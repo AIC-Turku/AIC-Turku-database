@@ -1,7 +1,15 @@
 name: Deploy Dashboard
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "master"]
+    paths:
+      - "docs/**"
+      - "instruments/**"
+      - "scripts/**"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - ".github/workflows/deploy-dashboard.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read      # Allows checkout of the repo
