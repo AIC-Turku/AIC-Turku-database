@@ -1,7 +1,7 @@
 schema_version: 1
 record_type: maintenance_event
 
-maintenance_id: "maint_scope-testx1_20250903_led_driver_replace"
+maintenance_id: "maint_scope-testx1_20250903_led_driver_replacement"
 microscope: "scope-testx1"
 
 service_provider: "distributor"
