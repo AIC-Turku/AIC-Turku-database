@@ -1,0 +1,53 @@
+# {{ display_name }} - History
+
+[⚙️ Back to Specifications](spec.md)
+
+## Metrics Over Time
+
+<canvas id="qcChart"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const chartData = {{ chart_data_json }};
+  const ctx = document.getElementById('qcChart');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      scales: {
+        y: {
+          beginAtZero: false
+        }
+      }
+    }
+  });
+</script>
+
+## Event Log
+
+### QC Events
+
+| Date | Suite/Type | Status |
+|------|------------|--------|
+{% for event in qc_events | default([], true) -%}
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+{% else -%}
+| — | — | — |
+{% endfor %}
+
+### Maintenance Events
+
+| Date | Suite/Type | Status |
+|------|------------|--------|
+{% for event in maintenance_events | default([], true) -%}
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+{% else -%}
+| — | — | — |
+{% endfor %}

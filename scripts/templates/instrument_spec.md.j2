@@ -1,0 +1,65 @@
+# {{ display_name }}
+
+!!! success "Current Status: {{ status_indicator | default('🟢 Online', true) }}"
+
+[📊 View Full History and Events](history.md)
+
+## Hardware Configurations
+
+### Light Sources
+
+| Name | Type | Wavelength | Notes |
+|------|------|------------|-------|
+{% for source in light_sources | default([], true) -%}
+| {{ source.name | default('—', true) }} | {{ source.type | default('—', true) }} | {{ source.wavelength | default('—', true) }} | {{ source.notes | default('—', true) }} |
+{% else -%}
+| — | — | — | — |
+{% endfor %}
+
+### Detectors
+
+| Name | Type | Model | Notes |
+|------|------|-------|-------|
+{% for detector in detectors | default([], true) -%}
+| {{ detector.name | default('—', true) }} | {{ detector.type | default('—', true) }} | {{ detector.model | default('—', true) }} | {{ detector.notes | default('—', true) }} |
+{% else -%}
+| — | — | — | — |
+{% endfor %}
+
+### Objectives
+
+| Name | Magnification | NA | Notes |
+|------|---------------|----|-------|
+{% for objective in objectives | default([], true) -%}
+| {{ objective.name | default('—', true) }} | {{ objective.magnification | default('—', true) }} | {{ objective.na | default('—', true) }} | {{ objective.notes | default('—', true) }} |
+{% else -%}
+| — | — | — | — |
+{% endfor %}
+
+## QC Metrics Overview
+
+<canvas id="qcChart"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const chartData = {{ chart_data_json }};
+  const ctx = document.getElementById('qcChart');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      scales: {
+        y: {
+          beginAtZero: false
+        }
+      }
+    }
+  });
+</script>

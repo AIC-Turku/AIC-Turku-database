@@ -1,0 +1,9 @@
+# Event: {{ event_id }}
+
+- **Date:** {{ date | default('—', true) }}
+- **Instrument:** {{ instrument | default(instrument_id, true) | default('—', true) }}
+- **Operator:** {{ operator | default('—', true) }}
+
+```yaml
+{{ raw_yaml_content }}
+```
