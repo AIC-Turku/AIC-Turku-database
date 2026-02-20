@@ -1,0 +1,19 @@
+# System Health
+
+!!! info "System Health Overview"
+    This page highlights instruments currently in a degraded state (**Red** or **Yellow**) and summarizes why attention is required.
+
+{% if issues %}
+{% for issue in issues %}
+## {{ issue.name }}
+
+- **Status:** {{ issue.badge }}
+- **Date Flagged:** {{ issue.date_flagged | default("Unknown", true) }}
+
+> {{ issue.reason | default("No reason provided.", true) }}
+
+{% endfor %}
+{% else %}
+!!! success "No Active Issues"
+    All instruments are currently healthy.
+{% endif %}
