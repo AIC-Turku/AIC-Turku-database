@@ -1,7 +1,7 @@
 schema_version: 1
 record_type: maintenance_event
 
-maintenance_id: "maint_scope-testx1_20260328_control_software_update"
+maintenance_id: "maint_scope-testx1_20260328_firmware_and_control_software_update"
 microscope: "scope-testx1"
 
 service_provider: "vendor"
