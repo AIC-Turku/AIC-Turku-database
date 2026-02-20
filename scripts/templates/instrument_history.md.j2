@@ -2,6 +2,16 @@
 
 [🔙 Back to Specifications](spec.md){ .md-button }
 
+## Latest Metric Snapshot
+
+| Metric | Latest Value |
+|--------|--------------|
+{% for metric_id, value in latest_metrics.items() -%}
+| {{ metric_id }} | {{ value | default('—', true) }} |
+{% else -%}
+| — | — |
+{% endfor %}
+
 ## Metrics Over Time
 
 
@@ -10,12 +20,14 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const chartData = {{ chart_data_json }};
+    const allCharts = {{ charts_json }};
+    const chartIds = Object.keys(allCharts || {});
+    const defaultChart = chartIds.length ? allCharts[chartIds[0]] : { labels: [], datasets: [] };
     const ctx = document.getElementById('qcChart');
 
     new Chart(ctx, {
       type: 'line',
-      data: chartData,
+      data: defaultChart,
       options: {
         responsive: true,
         maintainAspectRatio: false,
