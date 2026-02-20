@@ -1,0 +1,7 @@
+# Instrument Fleet Overview
+
+| Status | Instrument Name | Modality | Last QC | Last Maintenance |
+| :----: | :-------------- | :------- | :-----: | :--------------: |
+{% for instrument in instruments -%}
+| {{ instrument.badge }} | [{{ instrument.name }}](instruments/{{ instrument.id }}.md) | {{ instrument.modality | default("—", true) }} | {{ instrument.last_qc | default("—", true) }} | {{ instrument.last_maintenance | default("—", true) }} |
+{% endfor %}
