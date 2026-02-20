@@ -3,14 +3,16 @@
 !!! info "System Health Overview"
     This page highlights instruments currently in a degraded state (**Red** or **Yellow**) and summarizes why attention is required.
 
-{% if issues %}
-{% for issue in issues %}
-## {{ issue.name }}
+{% set flagged = flagged_instruments | default(issues, true) %}
+{% if flagged %}
+{% for instrument in flagged %}
+## {{ instrument.name }}
 
-- **Status:** {{ issue.badge }}
-- **Date Flagged:** {{ issue.date_flagged | default("Unknown", true) }}
+- **Status:** {{ instrument.badge }}
+- **Date:** {{ instrument.date_flagged | default(instrument.date, true) | default("Unknown", true) }}
+- **History:** [View history](instruments/{{ instrument.id }}/history.md)
 
-> {{ issue.reason | default("No reason provided.", true) }}
+> {{ instrument.reason | default("No reason provided.", true) }}
 
 {% endfor %}
 {% else %}
