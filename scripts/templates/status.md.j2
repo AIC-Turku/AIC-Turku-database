@@ -5,14 +5,14 @@
 
 {% set flagged = flagged_instruments | default(issues, true) %}
 {% if flagged %}
-{% for instrument in flagged %}
-## {{ instrument.name }}
+{% for issue in flagged %}
+## {{ issue.name }}
 
-- **Status:** {{ instrument.badge }}
-- **Date:** {{ instrument.date_flagged | default(instrument.date, true) | default("Unknown", true) }}
-- **History:** [View history](instruments/{{ instrument.id }}/history.md)
+- **Status:** {{ issue.badge }}
+- **Date:** {{ issue.date_flagged | default(issue.date, true) | default("Unknown", true) }}
+- **History:** [View History](instruments/{{ issue.id }}/history.md)
 
-> {{ instrument.reason | default("No reason provided.", true) }}
+> {{ issue.reason | default("No reason provided.", true) }}
 
 {% endfor %}
 {% else %}

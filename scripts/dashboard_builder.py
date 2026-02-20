@@ -500,6 +500,7 @@ def main() -> None:
         "site_name": "AIC Microscopy Dashboard",
         "site_url": "https://aic-turku.github.io/AIC-Turku-database/",
         "docs_dir": "dashboard_docs",
+        "markdown_extensions": ["attr_list", "md_in_html"],
         "theme": {
             "name": "material",
             "logo": "assets/images/logo.png",
@@ -738,6 +739,7 @@ if __name__ == "__main__":
         "site_name": "AIC Microscopy Dashboard",
         "site_url": "https://aic-turku.github.io/AIC-Turku-database/",
         "docs_dir": "dashboard_docs",
+        "markdown_extensions": ["attr_list", "md_in_html"],
         "theme": {
             "name": "material",
             "features": [
