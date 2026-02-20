@@ -12,6 +12,20 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 
 
+METRIC_NAMES = {
+    "psf.fwhm_x_um": "PSF Lateral FWHM X (µm)",
+    "psf.fwhm_y_um": "PSF Lateral FWHM Y (µm)",
+    "psf.fwhm_z_um": "PSF Axial FWHM Z (µm)",
+    "laser.power_mw_405": "Laser Power: 405nm (mW)",
+    "laser.power_mw_488": "Laser Power: 488nm (mW)",
+    "laser.power_mw_561": "Laser Power: 561nm (mW)",
+    "laser.power_mw_640": "Laser Power: 640nm (mW)",
+    "laser.short_term_stability_delta_percent_488": "Laser Stability 488nm (Δ%)",
+    "illumination.uniformity_percent": "Illumination Uniformity (%)",
+    "detector.dark_noise_electrons": "Detector Dark Noise (e-)",
+}
+
+
 def _iter_yaml_files(base_dir: Path):
     """Yield YAML files under ``base_dir`` in deterministic order."""
     if not base_dir.exists() or not base_dir.is_dir():
@@ -592,6 +606,8 @@ if __name__ == "__main__":
             for mod in modalities:
                 all_modalities_set.add(mod)
 
+        software_list = instrument_payload.get("software", [])
+
         # Find image if it exists
         image_filename = "placeholder.png"
         image_path = Path(f"assets/images/{instrument_id}.jpg")
@@ -667,6 +683,9 @@ if __name__ == "__main__":
             objectives=objectives,
             charts_json=charts_json,
             latest_metrics=latest_metrics,
+            software=software_list,
+            modalities=modalities,
+            metric_names=METRIC_NAMES,
         )
         (instrument_dir / "spec.md").write_text(spec_rendered, encoding="utf-8")
 
@@ -705,6 +724,7 @@ if __name__ == "__main__":
             maintenance_events=maintenance_events,
             charts_json=charts_json,
             latest_metrics=latest_metrics,
+            metric_names=METRIC_NAMES,
         )
         (instrument_dir / "history.md").write_text(history_rendered, encoding="utf-8")
 
