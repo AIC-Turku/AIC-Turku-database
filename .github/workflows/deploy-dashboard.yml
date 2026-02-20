@@ -1,43 +1,44 @@
 name: Deploy Dashboard
-
 on:
   push:
     branches: ["main"]
 
 permissions:
-  pages: write
-  id-token: write
+  contents: read      # Allows checkout of the repo
+  pages: write        # Required to deploy to Pages
+  id-token: write     # Required to verify the deployment
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
     environment:
       name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Install documentation dependencies
-        run: pip install -r requirements-docs.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-docs.txt
 
-      - name: Build dashboard content
+      - name: Run dashboard builder
         run: python scripts/dashboard_builder.py
+        env:
+          PYTHONPATH: src
 
-      - name: Build MkDocs site
+      - name: Build MkDocs
         run: mkdocs build
 
-      - name: Upload GitHub Pages artifact
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          name: dashboard-pages
-          path: site/
+          path: "site/"
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          artifact_name: dashboard-pages
