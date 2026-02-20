@@ -472,7 +472,7 @@ def main() -> None:
                 event_id=event_id,
                 date=_extract_log_date(event_payload),
                 instrument=event_payload.get("microscope"),
-                instrument_id=event_payload.get("instrument_id"),
+                instrument_id=instrument_id,
                 operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
                 raw_yaml_content=raw_yaml_text,
             )
