@@ -1,4 +1,5 @@
 site_name: AIC Microscopy Dashboard
+site_url: https://aic-turku.github.io/AIC-Turku-database/
 
 theme:
   name: material
