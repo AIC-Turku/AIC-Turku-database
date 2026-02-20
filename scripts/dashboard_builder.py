@@ -536,4 +536,235 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import shutil
+    
+    docs_root = Path("dashboard_docs")
+    # Clean the directory to prevent stale files (optional but recommended)
+    if docs_root.exists():
+        shutil.rmtree(docs_root)
+    os.makedirs(docs_root, exist_ok=True)
+    os.makedirs(docs_root / "instruments", exist_ok=True)
+    os.makedirs(docs_root / "events", exist_ok=True)
+
+    # Copy assets if they exist (for images)
+    if Path("assets").exists():
+        shutil.copytree("assets", docs_root / "assets", dirs_exist_ok=True)
+
+    templates_dir = Path(__file__).resolve().parent / "templates"
+    jinja_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
+
+    # Load all templates
+    index_template = jinja_env.get_template("index.md.j2")
+    status_template = jinja_env.get_template("status.md.j2")
+    instrument_spec_template = jinja_env.get_template("instrument_spec.md.j2")
+    instrument_history_template = jinja_env.get_template("instrument_history.md.j2")
+    event_detail_template = jinja_env.get_template("event_detail.md.j2")
+
+    instruments = get_all_instruments("instruments")
+
+    # Data aggregators for the Fleet and Status pages
+    fleet_instruments = []
+    flagged_issues = []
+    all_modalities_set = set()
+    nav_microscopes = []
+
+    for instrument_id, instrument_payload in sorted(instruments.items(), key=lambda item: item[0]):
+        instrument_section = instrument_payload.get("instrument")
+        if not isinstance(instrument_section, dict):
+            instrument_section = {}
+        hardware_section = instrument_payload.get("hardware")
+        if not isinstance(hardware_section, dict):
+            hardware_section = {}
+
+        display_name = instrument_section.get("display_name") or instrument_id
+        
+        # Add to MkDocs Navigation
+        nav_microscopes.append({display_name: f"instruments/{instrument_id}/spec.md"})
+
+        # Collect unique modalities for the grid filter
+        modalities = instrument_section.get("modalities", [])
+        if isinstance(modalities, list):
+            for mod in modalities:
+                all_modalities_set.add(mod)
+
+        # Find image if it exists
+        image_filename = "placeholder.png"
+        image_path = Path(f"assets/images/{instrument_id}.jpg")
+        if image_path.exists():
+            image_filename = f"{instrument_id}.jpg"
+
+        qc_logs = get_all_instrument_logs("qc/sessions", instrument_id)
+        maintenance_logs = get_all_instrument_logs("maintenance/events", instrument_id)
+
+        chart_data_json = _chart_data_json(qc_logs)
+
+        latest_qc = qc_logs[-1]["data"] if qc_logs else None
+        latest_maintenance = maintenance_logs[-1]["data"] if maintenance_logs else None
+        status = evaluate_instrument_status(instrument_id, latest_qc, latest_maintenance)
+
+        # Append to Fleet Data
+        inst_summary = {
+            "id": instrument_id,
+            "instrument": instrument_section,
+            "display_name": display_name,
+            "status": status,
+            "image_filename": image_filename
+        }
+        fleet_instruments.append(inst_summary)
+        
+        # If offline or warning, add to System Health issues list
+        if status.get("color") in ["red", "yellow"]:
+            flagged_issues.append(inst_summary)
+
+        # --- SPEC PAGE RENDERING ---
+        light_sources = [
+            {
+                "name": source.get("model"),
+                "type": source.get("kind"),
+                "wavelength": source.get("wavelength_nm"),
+                "notes": source.get("manufacturer"),
+            }
+            for source in hardware_section.get("light_sources", [])
+            if isinstance(source, dict)
+        ]
+        detectors = [
+            {
+                "name": detector.get("manufacturer"),
+                "type": detector.get("kind"),
+                "model": detector.get("model"),
+                "notes": "",
+            }
+            for detector in hardware_section.get("detectors", [])
+            if isinstance(detector, dict)
+        ]
+        objectives = [
+            {
+                "name": objective.get("model"),
+                "magnification": objective.get("magnification"),
+                "na": objective.get("numerical_aperture"),
+                "notes": objective.get("manufacturer"),
+            }
+            for objective in hardware_section.get("objectives", [])
+            if isinstance(objective, dict)
+        ]
+
+        instrument_dir = docs_root / "instruments" / instrument_id
+        os.makedirs(instrument_dir, exist_ok=True)
+
+        spec_rendered = instrument_spec_template.render(
+            instrument=inst_summary,
+            display_name=display_name,
+            status_indicator=status.get("badge"),
+            light_sources=light_sources,
+            detectors=detectors,
+            objectives=objectives,
+            chart_data_json=chart_data_json,
+        )
+        (instrument_dir / "spec.md").write_text(spec_rendered, encoding="utf-8")
+
+        # --- HISTORY PAGE RENDERING ---
+        qc_events = []
+        for qc_log in qc_logs:
+            qc_data = qc_log.get("data", {})
+            qc_event_id = Path(str(qc_log.get("filename", ""))).stem
+            qc_events.append(
+                {
+                    "event_id": qc_event_id,
+                    "date": _extract_log_date(qc_data),
+                    "suite": qc_data.get("reason"),
+                    "type": qc_data.get("record_type"),
+                    "status": ((qc_data.get("evaluation") or {}).get("overall_status") if isinstance(qc_data.get("evaluation"), dict) else ""),
+                }
+            )
+
+        maintenance_events = []
+        for maintenance_log in maintenance_logs:
+            maint_data = maintenance_log.get("data", {})
+            maint_event_id = Path(str(maintenance_log.get("filename", ""))).stem
+            maintenance_events.append(
+                {
+                    "event_id": maint_event_id,
+                    "date": _extract_log_date(maint_data),
+                    "suite": maint_data.get("reason"),
+                    "type": maint_data.get("record_type"),
+                    "status": maint_data.get("microscope_status_after"),
+                }
+            )
+
+        history_rendered = instrument_history_template.render(
+            display_name=display_name,
+            qc_events=qc_events,
+            maintenance_events=maintenance_events,
+            chart_data_json=chart_data_json,
+        )
+        (instrument_dir / "history.md").write_text(history_rendered, encoding="utf-8")
+
+        # --- EVENT DETAILS RENDERING ---
+        for log_entry in qc_logs + maintenance_logs:
+            source_path = log_entry.get("source_path")
+            if not isinstance(source_path, str):
+                continue
+
+            source_file = Path(source_path)
+            event_id = source_file.stem
+            event_payload = log_entry.get("data") if isinstance(log_entry.get("data"), dict) else {}
+            try:
+                raw_yaml_text = source_file.read_text(encoding="utf-8")
+            except OSError:
+                raw_yaml_text = yaml.safe_dump(event_payload, sort_keys=False)
+
+            event_rendered = event_detail_template.render(
+                event_id=event_id,
+                date=_extract_log_date(event_payload),
+                instrument=event_payload.get("microscope"),
+                instrument_id=instrument_id,
+                operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
+                raw_yaml_content=raw_yaml_text,
+            )
+            (docs_root / "events" / f"{event_id}.md").write_text(event_rendered, encoding="utf-8")
+
+    # --- GENERATE INDEX AND STATUS PAGES ---
+    index_rendered = index_template.render(
+        instruments=fleet_instruments, 
+        all_modalities=sorted(list(all_modalities_set))
+    )
+    (docs_root / "index.md").write_text(index_rendered, encoding="utf-8")
+
+    status_rendered = status_template.render(issues=flagged_issues)
+    (docs_root / "status.md").write_text(status_rendered, encoding="utf-8")
+
+    # --- AUTO-GENERATE MKDOCS CONFIGURATION ---
+    mkdocs_config = {
+        "site_name": "AIC Microscopy Dashboard",
+        "site_url": "https://aic-turku.github.io/AIC-Turku-database/",
+        "docs_dir": "dashboard_docs",
+        "theme": {
+            "name": "material",
+            "features": [
+                "navigation.tabs",
+                "navigation.sections",
+                "navigation.top",
+                "toc.integrate",
+                "search.suggest",
+                "search.highlight"
+            ],
+            "palette": [
+                {
+                    "scheme": "default",
+                    "toggle": {"icon": "material/brightness-7", "name": "Switch to dark mode"}
+                },
+                {
+                    "scheme": "slate",
+                    "toggle": {"icon": "material/brightness-4", "name": "Switch to light mode"}
+                }
+            ]
+        },
+        "nav": [
+            {"Fleet Overview": "index.md"},
+            {"System Health": "status.md"},
+            {"Microscopes": nav_microscopes}
+        ]
+    }
+    
+    with open("mkdocs.yml", "w", encoding="utf-8") as f:
+        yaml.dump(mkdocs_config, f, sort_keys=False, default_flow_style=False)
