@@ -153,3 +153,85 @@ def get_latest_log(log_dir: str, instrument_id: str) -> dict[str, Any] | None:
 
     candidates.sort(key=lambda item: (item[0], item[1].as_posix()))
     return candidates[-1][2]
+
+
+def _extract_log_date(log_entry: dict[str, Any] | None) -> str:
+    """Extract ``YYYY-MM-DD`` from common timestamp fields in a log entry."""
+    if not isinstance(log_entry, dict):
+        return ""
+
+    for key in ("started_utc", "timestamp_utc", "date"):
+        parsed = _parse_iso_datetime(log_entry.get(key))
+        if parsed is not None:
+            return parsed.date().isoformat()
+
+    return ""
+
+
+def evaluate_instrument_status(
+    instrument_id: str, latest_qc: dict[str, Any] | None, latest_maint: dict[str, Any] | None
+) -> dict[str, str]:
+    """Build a fleet-overview status object for one instrument.
+
+    Priority order follows strict UI semantics:
+    1) Red (offline): out_of_service maintenance OR QC fail
+    2) Yellow (warning): limited maintenance OR QC warn
+    3) Green (online): default when no active issues (including missing logs)
+    """
+    maint_status = ""
+    maint_reason = ""
+    if isinstance(latest_maint, dict):
+        raw_maint_status = latest_maint.get("microscope_status_after")
+        if isinstance(raw_maint_status, str):
+            maint_status = raw_maint_status.strip().lower()
+
+        for key in ("reason_details", "action"):
+            value = latest_maint.get(key)
+            if isinstance(value, str) and value.strip():
+                maint_reason = value.strip()
+                break
+
+    qc_status = ""
+    qc_reason = ""
+    if isinstance(latest_qc, dict):
+        evaluation = latest_qc.get("evaluation")
+        if isinstance(evaluation, dict):
+            raw_qc_status = evaluation.get("overall_status")
+            if isinstance(raw_qc_status, str):
+                qc_status = raw_qc_status.strip().lower()
+
+            results = evaluation.get("results")
+            if isinstance(results, list) and results:
+                first_result = results[0]
+                if isinstance(first_result, dict):
+                    message = first_result.get("message")
+                    if isinstance(message, str) and message.strip():
+                        qc_reason = message.strip()
+
+    if maint_status == "out_of_service" or qc_status == "fail":
+        reason = maint_reason or qc_reason or "Out of service"
+        return {
+            "color": "red",
+            "badge": "🔴 Offline",
+            "reason": reason,
+            "last_qc_date": _extract_log_date(latest_qc),
+            "last_maint_date": _extract_log_date(latest_maint),
+        }
+
+    if maint_status == "limited" or qc_status == "warn":
+        reason = maint_reason or qc_reason or "Limited operation"
+        return {
+            "color": "yellow",
+            "badge": "🟡 Warning",
+            "reason": reason,
+            "last_qc_date": _extract_log_date(latest_qc),
+            "last_maint_date": _extract_log_date(latest_maint),
+        }
+
+    return {
+        "color": "green",
+        "badge": "🟢 Online",
+        "reason": "Operational",
+        "last_qc_date": _extract_log_date(latest_qc),
+        "last_maint_date": _extract_log_date(latest_maint),
+    }
