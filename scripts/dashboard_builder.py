@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
+from jinja2 import Environment, FileSystemLoader
 
 
 def _iter_yaml_files(base_dir: Path):
@@ -273,3 +276,229 @@ def evaluate_instrument_status(
         "last_qc_date": last_qc_date,
         "last_maint_date": last_maint_date,
     }
+
+
+def _metric_lookup(metric_entries: Any) -> dict[str, Any]:
+    """Convert ``metrics_computed`` list to ``{metric_id: value}`` mapping."""
+    output: dict[str, Any] = {}
+    if not isinstance(metric_entries, list):
+        return output
+
+    for item in metric_entries:
+        if not isinstance(item, dict):
+            continue
+        metric_id = item.get("metric_id")
+        value = item.get("value")
+        if isinstance(metric_id, str):
+            output[metric_id] = value
+    return output
+
+
+def _chart_data_json(qc_logs: list[dict[str, Any]]) -> str:
+    """Build a Chart.js-compatible JSON string from sorted QC logs."""
+    labels: list[str] = []
+    values: list[float | int | None] = []
+    chosen_metric = "psf.fwhm_z_um"
+    fallback_metric = "laser.short_term_stability_delta_percent_488"
+    dataset_label = chosen_metric
+
+    for entry in qc_logs:
+        payload = entry.get("data") if isinstance(entry, dict) else None
+        if not isinstance(payload, dict):
+            continue
+
+        started_utc = payload.get("started_utc")
+        parsed_started = _parse_iso_datetime(started_utc)
+        if parsed_started is None:
+            continue
+
+        labels.append(parsed_started.strftime("%Y-%m-%d"))
+        metrics = _metric_lookup(payload.get("metrics_computed"))
+        point = metrics.get(chosen_metric)
+        if point is None:
+            point = metrics.get(fallback_metric)
+            if point is not None:
+                dataset_label = fallback_metric
+
+        if isinstance(point, (int, float)):
+            values.append(point)
+        else:
+            values.append(None)
+
+    chart_payload = {
+        "labels": labels,
+        "datasets": [
+            {
+                "label": dataset_label,
+                "data": values,
+                "borderColor": "rgba(75, 192, 192, 1)",
+                "backgroundColor": "rgba(75, 192, 192, 0.2)",
+                "spanGaps": True,
+                "tension": 0.2,
+            }
+        ],
+    }
+    return json.dumps(chart_payload)
+
+
+if __name__ == "__main__":
+    docs_root = Path("docs")
+    os.makedirs(docs_root, exist_ok=True)
+    os.makedirs(docs_root / "instruments", exist_ok=True)
+    os.makedirs(docs_root / "events", exist_ok=True)
+
+    templates_dir = Path(__file__).resolve().parent / "templates"
+    jinja_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
+
+    instrument_spec_template = jinja_env.get_template("instrument_spec.md.j2")
+    instrument_history_template = jinja_env.get_template("instrument_history.md.j2")
+    event_detail_template = jinja_env.get_template("event_detail.md.j2")
+
+    instruments = get_all_instruments("instruments")
+    nav_instrument_entries: list[dict[str, Any]] = []
+
+    for instrument_id, instrument_payload in sorted(instruments.items(), key=lambda item: item[0]):
+        instrument_section = instrument_payload.get("instrument")
+        if not isinstance(instrument_section, dict):
+            instrument_section = {}
+        hardware_section = instrument_payload.get("hardware")
+        if not isinstance(hardware_section, dict):
+            hardware_section = {}
+
+        display_name = instrument_section.get("display_name") or instrument_id
+
+        qc_logs = get_all_instrument_logs("qc/sessions", instrument_id)
+        maintenance_logs = get_all_instrument_logs("maintenance/events", instrument_id)
+
+        chart_data_json = _chart_data_json(qc_logs)
+
+        latest_qc = qc_logs[-1]["data"] if qc_logs else None
+        latest_maintenance = maintenance_logs[-1]["data"] if maintenance_logs else None
+        status = evaluate_instrument_status(instrument_id, latest_qc, latest_maintenance)
+
+        light_sources = [
+            {
+                "name": source.get("model"),
+                "type": source.get("kind"),
+                "wavelength": source.get("wavelength_nm"),
+                "notes": source.get("manufacturer"),
+            }
+            for source in hardware_section.get("light_sources", [])
+            if isinstance(source, dict)
+        ]
+        detectors = [
+            {
+                "name": detector.get("manufacturer"),
+                "type": detector.get("kind"),
+                "model": detector.get("model"),
+                "notes": "",
+            }
+            for detector in hardware_section.get("detectors", [])
+            if isinstance(detector, dict)
+        ]
+        objectives = [
+            {
+                "name": objective.get("model"),
+                "magnification": objective.get("magnification"),
+                "na": objective.get("numerical_aperture"),
+                "notes": objective.get("manufacturer"),
+            }
+            for objective in hardware_section.get("objectives", [])
+            if isinstance(objective, dict)
+        ]
+
+        instrument_dir = docs_root / "instruments" / instrument_id
+        os.makedirs(instrument_dir, exist_ok=True)
+
+        spec_rendered = instrument_spec_template.render(
+            display_name=display_name,
+            status_indicator=status.get("badge"),
+            light_sources=light_sources,
+            detectors=detectors,
+            objectives=objectives,
+            chart_data_json=chart_data_json,
+        )
+        (instrument_dir / "spec.md").write_text(spec_rendered, encoding="utf-8")
+
+        qc_events = []
+        for qc_log in qc_logs:
+            qc_data = qc_log.get("data", {})
+            qc_event_id = Path(str(qc_log.get("filename", ""))).stem
+            qc_events.append(
+                {
+                    "event_id": qc_event_id,
+                    "date": _extract_log_date(qc_data),
+                    "suite": qc_data.get("reason"),
+                    "type": qc_data.get("record_type"),
+                    "status": ((qc_data.get("evaluation") or {}).get("overall_status") if isinstance(qc_data.get("evaluation"), dict) else ""),
+                }
+            )
+
+        maintenance_events = []
+        for maintenance_log in maintenance_logs:
+            maint_data = maintenance_log.get("data", {})
+            maint_event_id = Path(str(maintenance_log.get("filename", ""))).stem
+            maintenance_events.append(
+                {
+                    "event_id": maint_event_id,
+                    "date": _extract_log_date(maint_data),
+                    "suite": maint_data.get("reason"),
+                    "type": maint_data.get("record_type"),
+                    "status": maint_data.get("microscope_status_after"),
+                }
+            )
+
+        history_rendered = instrument_history_template.render(
+            display_name=display_name,
+            qc_events=qc_events,
+            maintenance_events=maintenance_events,
+            chart_data_json=chart_data_json,
+        )
+        (instrument_dir / "history.md").write_text(history_rendered, encoding="utf-8")
+
+        for log_entry in qc_logs + maintenance_logs:
+            source_path = log_entry.get("source_path")
+            if not isinstance(source_path, str):
+                continue
+
+            source_file = Path(source_path)
+            event_id = source_file.stem
+            event_payload = log_entry.get("data") if isinstance(log_entry.get("data"), dict) else {}
+            try:
+                raw_yaml_text = source_file.read_text(encoding="utf-8")
+            except OSError:
+                raw_yaml_text = yaml.safe_dump(event_payload, sort_keys=False)
+
+            event_rendered = event_detail_template.render(
+                event_id=event_id,
+                date=_extract_log_date(event_payload),
+                instrument=event_payload.get("microscope"),
+                instrument_id=event_payload.get("instrument_id"),
+                operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
+                raw_yaml_content=raw_yaml_text,
+            )
+            (docs_root / "events" / f"{event_id}.md").write_text(event_rendered, encoding="utf-8")
+
+        nav_instrument_entries.append(
+            {
+                display_name: [
+                    {"Specs": f"instruments/{instrument_id}/spec.md"},
+                    {"History": f"instruments/{instrument_id}/history.md"},
+                ]
+            }
+        )
+
+    mkdocs_path = Path("mkdocs.yml")
+    mkdocs_data: dict[str, Any] = {}
+    if mkdocs_path.exists():
+        try:
+            mkdocs_data = yaml.safe_load(mkdocs_path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            mkdocs_data = {}
+
+    mkdocs_data["nav"] = [
+        {"Home": "index.md"},
+        {"System Status": "status.md"},
+        {"Instruments": nav_instrument_entries},
+    ]
+    mkdocs_path.write_text(yaml.safe_dump(mkdocs_data, sort_keys=False, allow_unicode=True), encoding="utf-8")
