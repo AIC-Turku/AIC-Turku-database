@@ -3,7 +3,4 @@ site_name: AIC Microscopy Dashboard
 theme:
   name: material
 
-nav:
-  - Home: index.md
-  - System Status: status.md
-  - Instruments: []
+docs_dir: dashboard_docs
