@@ -210,6 +210,12 @@ def evaluate_instrument_status(
     2) Yellow (warning): limited maintenance OR QC warn
     3) Green (online): default when no active issues (including missing logs)
     """
+    # instrument_id is intentionally part of the signature for UI call sites.
+    _ = instrument_id
+
+    last_qc_date = _extract_log_date(latest_qc)
+    last_maint_date = _extract_log_date(latest_maint)
+
     maint_status = ""
     maint_reason = ""
     if isinstance(latest_maint, dict):
@@ -246,8 +252,8 @@ def evaluate_instrument_status(
             "color": "red",
             "badge": "🔴 Offline",
             "reason": reason,
-            "last_qc_date": _extract_log_date(latest_qc),
-            "last_maint_date": _extract_log_date(latest_maint),
+            "last_qc_date": last_qc_date,
+            "last_maint_date": last_maint_date,
         }
 
     if maint_status == "limited" or qc_status == "warn":
@@ -256,14 +262,14 @@ def evaluate_instrument_status(
             "color": "yellow",
             "badge": "🟡 Warning",
             "reason": reason,
-            "last_qc_date": _extract_log_date(latest_qc),
-            "last_maint_date": _extract_log_date(latest_maint),
+            "last_qc_date": last_qc_date,
+            "last_maint_date": last_maint_date,
         }
 
     return {
         "color": "green",
         "badge": "🟢 Online",
         "reason": "Operational",
-        "last_qc_date": _extract_log_date(latest_qc),
-        "last_maint_date": _extract_log_date(latest_maint),
+        "last_qc_date": last_qc_date,
+        "last_maint_date": last_maint_date,
     }
