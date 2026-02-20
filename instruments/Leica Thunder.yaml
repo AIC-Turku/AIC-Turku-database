@@ -1,0 +1,80 @@
+---
+instrument:
+  display_name: Leica Thunder
+  instrument_id: ''
+  manufacturer: Leica Microsystems
+  model: Thunder
+  stand_orientation: other
+  notes: 'type: "Widefield microscope (automated)" | filters: ["External motorized
+    filter wheel (21 ms exchange)"] | imaging_modes: ["Widefield fluorescence (with
+    real-time Computational Clearing)", "Brightfield (color imaging)", "Volume/deconvolution
+    imaging (3D Thunder mode)"]'
+modalities:
+- widefield_fluorescence
+- transmitted_brightfield
+modules: []
+software:
+  acquisition:
+    name: Leica LAS X (with Navigator module)
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources:
+  - kind: led
+    manufacturer: ''
+    model: Leica LED8 (8 independent LEDs at 395, 438, 475, 511, 555, 575, 635, 730
+      nm)
+    wavelength_nm: 730
+    power: ''
+  detectors:
+  - kind: sCMOS
+    manufacturer: ''
+    model: Leica K8 sCMOS camera (2048Ã—2048, 6.5 Âµm pixels, 95% QE)
+  - kind: sCMOS
+    manufacturer: ''
+    model: Leica K3C CMOS camera (color imaging, RGB 12-bit)
+  objectives:
+  - manufacturer: Leica
+    model: N Plan
+    magnification: 5.0
+    numerical_aperture: 0.12
+    working_distance: 14.0 mm
+    immersion: air
+    correction: ''
+  - manufacturer: Leica
+    model: HC Plan Apo
+    magnification: 10.0
+    numerical_aperture: 0.45
+    working_distance: 2.8 mm
+    immersion: air
+    correction: plan_apochromat
+  - manufacturer: Leica
+    model: IMM UV
+    magnification: 20.0
+    numerical_aperture: 0.7
+    working_distance: 0.26 mm
+    immersion: multi
+    correction: ''
+  - manufacturer: Leica
+    model: Plan Apo
+    magnification: 20.0
+    numerical_aperture: 0.8
+    working_distance: 0.4 mm
+    immersion: air
+    correction: plan_apochromat
+  - manufacturer: Leica
+    model: HC Fluotar L VISIR
+    magnification: 16.0
+    numerical_aperture: 0.6
+    working_distance: 2.5 mm
+    immersion: multi
+    correction: ''
+  - manufacturer: Leica
+    model: HCX Plan Apo
+    magnification: 100.0
+    numerical_aperture: 1.4
+    working_distance: 0.09 mm
+    immersion: oil
+    correction: plan_apochromat

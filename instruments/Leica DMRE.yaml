@@ -1,0 +1,24 @@
+---
+instrument:
+  display_name: Leica DMRE
+  instrument_id: ''
+  manufacturer: Leica Microsystems
+  model: DMRE
+  stand_orientation: upright
+  notes: 'type: "Widefield microscope (upright fluorescence)" | imaging_modes: ["Fluorescence
+    (epi-fluorescence)", "Brightfield (transmitted light)"]'
+modalities:
+- widefield_fluorescence
+- transmitted_brightfield
+modules: []
+software:
+  acquisition:
+    name: Unknown
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources: []
+  detectors: []
+  objectives: []

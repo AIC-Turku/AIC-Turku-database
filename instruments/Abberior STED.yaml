@@ -1,0 +1,81 @@
+instrument:
+  display_name: Abberior STED
+  instrument_id: scope-1e33f909
+  manufacturer: Abberior
+  model: STED
+  stand_orientation: other
+  notes: ''
+modalities:
+- STED
+- confocal_point
+software:
+  acquisition:
+    name: Abberior Imspector
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources:
+  - kind: laser
+    manufacturer: ''
+    model: 488 nm excitation (pulsed)
+    wavelength_nm: 488
+    power: ''
+  - kind: laser
+    manufacturer: ''
+    model: 561 nm excitation (pulsed)
+    wavelength_nm: 561
+    power: ''
+  - kind: laser
+    manufacturer: ''
+    model: 640 nm excitation (pulsed)
+    wavelength_nm: 640
+    power: ''
+  - kind: laser
+    manufacturer: ''
+    model: 580 nm STED depletion (continuous, for 488 nm)
+    wavelength_nm: 580
+    power: ''
+  - kind: laser
+    manufacturer: ''
+    model: 775 nm STED depletion (pulsed, for 561 & 640 nm)
+    wavelength_nm: 775
+    power: ''
+  detectors:
+  - kind: PMT
+    manufacturer: ''
+    model: Photomultiplier Tube
+  - kind: APD
+    manufacturer: ''
+    model: Avalanche Photodiodes
+  - kind: CCD
+    manufacturer: ''
+    model: Monochrome CCD camera
+  objectives:
+  - magnification: 20.0
+    numerical_aperture: 0.4
+    immersion: air
+    correction: plan_apochromat
+    manufacturer: Olympus
+    model: Plan
+    working_distance: 1.2 mm
+  - magnification: 60.0
+    numerical_aperture: 1.2
+    immersion: water
+    correction: apochromat
+    manufacturer: Olympus
+    model: UPLSAPO
+    working_distance: 0.28 mm
+  - magnification: 100.0
+    numerical_aperture: 1.4
+    immersion: oil
+    correction: apochromat
+    manufacturer: Olympus
+    model: UPLSAPO
+    working_distance: 0.13 mm
+modules:
+- hardware_autofocus
+- incubation
+- FCS
+- FLIM

@@ -1,0 +1,16 @@
+# Basic maintenance log template
+record_id: "maint-YYYYMMDD-001"
+instrument_id: "instrument-name-or-id"
+date: "YYYY-MM-DD"
+performed_by: "name"
+maintenance_type: "preventive|corrective|calibration|repair"
+summary: "Short description of what was done"
+status: "completed|in_progress|blocked"
+next_due_date: "YYYY-MM-DD"
+parts_used:
+  - part_name: ""
+    part_number: ""
+    quantity: 1
+notes: ""
+attachments:
+  - "path/or/url/to/report"

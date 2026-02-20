@@ -1,0 +1,56 @@
+---
+instrument:
+  display_name: ONI Nanoimager
+  instrument_id: ''
+  manufacturer: Olympus/Evident
+  model: Nanoimager
+  stand_orientation: other
+  notes: 'type: "Super-resolution microscope (compact)" | filters: [{"channel_0"=>"498â€“551
+    nm & 576â€“620 nm (dual-band)"}, {"channel_1"=>"665â€“705 nm"}] | imaging_modes:
+    ["Single-molecule localization microscopy (2D & 3D SMLM)", "Single-particle tracking
+    (3D SPT)", "TIRF imaging", "FRET imaging"]'
+modalities:
+- TIRF
+- SMLM
+modules: []
+software:
+  acquisition:
+    name: NimOS (microscope control)
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources:
+  - kind: laser
+    manufacturer: ''
+    model: 405 nm (150 mW) violet
+    wavelength_nm: 405
+    power: 150 mW
+  - kind: laser
+    manufacturer: ''
+    model: 488 nm (1000 mW) blue
+    wavelength_nm: 488
+    power: 1000 mW
+  - kind: laser
+    manufacturer: ''
+    model: 561 nm (500 mW) green
+    wavelength_nm: 561
+    power: 500 mW
+  - kind: laser
+    manufacturer: ''
+    model: 640 nm (100 mW) red
+    wavelength_nm: 640
+    power: 100 mW
+  detectors:
+  - kind: sCMOS
+    manufacturer: ''
+    model: Hamamatsu ORCA-Flash4.0 V3 sCMOS (digital, ~100 fps full frame)
+  objectives:
+  - manufacturer: Olympus
+    model: UPLXAPO100XO
+    magnification: 100.0
+    numerical_aperture: 1.45
+    working_distance: 0.13 mm
+    immersion: oil
+    correction: apochromat

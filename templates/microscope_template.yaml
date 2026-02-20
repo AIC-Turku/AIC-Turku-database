@@ -1,0 +1,119 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION TEMPLATE
+# -----------------------------------------------------------------------------
+# Instructions:
+# 1. Copy this file and rename it (e.g., "Zeiss_LSM980.yaml").
+# 2. Fill in the fields below.
+# 3. Delete the comment blocks listing options after you have made your selection.
+# -----------------------------------------------------------------------------
+
+instrument:
+  display_name: "Brand Model Nickname"  # e.g. "Zeiss LSM 980 Airyscan"
+  instrument_id: ""                     # Leave empty; system will auto-generate (e.g. scope-a1b2c3d4)
+  
+  # Options: Zeiss, Leica Microsystems, Nikon, Olympus/Evident, Abberior, Andor, 
+  #          Hamamatsu, Lumencor, Excelitas, Chroma, Semrock, Other
+  manufacturer: "Zeiss"
+  
+  model: ""                             # e.g. "AxioObserver 7"
+  
+  # Options: upright, inverted, stereo, other
+  stand_orientation: "inverted"
+  
+  notes: ""                             # e.g. "Located in Room 404. Custodian: Dr. Smith."
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
+# Remove lines that do not apply.
+modalities:
+  - "confocal_point"
+  - "widefield_fluorescence"
+  
+  # Available Options:
+  # - widefield_fluorescence
+  # - transmitted_brightfield
+  # - phase_contrast
+  # - DIC
+  # - confocal_point          (Standard LSM)
+  # - confocal_spinning_disk  (SDC)
+  # - TIRF
+  # - light_sheet
+  # - multiphoton
+  # - SIM                     (Structured Illumination)
+  # - STED
+  # - SMLM                    (PALM/STORM)
+  # - ISM                     (Airyscan)
+  # - spectral_imaging
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - "hardware_autofocus"
+  
+  # Available Options:
+  # - incubation              (Temp/CO2)
+  # - hardware_autofocus      (Definite/PFS/Z-drift)
+  # - FRAP
+  # - FCS
+  # - FLIM
+  # - optogenetics
+  # - adaptive_optics
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
+software:
+  acquisition:
+    name: "ZEN"               # e.g. ZEN, LAS X, NIS-Elements, MicroManager
+    version: "3.4"
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
+hardware:
+  
+  # --- Scanner ---
+  scanner:
+    # Options: none, galvo, resonant, spinning_disk, polygon, acousto_optic, stage_scanning
+    type: "galvo"
+    notes: ""
+
+  # --- Light Sources (Excitation) ---
+  light_sources:
+    - kind: "laser"           # Options: laser, white_light_laser, led, arc_lamp, halogen_lamp, supercontinuum
+      manufacturer: "Chroma"
+      model: "Solid State"
+      wavelength_nm: 488
+      power: "20 mW"
+      
+    - kind: "led"
+      manufacturer: "CoolLED"
+      model: "pE-300"
+      wavelength_nm: 
+      power: ""
+
+  # --- Detectors (Emission) ---
+  detectors:
+    - kind: "GaAsP_PMT"       # Options: PMT, GaAsP_PMT, HyD, sCMOS, EMCCD, CCD, APD
+      manufacturer: "Zeiss"
+      model: "Quasar"
+      
+    - kind: "sCMOS"
+      manufacturer: "Hamamatsu"
+      model: "Flash 4.0"
+
+  # --- Objectives ---
+  objectives:
+    - manufacturer: "Zeiss"
+      model: "Plan-Apochromat 63x/1.4 Oil"
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: "0.19mm"
+      
+      # Options: air, oil, water, glycerol, silicone, multi, dipping
+      immersion: "oil"
+      
+      # Options: plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
+      correction: "plan_apochromat"

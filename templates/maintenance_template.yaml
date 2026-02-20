@@ -1,0 +1,60 @@
+# =============================================================================
+# Maintenance Event — minimal vocabulary + rich free text
+# =============================================================================
+# Use this for any intervention: vendor/distributor visit, internal fix, inspection,
+# calibration, cleaning, upgrades, emergency response, etc.
+#
+# Parsing guidance:
+# - Treat "reason" and "action" as the primary filter keys in the UI.
+# - Display the corresponding *_details directly under them.
+# =============================================================================
+
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_<microscope>_<YYYYMMDD>_<short_slug>"
+microscope: "<instrument_id>"                 # e.g., ti2e_01
+
+service_provider: "vendor"                    # vendor | distributor | third_party | internal | unknown
+company: "<provider_company_name>"            # company involved (not necessarily microscope manufacturer)
+contact: "<optional contact details>"
+reference: "<optional ticket/case/PO/invoice>"
+
+started_utc: "2026-02-01T09:00:00Z"
+ended_utc: "2026-02-01T13:00:00Z"             # optional if unknown/open
+
+# ---- Simple controlled vocabulary + free text -------------------------------
+reason: "scheduled"                           # scheduled | problem | upgrade | install | check | other
+reason_details: >
+  Annual preventive maintenance visit.
+  Users reported slight Z-resolution degradation and focus drift prior to visit.
+
+action: "service"                             # service | repair | align | calibrate | clean | replace | update | other
+action_details: >
+  Cleaned objective front lens (obj_100x149_01).
+  Realigned excitation coupling (laser_488_01).
+  Replaced stage belt (PN-0000) x1.
+
+# ---- Operational impact ------------------------------------------------------
+microscope_status_after: "in_service"          # in_service | limited | out_of_service
+downtime_hours: 4.0                           # optional (or compute from started/ended)
+
+# ---- Linkages (kept simple) --------------------------------------------------
+related_qc:
+  - "qc_ti2e_01_20260131T0815Z_wg5_psf_v1"     # pre
+  - "qc_ti2e_01_20260202T0810Z_wg5_psf_v1"     # post
+
+attachments:
+  - "maintenance/ti2e_01/2026/attachments/2026-02-01_vendor_report.pdf"
+
+tags: ["optics", "alignment", "stage", "vendor"]
+
+# ---- Follow-up ---------------------------------------------------------------
+followup: >
+  Repeat PSF + co-registration by 2026-02-15.
+  If repeated WARN in Z, check objective and stage z-drive backlash.
+next_due_date: "2026-02-15"                   # optional; ISO date
+
+notes: >
+  Tech: Tech Name. Ticket: NIKON-CASE-123456.
+  Downtime ~4 hours; microscope out of service during visit.

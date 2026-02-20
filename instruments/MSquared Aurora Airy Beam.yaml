@@ -1,0 +1,45 @@
+---
+instrument:
+  display_name: MSquared Aurora Airy Beam
+  instrument_id: ''
+  manufacturer: Other
+  model: Aurora Airy Beam
+  stand_orientation: other
+  notes: 'type: "Light-sheet fluorescence microscope" | filters: ["GFP filter (BP
+    520/40)", "GFP longpass (LP 500 nm)", "RFP longpass (LP 570 nm)"] | imaging_modes:
+    ["Light-sheet fluorescence (Airy beam illumination)", "Long-term volumetric imaging
+    (minimized photobleaching)"]'
+modalities:
+- widefield_fluorescence
+modules: []
+software:
+  acquisition:
+    name: MÂ² Acquisition software
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources:
+  - kind: laser
+    manufacturer: ''
+    model: 488 nm (100 mW)
+    wavelength_nm: 488
+    power: 100 mW
+  - kind: laser
+    manufacturer: ''
+    model: 568 nm (80 mW)
+    wavelength_nm: 568
+    power: 80 mW
+  detectors:
+  - kind: sCMOS
+    manufacturer: ''
+    model: Hamamatsu ORCA-Flash4.0 sCMOS (2048Ã—2048)
+  objectives:
+  - manufacturer: Special Optics
+    model: Airy beam dipping objective (for illumination/detection)
+    magnification: 16.0
+    numerical_aperture:
+    working_distance: ''
+    immersion: multi
+    correction: ''

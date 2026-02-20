@@ -1,0 +1,25 @@
+---
+instrument:
+  display_name: Lambert FLIM (frequency domain)
+  instrument_id: ''
+  manufacturer: Other
+  model: FLIM (frequency domain)
+  stand_orientation: other
+  notes: 'type: "Widefield FLIM system (attached to Zeiss AxioImager)" | location:
+    "BioCity, 5th floor, room 5149" | imaging_modes: ["Widefield fluorescence (FLIM
+    only)"]'
+modalities:
+- widefield_fluorescence
+modules:
+- FLIM
+software:
+  acquisition:
+    name: Unknown
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources: []
+  detectors: []
+  objectives: []

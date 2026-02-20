@@ -1,0 +1,59 @@
+---
+instrument:
+  display_name: EVOS fl
+  instrument_id: ''
+  manufacturer: Olympus/Evident
+  model: fl
+  stand_orientation: inverted
+  notes: 'type: "Widefield fluorescence microscope (inverted)" | filters: ["DAPI",
+    "CFP", "GFP/AlexaÂ 488", "RFP/AlexaÂ 555", "Cy5/AlexaÂ 647"] | imaging_modes:
+    ["Brightfield (transmitted)", "Fluorescence (LED illumination)"]'
+modalities:
+- widefield_fluorescence
+- transmitted_brightfield
+modules: []
+software:
+  acquisition:
+    name: On-board EVOS interface (no external software, USB storage)
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources: []
+  detectors:
+  - kind: PMT
+    manufacturer: ''
+    model: Integrated color camera (for brightfield)
+  - kind: PMT
+    manufacturer: ''
+    model: Integrated monochrome camera (for fluorescence)
+  objectives:
+  - manufacturer: Olympus
+    model: UPlanFLN
+    magnification: 4.0
+    numerical_aperture: 0.13
+    working_distance: 16.4 mm
+    immersion: air
+    correction: ''
+  - manufacturer: AMG (Thermo Fisher)
+    model: PlanFluor
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: 8.3 mm
+    immersion: air
+    correction: plan_fluorite
+  - manufacturer: AMG (Thermo Fisher)
+    model: PlanFluor
+    magnification: 20.0
+    numerical_aperture: 0.45
+    working_distance: 7.1 mm
+    immersion: air
+    correction: plan_fluorite
+  - manufacturer: AMG (Thermo Fisher)
+    model: PlanFluor
+    magnification: 40.0
+    numerical_aperture: 0.65
+    working_distance: 2.8 mm
+    immersion: air
+    correction: plan_fluorite

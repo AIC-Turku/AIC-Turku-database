@@ -1,0 +1,59 @@
+---
+instrument:
+  display_name: Leica TCS SP5 Multiphoton
+  instrument_id: ''
+  manufacturer: Leica Microsystems
+  model: TCS SP5 Multiphoton
+  stand_orientation: upright
+  notes: 'type: "Multiphoton confocal microscope (upright)" | filters: [{"Main Beam
+    Splitter LP505 nm"=>["SHG 440 (440/20)", "CFP (483/32)", "YFP (535/20)"]}, {"Main
+    Beam Splitter LP560 nm"=>["DAPI (457/50)", "FITC (525/52)", "TRITC (585/40)",
+    "Alexa 633 (650/50)"]}] | imaging_modes: ["Multiphoton (two-photon) fluorescence",
+    "Deep tissue intravital imaging", "Resonant scanning (video-rate)"]'
+modalities:
+- confocal_point
+- multiphoton
+modules: []
+software:
+  acquisition:
+    name: Leica LAS AF
+    version: ''
+hardware:
+  scanner:
+    type: resonant
+    notes: ''
+  light_sources:
+  - kind: laser
+    manufacturer: ''
+    model: Coherent Chameleon Ultra II (tunable 690â€“1040 nm)
+    wavelength_nm: 1040
+    power: ''
+  - kind: laser
+    manufacturer: ''
+    model: Coherent Compact OPO (extends tunable range to 1600 nm)
+    wavelength_nm: 1600
+    power: ''
+  - kind: laser
+    manufacturer: ''
+    model: Coherent Chameleon Vision II (tunable 690â€“1040 nm)
+    wavelength_nm: 1040
+    power: ''
+  detectors:
+  - kind: PMT
+    manufacturer: ''
+    model: Photomultiplier Tubes (non-descanned)
+  objectives:
+  - manufacturer: Leica
+    model: HCX APO L
+    magnification: 20.0
+    numerical_aperture: 1.0
+    working_distance: 1.95 mm
+    immersion: water
+    correction: apochromat
+  - manufacturer: Leica
+    model: HCX IR APO L
+    magnification: 25.0
+    numerical_aperture: 0.95
+    working_distance: 2.50 mm
+    immersion: water
+    correction: apochromat

@@ -1,0 +1,64 @@
+---
+instrument:
+  display_name: Zeiss AxioZoom.V16
+  instrument_id: ''
+  manufacturer: Zeiss
+  model: AxioZoom.V16
+  stand_orientation: stereo
+  notes: 'type: "Fluorescence stereo zoom microscope" | filters: ["DAPI filter set
+    49 (Ex G365, Em BP 445/50)", "GFP filter set 38 HE (Ex BP 470/40, Em BP 525/50)",
+    "AlexaÂ 568 filter set 45 (Ex BP 560/40, Em BP 630/75)", "AlexaÂ 647 filter set
+    50 (Ex BP 640/30, Em BP 690/50)"] | additional_hardware: ["Zeiss ApoTome.2 module
+    (structured illumination for optical sectioning)"] | imaging_modes: ["Brightfield
+    (top/bottom illumination)", "Fluorescence", "Optical sectioning (structured illumination
+    SIM)"]'
+modalities:
+- transmitted_brightfield
+- SIM
+modules: []
+software:
+  acquisition:
+    name: Zeiss ZEN Pro
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources:
+  - kind: led
+    manufacturer: ''
+    model: Zeiss CL 9000 LED ring light (top illumination)
+    wavelength_nm:
+    power: ''
+  - kind: led
+    manufacturer: ''
+    model: VisiLED MC1000 LED base light (bottom illumination)
+    wavelength_nm:
+    power: ''
+  - kind: arc_lamp
+    manufacturer: ''
+    model: Zeiss HXPÂ 200C Mercury lamp
+    wavelength_nm:
+    power: ''
+  detectors:
+  - kind: sCMOS
+    manufacturer: ''
+    model: Hamamatsu ORCA-Flash4.0 LT+ sCMOS (2048Ã—2048 mono)
+  - kind: PMT
+    manufacturer: ''
+    model: Zeiss AxioCamÂ 105 Color (2560Ã—1920 color)
+  objectives:
+  - manufacturer: ''
+    model: ''
+    magnification: 0.5
+    numerical_aperture: 0.125
+    working_distance: 114 mm
+    immersion: air
+    correction: ''
+  - manufacturer: ''
+    model: ''
+    magnification: 1.0
+    numerical_aperture: 0.125
+    working_distance: 56 mm
+    immersion: air
+    correction: ''

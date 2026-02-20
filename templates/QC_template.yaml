@@ -1,0 +1,285 @@
+# =============================================================================
+# QC Session (Microscopy Core) — fully documented template
+# =============================================================================
+# Goal:
+# - One YAML file per QC session (self-contained record).
+# - Humans enter: context + manual readings (e.g., power meter).
+# - Scripts add: computed metrics (PSF, co-registration, stage repeatability, laser stats).
+# - CI (GitHub Action) adds: evaluation (pass/warn/fail) against benchmarks.
+#
+# Key design rules:
+# - Humans MUST NOT write pass/fail. Only CI writes `evaluation`.
+# - Human-entered laser data is structured as series (linearity and/or stability).
+# - Large artifacts (raw images, CSV logs) live in OMERO; YAML stores pointers.
+# =============================================================================
+
+schema_version: 1
+record_type: qc_session
+
+# -----------------------------------------------------------------------------
+# Identity and timing
+# -----------------------------------------------------------------------------
+qc_id: "qc_<microscope>_<YYYYMMDDThhmmZ>_<suite>"     # Unique ID for this QC session
+microscope: "<instrument_id>"                        # Must match your instrument registry ID
+
+started_utc: "2026-02-16T08:15:00Z"                  # ISO-8601 UTC time (required)
+ended_utc: "2026-02-16T09:05:00Z"                    # ISO-8601 UTC time (optional)
+
+performed_by: "<name_or_user_id>"                    # Who ran the QC
+reason: "monthly_qc"                                 # Free text: monthly_qc / post_service / troubleshooting / etc.
+
+# Human readable summary (no verdicts here)
+summary: "Free text summary of what was done and what looked abnormal (if anything)."
+notes: >
+  Free text notes: conditions, sample lot, anomalies, room conditions, changes vs baseline, etc.
+
+# -----------------------------------------------------------------------------
+# What was performed (human narrative, no pass/fail)
+# -----------------------------------------------------------------------------
+# Use this for UI display and traceability.
+# It should describe what datasets exist and where they are stored.
+performed:
+  - qc_type: "laser_power"                           # laser_power | psf | alignment | stage | other
+    details: >
+      Power meter series recorded for linearity and stability.
+      Measurement position recorded below.
+    artifacts: ["art_laser_linearity_csv", "art_laser_stability_csv"]
+
+  - qc_type: "psf"
+    details: "175 nm beads; central ROI; 488 channel."
+    artifacts: ["art_psf_stack_raw", "art_psf_preview"]
+
+  - qc_type: "alignment"
+    details: "Multicolor beads; co-registration computed."
+    artifacts: ["art_coreg_stack_raw", "art_coreg_preview"]
+
+  - qc_type: "stage"
+    details: "Repeatability test; 20 cycles; bead centroid tracking."
+    artifacts: ["art_stage_repeat_raw", "art_stage_repeat_plot"]
+
+# -----------------------------------------------------------------------------
+# HUMAN INPUTS (typed by operator; scripts should not overwrite)
+# -----------------------------------------------------------------------------
+# Keep general manual checks here (strings or numbers).
+inputs_human:
+  - metric_id: "visual.optics_clean"                 # Suggested convention: visual.* for manual checks
+    value: "yes"                                     # Allow string values for checklists
+    unit: ""                                         # Unit can be empty for categorical checks
+    details: "Objective front lens inspected."
+
+# -----------------------------------------------------------------------------
+# LASER INPUTS (human-entered structured series)
+# -----------------------------------------------------------------------------
+# This section captures the RAW laser measurements (series), which scripts can
+# later analyze and CI can evaluate indirectly via computed metrics.
+#
+# measurement_position:
+# - at_objective  : best for comparability; measures delivered power at sample plane
+# - pre_objective : useful if objective access is difficult; note coupling changes may affect comparability
+# - fiber_output  : useful for fiber-coupled systems; measures source output (not including downstream losses)
+laser_inputs_human:
+
+  measurement_position: "at_objective"               # at_objective | pre_objective | fiber_output
+  measurement_position_details: >
+    Describe adapter used, where sensor placed, objective used (if relevant),
+    and whether this is comparable to prior sessions.
+
+  power_meter:
+    model: "<meter model>"                           # Free text
+    serial: "<optional serial>"
+    calibration_due: "<YYYY-MM-DD or free text>"
+    integration_time_s: 1.0                          # Optional; helps reproduce noisy readings
+    notes: "Any other context (attenuators, adapters, sensor type)."
+
+  # A) Linearity series (setpoint sweep): power vs setpoint for each laser
+  # - Use points for small datasets
+  # - OR use csv_artifact for the full dataset (preferred if many points/replicates)
+  linearity_series:
+    - laser: "488"                                   # Simple identifier; consistent across your system
+      setpoint_units: "percent"                      # percent is typical; can be "percent" or "mW_setpoint"
+      power_units: "mW"
+      points:                                        # Optional if csv_artifact provided
+        - setpoint: 10
+          power: 0.24
+        - setpoint: 20
+          power: 0.48
+        - setpoint: 50
+          power: 1.20
+        - setpoint: 100
+          power: 2.35
+      csv_artifact: "art_laser_linearity_csv"        # Optional but recommended for full resolution
+      details: >
+        Setpoint sweep for linearity check.
+        If replicates were acquired, note here or in CSV.
+
+    - laser: "561"
+      setpoint_units: "percent"
+      power_units: "mW"
+      points:
+        - setpoint: 10
+          power: 0.18
+        - setpoint: 20
+          power: 0.36
+        - setpoint: 50
+          power: 0.90
+        - setpoint: 100
+          power: 1.80
+      details: "Linearity points typed manually."
+
+  # B) Stability series (time series): power over time at a defined setpoint
+  # - For short checks, you may include a few timepoints inline
+  # - For real stability runs (minutes-hours), store as CSV and reference it
+  stability_series:
+    - laser: "488"
+      setpoint: 80
+      setpoint_units: "percent"
+      sampling: "1 Hz for 5 min"                     # Human readable protocol description
+      power_units: "mW"
+      timepoints:                                    # Optional; omit if csv_artifact is provided
+        - t_s: 0
+          power: 1.88
+        - t_s: 60
+          power: 1.87
+        - t_s: 120
+          power: 1.88
+      details: "Short-term stability."
+
+    - laser: "488"
+      setpoint: 80
+      setpoint_units: "percent"
+      sampling: "every 30 s for 120 min"
+      power_units: "mW"
+      csv_artifact: "art_laser_stability_csv"        # Preferred for long series
+      details: "Long-term stability stored in CSV."
+
+# -----------------------------------------------------------------------------
+# COMPUTED METRICS (written by scripts; can be appended later)
+# -----------------------------------------------------------------------------
+# Scripts should write here, not in human sections.
+computed_provenance:
+  pipeline: "local_jupyter_pipeline"                 # Name of your analysis pipeline
+  version: "0.3.2"                                   # Pipeline version
+  git_commit: "abcdef1"                              # Commit hash of analysis code
+  run_utc: "2026-02-16T09:02:00Z"                    # When analysis ran
+
+# Each entry is a scalar designed for trending and CI evaluation.
+# Keep metric_id stable over time; value numeric when possible.
+metrics_computed:
+
+  # Laser metrics computed from laser_inputs_human or referenced CSVs
+  - metric_id: "laser.linearity_r2_488"
+    value: 0.998
+    unit: "unitless"
+    details: "Regression of power vs setpoint (linearity_series)."
+
+  - metric_id: "laser.short_term_stability_delta_percent_488"
+    value: 1.8
+    unit: "percent"
+    details: "Δ% computed from short-term stability series."
+
+  - metric_id: "laser.long_term_stability_delta_percent_488"
+    value: 2.4
+    unit: "percent"
+    details: "Δ% computed from long-term stability series."
+
+  # PSF / resolution metrics computed from bead stack
+  - metric_id: "psf.fwhm_x_um"
+    value: 0.23
+    unit: "um"
+    details: "Gaussian fit; central ROI."
+
+  - metric_id: "psf.fwhm_y_um"
+    value: 0.24
+    unit: "um"
+
+  - metric_id: "psf.fwhm_z_um"
+    value: 0.62
+    unit: "um"
+
+  - metric_id: "psf.fit_r2"
+    value: 0.972
+    unit: "unitless"
+
+  # Alignment / co-registration metrics computed from multicolor beads
+  - metric_id: "coreg.distance_488_561_um"
+    value: 0.06
+    unit: "um"
+    details: "3D distance between bead centers."
+
+  # Stage repeatability metrics computed from repeatability acquisition
+  - metric_id: "stage.repeatability_sigma_x_um"
+    value: 0.18
+    unit: "um"
+    details: "Std dev of centroid X over 20 cycles."
+
+  - metric_id: "stage.repeatability_sigma_y_um"
+    value: 0.20
+    unit: "um"
+
+# -----------------------------------------------------------------------------
+# EVALUATION (machine-generated; GitHub Action writes/updates this block)
+# -----------------------------------------------------------------------------
+# CI compares computed metrics to a benchmark file and writes verdicts here.
+# Humans should not edit this block.
+evaluation:
+  benchmark_ref: "benchmarks/<microscope>.yaml@<git_sha_or_tag>"   # Make evaluation reproducible
+  evaluated_utc: "2026-02-16T09:03:30Z"
+  evaluated_by: "github_action:qceval"
+  overall_status: "warn"                                          # pass | warn | fail
+
+  results:
+    - metric_id: "laser.short_term_stability_delta_percent_488"
+      status: "pass"
+      threshold: "warn>3.0%, fail>5.0%"
+      message: ""
+
+    - metric_id: "psf.fwhm_z_um"
+      status: "warn"
+      threshold: "warn>0.60um, fail>0.75um"
+      message: "Z slightly above baseline; check immersion and objective."
+
+# -----------------------------------------------------------------------------
+# ARTIFACT POINTERS (raw data in OMERO; previews/plots can be in repo)
+# -----------------------------------------------------------------------------
+# Use stable URIs/IDs. The YAML is the ledger; OMERO is the raw data store.
+artifacts:
+  - artifact_id: "art_laser_linearity_csv"
+    role: "table"                                   # table | raw_image | preview | report | other
+    uri: "omero://<server>/<group>/dataset/<id>/file/laser_linearity.csv"
+    description: "Laser setpoint sweep (linearity)."
+
+  - artifact_id: "art_laser_stability_csv"
+    role: "table"
+    uri: "omero://<server>/<group>/dataset/<id>/file/laser_stability.csv"
+    description: "Laser power time series (stability)."
+
+  - artifact_id: "art_psf_stack_raw"
+    role: "raw_image"
+    uri: "omero://<server>/<group>/image/<id>"
+    description: "PSF bead z-stack."
+    checksum_sha256: "<optional>"
+
+  - artifact_id: "art_psf_preview"
+    role: "preview"
+    uri: "qc/<microscope>/<YYYY>/previews/<qc_id>_psf_mip.png"
+    description: "Preview for UI (not used for quant)."
+
+  - artifact_id: "art_coreg_stack_raw"
+    role: "raw_image"
+    uri: "omero://<server>/<group>/image/<id>"
+    description: "Multicolor bead stack."
+
+  - artifact_id: "art_coreg_preview"
+    role: "preview"
+    uri: "qc/<microscope>/<YYYY>/previews/<qc_id>_coreg_overlay.png"
+    description: "Overlay preview."
+
+  - artifact_id: "art_stage_repeat_raw"
+    role: "raw_image"
+    uri: "omero://<server>/<group>/image/<id>"
+    description: "Stage repeatability acquisition."
+
+  - artifact_id: "art_stage_repeat_plot"
+    role: "preview"
+    uri: "qc/<microscope>/<YYYY>/previews/<qc_id>_stage_repeat.png"
+    description: "Repeatability plot."

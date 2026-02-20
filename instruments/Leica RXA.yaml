@@ -1,0 +1,63 @@
+---
+instrument:
+  display_name: Leica RXA
+  instrument_id: ''
+  manufacturer: Leica Microsystems
+  model: RXA
+  stand_orientation: upright
+  notes: 'type: "Widefield microscope (upright)" | filters: ["DAPI/Hoechst", "GFP/AlexaÂ 488",
+    "TRITC/RFP"] | imaging_modes: ["Fluorescence (epifluorescence)", "Brightfield
+    (transmitted light)", "Darkfield"]'
+modalities:
+- widefield_fluorescence
+- transmitted_brightfield
+modules: []
+software:
+  acquisition:
+    name: Unknown
+    version: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+  light_sources: []
+  detectors:
+  - kind: sCMOS
+    manufacturer: ''
+    model: Nikon DS-Fi2 color CMOS camera (2560Ã—1920)
+  objectives:
+  - manufacturer: Leica
+    model: Plan
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: ''
+    immersion: air
+    correction: ''
+  - manufacturer: Leica
+    model: Plan
+    magnification: 20.0
+    numerical_aperture: 0.6
+    working_distance: ''
+    immersion: air
+    correction: ''
+  - manufacturer: Leica
+    model: Plan
+    magnification: 40.0
+    numerical_aperture:
+    working_distance: ''
+    immersion: oil
+    correction: ''
+  - manufacturer: Leica
+    model: Plan
+    magnification: 63.0
+    numerical_aperture:
+    working_distance: ''
+    immersion: oil
+    correction: ''
+  - manufacturer: Leica
+    model: Plan
+    magnification: 100.0
+    numerical_aperture:
+    working_distance: ''
+    immersion: oil
+    correction: ''
