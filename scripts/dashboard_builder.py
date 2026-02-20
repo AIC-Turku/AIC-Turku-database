@@ -342,7 +342,7 @@ def _chart_data_json(qc_logs: list[dict[str, Any]]) -> str:
 
 
 if __name__ == "__main__":
-    docs_root = Path("docs")
+    docs_root = Path("dashboard_docs")
     os.makedirs(docs_root, exist_ok=True)
     os.makedirs(docs_root / "instruments", exist_ok=True)
     os.makedirs(docs_root / "events", exist_ok=True)
@@ -355,7 +355,6 @@ if __name__ == "__main__":
     event_detail_template = jinja_env.get_template("event_detail.md.j2")
 
     instruments = get_all_instruments("instruments")
-    nav_instrument_entries: list[dict[str, Any]] = []
 
     for instrument_id, instrument_payload in sorted(instruments.items(), key=lambda item: item[0]):
         instrument_section = instrument_payload.get("instrument")
@@ -478,27 +477,3 @@ if __name__ == "__main__":
                 raw_yaml_content=raw_yaml_text,
             )
             (docs_root / "events" / f"{event_id}.md").write_text(event_rendered, encoding="utf-8")
-
-        nav_instrument_entries.append(
-            {
-                display_name: [
-                    {"Specs": f"instruments/{instrument_id}/spec.md"},
-                    {"History": f"instruments/{instrument_id}/history.md"},
-                ]
-            }
-        )
-
-    mkdocs_path = Path("mkdocs.yml")
-    mkdocs_data: dict[str, Any] = {}
-    if mkdocs_path.exists():
-        try:
-            mkdocs_data = yaml.safe_load(mkdocs_path.read_text(encoding="utf-8")) or {}
-        except (OSError, yaml.YAMLError):
-            mkdocs_data = {}
-
-    mkdocs_data["nav"] = [
-        {"Home": "index.md"},
-        {"System Status": "status.md"},
-        {"Instruments": nav_instrument_entries},
-    ]
-    mkdocs_path.write_text(yaml.safe_dump(mkdocs_data, sort_keys=False, allow_unicode=True), encoding="utf-8")
