@@ -1,0 +1,147 @@
+schema_version: 1
+record_type: qc_session
+
+qc_id: "qc_scope-testx1_20260115T1610Z_darknoise_v1"
+microscope: "scope-testx1"
+
+started_utc: "2026-01-15T16:10:00Z"
+ended_utc: "2026-01-15T17:05:00Z"
+
+performed_by: "Ida Laine"
+reason: "troubleshooting"
+summary: "QC observed elevated camera background and unstable sensor temperature before cooling repair."
+notes: >
+  Dark current rose over 60 min and hot pixels increased; consistent with cooling alarm events seen by users.
+
+performed:
+  - qc_type: "laser_power"
+    details: "Linearity and 20-minute stability check at objective plane."
+    artifacts: ["art_laser_linearity_csv", "art_laser_stability_csv"]
+  - qc_type: "psf"
+    details: "175 nm bead stack in 488 channel."
+    artifacts: ["art_psf_stack_raw", "art_psf_preview"]
+  - qc_type: "alignment"
+    details: "Multicolor bead co-registration check (488/561)."
+    artifacts: ["art_coreg_stack_raw", "art_coreg_preview"]
+  - qc_type: "stage"
+    details: "Stage repeatability assay over 100 cycles."
+    artifacts: ["art_stage_repeat_raw", "art_stage_repeat_plot"]
+
+inputs_human:
+  - metric_id: "visual.optics_clean"
+    value: "yes"
+    unit: ""
+    details: "No visible residue on objective front lens."
+
+laser_inputs_human:
+  measurement_position: "at_objective"
+  measurement_position_details: "60x/1.4 objective with calibrated photodiode adapter."
+  power_meter:
+    model: "Thorlabs PM100D + S170C"
+    serial: "PMD-AX41-228"
+    calibration_due: "2026-12-31"
+    integration_time_s: 1.0
+    notes: "Room temp 22 C, humidity 41%."
+  linearity_series:
+    - laser: "488"
+      setpoint_units: "percent"
+      power_units: "mW"
+      points:
+        - setpoint: 10
+          power: 0.22
+        - setpoint: 20
+          power: 0.44
+        - setpoint: 50
+          power: 1.10
+        - setpoint: 100
+          power: 2.17
+      csv_artifact: "art_laser_linearity_csv"
+      details: "Single sweep after 10-minute warm-up."
+  stability_series:
+    - laser: "488"
+      setpoint: 80
+      setpoint_units: "percent"
+      sampling: "1 Hz for 5 min"
+      power_units: "mW"
+      timepoints:
+        - t_s: 0
+          power: 1.75
+        - t_s: 120
+          power: 1.74
+        - t_s: 300
+          power: 1.75
+      details: "Short-term stability check for trend continuity."
+
+computed_provenance:
+  pipeline: "aic_qc_pipeline"
+  version: "1.4.0"
+  git_commit: "7c4a9d1"
+  run_utc: "2026-01-15T17:05:00Z"
+
+metrics_computed:
+  - metric_id: "laser.linearity_r2_488"
+    value: 0.997
+    unit: "unitless"
+  - metric_id: "psf.fwhm_x_um"
+    value: 0.24
+    unit: "um"
+  - metric_id: "psf.fwhm_y_um"
+    value: 0.24
+    unit: "um"
+  - metric_id: "psf.fwhm_z_um"
+    value: 0.64
+    unit: "um"
+  - metric_id: "coreg.distance_488_561_um"
+    value: 0.07
+    unit: "um"
+  - metric_id: "stage.repeatability_sigma_x_um"
+    value: 0.23
+    unit: "um"
+  - metric_id: "stage.repeatability_sigma_y_um"
+    value: 0.24
+    unit: "um"
+
+evaluation:
+  benchmark_ref: "benchmarks/scope-testx1.yaml@main"
+  evaluated_utc: "2026-01-15T17:05:00Z"
+  evaluated_by: "github_action:qceval"
+  overall_status: "warn"
+  results:
+    - metric_id: "psf.fwhm_z_um"
+      status: "warn"
+      threshold: "warn>0.60um, fail>0.75um"
+      message: "Noise-related indicators and stability trended beyond warning limits."
+
+artifacts:
+  - artifact_id: "art_laser_linearity_csv"
+    role: "table"
+    uri: "omero://aic-core/scope-testx1/2026/dataset/qc_scope-testx1_20260115T1610Z_darknoise_v1/laser_linearity.csv"
+    description: "Laser setpoint sweep."
+  - artifact_id: "art_laser_stability_csv"
+    role: "table"
+    uri: "omero://aic-core/scope-testx1/2026/dataset/qc_scope-testx1_20260115T1610Z_darknoise_v1/laser_stability.csv"
+    description: "Laser stability time series."
+  - artifact_id: "art_psf_stack_raw"
+    role: "raw_image"
+    uri: "omero://aic-core/scope-testx1/2026/image/qc_scope-testx1_20260115T1610Z_darknoise_v1_psf"
+    description: "PSF bead stack."
+  - artifact_id: "art_psf_preview"
+    role: "preview"
+    uri: "qc/sessions/scope-testx1/2026/previews/qc_scope-testx1_20260115T1610Z_darknoise_v1_psf_mip.png"
+    description: "PSF MIP preview."
+  - artifact_id: "art_coreg_stack_raw"
+    role: "raw_image"
+    uri: "omero://aic-core/scope-testx1/2026/image/qc_scope-testx1_20260115T1610Z_darknoise_v1_coreg"
+    description: "Co-registration stack."
+  - artifact_id: "art_coreg_preview"
+    role: "preview"
+    uri: "qc/sessions/scope-testx1/2026/previews/qc_scope-testx1_20260115T1610Z_darknoise_v1_coreg_overlay.png"
+    description: "Co-registration overlay preview."
+  - artifact_id: "art_stage_repeat_raw"
+    role: "raw_image"
+    uri: "omero://aic-core/scope-testx1/2026/image/qc_scope-testx1_20260115T1610Z_darknoise_v1_stage"
+    description: "Stage repeatability acquisition."
+  - artifact_id: "art_stage_repeat_plot"
+    role: "preview"
+    uri: "qc/sessions/scope-testx1/2026/previews/qc_scope-testx1_20260115T1610Z_darknoise_v1_stage_repeat.png"
+    description: "Stage repeatability plot."
