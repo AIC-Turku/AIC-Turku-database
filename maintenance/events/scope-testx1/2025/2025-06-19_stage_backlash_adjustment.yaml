@@ -1,0 +1,43 @@
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_scope-testx1_20250619_stage_backlash"
+microscope: "scope-testx1"
+
+service_provider: "internal"
+company: "AIC Turku Microscopy Core"
+contact: "On-call staff: Mikko Salonen"
+reference: "INT-CORE-2025-233"
+
+started_utc: "2025-06-19T12:10:00Z"
+ended_utc: "2025-06-19T14:00:00Z"
+
+reason: "problem"
+reason_details: >
+  XY tiling jobs showed 1-2 frame overlap mismatch near the right edge,
+  consistent with increasing stage backlash.
+
+action: "align"
+action_details: >
+  Re-homed stage axes, tightened X-axis coupling set screw,
+  recalibrated pixel size/step conversion in acquisition software,
+  and validated with a 6x6 tile phantom run.
+
+microscope_status_after: "limited"
+downtime_hours: 1.8
+
+related_qc:
+  - "qc_scope-testx1_20250619T1110Z_stagegrid_v1"
+  - "qc_scope-testx1_20250620T0745Z_stagegrid_v1"
+
+attachments:
+  - "maintenance/events/scope-testx1/2025/attachments/2025-06-19_stage_validation.csv"
+
+tags: ["stage", "alignment", "tiling", "internal"]
+
+followup: >
+  Keep tile overlap at 12% minimum until next full vendor mechanical inspection.
+next_due_date: "2025-09-01"
+
+notes: >
+  Imaging resumed same afternoon, but instrument kept in limited mode for high-precision tiling only.

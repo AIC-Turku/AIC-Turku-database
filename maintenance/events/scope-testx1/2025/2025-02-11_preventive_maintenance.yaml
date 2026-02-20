@@ -1,0 +1,43 @@
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_scope-testx1_20250211_preventive_pm"
+microscope: "scope-testx1"
+
+service_provider: "vendor"
+company: "Nordic Imaging Service Oy"
+contact: "Field Engineer: Laura Niemi (laura.niemi@nordicimaging.fi)"
+reference: "NIS-2025-0211-044"
+
+started_utc: "2025-02-11T07:45:00Z"
+ended_utc: "2025-02-11T11:20:00Z"
+
+reason: "scheduled"
+reason_details: >
+  Annual preventive maintenance visit after high usage in Q4.
+  Users had noticed mild focus drift during long 60x live-cell runs.
+
+action: "service"
+action_details: >
+  Completed vendor PM checklist, cleaned objective turret contacts,
+  checked stage cable strain relief, and adjusted incubation chamber
+  fan profile to reduce vibration transfer.
+
+microscope_status_after: "in_service"
+downtime_hours: 3.6
+
+related_qc:
+  - "qc_scope-testx1_20250210T0910Z_psf_v1"
+  - "qc_scope-testx1_20250212T0835Z_psf_v1"
+
+attachments:
+  - "maintenance/events/scope-testx1/2025/attachments/2025-02-11_pm_report.pdf"
+
+tags: ["scheduled", "focus", "vibration", "vendor"]
+
+followup: >
+  Re-check autofocus repeatability after two weeks of incubated imaging.
+next_due_date: "2026-02-01"
+
+notes: >
+  Drift reduced after fan profile adjustment. No component replacement needed.

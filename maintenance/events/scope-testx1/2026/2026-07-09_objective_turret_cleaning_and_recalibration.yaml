@@ -1,0 +1,42 @@
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_scope-testx1_20260709_objective_turret_cleaning"
+microscope: "scope-testx1"
+
+service_provider: "internal"
+company: "AIC Turku Microscopy Core"
+contact: "Responsible staff: Elina Vainio"
+reference: "INT-CORE-2026-411"
+
+started_utc: "2026-07-09T10:15:00Z"
+ended_utc: "2026-07-09T12:05:00Z"
+
+reason: "check"
+reason_details: >
+  Weekly QC trend indicated slight channel-dependent focus offset after objective changes,
+  suggesting turret contact contamination.
+
+action: "clean"
+action_details: >
+  Cleaned turret electrical contacts and objective shoulders with approved solvent,
+  then recalibrated parfocal offsets for 20x/40x/60x objectives.
+
+microscope_status_after: "in_service"
+downtime_hours: 1.8
+
+related_qc:
+  - "qc_scope-testx1_20260709T0930Z_focusoffset_v1"
+  - "qc_scope-testx1_20260710T0730Z_focusoffset_v1"
+
+attachments:
+  - "maintenance/events/scope-testx1/2026/attachments/2026-07-09_parfocal_table.csv"
+
+tags: ["objective", "turret", "cleaning", "calibration"]
+
+followup: >
+  Include objective switch stress-test in monthly QC set.
+next_due_date: "2026-08-05"
+
+notes: >
+  Offsets improved from max 1.9 um to below 0.6 um across tested objectives.
