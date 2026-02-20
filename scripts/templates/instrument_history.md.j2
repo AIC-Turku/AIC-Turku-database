@@ -41,8 +41,7 @@
 | Date | Suite/Type | Status |
 |------|------------|--------|
 {% for event in qc_events | default([], true) -%}
-{% set event_id = event.event_id %}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
 {% else -%}
 | — | — | — |
 {% endfor %}
@@ -52,8 +51,7 @@
 | Date | Suite/Type | Status |
 |------|------------|--------|
 {% for event in maintenance_events | default([], true) -%}
-{% set event_id = event.event_id %}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
 {% else -%}
 | — | — | — |
 {% endfor %}
