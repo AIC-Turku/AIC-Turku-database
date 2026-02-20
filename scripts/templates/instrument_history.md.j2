@@ -14,35 +14,40 @@
 
 ## Metrics Over Time
 
-
 <div>
-  <canvas id="qcChart"></canvas>
+<div id="chartsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const allCharts = {{ charts_json }};
-    const chartIds = Object.keys(allCharts || {});
-    const defaultChart = chartIds.length ? allCharts[chartIds[0]] : { labels: [], datasets: [] };
-    const ctx = document.getElementById('qcChart');
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const chartsData = {{ charts_json }};
+    const container = document.getElementById('chartsContainer');
 
-    new Chart(ctx, {
-      type: 'line',
-      data: defaultChart,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false
-        },
-        scales: {
-          y: {
-            beginAtZero: false
-          }
-        }
-      }
-    });
-  </script>
+    for (const [metricId, chartConfig] of Object.entries(chartsData)) {
+        const wrapper = document.createElement('div');
+        wrapper.style.border = '1px solid var(--md-default-fg-color--lightest)';
+        wrapper.style.padding = '10px';
+        wrapper.style.borderRadius = '8px';
+        wrapper.style.backgroundColor = 'var(--md-default-bg-color)';
+        
+        const canvas = document.createElement('canvas');
+        wrapper.appendChild(canvas);
+        container.appendChild(wrapper);
+
+        new Chart(canvas, {
+            type: 'line',
+            data: chartConfig,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: metricId }
+                }
+            }
+        });
+    }
+});
+</script>
 </div>
 
 
