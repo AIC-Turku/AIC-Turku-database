@@ -24,7 +24,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-docs.txt
+        run: pip install -r requirements-docs.txt
 
       - name: Run dashboard builder
         run: python scripts/dashboard_builder.py
