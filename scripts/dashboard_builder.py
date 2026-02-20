@@ -127,7 +127,29 @@ def get_latest_log(log_dir: str, instrument_id: str) -> dict[str, Any] | None:
     if not instrument_id or not instrument_id.strip():
         return None
 
-    base_path = Path(log_dir)
+    all_logs = get_all_instrument_logs(log_dir, instrument_id)
+    if not all_logs:
+        return None
+
+    return all_logs[-1]["data"]
+
+
+def get_all_instrument_logs(log_base_dir: str, instrument_id: str) -> list[dict[str, Any]]:
+    """Return all logs for ``instrument_id`` under ``log_base_dir`` in time order.
+
+    Every matching YAML file is returned with both path metadata and parsed payload:
+    - ``source_path``: path to the YAML file
+    - ``filename``: basename of the YAML file
+    - ``data``: parsed YAML mapping
+
+    Sorting is oldest -> newest using ``started_utc`` (UTC-normalized). If a file has
+    no parseable ``started_utc``, it is placed first and then deterministically ordered
+    by path.
+    """
+    if not instrument_id or not instrument_id.strip():
+        return []
+
+    base_path = Path(log_base_dir)
     target_id = instrument_id.strip()
     candidates: list[tuple[datetime, Path, dict[str, Any]]] = []
 
@@ -137,6 +159,9 @@ def get_latest_log(log_dir: str, instrument_id: str) -> dict[str, Any] | None:
             continue
 
         payload_instrument = payload.get("microscope")
+        if not isinstance(payload_instrument, str):
+            payload_instrument = payload.get("instrument_id")
+
         if payload_instrument != target_id:
             continue
 
@@ -149,10 +174,17 @@ def get_latest_log(log_dir: str, instrument_id: str) -> dict[str, Any] | None:
         candidates.append((sort_dt, yaml_file, payload))
 
     if not candidates:
-        return None
+        return []
 
     candidates.sort(key=lambda item: (item[0], item[1].as_posix()))
-    return candidates[-1][2]
+    return [
+        {
+            "source_path": path.as_posix(),
+            "filename": path.name,
+            "data": payload,
+        }
+        for _, path, payload in candidates
+    ]
 
 
 def _extract_log_date(log_entry: dict[str, Any] | None) -> str:
