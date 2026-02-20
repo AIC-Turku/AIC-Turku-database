@@ -341,7 +341,7 @@ def _chart_data_json(qc_logs: list[dict[str, Any]]) -> str:
     return json.dumps(chart_payload)
 
 
-if __name__ == "__main__":
+def main() -> None:
     docs_root = Path("dashboard_docs")
     os.makedirs(docs_root, exist_ok=True)
     os.makedirs(docs_root / "instruments", exist_ok=True)
@@ -477,3 +477,63 @@ if __name__ == "__main__":
                 raw_yaml_content=raw_yaml_text,
             )
             (docs_root / "events" / f"{event_id}.md").write_text(event_rendered, encoding="utf-8")
+
+    nav_structure: list[dict[str, Any]] = [
+        {"Fleet Overview": "index.md"},
+        {"System Health": "status.md"},
+        {"Microscopes": []},
+    ]
+
+    microscope_nav = nav_structure[2]["Microscopes"]
+    if isinstance(microscope_nav, list):
+        for instrument_id, instrument_payload in sorted(instruments.items(), key=lambda item: item[0]):
+            instrument_section = instrument_payload.get("instrument")
+            display_name = instrument_id
+            if isinstance(instrument_section, dict):
+                raw_display_name = instrument_section.get("display_name")
+                if isinstance(raw_display_name, str) and raw_display_name.strip():
+                    display_name = raw_display_name.strip()
+
+            microscope_nav.append({display_name: f"instruments/{instrument_id}/spec.md"})
+
+    mkdocs_config = {
+        "site_name": "AIC Microscopy Dashboard",
+        "site_url": "https://aic-turku.github.io/AIC-Turku-database/",
+        "docs_dir": "dashboard_docs",
+        "theme": {
+            "name": "material",
+            "logo": "assets/images/logo.png",
+            "favicon": "assets/images/favicon.png",
+            "features": [
+                "navigation.tabs",
+                "navigation.sections",
+                "navigation.top",
+                "toc.integrate",
+                "search.suggest",
+                "search.highlight",
+            ],
+            "palette": [
+                {
+                    "scheme": "default",
+                    "toggle": {
+                        "icon": "material/brightness-7",
+                        "name": "Switch to dark mode",
+                    },
+                },
+                {
+                    "scheme": "slate",
+                    "toggle": {
+                        "icon": "material/brightness-4",
+                        "name": "Switch to light mode",
+                    },
+                },
+            ],
+        },
+        "nav": nav_structure,
+    }
+
+    Path("mkdocs.yml").write_text(yaml.dump(mkdocs_config, sort_keys=False), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
