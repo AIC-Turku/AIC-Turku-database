@@ -1,0 +1,42 @@
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_scope-testx1_20260328_control_software_update"
+microscope: "scope-testx1"
+
+service_provider: "vendor"
+company: "Nordic Imaging Service Oy"
+contact: "Remote engineer: J. Lehtinen"
+reference: "NIS-RMT-2026-218"
+
+started_utc: "2026-03-28T09:00:00Z"
+ended_utc: "2026-03-28T11:35:00Z"
+
+reason: "upgrade"
+reason_details: >
+  Planned firmware and control software upgrade to address autofocus lockups
+  and improve hardware trigger synchronization.
+
+action: "update"
+action_details: >
+  Updated controller firmware from 3.8.4 to 3.9.1 and acquisition software patch level,
+  migrated user macros, and validated trigger timing with a pulse generator.
+
+microscope_status_after: "limited"
+downtime_hours: 2.6
+
+related_qc:
+  - "qc_scope-testx1_20260327T1505Z_trigger_v1"
+  - "qc_scope-testx1_20260329T0815Z_trigger_v1"
+
+attachments:
+  - "maintenance/events/scope-testx1/2026/attachments/2026-03-28_upgrade_log.txt"
+
+tags: ["firmware", "software", "trigger", "autofocus"]
+
+followup: >
+  Keep high-speed acquisition workflows supervised until first week of April.
+next_due_date: "2026-04-07"
+
+notes: >
+  Two legacy macros required manual edits due to deprecated command names.

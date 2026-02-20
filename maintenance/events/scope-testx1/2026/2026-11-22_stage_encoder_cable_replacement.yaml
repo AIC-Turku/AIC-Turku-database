@@ -1,0 +1,42 @@
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_scope-testx1_20261122_stage_encoder_cable"
+microscope: "scope-testx1"
+
+service_provider: "third_party"
+company: "Precision Motion Nordic"
+contact: "Service technician: Tomas Berg"
+reference: "PMN-2026-7724"
+
+started_utc: "2026-11-22T07:20:00Z"
+ended_utc: "2026-11-22T13:50:00Z"
+
+reason: "problem"
+reason_details: >
+  Stage occasionally lost absolute position after long overnight screening jobs,
+  causing run aborts in approximately 1 of 6 plates.
+
+action: "replace"
+action_details: >
+  Replaced worn stage encoder ribbon cable and cable guide,
+  rerouted harness to increase bend radius, and validated repeatability over 500 cycles.
+
+microscope_status_after: "in_service"
+downtime_hours: 6.5
+
+related_qc:
+  - "qc_scope-testx1_20261121T1700Z_repeatability_v1"
+  - "qc_scope-testx1_20261123T0820Z_repeatability_v1"
+
+attachments:
+  - "maintenance/events/scope-testx1/2026/attachments/2026-11-22_encoder_validation.pdf"
+
+tags: ["stage", "encoder", "cable", "screening"]
+
+followup: >
+  Run one unattended mock plate every Friday for four weeks.
+next_due_date: "2026-12-20"
+
+notes: >
+  No position loss observed during post-repair endurance test.

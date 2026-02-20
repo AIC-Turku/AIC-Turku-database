@@ -1,0 +1,42 @@
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_scope-testx1_20250903_led_driver_replace"
+microscope: "scope-testx1"
+
+service_provider: "distributor"
+company: "BioOptics Finland"
+contact: "Service desk +358-10-555-2200"
+reference: "BOF-SR-98731"
+
+started_utc: "2025-09-03T06:30:00Z"
+ended_utc: "2025-09-03T15:10:00Z"
+
+reason: "problem"
+reason_details: >
+  Illumination in the 561 nm channel intermittently dropped to ~40% output,
+  causing failed time-lapse experiments.
+
+action: "replace"
+action_details: >
+  Replaced failing LED driver module for the 561 channel, checked power rails,
+  and rebalanced channel intensity presets across 405/488/561/640.
+
+microscope_status_after: "in_service"
+downtime_hours: 8.7
+
+related_qc:
+  - "qc_scope-testx1_20250902T1530Z_intensity_v1"
+  - "qc_scope-testx1_20250904T0805Z_intensity_v1"
+
+attachments:
+  - "maintenance/events/scope-testx1/2025/attachments/2025-09-03_driver_invoice.pdf"
+
+tags: ["illumination", "led", "replacement", "downtime"]
+
+followup: >
+  Repeat lamp intensity trend check monthly for the next quarter.
+next_due_date: "2025-10-05"
+
+notes: >
+  This outage caused cancellation of two booked sessions; users notified by core facility mailing list.
