@@ -1,0 +1,155 @@
+"""Helpers for building dashboards from instrument and log YAML ledgers."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+
+def _iter_yaml_files(base_dir: Path):
+    """Yield YAML files under ``base_dir`` in deterministic order."""
+    if not base_dir.exists() or not base_dir.is_dir():
+        return
+
+    for candidate in sorted(base_dir.rglob("*")):
+        if candidate.is_file() and candidate.suffix.lower() in {".yaml", ".yml"}:
+            yield candidate
+
+
+def _load_yaml_file(path: Path) -> dict[str, Any] | None:
+    """Safely load a YAML mapping from disk and return ``None`` on invalid data."""
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            parsed = yaml.safe_load(handle)
+    except (OSError, yaml.YAMLError):
+        return None
+
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _parse_iso_datetime(raw_value: Any) -> datetime | None:
+    """Parse an ISO-like datetime string and normalize to UTC-aware ``datetime``."""
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        return None
+
+    normalized = raw_value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    else:
+        parsed = parsed.astimezone(timezone.utc)
+    return parsed
+
+
+def _timestamp_from_filename(path: Path) -> datetime | None:
+    """Extract a date/time from a ledger filename stem.
+
+    Supports names like ``2026-11-23_post_encoder_repair`` or
+    ``2026-11-23T08-20-00Z_event``.
+    """
+    stem = path.stem
+    first_chunk = stem.split("_", 1)[0]
+
+    # Handle filenames that include full timestamps with separator variants.
+    full_ts = first_chunk.replace("Z", "+00:00")
+    if "T" in full_ts:
+        date_part, time_part = full_ts.split("T", 1)
+        if "+" not in time_part and "-" in time_part and time_part.count("-") >= 2:
+            # Convert HH-MM-SS style to HH:MM:SS (offset part is not expected here).
+            time_tokens = time_part.split("-")
+            if len(time_tokens) >= 3:
+                time_part = ":".join(time_tokens[:3])
+                full_ts = f"{date_part}T{time_part}"
+
+    parsed = _parse_iso_datetime(full_ts)
+    if parsed:
+        return parsed
+
+    # Fallback to date-only filenames.
+    try:
+        return datetime.strptime(first_chunk, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _extract_instrument_id(data: dict[str, Any], fallback: str) -> str:
+    """Get instrument id from common YAML layouts with a safe fallback."""
+    raw_id = data.get("instrument_id")
+    if isinstance(raw_id, str) and raw_id.strip():
+        return raw_id.strip()
+
+    instrument_section = data.get("instrument")
+    if isinstance(instrument_section, dict):
+        nested_id = instrument_section.get("instrument_id")
+        if isinstance(nested_id, str) and nested_id.strip():
+            return nested_id.strip()
+
+    return fallback
+
+
+def get_all_instruments(instruments_dir: str = "instruments") -> dict[str, dict[str, Any]]:
+    """Load all instrument YAML files keyed by instrument id.
+
+    Uses ``instrument_id`` from the file content when available. If it is blank or
+    missing, the file stem is used.
+    """
+    result: dict[str, dict[str, Any]] = {}
+    base_path = Path(instruments_dir)
+
+    for yaml_file in _iter_yaml_files(base_path):
+        payload = _load_yaml_file(yaml_file)
+        if payload is None:
+            continue
+
+        instrument_id = _extract_instrument_id(payload, fallback=yaml_file.stem)
+        result[instrument_id] = payload
+
+    return result
+
+
+def get_latest_log(log_dir: str, instrument_id: str) -> dict[str, Any] | None:
+    """Return the newest parsed log for ``instrument_id`` from ``log_dir``.
+
+    All YAML files in nested year folders are scanned. Logs are sorted by:
+    1) ``started_utc`` in file content (preferred)
+    2) ISO-like timestamp encoded in filename (fallback)
+    """
+    if not instrument_id or not instrument_id.strip():
+        return None
+
+    base_path = Path(log_dir)
+    target_id = instrument_id.strip()
+    candidates: list[tuple[datetime, Path, dict[str, Any]]] = []
+
+    for yaml_file in _iter_yaml_files(base_path):
+        payload = _load_yaml_file(yaml_file)
+        if payload is None:
+            continue
+
+        payload_instrument = payload.get("microscope")
+        if payload_instrument != target_id:
+            continue
+
+        sort_dt = _parse_iso_datetime(payload.get("started_utc"))
+        if sort_dt is None:
+            sort_dt = _timestamp_from_filename(yaml_file)
+        if sort_dt is None:
+            sort_dt = datetime.min.replace(tzinfo=timezone.utc)
+
+        candidates.append((sort_dt, yaml_file, payload))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda item: (item[0], item[1].as_posix()))
+    return candidates[-1][2]
