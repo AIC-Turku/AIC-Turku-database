@@ -23,7 +23,12 @@ document.addEventListener("DOMContentLoaded", function() {
     const chartsData = {{ charts_json }};
     const container = document.getElementById('chartsContainer');
 
+    // Retrieve the python dictionary for readable names
+    const metricNames = {{ metric_names | tojson | safe }};
+
     for (const [metricId, chartConfig] of Object.entries(chartsData)) {
+        const readableTitle = metricNames[metricId] || metricId;
+
         const wrapper = document.createElement('div');
         wrapper.style.border = '1px solid var(--md-default-fg-color--lightest)';
         wrapper.style.padding = '10px';
@@ -41,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 responsive: true,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: metricId }
+                    title: { display: true, text: readableTitle, font: { size: 14 } }
                 }
             }
         });
