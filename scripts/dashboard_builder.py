@@ -294,51 +294,51 @@ def _metric_lookup(metric_entries: Any) -> dict[str, Any]:
     return output
 
 
-def _chart_data_json(qc_logs: list[dict[str, Any]]) -> str:
-    """Build a Chart.js-compatible JSON string from sorted QC logs."""
-    labels: list[str] = []
-    values: list[float | int | None] = []
-    chosen_metric = "psf.fwhm_z_um"
-    fallback_metric = "laser.short_term_stability_delta_percent_488"
-    dataset_label = chosen_metric
-
+def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
+    """Build a dictionary of Chart.js-compatible JSON datasets for ALL metrics."""
+    all_metrics = set()
     for entry in qc_logs:
-        payload = entry.get("data") if isinstance(entry, dict) else None
-        if not isinstance(payload, dict):
-            continue
+        payload = entry.get("data")
+        if isinstance(payload, dict):
+            metrics = _metric_lookup(payload.get("metrics_computed"))
+            all_metrics.update(metrics.keys())
 
-        started_utc = payload.get("started_utc")
-        parsed_started = _parse_iso_datetime(started_utc)
-        if parsed_started is None:
-            continue
+    charts = {}
+    for metric_id in all_metrics:
+        labels = []
+        values = []
+        for entry in qc_logs:
+            payload = entry.get("data")
+            if not isinstance(payload, dict):
+                continue
+            started_utc = payload.get("started_utc")
+            parsed_started = _parse_iso_datetime(started_utc)
+            if parsed_started is None:
+                continue
 
-        labels.append(parsed_started.strftime("%Y-%m-%d"))
-        metrics = _metric_lookup(payload.get("metrics_computed"))
-        point = metrics.get(chosen_metric)
-        if point is None:
-            point = metrics.get(fallback_metric)
-            if point is not None:
-                dataset_label = fallback_metric
+            labels.append(parsed_started.strftime("%Y-%m-%d"))
+            metrics = _metric_lookup(payload.get("metrics_computed"))
+            val = metrics.get(metric_id)
+            values.append(val if isinstance(val, (int, float)) else None)
 
-        if isinstance(point, (int, float)):
-            values.append(point)
-        else:
-            values.append(None)
-
-    chart_payload = {
-        "labels": labels,
-        "datasets": [
-            {
-                "label": dataset_label,
-                "data": values,
-                "borderColor": "rgba(75, 192, 192, 1)",
-                "backgroundColor": "rgba(75, 192, 192, 0.2)",
-                "spanGaps": True,
-                "tension": 0.2,
+        # Only add the chart if there is at least one valid measurement
+        if any(v is not None for v in values):
+            charts[metric_id] = {
+                "labels": labels,
+                "datasets": [
+                    {
+                        "label": metric_id,
+                        "data": values,
+                        "borderColor": "rgba(75, 192, 192, 1)",
+                        "backgroundColor": "rgba(75, 192, 192, 0.2)",
+                        "spanGaps": True,
+                        "tension": 0.2,
+                        "pointRadius": 4,
+                        "pointBackgroundColor": "rgba(75, 192, 192, 1)",
+                    }
+                ],
             }
-        ],
-    }
-    return json.dumps(chart_payload)
+    return json.dumps(charts)
 
 
 def main() -> None:
@@ -369,11 +369,13 @@ def main() -> None:
         qc_logs = get_all_instrument_logs("qc/sessions", instrument_id)
         maintenance_logs = get_all_instrument_logs("maintenance/events", instrument_id)
 
-        chart_data_json = _chart_data_json(qc_logs)
+        charts_json = _build_all_charts_data(qc_logs)
 
         latest_qc = qc_logs[-1]["data"] if qc_logs else None
         latest_maintenance = maintenance_logs[-1]["data"] if maintenance_logs else None
         status = evaluate_instrument_status(instrument_id, latest_qc, latest_maintenance)
+        
+        latest_metrics = _metric_lookup(latest_qc.get("metrics_computed")) if latest_qc else {}
 
         light_sources = [
             {
@@ -415,7 +417,8 @@ def main() -> None:
             light_sources=light_sources,
             detectors=detectors,
             objectives=objectives,
-            chart_data_json=chart_data_json,
+            charts_json=charts_json,
+            latest_metrics=latest_metrics,
         )
         (instrument_dir / "spec.md").write_text(spec_rendered, encoding="utf-8")
 
@@ -451,7 +454,8 @@ def main() -> None:
             display_name=display_name,
             qc_events=qc_events,
             maintenance_events=maintenance_events,
-            chart_data_json=chart_data_json,
+            charts_json=charts_json,
+            latest_metrics=latest_metrics,
         )
         (instrument_dir / "history.md").write_text(history_rendered, encoding="utf-8")
 
@@ -597,11 +601,13 @@ if __name__ == "__main__":
         qc_logs = get_all_instrument_logs("qc/sessions", instrument_id)
         maintenance_logs = get_all_instrument_logs("maintenance/events", instrument_id)
 
-        chart_data_json = _chart_data_json(qc_logs)
+        charts_json = _build_all_charts_data(qc_logs)
 
         latest_qc = qc_logs[-1]["data"] if qc_logs else None
         latest_maintenance = maintenance_logs[-1]["data"] if maintenance_logs else None
         status = evaluate_instrument_status(instrument_id, latest_qc, latest_maintenance)
+
+        latest_metrics = _metric_lookup(latest_qc.get("metrics_computed")) if latest_qc else {}
 
         # Append to Fleet Data
         inst_summary = {
@@ -659,7 +665,8 @@ if __name__ == "__main__":
             light_sources=light_sources,
             detectors=detectors,
             objectives=objectives,
-            chart_data_json=chart_data_json,
+            charts_json=charts_json,
+            latest_metrics=latest_metrics,
         )
         (instrument_dir / "spec.md").write_text(spec_rendered, encoding="utf-8")
 
@@ -696,7 +703,8 @@ if __name__ == "__main__":
             display_name=display_name,
             qc_events=qc_events,
             maintenance_events=maintenance_events,
-            chart_data_json=chart_data_json,
+            charts_json=charts_json,
+            latest_metrics=latest_metrics,
         )
         (instrument_dir / "history.md").write_text(history_rendered, encoding="utf-8")
 
