@@ -4,31 +4,35 @@
 
 ## Metrics Over Time
 
-<canvas id="qcChart"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const chartData = {{ chart_data_json }};
-  const ctx = document.getElementById('qcChart');
+<div>
+  <canvas id="qcChart"></canvas>
 
-  new Chart(ctx, {
-    type: 'line',
-    data: chartData,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false
-      },
-      scales: {
-        y: {
-          beginAtZero: false
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const chartData = {{ chart_data_json }};
+    const ctx = document.getElementById('qcChart');
+
+    new Chart(ctx, {
+      type: 'line',
+      data: chartData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        scales: {
+          y: {
+            beginAtZero: false
+          }
         }
       }
-    }
-  });
-</script>
+    });
+  </script>
+</div>
+
 
 ## Event Log
 
