@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Nikon Eclipse Ti2-E
-  instrument_id: ''
+  instrument_id: scope-nikon-eclipse-ti2-e
   manufacturer: Nikon
   model: Eclipse Ti2-E
   stand_orientation: inverted

@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Leica DMRE
-  instrument_id: ''
+  instrument_id: scope-leica-dmre
   manufacturer: Leica Microsystems
   model: DMRE
   stand_orientation: upright

@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Zeiss LSM 510 JPK AFM
-  instrument_id: ''
+  instrument_id: scope-zeiss-lsm-510-jpk-afm
   manufacturer: Zeiss
   model: LSM 510 JPK AFM
   stand_orientation: other

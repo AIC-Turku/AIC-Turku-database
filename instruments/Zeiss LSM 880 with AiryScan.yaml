@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Zeiss LSM 880 with AiryScan
-  instrument_id: ''
+  instrument_id: scope-zeiss-lsm-880-with-airyscan
   manufacturer: Zeiss
   model: LSM 880 with AiryScan
   stand_orientation: inverted
@@ -9,7 +8,7 @@ instrument:
     tunable emission filters (array detector 371â€“740 nm)", {"AiryScan preset emission
     filters"=>["BP 420â€“488 + BP 495â€“550", "BP 465â€“505 + LP 525", "BP 420â€“488
     + LP 555", "BP 495â€“550 + LP 570", "BP 555â€“620 + LP 645", "BP 570â€“620 + LP
-    645"]}] | additional_hardware: ["Image processing workstation (36 TB, 4Â GB GPU)",
+    645"]}] | additional_hardware: ["Image processing workstation (36 TB, 4 GB GPU)",
     "Piezo Z-stage", "Zeiss Definite Focus (focus stabilization)", "Environmental
     chamber with temperature control", "Heated stage inserts"] | imaging_modes: ["Confocal
     scanning (spectral detection)", "Super-resolution AiryScan mode", "Fast live-cell

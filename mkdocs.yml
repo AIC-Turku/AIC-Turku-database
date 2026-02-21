@@ -1,11 +1,8 @@
 site_name: AIC Microscopy Dashboard
 site_url: https://aic-turku.github.io/AIC-Turku-database/
 docs_dir: dashboard_docs
-use_directory_urls: true
 theme:
   name: material
-  logo: assets/images/logo.svg
-  favicon: assets/images/favicon.svg
   features:
   - navigation.tabs
   - navigation.sections
@@ -23,28 +20,28 @@ theme:
     toggle:
       icon: material/brightness-4
       name: Switch to light mode
-markdown_extensions:
-- attr_list
-- md_in_html
-- pymdownx.details
-- pymdownx.superfences
-- pymdownx.tabbed:
-    alternate_style: true
 plugins:
 - search
+markdown_extensions:
+- admonition
+- attr_list
+- md_in_html
+- tables
+- pymdownx.details
+- pymdownx.superfences
+- pymdownx.tabbed
 extra_css:
 - assets/stylesheets/dashboard.css
 extra_javascript:
-- https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js
-- assets/javascripts/charts.js
 - assets/javascripts/dashboard.js
+- https://cdn.jsdelivr.net/npm/chart.js
 nav:
 - Fleet Overview: index.md
 - System Health: status.md
 - Microscopes:
+  - Abberior STED: instruments/scope-1e33f909/index.md
   - 3i CSU-W1 Spinning Disk: instruments/scope-3i-csu-w1-spinning-disk/index.md
   - 3i CSU-W1 Spinning Disk Med C: instruments/scope-3i-csu-w1-spinning-disk-med-c/index.md
-  - Abberior STED: instruments/scope-1e33f909/index.md
   - Deltavision OMX: instruments/scope-deltavision-omx/index.md
   - EVOS fl: instruments/scope-evos-fl/index.md
   - Lambert FLIM (frequency domain): instruments/scope-lambert-flim-frequency-domain/index.md

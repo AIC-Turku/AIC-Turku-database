@@ -1,13 +1,12 @@
----
 instrument:
   display_name: EVOS fl
-  instrument_id: ''
+  instrument_id: scope-evos-fl
   manufacturer: Olympus/Evident
   model: fl
   stand_orientation: inverted
   notes: 'type: "Widefield fluorescence microscope (inverted)" | filters: ["DAPI",
-    "CFP", "GFP/AlexaÂ 488", "RFP/AlexaÂ 555", "Cy5/AlexaÂ 647"] | imaging_modes:
-    ["Brightfield (transmitted)", "Fluorescence (LED illumination)"]'
+    "CFP", "GFP/Alexa 488", "RFP/Alexa 555", "Cy5/Alexa 647"] | imaging_modes: ["Brightfield
+    (transmitted)", "Fluorescence (LED illumination)"]'
 modalities:
 - widefield_fluorescence
 - transmitted_brightfield

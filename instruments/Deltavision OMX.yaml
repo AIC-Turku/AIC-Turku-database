@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Deltavision OMX
-  instrument_id: ''
+  instrument_id: scope-deltavision-omx
   manufacturer: Olympus/Evident
   model: OMX
   stand_orientation: other

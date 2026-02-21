@@ -1,38 +1,76 @@
-# {{ instrument.display_name }} — History
+# {{ instrument.display_name }} · History
 
-[⬅ Back to overview](index.md){ .md-button }
-
-<div class="aic-stack">
-
-!!! info "Log summary"
-    **QC sessions:** {{ qc_events | length }} · **Maintenance events:** {{ maintenance_events | length }}
-
+<div class="aic-topactions" markdown="span">
+  [🔙 Back to Overview](./){ .md-button }
 </div>
 
-=== "QC events"
+## Latest Metric Snapshot
 
-    | Date | Overall | Reason | Operator | Link |
-    |---|---|---|---|---|
-    {% for e in qc_events %}
-    | {{ e.date | default('—', true) }} | `{{ e.overall_status | default('—', true) }}` | {{ e.reason | default('—', true) }} | {{ e.operator | default('—', true) }} | [open](../../events/{{ e.event_id }}.md) |
-    {% else %}
-    | — | — | — | — | — |
-    {% endfor %}
+| Metric | Latest Value |
+|---|---|
+{% for metric_id, value in latest_metrics.items() -%}
+| **{{ metric_names.get(metric_id, metric_id) }}** <br><span class="aic-muted"><code>{{ metric_id }}</code></span> | <code>{{ value | default('—', true) }}</code> |
+{% else -%}
+| — | — |
+{% endfor %}
 
-=== "Maintenance"
+## Metrics Over Time
 
-    | Date | Status after | Reason | Provider | Link |
-    |---|---|---|---|---|
-    {% for e in maintenance_events %}
-    | {{ e.date | default('—', true) }} | `{{ e.status_after | default('—', true) }}` | {{ e.reason | default('—', true) }} | {{ e.provider | default('—', true) }} | [open](../../events/{{ e.event_id }}.md) |
-    {% else %}
-    | — | — | — | — | — |
-    {% endfor %}
+<div id="chartsContainer" class="aic-chartgrid"></div>
 
-=== "Trends"
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const chartsData = {{ charts_json }};
+  const metricNames = {{ metric_names | tojson | safe }};
+  const container = document.getElementById('chartsContainer');
+  if (!container || !window.Chart) return;
 
-    <div
-      class="aic-charts"
-      data-aic-charts='{{ charts_data | tojson | safe }}'
-      data-aic-metric-names='{{ metric_names | tojson | safe }}'
-    ></div>
+  for (const [metricId, chartConfig] of Object.entries(chartsData)) {
+    const readableTitle = metricNames[metricId] || metricId;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'aic-chartcard';
+
+    const title = document.createElement('div');
+    title.className = 'aic-chartcard__title';
+    title.textContent = readableTitle;
+    wrapper.appendChild(title);
+
+    const canvas = document.createElement('canvas');
+    wrapper.appendChild(canvas);
+    container.appendChild(wrapper);
+
+    new Chart(canvas, {
+      type: 'line',
+      data: chartConfig,
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: false } }
+      }
+    });
+  }
+});
+</script>
+
+## Event Log
+
+### QC Events
+
+| Date | Suite/Type | Status |
+|---|---|---|
+{% for event in qc_events | default([], true) -%}
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+{% else -%}
+| — | — | — |
+{% endfor %}
+
+### Maintenance Events
+
+| Date | Suite/Type | Status |
+|---|---|---|
+{% for event in maintenance_events | default([], true) -%}
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+{% else -%}
+| — | — | — |
+{% endfor %}

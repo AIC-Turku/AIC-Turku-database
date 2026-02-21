@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Leica Thunder
-  instrument_id: ''
+  instrument_id: scope-leica-thunder
   manufacturer: Leica Microsystems
   model: Thunder
   stand_orientation: other

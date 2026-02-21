@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Lambert FLIM (frequency domain)
-  instrument_id: ''
+  instrument_id: scope-lambert-flim-frequency-domain
   manufacturer: Other
   model: FLIM (frequency domain)
   stand_orientation: other

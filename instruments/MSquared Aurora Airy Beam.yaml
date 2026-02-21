@@ -1,7 +1,6 @@
----
 instrument:
   display_name: MSquared Aurora Airy Beam
-  instrument_id: ''
+  instrument_id: scope-msquared-aurora-airy-beam
   manufacturer: Other
   model: Aurora Airy Beam
   stand_orientation: other
@@ -39,7 +38,7 @@ hardware:
   - manufacturer: Special Optics
     model: Airy beam dipping objective (for illumination/detection)
     magnification: 16.0
-    numerical_aperture:
+    numerical_aperture: null
     working_distance: ''
     immersion: multi
     correction: ''

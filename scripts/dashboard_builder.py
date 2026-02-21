@@ -1,76 +1,67 @@
 """Build MkDocs Material dashboard pages from YAML ledgers.
 
 Pipeline
-- instruments/*.yaml           -> instrument registry
-- qc/sessions/**/<year>/*.yaml -> QC sessions
-- maintenance/events/**/*.yaml -> maintenance events
+--------
+- instruments/*.yaml
+- qc/sessions/**.yaml
+- maintenance/events/**.yaml
 
-The script normalizes metadata, fixes routing (stable slug IDs), renders pages via
-Jinja2 templates, and writes a complete mkdocs.yml for GitHub Pages builds.
+Produces:
+- dashboard_docs/index.md (fleet)
+- dashboard_docs/status.md (system health)
+- dashboard_docs/instruments/<instrument_id>/index.md (overview)
+- dashboard_docs/instruments/<instrument_id>/history.md
+- dashboard_docs/events/<event_id>.md
+- mkdocs.yml (auto-generated)
+
+The builder is intentionally deterministic: same inputs -> same output tree.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
-import unicodedata
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
 
 METRIC_NAMES: dict[str, str] = {
-    "psf.fwhm_x_um": "PSF lateral FWHM (X, µm)",
-    "psf.fwhm_y_um": "PSF lateral FWHM (Y, µm)",
-    "psf.fwhm_z_um": "PSF axial FWHM (Z, µm)",
-    "psf.fit_r2": "PSF fit R²",
-    "coreg.distance_488_561_um": "Co-registration (488↔561, µm)",
-    "stage.repeatability_sigma_x_um": "Stage repeatability σ (X, µm)",
-    "stage.repeatability_sigma_y_um": "Stage repeatability σ (Y, µm)",
-    "laser.power_mw_405": "Laser power (405 nm, mW)",
-    "laser.power_mw_488": "Laser power (488 nm, mW)",
-    "laser.power_mw_561": "Laser power (561 nm, mW)",
-    "laser.power_mw_640": "Laser power (640 nm, mW)",
-    "laser.short_term_stability_delta_percent_488": "Laser stability Δ% (488 nm)",
-    "laser.long_term_stability_delta_percent_488": "Laser long-term stability Δ% (488 nm)",
-    "illumination.uniformity_percent": "Illumination uniformity (%)",
-    "detector.dark_noise_electrons": "Detector dark noise (e⁻)",
+    "psf.fwhm_x_um": "PSF Lateral FWHM X (µm)",
+    "psf.fwhm_y_um": "PSF Lateral FWHM Y (µm)",
+    "psf.fwhm_z_um": "PSF Axial FWHM Z (µm)",
+    "laser.power_mw_405": "Laser Power: 405nm (mW)",
+    "laser.power_mw_488": "Laser Power: 488nm (mW)",
+    "laser.power_mw_561": "Laser Power: 561nm (mW)",
+    "laser.power_mw_640": "Laser Power: 640nm (mW)",
+    "laser.short_term_stability_delta_percent_488": "Laser Stability 488nm (Δ%)",
+    "illumination.uniformity_percent": "Illumination Uniformity (%)",
+    "detector.dark_noise_electrons": "Detector Dark Noise (e-)",
 }
 
-IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".svg")
 
-
-# -----------------------------------------------------------------------------
-# YAML + datetime helpers
-# -----------------------------------------------------------------------------
-
-def _iter_yaml_files(base_dir: Path):
-    """Yield YAML files under ``base_dir`` in deterministic order."""
+def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     if not base_dir.exists() or not base_dir.is_dir():
-        return
-
-    for candidate in sorted(base_dir.rglob("*")):
-        if candidate.is_file() and candidate.suffix.lower() in {".yaml", ".yml"}:
-            yield candidate
+        return []
+    return [p for p in sorted(base_dir.rglob("*")) if p.is_file() and p.suffix.lower() in {".yaml", ".yml"}]
 
 
 def _load_yaml_file(path: Path) -> dict[str, Any] | None:
-    """Safely load a YAML mapping from disk and return ``None`` on invalid data."""
     try:
-        with path.open("r", encoding="utf-8") as handle:
-            parsed = yaml.safe_load(handle)
+        raw = path.read_text(encoding="utf-8")
+        parsed = yaml.safe_load(raw)
     except (OSError, yaml.YAMLError):
         return None
-
     return parsed if isinstance(parsed, dict) else None
 
 
 def _parse_iso_datetime(raw_value: Any) -> datetime | None:
-    """Parse an ISO-like datetime string and normalize to UTC-aware datetime."""
     if not isinstance(raw_value, str) or not raw_value.strip():
         return None
 
@@ -91,7 +82,6 @@ def _parse_iso_datetime(raw_value: Any) -> datetime | None:
 
 
 def _timestamp_from_filename(path: Path) -> datetime | None:
-    """Extract a date/time from a ledger filename stem."""
     stem = path.stem
     first_chunk = stem.split("_", 1)[0]
 
@@ -99,9 +89,9 @@ def _timestamp_from_filename(path: Path) -> datetime | None:
     if "T" in full_ts:
         date_part, time_part = full_ts.split("T", 1)
         if "+" not in time_part and "-" in time_part and time_part.count("-") >= 2:
-            parts = time_part.split("-")
-            if len(parts) >= 3:
-                time_part = ":".join(parts[:3])
+            time_tokens = time_part.split("-")
+            if len(time_tokens) >= 3:
+                time_part = ":".join(time_tokens[:3])
                 full_ts = f"{date_part}T{time_part}"
 
     parsed = _parse_iso_datetime(full_ts)
@@ -114,202 +104,114 @@ def _timestamp_from_filename(path: Path) -> datetime | None:
         return None
 
 
-def _extract_log_date(payload: dict[str, Any] | None) -> str:
-    if not isinstance(payload, dict):
+def _extract_log_date(log_entry: dict[str, Any] | None) -> str:
+    if not isinstance(log_entry, dict):
         return ""
 
     for key in ("started_utc", "timestamp_utc", "date"):
-        parsed = _parse_iso_datetime(payload.get(key))
+        parsed = _parse_iso_datetime(log_entry.get(key))
         if parsed is not None:
             return parsed.date().isoformat()
-
     return ""
 
 
-# -----------------------------------------------------------------------------
-# Instrument normalization
-# -----------------------------------------------------------------------------
+def clean_text(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
 
-def slugify(text: str) -> str:
-    """ASCII + URL-safe slug (lowercase, hyphen-separated)."""
-    text = unicodedata.normalize("NFKD", text)
-    text = text.encode("ascii", "ignore").decode("ascii")
-    text = text.lower()
-    text = re.sub(r"[^a-z0-9]+", "-", text)
-    text = re.sub(r"-{2,}", "-", text).strip("-")
-    return text or "scope"
+    # Remove common double-decoding artifacts (UTF-8 NBSP rendered as "Â ")
+    s = value.replace("\u00c2\u00a0", " ").replace("\u00a0", " ")
+    s = s.replace("Â\u00a0", " ").replace("Â ", " ")
+    return s.strip()
 
 
-def _format_location(raw_location: Any) -> str:
-    if isinstance(raw_location, str) and raw_location.strip():
-        return raw_location.strip()
-
-    if isinstance(raw_location, dict):
-        parts: list[str] = []
-        for key in ("site", "building", "room"):
-            val = raw_location.get(key)
-            if isinstance(val, str) and val.strip():
-                parts.append(val.strip())
-        return " · ".join(parts)
-
-    return ""
+def slugify(value: str) -> str:
+    s = value.lower().strip()
+    s = re.sub(r"\s+", "-", s)
+    s = re.sub(r"[^a-z0-9\-]", "-", s)
+    s = re.sub(r"-+", "-", s).strip("-")
+    return s
 
 
-def _format_contacts(raw_contacts: Any) -> list[str]:
-    """Return a compact list of contact strings for display."""
-    out: list[str] = []
-    if isinstance(raw_contacts, list):
-        for item in raw_contacts:
-            if isinstance(item, str) and item.strip():
-                out.append(item.strip())
-            elif isinstance(item, dict):
-                name = (item.get("name") or "").strip() if isinstance(item.get("name"), str) else ""
-                email = (item.get("email") or "").strip() if isinstance(item.get("email"), str) else ""
-                role = (item.get("role") or "").strip() if isinstance(item.get("role"), str) else ""
+def parse_notes_compact(notes: str) -> dict[str, Any]:
+    """Parse legacy notes strings like: 'type: "..." | filters: [..] | imaging_modes: [...]'."""
+    notes = clean_text(notes)
+    if "|" not in notes or ":" not in notes:
+        return {"raw": notes} if notes else {}
 
-                label = name or email
-                if not label:
+    out: dict[str, Any] = {}
+    parts = [p.strip() for p in notes.split("|") if p.strip()]
+
+    for part in parts:
+        if ":" not in part:
+            continue
+        key, raw_val = part.split(":", 1)
+        key = key.strip().lower().replace(" ", "_")
+        raw_val = raw_val.strip()
+
+        # Try to parse list-ish values safely.
+        if raw_val.startswith("[") and raw_val.endswith("]"):
+            try:
+                parsed = yaml.safe_load(raw_val)
+                if isinstance(parsed, list):
+                    out[key] = [clean_text(x) for x in parsed]
                     continue
+            except yaml.YAMLError:
+                pass
 
-                if email and name:
-                    label = f"{name} <{email}>"
-                if role:
-                    label = f"{label} ({role})"
-                out.append(label)
-    elif isinstance(raw_contacts, dict):
-        # Single contact object
-        out.extend(_format_contacts([raw_contacts]))
+        # Unquote a simple quoted string
+        if (raw_val.startswith('"') and raw_val.endswith('"')) or (raw_val.startswith("'") and raw_val.endswith("'")):
+            raw_val = raw_val[1:-1]
+
+        out[key] = clean_text(raw_val)
+
+    if not out and notes:
+        out["raw"] = notes
 
     return out
 
 
-def _normalize_software(raw_software: Any) -> list[dict[str, str]]:
-    """Normalize arbitrary software layouts to a simple list."""
-    out: list[dict[str, str]] = []
+def normalize_software(raw: Any) -> list[dict[str, str]]:
+    """Normalize software sections into a list of rows.
 
-    def add(component: str, entry: Any):
-        if isinstance(entry, dict):
-            name = entry.get("name")
-            version = entry.get("version")
-            if isinstance(name, str) and name.strip():
-                out.append(
+    Accepts:
+    - list of dicts (already normalized)
+    - mapping of components -> {name, version}
+    - single string
+    """
+    rows: list[dict[str, str]] = []
+
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, dict):
+                rows.append(
                     {
-                        "component": component,
-                        "name": name.strip(),
-                        "version": (version.strip() if isinstance(version, str) else ""),
+                        "component": clean_text(item.get("component") or item.get("type") or ""),
+                        "name": clean_text(item.get("name") or ""),
+                        "version": clean_text(item.get("version") or ""),
                     }
                 )
-        elif isinstance(entry, str) and entry.strip():
-            out.append({"component": component, "name": entry.strip(), "version": ""})
+        return [r for r in rows if any(r.values())]
 
-    if isinstance(raw_software, dict):
-        for component, entry in raw_software.items():
-            if isinstance(entry, list):
-                for item in entry:
-                    add(str(component), item)
-            else:
-                add(str(component), entry)
-    elif isinstance(raw_software, list):
-        for item in raw_software:
-            if isinstance(item, dict):
-                component = item.get("component") if isinstance(item.get("component"), str) else "software"
-                add(component, item)
+    if isinstance(raw, dict):
+        for component, payload in raw.items():
+            if isinstance(payload, dict):
+                rows.append(
+                    {
+                        "component": clean_text(component),
+                        "name": clean_text(payload.get("name")),
+                        "version": clean_text(payload.get("version")),
+                    }
+                )
+            elif isinstance(payload, str):
+                rows.append({"component": clean_text(component), "name": clean_text(payload), "version": ""})
+        return [r for r in rows if any(r.values())]
 
-    return out
+    if isinstance(raw, str) and raw.strip():
+        return [{"component": "software", "name": clean_text(raw), "version": ""}]
 
+    return []
 
-def _find_image_filename(assets_images_dir: Path, instrument_id: str) -> str:
-    for ext in IMAGE_EXTS:
-        candidate = assets_images_dir / f"{instrument_id}{ext}"
-        if candidate.exists():
-            return candidate.name
-    return "placeholder.svg"
-
-
-def normalize_instrument(payload: dict[str, Any], source_path: Path, assets_images_dir: Path) -> dict[str, Any]:
-    instrument_section = payload.get("instrument") if isinstance(payload.get("instrument"), dict) else {}
-
-    display_name = instrument_section.get("display_name")
-    if not isinstance(display_name, str) or not display_name.strip():
-        display_name = source_path.stem
-
-    instrument_id = instrument_section.get("instrument_id")
-    if not isinstance(instrument_id, str) or not instrument_id.strip():
-        # Robust fallback (should not happen if instruments are maintained correctly)
-        instrument_id = f"scope-{slugify(display_name)}"
-
-    manufacturer = instrument_section.get("manufacturer")
-    model = instrument_section.get("model")
-    stand_orientation = instrument_section.get("stand_orientation")
-    notes = instrument_section.get("notes")
-
-    location = _format_location(instrument_section.get("location"))
-
-    booking_url = instrument_section.get("booking_url")
-    if not (isinstance(booking_url, str) and booking_url.strip()):
-        booking = instrument_section.get("booking")
-        if isinstance(booking, dict) and isinstance(booking.get("url"), str):
-            booking_url = booking.get("url")
-
-    contacts = _format_contacts(instrument_section.get("contacts"))
-
-    modalities = payload.get("modalities") if isinstance(payload.get("modalities"), list) else []
-    modalities = [m for m in modalities if isinstance(m, str) and m.strip()]
-
-    modules = payload.get("modules") if isinstance(payload.get("modules"), list) else []
-    modules = [m for m in modules if isinstance(m, str) and m.strip()]
-
-    software = _normalize_software(payload.get("software"))
-
-    hardware = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
-
-    image_filename = _find_image_filename(assets_images_dir, instrument_id)
-
-    return {
-        "id": instrument_id,
-        "instrument_id": instrument_id,
-        "display_name": display_name,
-        "manufacturer": manufacturer.strip() if isinstance(manufacturer, str) else "",
-        "model": model.strip() if isinstance(model, str) else "",
-        "stand_orientation": stand_orientation.strip() if isinstance(stand_orientation, str) else "",
-        "notes": notes.strip() if isinstance(notes, str) else "",
-        "location": location,
-        "booking_url": booking_url.strip() if isinstance(booking_url, str) else "",
-        "contacts": contacts,
-        "modalities": modalities,
-        "modules": modules,
-        "software": software,
-        "hardware": hardware,
-        "image_filename": image_filename,
-        # Filled later:
-        "status": {},
-        "latest_metrics": [],
-        "latest_qc_overall": "",
-        "charts_data": {},
-    }
-
-
-def get_all_instruments(instruments_dir: str, assets_images_dir: Path) -> dict[str, dict[str, Any]]:
-    result: dict[str, dict[str, Any]] = {}
-
-    for yaml_file in _iter_yaml_files(Path(instruments_dir)):
-        payload = _load_yaml_file(yaml_file)
-        if payload is None:
-            continue
-
-        inst = normalize_instrument(payload, yaml_file, assets_images_dir)
-        if inst["id"] in result:
-            # Rare collision -> disambiguate deterministically.
-            inst["id"] = f"{inst['id']}-{slugify(yaml_file.stem)}"
-            inst["instrument_id"] = inst["id"]
-        result[inst["id"]] = inst
-
-    return result
-
-
-# -----------------------------------------------------------------------------
-# Logs + status
-# -----------------------------------------------------------------------------
 
 def get_all_instrument_logs(log_base_dir: str, instrument_id: str) -> list[dict[str, Any]]:
     if not instrument_id or not instrument_id.strip():
@@ -340,41 +242,32 @@ def get_all_instrument_logs(log_base_dir: str, instrument_id: str) -> list[dict[
         candidates.append((sort_dt, yaml_file, payload))
 
     candidates.sort(key=lambda item: (item[0], item[1].as_posix()))
+
     return [
-        {
-            "source_path": path.as_posix(),
-            "filename": path.name,
-            "data": payload,
-        }
+        {"source_path": path.as_posix(), "filename": path.name, "data": payload}
         for _, path, payload in candidates
     ]
 
 
 def evaluate_instrument_status(
-    latest_qc: dict[str, Any] | None,
-    latest_maint: dict[str, Any] | None,
-    now_utc: datetime,
-    qc_overdue_days: int = 120,
+    latest_qc: dict[str, Any] | None, latest_maint: dict[str, Any] | None
 ) -> dict[str, str]:
-    """Compute UI status from newest QC + maintenance entries."""
+    """Status semantics used by fleet/status pages."""
 
-    last_qc_dt = _parse_iso_datetime((latest_qc or {}).get("started_utc")) if isinstance(latest_qc, dict) else None
-    last_maint_dt = _parse_iso_datetime((latest_maint or {}).get("started_utc")) if isinstance(latest_maint, dict) else None
-
-    last_qc_date = last_qc_dt.date().isoformat() if last_qc_dt else ""
-    last_maint_date = last_maint_dt.date().isoformat() if last_maint_dt else ""
+    last_qc_date = _extract_log_date(latest_qc)
+    last_maint_date = _extract_log_date(latest_maint)
 
     maint_status = ""
     maint_reason = ""
     if isinstance(latest_maint, dict):
-        raw = latest_maint.get("microscope_status_after")
-        if isinstance(raw, str):
-            maint_status = raw.strip().lower()
+        raw_maint_status = latest_maint.get("microscope_status_after")
+        if isinstance(raw_maint_status, str):
+            maint_status = raw_maint_status.strip().lower()
 
-        for key in ("reason_details", "action_details", "action"):
-            v = latest_maint.get(key)
-            if isinstance(v, str) and v.strip():
-                maint_reason = v.strip()
+        for key in ("reason_details", "action"):
+            value = latest_maint.get(key)
+            if isinstance(value, str) and value.strip():
+                maint_reason = clean_text(value)
                 break
 
     qc_status = ""
@@ -382,19 +275,18 @@ def evaluate_instrument_status(
     if isinstance(latest_qc, dict):
         evaluation = latest_qc.get("evaluation")
         if isinstance(evaluation, dict):
-            raw = evaluation.get("overall_status")
-            if isinstance(raw, str):
-                qc_status = raw.strip().lower()
+            raw_qc_status = evaluation.get("overall_status")
+            if isinstance(raw_qc_status, str):
+                qc_status = raw_qc_status.strip().lower()
 
             results = evaluation.get("results")
             if isinstance(results, list) and results:
-                first = results[0]
-                if isinstance(first, dict):
-                    msg = first.get("message")
+                first_result = results[0]
+                if isinstance(first_result, dict):
+                    msg = first_result.get("message")
                     if isinstance(msg, str) and msg.strip():
-                        qc_reason = msg.strip()
+                        qc_reason = clean_text(msg)
 
-    # Priority: offline -> warning -> ok
     if maint_status == "out_of_service" or qc_status == "fail":
         reason = maint_reason or qc_reason or "Out of service"
         return {
@@ -415,16 +307,6 @@ def evaluate_instrument_status(
             "last_maint_date": last_maint_date,
         }
 
-    # Optional: stale QC can be a soft warning
-    if last_qc_dt and last_qc_dt <= now_utc - timedelta(days=qc_overdue_days):
-        return {
-            "color": "yellow",
-            "badge": "🟡 Warning",
-            "reason": f"QC overdue (> {qc_overdue_days} days)",
-            "last_qc_date": last_qc_date,
-            "last_maint_date": last_maint_date,
-        }
-
     return {
         "color": "green",
         "badge": "🟢 Online",
@@ -434,221 +316,294 @@ def evaluate_instrument_status(
     }
 
 
-def _metrics_list(metrics_computed: Any) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    if not isinstance(metrics_computed, list):
-        return out
-
-    for entry in metrics_computed:
-        if not isinstance(entry, dict):
+def _metric_lookup(metric_entries: Any) -> dict[str, Any]:
+    output: dict[str, Any] = {}
+    if not isinstance(metric_entries, list):
+        return output
+    for item in metric_entries:
+        if not isinstance(item, dict):
             continue
-        metric_id = entry.get("metric_id")
-        if not isinstance(metric_id, str) or not metric_id.strip():
+        metric_id = item.get("metric_id")
+        value = item.get("value")
+        if isinstance(metric_id, str):
+            output[metric_id] = value
+    return output
+
+
+def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
+    all_metrics: set[str] = set()
+    for entry in qc_logs:
+        payload = entry.get("data")
+        if isinstance(payload, dict):
+            metrics = _metric_lookup(payload.get("metrics_computed"))
+            all_metrics.update(metrics.keys())
+
+    charts: dict[str, Any] = {}
+    for metric_id in sorted(all_metrics):
+        labels: list[str] = []
+        values: list[Any] = []
+
+        for entry in qc_logs:
+            payload = entry.get("data")
+            if not isinstance(payload, dict):
+                continue
+
+            parsed_started = _parse_iso_datetime(payload.get("started_utc"))
+            if parsed_started is None:
+                continue
+
+            labels.append(parsed_started.strftime("%Y-%m-%d"))
+            metrics = _metric_lookup(payload.get("metrics_computed"))
+            val = metrics.get(metric_id)
+            values.append(val if isinstance(val, (int, float)) else None)
+
+        if any(v is not None for v in values):
+            charts[metric_id] = {
+                "labels": labels,
+                "datasets": [
+                    {
+                        "label": metric_id,
+                        "data": values,
+                        "spanGaps": True,
+                        "tension": 0.2,
+                        "pointRadius": 3,
+                    }
+                ],
+            }
+
+    return json.dumps(charts)
+
+
+def _discover_image_filename(instrument_id: str) -> str:
+    # prefer local jpg/png assets if present
+    for ext in (".jpg", ".jpeg", ".png", ".webp", ".svg"):
+        candidate = Path("assets/images") / f"{instrument_id}{ext}"
+        if candidate.exists():
+            return candidate.name
+    return "placeholder.svg"
+
+
+def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any]]:
+    base = Path(instruments_dir)
+    instruments: list[dict[str, Any]] = []
+
+    for yaml_file in _iter_yaml_files(base):
+        payload = _load_yaml_file(yaml_file)
+        if payload is None:
             continue
 
-        value = entry.get("value")
-        unit = entry.get("unit")
-        details = entry.get("details")
-        out.append(
+        inst_section = payload.get("instrument")
+        if not isinstance(inst_section, dict):
+            inst_section = {}
+
+        display_name = clean_text(inst_section.get("display_name")) or yaml_file.stem
+        instrument_id = clean_text(inst_section.get("instrument_id"))
+        if not instrument_id:
+            instrument_id = "scope-" + slugify(display_name)
+
+        manufacturer = clean_text(inst_section.get("manufacturer"))
+        model = clean_text(inst_section.get("model"))
+        stand = clean_text(inst_section.get("stand_orientation"))
+        notes_raw = clean_text(inst_section.get("notes"))
+        notes_parsed = parse_notes_compact(notes_raw) if notes_raw else {}
+
+        modalities = payload.get("modalities")
+        if not isinstance(modalities, list):
+            modalities = []
+        modalities = [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)]
+
+        modules = payload.get("modules")
+        if not isinstance(modules, list):
+            modules = []
+        modules = [clean_text(m) for m in modules if isinstance(m, str) and clean_text(m)]
+
+        software = normalize_software(payload.get("software"))
+
+        hardware = payload.get("hardware")
+        if not isinstance(hardware, dict):
+            hardware = {}
+
+        instruments.append(
             {
-                "metric_id": metric_id,
-                "value": value,
-                "unit": unit if isinstance(unit, str) else "",
-                "details": details if isinstance(details, str) else "",
+                "id": instrument_id,
+                "display_name": display_name,
+                "manufacturer": manufacturer,
+                "model": model,
+                "stand_orientation": stand,
+                "notes_raw": notes_raw,
+                "notes": notes_parsed,
+                "modalities": modalities,
+                "modules": modules,
+                "software": software,
+                "hardware": hardware,
+                "image_filename": _discover_image_filename(instrument_id),
             }
         )
 
-    return out
+    # deterministic order by id
+    instruments.sort(key=lambda x: x["id"])
+    return instruments
 
 
-def build_charts_data(qc_logs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Return {metric_id: {labels:[...], values:[...]}}."""
-    metric_ids: set[str] = set()
-    parsed_logs: list[tuple[str, dict[str, Any]]] = []
-
-    for entry in qc_logs:
-        payload = entry.get("data")
-        if not isinstance(payload, dict):
-            continue
-        dt = _parse_iso_datetime(payload.get("started_utc"))
-        if dt is None:
-            continue
-        label = dt.strftime("%Y-%m-%d")
-        metrics = _metrics_list(payload.get("metrics_computed"))
-        for m in metrics:
-            metric_ids.add(m["metric_id"])
-        parsed_logs.append((label, {m["metric_id"]: m.get("value") for m in metrics}))
-
-    charts: dict[str, dict[str, Any]] = {}
-    for metric_id in sorted(metric_ids):
-        labels: list[str] = []
-        values: list[Any] = []
-        for label, metric_map in parsed_logs:
-            labels.append(label)
-            v = metric_map.get(metric_id)
-            values.append(v if isinstance(v, (int, float)) else None)
-
-        if any(v is not None for v in values):
-            charts[metric_id] = {"labels": labels, "values": values}
-
-    return charts
-
-
-# -----------------------------------------------------------------------------
-# Build
-# -----------------------------------------------------------------------------
-
-def build_mkdocs_nav(instruments: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    """Generate MkDocs navigation.
-
-    Requirement: the left sidebar should show **only instrument names** (clickable),
-    without nested Overview/History nodes. History remains accessible via internal
-    links from each instrument page.
-    """
-
-    microscopes_nav: list[dict[str, Any]] = []
-
-    for inst_id, inst in sorted(instruments.items(), key=lambda kv: kv[1]["display_name"].lower()):
-        microscopes_nav.append({inst["display_name"]: f"instruments/{inst_id}/index.md"})
+def build_nav(instruments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    microscopes = [{inst["display_name"]: f"instruments/{inst['id']}/index.md"} for inst in instruments]
 
     return [
         {"Fleet Overview": "index.md"},
         {"System Health": "status.md"},
-        {"Microscopes": microscopes_nav},
+        {"Microscopes": microscopes},
     ]
 
 
-
-def copy_assets_to_docs(docs_root: Path) -> None:
-    src_assets = Path("assets")
-    if src_assets.exists() and src_assets.is_dir():
-        shutil.copytree(src_assets, docs_root / "assets", dirs_exist_ok=True)
-
-
 def main() -> None:
-    repo_root = Path(__file__).resolve().parent.parent
-    os.chdir(repo_root)
+    repo_root = Path.cwd()
+    docs_root = repo_root / "dashboard_docs"
 
-    docs_root = Path("dashboard_docs")
+    # Fresh build
     if docs_root.exists():
         shutil.rmtree(docs_root)
-
     (docs_root / "instruments").mkdir(parents=True, exist_ok=True)
     (docs_root / "events").mkdir(parents=True, exist_ok=True)
 
-    copy_assets_to_docs(docs_root)
-
-    assets_images_dir = repo_root / "assets" / "images"
+    # Copy assets into docs
+    if (repo_root / "assets").exists():
+        shutil.copytree(repo_root / "assets", docs_root / "assets", dirs_exist_ok=True)
 
     templates_dir = Path(__file__).resolve().parent / "templates"
-    jinja_env = Environment(
-        loader=FileSystemLoader(templates_dir),
-        autoescape=False,
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
+    jinja_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
 
-    index_template = jinja_env.get_template("index.md.j2")
-    status_template = jinja_env.get_template("status.md.j2")
-    instrument_spec_template = jinja_env.get_template("instrument_spec.md.j2")
-    instrument_history_template = jinja_env.get_template("instrument_history.md.j2")
-    event_detail_template = jinja_env.get_template("event_detail.md.j2")
+    tpl_index = jinja_env.get_template("index.md.j2")
+    tpl_status = jinja_env.get_template("status.md.j2")
+    tpl_spec = jinja_env.get_template("instrument_spec.md.j2")
+    tpl_history = jinja_env.get_template("instrument_history.md.j2")
+    tpl_event = jinja_env.get_template("event_detail.md.j2")
 
-    instruments = get_all_instruments("instruments", assets_images_dir)
+    instruments = load_instruments("instruments")
 
-    now_utc = datetime.now(timezone.utc)
+    # Aggregations
+    all_modalities = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
 
-    # Pass 1: attach logs, status, charts
-    all_modalities: set[str] = set()
-    issues: list[dict[str, Any]] = []
+    fleet_counts = {"total": len(instruments), "green": 0, "yellow": 0, "red": 0}
+    flagged: list[dict[str, Any]] = []
 
-    for inst_id, inst in instruments.items():
-        # Modalities set for fleet filter
-        for mod in inst.get("modalities", []):
-            all_modalities.add(mod)
+    for inst in instruments:
+        instrument_id = inst["id"]
 
-        qc_logs = get_all_instrument_logs("qc/sessions", inst_id)
-        maint_logs = get_all_instrument_logs("maintenance/events", inst_id)
+        qc_logs = get_all_instrument_logs("qc/sessions", instrument_id)
+        maint_logs = get_all_instrument_logs("maintenance/events", instrument_id)
 
         latest_qc = qc_logs[-1]["data"] if qc_logs else None
         latest_maint = maint_logs[-1]["data"] if maint_logs else None
 
-        inst["status"] = evaluate_instrument_status(latest_qc, latest_maint, now_utc)
+        status = evaluate_instrument_status(latest_qc, latest_maint)
+        inst["status"] = status
 
-        inst["charts_data"] = build_charts_data(qc_logs)
-        inst["latest_metrics"] = _metrics_list((latest_qc or {}).get("metrics_computed")) if isinstance(latest_qc, dict) else []
+        if status["color"] == "green":
+            fleet_counts["green"] += 1
+        elif status["color"] == "yellow":
+            fleet_counts["yellow"] += 1
+        else:
+            fleet_counts["red"] += 1
 
-        if isinstance(latest_qc, dict):
-            eval_block = latest_qc.get("evaluation")
-            if isinstance(eval_block, dict) and isinstance(eval_block.get("overall_status"), str):
-                inst["latest_qc_overall"] = eval_block.get("overall_status")
+        if status["color"] in {"yellow", "red"}:
+            flagged.append(inst)
 
-        if inst["status"].get("color") in {"red", "yellow"}:
-            issues.append(inst)
+        charts_json = _build_all_charts_data(qc_logs)
+        latest_metrics = _metric_lookup(latest_qc.get("metrics_computed")) if latest_qc else {}
 
-        # Render instrument pages
-        inst_dir = docs_root / "instruments" / inst_id
-        inst_dir.mkdir(parents=True, exist_ok=True)
+        hardware = inst.get("hardware") or {}
 
-        hardware = inst.get("hardware") if isinstance(inst.get("hardware"), dict) else {}
-        light_sources = [s for s in hardware.get("light_sources", []) if isinstance(s, dict)]
-        detectors = [d for d in hardware.get("detectors", []) if isinstance(d, dict)]
-        objectives = [o for o in hardware.get("objectives", []) if isinstance(o, dict)]
+        light_sources = [
+            {
+                "name": clean_text(src.get("model")),
+                "type": clean_text(src.get("kind")),
+                "wavelength": src.get("wavelength_nm"),
+                "notes": clean_text(src.get("manufacturer")),
+            }
+            for src in hardware.get("light_sources", [])
+            if isinstance(src, dict)
+        ]
 
-        spec_rendered = instrument_spec_template.render(
+        detectors = [
+            {
+                "name": clean_text(det.get("manufacturer")),
+                "model": clean_text(det.get("model")),
+                "type": clean_text(det.get("kind")),
+                "notes": "",
+            }
+            for det in hardware.get("detectors", [])
+            if isinstance(det, dict)
+        ]
+
+        objectives = [
+            {
+                "name": clean_text(obj.get("model")),
+                "magnification": obj.get("magnification"),
+                "na": obj.get("numerical_aperture"),
+                "notes": clean_text(obj.get("manufacturer")),
+            }
+            for obj in hardware.get("objectives", [])
+            if isinstance(obj, dict)
+        ]
+
+        instrument_dir = docs_root / "instruments" / instrument_id
+        instrument_dir.mkdir(parents=True, exist_ok=True)
+
+        # Instrument overview is index.md to make clean URLs: /instruments/<id>/
+        overview_md = tpl_spec.render(
             instrument=inst,
+            charts_json=charts_json,
+            latest_metrics=latest_metrics,
+            metric_names=METRIC_NAMES,
             light_sources=light_sources,
             detectors=detectors,
             objectives=objectives,
-            software=inst.get("software", []),
-            latest_metrics=inst.get("latest_metrics", []),
-            latest_qc_overall=inst.get("latest_qc_overall", ""),
-            charts_data=inst.get("charts_data", {}),
-            metric_names=METRIC_NAMES,
         )
-        (inst_dir / "index.md").write_text(spec_rendered, encoding="utf-8")
+        (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
-        # Build history tables
-        qc_events: list[dict[str, Any]] = []
+        qc_events = []
         for qc_log in qc_logs:
-            payload = qc_log.get("data") if isinstance(qc_log.get("data"), dict) else {}
-            event_id = Path(str(qc_log.get("filename", ""))).stem
-            evaluation = payload.get("evaluation") if isinstance(payload.get("evaluation"), dict) else {}
+            qc_data = qc_log.get("data", {})
+            qc_event_id = Path(str(qc_log.get("filename", ""))).stem
             qc_events.append(
                 {
-                    "event_id": event_id,
-                    "date": _extract_log_date(payload),
-                    "reason": payload.get("reason"),
-                    "operator": payload.get("performed_by"),
-                    "overall_status": evaluation.get("overall_status") if isinstance(evaluation.get("overall_status"), str) else "",
+                    "event_id": qc_event_id,
+                    "date": _extract_log_date(qc_data),
+                    "suite": qc_data.get("reason"),
+                    "type": qc_data.get("record_type"),
+                    "status": (
+                        (qc_data.get("evaluation") or {}).get("overall_status")
+                        if isinstance(qc_data.get("evaluation"), dict)
+                        else ""
+                    ),
                 }
             )
 
-        maint_events: list[dict[str, Any]] = []
-        for m_log in maint_logs:
-            payload = m_log.get("data") if isinstance(m_log.get("data"), dict) else {}
-            event_id = Path(str(m_log.get("filename", ""))).stem
-            provider = payload.get("company") or payload.get("service_provider")
+        maint_events = []
+        for maint_log in maint_logs:
+            m_data = maint_log.get("data", {})
+            m_event_id = Path(str(maint_log.get("filename", ""))).stem
             maint_events.append(
                 {
-                    "event_id": event_id,
-                    "date": _extract_log_date(payload),
-                    "reason": payload.get("reason"),
-                    "provider": provider,
-                    "status_after": payload.get("microscope_status_after"),
+                    "event_id": m_event_id,
+                    "date": _extract_log_date(m_data),
+                    "suite": m_data.get("reason"),
+                    "type": m_data.get("record_type"),
+                    "status": m_data.get("microscope_status_after"),
                 }
             )
 
-        history_rendered = instrument_history_template.render(
+        history_md = tpl_history.render(
             instrument=inst,
             qc_events=qc_events,
             maintenance_events=maint_events,
-            charts_data=inst.get("charts_data", {}),
+            charts_json=charts_json,
+            latest_metrics=latest_metrics,
             metric_names=METRIC_NAMES,
         )
-        (inst_dir / "history.md").write_text(history_rendered, encoding="utf-8")
+        (instrument_dir / "history.md").write_text(history_md, encoding="utf-8")
 
-        # Render event details (QC + maintenance)
+        # Event details
         for log_entry in qc_logs + maint_logs:
             source_path = log_entry.get("source_path")
             if not isinstance(source_path, str):
@@ -656,93 +611,37 @@ def main() -> None:
 
             source_file = Path(source_path)
             event_id = source_file.stem
-            payload = log_entry.get("data") if isinstance(log_entry.get("data"), dict) else {}
+            event_payload = log_entry.get("data") if isinstance(log_entry.get("data"), dict) else {}
 
             try:
                 raw_yaml_text = source_file.read_text(encoding="utf-8")
             except OSError:
-                raw_yaml_text = yaml.safe_dump(payload, sort_keys=False)
+                raw_yaml_text = yaml.safe_dump(event_payload, sort_keys=False, allow_unicode=True)
 
-            record_type = payload.get("record_type") if isinstance(payload.get("record_type"), str) else ""
-
-            event_ctx: dict[str, Any] = {
-                "record_type": record_type,
-                "date": _extract_log_date(payload),
-                "actor": payload.get("performed_by") or payload.get("service_provider") or payload.get("company"),
-                "reason": payload.get("reason"),
-                "action": payload.get("action"),
-                "status_after": payload.get("microscope_status_after"),
-                "provider": payload.get("company") or payload.get("service_provider"),
-                "summary": payload.get("summary"),
-                "overall_status": "",
-                "results": [],
-            }
-
-            if record_type == "qc_session":
-                evaluation = payload.get("evaluation") if isinstance(payload.get("evaluation"), dict) else {}
-                overall = evaluation.get("overall_status") if isinstance(evaluation.get("overall_status"), str) else ""
-                event_ctx["overall_status"] = overall
-                results: list[dict[str, Any]] = []
-                raw_results = evaluation.get("results")
-                if isinstance(raw_results, list):
-                    for r in raw_results:
-                        if not isinstance(r, dict):
-                            continue
-                        mid = r.get("metric_id")
-                        stat = r.get("status")
-                        if not (isinstance(mid, str) and isinstance(stat, str)):
-                            continue
-                        results.append(
-                            {
-                                "metric_id": mid,
-                                "status": stat,
-                                "threshold": r.get("threshold"),
-                                "message": r.get("message"),
-                            }
-                        )
-                event_ctx["results"] = results
-
-            event_rendered = event_detail_template.render(
+            event_md = tpl_event.render(
                 event_id=event_id,
-                instrument_id=inst_id,
-                instrument_display_name=inst.get("display_name"),
-                event=event_ctx,
+                date=_extract_log_date(event_payload),
+                instrument=event_payload.get("microscope"),
+                instrument_id=instrument_id,
+                operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
                 raw_yaml_content=raw_yaml_text,
             )
-            (docs_root / "events" / f"{event_id}.md").write_text(event_rendered, encoding="utf-8")
+            (docs_root / "events" / f"{event_id}.md").write_text(event_md, encoding="utf-8")
 
-    # Render fleet pages
-    stats = {
-        "total": len(instruments),
-        "green": sum(1 for i in instruments.values() if i.get("status", {}).get("color") == "green"),
-        "yellow": sum(1 for i in instruments.values() if i.get("status", {}).get("color") == "yellow"),
-        "red": sum(1 for i in instruments.values() if i.get("status", {}).get("color") == "red"),
-    }
+    # Fleet + status pages
+    index_md = tpl_index.render(instruments=instruments, all_modalities=all_modalities, counts=fleet_counts)
+    (docs_root / "index.md").write_text(index_md, encoding="utf-8")
 
-    index_rendered = index_template.render(
-        instruments=sorted(instruments.values(), key=lambda x: x.get("display_name", "").lower()),
-        all_modalities=sorted(all_modalities, key=lambda s: s.lower()),
-        stats=stats,
-    )
-    (docs_root / "index.md").write_text(index_rendered, encoding="utf-8")
+    status_md = tpl_status.render(issues=flagged)
+    (docs_root / "status.md").write_text(status_md, encoding="utf-8")
 
-    status_rendered = status_template.render(
-        issues=sorted(issues, key=lambda x: (x.get("status", {}).get("color", ""), x.get("display_name", "").lower()))
-    )
-    (docs_root / "status.md").write_text(status_rendered, encoding="utf-8")
-
-    # Write mkdocs.yml (authoritative for the build)
-    nav_structure = build_mkdocs_nav(instruments)
-
-    mkdocs_config: dict[str, Any] = {
+    # MkDocs config
+    mkdocs_config = {
         "site_name": "AIC Microscopy Dashboard",
         "site_url": "https://aic-turku.github.io/AIC-Turku-database/",
         "docs_dir": "dashboard_docs",
-        "use_directory_urls": True,
         "theme": {
             "name": "material",
-            "logo": "assets/images/logo.svg",
-            "favicon": "assets/images/favicon.svg",
             "features": [
                 "navigation.tabs",
                 "navigation.sections",
@@ -763,24 +662,25 @@ def main() -> None:
                 },
             ],
         },
+        "plugins": ["search"],
         "markdown_extensions": [
+            "admonition",
             "attr_list",
             "md_in_html",
+            "tables",
             "pymdownx.details",
             "pymdownx.superfences",
-            {"pymdownx.tabbed": {"alternate_style": True}},
+            "pymdownx.tabbed",
         ],
-        "plugins": ["search"],
         "extra_css": ["assets/stylesheets/dashboard.css"],
         "extra_javascript": [
-            "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",
-            "assets/javascripts/charts.js",
             "assets/javascripts/dashboard.js",
+            "https://cdn.jsdelivr.net/npm/chart.js",
         ],
-        "nav": nav_structure,
+        "nav": build_nav(instruments),
     }
 
-    Path("mkdocs.yml").write_text(yaml.safe_dump(mkdocs_config, sort_keys=False), encoding="utf-8")
+    (repo_root / "mkdocs.yml").write_text(yaml.safe_dump(mkdocs_config, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
 
 if __name__ == "__main__":

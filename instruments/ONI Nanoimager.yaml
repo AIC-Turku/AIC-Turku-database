@@ -1,7 +1,6 @@
----
 instrument:
   display_name: ONI Nanoimager
-  instrument_id: ''
+  instrument_id: scope-oni-nanoimager
   manufacturer: Olympus/Evident
   model: Nanoimager
   stand_orientation: other

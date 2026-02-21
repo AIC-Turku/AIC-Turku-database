@@ -1,13 +1,12 @@
----
 instrument:
   display_name: Zeiss AxioZoom.V16
-  instrument_id: ''
+  instrument_id: scope-zeiss-axiozoom-v16
   manufacturer: Zeiss
   model: AxioZoom.V16
   stand_orientation: stereo
   notes: 'type: "Fluorescence stereo zoom microscope" | filters: ["DAPI filter set
     49 (Ex G365, Em BP 445/50)", "GFP filter set 38 HE (Ex BP 470/40, Em BP 525/50)",
-    "AlexaÂ 568 filter set 45 (Ex BP 560/40, Em BP 630/75)", "AlexaÂ 647 filter set
+    "Alexa 568 filter set 45 (Ex BP 560/40, Em BP 630/75)", "Alexa 647 filter set
     50 (Ex BP 640/30, Em BP 690/50)"] | additional_hardware: ["Zeiss ApoTome.2 module
     (structured illumination for optical sectioning)"] | imaging_modes: ["Brightfield
     (top/bottom illumination)", "Fluorescence", "Optical sectioning (structured illumination
@@ -28,17 +27,17 @@ hardware:
   - kind: led
     manufacturer: ''
     model: Zeiss CL 9000 LED ring light (top illumination)
-    wavelength_nm:
+    wavelength_nm: null
     power: ''
   - kind: led
     manufacturer: ''
     model: VisiLED MC1000 LED base light (bottom illumination)
-    wavelength_nm:
+    wavelength_nm: null
     power: ''
   - kind: arc_lamp
     manufacturer: ''
     model: Zeiss HXPÂ 200C Mercury lamp
-    wavelength_nm:
+    wavelength_nm: null
     power: ''
   detectors:
   - kind: sCMOS

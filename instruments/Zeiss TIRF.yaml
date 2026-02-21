@@ -1,14 +1,13 @@
----
 instrument:
   display_name: Zeiss TIRF
-  instrument_id: ''
+  instrument_id: scope-zeiss-tirf
   manufacturer: Zeiss
   model: TIRF
   stand_orientation: inverted
   notes: 'type: "TIRF/widefield microscope (inverted)" | filters: ["Filter set 38
     HE (GFP; Ex 470/40, Em 525/50)", "Filter set 43 HE (DsRed; Ex 550/25, Em 605/70)",
     "Filter set 76 HE (CFP/GFP/DsRed; Ex TBP 406+489+561, Em TBP 459+525+608)", "Filter
-    set 77 HE (GFP/mRFP/AlexaÂ 633; Ex TBP 483+564+642, Em TBP 526+601+688)"] | additional_hardware:
+    set 77 HE (GFP/mRFP/Alexa 633; Ex TBP 483+564+642, Em TBP 526+601+688)"] | additional_hardware:
     ["Motorized stage", "Definite Focus drift correction", "Heated incubator and sample
     holder"] | imaging_modes: ["TIRF (total internal reflection fluorescence)", "Widefield
     epifluorescence", "Brightfield"]'

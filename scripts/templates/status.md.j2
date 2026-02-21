@@ -1,43 +1,38 @@
 # System Health
 
+!!! info "System Health Overview"
+    This page lists instruments currently in a degraded state (**Warning** or **Offline**) and why.
+
 {% if issues %}
 
-!!! warning "Flagged instruments"
-    The list below includes microscopes that are **Offline** or in **Warning** state.
-
-<div class="aic-grid" aria-label="Flagged instrument cards">
+<div class="aic-grid aic-grid--compact">
   {% for inst in issues %}
-  <div class="aic-card">
+  <a class="aic-card aic-card--link" href="instruments/{{ inst.id }}/" aria-label="Open {{ inst.display_name }}">
     <div class="aic-card__body">
-      <div class="aic-card__title" markdown="span">
-        [{{ inst.display_name }}](instruments/{{ inst.id }}/)
-        <span class="aic-chip aic-chip--status aic-chip--{{ inst.status.color }}" title="{{ inst.status.reason }}">{{ inst.status.badge }}</span>
+      <div class="aic-card__title">{{ inst.display_name }}</div>
+      <div class="aic-card__meta">{{ inst.manufacturer }}{% if inst.model %} · {{ inst.model }}{% endif %}</div>
+
+      <div class="aic-statusline">
+        <span class="aic-badge aic-badge--{{ inst.status.color }}">{{ inst.status.badge }}</span>
+        <span class="aic-muted">{{ inst.status.reason }}</span>
       </div>
 
-      <div class="aic-muted" style="margin: .2rem 0 .65rem;" markdown="span">
-        {{ inst.manufacturer | default('—', true) }}{% if inst.model %} · {{ inst.model }}{% endif %}
+      <div class="aic-kv">
+        <div><span class="aic-muted">Last QC</span><br>{{ inst.status.last_qc_date or '—' }}</div>
+        <div><span class="aic-muted">Last Maintenance</span><br>{{ inst.status.last_maint_date or '—' }}</div>
       </div>
 
-      <div markdown="span">
-        **Why:** {{ inst.status.reason | default('—', true) }}
-      </div>
-
-      <div class="aic-kv" style="margin-top: .55rem;">
-        <div>Last QC</div><div>{{ inst.status.last_qc_date | default('—', true) }}</div>
-        <div>Last maint.</div><div>{{ inst.status.last_maint_date | default('—', true) }}</div>
-      </div>
-
-      <div style="margin-top: .85rem;" markdown="span">
-        [Open history](instruments/{{ inst.id }}/history.md){ .md-button }
+      <div class="aic-actions" markdown="span">
+        [View history](instruments/{{ inst.id }}/history.md){ .md-button .md-button--small }
       </div>
     </div>
-  </div>
+  </a>
   {% endfor %}
 </div>
 
 {% else %}
 
-!!! success "No active issues"
+!!! success "No Active Issues"
     All instruments are currently healthy.
 
 {% endif %}

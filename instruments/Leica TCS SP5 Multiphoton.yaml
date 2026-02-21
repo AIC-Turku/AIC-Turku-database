@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Leica TCS SP5 Multiphoton
-  instrument_id: ''
+  instrument_id: scope-leica-tcs-sp5-multiphoton
   manufacturer: Leica Microsystems
   model: TCS SP5 Multiphoton
   stand_orientation: upright

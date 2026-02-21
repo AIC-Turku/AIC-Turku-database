@@ -1,13 +1,12 @@
----
 instrument:
   display_name: Olympus BX60
-  instrument_id: ''
+  instrument_id: scope-olympus-bx60
   manufacturer: Olympus/Evident
   model: BX60
   stand_orientation: upright
   notes: 'type: "Widefield microscope (upright)" | filters: [{"DAPI (Olympus U-MWU"=>"Ex
     357/55, Em LP 420)"}, {"GFP narrow (Olympus U-MNIBA2"=>"Ex 480/20, Em 530/40)"},
-    {"AlexaÂ 546 (Olympus U-MWIG"=>"Ex 535/30, Em LP 580)"}, {"GFP wide (Olympus U-MWIB"=>"Ex
+    {"Alexa 546 (Olympus U-MWIG"=>"Ex 535/30, Em LP 580)"}, {"GFP wide (Olympus U-MWIB"=>"Ex
     475/30, Em LP 515)"}] | imaging_modes: ["Brightfield", "Fluorescence (epifluorescence)",
     "Phase contrast"]'
 modalities:

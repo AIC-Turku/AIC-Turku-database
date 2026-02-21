@@ -1,12 +1,11 @@
----
 instrument:
   display_name: Leica DM IRBE
-  instrument_id: ''
+  instrument_id: scope-leica-dm-irbe
   manufacturer: Leica Microsystems
   model: DM IRBE
   stand_orientation: inverted
   notes: 'type: "Widefield microscope (inverted)" | filters: ["DAPI/Hoechst (UV excitation)",
-    "GFP/AlexaÂ 488", "TRITC/RFP"] | imaging_modes: ["Fluorescence (epifluorescence)",
+    "GFP/Alexa 488", "TRITC/RFP"] | imaging_modes: ["Fluorescence (epifluorescence)",
     "Brightfield (transmitted light)", "Darkfield", "Phase contrast"]'
 modalities:
 - widefield_fluorescence
@@ -44,21 +43,21 @@ hardware:
   - manufacturer: Leica
     model: Plan
     magnification: 40.0
-    numerical_aperture:
+    numerical_aperture: null
     working_distance: ''
     immersion: oil
     correction: ''
   - manufacturer: Leica
     model: Plan
     magnification: 63.0
-    numerical_aperture:
+    numerical_aperture: null
     working_distance: ''
     immersion: oil
     correction: ''
   - manufacturer: Leica
     model: Plan
     magnification: 100.0
-    numerical_aperture:
+    numerical_aperture: null
     working_distance: ''
     immersion: oil
     correction: ''

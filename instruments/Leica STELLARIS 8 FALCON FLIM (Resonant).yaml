@@ -1,7 +1,6 @@
----
 instrument:
   display_name: Leica STELLARIS 8 FALCON FLIM (Resonant)
-  instrument_id: ''
+  instrument_id: scope-leica-stellaris-8-falcon-flim-resonant
   manufacturer: Leica Microsystems
   model: STELLARIS 8 FALCON FLIM (Resonant)
   stand_orientation: inverted
@@ -31,7 +30,7 @@ hardware:
     manufacturer: ''
     model: White Light Laser (WLL) tunable (continuous, up to 8 simultaneous lines
       via AOBS)
-    wavelength_nm:
+    wavelength_nm: null
     power: ''
   - kind: laser
     manufacturer: ''

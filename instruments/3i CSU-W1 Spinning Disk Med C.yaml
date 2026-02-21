@@ -1,13 +1,12 @@
----
 instrument:
   display_name: 3i CSU-W1 Spinning Disk Med C
-  instrument_id: ''
+  instrument_id: scope-3i-csu-w1-spinning-disk-med-c
   manufacturer: Zeiss
   model: 3i CSU-W1 Spinning Disk Med C
   stand_orientation: inverted
   notes: 'type: "Confocal spinning-disk microscope (inverted)" | filters: ["DAPI (Em
-    445/45)", "GFP (Em 525/50)", "Cy3/AlexaÂ 568 (Em 617/73 or 600/37)", "Cy5/AlexaÂ 647
-    (Em 692/40)", "AlexaÂ 750 (Em 809/81)", "Quad-band dichroic (Ex 440/40, 521/21,
+    445/45)", "GFP (Em 525/50)", "Cy3/Alexa 568 (Em 617/73 or 600/37)", "Cy5/Alexa
+    647 (Em 692/40)", "Alexa 750 (Em 809/81)", "Quad-band dichroic (Ex 440/40, 521/21,
     607/34, 700/45)"] | additional_hardware: ["FRAP/Photoactivation module", "Motorized
     piezo Z stage"] | imaging_modes: ["Confocal (spinning disk)", "Live-cell imaging",
     "FRAP", "Photoactivation"]'

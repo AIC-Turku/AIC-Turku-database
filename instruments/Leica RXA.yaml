@@ -1,12 +1,11 @@
----
 instrument:
   display_name: Leica RXA
-  instrument_id: ''
+  instrument_id: scope-leica-rxa
   manufacturer: Leica Microsystems
   model: RXA
   stand_orientation: upright
-  notes: 'type: "Widefield microscope (upright)" | filters: ["DAPI/Hoechst", "GFP/AlexaÂ 488",
-    "TRITC/RFP"] | imaging_modes: ["Fluorescence (epifluorescence)", "Brightfield
+  notes: 'type: "Widefield microscope (upright)" | filters: ["DAPI/Hoechst", "GFP/Alexa
+    488", "TRITC/RFP"] | imaging_modes: ["Fluorescence (epifluorescence)", "Brightfield
     (transmitted light)", "Darkfield"]'
 modalities:
 - widefield_fluorescence
@@ -43,21 +42,21 @@ hardware:
   - manufacturer: Leica
     model: Plan
     magnification: 40.0
-    numerical_aperture:
+    numerical_aperture: null
     working_distance: ''
     immersion: oil
     correction: ''
   - manufacturer: Leica
     model: Plan
     magnification: 63.0
-    numerical_aperture:
+    numerical_aperture: null
     working_distance: ''
     immersion: oil
     correction: ''
   - manufacturer: Leica
     model: Plan
     magnification: 100.0
-    numerical_aperture:
+    numerical_aperture: null
     working_distance: ''
     immersion: oil
     correction: ''

@@ -1,18 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#d7dde5"/>
-      <stop offset="100%" stop-color="#f3f5f8"/>
+      <stop offset="0" stop-color="#cfd8dc" />
+      <stop offset="1" stop-color="#eceff1" />
     </linearGradient>
   </defs>
-  <rect width="1200" height="800" fill="url(#g)"/>
-  <g fill="none" stroke="#9aa7b3" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
-    <rect x="170" y="170" width="860" height="460" rx="28"/>
-    <path d="M250 540 470 350 650 500 780 420 950 540"/>
-    <circle cx="420" cy="310" r="46"/>
+  <rect width="1200" height="800" fill="url(#g)" />
+  <rect x="80" y="80" width="1040" height="640" rx="28" fill="rgba(255,255,255,0.55)" stroke="rgba(0,0,0,0.08)" />
+  <g fill="rgba(0,0,0,0.35)">
+    <circle cx="360" cy="380" r="90" />
+    <rect x="520" y="320" width="360" height="48" rx="12" />
+    <rect x="520" y="392" width="260" height="36" rx="10" />
   </g>
-  <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" fill="#4b5a67">
-    <text x="600" y="700" font-size="40" text-anchor="middle">Microscope image unavailable</text>
-    <text x="600" y="744" font-size="24" text-anchor="middle" opacity="0.8">Add assets/images/&lt;instrument_id&gt;.jpg to override</text>
-  </g>
+  <text x="600" y="610" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system" font-size="28" fill="rgba(0,0,0,0.45)">
+    No instrument image
+  </text>
 </svg>

@@ -1,84 +1,89 @@
-# Fleet Overview
-
-<div class="aic-stack">
+# Instrument Fleet Overview
 
 !!! info "At-a-glance"
-    **Total:** {{ stats.total }} · **Online:** {{ stats.green }} · **Warning:** {{ stats.yellow }} · **Offline:** {{ stats.red }}
+    **Total:** {{ counts.total }} · **Online:** {{ counts.green }} · **Warning:** {{ counts.yellow }} · **Offline:** {{ counts.red }}
 
-<div class="aic-filters" role="region" aria-label="Fleet filters">
-  <div class="aic-field">
-    <label for="aicSearch">Search</label>
-    <input id="aicSearch" type="search" placeholder="Name, manufacturer, modality…" autocomplete="off" />
+<div class="aic-fleetbar">
+  <div class="aic-fleetbar__group">
+    <label class="aic-label" for="aicSearch">Search</label>
+    <input id="aicSearch" class="aic-input" type="search" placeholder="Name, manufacturer, model…" />
   </div>
 
-  <div class="aic-field">
-    <label for="aicModality">Modality</label>
-    <select id="aicModality">
-      <option value="all">All modalities</option>
+  <div class="aic-fleetbar__group">
+    <label class="aic-label" for="aicModality">Modality</label>
+    <select id="aicModality" class="aic-select">
+      <option value="all">All</option>
       {% for mod in all_modalities %}
       <option value="{{ mod | lower }}">{{ mod }}</option>
       {% endfor %}
     </select>
   </div>
 
-  <div class="aic-field">
-    <label for="aicStatus">Status</label>
-    <select id="aicStatus">
-      <option value="all">All statuses</option>
-      <option value="green">Online</option>
-      <option value="yellow">Warning</option>
-      <option value="red">Offline</option>
-    </select>
-  </div>
+  <div class="aic-fleetbar__spacer"></div>
 
-  <button class="aic-button" id="aicReset" type="button">Reset</button>
+  <div class="aic-fleetbar__group aic-fleetbar__hint" markdown="span">
+    Tip: click a card to open the instrument page.
+  </div>
 </div>
 
-<div class="aic-grid" aria-label="Microscope cards">
+<div class="aic-grid">
   {% for inst in instruments %}
-  <a
-    class="aic-card aic-card--link"
-    href="instruments/{{ inst.id }}/"
-    aria-label="Open {{ inst.display_name }}"
-    data-filterable="true"
-    data-name="{{ inst.display_name }}"
-    data-manufacturer="{{ inst.manufacturer }}"
-    data-modalities="{{ inst.modalities | join(',') | lower }}"
-    data-status="{{ inst.status.color }}"
-  >
-    <img
-      class="aic-card__media"
-      src="assets/images/{{ inst.image_filename }}"
-      alt="{{ inst.display_name }}"
-      loading="lazy"
-      onerror="this.onerror=null; this.src='assets/images/placeholder.svg';"
-    />
+  <a class="aic-card aic-card--link" href="instruments/{{ inst.id }}/"
+     data-name="{{ inst.display_name | lower }}"
+     data-manufacturer="{{ inst.manufacturer | lower }}"
+     data-model="{{ inst.model | lower }}"
+     data-modalities="{{ inst.modalities | join(',') | lower }}"
+     aria-label="Open {{ inst.display_name }}">
+
+    <div class="aic-card__media">
+      <img src="assets/images/{{ inst.image_filename }}" alt="{{ inst.display_name }}"
+           onerror="this.onerror=null; this.src='assets/images/placeholder.svg';" />
+      <div class="aic-badge aic-badge--{{ inst.status.color }}">{{ inst.status.badge }}</div>
+    </div>
 
     <div class="aic-card__body">
-      <div class="aic-card__title">
-        {{ inst.display_name }}
-        <span class="aic-chip aic-chip--status aic-chip--{{ inst.status.color }}" title="{{ inst.status.reason }}">{{ inst.status.badge }}</span>
-      </div>
+      <div class="aic-card__title">{{ inst.display_name }}</div>
+      <div class="aic-card__meta">{{ inst.manufacturer }}{% if inst.model %} · {{ inst.model }}{% endif %}</div>
 
-      <div class="aic-muted" style="margin: .25rem 0 .55rem;">
-        {{ inst.manufacturer | default('—', true) }}{% if inst.model %} · {{ inst.model }}{% endif %}
-      </div>
-
-      <div class="aic-inline" style="margin-bottom: .55rem;">
-        {% for mod in inst.modalities %}
-        <span class="aic-chip">{{ mod }}</span>
-        {% else %}
-        <span class="aic-muted">No modalities tagged</span>
+      <div class="aic-chiprow">
+        {% for mod in inst.modalities[:4] %}
+          <span class="aic-chip">{{ mod }}</span>
         {% endfor %}
-      </div>
-
-      <div class="aic-kv">
-        <div>Last QC</div><div>{{ inst.status.last_qc_date | default('—', true) }}</div>
-        <div>Last maint.</div><div>{{ inst.status.last_maint_date | default('—', true) }}</div>
+        {% if inst.modalities | length > 4 %}
+          <span class="aic-chip aic-chip--muted">+{{ (inst.modalities | length) - 4 }}</span>
+        {% endif %}
       </div>
     </div>
+
   </a>
   {% endfor %}
 </div>
 
-</div>
+<script>
+(function() {
+  const modalityEl = document.getElementById('aicModality');
+  const searchEl = document.getElementById('aicSearch');
+  const cards = Array.from(document.querySelectorAll('.aic-card'));
+
+  function applyFilters() {
+    const mod = (modalityEl.value || 'all').toLowerCase();
+    const q = (searchEl.value || '').trim().toLowerCase();
+
+    cards.forEach(card => {
+      const cardMods = (card.getAttribute('data-modalities') || '');
+      const hay = [
+        card.getAttribute('data-name') || '',
+        card.getAttribute('data-manufacturer') || '',
+        card.getAttribute('data-model') || ''
+      ].join(' ');
+
+      const matchesMod = (mod === 'all') || cardMods.includes(mod);
+      const matchesQ = (!q) || hay.includes(q);
+      card.style.display = (matchesMod && matchesQ) ? '' : 'none';
+    });
+  }
+
+  modalityEl.addEventListener('change', applyFilters);
+  searchEl.addEventListener('input', applyFilters);
+})();
+</script>

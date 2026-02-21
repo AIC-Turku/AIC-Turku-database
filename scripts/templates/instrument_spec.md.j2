@@ -1,150 +1,182 @@
 # {{ instrument.display_name }}
 
-[📈 History & logs](history.md){ .md-button .md-button--primary }
+<div class="aic-topactions" markdown="span">
+  [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
+</div>
 
-{% set level = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
-!!! {{ level }} "Status: {{ instrument.status.badge }}"
-    **Reason:** {{ instrument.status.reason }}  
-    **Last QC:** {{ instrument.status.last_qc_date | default('—', true) }} · **Last maintenance:** {{ instrument.status.last_maint_date | default('—', true) }}
+!!! {{ 'success' if instrument.status.badge == '🟢 Online' else 'warning' if instrument.status.badge == '🟡 Warning' else 'danger' }} "Current Status: {{ instrument.status.badge }}"
+    {{ instrument.status.reason }}
 
 <div class="aic-hero">
-  <div>
-    <img
-      class="aic-img"
-      src="../../assets/images/{{ instrument.image_filename }}"
-      alt="{{ instrument.display_name }}"
-      onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';"
-    />
+  <div class="aic-hero__media">
+    <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
+         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
   </div>
 
-  <div class="aic-panel">
-    <div class="aic-inline" style="justify-content: space-between;">
-      <div class="aic-inline">
-        <span class="aic-chip aic-chip--status aic-chip--{{ instrument.status.color }}" title="{{ instrument.status.reason }}">{{ instrument.status.badge }}</span>
-        {% if instrument.instrument_id %}<span class="aic-chip" title="Stable routing ID">{{ instrument.instrument_id }}</span>{% endif %}
+  <div class="aic-hero__facts">
+    <div class="aic-facts">
+      <div class="aic-fact">
+        <div class="aic-muted">Instrument ID</div>
+        <div><code>{{ instrument.id }}</code></div>
       </div>
-      {% if instrument.booking_url %}
-      <a class="md-button" href="{{ instrument.booking_url }}" target="_blank" rel="noopener">Book / access</a>
-      {% endif %}
+      <div class="aic-fact">
+        <div class="aic-muted">Manufacturer</div>
+        <div>{{ instrument.manufacturer or '—' }}</div>
+      </div>
+      <div class="aic-fact">
+        <div class="aic-muted">Model</div>
+        <div>{{ instrument.model or '—' }}</div>
+      </div>
+      <div class="aic-fact">
+        <div class="aic-muted">Stand</div>
+        <div>{{ instrument.stand_orientation or '—' }}</div>
+      </div>
     </div>
 
-    <div class="aic-kv" style="margin-top: .75rem;">
-      <div>Manufacturer</div><div>{{ instrument.manufacturer | default('—', true) }}</div>
-      <div>Model</div><div>{{ instrument.model | default('—', true) }}</div>
-      <div>Stand</div><div>{{ instrument.stand_orientation | default('—', true) }}</div>
-      {% if instrument.location %}
-      <div>Location</div><div>{{ instrument.location }}</div>
-      {% endif %}
+    <div class="aic-section">
+      <div class="aic-section__title">Modalities</div>
+      <div class="aic-chiprow">
+        {% for mod in instrument.modalities %}
+          <span class="aic-chip">{{ mod }}</span>
+        {% else %}
+          <span class="aic-muted">—</span>
+        {% endfor %}
+      </div>
     </div>
 
-    {% if instrument.notes %}
-    <div style="margin-top: .85rem;" markdown="span">{{ instrument.notes }}</div>
-    {% endif %}
-
-    {% if instrument.contacts %}
-    <div style="margin-top: .9rem;" class="aic-stack">
-      <div><strong>Contacts</strong></div>
-      <div class="aic-inline">
-        {% for c in instrument.contacts %}
-          <span class="aic-chip">{{ c }}</span>
+    {% if instrument.modules %}
+    <div class="aic-section">
+      <div class="aic-section__title">Modules</div>
+      <div class="aic-chiprow">
+        {% for m in instrument.modules %}
+          <span class="aic-chip aic-chip--muted">{{ m }}</span>
         {% endfor %}
       </div>
     </div>
     {% endif %}
+
   </div>
 </div>
 
-=== "Capabilities"
+{% if instrument.notes %}
+## Capabilities (legacy notes)
 
-    <div class="aic-stack">
-      <div>
-        <strong>Modalities</strong>
-        <div class="aic-inline" style="margin-top: .35rem;">
-          {% for mod in instrument.modalities %}
-          <span class="aic-chip">{{ mod }}</span>
-          {% else %}
-          <span class="aic-muted">No modalities tagged</span>
-          {% endfor %}
-        </div>
-      </div>
+{% if instrument.notes.type %}
+- **Type:** {{ instrument.notes.type }}
+{% endif %}
 
-      <div>
-        <strong>Modules</strong>
-        <div class="aic-inline" style="margin-top: .35rem;">
-          {% for mod in instrument.modules %}
-          <span class="aic-chip">{{ mod }}</span>
-          {% else %}
-          <span class="aic-muted">No modules tagged</span>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
+{% if instrument.notes.imaging_modes %}
+- **Imaging modes:** {{ instrument.notes.imaging_modes | join(', ') }}
+{% endif %}
 
-=== "Hardware"
+{% if instrument.notes.filters %}
+- **Filters:**
+  {% for f in instrument.notes.filters %}
+  - {{ f }}
+  {% endfor %}
+{% endif %}
 
-    ### Light sources
+{% if instrument.notes.additional_hardware %}
+- **Additional hardware:**
+  {% for h in instrument.notes.additional_hardware %}
+  - {{ h }}
+  {% endfor %}
+{% endif %}
 
-    | Model | Kind | Wavelength (nm) | Manufacturer |
-    |---|---|---:|---|
-    {% for src in light_sources %}
-    | {{ src.model | default('—', true) }} | {{ src.kind | default('—', true) }} | {{ src.wavelength_nm | default('—', true) }} | {{ src.manufacturer | default('—', true) }} |
-    {% else %}
-    | — | — | — | — |
-    {% endfor %}
+{% if instrument.notes.raw %}
+- **Notes:** {{ instrument.notes.raw }}
+{% endif %}
 
-    ### Detectors
+{% endif %}
 
-    | Model | Kind | Manufacturer |
-    |---|---|---|
-    {% for det in detectors %}
-    | {{ det.model | default('—', true) }} | {{ det.kind | default('—', true) }} | {{ det.manufacturer | default('—', true) }} |
-    {% else %}
-    | — | — | — |
-    {% endfor %}
+## Software Environment
 
-    ### Objectives
+{% if instrument.software %}
+| Component | Name | Version |
+|---|---|---|
+{% for sw in instrument.software %}
+| {{ sw.component or '—' }} | **{{ sw.name or '—' }}** | `{{ sw.version or '—' }}` |
+{% endfor %}
+{% else %}
+> *No software configurations recorded.*
+{% endif %}
 
-    | Model | Mag | NA | Immersion | Manufacturer |
-    |---|---:|---:|---|---|
-    {% for obj in objectives %}
-    | {{ obj.model | default('—', true) }} | {{ obj.magnification | default('—', true) }}× | {{ obj.numerical_aperture | default('—', true) }} | {{ obj.immersion | default('—', true) }} | {{ obj.manufacturer | default('—', true) }} |
-    {% else %}
-    | — | — | — | — | — |
-    {% endfor %}
+## Hardware
 
-=== "Software"
+### Light Sources
+| Model | Type | Wavelength (nm) | Notes |
+|---|---|---:|---|
+{% for src in light_sources %}
+| **{{ src.name or '—' }}** | {{ src.type or '—' }} | {{ src.wavelength if src.wavelength is not none else '—' }} | {{ src.notes or '—' }} |
+{% else %}
+| — | — | — | — |
+{% endfor %}
 
-    {% if software %}
-    | Component | Name | Version |
-    |---|---|---|
-    {% for sw in software %}
-    | {{ sw.component }} | {{ sw.name | default('—', true) }} | {{ sw.version | default('—', true) }} |
-    {% endfor %}
-    {% else %}
-    *No software recorded.*
-    {% endif %}
+### Detectors
+| Manufacturer | Model | Type | Notes |
+|---|---|---|---|
+{% for det in detectors %}
+| **{{ det.name or '—' }}** | {{ det.model or '—' }} | {{ det.type or '—' }} | {{ det.notes or '—' }} |
+{% else %}
+| — | — | — | — |
+{% endfor %}
 
-=== "QC"
+### Objectives
+| Model | Magnification | N.A. | Notes |
+|---|---:|---:|---|
+{% for obj in objectives %}
+| **{{ obj.name or '—' }}** | {{ obj.magnification if obj.magnification is not none else '—' }}x | {{ obj.na if obj.na is not none else '—' }} | {{ obj.notes or '—' }} |
+{% else %}
+| — | — | — | — |
+{% endfor %}
 
-    #### Latest measurements
+## QC Metrics
 
-    | Metric | Value | Unit |
-    |---|---:|---|
-    {% for m in latest_metrics %}
-    | {{ metric_names.get(m.metric_id, m.metric_id) }} <br><span class="aic-muted" style="font-size:.72rem;">`{{ m.metric_id }}`</span> | `{{ m.value }}` | {{ m.unit | default('—', true) }} |
-    {% else %}
-    | — | — | — |
-    {% endfor %}
+### Latest measurements
+| Metric | Value |
+|---|---|
+{% for m_id, m_val in latest_metrics.items() %}
+| **{{ metric_names.get(m_id, m_id) }}** <br><span class="aic-muted"><code>{{ m_id }}</code></span> | <code>{{ m_val }}</code> |
+{% else %}
+| — | — |
+{% endfor %}
 
-    {% if latest_qc_overall %}
-    !!! info "Latest QC verdict"
-        **Overall:** `{{ latest_qc_overall }}`
-    {% endif %}
+### Metric trends
 
-    #### Trends
+<div id="chartsContainer" class="aic-chartgrid"></div>
 
-    <div
-      class="aic-charts"
-      data-aic-charts='{{ charts_data | tojson | safe }}'
-      data-aic-metric-names='{{ metric_names | tojson | safe }}'
-    ></div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const chartsData = {{ charts_json }};
+  const metricNames = {{ metric_names | tojson | safe }};
+  const container = document.getElementById('chartsContainer');
+  if (!container || !window.Chart) return;
+
+  for (const [metricId, chartConfig] of Object.entries(chartsData)) {
+    const readableTitle = metricNames[metricId] || metricId;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'aic-chartcard';
+
+    const title = document.createElement('div');
+    title.className = 'aic-chartcard__title';
+    title.textContent = readableTitle;
+    wrapper.appendChild(title);
+
+    const canvas = document.createElement('canvas');
+    wrapper.appendChild(canvas);
+
+    container.appendChild(wrapper);
+
+    new Chart(canvas, {
+      type: 'line',
+      data: chartConfig,
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: false } }
+      }
+    });
+  }
+});
+</script>
