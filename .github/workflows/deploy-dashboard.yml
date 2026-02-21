@@ -5,7 +5,6 @@ on:
     paths:
       - "docs/**"
       - "instruments/**"
-      # FIXED: Added the actual data directories so new logs trigger a rebuild!
       - "qc/**"
       - "maintenance/**"
       - "scripts/**"
@@ -33,7 +32,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-          cache: "pip" # FIXED: Cache dependencies to speed up the pipeline
+          cache: "pip"
+          # FIXED: Tell the caching action to use our custom requirements file name
+          cache-dependency-path: "requirements-docs.txt" 
 
       - name: Install dependencies
         run: |
@@ -44,7 +45,6 @@ jobs:
         run: python scripts/dashboard_builder.py
         env:
           PYTHONPATH: src
-          # FIXED: Pass the dynamic repo URL to the builder script we fixed earlier
           MKDOCS_SITE_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
       - name: Build MkDocs
