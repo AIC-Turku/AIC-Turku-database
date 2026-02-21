@@ -1,7 +1,7 @@
 # 📊 {{ instrument.display_name }} · History
 
-<div class="aic-topactions" markdown="1">
-  [🔙 Back to Overview](index.md){ .md-button }
+<div class="aic-topactions">
+  <a href="../" class="md-button">🔙 Back to Overview</a>
 </div>
 
 ## 📈 Metrics Over Time
@@ -98,8 +98,8 @@ document.addEventListener('DOMContentLoaded', function() {
           {{ event.suite | default(event.type, true) | default('Routine Event', true) }}
         </div>
         
-        <div class="aic-timeline__actions" markdown="1">
-          [View Full Report](../../events/{{ event.event_id }}.md){ .md-button .md-button--small }
+        <div class="aic-timeline__actions">
+          <a href="../../../events/{{ event.event_id }}/" class="md-button md-button--small">View Full Report</a>
         </div>
       </div>
     </div>
