@@ -1,9 +1,9 @@
 (function () {
   // Chart.js is loaded via mkdocs extra_javascript.
-  // This renderer looks for <div class="aic-charts" data-aic-charts='{"metric":{...}}'>
+  // This renderer looks for elements with data-aic-charts='{"metric":{...}}'
 
   function cssVar(name, fallback) {
-    const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+    const v = getComputedStyle(document.body).getPropertyValue(name);
     return (v && v.trim()) ? v.trim() : fallback;
   }
 
@@ -20,47 +20,52 @@
 
   function getThemeColors() {
     return {
-      primary: cssVar('--md-primary-fg-color', 'rgba(75,192,192,1)'),
-      text: cssVar('--md-default-fg-color', '#111'),
-      grid: cssVar('--md-default-fg-color--lightest', 'rgba(0,0,0,.08)'),
-      bg: cssVar('--md-default-bg-color', '#fff')
+      // Prioritize the primary link color, fallback to default primary
+      primary: cssVar('--md-typeset-a-color', cssVar('--md-primary-fg-color', '#4051b5')),
+      text: cssVar('--md-default-fg-color', '#333'),
+      grid: cssVar('--md-default-fg-color--lightest', 'rgba(0,0,0,0.1)'),
     };
   }
 
   function buildChart(container, metricId, chartData, metricNames, colors) {
     const wrapper = document.createElement('div');
-    wrapper.className = 'aic-chart';
+    wrapper.className = 'aic-chartcard';
 
     const title = document.createElement('div');
-    title.className = 'aic-chart__title';
+    title.className = 'aic-chartcard__title';
     title.textContent = (metricNames && metricNames[metricId]) ? metricNames[metricId] : metricId;
     wrapper.appendChild(title);
 
+    const canvasWrapper = document.createElement('div');
+    canvasWrapper.className = 'aic-chartcard__canvas-wrapper';
+    
     const canvas = document.createElement('canvas');
-    wrapper.appendChild(canvas);
+    canvasWrapper.appendChild(canvas);
+    wrapper.appendChild(canvasWrapper);
     container.appendChild(wrapper);
 
     const ctx = canvas.getContext('2d');
 
-    // Use a minimal dataset config and apply theme colors at runtime.
     const data = {
       labels: chartData.labels || [],
       datasets: [
         {
-          label: metricId,
+          label: title.textContent,
           data: chartData.values || [],
           borderColor: colors.primary,
-          backgroundColor: colors.primary,
-          tension: 0.2,
-          spanGaps: true,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: colors.primary,
+          borderWidth: 2,
           pointRadius: 3,
+          tension: 0.2,
+          spanGaps: true
         }
       ]
     };
 
     const options = {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: false, // Relies on css wrapper to dictate dimensions
       plugins: {
         legend: { display: false },
         tooltip: { mode: 'index', intersect: false },
@@ -68,18 +73,16 @@
       scales: {
         x: {
           grid: { color: colors.grid },
-          ticks: { color: colors.text, maxRotation: 0 },
+          ticks: { color: colors.text, maxRotation: 45 },
         },
         y: {
           grid: { color: colors.grid },
           ticks: { color: colors.text },
+          beginAtZero: false
         },
       },
       interaction: { mode: 'index', intersect: false },
     };
-
-    // Fix height for consistent grid; users can scroll.
-    wrapper.style.height = '260px';
 
     return new Chart(ctx, { type: 'line', data, options });
   }
@@ -87,7 +90,7 @@
   function renderAll() {
     if (!window.Chart) return;
 
-    const containers = document.querySelectorAll('.aic-charts[data-aic-charts]');
+    const containers = document.querySelectorAll('[data-aic-charts]');
     if (!containers.length) return;
 
     window.__aicCharts = window.__aicCharts || [];
@@ -101,17 +104,26 @@
     const colors = getThemeColors();
 
     containers.forEach((container) => {
+      // Clear DOM to prevent duplicates
       container.innerHTML = '';
 
       const charts = parseJsonAttr(container, 'data-aic-charts', {});
       const metricNames = parseJsonAttr(container, 'data-aic-metric-names', {});
 
       const metricIds = Object.keys(charts || {}).sort();
+
+      if (metricIds.length === 0) {
+        container.innerHTML = '<p class="aic-muted">No historical metrics available.</p>';
+        return;
+      }
+
       metricIds.forEach((metricId) => {
         const chartData = charts[metricId];
         if (!chartData || !Array.isArray(chartData.labels) || !Array.isArray(chartData.values)) return;
-        // Only render if at least one numeric value exists.
+        
+        // Only render if at least one numeric value exists
         if (!chartData.values.some(v => typeof v === 'number')) return;
+        
         const chart = buildChart(container, metricId, chartData, metricNames, colors);
         window.__aicCharts.push(chart);
       });
@@ -125,7 +137,8 @@
     const obs = new MutationObserver((mutations) => {
       for (const m of mutations) {
         if (m.type === 'attributes' && m.attributeName === 'data-md-color-scheme') {
-          renderAll();
+          // Slight delay to allow MkDocs CSS variables to fully apply to the DOM
+          setTimeout(renderAll, 50);
           break;
         }
       }
