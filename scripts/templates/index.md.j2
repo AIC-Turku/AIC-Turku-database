@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Instrument Fleet Overview
 
 !!! info "At-a-glance"
@@ -28,7 +33,7 @@
 
 <div class="aic-grid">
   {% for inst in instruments %}
-  <a class="aic-card aic-card--link" href="instruments/{{ inst.id }}/"
+  <a class="aic-card aic-card--link" href="instruments/{{ inst.id }}/index.md"
      data-name="{{ inst.display_name | lower }}"
      data-manufacturer="{{ inst.manufacturer | lower }}"
      data-model="{{ inst.model | lower }}"
@@ -70,15 +75,19 @@
     const q = (searchEl.value || '').trim().toLowerCase();
 
     cards.forEach(card => {
-      const cardMods = (card.getAttribute('data-modalities') || '');
+      // FIXED: Split string into array for exact matching to prevent substring false-positives
+      const cardModsStr = card.getAttribute('data-modalities') || '';
+      const cardModsList = cardModsStr ? cardModsStr.split(',').map(s => s.trim()) : [];
+      
       const hay = [
         card.getAttribute('data-name') || '',
         card.getAttribute('data-manufacturer') || '',
         card.getAttribute('data-model') || ''
       ].join(' ');
 
-      const matchesMod = (mod === 'all') || cardMods.includes(mod);
+      const matchesMod = (mod === 'all') || cardModsList.includes(mod);
       const matchesQ = (!q) || hay.includes(q);
+      
       card.style.display = (matchesMod && matchesQ) ? '' : 'none';
     });
   }
