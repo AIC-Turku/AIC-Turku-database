@@ -92,11 +92,13 @@
 ## Software Environment
 
 {% if instrument.software %}
+
 | Component | Name | Version |
 |---|---|---|
-{% for sw in instrument.software %}
+{% for sw in instrument.software -%}
 | {{ sw.component or '—' }} | **{{ sw.name or '—' }}** | `{{ sw.version or '—' }}` |
 {% endfor %}
+
 {% else %}
 > *No software configurations recorded.*
 {% endif %}
@@ -104,40 +106,44 @@
 ## Hardware
 
 ### Light Sources
+
 | Model | Type | Wavelength (nm) | Notes |
 |---|---|---:|---|
-{% for src in light_sources %}
+{% for src in light_sources -%}
 | **{{ src.name or '—' }}** | {{ src.type or '—' }} | {{ src.wavelength if src.wavelength is not none else '—' }} | {{ src.notes or '—' }} |
-{% else %}
+{% else -%}
 | — | — | — | — |
 {% endfor %}
 
 ### Detectors
+
 | Manufacturer | Model | Type | Notes |
 |---|---|---|---|
-{% for det in detectors %}
+{% for det in detectors -%}
 | **{{ det.name or '—' }}** | {{ det.model or '—' }} | {{ det.type or '—' }} | {{ det.notes or '—' }} |
-{% else %}
+{% else -%}
 | — | — | — | — |
 {% endfor %}
 
 ### Objectives
+
 | Model | Magnification | N.A. | Notes |
 |---|---:|---:|---|
-{% for obj in objectives %}
+{% for obj in objectives -%}
 | **{{ obj.name or '—' }}** | {{ obj.magnification if obj.magnification is not none else '—' }}x | {{ obj.na if obj.na is not none else '—' }} | {{ obj.notes or '—' }} |
-{% else %}
+{% else -%}
 | — | — | — | — |
 {% endfor %}
 
 ## QC Metrics
 
 ### Latest measurements
+
 | Metric | Value |
 |---|---|
-{% for m_id, m_val in latest_metrics.items() %}
+{% for m_id, m_val in latest_metrics.items() -%}
 | **{{ metric_names.get(m_id, m_id) }}** <br><span class="aic-muted"><code>{{ m_id }}</code></span> | <code>{{ m_val }}</code> |
-{% else %}
+{% else -%}
 | — | — |
 {% endfor %}
 
@@ -159,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  // Use MkDocs Material theme colors for charts
   const themeColor = 'var(--md-typeset-a-color, #4051b5)';
 
   for (const [metricId, chartConfig] of Object.entries(chartsData)) {
