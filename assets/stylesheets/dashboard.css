@@ -1,0 +1,200 @@
+/*
+AIC Microscopy Dashboard - UI overhaul
+- Uses MkDocs Material CSS variables
+- Avoids hardcoded colors where possible
+*/
+
+:root {
+  --aic-card-radius: 14px;
+  --aic-card-border: 1px solid var(--md-default-fg-color--lightest);
+  --aic-shadow: 0 2px 10px rgba(0,0,0,.08);
+  --aic-shadow-hover: 0 6px 18px rgba(0,0,0,.14);
+  --aic-chip-radius: 999px;
+  --aic-gap: 1rem;
+}
+
+/* Layout helpers */
+.aic-stack { display: grid; gap: var(--aic-gap); }
+.aic-inline { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+
+/* Fleet grid */
+.aic-grid {
+  display: grid;
+  gap: var(--aic-gap);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-items: stretch;
+}
+
+.aic-card {
+  border: var(--aic-card-border);
+  border-radius: var(--aic-card-radius);
+  background: var(--md-default-bg-color);
+  box-shadow: var(--aic-shadow);
+  overflow: hidden;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.aic-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--aic-shadow-hover);
+  border-color: var(--md-primary-fg-color--light);
+}
+
+.aic-card__media {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  background: var(--md-code-bg-color);
+  display: block;
+  object-fit: cover;
+}
+
+.aic-card__body { padding: .9rem .95rem 1rem; }
+
+.aic-card__title {
+  display: flex;
+  justify-content: space-between;
+  gap: .8rem;
+  align-items: baseline;
+}
+
+.aic-card__title a {
+  text-decoration: none;
+}
+.aic-card__title a:hover {
+  text-decoration: underline;
+}
+
+.aic-muted { color: var(--md-default-fg-color--light); }
+
+.aic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .18rem .55rem;
+  border-radius: var(--aic-chip-radius);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  font-size: .74rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.aic-chip--status { border-width: 1px; font-weight: 600; }
+.aic-chip--green { border-color: rgba(0, 168, 90, .35); }
+.aic-chip--yellow { border-color: rgba(245, 170, 0, .45); }
+.aic-chip--red { border-color: rgba(230, 40, 60, .45); }
+
+.aic-kv {
+  display: grid;
+  gap: .25rem .8rem;
+  grid-template-columns: 110px 1fr;
+  font-size: .85rem;
+}
+.aic-kv div:nth-child(odd) { color: var(--md-default-fg-color--light); }
+
+/* Filter bar */
+.aic-filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .65rem;
+  border: var(--aic-card-border);
+  border-radius: var(--aic-card-radius);
+  padding: .85rem;
+  background: color-mix(in srgb, var(--md-default-bg-color) 96%, var(--md-primary-fg-color) 4%);
+}
+
+@media (min-width: 880px) {
+  .aic-filters { grid-template-columns: 1.3fr .9fr .9fr auto; align-items: end; }
+}
+
+.aic-field label {
+  display: block;
+  font-size: .72rem;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: .25rem;
+}
+
+.aic-field input,
+.aic-field select {
+  width: 100%;
+  padding: .55rem .6rem;
+  border-radius: 10px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  background: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+  outline: none;
+}
+
+.aic-field input:focus,
+.aic-field select:focus {
+  border-color: var(--md-primary-fg-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary-fg-color) 25%, transparent);
+}
+
+.aic-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .55rem .9rem;
+  border-radius: 10px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  background: var(--md-default-bg-color);
+  cursor: pointer;
+}
+
+.aic-button:hover { border-color: var(--md-primary-fg-color--light); }
+
+/* Instrument page layout */
+.aic-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--aic-gap);
+  margin: 1rem 0 1.2rem;
+}
+
+@media (min-width: 900px) {
+  .aic-hero { grid-template-columns: 360px 1fr; }
+}
+
+.aic-panel {
+  border: var(--aic-card-border);
+  border-radius: var(--aic-card-radius);
+  background: var(--md-default-bg-color);
+  box-shadow: var(--aic-shadow);
+  padding: 1rem;
+}
+
+.aic-img {
+  width: 100%;
+  border-radius: var(--aic-card-radius);
+  border: var(--aic-card-border);
+  box-shadow: var(--aic-shadow);
+  object-fit: cover;
+}
+
+/* Chart containers */
+.aic-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--aic-gap);
+}
+
+.aic-chart {
+  border: var(--aic-card-border);
+  border-radius: var(--aic-card-radius);
+  padding: .75rem .85rem;
+  background: var(--md-default-bg-color);
+}
+
+.aic-chart__title {
+  font-size: .9rem;
+  font-weight: 650;
+  margin: 0 0 .4rem;
+}
+
+/* Make large YAML blocks scroll nicely */
+.md-typeset pre code { max-height: 520px; }
+
+/* Reduce table density for the dashboard */
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  padding: .45rem .6rem;
+}

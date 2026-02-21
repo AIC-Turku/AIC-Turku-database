@@ -1,79 +1,38 @@
-# {{ display_name }} - History
+# {{ instrument.display_name }} — History
 
-[🔙 Back to Specifications](spec.md){ .md-button }
+[⬅ Back to specifications](spec.md){ .md-button }
 
-## Latest Metric Snapshot
+<div class="aic-stack">
 
-| Metric | Latest Value |
-|--------|--------------|
-{% for metric_id, value in latest_metrics.items() -%}
-| {{ metric_id }} | {{ value | default('—', true) }} |
-{% else -%}
-| — | — |
-{% endfor %}
+!!! info "Log summary"
+    **QC sessions:** {{ qc_events | length }} · **Maintenance events:** {{ maintenance_events | length }}
 
-## Metrics Over Time
-
-<div>
-<div id="chartsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const chartsData = {{ charts_json }};
-    const container = document.getElementById('chartsContainer');
-
-    // Retrieve the python dictionary for readable names
-    const metricNames = {{ metric_names | tojson | safe }};
-
-    for (const [metricId, chartConfig] of Object.entries(chartsData)) {
-        const readableTitle = metricNames[metricId] || metricId;
-
-        const wrapper = document.createElement('div');
-        wrapper.style.border = '1px solid var(--md-default-fg-color--lightest)';
-        wrapper.style.padding = '10px';
-        wrapper.style.borderRadius = '8px';
-        wrapper.style.backgroundColor = 'var(--md-default-bg-color)';
-        
-        const canvas = document.createElement('canvas');
-        wrapper.appendChild(canvas);
-        container.appendChild(wrapper);
-
-        new Chart(canvas, {
-            type: 'line',
-            data: chartConfig,
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    title: { display: true, text: readableTitle, font: { size: 14 } }
-                }
-            }
-        });
-    }
-});
-</script>
 </div>
 
+=== "QC events"
 
-## Event Log
+    | Date | Overall | Reason | Operator | Link |
+    |---|---|---|---|---|
+    {% for e in qc_events %}
+    | {{ e.date | default('—', true) }} | `{{ e.overall_status | default('—', true) }}` | {{ e.reason | default('—', true) }} | {{ e.operator | default('—', true) }} | [open](../../events/{{ e.event_id }}.md) |
+    {% else %}
+    | — | — | — | — | — |
+    {% endfor %}
 
-### QC Events
+=== "Maintenance"
 
-| Date | Suite/Type | Status |
-|------|------------|--------|
-{% for event in qc_events | default([], true) -%}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
-{% else -%}
-| — | — | — |
-{% endfor %}
+    | Date | Status after | Reason | Provider | Link |
+    |---|---|---|---|---|
+    {% for e in maintenance_events %}
+    | {{ e.date | default('—', true) }} | `{{ e.status_after | default('—', true) }}` | {{ e.reason | default('—', true) }} | {{ e.provider | default('—', true) }} | [open](../../events/{{ e.event_id }}.md) |
+    {% else %}
+    | — | — | — | — | — |
+    {% endfor %}
 
-### Maintenance Events
+=== "Trends"
 
-| Date | Suite/Type | Status |
-|------|------------|--------|
-{% for event in maintenance_events | default([], true) -%}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
-{% else -%}
-| — | — | — |
-{% endfor %}
+    <div
+      class="aic-charts"
+      data-aic-charts='{{ charts_data | tojson | safe }}'
+      data-aic-metric-names='{{ metric_names | tojson | safe }}'
+    ></div>

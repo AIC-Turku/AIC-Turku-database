@@ -1,7 +1,107 @@
 site_name: AIC Microscopy Dashboard
 site_url: https://aic-turku.github.io/AIC-Turku-database/
-
+docs_dir: dashboard_docs
+use_directory_urls: true
 theme:
   name: material
-
-docs_dir: dashboard_docs
+  logo: assets/images/logo.svg
+  favicon: assets/images/favicon.svg
+  features:
+  - navigation.tabs
+  - navigation.sections
+  - navigation.top
+  - toc.integrate
+  - search.suggest
+  - search.highlight
+  - content.code.copy
+  palette:
+  - scheme: default
+    toggle:
+      icon: material/brightness-7
+      name: Switch to dark mode
+  - scheme: slate
+    toggle:
+      icon: material/brightness-4
+      name: Switch to light mode
+markdown_extensions:
+- attr_list
+- md_in_html
+- pymdownx.details
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
+plugins:
+- search
+extra_css:
+- assets/stylesheets/dashboard.css
+extra_javascript:
+- https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js
+- assets/javascripts/charts.js
+- assets/javascripts/dashboard.js
+nav:
+- Fleet Overview: index.md
+- System Health: status.md
+- Microscopes:
+  - 3i CSU-W1 Spinning Disk:
+    - Overview: instruments/scope-3i-csu-w1-spinning-disk/spec.md
+    - History: instruments/scope-3i-csu-w1-spinning-disk/history.md
+  - 3i CSU-W1 Spinning Disk Med C:
+    - Overview: instruments/scope-3i-csu-w1-spinning-disk-med-c/spec.md
+    - History: instruments/scope-3i-csu-w1-spinning-disk-med-c/history.md
+  - Abberior STED:
+    - Overview: instruments/scope-1e33f909/spec.md
+    - History: instruments/scope-1e33f909/history.md
+  - Deltavision OMX:
+    - Overview: instruments/scope-deltavision-omx/spec.md
+    - History: instruments/scope-deltavision-omx/history.md
+  - EVOS fl:
+    - Overview: instruments/scope-evos-fl/spec.md
+    - History: instruments/scope-evos-fl/history.md
+  - Lambert FLIM (frequency domain):
+    - Overview: instruments/scope-lambert-flim-frequency-domain/spec.md
+    - History: instruments/scope-lambert-flim-frequency-domain/history.md
+  - Leica DM IRBE:
+    - Overview: instruments/scope-leica-dm-irbe/spec.md
+    - History: instruments/scope-leica-dm-irbe/history.md
+  - Leica DMRE:
+    - Overview: instruments/scope-leica-dmre/spec.md
+    - History: instruments/scope-leica-dmre/history.md
+  - Leica RXA:
+    - Overview: instruments/scope-leica-rxa/spec.md
+    - History: instruments/scope-leica-rxa/history.md
+  - Leica STELLARIS 8 FALCON FLIM (Resonant):
+    - Overview: instruments/scope-leica-stellaris-8-falcon-flim-resonant/spec.md
+    - History: instruments/scope-leica-stellaris-8-falcon-flim-resonant/history.md
+  - Leica TCS SP5 Multiphoton:
+    - Overview: instruments/scope-leica-tcs-sp5-multiphoton/spec.md
+    - History: instruments/scope-leica-tcs-sp5-multiphoton/history.md
+  - Leica Thunder:
+    - Overview: instruments/scope-leica-thunder/spec.md
+    - History: instruments/scope-leica-thunder/history.md
+  - MSquared Aurora Airy Beam:
+    - Overview: instruments/scope-msquared-aurora-airy-beam/spec.md
+    - History: instruments/scope-msquared-aurora-airy-beam/history.md
+  - Nikon Eclipse Ti2-E:
+    - Overview: instruments/scope-nikon-eclipse-ti2-e/spec.md
+    - History: instruments/scope-nikon-eclipse-ti2-e/history.md
+  - Olympus BX60:
+    - Overview: instruments/scope-olympus-bx60/spec.md
+    - History: instruments/scope-olympus-bx60/history.md
+  - ONI Nanoimager:
+    - Overview: instruments/scope-oni-nanoimager/spec.md
+    - History: instruments/scope-oni-nanoimager/history.md
+  - Test Scope X1:
+    - Overview: instruments/scope-testx1/spec.md
+    - History: instruments/scope-testx1/history.md
+  - Zeiss AxioZoom.V16:
+    - Overview: instruments/scope-zeiss-axiozoom-v16/spec.md
+    - History: instruments/scope-zeiss-axiozoom-v16/history.md
+  - Zeiss LSM 510 JPK AFM:
+    - Overview: instruments/scope-zeiss-lsm-510-jpk-afm/spec.md
+    - History: instruments/scope-zeiss-lsm-510-jpk-afm/history.md
+  - Zeiss LSM 880 with AiryScan:
+    - Overview: instruments/scope-zeiss-lsm-880-with-airyscan/spec.md
+    - History: instruments/scope-zeiss-lsm-880-with-airyscan/history.md
+  - Zeiss TIRF:
+    - Overview: instruments/scope-zeiss-tirf/spec.md
+    - History: instruments/scope-zeiss-tirf/history.md

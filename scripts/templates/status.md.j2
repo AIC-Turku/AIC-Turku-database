@@ -1,21 +1,43 @@
 # System Health
 
-!!! info "System Health Overview"
-    This page highlights instruments currently in a degraded state (**Red** or **Yellow**) and summarizes why attention is required.
+{% if issues %}
 
-{% set flagged = flagged_instruments | default(issues, true) %}
-{% if flagged %}
-{% for issue in flagged %}
-## {{ issue.name }}
+!!! warning "Flagged instruments"
+    The list below includes microscopes that are **Offline** or in **Warning** state.
 
-- **Status:** {{ issue.badge }}
-- **Date:** {{ issue.date_flagged | default(issue.date, true) | default("Unknown", true) }}
-- **History:** [View History](instruments/{{ issue.id }}/history.md)
+<div class="aic-grid" aria-label="Flagged instrument cards">
+  {% for inst in issues %}
+  <div class="aic-card">
+    <div class="aic-card__body">
+      <div class="aic-card__title" markdown="span">
+        [{{ inst.display_name }}](instruments/{{ inst.id }}/history.md)
+        <span class="aic-chip aic-chip--status aic-chip--{{ inst.status.color }}" title="{{ inst.status.reason }}">{{ inst.status.badge }}</span>
+      </div>
 
-> {{ issue.reason | default("No reason provided.", true) }}
+      <div class="aic-muted" style="margin: .2rem 0 .65rem;" markdown="span">
+        {{ inst.manufacturer | default('—', true) }}{% if inst.model %} · {{ inst.model }}{% endif %}
+      </div>
 
-{% endfor %}
+      <div markdown="span">
+        **Why:** {{ inst.status.reason | default('—', true) }}
+      </div>
+
+      <div class="aic-kv" style="margin-top: .55rem;">
+        <div>Last QC</div><div>{{ inst.status.last_qc_date | default('—', true) }}</div>
+        <div>Last maint.</div><div>{{ inst.status.last_maint_date | default('—', true) }}</div>
+      </div>
+
+      <div style="margin-top: .85rem;" markdown="span">
+        [Open history](instruments/{{ inst.id }}/history.md){ .md-button }
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
 {% else %}
-!!! success "No Active Issues"
+
+!!! success "No active issues"
     All instruments are currently healthy.
+
 {% endif %}

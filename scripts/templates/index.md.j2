@@ -1,49 +1,83 @@
-# Instrument Fleet Overview
+# Fleet Overview
 
-<div style="margin-bottom: 20px;">
-    <label for="modalityFilter"><strong>Filter by Modality: </strong></label>
-    <select id="modalityFilter" style="padding: 5px; border-radius: 4px; background-color: var(--md-default-bg-color); color: var(--md-default-fg-color); border: 1px solid var(--md-default-fg-color--light);">
-        <option value="all">All Modalities</option>
-        {% for mod in all_modalities %}
-        <option value="{{ mod | lower }}">{{ mod }}</option>
-        {% endfor %}
+<div class="aic-stack">
+
+!!! info "At-a-glance"
+    **Total:** {{ stats.total }} · **Online:** {{ stats.green }} · **Warning:** {{ stats.yellow }} · **Offline:** {{ stats.red }}
+
+<div class="aic-filters" role="region" aria-label="Fleet filters">
+  <div class="aic-field">
+    <label for="aicSearch">Search</label>
+    <input id="aicSearch" type="search" placeholder="Name, manufacturer, modality…" autocomplete="off" />
+  </div>
+
+  <div class="aic-field">
+    <label for="aicModality">Modality</label>
+    <select id="aicModality">
+      <option value="all">All modalities</option>
+      {% for mod in all_modalities %}
+      <option value="{{ mod | lower }}">{{ mod }}</option>
+      {% endfor %}
     </select>
+  </div>
+
+  <div class="aic-field">
+    <label for="aicStatus">Status</label>
+    <select id="aicStatus">
+      <option value="all">All statuses</option>
+      <option value="green">Online</option>
+      <option value="yellow">Warning</option>
+      <option value="red">Offline</option>
+    </select>
+  </div>
+
+  <button class="aic-button" id="aicReset" type="button">Reset</button>
 </div>
 
-<div class="microscope-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
-    {% for inst in instruments %}
-    <div class="microscope-card" data-modalities="{{ inst.instrument.modalities | join(',') | lower }}" style="border: 1px solid var(--md-default-fg-color--lightest); border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: var(--md-default-bg-color);">
-        
-        <img src="assets/images/{{ inst.image_filename }}" 
-             style="width: 100%; height: 180px; object-fit: cover; border-radius: 6px; margin-bottom: 10px;" 
-             onerror="this.onerror=null; this.src='assets/images/placeholder.png';" 
-             alt="{{ inst.display_name }}">
-             
-        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 5px;" markdown="span">
-            [{{ inst.display_name }}](instruments/{{ inst.id }}/spec.md)
-        </div>
-        
-        <div style="margin-bottom: 5px;" markdown="span">{{ inst.status.badge }}</div>
-        
-        <div style="font-size: 0.9em; color: var(--md-default-fg-color--light);" markdown="span">
-            **Modalities:** {{ inst.instrument.modalities | join(', ') | default("None") }}
-        </div>
+<div class="aic-grid" aria-label="Microscope cards">
+  {% for inst in instruments %}
+  <div
+    class="aic-card"
+    data-filterable="true"
+    data-name="{{ inst.display_name }}"
+    data-manufacturer="{{ inst.manufacturer }}"
+    data-modalities="{{ inst.modalities | join(',') | lower }}"
+    data-status="{{ inst.status.color }}"
+  >
+
+    <img
+      class="aic-card__media"
+      src="assets/images/{{ inst.image_filename }}"
+      alt="{{ inst.display_name }}"
+      loading="lazy"
+      onerror="this.onerror=null; this.src='assets/images/placeholder.svg';"
+    />
+
+    <div class="aic-card__body">
+      <div class="aic-card__title" markdown="span">
+        [{{ inst.display_name }}](instruments/{{ inst.id }}/spec.md)
+        <span class="aic-chip aic-chip--status aic-chip--{{ inst.status.color }}" title="{{ inst.status.reason }}">{{ inst.status.badge }}</span>
+      </div>
+
+      <div class="aic-muted" style="margin: .25rem 0 .55rem;" markdown="span">
+        {{ inst.manufacturer | default('—', true) }}{% if inst.model %} · {{ inst.model }}{% endif %}
+      </div>
+
+      <div class="aic-inline" style="margin-bottom: .55rem;">
+        {% for mod in inst.modalities %}
+        <span class="aic-chip">{{ mod }}</span>
+        {% else %}
+        <span class="aic-muted">No modalities tagged</span>
+        {% endfor %}
+      </div>
+
+      <div class="aic-kv">
+        <div>Last QC</div><div>{{ inst.status.last_qc_date | default('—', true) }}</div>
+        <div>Last maint.</div><div>{{ inst.status.last_maint_date | default('—', true) }}</div>
+      </div>
     </div>
-    {% endfor %}
+  </div>
+  {% endfor %}
 </div>
 
-<script>
-document.getElementById('modalityFilter').addEventListener('change', function(e) {
-    const selected = e.target.value;
-    const cards = document.querySelectorAll('.microscope-card');
-    
-    cards.forEach(card => {
-        const modalities = card.getAttribute('data-modalities');
-        if (selected === 'all' || modalities.includes(selected)) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-});
-</script>
+</div>

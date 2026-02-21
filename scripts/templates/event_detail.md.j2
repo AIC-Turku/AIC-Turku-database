@@ -1,11 +1,46 @@
 # Event: {{ event_id }}
 
-[🔙 Back to {{ instrument_id }} History](../instruments/{{ instrument_id }}/history.md){ .md-button }
+[⬅ Back to {{ instrument_display_name }} history](../instruments/{{ instrument_id }}/history.md){ .md-button }
 
-- **Date:** {{ date | default('—', true) }}
-- **Instrument:** {{ instrument | default(instrument_id, true) | default('—', true) }}
-- **Operator:** {{ operator | default('—', true) }}
+| Field | Value |
+|---|---|
+| Date | {{ event.date | default('—', true) }} |
+| Instrument | {{ instrument_display_name }} (`{{ instrument_id }}`) |
+| Type | `{{ event.record_type | default('—', true) }}` |
+| Performed by | {{ event.actor | default('—', true) }} |
 
-```yaml
-{{ raw_yaml_content }}
-```
+{% if event.record_type == 'qc_session' %}
+
+## QC evaluation
+
+{% if event.overall_status %}
+!!! info "Overall: {{ event.overall_status }}"
+    {{ event.summary | default('', true) }}
+{% endif %}
+
+| Metric | Status | Threshold | Message |
+|---|---|---|---|
+{% for r in event.results %}
+| `{{ r.metric_id }}` | `{{ r.status }}` | {{ r.threshold | default('—', true) }} | {{ r.message | default('', true) }} |
+{% else %}
+| — | — | — | — |
+{% endfor %}
+
+{% elif event.record_type == 'maintenance_event' %}
+
+## Maintenance details
+
+| Field | Value |
+|---|---|
+| Reason | {{ event.reason | default('—', true) }} |
+| Action | {{ event.action | default('—', true) }} |
+| Status after | `{{ event.status_after | default('—', true) }}` |
+| Provider | {{ event.provider | default('—', true) }} |
+
+{% endif %}
+
+??? note "Raw YAML"
+
+    ```yaml
+{{ raw_yaml_content | indent(4, true) }}
+    ```
