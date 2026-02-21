@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # System Health
 
 !!! info "System Health Overview"
@@ -7,7 +12,7 @@
 
 <div class="aic-grid aic-grid--compact">
   {% for inst in issues %}
-  <a class="aic-card aic-card--link" href="instruments/{{ inst.id }}/" aria-label="Open {{ inst.display_name }}">
+  <div class="aic-card" aria-label="Status for {{ inst.display_name }}">
     <div class="aic-card__body">
       <div class="aic-card__title">{{ inst.display_name }}</div>
       <div class="aic-card__meta">{{ inst.manufacturer }}{% if inst.model %} · {{ inst.model }}{% endif %}</div>
@@ -22,11 +27,12 @@
         <div><span class="aic-muted">Last Maintenance</span><br>{{ inst.status.last_maint_date or '—' }}</div>
       </div>
 
-      <div class="aic-actions" markdown="span">
-        [View history](instruments/{{ inst.id }}/history.md){ .md-button .md-button--small }
+      <div class="aic-actions">
+        <a href="instruments/{{ inst.id }}/index.md" class="md-button md-button--small">Overview</a>
+        <a href="instruments/{{ inst.id }}/history.md" class="md-button md-button--primary md-button--small">View History</a>
       </div>
     </div>
-  </a>
+  </div>
   {% endfor %}
 </div>
 
