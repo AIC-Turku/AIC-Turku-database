@@ -4,7 +4,8 @@
   [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
 </div>
 
-!!! {{ 'success' if instrument.status.badge == '🟢 Online' else 'warning' if instrument.status.badge == '🟡 Warning' else 'danger' }} "Current Status: {{ instrument.status.badge }}"
+{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
+!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
     {{ instrument.status.reason }}
 
 <div class="aic-hero">
@@ -71,22 +72,21 @@
 
 {% if instrument.notes.filters %}
 - **Filters:**
-  {% for f in instrument.notes.filters %}
+{% for f in instrument.notes.filters %}
   - {{ f }}
-  {% endfor %}
+{% endfor %}
 {% endif %}
 
 {% if instrument.notes.additional_hardware %}
 - **Additional hardware:**
-  {% for h in instrument.notes.additional_hardware %}
+{% for h in instrument.notes.additional_hardware %}
   - {{ h }}
-  {% endfor %}
+{% endfor %}
 {% endif %}
 
 {% if instrument.notes.raw %}
 - **Notes:** {{ instrument.notes.raw }}
 {% endif %}
-
 {% endif %}
 
 ## Software Environment
@@ -150,7 +150,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const chartsData = {{ charts_json }};
   const metricNames = {{ metric_names | tojson | safe }};
   const container = document.getElementById('chartsContainer');
+  
   if (!container || !window.Chart) return;
+  
+  const chartKeys = Object.keys(chartsData);
+  if (chartKeys.length === 0) {
+    container.innerHTML = '<p class="aic-muted">No historical metrics available.</p>';
+    return;
+  }
+
+  // Use MkDocs Material theme colors for charts
+  const themeColor = 'var(--md-typeset-a-color, #4051b5)';
 
   for (const [metricId, chartConfig] of Object.entries(chartsData)) {
     const readableTitle = metricNames[metricId] || metricId;
@@ -163,14 +173,31 @@ document.addEventListener('DOMContentLoaded', function() {
     title.textContent = readableTitle;
     wrapper.appendChild(title);
 
-    const canvas = document.createElement('canvas');
-    wrapper.appendChild(canvas);
+    const canvasContainer = document.createElement('div');
+    canvasContainer.className = 'aic-chartcard__canvas-wrapper';
 
+    const canvas = document.createElement('canvas');
+    canvasContainer.appendChild(canvas);
+    wrapper.appendChild(canvasContainer);
+    
     container.appendChild(wrapper);
 
     new Chart(canvas, {
       type: 'line',
-      data: chartConfig,
+      data: {
+        labels: chartConfig.labels,
+        datasets: [{
+          label: readableTitle,
+          data: chartConfig.values,
+          borderColor: themeColor,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: themeColor,
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.2,
+          spanGaps: true
+        }]
+      },
       options: {
         responsive: true,
         plugins: { legend: { display: false } },
