@@ -16,7 +16,12 @@
   margin: 1rem 0 1.25rem;
 }
 
-.aic-fleetbar__group { display: flex; flex-direction: column; gap: 0.35rem; }
+.aic-fleetbar__group { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0.35rem; 
+}
+
 .aic-fleetbar__spacer { flex: 1; }
 .aic-fleetbar__hint { align-self: center; }
 
@@ -35,6 +40,12 @@
   color: var(--md-default-fg-color);
 }
 
+@media (max-width: 600px) {
+  .aic-fleetbar__group { flex: 1 1 100%; }
+  .aic-input, .aic-select { min-width: 100%; }
+  .aic-fleetbar__hint { display: none; }
+}
+
 /* Card grid */
 .aic-grid {
   display: grid;
@@ -47,6 +58,8 @@
 }
 
 .aic-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: var(--aic-radius);
   background: var(--md-default-bg-color);
@@ -55,7 +68,6 @@
 }
 
 .aic-card--link {
-  display: block;
   color: inherit;
   text-decoration: none;
   transform: translateY(0);
@@ -86,8 +98,20 @@
   display: block;
 }
 
+/* Position badge absolutely ONLY when inside media */
+.aic-card__media .aic-badge {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 .aic-card__body {
   padding: 0.9rem 1rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .aic-card__title {
@@ -108,28 +132,37 @@
 
 /* Badges */
 .aic-badge {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  padding: 0.25rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
   border-radius: 999px;
   font-weight: 600;
   font-size: 0.8rem;
   border: 1px solid var(--md-default-fg-color--lightest);
-  background: rgba(255,255,255,0.75);
-  backdrop-filter: blur(6px);
+  background: rgba(255,255,255,0.85);
+  white-space: nowrap;
 }
 
 [data-md-color-scheme="slate"] .aic-badge {
-  background: rgba(20,20,20,0.6);
+  background: rgba(30,30,30,0.85);
 }
 
-.aic-badge--green { border-color: rgba(0, 160, 80, 0.6); }
-.aic-badge--yellow { border-color: rgba(230, 170, 20, 0.7); }
-.aic-badge--red { border-color: rgba(220, 60, 60, 0.7); }
+.aic-badge--green { border-color: rgba(0, 160, 80, 0.6); color: rgba(0, 140, 70, 1); }
+.aic-badge--yellow { border-color: rgba(230, 170, 20, 0.7); color: rgba(200, 140, 10, 1); }
+.aic-badge--red { border-color: rgba(220, 60, 60, 0.7); color: rgba(200, 40, 40, 1); }
+
+[data-md-color-scheme="slate"] .aic-badge--green { color: rgba(60, 200, 120, 1); }
+[data-md-color-scheme="slate"] .aic-badge--yellow { color: rgba(240, 190, 60, 1); }
+[data-md-color-scheme="slate"] .aic-badge--red { color: rgba(240, 100, 100, 1); }
 
 /* Chips */
-.aic-chiprow { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.7rem; }
+.aic-chiprow { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 0.35rem; 
+  margin-top: 0.7rem; 
+}
+
 .aic-chip {
   font-size: 0.75rem;
   padding: 0.18rem 0.55rem;
@@ -137,6 +170,7 @@
   border: 1px solid var(--md-default-fg-color--lightest);
   background: color-mix(in srgb, var(--md-primary-fg-color) 12%, transparent);
 }
+
 .aic-chip--muted {
   background: color-mix(in srgb, var(--md-default-fg-color) 8%, transparent);
 }
@@ -166,7 +200,7 @@
 
 .aic-facts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.75rem;
   padding: 0.9rem;
   border: 1px solid var(--md-default-fg-color--lightest);
@@ -182,6 +216,7 @@
 /* Status cards */
 .aic-statusline {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
   margin-top: 0.7rem;
@@ -192,9 +227,14 @@
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   margin-top: 0.75rem;
+  font-size: 0.85rem;
 }
 
-.aic-actions { margin-top: 0.8rem; }
+.aic-actions { 
+  margin-top: 1rem; 
+  display: flex;
+  gap: 0.5rem;
+}
 
 /* Charts */
 .aic-chartgrid {
@@ -208,10 +248,19 @@
   border-radius: var(--aic-radius);
   background: var(--md-default-bg-color);
   padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .aic-chartcard__title {
   font-weight: 700;
   font-size: 0.9rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.aic-chartcard__canvas-wrapper {
+  position: relative;
+  height: 260px;
+  width: 100%;
+  flex: 1;
 }
