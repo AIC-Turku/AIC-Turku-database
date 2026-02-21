@@ -31,7 +31,6 @@ from typing import Any, Iterable
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
-
 METRIC_NAMES: dict[str, str] = {
     "psf.fwhm_x_um": "PSF Lateral FWHM X (µm)",
     "psf.fwhm_y_um": "PSF Lateral FWHM Y (µm)",
@@ -172,13 +171,7 @@ def parse_notes_compact(notes: str) -> dict[str, Any]:
 
 
 def normalize_software(raw: Any) -> list[dict[str, str]]:
-    """Normalize software sections into a list of rows.
-
-    Accepts:
-    - list of dicts (already normalized)
-    - mapping of components -> {name, version}
-    - single string
-    """
+    """Normalize software sections into a list of rows."""
     rows: list[dict[str, str]] = []
 
     if isinstance(raw, list):
@@ -358,17 +351,10 @@ def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
             values.append(val if isinstance(val, (int, float)) else None)
 
         if any(v is not None for v in values):
+            # FIXED: We output exactly what `charts.js` expects: 'labels' and 'values'
             charts[metric_id] = {
                 "labels": labels,
-                "datasets": [
-                    {
-                        "label": metric_id,
-                        "data": values,
-                        "spanGaps": True,
-                        "tension": 0.2,
-                        "pointRadius": 3,
-                    }
-                ],
+                "values": values,
             }
 
     return json.dumps(charts)
@@ -397,9 +383,13 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
             inst_section = {}
 
         display_name = clean_text(inst_section.get("display_name")) or yaml_file.stem
-        instrument_id = clean_text(inst_section.get("instrument_id"))
-        if not instrument_id:
+        raw_instrument_id = clean_text(inst_section.get("instrument_id"))
+        
+        # FIXED: Ensure instrument_id is always path-safe
+        if not raw_instrument_id:
             instrument_id = "scope-" + slugify(display_name)
+        else:
+            instrument_id = slugify(raw_instrument_id)
 
         manufacturer = clean_text(inst_section.get("manufacturer"))
         model = clean_text(inst_section.get("model"))
@@ -635,10 +625,13 @@ def main() -> None:
     status_md = tpl_status.render(issues=flagged)
     (docs_root / "status.md").write_text(status_md, encoding="utf-8")
 
+    # FIXED: Extract site URL into environment variable to prevent hardcoding issues
+    site_url = os.getenv("MKDOCS_SITE_URL", "https://aic-turku.github.io/AIC-Turku-database/")
+
     # MkDocs config
     mkdocs_config = {
         "site_name": "AIC Microscopy Dashboard",
-        "site_url": "https://aic-turku.github.io/AIC-Turku-database/",
+        "site_url": site_url,
         "docs_dir": "dashboard_docs",
         "theme": {
             "name": "material",
@@ -678,6 +671,10 @@ def main() -> None:
             "https://cdn.jsdelivr.net/npm/chart.js",
         ],
         "nav": build_nav(instruments),
+        # FIXED: Tell MkDocs to ignore unmapped files gracefully (events and history pages)
+        "validation": {
+            "nav": {"omitted_files": "info"}
+        },
     }
 
     (repo_root / "mkdocs.yml").write_text(yaml.safe_dump(mkdocs_config, sort_keys=False, allow_unicode=True), encoding="utf-8")
