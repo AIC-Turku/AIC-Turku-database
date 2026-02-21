@@ -1,108 +1,146 @@
-# {{ instrument.display_name }} · History
+# 🔬 {{ instrument.display_name }}
 
 <div class="aic-topactions" markdown="span">
-  [🔙 Back to Overview](index.md){ .md-button }
+  [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
 </div>
 
-## Latest Metric Snapshot
+{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
+!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
+    {{ instrument.status.reason }}
 
-| Metric | Latest Value |
+<div class="aic-hero">
+  <div class="aic-hero__media">
+    <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
+         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
+  </div>
+
+  <div class="aic-hero__facts">
+    <div class="aic-facts">
+      <div class="aic-fact">
+        <div class="aic-muted">🏷️ Instrument ID</div>
+        <div><code>{{ instrument.id }}</code></div>
+      </div>
+      <div class="aic-fact">
+        <div class="aic-muted">🏭 Manufacturer</div>
+        <div>{{ instrument.manufacturer or '—' }}</div>
+      </div>
+      <div class="aic-fact">
+        <div class="aic-muted">⚙️ Model</div>
+        <div>{{ instrument.model or '—' }}</div>
+      </div>
+      <div class="aic-fact">
+        <div class="aic-muted">📐 Stand</div>
+        <div>{{ instrument.stand_orientation or '—' }}</div>
+      </div>
+    </div>
+
+    <div class="aic-section">
+      <div class="aic-section__title">🌈 Modalities</div>
+      <div class="aic-chiprow">
+        {% for mod in instrument.modalities %}
+          <span class="aic-chip">{{ mod }}</span>
+        {% else %}
+          <span class="aic-muted">📭 —</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if instrument.modules %}
+    <div class="aic-section">
+      <div class="aic-section__title">🧩 Modules</div>
+      <div class="aic-chiprow">
+        {% for m in instrument.modules %}
+          <span class="aic-chip aic-chip--muted">{{ m }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% if instrument.notes %}
+## 📝 Capabilities (legacy notes)
+
+{% if instrument.notes.type %}
+- **Type:** {{ instrument.notes.type }}
+{% endif %}
+
+{% if instrument.notes.imaging_modes %}
+- **Imaging modes:** {{ instrument.notes.imaging_modes | join(', ') }}
+{% endif %}
+
+{% if instrument.notes.filters %}
+- **Filters:**
+{% for f in instrument.notes.filters %}
+  - {{ f }}
+{% endfor %}
+{% endif %}
+
+{% if instrument.notes.additional_hardware %}
+- **Additional hardware:**
+{% for h in instrument.notes.additional_hardware %}
+  - {{ h }}
+{% endfor %}
+{% endif %}
+
+{% if instrument.notes.raw %}
+- **Notes:** {{ instrument.notes.raw }}
+{% endif %}
+{% endif %}
+
+## 💻 Software Environment
+
+{% if instrument.software %}
+
+| Component | Name | Version |
+|---|---|---|
+{% for sw in instrument.software -%}
+| {{ sw.component or '—' }} | **{{ sw.name or '—' }}** | `{{ sw.version or '—' }}` |
+{% endfor %}
+
+{% else %}
+> 📭 *No software configurations recorded.*
+{% endif %}
+
+## 🛠️ Hardware
+
+### 💡 Light Sources
+
+| Model | Type | Wavelength (nm) | Notes |
+|---|---|---:|---|
+{% for src in light_sources -%}
+| **{{ src.name or '—' }}** | {{ src.type or '—' }} | {{ src.wavelength if src.wavelength is not none else '—' }} | {{ src.notes or '—' }} |
+{% else -%}
+| — | — | — | — |
+{% endfor %}
+
+### 📷 Detectors
+
+| Manufacturer | Model | Type | Notes |
+|---|---|---|---|
+{% for det in detectors -%}
+| **{{ det.name or '—' }}** | {{ det.model or '—' }} | {{ det.type or '—' }} | {{ det.notes or '—' }} |
+{% else -%}
+| — | — | — | — |
+{% endfor %}
+
+### 🔍 Objectives
+
+| Model | Magnification | N.A. | Notes |
+|---|---:|---:|---|
+{% for obj in objectives -%}
+| **{{ obj.name or '—' }}** | {{ obj.magnification if obj.magnification is not none else '—' }}x | {{ obj.na if obj.na is not none else '—' }} | {{ obj.notes or '—' }} |
+{% else -%}
+| — | — | — | — |
+{% endfor %}
+
+## 📏 Latest QC Measurements
+
+| Metric | Value |
 |---|---|
-{% for metric_id, value in latest_metrics.items() -%}
-| **{{ metric_names.get(metric_id, metric_id) }}** <br><span class="aic-muted"><code>{{ metric_id }}</code></span> | <code>{{ value | default('—', true) }}</code> |
+{% for m_id, m_val in latest_metrics.items() -%}
+| **{{ metric_names.get(m_id, m_id) }}** <br><span class="aic-muted"><code>{{ m_id }}</code></span> | <code>{{ m_val }}</code> |
 {% else -%}
 | — | — |
-{% endfor %}
-
-## Metrics Over Time
-
-<div id="chartsContainer" class="aic-chartgrid"></div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const chartsData = {{ charts_json }};
-  const metricNames = {{ metric_names | tojson | safe }};
-  const container = document.getElementById('chartsContainer');
-  
-  if (!container || !window.Chart) return;
-  
-  const chartKeys = Object.keys(chartsData);
-  if (chartKeys.length === 0) {
-    container.innerHTML = '<p class="aic-muted">No historical metrics available.</p>';
-    return;
-  }
-
-  // Use MkDocs Material theme colors for charts
-  const themeColor = 'var(--md-typeset-a-color, #4051b5)';
-
-  for (const [metricId, chartConfig] of Object.entries(chartsData)) {
-    const readableTitle = metricNames[metricId] || metricId;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'aic-chartcard';
-
-    const title = document.createElement('div');
-    title.className = 'aic-chartcard__title';
-    title.textContent = readableTitle;
-    wrapper.appendChild(title);
-
-    const canvasContainer = document.createElement('div');
-    canvasContainer.className = 'aic-chartcard__canvas-wrapper';
-    
-    const canvas = document.createElement('canvas');
-    canvasContainer.appendChild(canvas);
-    wrapper.appendChild(canvasContainer);
-    container.appendChild(wrapper);
-
-    // FIXED: Reconstruct the strict dataset object Chart.js requires
-    new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels: chartConfig.labels,
-        datasets: [{
-          label: readableTitle,
-          data: chartConfig.values,
-          borderColor: themeColor,
-          backgroundColor: 'transparent',
-          pointBackgroundColor: themeColor,
-          borderWidth: 2,
-          pointRadius: 3,
-          tension: 0.2,
-          spanGaps: true
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { 
-          legend: { display: false } 
-        },
-        scales: { 
-          y: { beginAtZero: false } 
-        }
-      }
-    });
-  }
-});
-</script>
-
-## Event Log
-
-### QC Events
-
-| Date | Suite/Type | Status |
-|---|---|---|
-{% for event in qc_events | reverse -%}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | `{{ event.status | default('—', true) | upper }}` |
-{% else -%}
-| — | — | — |
-{% endfor %}
-
-### Maintenance Events
-
-| Date | Suite/Type | Status |
-|---|---|---|
-{% for event in maintenance_events | reverse -%}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | `{{ event.status | default('—', true) | upper }}` |
-{% else -%}
-| — | — | — |
 {% endfor %}
