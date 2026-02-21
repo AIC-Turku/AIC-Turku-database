@@ -1,14 +1,22 @@
-# Event: {{ event_id }}
+---
+hide:
+  - navigation
+  - toc
+---
+
+# 📝 Event: {{ event_id }}
 
 <div class="aic-topactions" markdown="span">
-  [🔙 Back to {{ instrument_id }} overview](../instruments/{{ instrument_id }}/){ .md-button }
-  [📊 Back to history](../instruments/{{ instrument_id }}/history.md){ .md-button .md-button--primary }
+  [🔙 Back to Overview](../instruments/{{ instrument_id }}/index.md){ .md-button }
+  [📊 View Full History](../instruments/{{ instrument_id }}/history.md){ .md-button .md-button--primary }
 </div>
 
-- **Date:** {{ date | default('—', true) }}
-- **Instrument:** {{ instrument | default(instrument_id, true) | default('—', true) }}
-- **Operator:** {{ operator | default('—', true) }}
+!!! info "Event Summary"
+    - **Date:** {{ date | default('—', true) }}
+    - **Instrument:** `{{ instrument | default(instrument_id, true) | default('—', true) }}`
+    - **Operator / Provider:** {{ operator | default('—', true) }}
 
-```yaml
+## Raw Ledger Data
+
+```yaml title="{{ event_id }}.yaml"
 {{ raw_yaml_content }}
-```
