@@ -1,7 +1,7 @@
 # {{ instrument.display_name }} · History
 
 <div class="aic-topactions" markdown="span">
-  [🔙 Back to Overview](./){ .md-button }
+  [🔙 Back to Overview](index.md){ .md-button }
 </div>
 
 ## Latest Metric Snapshot
@@ -23,7 +23,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const chartsData = {{ charts_json }};
   const metricNames = {{ metric_names | tojson | safe }};
   const container = document.getElementById('chartsContainer');
+  
   if (!container || !window.Chart) return;
+  
+  const chartKeys = Object.keys(chartsData);
+  if (chartKeys.length === 0) {
+    container.innerHTML = '<p class="aic-muted">No historical metrics available.</p>';
+    return;
+  }
+
+  // Use MkDocs Material theme colors for charts
+  const themeColor = 'var(--md-typeset-a-color, #4051b5)';
 
   for (const [metricId, chartConfig] of Object.entries(chartsData)) {
     const readableTitle = metricNames[metricId] || metricId;
@@ -36,17 +46,39 @@ document.addEventListener('DOMContentLoaded', function() {
     title.textContent = readableTitle;
     wrapper.appendChild(title);
 
+    const canvasContainer = document.createElement('div');
+    canvasContainer.className = 'aic-chartcard__canvas-wrapper';
+    
     const canvas = document.createElement('canvas');
-    wrapper.appendChild(canvas);
+    canvasContainer.appendChild(canvas);
+    wrapper.appendChild(canvasContainer);
     container.appendChild(wrapper);
 
+    // FIXED: Reconstruct the strict dataset object Chart.js requires
     new Chart(canvas, {
       type: 'line',
-      data: chartConfig,
+      data: {
+        labels: chartConfig.labels,
+        datasets: [{
+          label: readableTitle,
+          data: chartConfig.values,
+          borderColor: themeColor,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: themeColor,
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.2,
+          spanGaps: true
+        }]
+      },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: false } }
+        plugins: { 
+          legend: { display: false } 
+        },
+        scales: { 
+          y: { beginAtZero: false } 
+        }
       }
     });
   }
@@ -59,8 +91,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 | Date | Suite/Type | Status |
 |---|---|---|
-{% for event in qc_events | default([], true) -%}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+{% for event in qc_events | reverse -%}
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | `{{ event.status | default('—', true) | upper }}` |
 {% else -%}
 | — | — | — |
 {% endfor %}
@@ -69,8 +101,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 | Date | Suite/Type | Status |
 |---|---|---|
-{% for event in maintenance_events | default([], true) -%}
-| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | {{ event.status | default('—', true) }} |
+{% for event in maintenance_events | reverse -%}
+| [{{ event.date | default('Unknown', true) }}](../../events/{{ event.event_id }}.md) | {{ event.suite | default(event.type, true) | default('—', true) }} | `{{ event.status | default('—', true) | upper }}` |
 {% else -%}
 | — | — | — |
 {% endfor %}
