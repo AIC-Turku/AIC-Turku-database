@@ -124,5 +124,8 @@ hide:
 
 ## 📄 Raw YAML Ledger
 
-```yaml
-{{ raw_yaml_content }}
+??? quote "View `{{ event_id }}.yaml`"
+
+    ```yaml
+{{ raw_yaml_content | indent(4, true) }}
+    ```
