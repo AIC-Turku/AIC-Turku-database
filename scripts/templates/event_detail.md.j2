@@ -6,11 +6,9 @@ hide:
 
 # 📝 Event: {{ event_id }}
 
-<div class="aic-topactions" markdown="1">
-
-[🔙 Back to Overview](../instruments/{{ instrument_id }}/index.md){ .md-button }
-[📊 View Full History](../instruments/{{ instrument_id }}/history.md){ .md-button .md-button--primary }
-
+<div class="aic-topactions">
+  <a href="../instruments/{{ instrument_id }}/index.md" class="md-button">🔙 Back to Overview</a>
+  <a href="../instruments/{{ instrument_id }}/history.md" class="md-button md-button--primary">📊 View Full History</a>
 </div>
 
 ## 📊 Report Overview
@@ -24,7 +22,6 @@ hide:
         <div><span class="aic-muted">Record Type</span><br>{{ payload.get('record_type', '—') | replace('_', ' ') | title }}</div>
         <div><span class="aic-muted">Reason / Suite</span><br>{{ payload.get('reason', '—') | title }}</div>
         
-        {# Intelligently swap Operator vs Service Provider #}
         {% if payload.get('record_type') == 'maintenance' %}
         <div><span class="aic-muted">Service Provider</span><br>{{ payload.get('service_provider', '—') }}</div>
         {% else %}
@@ -89,15 +86,12 @@ hide:
 
 </div>
 
-{# --- EXTENDED DATA SECTIONS --- #}
-
 {% if payload.get('performed') %}
 ## 🔬 Tests Performed
 
 | Test Type | Details |
 |---|---|
-{% for task in payload.get('performed', []) %}
-| **{{ task.get('qc_type', '—') | replace('_', ' ') | title }}** | {{ task.get('details', '—') }} |
+{% for task in payload.get('performed', []) %}| **{{ task.get('qc_type', '—') | replace('_', ' ') | title }}** | {{ task.get('details', '—') }} |
 {% endfor %}
 
 {% endif %}
@@ -107,8 +101,7 @@ hide:
 
 | Metric ID | Value |
 |---|---|
-{% for m in payload.get('metrics_computed', []) %}
-| <code>{{ m.get('metric_id') }}</code> | **{{ m.get('value') }}** |
+{% for m in payload.get('metrics_computed', []) %}| <code>{{ m.get('metric_id') }}</code> | **{{ m.get('value') }}** |
 {% endfor %}
 
 {% endif %}
@@ -118,8 +111,7 @@ hide:
 
 | Artifact ID | Role | Description |
 |---|---|---|
-{% for art in payload.get('artifacts', []) %}
-| <code>{{ art.get('artifact_id', '—') }}</code> | <span class="aic-chip">{{ art.get('role', '—') | upper }}</span> | {% if art.get('uri') %}[{{ art.get('description', 'Link') }}]({{ art.get('uri') }}){% else %}{{ art.get('description', '—') }}{% endif %} |
+{% for art in payload.get('artifacts', []) %}| <code>{{ art.get('artifact_id', '—') }}</code> | <span class="aic-chip">{{ art.get('role', '—') | upper }}</span> | {% if art.get('uri') %}[{{ art.get('description', 'Link') }}]({{ art.get('uri') }}){% else %}{{ art.get('description', '—') }}{% endif %} |
 {% endfor %}
 
 {% endif %}
@@ -132,5 +124,5 @@ hide:
 
 ## 📄 Raw YAML Ledger
 
-```yaml title="{{ event_id }}.yaml"
-{{ raw_yaml_content | trim }}
+```yaml
+{{ raw_yaml_content }}
