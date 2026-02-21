@@ -96,7 +96,7 @@ hide:
 
 | Test Type | Details |
 |---|---|
-{% for task in payload.get('performed', []) -%}
+{% for task in payload.get('performed', []) %}
 | **{{ task.get('qc_type', '—') | replace('_', ' ') | title }}** | {{ task.get('details', '—') }} |
 {% endfor %}
 
@@ -107,7 +107,7 @@ hide:
 
 | Metric ID | Value |
 |---|---|
-{% for m in payload.get('metrics_computed', []) -%}
+{% for m in payload.get('metrics_computed', []) %}
 | <code>{{ m.get('metric_id') }}</code> | **{{ m.get('value') }}** |
 {% endfor %}
 
@@ -118,7 +118,7 @@ hide:
 
 | Artifact ID | Role | Description |
 |---|---|---|
-{% for art in payload.get('artifacts', []) -%}
+{% for art in payload.get('artifacts', []) %}
 | <code>{{ art.get('artifact_id', '—') }}</code> | <span class="aic-chip">{{ art.get('role', '—') | upper }}</span> | {% if art.get('uri') %}[{{ art.get('description', 'Link') }}]({{ art.get('uri') }}){% else %}{{ art.get('description', '—') }}{% endif %} |
 {% endfor %}
 
@@ -127,9 +127,10 @@ hide:
 {% if payload.get('notes') %}
 !!! quote "Additional Notes"
     {{ payload.get('notes') }}
+
 {% endif %}
 
 ## 📄 Raw YAML Ledger
 
 ```yaml title="{{ event_id }}.yaml"
-{{ raw_yaml_content }}
+{{ raw_yaml_content | trim }}
