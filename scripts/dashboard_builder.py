@@ -499,23 +499,24 @@ def build_charts_data(qc_logs: list[dict[str, Any]]) -> dict[str, dict[str, Any]
 # -----------------------------------------------------------------------------
 
 def build_mkdocs_nav(instruments: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Generate MkDocs navigation.
+
+    Requirement: the left sidebar should show **only instrument names** (clickable),
+    without nested Overview/History nodes. History remains accessible via internal
+    links from each instrument page.
+    """
+
     microscopes_nav: list[dict[str, Any]] = []
 
     for inst_id, inst in sorted(instruments.items(), key=lambda kv: kv[1]["display_name"].lower()):
-        microscopes_nav.append(
-            {
-                inst["display_name"]: [
-                    {"Overview": f"instruments/{inst_id}/spec.md"},
-                    {"History": f"instruments/{inst_id}/history.md"},
-                ]
-            }
-        )
+        microscopes_nav.append({inst["display_name"]: f"instruments/{inst_id}/index.md"})
 
     return [
         {"Fleet Overview": "index.md"},
         {"System Health": "status.md"},
         {"Microscopes": microscopes_nav},
     ]
+
 
 
 def copy_assets_to_docs(docs_root: Path) -> None:
@@ -605,7 +606,7 @@ def main() -> None:
             charts_data=inst.get("charts_data", {}),
             metric_names=METRIC_NAMES,
         )
-        (inst_dir / "spec.md").write_text(spec_rendered, encoding="utf-8")
+        (inst_dir / "index.md").write_text(spec_rendered, encoding="utf-8")
 
         # Build history tables
         qc_events: list[dict[str, Any]] = []

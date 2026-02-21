@@ -36,15 +36,16 @@
 
 <div class="aic-grid" aria-label="Microscope cards">
   {% for inst in instruments %}
-  <div
-    class="aic-card"
+  <a
+    class="aic-card aic-card--link"
+    href="instruments/{{ inst.id }}/"
+    aria-label="Open {{ inst.display_name }}"
     data-filterable="true"
     data-name="{{ inst.display_name }}"
     data-manufacturer="{{ inst.manufacturer }}"
     data-modalities="{{ inst.modalities | join(',') | lower }}"
     data-status="{{ inst.status.color }}"
   >
-
     <img
       class="aic-card__media"
       src="assets/images/{{ inst.image_filename }}"
@@ -54,12 +55,12 @@
     />
 
     <div class="aic-card__body">
-      <div class="aic-card__title" markdown="span">
-        [{{ inst.display_name }}](instruments/{{ inst.id }}/spec.md)
+      <div class="aic-card__title">
+        {{ inst.display_name }}
         <span class="aic-chip aic-chip--status aic-chip--{{ inst.status.color }}" title="{{ inst.status.reason }}">{{ inst.status.badge }}</span>
       </div>
 
-      <div class="aic-muted" style="margin: .25rem 0 .55rem;" markdown="span">
+      <div class="aic-muted" style="margin: .25rem 0 .55rem;">
         {{ inst.manufacturer | default('—', true) }}{% if inst.model %} · {{ inst.model }}{% endif %}
       </div>
 
@@ -76,7 +77,7 @@
         <div>Last maint.</div><div>{{ inst.status.last_maint_date | default('—', true) }}</div>
       </div>
     </div>
-  </div>
+  </a>
   {% endfor %}
 </div>
 

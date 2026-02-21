@@ -198,3 +198,18 @@ AIC Microscopy Dashboard - UI overhaul
 .md-typeset table:not([class]) th {
   padding: .45rem .6rem;
 }
+
+
+/* Clickable cards (anchor wrapper) */
+a.aic-card,
+a.aic-card:hover,
+a.aic-card:visited {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+a.aic-card:focus-visible {
+  outline: 3px solid var(--md-accent-fg-color);
+  outline-offset: 3px;
+}

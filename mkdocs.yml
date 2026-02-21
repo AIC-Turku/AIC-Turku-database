@@ -42,66 +42,24 @@ nav:
 - Fleet Overview: index.md
 - System Health: status.md
 - Microscopes:
-  - 3i CSU-W1 Spinning Disk:
-    - Overview: instruments/scope-3i-csu-w1-spinning-disk/spec.md
-    - History: instruments/scope-3i-csu-w1-spinning-disk/history.md
-  - 3i CSU-W1 Spinning Disk Med C:
-    - Overview: instruments/scope-3i-csu-w1-spinning-disk-med-c/spec.md
-    - History: instruments/scope-3i-csu-w1-spinning-disk-med-c/history.md
-  - Abberior STED:
-    - Overview: instruments/scope-1e33f909/spec.md
-    - History: instruments/scope-1e33f909/history.md
-  - Deltavision OMX:
-    - Overview: instruments/scope-deltavision-omx/spec.md
-    - History: instruments/scope-deltavision-omx/history.md
-  - EVOS fl:
-    - Overview: instruments/scope-evos-fl/spec.md
-    - History: instruments/scope-evos-fl/history.md
-  - Lambert FLIM (frequency domain):
-    - Overview: instruments/scope-lambert-flim-frequency-domain/spec.md
-    - History: instruments/scope-lambert-flim-frequency-domain/history.md
-  - Leica DM IRBE:
-    - Overview: instruments/scope-leica-dm-irbe/spec.md
-    - History: instruments/scope-leica-dm-irbe/history.md
-  - Leica DMRE:
-    - Overview: instruments/scope-leica-dmre/spec.md
-    - History: instruments/scope-leica-dmre/history.md
-  - Leica RXA:
-    - Overview: instruments/scope-leica-rxa/spec.md
-    - History: instruments/scope-leica-rxa/history.md
-  - Leica STELLARIS 8 FALCON FLIM (Resonant):
-    - Overview: instruments/scope-leica-stellaris-8-falcon-flim-resonant/spec.md
-    - History: instruments/scope-leica-stellaris-8-falcon-flim-resonant/history.md
-  - Leica TCS SP5 Multiphoton:
-    - Overview: instruments/scope-leica-tcs-sp5-multiphoton/spec.md
-    - History: instruments/scope-leica-tcs-sp5-multiphoton/history.md
-  - Leica Thunder:
-    - Overview: instruments/scope-leica-thunder/spec.md
-    - History: instruments/scope-leica-thunder/history.md
-  - MSquared Aurora Airy Beam:
-    - Overview: instruments/scope-msquared-aurora-airy-beam/spec.md
-    - History: instruments/scope-msquared-aurora-airy-beam/history.md
-  - Nikon Eclipse Ti2-E:
-    - Overview: instruments/scope-nikon-eclipse-ti2-e/spec.md
-    - History: instruments/scope-nikon-eclipse-ti2-e/history.md
-  - Olympus BX60:
-    - Overview: instruments/scope-olympus-bx60/spec.md
-    - History: instruments/scope-olympus-bx60/history.md
-  - ONI Nanoimager:
-    - Overview: instruments/scope-oni-nanoimager/spec.md
-    - History: instruments/scope-oni-nanoimager/history.md
-  - Test Scope X1:
-    - Overview: instruments/scope-testx1/spec.md
-    - History: instruments/scope-testx1/history.md
-  - Zeiss AxioZoom.V16:
-    - Overview: instruments/scope-zeiss-axiozoom-v16/spec.md
-    - History: instruments/scope-zeiss-axiozoom-v16/history.md
-  - Zeiss LSM 510 JPK AFM:
-    - Overview: instruments/scope-zeiss-lsm-510-jpk-afm/spec.md
-    - History: instruments/scope-zeiss-lsm-510-jpk-afm/history.md
-  - Zeiss LSM 880 with AiryScan:
-    - Overview: instruments/scope-zeiss-lsm-880-with-airyscan/spec.md
-    - History: instruments/scope-zeiss-lsm-880-with-airyscan/history.md
-  - Zeiss TIRF:
-    - Overview: instruments/scope-zeiss-tirf/spec.md
-    - History: instruments/scope-zeiss-tirf/history.md
+  - 3i CSU-W1 Spinning Disk: instruments/scope-3i-csu-w1-spinning-disk/index.md
+  - 3i CSU-W1 Spinning Disk Med C: instruments/scope-3i-csu-w1-spinning-disk-med-c/index.md
+  - Abberior STED: instruments/scope-1e33f909/index.md
+  - Deltavision OMX: instruments/scope-deltavision-omx/index.md
+  - EVOS fl: instruments/scope-evos-fl/index.md
+  - Lambert FLIM (frequency domain): instruments/scope-lambert-flim-frequency-domain/index.md
+  - Leica DM IRBE: instruments/scope-leica-dm-irbe/index.md
+  - Leica DMRE: instruments/scope-leica-dmre/index.md
+  - Leica RXA: instruments/scope-leica-rxa/index.md
+  - Leica STELLARIS 8 FALCON FLIM (Resonant): instruments/scope-leica-stellaris-8-falcon-flim-resonant/index.md
+  - Leica TCS SP5 Multiphoton: instruments/scope-leica-tcs-sp5-multiphoton/index.md
+  - Leica Thunder: instruments/scope-leica-thunder/index.md
+  - MSquared Aurora Airy Beam: instruments/scope-msquared-aurora-airy-beam/index.md
+  - Nikon Eclipse Ti2-E: instruments/scope-nikon-eclipse-ti2-e/index.md
+  - Olympus BX60: instruments/scope-olympus-bx60/index.md
+  - ONI Nanoimager: instruments/scope-oni-nanoimager/index.md
+  - Test Scope X1: instruments/scope-testx1/index.md
+  - Zeiss AxioZoom.V16: instruments/scope-zeiss-axiozoom-v16/index.md
+  - Zeiss LSM 510 JPK AFM: instruments/scope-zeiss-lsm-510-jpk-afm/index.md
+  - Zeiss LSM 880 with AiryScan: instruments/scope-zeiss-lsm-880-with-airyscan/index.md
+  - Zeiss TIRF: instruments/scope-zeiss-tirf/index.md
