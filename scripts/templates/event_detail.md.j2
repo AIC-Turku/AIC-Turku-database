@@ -11,12 +11,76 @@ hide:
   [📊 View Full History](../instruments/{{ instrument_id }}/history.md){ .md-button .md-button--primary }
 </div>
 
-!!! info "Event Summary"
-    - **Date:** {{ date | default('—', true) }}
-    - **Instrument:** `{{ instrument | default(instrument_id, true) | default('—', true) }}`
-    - **Operator / Provider:** {{ operator | default('—', true) }}
+=== "📊 Report Overview"
 
-## Raw Ledger Data
+    <div class="aic-grid">
+      
+      <div class="aic-card">
+        <div class="aic-card__body">
+          <div class="aic-card__title">Event Metadata</div>
+          <div class="aic-kv">
+            <div><span class="aic-muted">Record Type</span><br>{{ payload.get('record_type', '—') | title }}</div>
+            <div><span class="aic-muted">Reason / Suite</span><br>{{ payload.get('reason', '—') }}</div>
+            <div><span class="aic-muted">Operator</span><br>{{ operator | default('—', true) }}</div>
+            <div><span class="aic-muted">Instrument</span><br><code>{{ instrument | default(instrument_id, true) }}</code></div>
+          </div>
+        </div>
+      </div>
 
-```yaml title="{{ event_id }}.yaml"
-{{ raw_yaml_content }}
+      {% if payload.get('evaluation') %}
+      <div class="aic-card">
+        <div class="aic-card__body">
+          <div class="aic-card__title">QC Evaluation</div>
+          {% set eval = payload.get('evaluation', {}) %}
+          {% set status = eval.get('overall_status', 'unknown') %}
+          {% set badge_color = 'green' if status == 'pass' else 'yellow' if status == 'warn' else 'red' if status == 'fail' else 'gray' %}
+          
+          <div style="margin: 0.5rem 0 1rem;">
+            <span class="aic-badge aic-badge--{{ badge_color }}">{{ status | upper }}</span>
+          </div>
+          
+          {% if eval.get('results') %}
+            {% for res in eval.get('results', []) %}
+              <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+                <strong>{{ res.get('metric_id', 'Rule') }}</strong>: {{ res.get('message', '') }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if payload.get('action') or payload.get('microscope_status_after') %}
+      <div class="aic-card">
+        <div class="aic-card__body">
+          <div class="aic-card__title">Maintenance Action</div>
+          <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ payload.get('action', '—') }}</p>
+          {% if payload.get('reason_details') %}
+            <p style="font-size: 0.9rem; color: var(--md-default-fg-color--light);"><em>{{ payload.get('reason_details') }}</em></p>
+          {% endif %}
+          <div style="margin-top: 1rem;">
+            <span class="aic-muted" style="font-size: 0.85rem;">Status After:</span><br>
+            <code>{{ payload.get('microscope_status_after', '—') | upper }}</code>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    {% if payload.get('metrics_computed') %}
+    <br>
+    ### 📏 Computed Metrics
+
+    | Metric ID | Value |
+    |---|---|
+    {% for m in payload.get('metrics_computed', []) -%}
+    | <code>{{ m.get('metric_id') }}</code> | **{{ m.get('value') }}** |
+    {% endfor %}
+    {% endif %}
+
+=== "📄 Raw YAML Ledger"
+
+    ```yaml title="{{ event_id }}.yaml"
+    {{ raw_yaml_content }}
+    ```
