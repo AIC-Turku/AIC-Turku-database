@@ -615,6 +615,7 @@ def main() -> None:
                 instrument_id=instrument_id,
                 operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
                 raw_yaml_content=raw_yaml_text,
+                payload=event_payload,
             )
             (docs_root / "events" / f"{event_id}.md").write_text(event_md, encoding="utf-8")
 
