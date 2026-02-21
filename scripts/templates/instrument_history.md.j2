@@ -1,146 +1,110 @@
-# 🔬 {{ instrument.display_name }}
+# 📊 {{ instrument.display_name }} · History
 
 <div class="aic-topactions" markdown="span">
-  [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
+  [🔙 Back to Overview](index.md){ .md-button }
 </div>
 
-{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
-!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
-    {{ instrument.status.reason }}
+## 📈 Metrics Over Time
 
-<div class="aic-hero">
-  <div class="aic-hero__media">
-    <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
-         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
-  </div>
+<div id="chartsContainer" class="aic-chartgrid"></div>
 
-  <div class="aic-hero__facts">
-    <div class="aic-facts">
-      <div class="aic-fact">
-        <div class="aic-muted">🏷️ Instrument ID</div>
-        <div><code>{{ instrument.id }}</code></div>
-      </div>
-      <div class="aic-fact">
-        <div class="aic-muted">🏭 Manufacturer</div>
-        <div>{{ instrument.manufacturer or '—' }}</div>
-      </div>
-      <div class="aic-fact">
-        <div class="aic-muted">⚙️ Model</div>
-        <div>{{ instrument.model or '—' }}</div>
-      </div>
-      <div class="aic-fact">
-        <div class="aic-muted">📐 Stand</div>
-        <div>{{ instrument.stand_orientation or '—' }}</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const chartsData = {{ charts_json }};
+  const metricNames = {{ metric_names | tojson | safe }};
+  const container = document.getElementById('chartsContainer');
+  
+  if (!container || !window.Chart) return;
+  
+  const chartKeys = Object.keys(chartsData);
+  if (chartKeys.length === 0) {
+    container.innerHTML = '<p class="aic-muted">No historical metrics available.</p>';
+    return;
+  }
+
+  const themeColor = 'var(--md-typeset-a-color, #4051b5)';
+
+  for (const [metricId, chartConfig] of Object.entries(chartsData)) {
+    const readableTitle = metricNames[metricId] || metricId;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'aic-chartcard';
+
+    const title = document.createElement('div');
+    title.className = 'aic-chartcard__title';
+    title.textContent = readableTitle;
+    wrapper.appendChild(title);
+
+    const canvasContainer = document.createElement('div');
+    canvasContainer.className = 'aic-chartcard__canvas-wrapper';
+    
+    const canvas = document.createElement('canvas');
+    canvasContainer.appendChild(canvas);
+    wrapper.appendChild(canvasContainer);
+    container.appendChild(wrapper);
+
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: chartConfig.labels,
+        datasets: [{
+          label: readableTitle,
+          data: chartConfig.values,
+          borderColor: themeColor,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: themeColor,
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.2,
+          spanGaps: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: false } }
+      }
+    });
+  }
+});
+</script>
+
+## 📜 Event Timeline
+
+{% set all_events = (qc_events | default([], true)) + (maintenance_events | default([], true)) %}
+{% set sorted_events = all_events | sort(attribute='date', reverse=True) %}
+
+{% if sorted_events %}
+<div class="aic-timeline">
+  {% for event in sorted_events %}
+    {% set is_qc = event in qc_events %}
+    {% set event_icon = '🔬' if is_qc else '🔧' %}
+    {% set event_label = 'QC Session' if is_qc else 'Maintenance' %}
+    {% set event_class = 'aic-timeline__event--qc' if is_qc else 'aic-timeline__event--maint' %}
+    
+    <div class="aic-timeline__event {{ event_class }}">
+      <div class="aic-timeline__marker" title="{{ event_label }}">{{ event_icon }}</div>
+      
+      <div class="aic-card aic-timeline__content">
+        <div class="aic-timeline__header">
+          <div>
+            <strong>{{ event.date | default('Unknown Date', true) }}</strong>
+            <span class="aic-muted" style="margin-left: 0.5rem; font-size: 0.85rem;">{{ event_label }}</span>
+          </div>
+          <span class="aic-badge">{{ event.status | default('—', true) | upper }}</span>
+        </div>
+        
+        <div class="aic-timeline__body">
+          {{ event.suite | default(event.type, true) | default('Routine Event', true) }}
+        </div>
+        
+        <div class="aic-timeline__actions" markdown="span">
+          <a href="../../events/{{ event.event_id }}.md" class="md-button md-button--small">View Full Report</a>
+        </div>
       </div>
     </div>
-
-    <div class="aic-section">
-      <div class="aic-section__title">🌈 Modalities</div>
-      <div class="aic-chiprow">
-        {% for mod in instrument.modalities %}
-          <span class="aic-chip">{{ mod }}</span>
-        {% else %}
-          <span class="aic-muted">📭 —</span>
-        {% endfor %}
-      </div>
-    </div>
-
-    {% if instrument.modules %}
-    <div class="aic-section">
-      <div class="aic-section__title">🧩 Modules</div>
-      <div class="aic-chiprow">
-        {% for m in instrument.modules %}
-          <span class="aic-chip aic-chip--muted">{{ m }}</span>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-  </div>
+  {% endfor %}
 </div>
-
-{% if instrument.notes %}
-## 📝 Capabilities (legacy notes)
-
-{% if instrument.notes.type %}
-- **Type:** {{ instrument.notes.type }}
-{% endif %}
-
-{% if instrument.notes.imaging_modes %}
-- **Imaging modes:** {{ instrument.notes.imaging_modes | join(', ') }}
-{% endif %}
-
-{% if instrument.notes.filters %}
-- **Filters:**
-{% for f in instrument.notes.filters %}
-  - {{ f }}
-{% endfor %}
-{% endif %}
-
-{% if instrument.notes.additional_hardware %}
-- **Additional hardware:**
-{% for h in instrument.notes.additional_hardware %}
-  - {{ h }}
-{% endfor %}
-{% endif %}
-
-{% if instrument.notes.raw %}
-- **Notes:** {{ instrument.notes.raw }}
-{% endif %}
-{% endif %}
-
-## 💻 Software Environment
-
-{% if instrument.software %}
-
-| Component | Name | Version |
-|---|---|---|
-{% for sw in instrument.software -%}
-| {{ sw.component or '—' }} | **{{ sw.name or '—' }}** | `{{ sw.version or '—' }}` |
-{% endfor %}
-
 {% else %}
-> 📭 *No software configurations recorded.*
+> 📭 *No QC or Maintenance events recorded yet.*
 {% endif %}
-
-## 🛠️ Hardware
-
-### 💡 Light Sources
-
-| Model | Type | Wavelength (nm) | Notes |
-|---|---|---:|---|
-{% for src in light_sources -%}
-| **{{ src.name or '—' }}** | {{ src.type or '—' }} | {{ src.wavelength if src.wavelength is not none else '—' }} | {{ src.notes or '—' }} |
-{% else -%}
-| — | — | — | — |
-{% endfor %}
-
-### 📷 Detectors
-
-| Manufacturer | Model | Type | Notes |
-|---|---|---|---|
-{% for det in detectors -%}
-| **{{ det.name or '—' }}** | {{ det.model or '—' }} | {{ det.type or '—' }} | {{ det.notes or '—' }} |
-{% else -%}
-| — | — | — | — |
-{% endfor %}
-
-### 🔍 Objectives
-
-| Model | Magnification | N.A. | Notes |
-|---|---:|---:|---|
-{% for obj in objectives -%}
-| **{{ obj.name or '—' }}** | {{ obj.magnification if obj.magnification is not none else '—' }}x | {{ obj.na if obj.na is not none else '—' }} | {{ obj.notes or '—' }} |
-{% else -%}
-| — | — | — | — |
-{% endfor %}
-
-## 📏 Latest QC Measurements
-
-| Metric | Value |
-|---|---|
-{% for m_id, m_val in latest_metrics.items() -%}
-| **{{ metric_names.get(m_id, m_id) }}** <br><span class="aic-muted"><code>{{ m_id }}</code></span> | <code>{{ m_val }}</code> |
-{% else -%}
-| — | — |
-{% endfor %}
