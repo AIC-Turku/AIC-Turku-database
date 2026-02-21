@@ -21,54 +21,86 @@ hide:
     <div class="aic-card__body">
       <div class="aic-card__title">Event Metadata</div>
       <div class="aic-kv">
-        <div><span class="aic-muted">Record Type</span><br>{{ payload.get('record_type', '—') | title }}</div>
-        <div><span class="aic-muted">Reason / Suite</span><br>{{ payload.get('reason', '—') }}</div>
+        <div><span class="aic-muted">Record Type</span><br>{{ payload.get('record_type', '—') | replace('_', ' ') | title }}</div>
+        <div><span class="aic-muted">Reason / Suite</span><br>{{ payload.get('reason', '—') | title }}</div>
+        
+        {# Intelligently swap Operator vs Service Provider #}
+        {% if payload.get('record_type') == 'maintenance' %}
+        <div><span class="aic-muted">Service Provider</span><br>{{ payload.get('service_provider', '—') }}</div>
+        {% else %}
         <div><span class="aic-muted">Operator</span><br>{{ operator | default('—', true) }}</div>
+        {% endif %}
+        
         <div><span class="aic-muted">Instrument</span><br><code>{{ instrument | default(instrument_id, true) }}</code></div>
       </div>
     </div>
   </div>
 
-  {% if payload.get('evaluation') %}
+  {% if payload.get('record_type') == 'qc_session' or payload.get('evaluation') %}
   <div class="aic-card">
     <div class="aic-card__body">
-      <div class="aic-card__title">QC Evaluation</div>
+      <div class="aic-card__title">QC Summary & Evaluation</div>
+      
+      {% if payload.get('summary') %}
+        <p style="font-size: 0.95rem; margin-bottom: 0.8rem;"><strong>Summary:</strong> {{ payload.get('summary') }}</p>
+      {% endif %}
+
       {% set eval = payload.get('evaluation', {}) %}
-      {% set status = eval.get('overall_status', 'unknown') %}
-      {% set badge_color = 'green' if status == 'pass' else 'yellow' if status == 'warn' else 'red' if status == 'fail' else 'gray' %}
-      
-      <div style="margin: 0.5rem 0 1rem;">
-        <span class="aic-badge aic-badge--{{ badge_color }}">{{ status | upper }}</span>
-      </div>
-      
-      {% if eval.get('results') %}
-        {% for res in eval.get('results', []) %}
-          <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">
-            <strong>{{ res.get('metric_id', 'Rule') }}</strong>: {{ res.get('message', '') }}
-          </div>
-        {% endfor %}
+      {% if eval %}
+        {% set status = eval.get('overall_status', 'unknown') %}
+        {% set badge_color = 'green' if status == 'pass' else 'yellow' if status == 'warn' else 'red' if status == 'fail' else 'gray' %}
+        
+        <div style="margin: 0.5rem 0 1rem;">
+          <span class="aic-badge aic-badge--{{ badge_color }}">{{ status | upper }}</span>
+        </div>
+        
+        {% if eval.get('results') %}
+          {% for res in eval.get('results', []) %}
+            <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+              <strong>{{ res.get('metric_id', 'Rule') }}</strong>: {{ res.get('message', '') }}
+            </div>
+          {% endfor %}
+        {% endif %}
       {% endif %}
     </div>
   </div>
   {% endif %}
 
-  {% if payload.get('action') or payload.get('microscope_status_after') %}
+  {% if payload.get('record_type') == 'maintenance' or payload.get('action') %}
   <div class="aic-card">
     <div class="aic-card__body">
       <div class="aic-card__title">Maintenance Action</div>
+      
       <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ payload.get('action', '—') }}</p>
+      
       {% if payload.get('reason_details') %}
         <p style="font-size: 0.9rem; color: var(--md-default-fg-color--light);"><em>{{ payload.get('reason_details') }}</em></p>
       {% endif %}
+      
+      {% if payload.get('microscope_status_after') %}
       <div style="margin-top: 1rem;">
-        <span class="aic-muted" style="font-size: 0.85rem;">Status After:</span><br>
+        <span class="aic-muted" style="font-size: 0.85rem;">Status After Fix:</span><br>
         <code>{{ payload.get('microscope_status_after', '—') | upper }}</code>
       </div>
+      {% endif %}
     </div>
   </div>
   {% endif %}
 
 </div>
+
+{# --- EXTENDED DATA SECTIONS --- #}
+
+{% if payload.get('performed') %}
+## 🔬 Tests Performed
+
+| Test Type | Details |
+|---|---|
+{% for task in payload.get('performed', []) -%}
+| **{{ task.get('qc_type', '—') | replace('_', ' ') | title }}** | {{ task.get('details', '—') }} |
+{% endfor %}
+
+{% endif %}
 
 {% if payload.get('metrics_computed') %}
 ## 📏 Computed Metrics
@@ -79,6 +111,22 @@ hide:
 | <code>{{ m.get('metric_id') }}</code> | **{{ m.get('value') }}** |
 {% endfor %}
 
+{% endif %}
+
+{% if payload.get('artifacts') %}
+## 📎 Artifacts & References
+
+| Artifact ID | Role | Description |
+|---|---|---|
+{% for art in payload.get('artifacts', []) -%}
+| <code>{{ art.get('artifact_id', '—') }}</code> | <span class="aic-chip">{{ art.get('role', '—') | upper }}</span> | {% if art.get('uri') %}[{{ art.get('description', 'Link') }}]({{ art.get('uri') }}){% else %}{{ art.get('description', '—') }}{% endif %} |
+{% endfor %}
+
+{% endif %}
+
+{% if payload.get('notes') %}
+!!! quote "Additional Notes"
+    {{ payload.get('notes') }}
 {% endif %}
 
 ## 📄 Raw YAML Ledger
