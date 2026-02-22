@@ -1,63 +1,153 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Leica DM IRBE
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Leica DM IRBE
-  instrument_id: scope-leica-dm-irbe
-  manufacturer: Leica Microsystems
-  model: DM IRBE
-  stand_orientation: inverted
-  notes: 'type: "Widefield microscope (inverted)" | filters: ["DAPI/Hoechst (UV excitation)",
-    "GFP/Alexa 488", "TRITC/RFP"] | imaging_modes: ["Fluorescence (epifluorescence)",
-    "Brightfield (transmitted light)", "Darkfield", "Phase contrast"]'
+  display_name: "Leica DM IRBE"
+  instrument_id: "scope-leica-dm-irbe"
+  manufacturer: "Leica Microsystems"
+  model: "DM IRBE"
+  stand_orientation: "inverted"
+  notes: "Widefield microscope (inverted). Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield, Phase contrast."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+  - "phase_contrast"
+  - "darkfield"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules: []
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Unknown
-    version: ''
+    name: "Unknown"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources: []
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: PMT
-    manufacturer: ''
-    model: Nikon DS-L3 standalone camera control with Nikon color camera
+    - kind: "CMOS"
+      manufacturer: "Nikon"
+      model: "DS-L3 standalone camera control with Nikon color camera"
+      notes: ""
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "DAPI/Hoechst"
+      location: "Fluorescence Turret"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "UV excitation"
+      url: ""
+    - name: "GFP/Alexa 488"
+      location: "Fluorescence Turret"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "TRITC/RFP"
+      location: "Fluorescence Turret"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Leica
-    model: Plan (phase compatible)
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: ''
-    immersion: air
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 20.0
-    numerical_aperture: 0.6
-    working_distance: ''
-    immersion: air
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 40.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: oil
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 63.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: oil
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 100.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: oil
-    correction: ''
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: ""
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: "phase compatible"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.6
+      working_distance: ""
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: null
+      working_distance: ""
+      immersion: "oil"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: null
+      working_distance: ""
+      immersion: "oil"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: null
+      working_distance: ""
+      immersion: "oil"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
