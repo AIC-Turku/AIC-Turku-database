@@ -5,12 +5,12 @@ instrument:
   display_name: "Lambert FLIM"
   instrument_id: "scope-lambert-flim-frequency-domain"
   manufacturer: "Lambert Instruments"
-  model: "FLIM (frequency domain)"
+  model: "LIFA (frequency domain FLIM)"
   year_of_purchase: ""
   funding: ""
-  stand_orientation: "other"
-  location: ""
-  notes: "Widefield FLIM system (attached to Zeiss AxioImager). Location: BioCity, 5th floor, room 5149. Imaging modes: Widefield fluorescence (FLIM only)."
+  stand_orientation: "inverted"
+  location: "BioCity, 5th floor, room 5149"
+  notes: 'Fluorescence lifetime imaging microscopy (FLIM) measures differences in fluorescence decay lifetimes. The Lambert Instruments LIFA frequency-domain FLIM system is attached to an inverted Carl Zeiss AxioImager microscope body and supports fixed-sample imaging in widefield mode. It is suitable for FRET imaging, where donor lifetime decreases upon FRET; CFP-YFP and GFP-DsRed pairs have been used successfully. Lifetime imaging performance is <100 ps resolution over an approximately 0.1 ns to 1 ms range. The system is capable of high-content imaging. Recommended background reading: Bastiaens and Squire, "Fluorescence lifetime imaging microscopy: spatial resolution of biochemical processes in the cell" (Trends Cell Biol. 1999 Feb;9(2):48-52).'
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -24,7 +24,7 @@ modalities:
 # -----------------------------------------------------------------------------
 modules:
   - name: "FLIM"
-    notes: "Frequency domain FLIM"
+    notes: "Lambert Instruments LIFA fast frequency-domain FLIM module"
     url: ""
 
 # -----------------------------------------------------------------------------
@@ -48,7 +48,28 @@ hardware:
     url: ""
 
   # --- Light Sources (Excitation) ---
-  light_sources: []
+  light_sources:
+    - kind: "led"
+      manufacturer: "Unknown"
+      model: "Multi-LED excitation"
+      wavelength_nm: "406"
+      power: ""
+      notes: "Excitation line"
+      url: ""
+    - kind: "led"
+      manufacturer: "Unknown"
+      model: "Multi-LED excitation"
+      wavelength_nm: "469"
+      power: ""
+      notes: "Excitation line"
+      url: ""
+    - kind: "led"
+      manufacturer: "Unknown"
+      model: "Multi-LED excitation"
+      wavelength_nm: "533"
+      power: ""
+      notes: "Excitation line"
+      url: ""
 
   # --- Detectors (Emission) ---
   detectors: []
