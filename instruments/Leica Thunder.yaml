@@ -10,20 +10,36 @@ instrument:
   notes: "Widefield microscope"                             
   url: "https://www.leica-microsystems.com/products/light-microscopes/p/thunder-imager-3d-live-cell/"
 
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
   - "widefield_fluorescence"
   - "transmitted_brightfield"
 
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules:
-  - "hardware_autofocus"
+  - name: "hardware_autofocus"
+    notes: ""
+    url: ""
 
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
     name: "LAS X"               
     version: ""
     url: "https://www.leica-microsystems.com/products/microscope-software/p/leica-las-x-ls/"
 
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
     type: "none"
     notes: ""
@@ -101,9 +117,13 @@ hardware:
       notes: "color"
       url: "https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/"
 
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
   # --- Filters / Filter Cubes ---
   filters:
     - name: "CYR71010"
+      location: "Filter Turret"
       product_code: "11525416"
       excitation: "436/28; 506/21; 578/24; 730/40"
       dichroic: "459; 523; 598; 763"
@@ -111,6 +131,7 @@ hardware:
       notes: "Quad-band"
       url: ""
     - name: "DFT51010"
+      location: "Filter Turret"
       product_code: "11525418"
       excitation: "391/32; 479/33; 554/24; 638/31"
       dichroic: "415; 500; 572; 660"
@@ -118,6 +139,7 @@ hardware:
       notes: "Quad-band"
       url: ""
     - name: "CY3"
+      location: "Filter Turret"
       product_code: ""
       excitation: "546/10"
       dichroic: "556"
@@ -125,6 +147,7 @@ hardware:
       notes: "LED: 555"
       url: ""
     - name: "A594"
+      location: "Filter Turret"
       product_code: ""
       excitation: "592/21"
       dichroic: "610"
@@ -132,6 +155,7 @@ hardware:
       notes: "LED: 575"
       url: ""
     - name: "EMP_BF"
+      location: "Filter Turret"
       product_code: "11525000"
       excitation: ""
       dichroic: ""
@@ -139,6 +163,7 @@ hardware:
       notes: "Empty position for TL-methods excluding POL, DIC"
       url: ""
     - name: "EMP+Pol"
+      location: "Filter Turret"
       product_code: "11525000"
       excitation: ""
       dichroic: ""
@@ -146,6 +171,7 @@ hardware:
       notes: "Empty position for TL-methods including POL, DIC, requires external Analyser-slider"
       url: ""
     - name: "Standalone Emission Filters"
+      location: "Emission Wheel"
       product_code: ""
       excitation: ""
       dichroic: ""
