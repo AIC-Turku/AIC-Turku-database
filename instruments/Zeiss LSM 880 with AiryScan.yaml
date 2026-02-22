@@ -22,6 +22,9 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
+  - name: "AiryScan"
+    notes: "32-channel GaAsP area detector for super-resolution"
+    url: ""
   - name: "incubation"
     notes: "Environmental chamber with temperature control and heated stage inserts"
     url: ""
