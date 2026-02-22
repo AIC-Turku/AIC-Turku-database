@@ -1,23 +1,58 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Leica DMRE
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Leica DMRE
-  instrument_id: scope-leica-dmre
-  manufacturer: Leica Microsystems
-  model: DMRE
-  stand_orientation: upright
-  notes: 'type: "Widefield microscope (upright fluorescence)" | imaging_modes: ["Fluorescence
-    (epi-fluorescence)", "Brightfield (transmitted light)"]'
+  display_name: "Leica DMRE"
+  instrument_id: "scope-leica-dmre"
+  manufacturer: "Leica Microsystems"
+  model: "DMRE"
+  stand_orientation: "upright"
+  notes: "Widefield microscope (upright fluorescence). Imaging modes: Fluorescence (epi-fluorescence), Brightfield (transmitted light)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules: []
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Unknown
-    version: ''
+    name: "Unknown"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources: []
+
+  # --- Detectors (Emission) ---
   detectors: []
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters: []
+
+  # --- Objectives ---
   objectives: []
