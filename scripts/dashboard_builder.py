@@ -513,12 +513,17 @@ def main() -> None:
             flagged.append(inst)
 
         charts_json = _build_all_charts_data(qc_logs)
-        latest_metrics = _metric_lookup(latest_qc.get("metrics_computed")) if latest_qc else {}
-
-        # Fixed Indentation Block
+        # Roll up metrics chronologically so we always have the latest value for EVERY metric
+        latest_metrics = {}
+        for log in qc_logs:
+            payload = log.get("data")
+            if isinstance(payload, dict):
+                session_metrics = _metric_lookup(payload.get("metrics_computed"))
+                latest_metrics.update(session_metrics)
+        
         hardware = inst.get("hardware") or {}
 
-        # Expanded Light Sources
+        # Light Sources
         light_sources = [
             {
                 "name": clean_text(src.get("model")),
