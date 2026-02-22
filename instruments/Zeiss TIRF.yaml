@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "inverted"
+  location: ""
   notes: "TIRF/widefield microscope (inverted). Imaging modes: TIRF (total internal reflection fluorescence), Widefield epifluorescence, Brightfield."
   url: ""
 

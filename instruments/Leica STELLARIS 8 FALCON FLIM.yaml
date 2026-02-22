@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "inverted"
+  location: ""
   notes: "Confocal spectral microscope (inverted). Imaging modes: Confocal spectral imaging (tunable emission), FLIM (fluorescence lifetime imaging), FCS (correlation spectroscopy), High-speed scanning (resonant), Multiplex simultaneous channels."
   url: ""
 

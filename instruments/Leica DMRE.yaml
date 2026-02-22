@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "upright"
+  location: ""
   notes: "Widefield microscope (upright fluorescence). Imaging modes: Fluorescence (epi-fluorescence), Brightfield (transmitted light)."
   url: ""
 

@@ -21,6 +21,7 @@ instrument:
   
   # Options: upright, inverted, stereo, benchtop, other
   stand_orientation: "inverted"
+  location: ""                          # e.g. "Medisiina C, Room C242"
   
   notes: ""                             # e.g. "Located in Room 404. Custodian: Dr. Smith."
   url: ""                               # Link to booking system or general system overview

@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: upright
+  location: ""
   notes: 'type: "Multiphoton confocal microscope (upright)" | filters: [{"Main Beam
     Splitter LP505 nm"=>["SHG 440 (440/20)", "CFP (483/32)", "YFP (535/20)"]}, {"Main
     Beam Splitter LP560 nm"=>["DAPI (457/50)", "FITC (525/52)", "TRITC (585/40)",

@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "other"
+  location: ""
   notes: "Widefield FLIM system (attached to Zeiss AxioImager). Location: BioCity, 5th floor, room 5149. Imaging modes: Widefield fluorescence (FLIM only)."
   url: ""
 

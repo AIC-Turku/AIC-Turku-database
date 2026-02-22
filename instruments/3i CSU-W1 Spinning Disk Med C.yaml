@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: "2019"
   funding: ""
   stand_orientation: "inverted"
+  location: ""
   notes: "Confocal spinning-disk microscope based on a Zeiss Axio Observer 7. Includes MESA Illumination Enhancement. Location: Medisiina C, 2nd floor, room C242."
   url: ""
 
