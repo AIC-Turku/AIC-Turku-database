@@ -97,12 +97,17 @@
 
 {% if instrument.software %}
 <div class="grid cards" markdown>
-{% for sw in instrument.software -%}
-- **{% if sw.url %}[{{ sw.name or 'Unknown Software' }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name or 'Unknown Software' }}{% endif %}**
-  ---
-  <span class="aic-muted">Component:</span> {{ sw.component or '—' }}<br>
-  {% if sw.version %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}
+
+{% for sw in instrument.software %}
+-   **{% if sw.url %}[{{ sw.name or 'Unknown Software' }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name or 'Unknown Software' }}{% endif %}**
+
+    ---
+
+    <span class="aic-muted">Component:</span> {{ sw.component or '—' }}<br>
+    {% if sw.version %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}
+
 {% endfor %}
+
 </div>
 {% else %}
 > *No software configurations recorded.*
@@ -116,14 +121,19 @@
 
 {% if light_sources %}
 <div class="grid cards" markdown>
-{% for src in light_sources -%}
-- **{% if src.url %}[{{ src.name or 'Unknown Model' }}]({{ src.url }}){:target="_blank"}{% else %}{{ src.name or 'Unknown Model' }}{% endif %}**
-  ---
-  **Type:** {{ src.type or '—' }}
-  {% if src.wavelength %}<br>**Wavelength:** `{{ src.wavelength }} nm`{% endif %}
-  {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
-  {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
+
+{% for src in light_sources %}
+-   **{% if src.url %}[{{ src.name or 'Unknown Model' }}]({{ src.url }}){:target="_blank"}{% else %}{{ src.name or 'Unknown Model' }}{% endif %}**
+
+    ---
+
+    **Type:** {{ src.type or '—' }}
+    {% if src.wavelength %}<br>**Wavelength:** `{{ src.wavelength }} nm`{% endif %}
+    {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
+    {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
+
 {% endfor %}
+
 </div>
 {% else %}
 > *No light sources recorded.*
@@ -133,12 +143,17 @@
 
 {% if detectors %}
 <div class="grid cards" markdown>
-{% for det in detectors -%}
-- **{% if det.url %}[{{ det.name or 'Unknown' }} {{ det.model or '' }}]({{ det.url }}){:target="_blank"}{% else %}{{ det.name or 'Unknown' }} {{ det.model or '' }}{% endif %}**
-  ---
-  **Type:** {{ det.type or '—' }}
-  {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
+
+{% for det in detectors %}
+-   **{% if det.url %}[{{ det.name or 'Unknown' }} {{ det.model or '' }}]({{ det.url }}){:target="_blank"}{% else %}{{ det.name or 'Unknown' }} {{ det.model or '' }}{% endif %}**
+
+    ---
+
+    **Type:** {{ det.type or '—' }}
+    {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
+
 {% endfor %}
+
 </div>
 {% else %}
 > *No detectors recorded.*
@@ -148,15 +163,20 @@
 
 {% if objectives %}
 <div class="grid cards" markdown>
-{% for obj in objectives -%}
-- **{% if obj.url %}[{{ obj.name or 'Unknown Model' }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.name or 'Unknown Model' }}{% endif %}**
-  ---
-  **Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.na if obj.na is not none else '—' }}`
-  {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
-  {% if obj.wd %}<br>**WD:** {{ obj.wd }}{% endif %}
-  {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
-  {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}
+
+{% for obj in objectives %}
+-   **{% if obj.url %}[{{ obj.name or 'Unknown Model' }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.name or 'Unknown Model' }}{% endif %}**
+
+    ---
+
+    **Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.na if obj.na is not none else '—' }}`
+    {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
+    {% if obj.wd %}<br>**WD:** {{ obj.wd }}{% endif %}
+    {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
+    {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}
+
 {% endfor %}
+
 </div>
 {% else %}
 > *No objectives recorded.*
@@ -168,29 +188,35 @@
 <div class="grid cards" markdown>
 
 {% if filters %}
-- **Optical Filters**
-  ---
-  {% for f in filters %}
-  * {% if f.url %}[**{{ f.name or 'Filter' }}**]({{ f.url }}){:target="_blank"}{% else %}**{{ f.name or 'Filter' }}**{% endif %}
-    {% if f.excitation or f.emission %}
-    <br><small class="aic-muted">EX: {{ f.excitation or '-' }} | EM: {{ f.emission or '-' }}</small>
-    {% endif %}
-  {% endfor %}
+-   **Optical Filters**
+
+    ---
+
+    {% for f in filters %}
+    * {% if f.url %}[**{{ f.name or 'Filter' }}**]({{ f.url }}){:target="_blank"}{% else %}**{{ f.name or 'Filter' }}**{% endif %}
+      {% if f.excitation or f.emission %}
+      <br><small class="aic-muted">EX: {{ f.excitation or '-' }} | EM: {{ f.emission or '-' }}</small>
+      {% endif %}
+    {% endfor %}
 {% endif %}
 
 {% if splitters %}
-- **Splitters / Dichroics**
-  ---
-  {% for s in splitters %}
-  * {% if s.url %}[**{{ s.name or 'Splitter' }}**]({{ s.url }}){:target="_blank"}{% else %}**{{ s.name or 'Splitter' }}**{% endif %}
-    {% if s.type %}<br><small class="aic-muted">Type: {{ s.type }}</small>{% endif %}
-  {% endfor %}
+-   **Splitters / Dichroics**
+
+    ---
+
+    {% for s in splitters %}
+    * {% if s.url %}[**{{ s.name or 'Splitter' }}**]({{ s.url }}){:target="_blank"}{% else %}**{{ s.name or 'Splitter' }}**{% endif %}
+      {% if s.type %}<br><small class="aic-muted">Type: {{ s.type }}</small>{% endif %}
+    {% endfor %}
 {% endif %}
 
 {% if not filters and not splitters %}
-- **Optical Components**
-  ---
-  > *No filters or splitters recorded.*
+-   **Optical Components**
+
+    ---
+
+    > *No filters or splitters recorded.*
 {% endif %}
 
 </div>
@@ -203,12 +229,17 @@
 
 {% if latest_metrics %}
 <div class="grid cards" markdown>
-{% for m_id, m_val in latest_metrics.items() -%}
-- **{{ metric_names.get(m_id, m_id) }}**
-  ---
-  <span style="font-size: 1.5em; font-weight: bold; color: var(--md-primary-fg-color);">{{ m_val }}</span><br>
-  <span class="aic-muted" style="font-size: 0.8em;"><code>{{ m_id }}</code></span>
+
+{% for m_id, m_val in latest_metrics.items() %}
+-   **{{ metric_names.get(m_id, m_id) }}**
+
+    ---
+
+    <span style="font-size: 1.5em; font-weight: bold; color: var(--md-primary-fg-color);">{{ m_val }}</span><br>
+    <span class="aic-muted" style="font-size: 0.8em;"><code>{{ m_id }}</code></span>
+
 {% endfor %}
+
 </div>
 {% else %}
 > *No recent metrics available.*
