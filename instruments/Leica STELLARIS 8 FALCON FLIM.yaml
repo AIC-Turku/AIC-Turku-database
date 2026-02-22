@@ -1,0 +1,142 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Leica STELLARIS 8 FALCON FLIM
+# -----------------------------------------------------------------------------
+instrument:
+  display_name: "Leica STELLARIS 8 FALCON FLIM (Resonant)"
+  instrument_id: "scope-leica-stellaris-8-falcon-flim-resonant"
+  manufacturer: "Leica Microsystems"
+  model: "STELLARIS 8 FALCON FLIM"
+  stand_orientation: "inverted"
+  notes: "Confocal spectral microscope (inverted). Imaging modes: Confocal spectral imaging (tunable emission), FLIM (fluorescence lifetime imaging), FCS (correlation spectroscopy), High-speed scanning (resonant), Multiplex simultaneous channels."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
+modalities:
+  - "confocal_point"
+  - "spectral_imaging"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - name: "FLIM"
+    notes: "FAST Lifetime Contrast (FALCON) module"
+    url: ""
+  - name: "FCS"
+    notes: "Fluorescence correlation spectroscopy module"
+    url: ""
+  - name: "AOBS"
+    notes: "Acousto-Optical Beam Splitter (spectral splitter)"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
+software:
+  acquisition:
+    name: "Leica LAS X with FALCON (FLIM)"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
+hardware:
+  
+  # --- Scanner ---
+  scanner:
+    type: "resonant"
+    notes: "High-speed resonant scanner"
+    url: ""
+
+  # --- Light Sources (Excitation) ---
+  light_sources:
+    - kind: "white_light_laser"
+      manufacturer: "Leica"
+      model: "White Light Laser (WLL)"
+      wavelength_nm: "tunable"
+      power: ""
+      notes: "continuous, up to 8 simultaneous lines via AOBS"
+      url: ""
+    - kind: "laser"
+      manufacturer: "Leica"
+      model: "405 nm diode laser"
+      wavelength_nm: "405"
+      power: ""
+      notes: ""
+      url: ""
+
+  # --- Detectors (Emission) ---
+  detectors:
+    - kind: "HyD"
+      manufacturer: "Leica"
+      model: "HyD SP detectors"
+      notes: "4x detectors (Power HyD S, S Core, X, R)"
+      url: ""
+    - kind: "PMT"
+      manufacturer: "Leica"
+      model: "Transmitted light detector"
+      notes: "Brightfield PMT"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters: []
+
+  # --- Objectives ---
+  objectives:
+    - manufacturer: "Leica"
+      model: "HC PL APO CS2"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.4
+      working_distance: ""
+      immersion: "air"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "HC PL APO IMM CORR CS2"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.75
+      working_distance: ""
+      immersion: "multi"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: "Correction Ring (CORR)"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "HC PL APO GLYC CORR CS2"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: 1.25
+      working_distance: ""
+      immersion: "glycerol"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: "Correction Ring (CORR)"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "HC PL APO OIL CS2"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: ""
+      immersion: "oil"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
