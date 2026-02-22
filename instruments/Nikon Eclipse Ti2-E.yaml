@@ -1,110 +1,295 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Nikon Eclipse Ti2-E
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Nikon Eclipse Ti2-E
-  instrument_id: scope-nikon-eclipse-ti2-e
-  manufacturer: Nikon
-  model: Eclipse Ti2-E
-  stand_orientation: inverted
-  notes: 'type: "Automated inverted microscope (high-content)" | filters: ["Chroma
-    89403bs (dichroic for CFP/YFP/mCherry/Cy7)", "Chroma 84000v2 (quad-band for DAPI/FITC/TRITC/Cy5)",
-    "Chroma 96377 (Cy7 emission filter)", "DIC fixed analyzer (for DIC imaging)",
-    {"Emission filters"=>"DAPI 435/26, CFP 475/20, GFP 515/30, YFP 540/21 nm"}, {"Lamp
-    filter cubes"=>"DAPI, CFP, GFP, YFP, TexasRed "}, {"Additional emission"=>"TRITC
-    595/40, mCherry 632/60, Cy5 705/71, Cy7 809/81 nm (optional)"}] | additional_hardware:
-    ["Nikon Perfect Focus System (autofocus)", "Enclosed incubation chamber (Okolab)
-    with temperature control (Okolab H201-T)"] | imaging_modes: ["Widefield fluorescence
-    (multichannel spectral imaging)", "Brightfield (and DIC)", "Time-lapse live-cell
-    imaging (with autofocus)", "High-content screening (multi-well scanning)"]'
+  display_name: "Nikon Eclipse Ti2-E"
+  instrument_id: "scope-nikon-eclipse-ti2-e"
+  manufacturer: "Nikon"
+  model: "Eclipse Ti2-E"
+  stand_orientation: "inverted"
+  notes: "Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- DIC
-- spectral_imaging
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+  - "DIC"
+  - "spectral_imaging"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules:
-- incubation
-- hardware_autofocus
+  - name: "incubation"
+    notes: "Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)"
+    url: ""
+  - name: "hardware_autofocus"
+    notes: "Nikon Perfect Focus System (autofocus)"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Nikon NIS-Elements AR (v5.11)
-    version: ''
+    name: "Nikon NIS-Elements AR"
+    version: "5.11"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources:
-  - kind: led
-    manufacturer: ''
-    model: Lumencor Spectra X LED system (395/25, 440/20, 475/28, 550/15*, 575/35,
-      640/30, 730/40 nm)  *550 nm module by request
-    wavelength_nm: 550
-    power: ''
+    - kind: "led"
+      manufacturer: "Lumencor"
+      model: "Spectra X LED system"
+      wavelength_nm: "395/25; 440/20; 475/28; 550/15; 575/35; 640/30; 730/40"
+      power: ""
+      notes: "550 nm module available by request"
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: sCMOS
-    manufacturer: ''
-    model: Hamamatsu Orca Flash4.0 V3 sCMOS (2048Ã—2044)
-  - kind: sCMOS
-    manufacturer: ''
-    model: Nikon DS-Fi3 color CMOS (2880Ã—2048)
+    - kind: "sCMOS"
+      manufacturer: "Hamamatsu"
+      model: "Orca Flash4.0 V3"
+      notes: "sCMOS (2048x2044)"
+      url: ""
+    - kind: "sCMOS"
+      manufacturer: "Nikon"
+      model: "DS-Fi3"
+      notes: "Color CMOS (2880x2048)"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "Chroma 89403bs"
+      location: "Filter Turret"
+      product_code: "89403bs"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "Dichroic for CFP/YFP/mCherry/Cy7"
+      url: ""
+    - name: "Chroma 84000v2"
+      location: "Filter Turret"
+      product_code: "84000v2"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "Quad-band for DAPI/FITC/TRITC/Cy5"
+      url: ""
+    - name: "Chroma 96377"
+      location: "Filter Turret"
+      product_code: "96377"
+      excitation: ""
+      dichroic: ""
+      emission: "809/81"
+      notes: "Cy7 emission filter"
+      url: ""
+    - name: "DAPI Emission"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "435/26"
+      notes: ""
+      url: ""
+    - name: "CFP Emission"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "475/20"
+      notes: ""
+      url: ""
+    - name: "GFP Emission"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "515/30"
+      notes: ""
+      url: ""
+    - name: "YFP Emission"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "540/21"
+      notes: ""
+      url: ""
+    - name: "TRITC Emission"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "595/40"
+      notes: "Additional optional emission"
+      url: ""
+    - name: "mCherry Emission"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "632/60"
+      notes: "Additional optional emission"
+      url: ""
+    - name: "Cy5 Emission"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "705/71"
+      notes: "Additional optional emission"
+      url: ""
+    - name: "Lamp Filter Cubes"
+      location: "Epi Turret"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "Standard DAPI, CFP, GFP, YFP, and TexasRed cubes"
+      url: ""
+    - name: "DIC Fixed Analyzer"
+      location: "Analyzer Slider"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "For DIC imaging"
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Nikon
-    model: Plan Apochromat
-    magnification: 2.0
-    numerical_aperture: 0.06
-    working_distance: 7.5 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Nikon
-    model: Plan Fluor
-    magnification: 4.0
-    numerical_aperture: 0.13
-    working_distance: 17.2 mm
-    immersion: air
-    correction: plan_fluorite
-  - manufacturer: Nikon
-    model: Plan Apo Lambda D
-    magnification: 4.0
-    numerical_aperture: 0.2
-    working_distance: 20.0 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Nikon
-    model: CFI Plan Fluor
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: 15.2 mm
-    immersion: air
-    correction: plan_fluorite
-  - manufacturer: Nikon
-    model: CFI S Plan Fluor ELWD
-    magnification: 20.0
-    numerical_aperture: 0.45
-    working_distance: 8.2â€“6.9 mm
-    immersion: air
-    correction: plan_fluorite
-  - manufacturer: Nikon
-    model: CFI Plan Apo Lambda
-    magnification: 20.0
-    numerical_aperture: 0.75
-    working_distance: 1.0 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Nikon
-    model: CFI S Plan Fluor ELWD ADM
-    magnification: 40.0
-    numerical_aperture: 0.6
-    working_distance: 3.6â€“2.8 mm
-    immersion: air
-    correction: plan_fluorite
-  - manufacturer: Nikon
-    model: CFI Plan Apo Lambda
-    magnification: 60.0
-    numerical_aperture: 1.4
-    working_distance: 0.13 mm
-    immersion: oil
-    correction: plan_apochromat
-  - manufacturer: Nikon
-    model: Apo TIRF
-    magnification: 100.0
-    numerical_aperture: 1.49
-    working_distance: 0.12 mm
-    immersion: oil
-    correction: apochromat
+    - manufacturer: "Nikon"
+      model: "Plan Apochromat 2x"
+      product_code: ""
+      magnification: 2.0
+      numerical_aperture: 0.06
+      working_distance: "7.5 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "Plan Fluor 4x"
+      product_code: ""
+      magnification: 4.0
+      numerical_aperture: 0.13
+      working_distance: "17.2 mm"
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "Plan Apo Lambda D 4x"
+      product_code: ""
+      magnification: 4.0
+      numerical_aperture: 0.2
+      working_distance: "20.0 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI Plan Fluor 10x"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: "15.2 mm"
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: true
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI S Plan Fluor ELWD 20x"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.45
+      working_distance: "8.2-6.9 mm"
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: true
+      specialties: "ELWD"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apo Lambda 20x"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.75
+      working_distance: "1.0 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI S Plan Fluor ELWD ADM 40x"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: 0.6
+      working_distance: "3.6-2.8 mm"
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: true
+      specialties: "ELWD ADM"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apo Lambda 60x"
+      product_code: ""
+      magnification: 60.0
+      numerical_aperture: 1.4
+      working_distance: "0.13 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "Apo TIRF 100x"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: 1.49
+      working_distance: "0.12 mm"
+      immersion: "oil"
+      correction: "apochromat"
+      afc_compatible: true
+      specialties: "TIRF"
+      notes: ""
+      url: ""
