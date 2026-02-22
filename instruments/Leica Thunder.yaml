@@ -10,7 +10,7 @@ instrument:
   funding: ""
   stand_orientation: "inverted"
   location: ""
-  notes: "Widefield microscope"                             
+  notes: "Widefield microscope with Leica Computational Clearing for real-time out-of-focus blur removal in 3D fluorescence imaging; high sensitivity supports low phototoxicity and photobleaching. LAS X raw data is saved separately; processing can be done during acquisition or by post-processing."                             
   url: "https://www.leica-microsystems.com/products/light-microscopes/p/thunder-imager-3d-live-cell/"
 
 # -----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ modules:
 # -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: "LAS X"               
+    name: "LAS X with Navigator"               
     version: ""
     url: "https://www.leica-microsystems.com/products/microscope-software/p/leica-las-x-ls/"
 
@@ -112,12 +112,12 @@ hardware:
     - kind: "sCMOS"
       manufacturer: "Leica"
       model: "K8"
-      notes: "monochrome"
+      notes: "monochrome; 18.8 mm sensor, 2048x2048 px, 6.5 um pixel, QE 95% peak, dark current 1.5 e-/pix/s, read noise (12-bit) 1.0 e- median / 1.1 e- RMS"
       url: "https://www.leica-microsystems.com/products/microscope-cameras/p/k8/"
     - kind: "CMOS"
       manufacturer: "Leica"
       model: "K3C"
-      notes: "color"
+      notes: "color CMOS; excellent color reproduction; 12-bit/channel RGB quantifiable images"
       url: "https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/"
 
   # --- Splitters (Camera/Emission) ---
@@ -179,7 +179,7 @@ hardware:
       excitation: ""
       dichroic: ""
       emission: "460/80; 535/70; 590/50; 642/80"
-      notes: ""
+      notes: "External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope turret)"
       url: ""
 
   # --- Objectives ---
@@ -228,11 +228,11 @@ hardware:
       
     - id: "20x_multi"
       manufacturer: "Leica"
-      model: "20x"
+      model: "20x IMM UV"
       product_code: "11506326"
       magnification: 20.0
-      numerical_aperture: null
-      working_distance: ""
+      numerical_aperture: 0.7
+      working_distance: "0.26 mm"
       immersion: "multi"
       correction: ""
       afc_compatible: false
@@ -298,11 +298,11 @@ hardware:
 
     - id: "100x_oil"
       manufacturer: "Leica"
-      model: "100x"
+      model: "100x HCX Plan Apo"
       product_code: "506316"
       magnification: 100.0
-      numerical_aperture: null
-      working_distance: ""
+      numerical_aperture: 1.4
+      working_distance: "0.09 mm"
       immersion: "oil"
       correction: ""
       afc_compatible: false
