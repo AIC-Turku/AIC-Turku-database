@@ -2,7 +2,7 @@
 # MICROSCOPE CONFIGURATION: Lambert FLIM 
 # -----------------------------------------------------------------------------
 instrument:
-  display_name: "Lambert FLIM (frequency domain)"
+  display_name: "Lambert FLIM"
   instrument_id: "scope-lambert-flim-frequency-domain"
   manufacturer: "Lambert Instruments"
   model: "FLIM (frequency domain)"
