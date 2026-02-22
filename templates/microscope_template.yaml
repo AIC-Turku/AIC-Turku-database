@@ -13,11 +13,11 @@ instrument:
   instrument_id: ""                     # Leave empty; system will auto-generate (e.g. scope-a1b2c3d4)
   
   # Options: Zeiss, Leica Microsystems, Nikon, Olympus/Evident, Abberior, Andor, 
-  #          Hamamatsu, Lumencor, Excelitas, Chroma, Semrock, Other
+  #          Hamamatsu, Lumencor, Excelitas, Chroma, Semrock, CrestOptics, Other
   manufacturer: "Zeiss"
   model: ""                             # e.g. "AxioObserver 7"
   
-  # Options: upright, inverted, stereo, other
+  # Options: upright, inverted, stereo, benchtop, other
   stand_orientation: "inverted"
   
   notes: ""                             # e.g. "Located in Room 404. Custodian: Dr. Smith."
@@ -51,9 +51,11 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - "hardware_autofocus"
+  - name: "hardware_autofocus"
+    notes: "e.g., Definite Focus / PFS. Add specific hardware limitations here."
+    url: ""
   
-  # Available Options:
+  # Available Options for 'name':
   # - incubation              (Temp/CO2)
   # - hardware_autofocus      (Definite/PFS/Z-drift)
   # - FRAP
@@ -115,14 +117,22 @@ hardware:
       notes: ""
       url: ""
 
+  # --- Splitters (Camera/Emission) ---
+  splitters:
+    - name: "DualCam Splitter"
+      type: "emission_splitter"
+      notes: "Channel 1 to Master, Channel 2 to Slave"
+      url: ""
+
   # --- Filters / Filter Cubes ---
   filters:
     - name: "Example Quad Band"
+      location: "Turret Position 1"   # e.g., "Emission Wheel Pos 1", "Turret Position 2", "Slider"
       product_code: "123456"
       excitation: "405/20; 488/20; 561/20; 640/20"
       dichroic: "420; 500; 580; 660"
       emission: "450/50; 525/50; 600/50; 680/50"
-      notes: "Installed in turret position 1"
+      notes: "Installed in primary turret"
       url: ""                 # Link to filter transmission curves (e.g., Chroma/Semrock page)
 
   # --- Objectives ---
