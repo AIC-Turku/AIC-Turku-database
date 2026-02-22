@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-leica-dmre"
   manufacturer: "Leica Microsystems"
   model: "DMRE"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "upright"
   notes: "Widefield microscope (upright fluorescence). Imaging modes: Fluorescence (epi-fluorescence), Brightfield (transmitted light)."
   url: ""

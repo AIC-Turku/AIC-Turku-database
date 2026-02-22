@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-deltavision-omx"
   manufacturer: "GE Healthcare"
   model: "OMX"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "other"
   notes: "Super-resolution widefield system (SIM, TIRF). Imaging modes: Widefield, Structured Illumination, TIRF, Localization microscopy."
   url: ""

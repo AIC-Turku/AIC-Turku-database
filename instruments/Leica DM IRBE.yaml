@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-leica-dm-irbe"
   manufacturer: "Leica Microsystems"
   model: "DM IRBE"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "Widefield microscope (inverted). Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield, Phase contrast."
   url: ""

@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-olympus-bx60"
   manufacturer: "Olympus/Evident"
   model: "BX60"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "upright"
   notes: "Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast."
   url: ""

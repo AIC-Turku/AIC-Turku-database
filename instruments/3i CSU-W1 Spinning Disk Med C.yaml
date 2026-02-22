@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-3i-csu-w1-spinning-disk-med-c"
   manufacturer: "3i / Zeiss"
   model: "CSU-W1 Spinning Disk Med C"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "Confocal spinning-disk microscope (inverted). Imaging modes: Confocal (spinning disk), Live-cell imaging, FRAP, Photoactivation."
   url: ""

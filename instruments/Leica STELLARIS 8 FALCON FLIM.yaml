@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-leica-stellaris-8-falcon-flim-resonant"
   manufacturer: "Leica Microsystems"
   model: "STELLARIS 8 FALCON FLIM"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "Confocal spectral microscope (inverted). Imaging modes: Confocal spectral imaging (tunable emission), FLIM (fluorescence lifetime imaging), FCS (correlation spectroscopy), High-speed scanning (resonant), Multiplex simultaneous channels."
   url: ""

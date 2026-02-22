@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-msquared-aurora-airy-beam"
   manufacturer: "M Squared"
   model: "Aurora Airy Beam"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "other"
   notes: "Light-sheet fluorescence microscope. Imaging modes: Light-sheet fluorescence (Airy beam illumination), Long-term volumetric imaging (minimized photobleaching)."
   url: ""

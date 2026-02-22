@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-zeiss-tirf"
   manufacturer: "Zeiss"
   model: "TIRF"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "TIRF/widefield microscope (inverted). Imaging modes: TIRF (total internal reflection fluorescence), Widefield epifluorescence, Brightfield."
   url: ""

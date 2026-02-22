@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-leica-rxa"
   manufacturer: "Leica Microsystems"
   model: "RXA"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "upright"
   notes: "Widefield microscope (upright). Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield."
   url: ""

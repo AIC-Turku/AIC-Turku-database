@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-testx1"
   manufacturer: "Custom"
   model: "X1 Research Platform"
+  year_of_purchase: "2024"
+  funding: "Internal development budget"
   stand_orientation: "inverted"
   notes: "Synthetic test instrument for dashboard visualization and integration testing."
   url: "https://github.com/aic-turku/aic-turku-database"

@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-zeiss-lsm-880-with-airyscan"
   manufacturer: "Zeiss"
   model: "LSM 880 with AiryScan"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "Confocal laser-scanning microscope (inverted). Imaging modes: Confocal scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell imaging (resonant scan), Multiplex mode (AiryScan Fast)."
   url: ""
