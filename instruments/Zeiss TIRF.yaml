@@ -1,87 +1,195 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Zeiss TIRF
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Zeiss TIRF
-  instrument_id: scope-zeiss-tirf
-  manufacturer: Zeiss
-  model: TIRF
-  stand_orientation: inverted
-  notes: 'type: "TIRF/widefield microscope (inverted)" | filters: ["Filter set 38
-    HE (GFP; Ex 470/40, Em 525/50)", "Filter set 43 HE (DsRed; Ex 550/25, Em 605/70)",
-    "Filter set 76 HE (CFP/GFP/DsRed; Ex TBP 406+489+561, Em TBP 459+525+608)", "Filter
-    set 77 HE (GFP/mRFP/Alexa 633; Ex TBP 483+564+642, Em TBP 526+601+688)"] | additional_hardware:
-    ["Motorized stage", "Definite Focus drift correction", "Heated incubator and sample
-    holder"] | imaging_modes: ["TIRF (total internal reflection fluorescence)", "Widefield
-    epifluorescence", "Brightfield"]'
+  display_name: "Zeiss TIRF"
+  instrument_id: "scope-zeiss-tirf"
+  manufacturer: "Zeiss"
+  model: "TIRF"
+  stand_orientation: "inverted"
+  notes: "TIRF/widefield microscope (inverted). Imaging modes: TIRF (total internal reflection fluorescence), Widefield epifluorescence, Brightfield."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- TIRF
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+  - "TIRF"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules:
-- incubation
-- hardware_autofocus
+  - name: "incubation"
+    notes: "Heated incubator and sample holder"
+    url: ""
+  - name: "hardware_autofocus"
+    notes: "Definite Focus drift correction"
+    url: ""
+  - name: "motorized_stage"
+    notes: "Motorized XY stage"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Unknown
-    version: ''
+    name: "Unknown"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm
-    wavelength_nm: 488
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 561 nm
-    wavelength_nm: 561
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 639 nm
-    wavelength_nm: 639
-    power: ''
+    - kind: "laser"
+      manufacturer: ""
+      model: "488 nm"
+      wavelength_nm: "488"
+      power: ""
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "561 nm"
+      wavelength_nm: "561"
+      power: ""
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "639 nm"
+      wavelength_nm: "639"
+      power: ""
+      notes: ""
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: EMCCD
-    manufacturer: ''
-    model: Hamamatsu EMCCD C9100-13 (512Ã—512)
-  - kind: sCMOS
-    manufacturer: ''
-    model: Hamamatsu ORCA-Flash4.0 CMOS (2048Ã—2048)
+    - kind: "EMCCD"
+      manufacturer: "Hamamatsu"
+      model: "C9100-13"
+      notes: "512x512"
+      url: ""
+    - kind: "sCMOS"
+      manufacturer: "Hamamatsu"
+      model: "ORCA-Flash4.0 CMOS"
+      notes: "2048x2048"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "Filter set 38 HE (GFP)"
+      location: "Filter Turret"
+      product_code: "38 HE"
+      excitation: "470/40"
+      dichroic: ""
+      emission: "525/50"
+      notes: ""
+      url: ""
+    - name: "Filter set 43 HE (DsRed)"
+      location: "Filter Turret"
+      product_code: "43 HE"
+      excitation: "550/25"
+      dichroic: ""
+      emission: "605/70"
+      notes: ""
+      url: ""
+    - name: "Filter set 76 HE (CFP/GFP/DsRed)"
+      location: "Filter Turret"
+      product_code: "76 HE"
+      excitation: "TBP 406+489+561"
+      dichroic: ""
+      emission: "TBP 459+525+608"
+      notes: ""
+      url: ""
+    - name: "Filter set 77 HE (GFP/mRFP/Alexa 633)"
+      location: "Filter Turret"
+      product_code: "77 HE"
+      excitation: "TBP 483+564+642"
+      dichroic: ""
+      emission: "TBP 526+601+688"
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Zeiss
-    model: EC Epiplan-Neofluar
-    magnification: 2.5
-    numerical_aperture: 0.06
-    working_distance: 15.1 mm
-    immersion: air
-    correction: ''
-  - manufacturer: Zeiss
-    model: EC Epiplan-Neofluar
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: 5.2 mm
-    immersion: air
-    correction: ''
-  - manufacturer: Zeiss
-    model: Plan Apochromat
-    magnification: 20.0
-    numerical_aperture: 0.45
-    working_distance: 8.2â€“6.9 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: Î± Plan Apochromat
-    magnification: 63.0
-    numerical_aperture: 1.46
-    working_distance: 0.55 mm
-    immersion: oil
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: Î± Plan Apochromat
-    magnification: 100.0
-    numerical_aperture: 1.46
-    working_distance: 0.11 mm
-    immersion: oil
-    correction: plan_apochromat
+    - manufacturer: "Zeiss"
+      model: "EC Epiplan-Neofluar"
+      product_code: ""
+      magnification: 2.5
+      numerical_aperture: 0.06
+      working_distance: "15.1 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "EC Epiplan-Neofluar"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: "5.2 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "Plan Apochromat"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.45
+      working_distance: "8.2-6.9 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "Alpha Plan Apochromat"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: 1.46
+      working_distance: "0.55 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "TIRF"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "Alpha Plan Apochromat"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: 1.46
+      working_distance: "0.11 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "TIRF"
+      notes: ""
+      url: ""
