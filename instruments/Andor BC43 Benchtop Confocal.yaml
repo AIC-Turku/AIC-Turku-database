@@ -1,0 +1,197 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Andor BC43 Benchtop Confocal
+# -----------------------------------------------------------------------------
+instrument:
+  display_name: "Andor BC43 Benchtop Confocal"  
+  instrument_id: "scope-andor-bc43"                     
+  manufacturer: "Andor"
+  model: "BC43"                             
+  stand_orientation: "benchtop"
+  notes: "Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution."
+  url: "https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope"
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
+modalities:
+  - "confocal_spinning_disk"
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+  - "phase_contrast"            # Differential Phase Contrast (DPC)
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - "hardware_autofocus"        # Dual function Focus Seek and Lock
+  - "incubation"                # TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
+software:
+  acquisition:
+    name: "Fusion BC43"               
+    version: ""
+    url: "https://andor.oxinst.com/products/microscopy-software"
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
+hardware:
+  
+  # --- Scanner ---
+  scanner:
+    type: "spinning_disk"
+    notes: "Microlens-spinning disk multipoint confocal"
+    url: ""
+
+  # --- Light Sources (Excitation) ---
+  light_sources:
+    - kind: "laser"           
+      manufacturer: "Andor"
+      model: "Borealis Illumination"
+      wavelength_nm: "405"
+      power: ""
+      notes: "Part of BC43 excitation lines"
+      url: ""
+    - kind: "laser"           
+      manufacturer: "Andor"
+      model: "Borealis Illumination"
+      wavelength_nm: "488"
+      power: ""
+      notes: "Part of BC43 excitation lines"
+      url: ""
+    - kind: "laser"           
+      manufacturer: "Andor"
+      model: "Borealis Illumination"
+      wavelength_nm: "561"
+      power: ""
+      notes: "Part of BC43 excitation lines"
+      url: ""
+    - kind: "laser"           
+      manufacturer: "Andor"
+      model: "Borealis Illumination"
+      wavelength_nm: "638"
+      power: ""
+      notes: "Part of BC43 excitation lines"
+      url: ""
+
+  # --- Detectors (Emission) ---
+  detectors:
+    - kind: "sCMOS"       
+      manufacturer: "Andor"
+      model: "4.1 MP sCMOS"
+      notes: "6.5µm pixel, 16-bit, up to 82% QE. 18.4 mm field of view."
+      url: ""
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "DAPI"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "Standard emission filter for DAPI included in BC43"
+      url: ""
+    - name: "GFP"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "Standard emission filter for GFP included in BC43"
+      url: ""
+    - name: "mCherry"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "Standard emission filter for mCherry included in BC43"
+      url: ""
+    - name: "CY5"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "Standard emission filter for CY5 included in BC43"
+      url: ""
+
+  # --- Objectives ---
+  objectives:
+    - manufacturer: "Nikon" # Andor typically uses Nikon objectives for BC43
+      model: "10X Plan Apo LD Air"
+      product_code: "INS-OBJ-10D-045"
+      magnification: 10.0
+      numerical_aperture: 0.45
+      working_distance: "4.0 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: "Included in base BC43 CF"
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "20X Plan Apo LD Air"
+      product_code: "INS-OBJ-20D-080"
+      magnification: 20.0
+      numerical_aperture: 0.8
+      working_distance: "0.8 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "40X Plan Apo LD Air"
+      product_code: "INS-OBJ-40D-095"
+      magnification: 40.0
+      numerical_aperture: 0.95
+      working_distance: "0.21 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "40X Plan Apo LS Sil Oil"
+      product_code: "INS-OBJ-40S-125-SIL"
+      magnification: 40.0
+      numerical_aperture: 1.25
+      working_distance: "0.3 mm"
+      immersion: "silicone"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda S"
+      notes: ""
+      url: ""
+
+    - manufacturer: "Nikon"
+      model: "60X Plan Apo LD Oil"
+      product_code: "INS-OBJ-60D-142-0"
+      magnification: 60.0
+      numerical_aperture: 1.42
+      working_distance: "0.15 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
+
+    - manufacturer: "Nikon"
+      model: "100x Plan Apo LD Oil"
+      product_code: "INS-OBJ-100D-145-0"
+      magnification: 100.0
+      numerical_aperture: 1.45
+      working_distance: "0.13 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
