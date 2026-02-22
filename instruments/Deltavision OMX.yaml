@@ -9,8 +9,8 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "other"
-  location: ""
-  notes: "Super-resolution widefield system (SIM, TIRF). Imaging modes: Widefield, Structured Illumination, TIRF, Localization microscopy."
+  location: "BioCity, 5th floor, room 5149"
+  notes: "Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF for evenly illuminated large fields of view."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -44,6 +44,7 @@ software:
     name: "OMX Acquisition"
     version: "3.70"
     url: ""
+    notes: "Includes softWoRx Deconvolution v7.0.0"
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION
@@ -106,7 +107,7 @@ hardware:
     - kind: "sCMOS"
       manufacturer: "PCO"
       model: "Edge"
-      notes: "sCMOS cameras"
+      notes: "3x front-illuminated sCMOS cameras, 1024x1024 px, 6.5 um pixel size. Camera mapping: Cam1 DAPI+Cy5/CFP, Cam2 Alexa 488/YFP, Cam3 Alexa 568."
       url: ""
 
   # --- Splitters (Camera/Emission) ---
