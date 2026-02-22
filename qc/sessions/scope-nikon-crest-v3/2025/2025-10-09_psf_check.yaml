@@ -1,0 +1,136 @@
+schema_version: 1
+record_type: qc_session
+
+# -----------------------------------------------------------------------------
+# Identity and timing
+# -----------------------------------------------------------------------------
+qc_id: "qc_scope-nikon-crest-v3_20251009T100000Z_psf"
+microscope: "scope-nikon-crest-v3"                   # Matches the instrument_id exactly
+
+started_utc: "2025-10-09T10:00:00Z"                  # Extracted from PDF Date of Acquisition
+performed_by: "AIC Staff"
+reason: "routine_psf_check"
+
+summary: "Automated PSF extraction for 60x Silicone, 60x Oil, and 100x Oil objectives using Turku CIC Nikon Crest v3."
+notes: "Images acquired at room temperature (20°C). Measurements extracted using the ImageJ PSFj plugin."
+
+# -----------------------------------------------------------------------------
+# What was performed 
+# -----------------------------------------------------------------------------
+performed:
+  - qc_type: "psf"
+    details: "Sub-diffraction beads measured on 60x Silicone, 60x Oil, and 100x Oil."
+    artifacts: ["art_psf_60x_silicone", "art_psf_60x_oil", "art_psf_100x_oil"]
+
+# -----------------------------------------------------------------------------
+# HUMAN INPUTS 
+# -----------------------------------------------------------------------------
+inputs_human:
+  - metric_id: "environment.room_temperature_c"
+    value: 20
+    unit: "C"
+    details: "Recorded from PSF report metadata."
+
+# -----------------------------------------------------------------------------
+# COMPUTED METRICS (Generated via ImageJ)
+# -----------------------------------------------------------------------------
+computed_provenance:
+  pipeline: "imagej_psfj"                            # Corrected to reflect ImageJ PSFj
+  version: "unknown"                                 # Update if you know the exact plugin version
+  run_utc: "2025-10-09T14:02:00Z"                    
+
+metrics_computed:
+
+  # ==========================================
+  # OBJECTIVE: 60x Silicone (ID: 60x_silicone)
+  # ==========================================
+  - metric_id: "psf.60x_silicone.525.fwhm_xy_max_nm"
+    value: 288.3
+    unit: "nm"
+    details: "StdDev: 4.9. N=93 beads."
+    
+  - metric_id: "psf.60x_silicone.525.fwhm_xy_min_nm"
+    value: 267.1
+    unit: "nm"
+
+  - metric_id: "psf.60x_silicone.525.fwhm_z_nm"
+    value: 853.2
+    unit: "nm"
+
+  - metric_id: "psf.60x_silicone.525.asymmetry"
+    value: 0.93
+    unit: "unitless"
+
+  - metric_id: "chromatic_shift.60x_silicone.425_to_525.z_nm"
+    value: 127.5
+    unit: "nm"
+    details: "Axial shift of Blue 425 relative to Green 525."
+
+  # ==========================================
+  # OBJECTIVE: 60x Oil (ID: 60x_oil)
+  # ==========================================
+  - metric_id: "psf.60x_oil.525.fwhm_xy_max_nm"
+    value: 291.1
+    unit: "nm"
+    details: "StdDev: 7.6. N=356 beads."
+    
+  - metric_id: "psf.60x_oil.525.fwhm_xy_min_nm"
+    value: 260.2
+    unit: "nm"
+
+  - metric_id: "psf.60x_oil.525.fwhm_z_nm"
+    value: 686.8
+    unit: "nm"
+
+  - metric_id: "psf.60x_oil.525.asymmetry"
+    value: 0.93
+    unit: "unitless"
+
+  - metric_id: "chromatic_shift.60x_oil.425_to_525.z_nm"
+    value: 118.7
+    unit: "nm"
+    details: "Axial shift of Blue 425 relative to Green 525."
+
+  # ==========================================
+  # OBJECTIVE: 100x Oil (ID: 100x_oil)
+  # ==========================================
+  - metric_id: "psf.100x_oil.525.fwhm_xy_max_nm"
+    value: 210.0
+    unit: "nm"
+    details: "StdDev: 1.5. N=85 beads."
+    
+  - metric_id: "psf.100x_oil.525.fwhm_xy_min_nm"
+    value: 203.1
+    unit: "nm"
+
+  - metric_id: "psf.100x_oil.525.fwhm_z_nm"
+    value: 585.5
+    unit: "nm"
+
+  - metric_id: "psf.100x_oil.525.asymmetry"
+    value: 0.97
+    unit: "unitless"
+
+  - metric_id: "chromatic_shift.100x_oil.425_to_525.z_nm"
+    value: -25.4
+    unit: "nm"
+    details: "Axial shift of Blue 425 relative to Green 525."
+
+# -----------------------------------------------------------------------------
+# ARTIFACT POINTERS 
+# -----------------------------------------------------------------------------
+artifacts:
+  - artifact_id: "art_psf_60x_silicone"
+    role: "raw_image"
+    uri: "omero://<server>/<group>/image/<id>"
+    description: "Raw z-stack for PLAN APO 60x SIL."
+
+  - artifact_id: "art_psf_60x_oil"
+    role: "raw_image"
+    uri: "omero://<server>/<group>/image/<id>"
+    description: "Raw z-stack for PLAN APO AD 60x OIL."
+
+  - artifact_id: "art_psf_100x_oil"
+    role: "raw_image"
+    uri: "omero://<server>/<group>/image/<id>"
+    description: "Raw z-stack for PLAN APO AD 100x OIL."
