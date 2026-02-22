@@ -182,6 +182,7 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                         "component": clean_text(item.get("component") or item.get("type") or ""),
                         "name": clean_text(item.get("name") or ""),
                         "version": clean_text(item.get("version") or ""),
+                        "url": clean_text(item.get("url") or ""),
                     }
                 )
         return [r for r in rows if any(r.values())]
@@ -194,14 +195,15 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                         "component": clean_text(component),
                         "name": clean_text(payload.get("name")),
                         "version": clean_text(payload.get("version")),
+                        "url": clean_text(payload.get("url")),
                     }
                 )
             elif isinstance(payload, str):
-                rows.append({"component": clean_text(component), "name": clean_text(payload), "version": ""})
+                rows.append({"component": clean_text(component), "name": clean_text(payload), "version": "", "url": ""})
         return [r for r in rows if any(r.values())]
 
     if isinstance(raw, str) and raw.strip():
-        return [{"component": "software", "name": clean_text(raw), "version": ""}]
+        return [{"component": "software", "name": clean_text(raw), "version": "", "url": ""}]
 
     return []
 
@@ -374,6 +376,10 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
     instruments: list[dict[str, Any]] = []
 
     for yaml_file in _iter_yaml_files(base):
+        # Skip retired instruments (files residing in a 'retired' directory)
+        if "retired" in yaml_file.parts:
+            continue
+
         payload = _load_yaml_file(yaml_file)
         if payload is None:
             continue
@@ -385,7 +391,6 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
         display_name = clean_text(inst_section.get("display_name")) or yaml_file.stem
         raw_instrument_id = clean_text(inst_section.get("instrument_id"))
         
-        # FIXED: Ensure instrument_id is always path-safe
         if not raw_instrument_id:
             instrument_id = "scope-" + slugify(display_name)
         else:
@@ -393,6 +398,8 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
 
         manufacturer = clean_text(inst_section.get("manufacturer"))
         model = clean_text(inst_section.get("model"))
+        year = clean_text(inst_section.get("year_of_purchase"))
+        funding = clean_text(inst_section.get("funding"))
         stand = clean_text(inst_section.get("stand_orientation"))
         notes_raw = clean_text(inst_section.get("notes"))
         notes_parsed = parse_notes_compact(notes_raw) if notes_raw else {}
@@ -402,10 +409,18 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
             modalities = []
         modalities = [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)]
 
-        modules = payload.get("modules")
-        if not isinstance(modules, list):
-            modules = []
-        modules = [clean_text(m) for m in modules if isinstance(m, str) and clean_text(m)]
+        # Handle both legacy string modules and new object-based modules
+        raw_modules = payload.get("modules") or []
+        modules = []
+        for m in raw_modules:
+            if isinstance(m, dict):
+                modules.append({
+                    "name": clean_text(m.get("name")),
+                    "notes": clean_text(m.get("notes")),
+                    "url": clean_text(m.get("url"))
+                })
+            elif isinstance(m, str):
+                modules.append({"name": clean_text(m), "notes": "", "url": ""})
 
         software = normalize_software(payload.get("software"))
 
@@ -419,6 +434,8 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
                 "display_name": display_name,
                 "manufacturer": manufacturer,
                 "model": model,
+                "year_of_purchase": year,
+                "funding": funding,
                 "stand_orientation": stand,
                 "notes_raw": notes_raw,
                 "notes": notes_parsed,
@@ -430,7 +447,6 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
             }
         )
 
-    # deterministic order by id
     instruments.sort(key=lambda x: x["id"])
     return instruments
 
@@ -503,43 +519,85 @@ def main() -> None:
 
         hardware = inst.get("hardware") or {}
 
+        # Expanded Light Sources
         light_sources = [
             {
                 "name": clean_text(src.get("model")),
                 "type": clean_text(src.get("kind")),
                 "wavelength": src.get("wavelength_nm"),
-                "notes": clean_text(src.get("manufacturer")),
+                "power": clean_text(src.get("power")),
+                "manufacturer": clean_text(src.get("manufacturer")),
+                "notes": clean_text(src.get("notes")),
+                "url": clean_text(src.get("url")),
             }
             for src in hardware.get("light_sources", [])
             if isinstance(src, dict)
         ]
 
+        # Expanded Detectors
         detectors = [
             {
                 "name": clean_text(det.get("manufacturer")),
                 "model": clean_text(det.get("model")),
                 "type": clean_text(det.get("kind")),
-                "notes": "",
+                "notes": clean_text(det.get("notes")),
+                "url": clean_text(det.get("url")),
             }
             for det in hardware.get("detectors", [])
             if isinstance(det, dict)
         ]
 
+        # Expanded Objectives
         objectives = [
             {
                 "name": clean_text(obj.get("model")),
+                "manufacturer": clean_text(obj.get("manufacturer")),
+                "product_code": clean_text(obj.get("product_code")),
                 "magnification": obj.get("magnification"),
                 "na": obj.get("numerical_aperture"),
-                "notes": clean_text(obj.get("manufacturer")),
+                "wd": clean_text(obj.get("working_distance")),
+                "immersion": clean_text(obj.get("immersion")),
+                "correction": clean_text(obj.get("correction")),
+                "afc": obj.get("afc_compatible"),
+                "specialties": clean_text(obj.get("specialties")),
+                "notes": clean_text(obj.get("notes")),
+                "url": clean_text(obj.get("url")),
             }
             for obj in hardware.get("objectives", [])
             if isinstance(obj, dict)
         ]
 
+        # New: Splitters
+        splitters = [
+            {
+                "name": clean_text(s.get("name")),
+                "type": clean_text(s.get("type")),
+                "notes": clean_text(s.get("notes")),
+                "url": clean_text(s.get("url")),
+            }
+            for s in hardware.get("splitters", [])
+            if isinstance(s, dict)
+        ]
+
+        # New: Filters
+        filters = [
+            {
+                "name": clean_text(f.get("name")),
+                "location": clean_text(f.get("location")),
+                "product_code": clean_text(f.get("product_code")),
+                "excitation": clean_text(f.get("excitation")),
+                "dichroic": clean_text(f.get("dichroic")),
+                "emission": clean_text(f.get("emission")),
+                "notes": clean_text(f.get("notes")),
+                "url": clean_text(f.get("url")),
+            }
+            for f in hardware.get("filters", [])
+            if isinstance(f, dict)
+        ]
+
         instrument_dir = docs_root / "instruments" / instrument_id
         instrument_dir.mkdir(parents=True, exist_ok=True)
 
-        # Instrument overview is index.md to make clean URLs: /instruments/<id>/
         overview_md = tpl_spec.render(
             instrument=inst,
             charts_json=charts_json,
@@ -548,50 +606,10 @@ def main() -> None:
             light_sources=light_sources,
             detectors=detectors,
             objectives=objectives,
+            splitters=splitters,
+            filters=filters,
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
-
-        qc_events = []
-        for qc_log in qc_logs:
-            qc_data = qc_log.get("data", {})
-            qc_event_id = Path(str(qc_log.get("filename", ""))).stem
-            qc_events.append(
-                {
-                    "event_id": qc_event_id,
-                    "date": _extract_log_date(qc_data),
-                    "suite": qc_data.get("reason"),
-                    "type": qc_data.get("record_type"),
-                    "status": (
-                        (qc_data.get("evaluation") or {}).get("overall_status")
-                        if isinstance(qc_data.get("evaluation"), dict)
-                        else ""
-                    ),
-                }
-            )
-
-        maint_events = []
-        for maint_log in maint_logs:
-            m_data = maint_log.get("data", {})
-            m_event_id = Path(str(maint_log.get("filename", ""))).stem
-            maint_events.append(
-                {
-                    "event_id": m_event_id,
-                    "date": _extract_log_date(m_data),
-                    "suite": m_data.get("reason"),
-                    "type": m_data.get("record_type"),
-                    "status": m_data.get("microscope_status_after"),
-                }
-            )
-
-        history_md = tpl_history.render(
-            instrument=inst,
-            qc_events=qc_events,
-            maintenance_events=maint_events,
-            charts_json=charts_json,
-            latest_metrics=latest_metrics,
-            metric_names=METRIC_NAMES,
-        )
-        (instrument_dir / "history.md").write_text(history_md, encoding="utf-8")
 
         # Event details
         for log_entry in qc_logs + maint_logs:
