@@ -267,41 +267,60 @@
 ### 🔬 Optical Resolution (PSF & Alignment)
 
 {% if objectives %}
-<div class="aic-tabs" markdown>
+  {% set obj_with_data = [] %}
+  {% set obj_without_data = [] %}
 
-{% for obj in objectives %}
-{% if obj.id %}
-=== "{{ obj.magnification | int }}x {{ obj.immersion | capitalize }}"
+  {# 1. Sort objectives into "has data" and "no data" buckets #}
+  {% for obj in objectives %}
+    {% if obj.id %}
+      {% set obj_metrics = {} %}
+      {% for k, v in latest_metrics.items() %}
+        {% if k.startswith('psf.' ~ obj.id ~ '.') or k.startswith('chromatic_shift.' ~ obj.id ~ '.') %}
+          {% set _ = obj_metrics.update({k: v}) %}
+        {% endif %}
+      {% endfor %}
 
-    {% set obj_metrics = {} %}
-    {% for k, v in latest_metrics.items() %}
-      {% if k.startswith('psf.' ~ obj.id ~ '.') or k.startswith('chromatic_shift.' ~ obj.id ~ '.') %}
-        {% set _ = obj_metrics.update({k: v}) %}
+      {% if obj_metrics %}
+        {% set _ = obj_with_data.append((obj, obj_metrics)) %}
+      {% else %}
+        {% set _ = obj_without_data.append(obj) %}
       {% endif %}
-    {% endfor %}
-
-    {% if obj_metrics %}
-    <div class="grid cards" markdown>
-    
-    {% for m_id, m_val in obj_metrics.items() %}
-    -   **{{ metric_names.get(m_id, m_id.split('.')[-1] | replace('_', ' ') | title ) }}**
-        
-        ---
-        
-        <span style="font-size: 1.5em; font-weight: bold; color: var(--md-primary-fg-color);">{{ m_val }}</span><br>
-        <span class="aic-muted" style="font-size: 0.8em;"><code>{{ m_id }}</code></span>
-    
-    {% endfor %}
-    
-    </div>
-    {% else %}
-    > *No recent PSF or chromatic shift metrics available for the `{{ obj.id }}` objective.*
     {% endif %}
+  {% endfor %}
 
-{% endif %}
+  {# 2. Display objectives with data #}
+  {% if obj_with_data %}
+    {% for obj, obj_metrics in obj_with_data %}
+
+#### **{{ obj.magnification | int }}x {{ obj.immersion | capitalize }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
+
+<div class="grid cards" markdown>
+
+{% for m_id, m_val in obj_metrics.items() %}
+-   **{{ metric_names.get(m_id, m_id.split('.')[-1] | replace('_', ' ') | title ) }}**
+
+    ---
+
+    <span style="font-size: 1.5em; font-weight: bold; color: var(--md-primary-fg-color);">{{ m_val }}</span><br>
+    <span class="aic-muted" style="font-size: 0.75em;"><code>{{ m_id }}</code></span>
+
 {% endfor %}
 
 </div>
+
+    {% endfor %}
+  {% else %}
+> *No recent PSF or chromatic shift metrics available for any objectives.*
+  {% endif %}
+
+  {# 3. Collapse objectives without data into an expandable block #}
+  {% if obj_without_data %}
+??? info "Objectives without recent data"
+    {% for obj in obj_without_data %}
+    - **{{ obj.magnification | int }}x {{ obj.immersion | capitalize }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
+    {% endfor %}
+  {% endif %}
+
 {% else %}
 > *No objectives defined for this instrument.*
 {% endif %}
@@ -320,6 +339,9 @@
     <span class="aic-muted" style="font-size: 0.8em;"><code>{{ m_id }}</code></span>
 
 {% endfor %}
+
+</div>
+{% endif %}
 
 </div>
 {% endif %}
