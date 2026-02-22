@@ -1,0 +1,60 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Lambert FLIM 
+# -----------------------------------------------------------------------------
+instrument:
+  display_name: "Lambert FLIM (frequency domain)"
+  instrument_id: "scope-lambert-flim-frequency-domain"
+  manufacturer: "Lambert Instruments"
+  model: "FLIM (frequency domain)"
+  stand_orientation: "other"
+  notes: "Widefield FLIM system (attached to Zeiss AxioImager). Location: BioCity, 5th floor, room 5149. Imaging modes: Widefield fluorescence (FLIM only)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
+modalities:
+  - "widefield_fluorescence"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - name: "FLIM"
+    notes: "Frequency domain FLIM"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
+software:
+  acquisition:
+    name: "Unknown"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
+hardware:
+  
+  # --- Scanner ---
+  scanner:
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
+  light_sources: []
+
+  # --- Detectors (Emission) ---
+  detectors: []
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters: []
+
+  # --- Objectives ---
+  objectives: []
