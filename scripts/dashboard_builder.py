@@ -353,7 +353,7 @@ def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
             values.append(val if isinstance(val, (int, float)) else None)
 
         if any(v is not None for v in values):
-            # FIXED: We output exactly what `charts.js` expects: 'labels' and 'values'
+            # Format expected by 'charts.js'
             charts[metric_id] = {
                 "labels": labels,
                 "values": values,
@@ -515,7 +515,8 @@ def main() -> None:
         charts_json = _build_all_charts_data(qc_logs)
         latest_metrics = _metric_lookup(latest_qc.get("metrics_computed")) if latest_qc else {}
 
-hardware = inst.get("hardware") or {}
+        # Fixed Indentation Block
+        hardware = inst.get("hardware") or {}
 
         # Expanded Light Sources
         light_sources = [
@@ -593,25 +594,10 @@ hardware = inst.get("hardware") or {}
             if isinstance(f, dict)
         ]
 
-        # Render Overview (includes Splitters and Filters in context)
-        overview_md = tpl_spec.render(
-            instrument=inst,
-            charts_json=charts_json,
-            latest_metrics=latest_metrics,
-            metric_names=METRIC_NAMES,
-            light_sources=light_sources,
-            detectors=detectors,
-            objectives=objectives,
-            splitters=splitters,
-            filters=filters,
-        )
-            for f in hardware.get("filters", [])
-            if isinstance(f, dict)
-        ]
-
         instrument_dir = docs_root / "instruments" / instrument_id
         instrument_dir.mkdir(parents=True, exist_ok=True)
 
+        # Render Overview
         overview_md = tpl_spec.render(
             instrument=inst,
             charts_json=charts_json,
@@ -624,6 +610,14 @@ hardware = inst.get("hardware") or {}
             filters=filters,
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
+
+        # Fixed: Render history page for each instrument
+        history_md = tpl_history.render(
+            instrument=inst,
+            qc_logs=qc_logs,
+            maint_logs=maint_logs
+        )
+        (instrument_dir / "history.md").write_text(history_md, encoding="utf-8")
 
         # Event details
         for log_entry in qc_logs + maint_logs:
@@ -658,7 +652,7 @@ hardware = inst.get("hardware") or {}
     status_md = tpl_status.render(issues=flagged)
     (docs_root / "status.md").write_text(status_md, encoding="utf-8")
 
-    # FIXED: Extract site URL into environment variable to prevent hardcoding issues
+    # Extracted site URL into environment variable to prevent hardcoding issues
     site_url = os.getenv("MKDOCS_SITE_URL", "https://aic-turku.github.io/AIC-Turku-database/")
 
     # MkDocs config
@@ -704,7 +698,7 @@ hardware = inst.get("hardware") or {}
             "https://cdn.jsdelivr.net/npm/chart.js",
         ],
         "nav": build_nav(instruments),
-        # FIXED: Tell MkDocs to ignore unmapped files gracefully (events and history pages)
+        # Tell MkDocs to ignore unmapped files gracefully (events and history pages)
         "validation": {
             "nav": {"omitted_files": "info"}
         },
