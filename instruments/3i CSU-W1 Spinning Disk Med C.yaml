@@ -1,108 +1,247 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: 3i CSU-W1 Spinning Disk Med C
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: 3i CSU-W1 Spinning Disk Med C
-  instrument_id: scope-3i-csu-w1-spinning-disk-med-c
-  manufacturer: Zeiss
-  model: 3i CSU-W1 Spinning Disk Med C
-  stand_orientation: inverted
-  notes: 'type: "Confocal spinning-disk microscope (inverted)" | filters: ["DAPI (Em
-    445/45)", "GFP (Em 525/50)", "Cy3/Alexa 568 (Em 617/73 or 600/37)", "Cy5/Alexa
-    647 (Em 692/40)", "Alexa 750 (Em 809/81)", "Quad-band dichroic (Ex 440/40, 521/21,
-    607/34, 700/45)"] | additional_hardware: ["FRAP/Photoactivation module", "Motorized
-    piezo Z stage"] | imaging_modes: ["Confocal (spinning disk)", "Live-cell imaging",
-    "FRAP", "Photoactivation"]'
+  display_name: "3i CSU-W1 Spinning Disk Med C"
+  instrument_id: "scope-3i-csu-w1-spinning-disk-med-c"
+  manufacturer: "3i / Zeiss"
+  model: "CSU-W1 Spinning Disk Med C"
+  stand_orientation: "inverted"
+  notes: "Confocal spinning-disk microscope (inverted). Imaging modes: Confocal (spinning disk), Live-cell imaging, FRAP, Photoactivation."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- confocal_spinning_disk
-- confocal_point
+  - "confocal_spinning_disk"
+  - "confocal_point"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules:
-- FRAP
+  - name: "FRAP"
+    notes: "FRAP/Photoactivation module"
+    url: ""
+  - name: "piezo_z_stage"
+    notes: "Motorized piezo Z stage"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: 3i SlideBook
-    version: '6'
+    name: "3i SlideBook"
+    version: "6"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: spinning_disk
-    notes: ''
+    type: "spinning_disk"
+    notes: "Yokogawa CSU-W1"
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 405 nm (100 mW)
-    wavelength_nm: 405
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm (150 mW)
-    wavelength_nm: 488
-    power: 150 mW
-  - kind: laser
-    manufacturer: ''
-    model: 561 nm (100 mW)
-    wavelength_nm: 561
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 640 nm (100 mW)
-    wavelength_nm: 640
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 730 nm (40 mW)
-    wavelength_nm: 730
-    power: 40 mW
+    - kind: "laser"
+      manufacturer: ""
+      model: "405 nm"
+      wavelength_nm: "405"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "488 nm"
+      wavelength_nm: "488"
+      power: "150 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "561 nm"
+      wavelength_nm: "561"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "640 nm"
+      wavelength_nm: "640"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "730 nm"
+      wavelength_nm: "730"
+      power: "40 mW"
+      notes: ""
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: sCMOS
-    manufacturer: ''
-    model: Hamamatsu Orca Flash4.0 sCMOS
-  - kind: EMCCD
-    manufacturer: ''
-    model: Photometrics Evolve EMCCD
+    - kind: "sCMOS"
+      manufacturer: "Hamamatsu"
+      model: "Orca Flash4.0"
+      notes: ""
+      url: ""
+    - kind: "EMCCD"
+      manufacturer: "Photometrics"
+      model: "Evolve"
+      notes: ""
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "Quad-band Dichroic"
+      location: "Dichroic Wheel"
+      product_code: ""
+      excitation: "440/40; 521/21; 607/34; 700/45"
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "DAPI"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "445/45"
+      notes: ""
+      url: ""
+    - name: "GFP"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "525/50"
+      notes: ""
+      url: ""
+    - name: "Cy3/Alexa 568"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "617/73 or 600/37"
+      notes: ""
+      url: ""
+    - name: "Cy5/Alexa 647"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "692/40"
+      notes: ""
+      url: ""
+    - name: "Alexa 750"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "809/81"
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Zeiss
-    model: Plan Apochromat
-    magnification: 10.0
-    numerical_aperture: 0.45
-    working_distance: 2.0 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: Plan Apochromat
-    magnification: 20.0
-    numerical_aperture: 0.8
-    working_distance: 0.55 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: LD C-Apochromat
-    magnification: 40.0
-    numerical_aperture: 1.1
-    working_distance: 0.62 mm (cover glass 0.17)
-    immersion: water
-    correction: apochromat
-  - manufacturer: Zeiss
-    model: LD Plan-Neofluar
-    magnification: 63.0
-    numerical_aperture: 0.75
-    working_distance: 1.7 mm (cover glass 0.75)
-    immersion: air
-    correction: ''
-  - manufacturer: Zeiss
-    model: LD C-Apochromat
-    magnification: 63.0
-    numerical_aperture: 1.15
-    working_distance: 0.60 mm (cover glass 0.17)
-    immersion: water
-    correction: apochromat
-  - manufacturer: Zeiss
-    model: Plan Apochromat
-    magnification: 63.0
-    numerical_aperture: 1.4
-    working_distance: 0.19 mm
-    immersion: oil
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: Plan Apochromat
-    magnification: 100.0
-    numerical_aperture: 1.4
-    working_distance: 0.17 mm
-    immersion: oil
-    correction: plan_apochromat
+    - manufacturer: "Zeiss"
+      model: "Plan Apochromat 10x"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.45
+      working_distance: "2.0 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "Plan Apochromat 20x"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.8
+      working_distance: "0.55 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "LD C-Apochromat 40x"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: 1.1
+      working_distance: "0.62 mm"
+      immersion: "water"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: "cover glass 0.17"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "LD Plan-Neofluar 63x"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: 0.75
+      working_distance: "1.7 mm"
+      immersion: "air"
+      correction: "fluorite"
+      afc_compatible: false
+      specialties: "cover glass 0.75"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "LD C-Apochromat 63x"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: 1.15
+      working_distance: "0.60 mm"
+      immersion: "water"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: "cover glass 0.17"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "Plan Apochromat 63x"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: "0.19 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "Plan Apochromat 100x"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: 1.4
+      working_distance: "0.17 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
