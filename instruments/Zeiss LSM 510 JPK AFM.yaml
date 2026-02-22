@@ -1,27 +1,64 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Zeiss LSM 510 JPK AFM
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Zeiss LSM 510 JPK AFM
-  instrument_id: scope-zeiss-lsm-510-jpk-afm
-  manufacturer: Zeiss
-  model: LSM 510 JPK AFM
-  stand_orientation: other
-  notes: 'type: "Confocal laser-scanning microscope with integrated AFM" | location:
-    "BioCity, floor -1 (Basement)" | additional_hardware: ["JPK NanoWizard I AFM (with
-    CellHesion module, 100Ã—100Ã—15 Âµm scan range)", "Incubation chamber (live-cell
-    environment)"] | imaging_modes: ["Laser scanning confocal (standard modes)", "AFM
-    Contact Mode", "AFM Intermittent (tapping) Mode", "AFM Force Spectroscopy", "AFM
-    Force Mapping", "AFM Force Modulation", "AFM Manipulation"]'
+  display_name: "Zeiss LSM 510 JPK AFM"
+  instrument_id: "scope-zeiss-lsm-510-jpk-afm"
+  manufacturer: "Zeiss"
+  model: "LSM 510 JPK AFM"
+  stand_orientation: "other"
+  notes: "Confocal laser-scanning microscope with integrated AFM. Location: BioCity, floor -1 (Basement)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- confocal_point
+  - "confocal_point"
+  - "transmitted_brightfield"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules:
-- incubation
+  - name: "AFM"
+    notes: "JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range). Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force Mapping, Force Modulation, and Manipulation."
+    url: ""
+  - name: "incubation"
+    notes: "Incubation chamber (live-cell environment)"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Unknown
-    version: ''
+    name: "Unknown"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: stage_scanning
-    notes: ''
+    type: "stage_scanning"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources: []
+
+  # --- Detectors (Emission) ---
   detectors: []
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters: []
+
+  # --- Objectives ---
   objectives: []
