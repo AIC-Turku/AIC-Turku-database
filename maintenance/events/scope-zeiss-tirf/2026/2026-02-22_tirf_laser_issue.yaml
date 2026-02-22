@@ -1,0 +1,18 @@
+schema_version: 1
+record_type: maintenance_event
+
+event_id: "maint_scope-zeiss-tirf_20260222_tirf_issue"
+microscope: "scope-zeiss-tirf"
+started_utc: "2026-02-22T10:00:00Z"
+ended_utc: "2026-02-22T10:15:00Z"
+performed_by: "AIC Staff"
+service_provider: "Internal"
+
+type: "issue_reported"
+
+microscope_status_before: "operational"
+microscope_status_after: "limited"
+
+reason_details: "TIRF modality is no longer working due to a hardware fault."
+action: "System restricted to widefield imaging only. Awaiting service quote."
+parts_replaced: []
