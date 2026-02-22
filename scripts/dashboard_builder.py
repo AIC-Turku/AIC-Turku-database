@@ -170,6 +170,24 @@ def parse_notes_compact(notes: str) -> dict[str, Any]:
     return out
 
 
+def extract_instrument_location(raw_location: str, notes: str) -> str:
+    """Return microscope location from dedicated field or note text fallback."""
+    location = clean_text(raw_location)
+    if location:
+        return location
+
+    cleaned_notes = clean_text(notes)
+    if not cleaned_notes:
+        return ""
+
+    match = re.search(r"\blocation\s*:\s*([^|\n\r]+)", cleaned_notes, flags=re.IGNORECASE)
+    if not match:
+        return ""
+
+    extracted = match.group(1).strip().rstrip(". ")
+    return clean_text(extracted)
+
+
 def normalize_software(raw: Any) -> list[dict[str, str]]:
     """Normalize software sections into a list of rows, including URLs."""
     rows: list[dict[str, str]] = []
@@ -403,6 +421,7 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
         stand = clean_text(inst_section.get("stand_orientation"))
         notes_raw = clean_text(inst_section.get("notes"))
         notes_parsed = parse_notes_compact(notes_raw) if notes_raw else {}
+        location = extract_instrument_location(inst_section.get("location"), notes_raw)
 
         modalities = payload.get("modalities")
         if not isinstance(modalities, list):
@@ -434,6 +453,7 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
                 "year_of_purchase": year,
                 "funding": funding,
                 "stand_orientation": stand,
+                "location": location,
                 "notes_raw": notes_raw,
                 "notes": notes_parsed,
                 "modalities": modalities,
