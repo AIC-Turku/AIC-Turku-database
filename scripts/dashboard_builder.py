@@ -171,7 +171,7 @@ def parse_notes_compact(notes: str) -> dict[str, Any]:
 
 
 def normalize_software(raw: Any) -> list[dict[str, str]]:
-    """Normalize software sections into a list of rows."""
+    """Normalize software sections into a list of rows, including URLs."""
     rows: list[dict[str, str]] = []
 
     if isinstance(raw, list):
@@ -376,7 +376,7 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
     instruments: list[dict[str, Any]] = []
 
     for yaml_file in _iter_yaml_files(base):
-        # Skip retired instruments (files residing in a 'retired' directory)
+        # Skip retired instruments (residing in a 'retired' directory)
         if "retired" in yaml_file.parts:
             continue
 
@@ -423,10 +423,7 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
                 modules.append({"name": clean_text(m), "notes": "", "url": ""})
 
         software = normalize_software(payload.get("software"))
-
-        hardware = payload.get("hardware")
-        if not isinstance(hardware, dict):
-            hardware = {}
+        hardware = payload.get("hardware") or {}
 
         instruments.append(
             {
@@ -444,6 +441,7 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
                 "software": software,
                 "hardware": hardware,
                 "image_filename": _discover_image_filename(instrument_id),
+                "url": clean_text(inst_section.get("url")),
             }
         )
 
@@ -517,7 +515,7 @@ def main() -> None:
         charts_json = _build_all_charts_data(qc_logs)
         latest_metrics = _metric_lookup(latest_qc.get("metrics_computed")) if latest_qc else {}
 
-        hardware = inst.get("hardware") or {}
+hardware = inst.get("hardware") or {}
 
         # Expanded Light Sources
         light_sources = [
@@ -547,7 +545,7 @@ def main() -> None:
             if isinstance(det, dict)
         ]
 
-        # Expanded Objectives
+        # Expanded Objectives (Captures WD, Immersion, Correction, AFC compatibility)
         objectives = [
             {
                 "name": clean_text(obj.get("model")),
@@ -591,6 +589,22 @@ def main() -> None:
                 "notes": clean_text(f.get("notes")),
                 "url": clean_text(f.get("url")),
             }
+            for f in hardware.get("filters", [])
+            if isinstance(f, dict)
+        ]
+
+        # Render Overview (includes Splitters and Filters in context)
+        overview_md = tpl_spec.render(
+            instrument=inst,
+            charts_json=charts_json,
+            latest_metrics=latest_metrics,
+            metric_names=METRIC_NAMES,
+            light_sources=light_sources,
+            detectors=detectors,
+            objectives=objectives,
+            splitters=splitters,
+            filters=filters,
+        )
             for f in hardware.get("filters", [])
             if isinstance(f, dict)
         ]
