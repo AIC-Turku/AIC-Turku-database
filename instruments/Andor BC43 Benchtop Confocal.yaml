@@ -23,8 +23,12 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - "hardware_autofocus"        # Dual function Focus Seek and Lock
-  - "incubation"                # TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
+  - name: "hardware_autofocus"
+    notes: "Dual function Focus Seek and Lock"
+    url: ""
+  - name: "incubation"
+    notes: "TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)"
+    url: ""
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
@@ -85,9 +89,13 @@ hardware:
       notes: "6.5µm pixel, 16-bit, up to 82% QE. 18.4 mm field of view."
       url: ""
 
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
   # --- Filters / Filter Cubes ---
   filters:
     - name: "DAPI"
+      location: "Internal Emission Filter"
       product_code: ""
       excitation: ""
       dichroic: ""
@@ -95,6 +103,7 @@ hardware:
       notes: "Standard emission filter for DAPI included in BC43"
       url: ""
     - name: "GFP"
+      location: "Internal Emission Filter"
       product_code: ""
       excitation: ""
       dichroic: ""
@@ -102,6 +111,7 @@ hardware:
       notes: "Standard emission filter for GFP included in BC43"
       url: ""
     - name: "mCherry"
+      location: "Internal Emission Filter"
       product_code: ""
       excitation: ""
       dichroic: ""
@@ -109,6 +119,7 @@ hardware:
       notes: "Standard emission filter for mCherry included in BC43"
       url: ""
     - name: "CY5"
+      location: "Internal Emission Filter"
       product_code: ""
       excitation: ""
       dichroic: ""
@@ -118,7 +129,7 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Nikon" # Andor typically uses Nikon objectives for BC43
+    - manufacturer: "Nikon" 
       model: "10X Plan Apo LD Air"
       product_code: "INS-OBJ-10D-045"
       magnification: 10.0
