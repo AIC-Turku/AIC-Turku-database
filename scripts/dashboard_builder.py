@@ -611,11 +611,36 @@ def main() -> None:
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
-        # Fixed: Render history page for each instrument
+# Format events for the history timeline
+        history_events_qc = []
+        for log in qc_logs:
+            payload = log.get("data") or {}
+            event_id = Path(log["source_path"]).stem
+            history_events_qc.append({
+                "date": _extract_log_date(payload),
+                "status": payload.get("evaluation", {}).get("overall_status", "completed"),
+                "suite": "QC Session",
+                "event_id": event_id
+            })
+            
+        history_events_maint = []
+        for log in maint_logs:
+            payload = log.get("data") or {}
+            event_id = Path(log["source_path"]).stem
+            history_events_maint.append({
+                "date": _extract_log_date(payload),
+                "status": payload.get("microscope_status_after", "completed"),
+                "type": "Maintenance",
+                "event_id": event_id
+            })
+
+        # Render history page for each instrument
         history_md = tpl_history.render(
             instrument=inst,
-            qc_logs=qc_logs,
-            maint_logs=maint_logs
+            charts_json=charts_json,
+            metric_names=METRIC_NAMES,
+            qc_events=history_events_qc,
+            maintenance_events=history_events_maint
         )
         (instrument_dir / "history.md").write_text(history_md, encoding="utf-8")
 
