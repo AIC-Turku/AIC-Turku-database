@@ -9,8 +9,8 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "other"
-  location: ""
-  notes: "Light-sheet fluorescence microscope. Imaging modes: Light-sheet fluorescence (Airy beam illumination), Long-term volumetric imaging (minimized photobleaching)."
+  location: "BioCity, 5th floor, room 5149"
+  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 600 µm FOV at 20x detection (about 20x Gaussian and 8x Bessel10), sub-1 µm axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -30,7 +30,11 @@ modules: []
 # -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: "M² Acquisition software"
+    name: "MSquared Acquisition"
+    version: ""
+    url: ""
+  deconvolution:
+    name: "MSquared Deconvolution"
     version: ""
     url: ""
 
@@ -48,15 +52,15 @@ hardware:
   # --- Light Sources (Excitation) ---
   light_sources:
     - kind: "laser"
-      manufacturer: ""
-      model: "488 nm"
+      manufacturer: "Coherent OBIS"
+      model: "488 nm laser"
       wavelength_nm: "488"
       power: "100 mW"
       notes: ""
       url: ""
     - kind: "laser"
-      manufacturer: ""
-      model: "568 nm"
+      manufacturer: "Coherent OBIS"
+      model: "568 nm laser"
       wavelength_nm: "568"
       power: "80 mW"
       notes: ""
@@ -113,5 +117,5 @@ hardware:
       correction: ""
       afc_compatible: false
       specialties: "For illumination/detection"
-      notes: ""
+      notes: "Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI, and <870 µm FOV with 12 mm imaging sphere."
       url: ""
