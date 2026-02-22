@@ -32,6 +32,14 @@
         <div class="aic-muted">Stand</div>
         <div>{{ instrument.stand_orientation or '—' }}</div>
       </div>
+      <div class="aic-fact">
+        <div class="aic-muted">Purchased</div>
+        <div>{{ instrument.year_of_purchase or '—' }}</div>
+      </div>
+      <div class="aic-fact">
+        <div class="aic-muted">Funding</div>
+        <div>{{ instrument.funding or '—' }}</div>
+      </div>
     </div>
 
     <div class="aic-section">
@@ -64,7 +72,7 @@
 </div>
 
 {% if instrument.notes %}
-## Capabilities (Legacy Notes)
+## Capabilities
 
 {% if instrument.notes.type %}
 - **Type:** {{ instrument.notes.type }}
