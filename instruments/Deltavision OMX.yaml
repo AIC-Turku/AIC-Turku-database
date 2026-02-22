@@ -1,76 +1,189 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Deltavision OMX
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Deltavision OMX
-  instrument_id: scope-deltavision-omx
-  manufacturer: Olympus/Evident
-  model: OMX
-  stand_orientation: other
-  notes: 'type: "Super-resolution widefield system (SIM, TIRF)" | filters: ["DAPI
-    (436/31 nm)", "CFP (478/35 nm)", "Alexa 488 (528/45 nm)", "YFP (541/22 nm)", "Alexa
-    568 (609/37 nm)", "Cy5 (683/40 nm)"] | additional_hardware: ["Piezo stage", "Ultra-focus
-    system", "Environmental chamber with temperature control"] | imaging_modes: ["Widefield",
-    "Structured Illumination", "TIRF", "Localization microscopy"]'
+  display_name: "Deltavision OMX"
+  instrument_id: "scope-deltavision-omx"
+  manufacturer: "GE Healthcare"
+  model: "OMX"
+  stand_orientation: "other"
+  notes: "Super-resolution widefield system (SIM, TIRF). Imaging modes: Widefield, Structured Illumination, TIRF, Localization microscopy."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- TIRF
-- SIM
-- SMLM
+  - "widefield_fluorescence"
+  - "TIRF"
+  - "SIM"
+  - "SMLM"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules:
-- incubation
+  - name: "incubation"
+    notes: "Environmental chamber with temperature control"
+    url: ""
+  - name: "hardware_autofocus"
+    notes: "Ultra-focus system"
+    url: ""
+  - name: "piezo_z_stage"
+    notes: "Motorized piezo Z stage"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: OMX Acquisition
-    version: '3.70'
+    name: "OMX Acquisition"
+    version: "3.70"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 405 nm (100 mW)
-    wavelength_nm: 405
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 445 nm (100 mW)
-    wavelength_nm: 445
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm (100 mW)
-    wavelength_nm: 488
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 514 nm (100 mW)
-    wavelength_nm: 514
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 568 nm (100 mW)
-    wavelength_nm: 568
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 642 nm (300 mW)
-    wavelength_nm: 642
-    power: 300 mW
+    - kind: "laser"
+      manufacturer: ""
+      model: "405 nm"
+      wavelength_nm: "405"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "445 nm"
+      wavelength_nm: "445"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "488 nm"
+      wavelength_nm: "488"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "514 nm"
+      wavelength_nm: "514"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "568 nm"
+      wavelength_nm: "568"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "642 nm"
+      wavelength_nm: "642"
+      power: "300 mW"
+      notes: ""
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: sCMOS
-    manufacturer: ''
-    model: PCO Edge sCMOS cameras
+    - kind: "sCMOS"
+      manufacturer: "PCO"
+      model: "Edge"
+      notes: "sCMOS cameras"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "DAPI"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "436/31"
+      notes: ""
+      url: ""
+    - name: "CFP"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "478/35"
+      notes: ""
+      url: ""
+    - name: "Alexa 488"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "528/45"
+      notes: ""
+      url: ""
+    - name: "YFP"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "541/22"
+      notes: ""
+      url: ""
+    - name: "Alexa 568"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "609/37"
+      notes: ""
+      url: ""
+    - name: "Cy5"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "683/40"
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Olympus
-    model: Plan Apo N (SIM)
-    magnification: 60.0
-    numerical_aperture: 1.42
-    working_distance: 0.15 mm
-    immersion: oil
-    correction: plan_apochromat
-  - manufacturer: Olympus
-    model: APO N TIRF
-    magnification: 60.0
-    numerical_aperture: 1.49
-    working_distance: 0.10 mm
-    immersion: oil
-    correction: apochromat
+    - manufacturer: "Olympus"
+      model: "Plan Apo N"
+      product_code: ""
+      magnification: 60.0
+      numerical_aperture: 1.42
+      working_distance: "0.15 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: "SIM"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Olympus"
+      model: "APO N TIRF"
+      product_code: ""
+      magnification: 60.0
+      numerical_aperture: 1.49
+      working_distance: "0.10 mm"
+      immersion: "oil"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: "TIRF"
+      notes: ""
+      url: ""
