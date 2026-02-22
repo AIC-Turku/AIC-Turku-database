@@ -8,7 +8,7 @@ instrument:
   model: "OMX"
   year_of_purchase: ""
   funding: ""
-  stand_orientation: "other"
+  stand_orientation: "inverted"
   location: "BioCity, 5th floor, room 5149"
   notes: "Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF for evenly illuminated large fields of view."
   url: ""
