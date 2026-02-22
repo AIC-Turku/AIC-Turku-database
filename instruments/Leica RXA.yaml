@@ -1,62 +1,152 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Leica RXA
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Leica RXA
-  instrument_id: scope-leica-rxa
-  manufacturer: Leica Microsystems
-  model: RXA
-  stand_orientation: upright
-  notes: 'type: "Widefield microscope (upright)" | filters: ["DAPI/Hoechst", "GFP/Alexa
-    488", "TRITC/RFP"] | imaging_modes: ["Fluorescence (epifluorescence)", "Brightfield
-    (transmitted light)", "Darkfield"]'
+  display_name: "Leica RXA"
+  instrument_id: "scope-leica-rxa"
+  manufacturer: "Leica Microsystems"
+  model: "RXA"
+  stand_orientation: "upright"
+  notes: "Widefield microscope (upright). Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+  - "darkfield"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules: []
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Unknown
-    version: ''
+    name: "Unknown"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources: []
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: sCMOS
-    manufacturer: ''
-    model: Nikon DS-Fi2 color CMOS camera (2560Ã—1920)
+    - kind: "CMOS"
+      manufacturer: "Nikon"
+      model: "DS-Fi2"
+      notes: "Color CMOS camera (2560x1920)"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "DAPI/Hoechst"
+      location: "Fluorescence Turret"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "GFP/Alexa 488"
+      location: "Fluorescence Turret"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "TRITC/RFP"
+      location: "Fluorescence Turret"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Leica
-    model: Plan
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: ''
-    immersion: air
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 20.0
-    numerical_aperture: 0.6
-    working_distance: ''
-    immersion: air
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 40.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: oil
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 63.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: oil
-    correction: ''
-  - manufacturer: Leica
-    model: Plan
-    magnification: 100.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: oil
-    correction: ''
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: ""
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.6
+      working_distance: ""
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: null
+      working_distance: ""
+      immersion: "oil"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: null
+      working_distance: ""
+      immersion: "oil"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Leica"
+      model: "Plan"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: null
+      working_distance: ""
+      immersion: "oil"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
