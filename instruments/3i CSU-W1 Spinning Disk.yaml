@@ -5,12 +5,12 @@ instrument:
   display_name: "3i CSU-W1 Spinning Disk"
   instrument_id: "scope-3i-csu-w1-spinning-disk"
   manufacturer: "3i / Zeiss"
-  model: "CSU-W1 Spinning Disk"
+  model: "Marianas CSU-W1 Spinning Disk Confocal"
   year_of_purchase: ""
   funding: ""
   stand_orientation: "inverted"
-  location: ""
-  notes: "Confocal spinning-disk microscope (inverted). Imaging modes: Confocal (spinning disk), Live-cell time-lapse, FRAP, Photoactivation."
+  location: "BioCity, 5th floor, room 5149"
+  notes: "Confocal spinning-disk microscope (inverted) with 50 µm pinholes. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: Confocal (spinning disk), Live-cell time-lapse, FRAP, Photoactivation."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -28,7 +28,13 @@ modules:
     notes: "FRAP/Photoactivation laser module (for bleaching and activation)"
     url: ""
   - name: "piezo_z_stage"
-    notes: "Motorized piezo Z stage"
+    notes: "ASI piezo stage (300 µm travel)"
+    url: ""
+  - name: "hardware_autofocus"
+    notes: "Definite Focus"
+    url: ""
+  - name: "incubation"
+    notes: "Okolab environment chamber with temperature control"
     url: ""
 
 # -----------------------------------------------------------------------------
@@ -48,7 +54,7 @@ hardware:
   # --- Scanner ---
   scanner:
     type: "spinning_disk"
-    notes: "Yokogawa CSU-W1"
+    notes: "Yokogawa CSU-W1 with 50 µm pinhole disk"
     url: ""
 
   # --- Light Sources (Excitation) ---
@@ -94,12 +100,12 @@ hardware:
     - kind: "sCMOS"
       manufacturer: "Hamamatsu"
       model: "Orca Flash4.0"
-      notes: ""
+      notes: "2048 x 2048 pixels, 6.5 x 6.5 µm pixel size"
       url: ""
     - kind: "EMCCD"
       manufacturer: "Photometrics"
       model: "Evolve"
-      notes: ""
+      notes: "10 MHz back-illuminated EMCCD, 512 x 512 pixels, 16 x 16 µm pixel size"
       url: ""
 
   # --- Splitters (Camera/Emission) ---
@@ -129,7 +135,7 @@ hardware:
       excitation: ""
       dichroic: ""
       emission: "525/50"
-      notes: ""
+      notes: "Previously 525/30 before 18.08.21"
       url: ""
     - name: "Cy3/Alexa 568"
       location: "Emission Wheel"
@@ -161,7 +167,7 @@ hardware:
     - id: "10x_air"
       manufacturer: "Zeiss"
       model: "Plan Apochromat 10x"
-      product_code: ""
+      product_code: "420641-9910-000"
       magnification: 10.0
       numerical_aperture: 0.45
       working_distance: "2.0 mm"
@@ -170,12 +176,12 @@ hardware:
       afc_compatible: false
       specialties: ""
       notes: ""
-      url: ""
+      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
       
     - id: "20x_air"
       manufacturer: "Zeiss"
       model: "Plan Apochromat 20x"
-      product_code: ""
+      product_code: "440640-9903-000"
       magnification: 20.0
       numerical_aperture: 0.8
       working_distance: "0.55 mm"
@@ -184,12 +190,12 @@ hardware:
       afc_compatible: false
       specialties: ""
       notes: ""
-      url: ""
+      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8"
       
     - id: "40x_water"
       manufacturer: "Zeiss"
       model: "LD C-Apochromat 40x"
-      product_code: ""
+      product_code: "421867-9970-000"
       magnification: 40.0
       numerical_aperture: 1.1
       working_distance: "0.62 mm"
@@ -198,12 +204,12 @@ hardware:
       afc_compatible: false
       specialties: "cover glass 0.17"
       notes: ""
-      url: ""
+      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27"
       
     - id: "63x_air"
       manufacturer: "Zeiss"
       model: "LD Plan-Neofluar 63x"
-      product_code: ""
+      product_code: "421381-9971-000"
       magnification: 63.0
       numerical_aperture: 0.75
       working_distance: "1.7 mm"
@@ -212,12 +218,12 @@ hardware:
       afc_compatible: false
       specialties: "cover glass 0.75"
       notes: ""
-      url: ""
+      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421381-9971-000/Objective-LD-Plan-Neofluar-63x-0.75-Corr-Ph2-M27"
       
     - id: "63x_water"
       manufacturer: "Zeiss"
       model: "LD C-Apochromat 63x"
-      product_code: ""
+      product_code: "421887-9970-000"
       magnification: 63.0
       numerical_aperture: 1.15
       working_distance: "0.60 mm"
@@ -226,12 +232,12 @@ hardware:
       afc_compatible: false
       specialties: "cover glass 0.17"
       notes: ""
-      url: ""
+      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421887-9970-000/Objective-LD-C-Apochromat-63x-1.15-W-Corr-M27"
       
     - id: "63x_oil"
       manufacturer: "Zeiss"
       model: "Plan Apochromat 63x"
-      product_code: ""
+      product_code: "420782-9900-799"
       magnification: 63.0
       numerical_aperture: 1.4
       working_distance: "0.19 mm"
@@ -240,7 +246,7 @@ hardware:
       afc_compatible: false
       specialties: ""
       notes: ""
-      url: ""
+      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27"
       
     - id: "100x_oil"
       manufacturer: "Zeiss"
