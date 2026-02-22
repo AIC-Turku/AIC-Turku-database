@@ -9,7 +9,7 @@ instrument:
   year_of_purchase: "2019"
   funding: ""
   stand_orientation: "inverted"
-  notes: "Confocal spinning-disk microscope (inverted) with 50µm pinholes. Perfect for fast gentle imaging of live samples or large fields of view. Location: Medisiina C, 2nd floor, room C242."
+  notes: "Confocal spinning-disk microscope based on a Zeiss Axio Observer 7. Includes MESA Illumination Enhancement. Location: Medisiina C, 2nd floor, room C242."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -17,28 +17,21 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "confocal_spinning_disk"
-  - "confocal_point"
-  - "live_cell_imaging"
-  - "large_field_3d_tile"
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "FRAP"
-    notes: "FRAP/Photoactivation module"
-    url: ""
-  - name: "piezo_z_stage"
-    notes: "ASI motorized stage with 300μm working distance"
-    url: ""
   - name: "incubation"
-    notes: "Okolab Environment chamber with temperature control"
+    notes: "Okolab Full Enclosure Incubator with Temperature and digital CO2/O2 Control"
     url: ""
   - name: "hardware_autofocus"
-    notes: "Zeiss Definite focus 2"
+    notes: "Zeiss Definite Focus 2"
     url: ""
-  - name: "MESA"
-    notes: "Illumination Enhancement and Field Flattening for seamless montage imaging"
+  - name: "FRAP"
+    notes: "FRAP/Photoactivation module"
     url: ""
 
 # -----------------------------------------------------------------------------
@@ -58,45 +51,45 @@ hardware:
   # --- Scanner ---
   scanner:
     type: "spinning_disk"
-    notes: "3i Marianas CSU-W1 spinning disk (50µm pinholes)"
+    notes: "Yokogawa CSU-W1 T1 with 50µm Disk"
     url: ""
 
   # --- Light Sources (Excitation) ---
   light_sources:
     - kind: "laser"
       manufacturer: "3i"
-      model: "Solid state laser"
+      model: "LaserStack v4"
       wavelength_nm: "405"
       power: "100 mW"
-      notes: ""
+      notes: "Measured Fiber Output: 46 mW"
       url: ""
     - kind: "laser"
       manufacturer: "3i"
-      model: "Solid state laser"
+      model: "LaserStack v4"
       wavelength_nm: "488"
       power: "150 mW"
-      notes: ""
+      notes: "Measured Fiber Output: 102 mW"
       url: ""
     - kind: "laser"
       manufacturer: "3i"
-      model: "Solid state laser"
+      model: "LaserStack v4"
       wavelength_nm: "561"
       power: "150 mW"
-      notes: ""
+      notes: "Measured Fiber Output: 105.5 mW"
       url: ""
     - kind: "laser"
       manufacturer: "3i"
-      model: "Solid state laser"
+      model: "LaserStack v4"
       wavelength_nm: "640"
       power: "100 mW"
-      notes: ""
+      notes: "Measured Fiber Output: 50.4 mW"
       url: ""
     - kind: "led"
       manufacturer: "CoolLED"
       model: "pE-300"
       wavelength_nm: ""
       power: ""
-      notes: "White Light Source"
+      notes: "White Light Source with Liquid Light Guide"
       url: ""
 
   # --- Detectors (Emission) ---
@@ -104,7 +97,7 @@ hardware:
     - kind: "sCMOS"
       manufacturer: "Photometrics"
       model: "Prime BSI sCMOS"
-      notes: "2048x2048 pixels, 6.5 µm pixel size. Sensitive for low light live cell imaging."
+      notes: "2048x2048 pixels, 6.5 µm pixel size, 95% QE"
       url: "https://www.teledynevisionsolutions.com/products/prime-bsi/?vertical=tvs-photometrics&segment=tvs"
 
   # --- Splitters (Camera/Emission) ---
@@ -112,77 +105,109 @@ hardware:
 
   # --- Filters / Filter Cubes ---
   filters:
-    - name: "Quad-band"
-      location: ""
-      product_code: ""
-      excitation: "440/40"
+    - name: "CSU-W1 Dichroic"
+      location: "Dichroic Slider Pos 1"
+      product_code: "Di01-T405/488/568/647"
+      excitation: "405/488/568/647"
+      dichroic: "405/488/568/647"
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "Quad-band Emitter"
+      location: "CSU-W1 Emission Wheel Pos 1"
+      product_code: "FF01-440/521/607/700-25"
+      excitation: ""
       dichroic: ""
-      emission: "521/21; 607/34; 700/45"
+      emission: "440/521/607/700"
       notes: ""
       url: ""
     - name: "DAPI"
-      location: ""
-      product_code: ""
+      location: "CSU-W1 Emission Wheel Pos 2"
+      product_code: "FF01-445/45-25"
       excitation: ""
       dichroic: ""
-      emission: "445/45nm"
+      emission: "445/45"
       notes: ""
       url: ""
     - name: "GFP"
-      location: ""
-      product_code: ""
+      location: "CSU-W1 Emission Wheel Pos 3"
+      product_code: "FF01-525/30-25"
       excitation: ""
       dichroic: ""
       emission: "525/30"
       notes: ""
       url: ""
     - name: "Cy3/Alexa 568"
-      location: ""
-      product_code: ""
+      location: "CSU-W1 Emission Wheel Pos 4"
+      product_code: "FF02-617/73-25"
       excitation: ""
       dichroic: ""
-      emission: "617/73nm or 600/37nm"
+      emission: "617/73"
       notes: ""
       url: ""
     - name: "Cy5/Alexa 647"
-      location: ""
-      product_code: ""
+      location: "CSU-W1 Emission Wheel Pos 5"
+      product_code: "FF01-692/40-25"
       excitation: ""
       dichroic: ""
-      emission: "692/40nm"
+      emission: "692/40"
+      notes: ""
+      url: ""
+    - name: "DAPI Cube"
+      location: "Zeiss Filter Wheel Pos 1"
+      product_code: "LED-DAPI-A-ZHE-Zero"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "FITC Cube"
+      location: "Zeiss Filter Wheel Pos 2"
+      product_code: "LED-FITC-A-ZHE-Zero"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "TRITC Cube"
+      location: "Zeiss Filter Wheel Pos 3"
+      product_code: "LED-TRITC-A-ZHE-Zero"
+      excitation: ""
+      dichroic: ""
+      emission: ""
       notes: ""
       url: ""
 
   # --- Objectives ---
   objectives:
     - manufacturer: "Zeiss"
-      model: "EC Plan-Neofluar 5x"
+      model: "EC Plan-Neofluar 5x/0.16 NA Ph1"
       product_code: "420331-9911-000"
       magnification: 5.0
       numerical_aperture: 0.16
       working_distance: "18.5 mm"
       immersion: "air"
-      correction: "Ph1"
+      correction: "plan_fluorite"
       afc_compatible: false
-      specialties: "Semi-apochromatic"
+      specialties: "Ph1"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420331-9911-000/Objective-EC-Plan-Neofluar-5x-0.16-Ph1-M27"
       
     - manufacturer: "Zeiss"
-      model: "Plan-Apochromat 10x"
+      model: "Plan-Apochromat 10x/0.45 NA Ph1"
       product_code: "420641-9910-000"
       magnification: 10.0
       numerical_aperture: 0.45
-      working_distance: "2 mm"
+      working_distance: "2.0 mm"
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: "Ph1 phase"
+      specialties: "Ph1"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
       
     - manufacturer: "Zeiss"
-      model: "Plan-Apochromat 20x"
+      model: "Plan-Apochromat 20x/0.8 NA"
       product_code: "420650-9902-000"
       magnification: 20.0
       numerical_aperture: 0.8
@@ -195,46 +220,46 @@ hardware:
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420650-9902-000/Objective-Plan-Apochromat-20x-0.8-M27"
 
     - manufacturer: "Zeiss"
-      model: "LD Plan-Neofluar 20x"
+      model: "LD Plan-Neofluar 20x/0.4 NA Corr"
       product_code: "421350-9971-000"
       magnification: 20.0
       numerical_aperture: 0.4
       working_distance: "7.9 mm"
       immersion: "air"
-      correction: "Corr"
+      correction: "plan_fluorite"
       afc_compatible: true
-      specialties: ""
+      specialties: "Correction collar for 0-1.5mm glass"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421350-9971-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-M27"
       
     - manufacturer: "Zeiss"
-      model: "LD Plan-Neofluar 40x"
+      model: "LD Plan-Neofluar 40x/0.6 NA Corr"
       product_code: "421360-9971-000"
       magnification: 40.0
       numerical_aperture: 0.6
       working_distance: "2.9 mm"
       immersion: "air"
-      correction: "Corr"
+      correction: "plan_fluorite"
       afc_compatible: true
-      specialties: ""
+      specialties: "Correction collar for 0-1.5mm glass"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/no/shop/objectives/421360-9971-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-M27"
 
     - manufacturer: "Zeiss"
-      model: "C-Apochromat 40x"
+      model: "C-Apochromat 40x/1.2 W Corr"
       product_code: "421767-9970-000"
       magnification: 40.0
       numerical_aperture: 1.2
-      working_distance: "0.28 mm at cover glass 0.17 mm"
+      working_distance: "0.28 mm"
       immersion: "water"
       correction: "apochromat"
       afc_compatible: true
-      specialties: ""
+      specialties: "Correction ring for 0.17 mm cover glass"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421767-9970-000/Objective-C-Apochromat-40x-1.2-W-Corr-M27"
       
     - manufacturer: "Zeiss"
-      model: "Plan-Apochromat 63x"
+      model: "Plan-Apochromat 63x/1.4 NA Oil"
       product_code: "420780-9900-000"
       magnification: 63.0
       numerical_aperture: 1.4
@@ -247,7 +272,7 @@ hardware:
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420780-9900-000/Objective-Plan-Apochromat-63x-1.4-Oil-M27"
 
     - manufacturer: "Zeiss"
-      model: "alpha Plan-Apochromat 100x"
+      model: "alpha Plan-Apochromat 100x/1.46 NA Oil DIC"
       product_code: "420792-9800-000"
       magnification: 100.0
       numerical_aperture: 1.46
