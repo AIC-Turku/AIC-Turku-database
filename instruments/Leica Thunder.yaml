@@ -196,7 +196,7 @@ hardware:
       afc_compatible: false
       specialties: "PHO"
       notes: ""
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506303/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/"
       
     - id: "10x_air"
       manufacturer: "Leica"
@@ -210,7 +210,7 @@ hardware:
       afc_compatible: true
       specialties: ""
       notes: ""
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506410/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/"
       
     - id: "20x_air"
       manufacturer: "Leica"
@@ -224,7 +224,7 @@ hardware:
       afc_compatible: true
       specialties: "correction ring"
       notes: ""
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506242/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/"
       
     - id: "20x_multi"
       manufacturer: "Leica"
@@ -238,7 +238,7 @@ hardware:
       afc_compatible: false
       specialties: "multi-immersion"
       notes: ""
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506326/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/"
 
     - id: "20x_air_2"
       manufacturer: "Leica"
@@ -252,7 +252,7 @@ hardware:
       afc_compatible: true
       specialties: ""
       notes: ""
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506529/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/"
 
     - id: "63x_oil"
       manufacturer: "Leica"
@@ -266,7 +266,7 @@ hardware:
       afc_compatible: true
       specialties: ""
       notes: ""
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506350/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/"
 
     - id: "16x_multi"
       manufacturer: "Leica"
@@ -280,7 +280,7 @@ hardware:
       afc_compatible: true
       specialties: "multi-immersion; IR-compatible, glyc/sil-oil / W / BABB"
       notes: ""
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/506533/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/"
 
     - id: "10x_air_2"
       manufacturer: "Leica"
@@ -294,7 +294,7 @@ hardware:
       afc_compatible: false
       specialties: "PH1"
       notes: "from SP5?"
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/506507/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/"
 
     - id: "100x_oil"
       manufacturer: "Leica"
@@ -308,4 +308,4 @@ hardware:
       afc_compatible: false
       specialties: "STED"
       notes: "from SP5?"
-      url: "https://www.leica-microsystems.com/products/microscope-objectives/p/506316/"
+      url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/"
