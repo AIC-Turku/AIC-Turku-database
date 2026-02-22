@@ -1,44 +1,113 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: MSquared Aurora Airy Beam
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: MSquared Aurora Airy Beam
-  instrument_id: scope-msquared-aurora-airy-beam
-  manufacturer: Other
-  model: Aurora Airy Beam
-  stand_orientation: other
-  notes: 'type: "Light-sheet fluorescence microscope" | filters: ["GFP filter (BP
-    520/40)", "GFP longpass (LP 500 nm)", "RFP longpass (LP 570 nm)"] | imaging_modes:
-    ["Light-sheet fluorescence (Airy beam illumination)", "Long-term volumetric imaging
-    (minimized photobleaching)"]'
+  display_name: "MSquared Aurora Airy Beam"
+  instrument_id: "scope-msquared-aurora-airy-beam"
+  manufacturer: "M Squared"
+  model: "Aurora Airy Beam"
+  stand_orientation: "other"
+  notes: "Light-sheet fluorescence microscope. Imaging modes: Light-sheet fluorescence (Airy beam illumination), Long-term volumetric imaging (minimized photobleaching)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
+  - "light_sheet"
+  - "widefield_fluorescence"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules: []
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: MÂ² Acquisition software
-    version: ''
+    name: "M² Acquisition software"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm (100 mW)
-    wavelength_nm: 488
-    power: 100 mW
-  - kind: laser
-    manufacturer: ''
-    model: 568 nm (80 mW)
-    wavelength_nm: 568
-    power: 80 mW
+    - kind: "laser"
+      manufacturer: ""
+      model: "488 nm"
+      wavelength_nm: "488"
+      power: "100 mW"
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "568 nm"
+      wavelength_nm: "568"
+      power: "80 mW"
+      notes: ""
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: sCMOS
-    manufacturer: ''
-    model: Hamamatsu ORCA-Flash4.0 sCMOS (2048Ã—2048)
+    - kind: "sCMOS"
+      manufacturer: "Hamamatsu"
+      model: "ORCA-Flash4.0"
+      notes: "2048x2048"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "GFP filter"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "520/40"
+      notes: ""
+      url: ""
+    - name: "GFP longpass"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "LP 500"
+      notes: ""
+      url: ""
+    - name: "RFP longpass"
+      location: "Emission Wheel"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "LP 570"
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Special Optics
-    model: Airy beam dipping objective (for illumination/detection)
-    magnification: 16.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: multi
-    correction: ''
+    - manufacturer: "Special Optics"
+      model: "Airy beam dipping objective"
+      product_code: ""
+      magnification: 16.0
+      numerical_aperture: null
+      working_distance: ""
+      immersion: "multi"
+      correction: ""
+      afc_compatible: false
+      specialties: "For illumination/detection"
+      notes: ""
+      url: ""
