@@ -1,0 +1,382 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Nikon Ti2-E Crest V3 Spinning Disk
+# -----------------------------------------------------------------------------
+instrument:
+  display_name: "Nikon Ti2-E Crest V3"
+  instrument_id: "scope-nikon-crest-v3"
+  manufacturer: "Nikon / CrestOptics"
+  model: "Eclipse Ti2-E with X-Light V3 HTDS"
+  stand_orientation: "inverted"
+  notes: "High-end spinning disk system with Lumencor Celesta 7-channel laser, dual Photometrics Kinetix cameras, and Dark Enclosure WarmBox."
+  url: "https://www.microscope.healthcare.nikon.com/products/inverted-microscopes/eclipse-ti2"
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
+modalities:
+  - "confocal_spinning_disk"
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - name: "hardware_autofocus"
+    notes: "Nikon Perfect Focus System (PFS). WARNING: Not compatible with 751 nm excitation. The PFS beamsplitter needs to be taken out from the lightpath in the optical configurations for 749/751nm use."
+    url: ""
+  - name: "incubation"
+    notes: "Dark Enclosure WarmBox set for Ti2 (TI2WB-SP400NX-G)"
+    url: ""
+  - name: "piezo_z_stage"
+    notes: "QG/Prior SP600 piezo kit with well-plate holder"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
+software:
+  acquisition:
+    name: "NIS-Elements AR"
+    version: "Includes 6D, JOBS 2.0, 3D Measurement, and RT Acquisition"
+    url: "https://www.microscope.healthcare.nikon.com/products/software/nis-elements"
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
+hardware:
+  
+  # --- Scanner ---
+  scanner:
+    type: "spinning_disk"
+    notes: "CrestOptics X-Light V3 HTDS (Laser-SP disk-Throughput-V2&V3 50:250um)"
+    url: "https://crestoptics.com/x-light-v3/"
+
+  # --- Light Sources (Excitation) ---
+  light_sources:
+    - kind: "laser"
+      manufacturer: "Lumencor"
+      model: "Celesta 7ch with Despeckler"
+      wavelength_nm: "405"
+      power: "~800 mW"
+      notes: "Integral filter: 405/12"
+      url: "https://lumencor.com/products/celesta-light-engine"
+    - kind: "laser"
+      manufacturer: "Lumencor"
+      model: "Celesta 7ch"
+      wavelength_nm: "446"
+      power: "~800 mW"
+      notes: "Integral filter: 446/12"
+      url: ""
+    - kind: "laser"
+      manufacturer: "Lumencor"
+      model: "Celesta 7ch"
+      wavelength_nm: "477"
+      power: "~800 mW"
+      notes: "Integral filter: 476/12"
+      url: ""
+    - kind: "laser"
+      manufacturer: "Lumencor"
+      model: "Celesta 7ch"
+      wavelength_nm: "520"
+      power: "~800 mW"
+      notes: "Integral filter: 518/12"
+      url: ""
+    - kind: "laser"
+      manufacturer: "Lumencor"
+      model: "Celesta 7ch"
+      wavelength_nm: "546"
+      power: "~800 mW"
+      notes: "Integral filter: 545/12"
+      url: ""
+    - kind: "laser"
+      manufacturer: "Lumencor"
+      model: "Celesta 7ch"
+      wavelength_nm: "638"
+      power: "~800 mW"
+      notes: "Integral filter: 637/12"
+      url: ""
+    - kind: "laser"
+      manufacturer: "Lumencor"
+      model: "Celesta 7ch"
+      wavelength_nm: "749"
+      power: "~800 mW"
+      notes: "Integral filter: 748/12"
+      url: ""
+    - kind: "led"
+      manufacturer: "Nikon"
+      model: "D-LEDI Fluorescence LED Illumination System"
+      wavelength_nm: "broadband"
+      power: ""
+      notes: "For widefield epifluorescence"
+      url: ""
+    - kind: "led"
+      manufacturer: "Nikon"
+      model: "T12-D-LHLED LED Lamp House"
+      wavelength_nm: "white"
+      power: ""
+      notes: "For DIA transmitted illumination"
+      url: ""
+
+  # --- Detectors (Emission) ---
+  detectors:
+    - kind: "sCMOS"
+      manufacturer: "Photometrics"
+      model: "Kinetix"
+      notes: "Master Camera (1st F-cam) - GFP/Cy5 in DualCam mode"
+      url: "https://www.photometrics.com/products/kinetix-family/kinetix"
+    - kind: "sCMOS"
+      manufacturer: "Photometrics"
+      model: "Kinetix"
+      notes: "Slave Camera (2nd F-cam) - DAPI/Cy3 in DualCam mode"
+      url: "https://www.photometrics.com/products/kinetix-family/kinetix"
+
+  # --- Splitters (Camera/Emission) ---
+  splitters:
+    - name: "Nikon DIA"
+      type: "emission_splitter"
+      notes: "Neutral filter for assigning the light path to single camera"
+      url: ""
+    - name: "MXR00546 Celesta DAPI/Cy3 - GFP/Cy5"
+      type: "emission_splitter"
+      notes: "DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave Camera"
+      url: ""
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    # Epifluorescence Turret (Nikon Ti2 Motorized Turret)
+    - name: "DAPI Ti2 32mm Cube SB LFOV"
+      location: "Epi Turret"
+      product_code: "MXR00714"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "For widefield imaging with D-LEDI"
+      url: ""
+    - name: "FITC Ti2 32mm Cube SB LFOV"
+      location: "Epi Turret"
+      product_code: "MXR00716"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "For widefield imaging with D-LEDI"
+      url: ""
+    - name: "mCherry Ti2 32mm Cube SB LFOV"
+      location: "Epi Turret"
+      product_code: "MXR00719"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "For widefield imaging with D-LEDI"
+      url: ""
+    - name: "Cy5 Ti2 32mm Cube SB LFOV"
+      location: "Epi Turret"
+      product_code: "MXR00720"
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "For widefield imaging with D-LEDI"
+      url: ""
+
+    # Crest X-Light V3 Excitation Wheel
+    - name: "Celesta-DA/FI/TR/Cy5/Cy7-A (Full Multiband Penta)"
+      location: "Crest Excitation Wheel Pos 1"
+      product_code: "MXR00543"
+      excitation: "FF01-391/477/549/639/741"
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "Celesta CFP-YFP-A (CFP-YFP Multiband)"
+      location: "Crest Excitation Wheel Pos 2"
+      product_code: "MXR00544"
+      excitation: "FF01-449/520"
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "Neutral Density"
+      location: "Crest Excitation Wheel Pos 3"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: "ND 1.3-5%T-25mm. 5% transmission to be used with widefield."
+      url: ""
+
+    # Crest X-Light V3 Dichroic Wheel
+    - name: "Celesta-DA/FI/TR/Cy5/Cy7-A (Full Multiband Penta)"
+      location: "Crest Dichroic Wheel Pos 1"
+      product_code: "MXR00543"
+      excitation: ""
+      dichroic: "FF-421/491/567/659/776 Di01"
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "Celesta CFP-YFP-A (CFP-YFP Multiband)"
+      location: "Crest Dichroic Wheel Pos 2"
+      product_code: "MXR00544"
+      excitation: ""
+      dichroic: "FF-471/539 Di01"
+      emission: ""
+      notes: ""
+      url: ""
+
+    # Crest X-Light V3 Emission Wheel
+    - name: "Celesta-DA/FI/TR/Cy5/Cy7-A (Full Multiband Penta)"
+      location: "Crest Emission Wheel Pos 1"
+      product_code: "MXR00541 / MXR00543"
+      excitation: ""
+      dichroic: ""
+      emission: "FF01-411/511/593/684/817"
+      notes: ""
+      url: ""
+    - name: "Celesta CFP-YFP-A (CFP-YFP Multiband)"
+      location: "Crest Emission Wheel Pos 2"
+      product_code: "MXR00542 / MXR00544"
+      excitation: ""
+      dichroic: ""
+      emission: "FF01-484/561"
+      notes: ""
+      url: ""
+    - name: "Semrock FF02-438/24"
+      location: "Crest Emission Wheel Pos 3"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "438/24"
+      notes: ""
+      url: ""
+    - name: "Semrock FF02-485/20"
+      location: "Crest Emission Wheel Pos 4"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "485/20"
+      notes: ""
+      url: ""
+    - name: "Semrock FF01-511/20"
+      location: "Crest Emission Wheel Pos 5"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "511/20"
+      notes: ""
+      url: ""
+    - name: "Semrock FF01-560/25"
+      location: "Crest Emission Wheel Pos 6"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "560/25"
+      notes: ""
+      url: ""
+    - name: "Semrock FF01-595-31"
+      location: "Crest Emission Wheel Pos 7"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "595/31"
+      notes: ""
+      url: ""
+    - name: "Semrock FF02-685/40"
+      location: "Crest Emission Wheel Pos 8"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "685/40"
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
+  objectives:
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apochromat Lambda D 4X"
+      product_code: "MRD70040"
+      magnification: 4.0
+      numerical_aperture: 0.20
+      working_distance: "20.0 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apochromat Lambda D 20X"
+      product_code: "MRD70270"
+      magnification: 20.0
+      numerical_aperture: 0.80
+      working_distance: "0.8 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apochromat Lambda S 25XC Sil"
+      product_code: "MRD73250"
+      magnification: 25.0
+      numerical_aperture: 1.05
+      working_distance: "0.55 mm"
+      immersion: "silicone"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda S"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Nikon"
+      model: "CFI Apochromat LWD Lambda S 40XC WI"
+      product_code: "MRD77410"
+      magnification: 40.0
+      numerical_aperture: 1.15
+      working_distance: "0.59 - 0.61 mm"
+      immersion: "water"
+      correction: "apochromat"
+      afc_compatible: true
+      specialties: "Lambda S, LWD"
+      notes: ""
+      url: ""
+
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apochromat Lambda D 60X Oil"
+      product_code: "MRD71670"
+      magnification: 60.0
+      numerical_aperture: 1.42
+      working_distance: "0.15 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
+
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apochromat Lambda S 60XC Sil"
+      product_code: "MRD73600"
+      magnification: 60.0
+      numerical_aperture: 1.30
+      working_distance: "0.30 mm"
+      immersion: "silicone"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda S"
+      notes: ""
+      url: ""
+
+    - manufacturer: "Nikon"
+      model: "CFI Plan Apochromat Lambda D 100x Oil"
+      product_code: "MRD71970"
+      magnification: 100.0
+      numerical_aperture: 1.45
+      working_distance: "0.13 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: true
+      specialties: "Lambda D"
+      notes: ""
+      url: ""
