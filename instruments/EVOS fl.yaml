@@ -1,58 +1,159 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: EVOS fl
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: EVOS fl
-  instrument_id: scope-evos-fl
-  manufacturer: Olympus/Evident
-  model: fl
-  stand_orientation: inverted
-  notes: 'type: "Widefield fluorescence microscope (inverted)" | filters: ["DAPI",
-    "CFP", "GFP/Alexa 488", "RFP/Alexa 555", "Cy5/Alexa 647"] | imaging_modes: ["Brightfield
-    (transmitted)", "Fluorescence (LED illumination)"]'
+  display_name: "EVOS fl"
+  instrument_id: "scope-evos-fl"
+  manufacturer: "Thermo Fisher / AMG" # Typically AMG/Thermo Fisher for EVOS
+  model: "FL"
+  stand_orientation: "inverted"
+  notes: "Widefield fluorescence microscope (inverted). Imaging modes: Brightfield (transmitted), Fluorescence (LED illumination)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules: []
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: On-board EVOS interface (no external software, USB storage)
-    version: ''
+    name: "On-board EVOS interface"
+    version: "no external software, USB storage"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources: []
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: PMT
-    manufacturer: ''
-    model: Integrated color camera (for brightfield)
-  - kind: PMT
-    manufacturer: ''
-    model: Integrated monochrome camera (for fluorescence)
+    - kind: "CMOS"
+      manufacturer: ""
+      model: "Integrated color camera"
+      notes: "For brightfield"
+      url: ""
+    - kind: "CMOS"
+      manufacturer: ""
+      model: "Integrated monochrome camera"
+      notes: "For fluorescence"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "DAPI"
+      location: "Light Cube Pos 1"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "CFP"
+      location: "Light Cube Pos 2"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "GFP/Alexa 488"
+      location: "Light Cube Pos 3"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "RFP/Alexa 555"
+      location: "Light Cube Pos 4"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+    - name: "Cy5/Alexa 647"
+      location: "Light Cube Pos 5"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: ""
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Olympus
-    model: UPlanFLN
-    magnification: 4.0
-    numerical_aperture: 0.13
-    working_distance: 16.4 mm
-    immersion: air
-    correction: ''
-  - manufacturer: AMG (Thermo Fisher)
-    model: PlanFluor
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: 8.3 mm
-    immersion: air
-    correction: plan_fluorite
-  - manufacturer: AMG (Thermo Fisher)
-    model: PlanFluor
-    magnification: 20.0
-    numerical_aperture: 0.45
-    working_distance: 7.1 mm
-    immersion: air
-    correction: plan_fluorite
-  - manufacturer: AMG (Thermo Fisher)
-    model: PlanFluor
-    magnification: 40.0
-    numerical_aperture: 0.65
-    working_distance: 2.8 mm
-    immersion: air
-    correction: plan_fluorite
+    - manufacturer: "Olympus"
+      model: "UPlanFLN"
+      product_code: ""
+      magnification: 4.0
+      numerical_aperture: 0.13
+      working_distance: "16.4 mm"
+      immersion: "air"
+      correction: "fluorite"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "AMG (Thermo Fisher)"
+      model: "PlanFluor"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: "8.3 mm"
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "AMG (Thermo Fisher)"
+      model: "PlanFluor"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.45
+      working_distance: "7.1 mm"
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "AMG (Thermo Fisher)"
+      model: "PlanFluor"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: 0.65
+      working_distance: "2.8 mm"
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
