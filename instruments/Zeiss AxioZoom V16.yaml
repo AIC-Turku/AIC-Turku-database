@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-zeiss-axiozoom-v16"
   manufacturer: "Zeiss"
   model: "AxioZoom.V16"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "stereo"
   notes: "Fluorescence stereo zoom microscope. Imaging modes: Brightfield (top/bottom illumination), Fluorescence, Optical sectioning (structured illumination SIM)."
   url: ""

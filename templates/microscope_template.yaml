@@ -16,6 +16,8 @@ instrument:
   #          Hamamatsu, Lumencor, Excelitas, Chroma, Semrock, CrestOptics, Other
   manufacturer: "Zeiss"
   model: ""                             # e.g. "AxioObserver 7"
+  year_of_purchase: ""                  # e.g. "2023"
+  funding: ""                           # e.g. "Biocenter instrumentation grant"
   
   # Options: upright, inverted, stereo, benchtop, other
   stand_orientation: "inverted"

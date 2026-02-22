@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-zeiss-lsm-510-jpk-afm"
   manufacturer: "Zeiss"
   model: "LSM 510 JPK AFM"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "other"
   notes: "Confocal laser-scanning microscope with integrated AFM. Location: BioCity, floor -1 (Basement)."
   url: ""

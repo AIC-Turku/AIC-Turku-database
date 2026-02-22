@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-nikon-eclipse-ti2-e"
   manufacturer: "Nikon"
   model: "Eclipse Ti2-E"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning)."
   url: ""

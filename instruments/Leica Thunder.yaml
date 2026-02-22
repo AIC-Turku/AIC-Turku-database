@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-leica-thunder"                     
   manufacturer: "Leica Microsystems"
   model: "Thunder"                             
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "Widefield microscope"                             
   url: "https://www.leica-microsystems.com/products/light-microscopes/p/thunder-imager-3d-live-cell/"

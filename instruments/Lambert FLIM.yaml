@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-lambert-flim-frequency-domain"
   manufacturer: "Lambert Instruments"
   model: "FLIM (frequency domain)"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "other"
   notes: "Widefield FLIM system (attached to Zeiss AxioImager). Location: BioCity, 5th floor, room 5149. Imaging modes: Widefield fluorescence (FLIM only)."
   url: ""

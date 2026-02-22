@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-evos-fl"
   manufacturer: "Thermo Fisher / AMG" # Typically AMG/Thermo Fisher for EVOS
   model: "FL"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "Widefield fluorescence microscope (inverted). Imaging modes: Brightfield (transmitted), Fluorescence (LED illumination)."
   url: ""

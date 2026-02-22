@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-1e33f909"
   manufacturer: "Abberior"
   model: "STED"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "other"
   notes: ""
   url: ""

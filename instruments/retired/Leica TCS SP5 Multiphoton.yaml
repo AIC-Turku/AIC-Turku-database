@@ -3,6 +3,8 @@ instrument:
   instrument_id: scope-leica-tcs-sp5-multiphoton
   manufacturer: Leica Microsystems
   model: TCS SP5 Multiphoton
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: upright
   notes: 'type: "Multiphoton confocal microscope (upright)" | filters: [{"Main Beam
     Splitter LP505 nm"=>["SHG 440 (440/20)", "CFP (483/32)", "YFP (535/20)"]}, {"Main

@@ -6,6 +6,8 @@ instrument:
   instrument_id: "scope-nikon-crest-v3"
   manufacturer: "Nikon / CrestOptics"
   model: "Eclipse Ti2-E with X-Light V3 HTDS"
+  year_of_purchase: ""
+  funding: ""
   stand_orientation: "inverted"
   notes: "High-end spinning disk system with Lumencor Celesta 7-channel laser, dual Photometrics Kinetix cameras, and Dark Enclosure WarmBox."
   url: "https://www.microscope.healthcare.nikon.com/products/inverted-microscopes/eclipse-ti2"
