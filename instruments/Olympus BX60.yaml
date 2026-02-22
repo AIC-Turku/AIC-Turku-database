@@ -1,65 +1,160 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Olympus BX60
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Olympus BX60
-  instrument_id: scope-olympus-bx60
-  manufacturer: Olympus/Evident
-  model: BX60
-  stand_orientation: upright
-  notes: 'type: "Widefield microscope (upright)" | filters: [{"DAPI (Olympus U-MWU"=>"Ex
-    357/55, Em LP 420)"}, {"GFP narrow (Olympus U-MNIBA2"=>"Ex 480/20, Em 530/40)"},
-    {"Alexa 546 (Olympus U-MWIG"=>"Ex 535/30, Em LP 580)"}, {"GFP wide (Olympus U-MWIB"=>"Ex
-    475/30, Em LP 515)"}] | imaging_modes: ["Brightfield", "Fluorescence (epifluorescence)",
-    "Phase contrast"]'
+  display_name: "Olympus BX60"
+  instrument_id: "scope-olympus-bx60"
+  manufacturer: "Olympus/Evident"
+  model: "BX60"
+  stand_orientation: "upright"
+  notes: "Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
+  - "widefield_fluorescence"
+  - "transmitted_brightfield"
+  - "phase_contrast"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules: []
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Olympus Cell^D
-    version: ''
+    name: "Olympus Cell^D"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources: []
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: CCD
-    manufacturer: ''
-    model: Olympus DP71 CCD camera (4080Ã—3072)
+    - kind: "CCD"
+      manufacturer: "Olympus"
+      model: "DP71"
+      notes: "4080x3072"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "DAPI"
+      location: "Olympus U-MWU"
+      product_code: ""
+      excitation: "357/55"
+      dichroic: ""
+      emission: "LP 420"
+      notes: ""
+      url: ""
+    - name: "GFP narrow"
+      location: "Olympus U-MNIBA2"
+      product_code: ""
+      excitation: "480/20"
+      dichroic: ""
+      emission: "530/40"
+      notes: ""
+      url: ""
+    - name: "Alexa 546"
+      location: "Olympus U-MWIG"
+      product_code: ""
+      excitation: "535/30"
+      dichroic: ""
+      emission: "LP 580"
+      notes: ""
+      url: ""
+    - name: "GFP wide"
+      location: "Olympus U-MWIB"
+      product_code: ""
+      excitation: "475/30"
+      dichroic: ""
+      emission: "LP 515"
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Olympus
-    model: Plan
-    magnification: 4.0
-    numerical_aperture: 0.1
-    working_distance: 18.5 mm
-    immersion: air
-    correction: ''
-  - manufacturer: Olympus
-    model: UPlan FL (phase)
-    magnification: 10.0
-    numerical_aperture: 0.25
-    working_distance: 10.0 mm
-    immersion: air
-    correction: ''
-  - manufacturer: Olympus
-    model: UPlan FL (phase)
-    magnification: 20.0
-    numerical_aperture: 0.5
-    working_distance: 2.1 mm
-    immersion: air
-    correction: ''
-  - manufacturer: Olympus
-    model: UPlan FL (phase)
-    magnification: 40.0
-    numerical_aperture: 0.75
-    working_distance: 0.51 mm
-    immersion: air
-    correction: ''
-  - manufacturer: Olympus
-    model: UPlan Apochromat
-    magnification: 100.0
-    numerical_aperture: 1.35
-    working_distance: 0.17 mm
-    immersion: oil
-    correction: plan_apochromat
+    - manufacturer: "Olympus"
+      model: "Plan"
+      product_code: ""
+      magnification: 4.0
+      numerical_aperture: 0.1
+      working_distance: "18.5 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Olympus"
+      model: "UPlan FL"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.25
+      working_distance: "10.0 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: "phase"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Olympus"
+      model: "UPlan FL"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.5
+      working_distance: "2.1 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: "phase"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Olympus"
+      model: "UPlan FL"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: 0.75
+      working_distance: "0.51 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: "phase"
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Olympus"
+      model: "UPlan Apochromat"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: 1.35
+      working_distance: "0.17 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
