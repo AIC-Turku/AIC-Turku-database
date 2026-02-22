@@ -10,7 +10,7 @@
 
 instrument:
   display_name: "Brand Model Nickname"  # e.g. "Zeiss LSM 980 Airyscan"
-  instrument_id: ""                     # Leave empty; system will auto-generate (e.g. scope-a1b2c3d4)
+  instrument_id: ""                     # auto-generate (e.g. scope-a1b2c3d4)
   
   # Options: Zeiss, Leica Microsystems, Nikon, Olympus/Evident, Abberior, Andor, 
   #          Hamamatsu, Lumencor, Excelitas, Chroma, Semrock, CrestOptics, Other
