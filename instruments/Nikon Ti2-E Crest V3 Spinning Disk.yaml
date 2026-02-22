@@ -293,7 +293,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Nikon"
+    - id: "4x_air"
+      manufacturer: "Nikon"
       model: "CFI Plan Apochromat Lambda D 4X"
       product_code: "MRD70040"
       magnification: 4.0
@@ -306,7 +307,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "20x_air"
+      manufacturer: "Nikon"
       model: "CFI Plan Apochromat Lambda D 20X"
       product_code: "MRD70270"
       magnification: 20.0
@@ -319,7 +321,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "25x_silicone"
+      manufacturer: "Nikon"
       model: "CFI Plan Apochromat Lambda S 25XC Sil"
       product_code: "MRD73250"
       magnification: 25.0
@@ -332,7 +335,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "40x_water"
+      manufacturer: "Nikon"
       model: "CFI Apochromat LWD Lambda S 40XC WI"
       product_code: "MRD77410"
       magnification: 40.0
@@ -345,7 +349,8 @@ hardware:
       notes: ""
       url: ""
 
-    - manufacturer: "Nikon"
+    - id: "60x_oil"
+      manufacturer: "Nikon"
       model: "CFI Plan Apochromat Lambda D 60X Oil"
       product_code: "MRD71670"
       magnification: 60.0
@@ -358,7 +363,8 @@ hardware:
       notes: ""
       url: ""
 
-    - manufacturer: "Nikon"
+    - id: "60x_silicone"
+      manufacturer: "Nikon"
       model: "CFI Plan Apochromat Lambda S 60XC Sil"
       product_code: "MRD73600"
       magnification: 60.0
@@ -371,7 +377,8 @@ hardware:
       notes: ""
       url: ""
 
-    - manufacturer: "Nikon"
+    - id: "100x_oil"
+      manufacturer: "Nikon"
       model: "CFI Plan Apochromat Lambda D 100x Oil"
       product_code: "MRD71970"
       magnification: 100.0

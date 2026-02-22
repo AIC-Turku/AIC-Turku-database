@@ -180,7 +180,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Nikon"
+    - id: "2x_air"
+      manufacturer: "Nikon"
       model: "Plan Apochromat 2x"
       product_code: ""
       magnification: 2.0
@@ -193,7 +194,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "4x_air"
+      manufacturer: "Nikon"
       model: "Plan Fluor 4x"
       product_code: ""
       magnification: 4.0
@@ -206,7 +208,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "4x_air_2"
+      manufacturer: "Nikon"
       model: "Plan Apo Lambda D 4x"
       product_code: ""
       magnification: 4.0
@@ -219,7 +222,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "10x_air"
+      manufacturer: "Nikon"
       model: "CFI Plan Fluor 10x"
       product_code: ""
       magnification: 10.0
@@ -232,7 +236,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "20x_air"
+      manufacturer: "Nikon"
       model: "CFI S Plan Fluor ELWD 20x"
       product_code: ""
       magnification: 20.0
@@ -245,7 +250,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "20x_air_2"
+      manufacturer: "Nikon"
       model: "CFI Plan Apo Lambda 20x"
       product_code: ""
       magnification: 20.0
@@ -258,7 +264,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "40x_air"
+      manufacturer: "Nikon"
       model: "CFI S Plan Fluor ELWD ADM 40x"
       product_code: ""
       magnification: 40.0
@@ -271,7 +278,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "60x_oil"
+      manufacturer: "Nikon"
       model: "CFI Plan Apo Lambda 60x"
       product_code: ""
       magnification: 60.0
@@ -284,7 +292,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "100x_oil"
+      manufacturer: "Nikon"
       model: "Apo TIRF 100x"
       product_code: ""
       magnification: 100.0

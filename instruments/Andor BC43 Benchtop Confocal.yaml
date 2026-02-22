@@ -132,7 +132,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Nikon" 
+    - id: "10x_air"
+      manufacturer: "Nikon" 
       model: "10X Plan Apo LD Air"
       product_code: "INS-OBJ-10D-045"
       magnification: 10.0
@@ -145,7 +146,8 @@ hardware:
       notes: "Included in base BC43 CF"
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "20x_air"
+      manufacturer: "Nikon"
       model: "20X Plan Apo LD Air"
       product_code: "INS-OBJ-20D-080"
       magnification: 20.0
@@ -158,7 +160,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "40x_air"
+      manufacturer: "Nikon"
       model: "40X Plan Apo LD Air"
       product_code: "INS-OBJ-40D-095"
       magnification: 40.0
@@ -171,7 +174,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Nikon"
+    - id: "40x_silicone"
+      manufacturer: "Nikon"
       model: "40X Plan Apo LS Sil Oil"
       product_code: "INS-OBJ-40S-125-SIL"
       magnification: 40.0
@@ -184,7 +188,8 @@ hardware:
       notes: ""
       url: ""
 
-    - manufacturer: "Nikon"
+    - id: "60x_oil"
+      manufacturer: "Nikon"
       model: "60X Plan Apo LD Oil"
       product_code: "INS-OBJ-60D-142-0"
       magnification: 60.0
@@ -197,7 +202,8 @@ hardware:
       notes: ""
       url: ""
 
-    - manufacturer: "Nikon"
+    - id: "100x_oil"
+      manufacturer: "Nikon"
       model: "100x Plan Apo LD Oil"
       product_code: "INS-OBJ-100D-145-0"
       magnification: 100.0

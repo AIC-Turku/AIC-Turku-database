@@ -158,7 +158,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Zeiss"
+    - id: "10x_air"
+      manufacturer: "Zeiss"
       model: "Plan Apochromat 10x"
       product_code: ""
       magnification: 10.0
@@ -171,7 +172,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Zeiss"
+    - id: "20x_air"
+      manufacturer: "Zeiss"
       model: "Plan Apochromat 20x"
       product_code: ""
       magnification: 20.0
@@ -184,7 +186,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Zeiss"
+    - id: "40x_water"
+      manufacturer: "Zeiss"
       model: "LD C-Apochromat 40x"
       product_code: ""
       magnification: 40.0
@@ -197,7 +200,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Zeiss"
+    - id: "63x_air"
+      manufacturer: "Zeiss"
       model: "LD Plan-Neofluar 63x"
       product_code: ""
       magnification: 63.0
@@ -210,7 +214,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Zeiss"
+    - id: "63x_water"
+      manufacturer: "Zeiss"
       model: "LD C-Apochromat 63x"
       product_code: ""
       magnification: 63.0
@@ -223,7 +228,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Zeiss"
+    - id: "63x_oil"
+      manufacturer: "Zeiss"
       model: "Plan Apochromat 63x"
       product_code: ""
       magnification: 63.0
@@ -236,7 +242,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Zeiss"
+    - id: "100x_oil"
+      manufacturer: "Zeiss"
       model: "Plan Apochromat 100x"
       product_code: ""
       magnification: 100.0

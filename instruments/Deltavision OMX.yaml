@@ -165,7 +165,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Olympus"
+    - id: "60x_oil"
+      manufacturer: "Olympus"
       model: "Plan Apo N"
       product_code: ""
       magnification: 60.0
@@ -178,7 +179,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Olympus"
+    - id: "60x_oil_2"
+      manufacturer: "Olympus"
       model: "APO N TIRF"
       product_code: ""
       magnification: 60.0

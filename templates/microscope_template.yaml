@@ -140,7 +140,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Zeiss"
+    - id: ""                        # Short objective slug for QC mapping, e.g. "10x_air", "60x_oil"
+      manufacturer: "Zeiss"
       model: "Plan-Apochromat 63x/1.4 Oil"
       product_code: "123-456"
       magnification: 63.0

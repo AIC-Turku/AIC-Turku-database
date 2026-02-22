@@ -126,7 +126,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Zeiss"
+    - id: "0.5x_air"
+      manufacturer: "Zeiss"
       model: ""
       product_code: ""
       magnification: 0.5
@@ -138,7 +139,8 @@ hardware:
       specialties: ""
       notes: ""
       url: ""
-    - manufacturer: "Zeiss"
+    - id: "1x_air"
+      manufacturer: "Zeiss"
       model: ""
       product_code: ""
       magnification: 1.0

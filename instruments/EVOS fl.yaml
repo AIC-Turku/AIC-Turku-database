@@ -109,7 +109,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Olympus"
+    - id: "4x_air"
+      manufacturer: "Olympus"
       model: "UPlanFLN"
       product_code: ""
       magnification: 4.0
@@ -122,7 +123,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "AMG (Thermo Fisher)"
+    - id: "10x_air"
+      manufacturer: "AMG (Thermo Fisher)"
       model: "PlanFluor"
       product_code: ""
       magnification: 10.0
@@ -135,7 +137,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "AMG (Thermo Fisher)"
+    - id: "20x_air"
+      manufacturer: "AMG (Thermo Fisher)"
       model: "PlanFluor"
       product_code: ""
       magnification: 20.0
@@ -148,7 +151,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "AMG (Thermo Fisher)"
+    - id: "40x_air"
+      manufacturer: "AMG (Thermo Fisher)"
       model: "PlanFluor"
       product_code: ""
       magnification: 40.0

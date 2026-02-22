@@ -549,6 +549,7 @@ def main() -> None:
         # Expanded Objectives (Captures WD, Immersion, Correction, AFC compatibility)
         objectives = [
             {
+                "id": clean_text(obj.get("id")),
                 "name": clean_text(obj.get("model")),
                 "manufacturer": clean_text(obj.get("manufacturer")),
                 "product_code": clean_text(obj.get("product_code")),

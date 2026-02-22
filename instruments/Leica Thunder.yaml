@@ -184,7 +184,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Leica"
+    - id: "5x_air"
+      manufacturer: "Leica"
       model: "5x"
       product_code: "11506303"
       magnification: 5.0
@@ -197,7 +198,8 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506303/"
       
-    - manufacturer: "Leica"
+    - id: "10x_air"
+      manufacturer: "Leica"
       model: "10x"
       product_code: "11506410"
       magnification: 10.0
@@ -210,7 +212,8 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506410/"
       
-    - manufacturer: "Leica"
+    - id: "20x_air"
+      manufacturer: "Leica"
       model: "20x"
       product_code: "11506242"
       magnification: 20.0
@@ -223,7 +226,8 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506242/"
       
-    - manufacturer: "Leica"
+    - id: "20x_multi"
+      manufacturer: "Leica"
       model: "20x"
       product_code: "11506326"
       magnification: 20.0
@@ -236,7 +240,8 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506326/"
 
-    - manufacturer: "Leica"
+    - id: "20x_air_2"
+      manufacturer: "Leica"
       model: "20x"
       product_code: "11506529"
       magnification: 20.0
@@ -249,7 +254,8 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506529/"
 
-    - manufacturer: "Leica"
+    - id: "63x_oil"
+      manufacturer: "Leica"
       model: "63x"
       product_code: "11506350"
       magnification: 63.0
@@ -262,7 +268,8 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/11506350/"
 
-    - manufacturer: "Leica"
+    - id: "16x_multi"
+      manufacturer: "Leica"
       model: "16x"
       product_code: "506533"
       magnification: 16.0
@@ -275,7 +282,8 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/506533/"
 
-    - manufacturer: "Leica"
+    - id: "10x_air_2"
+      manufacturer: "Leica"
       model: "10x"
       product_code: "506507"
       magnification: 10.0
@@ -288,7 +296,8 @@ hardware:
       notes: "from SP5?"
       url: "https://www.leica-microsystems.com/products/microscope-objectives/p/506507/"
 
-    - manufacturer: "Leica"
+    - id: "100x_oil"
+      manufacturer: "Leica"
       model: "100x"
       product_code: "506316"
       magnification: 100.0

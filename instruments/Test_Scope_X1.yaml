@@ -105,7 +105,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Olympus"
+    - id: "20x_air"
+      manufacturer: "Olympus"
       model: "UPlanSApo 20x/0.75"
       product_code: "OLY-20X-SA"
       magnification: 20.0
@@ -118,7 +119,8 @@ hardware:
       notes: "General purpose testing"
       url: ""
       
-    - manufacturer: "Olympus"
+    - id: "60x_oil"
+      manufacturer: "Olympus"
       model: "UPlanSApo 60x/1.35"
       product_code: "OLY-60X-SA"
       magnification: 60.0
