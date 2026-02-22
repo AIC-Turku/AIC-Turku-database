@@ -10,7 +10,7 @@ instrument:
   funding: ""
   stand_orientation: "other"
   location: "BioCity, 5th floor, BioPhysics room 5086"
-  notes: "Reservation system: Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose."
+  notes: "Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose."
   url: ""
 
 # -----------------------------------------------------------------------------
