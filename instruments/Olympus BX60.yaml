@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "upright"
+  location: ""
   notes: "Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast."
   url: ""
 

@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "benchtop"
+  location: ""
   notes: "Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution."
   url: "https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope"
 

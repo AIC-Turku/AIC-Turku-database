@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "other"
+  location: ""
   notes: "Super-resolution microscope (compact). Imaging modes: Single-molecule localization microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET imaging."
   url: "https://oni.bio/nanoimager"
 

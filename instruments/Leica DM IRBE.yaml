@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "inverted"
+  location: ""
   notes: "Widefield microscope (inverted). Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield, Phase contrast."
   url: ""
 

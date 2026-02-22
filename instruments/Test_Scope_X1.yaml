@@ -9,6 +9,7 @@ instrument:
   year_of_purchase: "2024"
   funding: "Internal development budget"
   stand_orientation: "inverted"
+  location: ""
   notes: "Synthetic test instrument for dashboard visualization and integration testing."
   url: "https://github.com/aic-turku/aic-turku-database"
 
