@@ -1,113 +1,258 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Zeiss LSM 880 with AiryScan
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Zeiss LSM 880 with AiryScan
-  instrument_id: scope-zeiss-lsm-880-with-airyscan
-  manufacturer: Zeiss
-  model: LSM 880 with AiryScan
-  stand_orientation: inverted
-  notes: 'type: "Confocal laser-scanning microscope (inverted) " | filters: ["Continuously
-    tunable emission filters (array detector 371â€“740 nm)", {"AiryScan preset emission
-    filters"=>["BP 420â€“488 + BP 495â€“550", "BP 465â€“505 + LP 525", "BP 420â€“488
-    + LP 555", "BP 495â€“550 + LP 570", "BP 555â€“620 + LP 645", "BP 570â€“620 + LP
-    645"]}] | additional_hardware: ["Image processing workstation (36 TB, 4 GB GPU)",
-    "Piezo Z-stage", "Zeiss Definite Focus (focus stabilization)", "Environmental
-    chamber with temperature control", "Heated stage inserts"] | imaging_modes: ["Confocal
-    scanning (spectral detection)", "Super-resolution AiryScan mode", "Fast live-cell
-    imaging (resonant scan)", "Multiplex mode (AiryScan Fast)"]'
+  display_name: "Zeiss LSM 880 with AiryScan"
+  instrument_id: "scope-zeiss-lsm-880-with-airyscan"
+  manufacturer: "Zeiss"
+  model: "LSM 880 with AiryScan"
+  stand_orientation: "inverted"
+  notes: "Confocal laser-scanning microscope (inverted). Imaging modes: Confocal scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell imaging (resonant scan), Multiplex mode (AiryScan Fast)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- confocal_point
-- ISM
-- spectral_imaging
+  - "confocal_point"
+  - "ISM"
+  - "spectral_imaging"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
 modules:
-- incubation
-- hardware_autofocus
+  - name: "incubation"
+    notes: "Environmental chamber with temperature control and heated stage inserts"
+    url: ""
+  - name: "hardware_autofocus"
+    notes: "Zeiss Definite Focus (focus stabilization)"
+    url: ""
+  - name: "piezo_z_stage"
+    notes: "Piezo Z-stage"
+    url: ""
+  - name: "workstation"
+    notes: "Image processing workstation (36 TB, 4 GB GPU)"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Zeiss ZEN 2.3 SP1 (black edition)
-    version: ''
+    name: "Zeiss ZEN 2.3 SP1 (black edition)"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: resonant
-    notes: ''
+    type: "resonant"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 405 nm (Diode)
-    wavelength_nm: 405
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 458 nm (Argon)
-    wavelength_nm: 458
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm (Argon)
-    wavelength_nm: 488
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 514 nm (Argon)
-    wavelength_nm: 514
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 543 nm (HeNe)
-    wavelength_nm: 543
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 633 nm (HeNe)
-    wavelength_nm: 633
-    power: ''
+    - kind: "laser"
+      manufacturer: ""
+      model: "405 nm (Diode)"
+      wavelength_nm: "405"
+      power: ""
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "458 nm (Argon)"
+      wavelength_nm: "458"
+      power: ""
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "488 nm (Argon)"
+      wavelength_nm: "488"
+      power: ""
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "514 nm (Argon)"
+      wavelength_nm: "514"
+      power: ""
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "543 nm (HeNe)"
+      wavelength_nm: "543"
+      power: ""
+      notes: ""
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "633 nm (HeNe)"
+      wavelength_nm: "633"
+      power: ""
+      notes: ""
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: PMT
-    manufacturer: ''
-    model: PMT (Ch1)
-  - kind: PMT
-    manufacturer: ''
-    model: Cooled PMT (Ch2)
-  - kind: PMT
-    manufacturer: ''
-    model: Transmitted light PMT
-  - kind: GaAsP_PMT
-    manufacturer: ''
-    model: 32-channel GaAsP spectral array detector
-  - kind: GaAsP_PMT
-    manufacturer: ''
-    model: 32-channel AiryScan detector (GaAsP)
+    - kind: "PMT"
+      manufacturer: ""
+      model: "PMT (Ch1)"
+      notes: ""
+      url: ""
+    - kind: "PMT"
+      manufacturer: ""
+      model: "Cooled PMT (Ch2)"
+      notes: ""
+      url: ""
+    - kind: "PMT"
+      manufacturer: ""
+      model: "Transmitted light PMT"
+      notes: ""
+      url: ""
+    - kind: "GaAsP_PMT"
+      manufacturer: ""
+      model: "32-channel GaAsP spectral array detector"
+      notes: ""
+      url: ""
+    - kind: "GaAsP_PMT"
+      manufacturer: ""
+      model: "32-channel AiryScan detector (GaAsP)"
+      notes: ""
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "Continuously tunable emission filters"
+      location: "Array detector"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "371-740"
+      notes: ""
+      url: ""
+    - name: "AiryScan BP 420-488 + BP 495-550"
+      location: "AiryScan detector"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "BP 420-488 + BP 495-550"
+      notes: "Preset emission filter"
+      url: ""
+    - name: "AiryScan BP 465-505 + LP 525"
+      location: "AiryScan detector"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "BP 465-505 + LP 525"
+      notes: "Preset emission filter"
+      url: ""
+    - name: "AiryScan BP 420-488 + LP 555"
+      location: "AiryScan detector"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "BP 420-488 + LP 555"
+      notes: "Preset emission filter"
+      url: ""
+    - name: "AiryScan BP 495-550 + LP 570"
+      location: "AiryScan detector"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "BP 495-550 + LP 570"
+      notes: "Preset emission filter"
+      url: ""
+    - name: "AiryScan BP 555-620 + LP 645"
+      location: "AiryScan detector"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "BP 555-620 + LP 645"
+      notes: "Preset emission filter"
+      url: ""
+    - name: "AiryScan BP 570-620 + LP 645"
+      location: "AiryScan detector"
+      product_code: ""
+      excitation: ""
+      dichroic: ""
+      emission: "BP 570-620 + LP 645"
+      notes: "Preset emission filter"
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: Zeiss
-    model: Plan Apochromat
-    magnification: 10.0
-    numerical_aperture: 0.45
-    working_distance: 2.0 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: Plan Apochromat
-    magnification: 20.0
-    numerical_aperture: 0.8
-    working_distance: 0.55 mm
-    immersion: air
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: LD LCI Plan Apochromat
-    magnification: 40.0
-    numerical_aperture: 1.2
-    working_distance: 0.41 mm
-    immersion: multi
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: C Plan Apochromat
-    magnification: 63.0
-    numerical_aperture: 1.4
-    working_distance: 0.14 mm
-    immersion: oil
-    correction: plan_apochromat
-  - manufacturer: Zeiss
-    model: Î± Plan Apochromat
-    magnification: 100.0
-    numerical_aperture: 1.46
-    working_distance: 0.11 mm
-    immersion: oil
-    correction: plan_apochromat
+    - manufacturer: "Zeiss"
+      model: "Plan Apochromat"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: 0.45
+      working_distance: "2.0 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "Plan Apochromat"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.8
+      working_distance: "0.55 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "LD LCI Plan Apochromat"
+      product_code: ""
+      magnification: 40.0
+      numerical_aperture: 1.2
+      working_distance: "0.41 mm"
+      immersion: "multi"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "C Plan Apochromat"
+      product_code: ""
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: "0.14 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Zeiss"
+      model: "α Plan Apochromat"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: 1.46
+      working_distance: "0.11 mm"
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
