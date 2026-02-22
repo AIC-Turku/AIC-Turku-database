@@ -5,6 +5,7 @@
 # 1. Copy this file and rename it (e.g., "Zeiss_LSM980.yaml").
 # 2. Fill in the fields below.
 # 3. Delete the comment blocks listing options after you have made your selection.
+# 4. Use the 'url' field in any section to link to manuals or vendor pages.
 # -----------------------------------------------------------------------------
 
 instrument:
@@ -14,13 +15,13 @@ instrument:
   # Options: Zeiss, Leica Microsystems, Nikon, Olympus/Evident, Abberior, Andor, 
   #          Hamamatsu, Lumencor, Excelitas, Chroma, Semrock, Other
   manufacturer: "Zeiss"
-  
   model: ""                             # e.g. "AxioObserver 7"
   
   # Options: upright, inverted, stereo, other
   stand_orientation: "inverted"
   
   notes: ""                             # e.g. "Located in Room 404. Custodian: Dr. Smith."
+  url: ""                               # Link to booking system or general system overview
 
 # -----------------------------------------------------------------------------
 # IMAGING MODALITIES
@@ -68,6 +69,7 @@ software:
   acquisition:
     name: "ZEN"               # e.g. ZEN, LAS X, NIS-Elements, MicroManager
     version: "3.4"
+    url: ""                   # Link to software manual or vendor page
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION
@@ -79,41 +81,66 @@ hardware:
     # Options: none, galvo, resonant, spinning_disk, polygon, acousto_optic, stage_scanning
     type: "galvo"
     notes: ""
+    url: ""
 
   # --- Light Sources (Excitation) ---
   light_sources:
     - kind: "laser"           # Options: laser, white_light_laser, led, arc_lamp, halogen_lamp, supercontinuum
       manufacturer: "Chroma"
       model: "Solid State"
-      wavelength_nm: 488
+      wavelength_nm: "488"    # e.g., "488", or "395/25" for banded LEDs
       power: "20 mW"
+      notes: "488 in software"
+      url: ""                 # Link to laser/LED spec sheet
       
     - kind: "led"
       manufacturer: "CoolLED"
       model: "pE-300"
-      wavelength_nm: 
+      wavelength_nm: ""
       power: ""
+      notes: ""
+      url: ""
 
   # --- Detectors (Emission) ---
   detectors:
     - kind: "GaAsP_PMT"       # Options: PMT, GaAsP_PMT, HyD, sCMOS, EMCCD, CCD, APD
       manufacturer: "Zeiss"
       model: "Quasar"
+      notes: "Channel 1"
+      url: ""                 # Link to detector spec sheet
       
     - kind: "sCMOS"
       manufacturer: "Hamamatsu"
       model: "Flash 4.0"
+      notes: ""
+      url: ""
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "Example Quad Band"
+      product_code: "123456"
+      excitation: "405/20; 488/20; 561/20; 640/20"
+      dichroic: "420; 500; 580; 660"
+      emission: "450/50; 525/50; 600/50; 680/50"
+      notes: "Installed in turret position 1"
+      url: ""                 # Link to filter transmission curves (e.g., Chroma/Semrock page)
 
   # --- Objectives ---
   objectives:
     - manufacturer: "Zeiss"
       model: "Plan-Apochromat 63x/1.4 Oil"
+      product_code: "123-456"
       magnification: 63.0
       numerical_aperture: 1.4
-      working_distance: "0.19mm"
+      working_distance: "0.19 mm"
       
       # Options: air, oil, water, glycerol, silicone, multi, dipping
       immersion: "oil"
       
       # Options: plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
       correction: "plan_apochromat"
+      
+      afc_compatible: true               # Hardware autofocus compatibility (true/false)
+      specialties: "DIC, UV compatible"  # e.g., STED, PH1, Correction Ring
+      notes: ""
+      url: ""                            # Link to objective database/specs
