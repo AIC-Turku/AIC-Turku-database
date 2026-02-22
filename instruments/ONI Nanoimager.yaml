@@ -30,7 +30,11 @@ modules: []
 # -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: "NimOS"
+    name: "NimOS microscope control software"
+    version: ""
+    url: ""
+  analysis:
+    name: "CODI analysis software"
     version: ""
     url: ""
 
@@ -81,7 +85,7 @@ hardware:
     - kind: "sCMOS"
       manufacturer: "Hamamatsu"
       model: "ORCA-Flash4.0 V3"
-      notes: "digital, ~100 fps full frame"
+      notes: "Digital sCMOS camera, 100 fps full frame"
       url: ""
 
   # --- Splitters (Camera/Emission) ---
