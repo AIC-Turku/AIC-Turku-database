@@ -9,8 +9,8 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "inverted"
-  location: ""
-  notes: "TIRF/widefield microscope (inverted). Imaging modes: TIRF (total internal reflection fluorescence), Widefield epifluorescence, Brightfield."
+  location: "BioCity, 2nd floor, room 2209"
+  notes: "TIRF/widefield microscope (inverted). TIRF imaging enables approximately 70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm in common confocal microscopy). Designed for membrane studies such as endocytosis and integrin trafficking, and also suitable for sensitive widefield imaging."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -84,12 +84,12 @@ hardware:
     - kind: "EMCCD"
       manufacturer: "Hamamatsu"
       model: "C9100-13"
-      notes: "512x512"
+      notes: "EMCCD camera, 512x512 pixels"
       url: ""
     - kind: "sCMOS"
       manufacturer: "Hamamatsu"
       model: "ORCA-Flash4.0 CMOS"
-      notes: "2048x2048"
+      notes: "sCMOS camera, 2048x2048 pixels"
       url: ""
 
   # --- Splitters (Camera/Emission) ---
