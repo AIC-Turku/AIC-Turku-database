@@ -181,7 +181,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Zeiss"
+    - id: "5x_air"
+      manufacturer: "Zeiss"
       model: "EC Plan-Neofluar 5x/0.16 NA Ph1"
       product_code: "420331-9911-000"
       magnification: 5.0
@@ -194,7 +195,8 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420331-9911-000/Objective-EC-Plan-Neofluar-5x-0.16-Ph1-M27"
       
-    - manufacturer: "Zeiss"
+    - id: "10x_air"
+      manufacturer: "Zeiss"
       model: "Plan-Apochromat 10x/0.45 NA Ph1"
       product_code: "420641-9910-000"
       magnification: 10.0
@@ -207,7 +209,8 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
       
-    - manufacturer: "Zeiss"
+    - id: "20x_air"
+      manufacturer: "Zeiss"
       model: "Plan-Apochromat 20x/0.8 NA"
       product_code: "420650-9902-000"
       magnification: 20.0
@@ -220,7 +223,8 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420650-9902-000/Objective-Plan-Apochromat-20x-0.8-M27"
 
-    - manufacturer: "Zeiss"
+    - id: "20x_air_2"
+      manufacturer: "Zeiss"
       model: "LD Plan-Neofluar 20x/0.4 NA Corr"
       product_code: "421350-9971-000"
       magnification: 20.0
@@ -233,7 +237,8 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421350-9971-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-M27"
       
-    - manufacturer: "Zeiss"
+    - id: "40x_air"
+      manufacturer: "Zeiss"
       model: "LD Plan-Neofluar 40x/0.6 NA Corr"
       product_code: "421360-9971-000"
       magnification: 40.0
@@ -246,7 +251,8 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/no/shop/objectives/421360-9971-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-M27"
 
-    - manufacturer: "Zeiss"
+    - id: "40x_water"
+      manufacturer: "Zeiss"
       model: "C-Apochromat 40x/1.2 W Corr"
       product_code: "421767-9970-000"
       magnification: 40.0
@@ -259,7 +265,8 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421767-9970-000/Objective-C-Apochromat-40x-1.2-W-Corr-M27"
       
-    - manufacturer: "Zeiss"
+    - id: "63x_oil"
+      manufacturer: "Zeiss"
       model: "Plan-Apochromat 63x/1.4 NA Oil"
       product_code: "420780-9900-000"
       magnification: 63.0
@@ -272,7 +279,8 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420780-9900-000/Objective-Plan-Apochromat-63x-1.4-Oil-M27"
 
-    - manufacturer: "Zeiss"
+    - id: "100x_oil"
+      manufacturer: "Zeiss"
       model: "alpha Plan-Apochromat 100x/1.46 NA Oil DIC"
       product_code: "420792-9800-000"
       magnification: 100.0

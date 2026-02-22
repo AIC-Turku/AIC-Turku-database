@@ -102,7 +102,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Special Optics"
+    - id: "16x_multi"
+      manufacturer: "Special Optics"
       model: "Airy beam dipping objective"
       product_code: ""
       magnification: 16.0

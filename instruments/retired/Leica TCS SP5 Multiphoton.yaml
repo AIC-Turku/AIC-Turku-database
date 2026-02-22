@@ -45,14 +45,16 @@ hardware:
     manufacturer: ''
     model: Photomultiplier Tubes (non-descanned)
   objectives:
-  - manufacturer: Leica
+  - id: "20x_water"
+    manufacturer: Leica
     model: HCX APO L
     magnification: 20.0
     numerical_aperture: 1.0
     working_distance: 1.95 mm
     immersion: water
     correction: apochromat
-  - manufacturer: Leica
+  - id: "25x_water"
+    manufacturer: Leica
     model: HCX IR APO L
     magnification: 25.0
     numerical_aperture: 0.95

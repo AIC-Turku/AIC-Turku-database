@@ -108,7 +108,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Olympus"
+    - id: "100x_oil"
+      manufacturer: "Olympus"
       model: "UPLXAPO100XO"
       product_code: ""
       magnification: 100.0

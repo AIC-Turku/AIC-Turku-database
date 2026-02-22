@@ -97,7 +97,8 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - manufacturer: "Olympus"
+    - id: "4x_air"
+      manufacturer: "Olympus"
       model: "Plan"
       product_code: ""
       magnification: 4.0
@@ -110,7 +111,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Olympus"
+    - id: "10x_air"
+      manufacturer: "Olympus"
       model: "UPlan FL"
       product_code: ""
       magnification: 10.0
@@ -123,7 +125,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Olympus"
+    - id: "20x_air"
+      manufacturer: "Olympus"
       model: "UPlan FL"
       product_code: ""
       magnification: 20.0
@@ -136,7 +139,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Olympus"
+    - id: "40x_air"
+      manufacturer: "Olympus"
       model: "UPlan FL"
       product_code: ""
       magnification: 40.0
@@ -149,7 +153,8 @@ hardware:
       notes: ""
       url: ""
       
-    - manufacturer: "Olympus"
+    - id: "100x_oil"
+      manufacturer: "Olympus"
       model: "UPlan Apochromat"
       product_code: ""
       magnification: 100.0
