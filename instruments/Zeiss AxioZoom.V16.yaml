@@ -1,63 +1,149 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Zeiss AxioZoom.V16
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Zeiss AxioZoom.V16
-  instrument_id: scope-zeiss-axiozoom-v16
-  manufacturer: Zeiss
-  model: AxioZoom.V16
-  stand_orientation: stereo
-  notes: 'type: "Fluorescence stereo zoom microscope" | filters: ["DAPI filter set
-    49 (Ex G365, Em BP 445/50)", "GFP filter set 38 HE (Ex BP 470/40, Em BP 525/50)",
-    "Alexa 568 filter set 45 (Ex BP 560/40, Em BP 630/75)", "Alexa 647 filter set
-    50 (Ex BP 640/30, Em BP 690/50)"] | additional_hardware: ["Zeiss ApoTome.2 module
-    (structured illumination for optical sectioning)"] | imaging_modes: ["Brightfield
-    (top/bottom illumination)", "Fluorescence", "Optical sectioning (structured illumination
-    SIM)"]'
+  display_name: "Zeiss AxioZoom.V16"
+  instrument_id: "scope-zeiss-axiozoom-v16"
+  manufacturer: "Zeiss"
+  model: "AxioZoom.V16"
+  stand_orientation: "stereo"
+  notes: "Fluorescence stereo zoom microscope. Imaging modes: Brightfield (top/bottom illumination), Fluorescence, Optical sectioning (structured illumination SIM)."
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- transmitted_brightfield
-- SIM
-modules: []
+  - "transmitted_brightfield"
+  - "SIM"
+  - "widefield_fluorescence"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - name: "SIM"
+    notes: "Zeiss ApoTome.2 module (structured illumination for optical sectioning)"
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Zeiss ZEN Pro
-    version: ''
+    name: "Zeiss ZEN Pro"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation) ---
   light_sources:
-  - kind: led
-    manufacturer: ''
-    model: Zeiss CL 9000 LED ring light (top illumination)
-    wavelength_nm: null
-    power: ''
-  - kind: led
-    manufacturer: ''
-    model: VisiLED MC1000 LED base light (bottom illumination)
-    wavelength_nm: null
-    power: ''
-  - kind: arc_lamp
-    manufacturer: ''
-    model: Zeiss HXPÂ 200C Mercury lamp
-    wavelength_nm: null
-    power: ''
+    - kind: "led"
+      manufacturer: "Zeiss"
+      model: "CL 9000 LED ring light"
+      wavelength_nm: null
+      power: ""
+      notes: "top illumination"
+      url: ""
+    - kind: "led"
+      manufacturer: "VisiLED"
+      model: "MC1000 LED base light"
+      wavelength_nm: null
+      power: ""
+      notes: "bottom illumination"
+      url: ""
+    - kind: "arc_lamp"
+      manufacturer: "Zeiss"
+      model: "HXP 200C"
+      wavelength_nm: null
+      power: ""
+      notes: "Mercury lamp"
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: sCMOS
-    manufacturer: ''
-    model: Hamamatsu ORCA-Flash4.0 LT+ sCMOS (2048Ã—2048 mono)
-  - kind: PMT
-    manufacturer: ''
-    model: Zeiss AxioCamÂ 105 Color (2560Ã—1920 color)
+    - kind: "sCMOS"
+      manufacturer: "Hamamatsu"
+      model: "ORCA-Flash4.0 LT+ sCMOS"
+      notes: "2048x2048 mono"
+      url: ""
+    - kind: "CMOS"
+      manufacturer: "Zeiss"
+      model: "AxioCam 105 Color"
+      notes: "2560x1920 color"
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "DAPI (Filter set 49)"
+      location: "Internal Turret"
+      product_code: "49"
+      excitation: "G 365"
+      dichroic: ""
+      emission: "BP 445/50"
+      notes: ""
+      url: ""
+    - name: "GFP (Filter set 38 HE)"
+      location: "Internal Turret"
+      product_code: "38 HE"
+      excitation: "BP 470/40"
+      dichroic: ""
+      emission: "BP 525/50"
+      notes: ""
+      url: ""
+    - name: "Alexa 568 (Filter set 45)"
+      location: "Internal Turret"
+      product_code: "45"
+      excitation: "BP 560/40"
+      dichroic: ""
+      emission: "BP 630/75"
+      notes: ""
+      url: ""
+    - name: "Alexa 647 (Filter set 50)"
+      location: "Internal Turret"
+      product_code: "50"
+      excitation: "BP 640/30"
+      dichroic: ""
+      emission: "BP 690/50"
+      notes: ""
+      url: ""
+
+  # --- Objectives ---
   objectives:
-  - manufacturer: ''
-    model: ''
-    magnification: 0.5
-    numerical_aperture: 0.125
-    working_distance: 114 mm
-    immersion: air
-    correction: ''
-  - manufacturer: ''
-    model: ''
-    magnification: 1.0
-    numerical_aperture: 0.125
-    working_distance: 56 mm
-    immersion: air
-    correction: ''
+    - manufacturer: "Zeiss"
+      model: ""
+      product_code: ""
+      magnification: 0.5
+      numerical_aperture: 0.125
+      working_distance: "114 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+    - manufacturer: "Zeiss"
+      model: ""
+      product_code: ""
+      magnification: 1.0
+      numerical_aperture: 0.125
+      working_distance: "56 mm"
+      immersion: "air"
+      correction: ""
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
