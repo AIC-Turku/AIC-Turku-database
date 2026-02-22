@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: Zeiss AxioZoom.V16
+# MICROSCOPE CONFIGURATION: Zeiss AxioZoom V16
 # -----------------------------------------------------------------------------
 instrument:
   display_name: "Zeiss AxioZoom.V16"
