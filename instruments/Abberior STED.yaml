@@ -1,81 +1,158 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Abberior STED
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: Abberior STED
-  instrument_id: scope-1e33f909
-  manufacturer: Abberior
-  model: STED
-  stand_orientation: other
-  notes: ''
+  display_name: "Abberior STED"
+  instrument_id: "scope-1e33f909"
+  manufacturer: "Abberior"
+  model: "STED"
+  stand_orientation: "other"
+  notes: ""
+  url: ""
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
 modalities:
-- STED
-- confocal_point
+  - "STED"
+  - "confocal_point"
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - name: "hardware_autofocus"
+    notes: ""
+    url: ""
+  - name: "incubation"
+    notes: ""
+    url: ""
+  - name: "FCS"
+    notes: ""
+    url: ""
+  - name: "FLIM"
+    notes: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: Abberior Imspector
-    version: ''
+    name: "Abberior Imspector"
+    version: ""
+    url: ""
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
 hardware:
+  
+  # --- Scanner ---
   scanner:
-    type: none
-    notes: ''
+    type: "none"
+    notes: ""
+    url: ""
+
+  # --- Light Sources (Excitation & Depletion) ---
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm excitation (pulsed)
-    wavelength_nm: 488
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 561 nm excitation (pulsed)
-    wavelength_nm: 561
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 640 nm excitation (pulsed)
-    wavelength_nm: 640
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 580 nm STED depletion (continuous, for 488 nm)
-    wavelength_nm: 580
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: 775 nm STED depletion (pulsed, for 561 & 640 nm)
-    wavelength_nm: 775
-    power: ''
+    - kind: "laser"
+      manufacturer: ""
+      model: "488 nm"
+      wavelength_nm: "488"
+      power: ""
+      notes: "pulsed excitation"
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "561 nm"
+      wavelength_nm: "561"
+      power: ""
+      notes: "pulsed excitation"
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "640 nm"
+      wavelength_nm: "640"
+      power: ""
+      notes: "pulsed excitation"
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "580 nm"
+      wavelength_nm: "580"
+      power: ""
+      notes: "STED depletion (continuous, for 488 nm)"
+      url: ""
+    - kind: "laser"
+      manufacturer: ""
+      model: "775 nm"
+      wavelength_nm: "775"
+      power: ""
+      notes: "STED depletion (pulsed, for 561 & 640 nm)"
+      url: ""
+
+  # --- Detectors (Emission) ---
   detectors:
-  - kind: PMT
-    manufacturer: ''
-    model: Photomultiplier Tube
-  - kind: APD
-    manufacturer: ''
-    model: Avalanche Photodiodes
-  - kind: CCD
-    manufacturer: ''
-    model: Monochrome CCD camera
+    - kind: "PMT"
+      manufacturer: ""
+      model: "Photomultiplier Tube"
+      notes: ""
+      url: ""
+    - kind: "APD"
+      manufacturer: ""
+      model: "Avalanche Photodiodes"
+      notes: ""
+      url: ""
+    - kind: "CCD"
+      manufacturer: ""
+      model: "Monochrome CCD camera"
+      notes: ""
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters: []
+
+  # --- Objectives ---
   objectives:
-  - magnification: 20.0
-    numerical_aperture: 0.4
-    immersion: air
-    correction: plan_apochromat
-    manufacturer: Olympus
-    model: Plan
-    working_distance: 1.2 mm
-  - magnification: 60.0
-    numerical_aperture: 1.2
-    immersion: water
-    correction: apochromat
-    manufacturer: Olympus
-    model: UPLSAPO
-    working_distance: 0.28 mm
-  - magnification: 100.0
-    numerical_aperture: 1.4
-    immersion: oil
-    correction: apochromat
-    manufacturer: Olympus
-    model: UPLSAPO
-    working_distance: 0.13 mm
-modules:
-- hardware_autofocus
-- incubation
-- FCS
-- FLIM
+    - manufacturer: "Olympus"
+      model: "Plan"
+      product_code: ""
+      magnification: 20.0
+      numerical_aperture: 0.4
+      working_distance: "1.2 mm"
+      immersion: "air"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Olympus"
+      model: "UPLSAPO"
+      product_code: ""
+      magnification: 60.0
+      numerical_aperture: 1.2
+      working_distance: "0.28 mm"
+      immersion: "water"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
+      
+    - manufacturer: "Olympus"
+      model: "UPLSAPO"
+      product_code: ""
+      magnification: 100.0
+      numerical_aperture: 1.4
+      working_distance: "0.13 mm"
+      immersion: "oil"
+      correction: "apochromat"
+      afc_compatible: false
+      specialties: ""
+      notes: ""
+      url: ""
