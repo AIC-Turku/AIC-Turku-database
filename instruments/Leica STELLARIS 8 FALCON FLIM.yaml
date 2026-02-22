@@ -1,8 +1,8 @@
 # -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: Leica STELLARIS 8 FALCON FLIM
+# MICROSCOPE CONFIGURATION: Leica STELLARIS 8
 # -----------------------------------------------------------------------------
 instrument:
-  display_name: "Leica STELLARIS 8 FALCON FLIM (Resonant)"
+  display_name: "Leica STELLARIS 8"
   instrument_id: "scope-leica-stellaris-8-falcon-flim-resonant"
   manufacturer: "Leica Microsystems"
   model: "STELLARIS 8 FALCON FLIM"
