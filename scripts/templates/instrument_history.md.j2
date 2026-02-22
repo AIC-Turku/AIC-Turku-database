@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 2. Helper to create a single Chart.js card
   function createChartCard(metricId, chartConfig) {
-    // Fallback to auto-generating a nice title if it's not in the METRIC_NAMES dict
     let readableTitle = metricNames[metricId];
     if (!readableTitle) {
        const parts = metricId.split('.');
@@ -128,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
     rootContainer.appendChild(section);
   }
 
-  // --- Render Laser Section ---
+  // Render Laser Section
   if (Object.keys(groups.laser.items).length > 0) {
     renderSection(groups.laser.title, (grid) => {
       for (const [mId, config] of Object.entries(groups.laser.items)) {
@@ -137,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // --- Render Optical Section (Grouped by Objective) ---
+  // Render Optical Section
   const objIds = Object.keys(groups.optical.subGroups);
   if (objIds.length > 0) {
     const section = document.createElement('div');
@@ -151,7 +150,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     for (const objId of objIds) {
        const subHeading = document.createElement('h4');
-       // Format "60x_oil" to "60X OIL Objective"
        subHeading.textContent = objId.replace(/_/g, ' ').toUpperCase() + " Objective";
        subHeading.style.color = 'var(--md-default-fg-color--light)';
        subHeading.style.marginTop = '1.5rem';
@@ -171,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
     rootContainer.appendChild(section);
   }
 
-  // --- Render Environment/Other Section ---
+  // Render Environment Section
   if (Object.keys(groups.other.items).length > 0) {
     renderSection(groups.other.title, (grid) => {
       for (const [mId, config] of Object.entries(groups.other.items)) {
@@ -179,7 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-
 });
 </script>
 
@@ -187,13 +184,101 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ## 📜 Event Timeline
 
+<style>
+/* Responsive Split Timeline CSS */
+.aic-split-timeline {
+  position: relative;
+  max-width: 100%;
+  margin: 2rem auto;
+}
+/* The central vertical line */
+.aic-split-timeline::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  background-color: var(--md-default-fg-color--lightest);
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: -2px;
+  border-radius: 2px;
+}
+/* Individual event container */
+.aic-timeline-container {
+  padding: 10px 40px;
+  position: relative;
+  background-color: inherit;
+  width: 50%;
+  box-sizing: border-box;
+}
+/* QC on the Left */
+.aic-timeline-left {
+  left: 0;
+}
+/* Maintenance on the Right */
+.aic-timeline-right {
+  left: 50%;
+}
+/* The circles on the timeline */
+.aic-timeline-marker {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  right: -22px;
+  background-color: var(--md-default-bg-color);
+  border: 3px solid;
+  top: 15px;
+  border-radius: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.aic-timeline-right .aic-timeline-marker {
+  left: -22px;
+}
+/* The actual content card */
+.aic-timeline-content {
+  padding: 1.2rem;
+  background-color: var(--md-default-bg-color);
+  position: relative;
+  border-radius: 0.4rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+/* Media query for mobile: push line to the left */
+@media screen and (max-width: 768px) {
+  .aic-split-timeline::after {
+    left: 31px;
+  }
+  .aic-timeline-container {
+    width: 100%;
+    padding-left: 70px;
+    padding-right: 0px;
+  }
+  .aic-timeline-right {
+    left: 0%;
+  }
+  .aic-timeline-left .aic-timeline-marker,
+  .aic-timeline-right .aic-timeline-marker {
+    left: 9px;
+  }
+}
+</style>
+
 {% set all_events = (qc_events | default([], true)) + (maintenance_events | default([], true)) %}
 {% set sorted_events = all_events | sort(attribute='date', reverse=True) %}
 
 {% if sorted_events %}
-<div style="margin-top: 2rem;">
+<div class="aic-split-timeline">
   {% for event in sorted_events %}
     {% set is_qc = event in qc_events %}
+    
+    {# QC goes on the left, Maintenance goes on the right #}
+    {% set side_class = 'aic-timeline-left' if is_qc else 'aic-timeline-right' %}
     {% set event_icon = '🔬' if is_qc else '🔧' %}
     {% set event_label = 'QC Session' if is_qc else 'Maintenance' %}
     
@@ -201,13 +286,12 @@ document.addEventListener('DOMContentLoaded', function() {
     {% set s_lower = event.status | lower %}
     {% set status_color = '#00e676' if s_lower in ['pass', 'completed', 'online'] else '#ffea00' if s_lower in ['warn', 'limited'] else '#ff1744' if s_lower in ['fail', 'out_of_service'] else 'var(--md-default-fg-color--light)' %}
     
-    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; position: relative;">
-      
-      <div title="{{ event_label }}" style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: var(--md-default-bg-color); border: 3px solid {{ status_color }}; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="aic-timeline-container {{ side_class }}">
+      <div class="aic-timeline-marker" title="{{ event_label }}" style="border-color: {{ status_color }};">
         {{ event_icon }}
       </div>
       
-      <div style="flex-grow: 1; padding: 1.2rem; border: 1px solid var(--md-default-fg-color--lightest); border-radius: 0.4rem; box-shadow: 0 4px 6px rgba(0,0,0,0.02); background: var(--md-default-bg-color);">
+      <div class="aic-timeline-content">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
           <div>
             <strong style="font-size: 1.1rem; color: var(--md-default-fg-color);">{{ event.date | default('Unknown Date', true) }}</strong>
