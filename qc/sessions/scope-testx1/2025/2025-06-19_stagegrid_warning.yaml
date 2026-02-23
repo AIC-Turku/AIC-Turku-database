@@ -79,27 +79,27 @@ computed_provenance:
   run_utc: "2025-06-19T11:55:00Z"
 
 metrics_computed:
-  - metric_id: "laser.linearity_r2_488"
+  - metric_id: "laser.488.linearity_r2"
     value: 0.997
     unit: "unitless"
-  - metric_id: "psf.fwhm_x_um"
-    value: 0.24
-    unit: "um"
-  - metric_id: "psf.fwhm_y_um"
-    value: 0.24
-    unit: "um"
-  - metric_id: "psf.fwhm_z_um"
-    value: 0.61
-    unit: "um"
-  - metric_id: "coreg.distance_488_561_um"
-    value: 0.07
-    unit: "um"
-  - metric_id: "stage.repeatability_sigma_x_um"
-    value: 0.38
-    unit: "um"
-  - metric_id: "stage.repeatability_sigma_y_um"
-    value: 0.34
-    unit: "um"
+  - metric_id: "psf.60x_oil.525.fwhm_xy_max_nm"
+    value: 240
+    unit: "nm"
+  - metric_id: "psf.60x_oil.525.fwhm_xy_min_nm"
+    value: 240
+    unit: "nm"
+  - metric_id: "psf.60x_oil.525.fwhm_z_nm"
+    value: 610
+    unit: "nm"
+  - metric_id: "chromatic_shift.60x_oil.561_to_488.dist_nm"
+    value: 70
+    unit: "nm"
+  - metric_id: "stage.repeatability_sigma_x_nm"
+    value: 380
+    unit: "nm"
+  - metric_id: "stage.repeatability_sigma_y_nm"
+    value: 340
+    unit: "nm"
 
 evaluation:
   benchmark_ref: "benchmarks/scope-testx1.yaml@main"
@@ -107,9 +107,9 @@ evaluation:
   evaluated_by: "github_action:qceval"
   overall_status: "warn"
   results:
-    - metric_id: "psf.fwhm_z_um"
+    - metric_id: "psf.60x_oil.525.fwhm_z_nm"
       status: "warn"
-      threshold: "warn>0.60um, fail>0.75um"
+      threshold: "warn>600nm, fail>750nm"
       message: "Stage repeatability above warning threshold; tiling jobs restricted."
 
 artifacts:

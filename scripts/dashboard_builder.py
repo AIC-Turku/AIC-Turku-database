@@ -32,6 +32,16 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 
 METRIC_NAMES: dict[str, str] = {
+    "laser.488.linearity_r2": "Laser Linearity 488nm (R²)",
+    "laser.488.stability_long_delta_pct": "Laser Stability 488nm (Δ%)",
+    "psf.60x_oil.525.fwhm_xy_max_nm": "PSF XY Max FWHM (60x Oil, 525nm)",
+    "psf.60x_oil.525.fwhm_xy_min_nm": "PSF XY Min FWHM (60x Oil, 525nm)",
+    "psf.60x_oil.525.fwhm_z_nm": "PSF Z FWHM (60x Oil, 525nm)",
+    "chromatic_shift.60x_oil.561_to_488.dist_nm": "Chromatic Shift 561→488 (60x Oil, nm)",
+    "stage.repeatability_sigma_x_nm": "Stage Repeatability σX (nm)",
+    "stage.repeatability_sigma_y_nm": "Stage Repeatability σY (nm)",
+
+    # Legacy metric IDs kept for backward compatibility in older ledgers.
     "psf.fwhm_x_um": "PSF Lateral FWHM X (µm)",
     "psf.fwhm_y_um": "PSF Lateral FWHM Y (µm)",
     "psf.fwhm_z_um": "PSF Axial FWHM Z (µm)",
