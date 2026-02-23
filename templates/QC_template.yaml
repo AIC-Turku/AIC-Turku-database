@@ -11,6 +11,8 @@
 # - Humans MUST NOT write pass/fail. Only CI writes `evaluation`.
 # - Human-entered laser data is structured as series (linearity and/or stability).
 # - Large artifacts (raw images, CSV logs) live in OMERO; YAML stores pointers.
+# - Metric IDs explicitly encode hardware IDs and measurement protocols to prevent 
+#   "apples to oranges" comparisons on the dashboard charts.
 # =============================================================================
 
 schema_version: 1
@@ -121,27 +123,44 @@ laser_inputs_human:
 # -----------------------------------------------------------------------------
 # Scripts should write here, not in human sections.
 computed_provenance:
-  pipeline: "turku_psf_analyzer"                     # Name of your new Python tool
+  pipeline: "turku_psf_analyzer"                     # Name of your custom Python tool
   version: "1.0.0"                                   # Pipeline version
   git_commit: "abcdef1"                              # Commit hash of analysis code
   run_utc: "2026-02-16T09:02:00Z"                    # When analysis ran
 
-# Each entry is a scalar designed for trending and CI evaluation.
-# Naming Convention: <category>.<objective_slug>.<channel>.<metric>
+# =============================================================================
+# NAMING CONVENTIONS FOR STRICT LONGITUDINAL TRACKING (Dashboard Compatibility)
+# =============================================================================
+# - Absolute Lasers: laser.<position>.<wavelength>.<setpoint>.<metric> 
+#                    (e.g., laser.at_obj.488.100pct.power_mw)
+# - Relative Lasers: laser.<wavelength>.<metric> 
+#                    (e.g., laser.488.linearity_r2)
+# - Optical/PSF:     psf.<objective_id>.<channel_nm>.<metric> 
+#                    (e.g., psf.60x_sil.525.fwhm_z_nm)
+# - Chromatic Shift: chromatic_shift.<objective_id>.<target_wl>_to_<ref_wl>.<metric>
+# =============================================================================
+
 metrics_computed:
 
-  # Laser metrics computed from laser_inputs_human or referenced CSVs
-  - metric_id: "laser.linearity_r2_488"
+  # --- ABSOLUTE LASER METRICS (Protocol specific) ---
+  - metric_id: "laser.at_obj.488.100pct.power_mw"
+    value: 2.35
+    unit: "mW"
+    details: "Max power at objective. Will spawn a separate chart from fiber measurements."
+
+  # --- RELATIVE LASER METRICS (Comparable across setups) ---
+  - metric_id: "laser.488.linearity_r2"
     value: 0.998
     unit: "unitless"
     details: "Regression of power vs setpoint (linearity_series)."
 
-  - metric_id: "laser.long_term_stability_delta_percent_488"
+  - metric_id: "laser.488.stability_long_delta_pct"
     value: 2.4
     unit: "percent"
     details: "Δ% computed from long-term stability series."
 
-  # PSF metrics computed from bead stack by custom Python tool
+
+  # --- PSF METRICS (Namespaced by objective ID and channel) ---
   - metric_id: "psf.60x_sil.525.fwhm_xy_max_nm"
     value: 288.3
     unit: "nm"
@@ -155,13 +174,14 @@ metrics_computed:
     value: 0.93
     unit: "unitless"
 
-  # Chromatic shift metrics computed from custom Python tool
+  # --- CHROMATIC SHIFT (Namespaced by objective ID) ---
   - metric_id: "chromatic_shift.60x_sil.425_to_525.z_nm"
     value: 127.5
     unit: "nm"
     details: "Axial shift of 425nm channel relative to 525nm."
 
-  # Stage repeatability metrics computed from repeatability acquisition
+
+  # --- STAGE / HARDWARE METRICS ---
   - metric_id: "stage.repeatability_sigma_x_nm"
     value: 180
     unit: "nm"
@@ -179,7 +199,7 @@ evaluation:
   overall_status: "warn"                                          # pass | warn | fail
 
   results:
-    - metric_id: "laser.short_term_stability_delta_percent_488"
+    - metric_id: "laser.488.stability_long_delta_pct"
       status: "pass"
       threshold: "warn>3.0%, fail>5.0%"
       message: ""
@@ -199,15 +219,15 @@ artifacts:
     uri: "omero://<server>/<group>/dataset/<id>/file/laser_linearity.csv"
     description: "Laser setpoint sweep (linearity)."
 
-  - artifact_id: "art_psf_stack_raw_60x"
+  - artifact_id: "art_psf_stack_raw_60x_sil"
     role: "raw_image"
     uri: "omero://<server>/<group>/image/<id>"
     description: "Raw sub-diffraction bead stack for 60x Silicon."
     checksum_sha256: "<optional>"
 
-  - artifact_id: "art_psf_preview_60x"
+  - artifact_id: "art_psf_preview_60x_sil"
     role: "preview"
-    uri: "qc/<microscope>/<YYYY>/previews/<qc_id>_60x_psf_mip.png"
+    uri: "qc/<microscope>/<YYYY>/previews/<qc_id>_60x_sil_mip.png"
     description: "XY Maximum Intensity Projection preview."
 
   - artifact_id: "art_stage_repeat_raw"
