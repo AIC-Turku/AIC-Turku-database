@@ -9,8 +9,8 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "stereo"
-  location: ""
-  notes: "Fluorescence stereo zoom microscope. Imaging modes: Brightfield (top/bottom illumination), Fluorescence, Optical sectioning (structured illumination SIM)."
+  location: "BioCity, 5th floor, room Dunkel"
+  notes: "Fluorescence stereo zoom microscope with dual-camera detection (color + monochrome). Imaging modes: Brightfield (top/bottom illumination), Fluorescence, Optical sectioning (ApoTome.2 structured illumination SIM). Reservation system: Zeiss AxioZoom.V16. Fluorophore selection guide available for users."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -53,7 +53,7 @@ hardware:
   light_sources:
     - kind: "led"
       manufacturer: "Zeiss"
-      model: "CL 9000 LED ring light"
+      model: "CL 9000 LED CAN ring light"
       wavelength_nm: null
       power: ""
       notes: "top illumination"
@@ -94,12 +94,12 @@ hardware:
     - name: "DAPI (Filter set 49)"
       location: "Internal Turret"
       product_code: "49"
-      excitation: "G 365"
+      excitation: "G365"
       dichroic: ""
       emission: "BP 445/50"
       notes: ""
       url: ""
-    - name: "GFP (Filter set 38 HE)"
+    - name: "Alexa 488 (Filter set 38 HE)"
       location: "Internal Turret"
       product_code: "38 HE"
       excitation: "BP 470/40"
@@ -128,7 +128,7 @@ hardware:
   objectives:
     - id: "0.5x_air"
       manufacturer: "Zeiss"
-      model: ""
+      model: "PlanApo Z"
       product_code: ""
       magnification: 0.5
       numerical_aperture: 0.125
@@ -137,11 +137,11 @@ hardware:
       correction: ""
       afc_compatible: false
       specialties: ""
-      notes: ""
+      notes: "System magnification range 3.5x-56x. Field of view range 66-4 mm. ApoTome compatible: No."
       url: ""
     - id: "1x_air"
       manufacturer: "Zeiss"
-      model: ""
+      model: "PlanApo Z"
       product_code: ""
       magnification: 1.0
       numerical_aperture: 0.125
@@ -150,5 +150,5 @@ hardware:
       correction: ""
       afc_compatible: false
       specialties: ""
-      notes: ""
+      notes: "System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome compatible from 40x-112x."
       url: ""
