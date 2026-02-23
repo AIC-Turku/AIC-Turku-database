@@ -1,0 +1,18 @@
+schema_version: 1
+record_type: maintenance_event
+
+event_id: "maint_scope-andor-bc43_20260223_not_installed"
+microscope: "scope-andor-bc43"
+started_utc: "2026-02-23T09:00:00Z"
+ended_utc: "2026-02-23T09:05:00Z"
+performed_by: "AIC Staff"
+service_provider: "Internal"
+
+type: "issue_reported"
+
+microscope_status_before: "operational"
+microscope_status_after: "out_of_service"
+
+reason_details: "System has been delivered but is currently awaiting final installation and validation."
+action: "Marked as offline until installation is complete and initial QC is passed."
+parts_replaced: []
