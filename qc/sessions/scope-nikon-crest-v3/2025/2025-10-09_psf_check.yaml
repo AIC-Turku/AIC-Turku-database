@@ -31,6 +31,17 @@ inputs_human:
     unit: "C"
     details: "Recorded from PSF report metadata."
 
+laser_inputs_human:
+  measurement_position: "at_objective"
+  measurement_position_details: "Not measured in this PSF-only session."
+  power_meter:
+    model: "not_applicable"
+    serial: ""
+    calibration_due: ""
+    notes: "Laser power linearity/stability was not part of this session."
+  linearity_series: []
+  stability_series: []
+
 # -----------------------------------------------------------------------------
 # COMPUTED METRICS (Generated via ImageJ)
 # -----------------------------------------------------------------------------
@@ -115,6 +126,13 @@ metrics_computed:
     value: -25.4
     unit: "nm"
     details: "Axial shift of Blue 425 relative to Green 525."
+
+evaluation:
+  benchmark_ref: "benchmarks/scope-nikon-crest-v3.yaml@main"
+  evaluated_utc: "2025-10-09T14:10:00Z"
+  evaluated_by: "github_action:qceval"
+  overall_status: "pass"
+  results: []
 
 # -----------------------------------------------------------------------------
 # ARTIFACT POINTERS 
