@@ -46,6 +46,10 @@ def _is_valid_instrument_id(value: str) -> bool:
     return bool(INSTRUMENT_ID_PATTERN.fullmatch(value))
 
 
+def _is_non_empty_string(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 def validate_instrument_ledgers(
     *,
     instruments_dir: Path = Path("instruments"),
@@ -203,11 +207,45 @@ def validate_event_ledgers(
                 )
 
             if record_type == "maintenance_event":
+                required_maintenance_fields = (
+                    "started_utc",
+                    "service_provider",
+                    "reason_details",
+                    "action",
+                )
+                for field_name in required_maintenance_fields:
+                    if _is_non_empty_string(payload.get(field_name)):
+                        continue
+                    issues.append(
+                        ValidationIssue(
+                            code="missing_maintenance_field",
+                            path=event_file.as_posix(),
+                            message=(
+                                f"Missing required maintenance field '{field_name}' "
+                                "(must be a non-empty string)."
+                            ),
+                        )
+                    )
+
+                has_maintenance_id = _is_non_empty_string(payload.get("maintenance_id"))
+                has_event_id = _is_non_empty_string(payload.get("event_id"))
+                if has_maintenance_id == has_event_id:
+                    issues.append(
+                        ValidationIssue(
+                            code="invalid_maintenance_id_shape",
+                            path=event_file.as_posix(),
+                            message=(
+                                "Maintenance events must include exactly one ID field: "
+                                "either 'maintenance_id' or 'event_id'."
+                            ),
+                        )
+                    )
+
                 for status_key in ("microscope_status_before", "microscope_status_after"):
                     raw_status = payload.get(status_key)
                     if raw_status is None:
                         continue
-                    if not isinstance(raw_status, str) or not raw_status.strip():
+                    if not _is_non_empty_string(raw_status):
                         issues.append(
                             ValidationIssue(
                                 code="invalid_maintenance_status",
@@ -220,15 +258,15 @@ def validate_event_ledgers(
                         )
                         continue
 
-                    maintenance_status = raw_status.strip().lower()
-                    if maintenance_status not in allowed_maintenance_statuses:
+                    if raw_status.strip() not in allowed_maintenance_statuses:
                         issues.append(
                             ValidationIssue(
                                 code="invalid_maintenance_status",
                                 path=event_file.as_posix(),
                                 message=(
                                     f"Invalid {status_key} '{raw_status}'. "
-                                    f"Allowed values: {', '.join(ALLOWED_MAINTENANCE_STATUSES)}."
+                                    "Use normalized lowercase values from: "
+                                    f"{', '.join(ALLOWED_MAINTENANCE_STATUSES)}."
                                 ),
                             )
                         )
