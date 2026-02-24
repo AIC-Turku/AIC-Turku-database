@@ -14,6 +14,8 @@ hide:
 {% set record_type = payload.get('record_type', '') | lower %}
 {% set is_maintenance = record_type.startswith('maintenance') %}
 {% set reason_or_suite = payload.get('reason') or payload.get('type') or payload.get('reason_details') or '—' %}
+{% set maintenance_reason_details = payload.get('reason_details') or payload.get('reason') or '—' %}
+{% set maintenance_action_details = payload.get('action_details') or payload.get('action') or '—' %}
 
 ## 📊 Report Overview
 
@@ -67,15 +69,22 @@ hide:
   </div>
   {% endif %}
 
-  {% if is_maintenance or payload.get('action') %}
+  {% if is_maintenance or payload.get('action') or payload.get('action_details') %}
   <div class="aic-card">
     <div class="aic-card__body">
       <div class="aic-card__title">Maintenance Action</div>
-      
-      <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ payload.get('action', '—') }}</p>
-      
-      {% if payload.get('reason_details') %}
-        <p style="font-size: 0.9rem; color: var(--md-default-fg-color--light);"><em>{{ payload.get('reason_details') }}</em></p>
+
+      {% if is_maintenance %}
+      <div style="font-size: 0.95rem; margin-bottom: 0.6rem;">
+        <strong>Reason Details:</strong><br>
+        {{ maintenance_reason_details }}
+      </div>
+      <div style="font-size: 0.95rem; margin-bottom: 0.5rem;">
+        <strong>Action Details:</strong><br>
+        {{ maintenance_action_details }}
+      </div>
+      {% else %}
+      <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ payload.get('action', payload.get('action_details', '—')) }}</p>
       {% endif %}
       
       {% if payload.get('microscope_status_after') %}
