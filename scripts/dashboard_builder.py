@@ -19,10 +19,12 @@ The builder is intentionally deterministic: same inputs -> same output tree.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
 import shutil
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -61,13 +63,41 @@ def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     return [p for p in sorted(base_dir.rglob("*")) if p.is_file() and p.suffix.lower() in {".yaml", ".yml"}]
 
 
-def _load_yaml_file(path: Path) -> dict[str, Any] | None:
+@dataclass
+class YamlLoadError:
+    path: str
+    message: str
+
+
+def _load_yaml_file(path: Path, load_errors: list[YamlLoadError] | None = None) -> dict[str, Any] | None:
     try:
         raw = path.read_text(encoding="utf-8")
         parsed = yaml.safe_load(raw)
-    except (OSError, yaml.YAMLError):
+    except (OSError, yaml.YAMLError) as exc:
+        if load_errors is not None:
+            load_errors.append(YamlLoadError(path=path.as_posix(), message=str(exc)))
         return None
     return parsed if isinstance(parsed, dict) else None
+
+
+def _print_yaml_error_report(load_errors: list[YamlLoadError]) -> None:
+    if not load_errors:
+        return
+
+    unique_errors: list[YamlLoadError] = []
+    seen: set[tuple[str, str]] = set()
+    for err in load_errors:
+        key = (err.path, err.message)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_errors.append(err)
+
+    print("\nYAML load failures detected:", file=sys.stderr)
+    for index, err in enumerate(unique_errors, start=1):
+        print(f"  {index}. {err.path}", file=sys.stderr)
+        print(f"     {err.message}", file=sys.stderr)
+    print(f"\nTotal YAML failures: {len(unique_errors)}", file=sys.stderr)
 
 
 def _parse_iso_datetime(raw_value: Any) -> datetime | None:
@@ -236,7 +266,9 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
     return []
 
 
-def get_all_instrument_logs(log_base_dir: str, instrument_id: str) -> list[dict[str, Any]]:
+def get_all_instrument_logs(
+    log_base_dir: str, instrument_id: str, load_errors: list[YamlLoadError] | None = None
+) -> list[dict[str, Any]]:
     if not instrument_id or not instrument_id.strip():
         return []
 
@@ -245,7 +277,7 @@ def get_all_instrument_logs(log_base_dir: str, instrument_id: str) -> list[dict[
     candidates: list[tuple[datetime, Path, dict[str, Any]]] = []
 
     for yaml_file in _iter_yaml_files(base_path):
-        payload = _load_yaml_file(yaml_file)
+        payload = _load_yaml_file(yaml_file, load_errors=load_errors)
         if payload is None:
             continue
 
@@ -399,7 +431,9 @@ def _discover_image_filename(instrument_id: str) -> str:
     return "placeholder.svg"
 
 
-def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any]]:
+def load_instruments(
+    instruments_dir: str = "instruments", load_errors: list[YamlLoadError] | None = None
+) -> list[dict[str, Any]]:
     base = Path(instruments_dir)
     instruments: list[dict[str, Any]] = []
 
@@ -408,7 +442,7 @@ def load_instruments(instruments_dir: str = "instruments") -> list[dict[str, Any
         if "retired" in yaml_file.parts:
             continue
 
-        payload = _load_yaml_file(yaml_file)
+        payload = _load_yaml_file(yaml_file, load_errors=load_errors)
         if payload is None:
             continue
 
@@ -489,7 +523,7 @@ def build_nav(instruments: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def main() -> None:
+def main(strict: bool = True) -> int:
     repo_root = Path.cwd()
     docs_root = repo_root / "dashboard_docs"
 
@@ -512,7 +546,8 @@ def main() -> None:
     tpl_history = jinja_env.get_template("instrument_history.md.j2")
     tpl_event = jinja_env.get_template("event_detail.md.j2")
 
-    instruments = load_instruments("instruments")
+    load_errors: list[YamlLoadError] = []
+    instruments = load_instruments("instruments", load_errors=load_errors)
 
     # Aggregations
     all_modalities = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
@@ -523,8 +558,8 @@ def main() -> None:
     for inst in instruments:
         instrument_id = inst["id"]
 
-        qc_logs = get_all_instrument_logs("qc/sessions", instrument_id)
-        maint_logs = get_all_instrument_logs("maintenance/events", instrument_id)
+        qc_logs = get_all_instrument_logs("qc/sessions", instrument_id, load_errors=load_errors)
+        maint_logs = get_all_instrument_logs("maintenance/events", instrument_id, load_errors=load_errors)
 
         latest_qc = qc_logs[-1]["data"] if qc_logs else None
         latest_maint = maint_logs[-1]["data"] if maint_logs else None
@@ -773,6 +808,26 @@ def main() -> None:
 
     (repo_root / "mkdocs.yml").write_text(yaml.safe_dump(mkdocs_config, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
+    if load_errors:
+        _print_yaml_error_report(load_errors)
+        if strict:
+            return 1
+
+    return 0
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build dashboard docs from YAML ledgers.")
+    parser.add_argument(
+        "--strict",
+        dest="strict",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Fail with non-zero exit code if any YAML file cannot be parsed (default: strict).",
+    )
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
-    main()
+    args = _parse_args()
+    raise SystemExit(main(strict=args.strict))
