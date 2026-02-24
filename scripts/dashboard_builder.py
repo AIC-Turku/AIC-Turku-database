@@ -451,12 +451,19 @@ def load_instruments(
             inst_section = {}
 
         display_name = clean_text(inst_section.get("display_name")) or yaml_file.stem
-        raw_instrument_id = clean_text(inst_section.get("instrument_id"))
-        
-        if not raw_instrument_id:
-            instrument_id = "scope-" + slugify(display_name)
-        else:
-            instrument_id = slugify(raw_instrument_id)
+        raw_instrument_id = inst_section.get("instrument_id")
+
+        if not isinstance(raw_instrument_id, str) or not raw_instrument_id.strip():
+            if load_errors is not None:
+                load_errors.append(
+                    YamlLoadError(
+                        path=yaml_file.as_posix(),
+                        message="Missing required instrument.instrument_id (must be a non-empty string).",
+                    )
+                )
+            continue
+
+        instrument_id = slugify(raw_instrument_id)
 
         manufacturer = clean_text(inst_section.get("manufacturer"))
         model = clean_text(inst_section.get("model"))
