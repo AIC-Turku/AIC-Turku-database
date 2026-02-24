@@ -23,7 +23,10 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  const themeColor = 'var(--md-typeset-a-color, #4051b5)';
+  const themeColor =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--md-typeset-a-color')
+      .trim() || '#4051b5';
 
   // 1. Group the data dynamically
   const groups = {
