@@ -30,6 +30,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from validate import (
+    DEFAULT_ALLOWED_RECORD_TYPES,
+    print_validation_report,
+    validate_event_ledgers,
+)
+
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
@@ -530,7 +536,15 @@ def build_nav(instruments: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def main(strict: bool = True) -> int:
+def _allowed_record_types_from_arg(raw: str | None) -> tuple[str, ...]:
+    if not raw:
+        return DEFAULT_ALLOWED_RECORD_TYPES
+
+    values = [item.strip() for item in raw.split(",") if item.strip()]
+    return tuple(values) if values else DEFAULT_ALLOWED_RECORD_TYPES
+
+
+def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_ALLOWED_RECORD_TYPES) -> int:
     repo_root = Path.cwd()
     docs_root = repo_root / "dashboard_docs"
 
@@ -555,6 +569,12 @@ def main(strict: bool = True) -> int:
 
     load_errors: list[YamlLoadError] = []
     instruments = load_instruments("instruments", load_errors=load_errors)
+
+    instrument_ids = {inst.get("id") for inst in instruments if isinstance(inst.get("id"), str)}
+    validation_issues = validate_event_ledgers(
+        instrument_ids=instrument_ids,
+        allowed_record_types=allowed_record_types,
+    )
 
     # Aggregations
     all_modalities = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
@@ -815,10 +835,18 @@ def main(strict: bool = True) -> int:
 
     (repo_root / "mkdocs.yml").write_text(yaml.safe_dump(mkdocs_config, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
+    has_failures = False
+
     if load_errors:
         _print_yaml_error_report(load_errors)
-        if strict:
-            return 1
+        has_failures = True
+
+    if validation_issues:
+        print_validation_report(validation_issues)
+        has_failures = True
+
+    if strict and has_failures:
+        return 1
 
     return 0
 
@@ -830,11 +858,19 @@ def _parse_args() -> argparse.Namespace:
         dest="strict",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Fail with non-zero exit code if any YAML file cannot be parsed (default: strict).",
+        help="Fail with non-zero exit code if any YAML file cannot be parsed or validation fails (default: strict).",
+    )
+    parser.add_argument(
+        "--allowed-record-types",
+        dest="allowed_record_types",
+        default=",".join(DEFAULT_ALLOWED_RECORD_TYPES),
+        help="Comma-separated allowed event record_type values.",
     )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
-    raise SystemExit(main(strict=args.strict))
+    raise SystemExit(
+        main(strict=args.strict, allowed_record_types=_allowed_record_types_from_arg(args.allowed_record_types))
+    )
