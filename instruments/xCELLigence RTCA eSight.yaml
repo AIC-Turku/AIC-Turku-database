@@ -1,0 +1,144 @@
+# -----------------------------------------------------------------------------
+# MICROSCOPE CONFIGURATION: Agilent xCELLigence RTCA eSight
+# -----------------------------------------------------------------------------
+instrument:
+  display_name: "Agilent xCELLigence RTCA eSight"
+  instrument_id: "scope-agilent-rtca-esight"
+  manufacturer: "Agilent"
+  model: "xCELLigence RTCA eSight"
+  year_of_purchase: "2024"
+  funding: "Testament funds from Henna Ruusunen"
+  stand_orientation: "benchtop"
+  location: "BioCity, 5th floor"
+  notes: |
+    Real-time cell analysis system combining label-free impedance monitoring with live-cell imaging.
+    Dimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg.
+    Placed inside a standard CO2 incubator for operation (Operating range: 20-40°C, 5-98% RH).
+  url: "https://www.agilent.com/lifesciences/eSight"
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITIES
+# -----------------------------------------------------------------------------
+modalities:
+  - "impedance_cytometry"         #
+  - "widefield_fluorescence"      #
+  - "transmitted_brightfield"     #
+  - "live_cell_imaging"           #
+
+# -----------------------------------------------------------------------------
+# HARDWARE MODULES
+# -----------------------------------------------------------------------------
+modules:
+  - name: "environmental_tolerance"
+    notes: "Designed for operation inside cell culture incubator (20-40°C, 5-98% RH)." #
+    url: ""
+  - name: "hardware_autofocus"
+    notes: "Image-based autofocus." #
+    url: ""
+  - name: "impedance_module"
+    notes: "22 mV rms +/- 20% at 10 kHz; Accuracy +/- (1.5% + 1 Ohm)." #
+    url: ""
+
+# -----------------------------------------------------------------------------
+# SOFTWARE
+# -----------------------------------------------------------------------------
+software:
+  acquisition:
+    name: "RTCA eSight Software"
+    version: ""
+    url: "https://www.agilent.com/lifesciences/eSight"
+
+# -----------------------------------------------------------------------------
+# HARDWARE CONFIGURATION
+# -----------------------------------------------------------------------------
+hardware:
+
+  # --- Scanner ---
+  scanner:
+    type: "stage_scanning"
+    notes: "Supports E-Plate 96, E-Plate VIEW 96, and ANSI/SLAS standard plates." #
+    url: ""
+
+  # --- Light Sources (Excitation) ---
+  light_sources:
+    - kind: "led"
+      manufacturer: "Agilent"
+      model: "High-power LED (Blue)"
+      wavelength_nm: "381-404"    #
+      power: ""
+      notes: "Blue Excitation"
+      url: ""
+
+    - kind: "led"
+      manufacturer: "Agilent"
+      model: "High-power LED (Green)"
+      wavelength_nm: "473-491"    #
+      power: ""
+      notes: "Green Excitation"
+      url: ""
+
+    - kind: "led"
+      manufacturer: "Agilent"
+      model: "High-power LED (Red)"
+      wavelength_nm: "584-605"    #
+      power: ""
+      notes: "Red Excitation"
+      url: ""
+
+  # --- Detectors (Emission) ---
+  detectors:
+    - kind: "sCMOS"               #
+      manufacturer: "Sony"        # Inferred from IMX264 usage in this class, spec sheet confirms CMOS
+      model: "5.0 MP Monochromatic CMOS"      #
+      notes: "3.45 µm pixel size, up to 35 fps." #
+      url: ""
+
+  # --- Splitters (Camera/Emission) ---
+  splitters: []
+
+  # --- Filters / Filter Cubes ---
+  filters:
+    - name: "Blue Channel"
+      location: "Internal"
+      product_code: ""
+      excitation: "381-404"       #
+      dichroic: ""
+      emission: "427-462"         #
+      notes: "e.g., DAPI/Hoechst"
+      url: ""
+
+    - name: "Green Channel"
+      location: "Internal"
+      product_code: ""
+      excitation: "473-491"       #
+      dichroic: ""
+      emission: "503-561"         #
+      notes: "e.g., FITC/GFP"
+      url: ""
+
+    - name: "Red Channel"
+      location: "Internal"
+      product_code: ""
+      excitation: "584-605"       #
+      dichroic: ""
+      emission: "621-720"         #
+      notes: "e.g., Cy3/Texas Red"
+      url: ""
+
+  # --- Objectives ---
+  objectives:
+    - id: "10x_air"
+      manufacturer: "Agilent"
+      model: "10x Objective"
+      product_code: ""
+      magnification: 10.0
+      numerical_aperture: ""      # Not listed in public spec sheet
+      working_distance: ""
+      immersion: "air"
+      correction: ""
+      afc_compatible: true
+      specialties: ""
+      notes: "Default. Resolution: 1.72 µm/pixel. FOV: 1.68 x 1.40 mm." #
+      url: ""
+
+   
