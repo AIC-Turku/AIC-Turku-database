@@ -209,6 +209,13 @@ def slugify(value: str) -> str:
     return s
 
 
+INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def is_valid_instrument_id(value: str) -> bool:
+    return bool(INSTRUMENT_ID_PATTERN.fullmatch(value))
+
+
 def parse_notes_compact(notes: str) -> dict[str, Any]:
     """Parse legacy notes strings like: 'type: "..." | filters: [..] | imaging_modes: [...]'."""
     notes = clean_text(notes)
@@ -500,7 +507,19 @@ def load_instruments(
                 )
             continue
 
-        instrument_id = slugify(raw_instrument_id)
+        instrument_id = raw_instrument_id.strip()
+        if not is_valid_instrument_id(instrument_id):
+            if load_errors is not None:
+                load_errors.append(
+                    YamlLoadError(
+                        path=yaml_file.as_posix(),
+                        message=(
+                            "Invalid instrument.instrument_id; expected URL-safe slug "
+                            "(lowercase letters, numbers, and single hyphens only)."
+                        ),
+                    )
+                )
+            continue
 
         manufacturer = clean_text(inst_section.get("manufacturer"))
         model = clean_text(inst_section.get("model"))
