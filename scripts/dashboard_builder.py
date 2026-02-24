@@ -720,6 +720,7 @@ def main() -> None:
     mkdocs_config = {
         "site_name": "AIC Microscopy Dashboard",
         "site_url": site_url,
+        "use_directory_urls": True,
         "docs_dir": "dashboard_docs",
         "theme": {
             "name": "material",
