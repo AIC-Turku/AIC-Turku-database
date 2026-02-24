@@ -11,7 +11,7 @@ Produces:
 - dashboard_docs/status.md (system health)
 - dashboard_docs/instruments/<instrument_id>/index.md (overview)
 - dashboard_docs/instruments/<instrument_id>/history.md
-- dashboard_docs/events/<event_id>.md
+- dashboard_docs/events/<instrument_id>/<event_id>.md
 - mkdocs.yml (auto-generated)
 
 The builder is intentionally deterministic: same inputs -> same output tree.
@@ -656,7 +656,8 @@ def main() -> None:
                 "date": _extract_log_date(payload),
                 "status": payload.get("evaluation", {}).get("overall_status", "completed"),
                 "suite": "QC Session",
-                "event_id": event_id
+                "event_id": event_id,
+                "event_href": f"../../../events/{instrument_id}/{event_id}/",
             })
             
         history_events_maint = []
@@ -667,7 +668,8 @@ def main() -> None:
                 "date": _extract_log_date(payload),
                 "status": payload.get("microscope_status_after", "completed"),
                 "type": "Maintenance",
-                "event_id": event_id
+                "event_id": event_id,
+                "event_href": f"../../../events/{instrument_id}/{event_id}/",
             })
 
         # Render history page for each instrument
@@ -704,7 +706,9 @@ def main() -> None:
                 raw_yaml_content=raw_yaml_text,
                 payload=event_payload,
             )
-            (docs_root / "events" / f"{event_id}.md").write_text(event_md, encoding="utf-8")
+            event_dir = docs_root / "events" / instrument_id
+            event_dir.mkdir(parents=True, exist_ok=True)
+            (event_dir / f"{event_id}.md").write_text(event_md, encoding="utf-8")
 
     # Fleet + status pages
     index_md = tpl_index.render(instruments=instruments, all_modalities=all_modalities, counts=fleet_counts)
