@@ -106,6 +106,37 @@ def _print_yaml_error_report(load_errors: list[YamlLoadError]) -> None:
     print(f"\nTotal YAML failures: {len(unique_errors)}", file=sys.stderr)
 
 
+def _print_agent_fix_prompt(load_errors: list[YamlLoadError], validation_issues: list[Any]) -> None:
+    """Print an agent-ready remediation prompt when build validation fails."""
+    if not load_errors and not validation_issues:
+        return
+
+    print("\n=== AGENT_FIX_PROMPT_BEGIN ===", file=sys.stderr)
+    print("You are fixing YAML validation/build failures in this repository.", file=sys.stderr)
+    print("Tasks:", file=sys.stderr)
+    print("1. Repair malformed YAML files reported below so they parse as top-level mappings.", file=sys.stderr)
+    print("2. Resolve validation issues while preserving domain intent.", file=sys.stderr)
+    print("3. Re-run: python scripts/dashboard_builder.py --strict", file=sys.stderr)
+    print("4. Stop only when the command exits 0.", file=sys.stderr)
+
+    if load_errors:
+        print("\nYAML load errors:", file=sys.stderr)
+        for err in load_errors:
+            print(f"- path: {err.path}", file=sys.stderr)
+            print(f"  error: {err.message}", file=sys.stderr)
+
+    if validation_issues:
+        print("\nValidation issues:", file=sys.stderr)
+        for issue in validation_issues:
+            code = getattr(issue, "code", "unknown")
+            issue_path = getattr(issue, "path", "")
+            message = getattr(issue, "message", "")
+            print(f"- code: {code}", file=sys.stderr)
+            print(f"  path: {issue_path}", file=sys.stderr)
+            print(f"  message: {message}", file=sys.stderr)
+
+    print("=== AGENT_FIX_PROMPT_END ===", file=sys.stderr)
+
 def _parse_iso_datetime(raw_value: Any) -> datetime | None:
     if not isinstance(raw_value, str) or not raw_value.strip():
         return None
@@ -857,6 +888,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         has_failures = True
 
     if strict and has_failures:
+        _print_agent_fix_prompt(load_errors, validation_issues)
         return 1
 
     return 0
