@@ -46,7 +46,6 @@ jobs:
       - name: Run dashboard builder
         run: python scripts/dashboard_builder.py
         env:
-          PYTHONPATH: src
           MKDOCS_SITE_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
       - name: Build MkDocs
