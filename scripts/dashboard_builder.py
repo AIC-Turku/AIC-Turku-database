@@ -544,6 +544,14 @@ def _allowed_record_types_from_arg(raw: str | None) -> tuple[str, ...]:
     return tuple(values) if values else DEFAULT_ALLOWED_RECORD_TYPES
 
 
+def _event_output_instrument(payload: dict[str, Any], fallback_instrument: str) -> str:
+    """Return the instrument namespace to use for event doc output/links."""
+    microscope = payload.get("microscope")
+    if isinstance(microscope, str) and microscope.strip():
+        return microscope.strip()
+    return fallback_instrument
+
+
 def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_ALLOWED_RECORD_TYPES) -> int:
     repo_root = Path.cwd()
     docs_root = repo_root / "dashboard_docs"
@@ -714,24 +722,26 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         for log in qc_logs:
             payload = log.get("data") or {}
             event_id = Path(log["source_path"]).stem
+            event_instrument = _event_output_instrument(payload, instrument_id)
             history_events_qc.append({
                 "date": _extract_log_date(payload),
                 "status": payload.get("evaluation", {}).get("overall_status", "completed"),
                 "suite": "QC Session",
                 "event_id": event_id,
-                "event_href": f"../../../events/{instrument_id}/{event_id}/",
+                "event_href": f"../../../events/{event_instrument}/{event_id}/",
             })
             
         history_events_maint = []
         for log in maint_logs:
             payload = log.get("data") or {}
             event_id = Path(log["source_path"]).stem
+            event_instrument = _event_output_instrument(payload, instrument_id)
             history_events_maint.append({
                 "date": _extract_log_date(payload),
                 "status": payload.get("microscope_status_after", "completed"),
                 "type": "Maintenance",
                 "event_id": event_id,
-                "event_href": f"../../../events/{instrument_id}/{event_id}/",
+                "event_href": f"../../../events/{event_instrument}/{event_id}/",
             })
 
         # Render history page for each instrument
@@ -753,6 +763,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             source_file = Path(source_path)
             event_id = source_file.stem
             event_payload = log_entry.get("data") if isinstance(log_entry.get("data"), dict) else {}
+            event_instrument = _event_output_instrument(event_payload, instrument_id)
 
             try:
                 raw_yaml_text = source_file.read_text(encoding="utf-8")
@@ -763,12 +774,12 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 event_id=event_id,
                 date=_extract_log_date(event_payload),
                 instrument=event_payload.get("microscope"),
-                instrument_id=instrument_id,
+                instrument_id=event_instrument,
                 operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
                 raw_yaml_content=raw_yaml_text,
                 payload=event_payload,
             )
-            event_dir = docs_root / "events" / instrument_id
+            event_dir = docs_root / "events" / event_instrument
             event_dir.mkdir(parents=True, exist_ok=True)
             (event_dir / f"{event_id}.md").write_text(event_md, encoding="utf-8")
 
