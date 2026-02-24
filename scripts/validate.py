@@ -25,12 +25,18 @@ def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     return [p for p in sorted(base_dir.rglob("*")) if p.is_file() and p.suffix.lower() in {".yaml", ".yml"}]
 
 
-def _load_yaml(path: Path) -> dict[str, Any] | None:
+def _load_yaml(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError):
-        return None
-    return payload if isinstance(payload, dict) else None
+    except (OSError, yaml.YAMLError) as exc:
+        return None, str(exc)
+
+    if payload is None:
+        return None, "YAML document is empty."
+    if not isinstance(payload, dict):
+        return None, f"Expected YAML mapping/object at top level, found {type(payload).__name__}."
+
+    return payload, None
 
 
 def validate_event_ledgers(
@@ -51,7 +57,17 @@ def validate_event_ledgers(
 
     for base_dir, _expected_type in event_sources:
         for event_file in _iter_yaml_files(base_dir):
-            payload = _load_yaml(event_file)
+            payload, load_error = _load_yaml(event_file)
+            if load_error is not None:
+                issues.append(
+                    ValidationIssue(
+                        code="yaml_parse_error",
+                        path=event_file.as_posix(),
+                        message=load_error,
+                    )
+                )
+                continue
+
             if payload is None:
                 continue
 
