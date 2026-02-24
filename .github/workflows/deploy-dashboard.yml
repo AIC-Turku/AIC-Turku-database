@@ -8,6 +8,8 @@ on:
       - "qc/**"
       - "maintenance/**"
       - "scripts/**"
+      - "assets/**"
+      - "templates/**"
       - "mkdocs.yml"
       - "requirements-docs.txt"
       - ".github/workflows/deploy-dashboard.yml"
