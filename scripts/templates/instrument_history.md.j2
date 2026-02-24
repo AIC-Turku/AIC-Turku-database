@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const chartKeys = Object.keys(chartsData);
   if (chartKeys.length === 0) {
-    rootContainer.innerHTML = '> 📭 *No historical metrics available to chart.*';
+    // NOTE: this is raw HTML; Markdown won't be parsed here
+    rootContainer.innerHTML = '<p>📭 <em>No historical metrics available to chart.</em></p>';
     return;
   }
 
@@ -50,7 +51,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!readableTitle) {
       const parts = metricId.split('.');
       const rawName = parts[parts.length - 1].replace(/_/g, ' ');
-      readableTitle = rawName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      readableTitle = rawName
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
     }
 
     const wrapper = document.createElement('div');
@@ -250,6 +254,18 @@ document.addEventListener('DOMContentLoaded', function() {
   box-shadow: 0 4px 6px rgba(0,0,0,0.02);
 }
 
+/* Status pill (works for hex colors AND CSS vars) */
+.aic-status-pill {
+  --aic-status-color: var(--md-default-fg-color--light);
+  background-color: color-mix(in srgb, var(--aic-status-color) 12%, transparent);
+  color: var(--aic-status-color);
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border: 1px solid var(--aic-status-color);
+}
+
 /* Media query for mobile: push line to the left */
 @media screen and (max-width: 768px) {
   .aic-split-timeline::after {
@@ -270,44 +286,59 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </style>
 
-{% set all_events = (qc_events | default([], true)) + (maintenance_events | default([], true)) %}
+{# Make qc/maintenance safe even if undefined #}
+{% set qc_list = qc_events | default([], true) %}
+{% set maintenance_list = maintenance_events | default([], true) %}
+{% set all_events = qc_list + maintenance_list %}
 {% set sorted_events = all_events | sort(attribute='date', reverse=True) %}
 
 {% if sorted_events %}
 <div class="aic-split-timeline">
   {% for event in sorted_events %}
-    {% set is_qc = event in qc_events %}
-    
+    {% set is_qc = event in qc_list %}
+
     {# QC goes on the left, Maintenance goes on the right #}
     {% set side_class = 'aic-timeline-left' if is_qc else 'aic-timeline-right' %}
     {% set event_icon = '🔬' if is_qc else '🔧' %}
     {% set event_label = 'QC Session' if is_qc else 'Maintenance' %}
-    
+
     {# Dynamic Color Coding #}
-    {% set s_lower = event.status | lower %}
-    {% set status_color = '#00e676' if s_lower in ['pass', 'completed', 'online'] else '#ffea00' if s_lower in ['warn', 'limited'] else '#ff1744' if s_lower in ['fail', 'out_of_service'] else 'var(--md-default-fg-color--light)' %}
-    
+    {% set s_lower = (event.status | default('', true)) | lower %}
+    {% set status_color = '#00e676' if s_lower in ['pass', 'completed', 'online']
+      else '#ffea00' if s_lower in ['warn', 'limited']
+      else '#ff1744' if s_lower in ['fail', 'out_of_service']
+      else 'var(--md-default-fg-color--light)' %}
+
     <div class="aic-timeline-container {{ side_class }}">
       <div class="aic-timeline-marker" title="{{ event_label }}" style="border-color: {{ status_color }};">
         {{ event_icon }}
       </div>
-      
-      <div class="aic-timeline-content" markdown="1">
 
-<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-<div>
-<strong style="font-size: 1.1rem; color: var(--md-default-fg-color);">{{ event.date | default('Unknown Date', true) }}</strong>
-<span class="aic-muted" style="margin-left: 0.5rem; font-size: 0.85rem;">{{ event_label }}</span>
-</div>
-<span style="background-color: {{ status_color }}15; color: {{ status_color }}; padding: 0.2rem 0.6rem; border-radius: 1rem; font-size: 0.75rem; font-weight: bold; border: 1px solid {{ status_color }};">{{ event.status | default('—', true) | upper }}</span>
-</div>
+      <div class="aic-timeline-content">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <strong style="font-size: 1.1rem; color: var(--md-default-fg-color);">
+              {{ event.date | default('Unknown Date', true) }}
+            </strong>
+            <span class="aic-muted" style="margin-left: 0.5rem; font-size: 0.85rem;">
+              {{ event_label }}
+            </span>
+          </div>
 
-<div style="margin-bottom: 1rem; color: var(--md-default-fg-color--light);">
-{{ event.suite | default(event.type, true) | default('Routine Event', true) }}
-</div>
+          <span class="aic-status-pill" style="--aic-status-color: {{ status_color }};">
+            {{ event.status | default('—', true) | upper }}
+          </span>
+        </div>
 
-[View Full Report](../../events/{{ event.event_id }}.md){ .md-button .md-button--primary style="font-size: 0.8rem; padding: 0.3rem 0.8rem; border-radius: 0.2rem;" }
+        <div style="margin-bottom: 1rem; color: var(--md-default-fg-color--light);">
+          {{ event.suite | default(event.type, true) | default('Routine Event', true) }}
+        </div>
 
+        {% if event.event_id %}
+<p markdown="1">
+[View Full Report](../../events/{{ event.event_id }}.md){ .md-button .md-button--primary style="font-size:0.8rem; padding:0.3rem 0.8rem; border-radius:0.2rem;" }
+</p>
+        {% endif %}
       </div>
     </div>
   {% endfor %}
