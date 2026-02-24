@@ -762,6 +762,7 @@ def main() -> None:
         "extra_javascript": [
             "assets/javascripts/dashboard.js",
             "https://cdn.jsdelivr.net/npm/chart.js",
+            "assets/javascripts/charts.js",
         ],
         "nav": build_nav(instruments),
         # Tell MkDocs to ignore unmapped files gracefully (events and history pages)
