@@ -13,6 +13,9 @@ import yaml
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
 ALLOWED_MAINTENANCE_STATUSES: tuple[str, ...] = ("in_service", "limited", "out_of_service")
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+YEAR_PATTERN = re.compile(r"^\d{4}$")
+ISO_YEAR_PATTERN = re.compile(r"^(\d{4})-")
+FILENAME_DATE_PATTERN = re.compile(r"^(\d{4})-\d{2}-\d{2}(?:_|$)")
 
 
 @dataclass
@@ -48,6 +51,20 @@ def _is_valid_instrument_id(value: str) -> bool:
 
 def _is_non_empty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
+    started_utc = payload.get("started_utc")
+    if isinstance(started_utc, str):
+        started_match = ISO_YEAR_PATTERN.match(started_utc.strip())
+        if started_match:
+            return started_match.group(1)
+
+    filename_match = FILENAME_DATE_PATTERN.match(event_file.stem)
+    if filename_match:
+        return filename_match.group(1)
+
+    return None
 
 
 def validate_instrument_ledgers(
@@ -149,6 +166,11 @@ def validate_event_ledgers(
 
     for base_dir, expected_type in event_sources:
         for event_file in _iter_yaml_files(base_dir):
+            try:
+                rel_parts = event_file.relative_to(base_dir).parts
+            except ValueError:
+                rel_parts = ()
+
             payload, load_error = _load_yaml(event_file)
             if load_error is not None:
                 issues.append(
@@ -186,6 +208,69 @@ def validate_event_ledgers(
                         ),
                     )
                 )
+
+            if len(rel_parts) < 3:
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_event_path_structure",
+                        path=event_file.as_posix(),
+                        message=(
+                            f"Expected event path under '{base_dir.as_posix()}' to follow "
+                            "'<microscope>/<YYYY>/<file>.yaml'."
+                        ),
+                    )
+                )
+            else:
+                path_microscope = rel_parts[0]
+                path_year = rel_parts[1]
+
+                if microscope != path_microscope:
+                    issues.append(
+                        ValidationIssue(
+                            code="microscope_mismatch_with_path",
+                            path=event_file.as_posix(),
+                            message=(
+                                f"Path microscope '{path_microscope}' does not match payload "
+                                f"microscope '{microscope}'."
+                            ),
+                        )
+                    )
+
+                if not YEAR_PATTERN.fullmatch(path_year):
+                    issues.append(
+                        ValidationIssue(
+                            code="invalid_event_year_folder",
+                            path=event_file.as_posix(),
+                            message=(
+                                f"Invalid year folder '{path_year}'. Expected a 4-digit year "
+                                "like '2026'."
+                            ),
+                        )
+                    )
+                else:
+                    event_year = _get_started_year(payload, event_file)
+                    if event_year is None:
+                        issues.append(
+                            ValidationIssue(
+                                code="missing_event_year_source",
+                                path=event_file.as_posix(),
+                                message=(
+                                    "Could not derive event year from payload.started_utc or "
+                                    "filename date prefix (YYYY-MM-DD_...)."
+                                ),
+                            )
+                        )
+                    elif path_year != event_year:
+                        issues.append(
+                            ValidationIssue(
+                                code="year_mismatch_with_path",
+                                path=event_file.as_posix(),
+                                message=(
+                                    f"Path year '{path_year}' does not match derived event "
+                                    f"year '{event_year}' from started_utc/filename."
+                                ),
+                            )
+                        )
 
             record_type = payload.get("record_type")
             if not isinstance(record_type, str) or not record_type.strip():
