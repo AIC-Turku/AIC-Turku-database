@@ -125,7 +125,7 @@ hide:
 
 | Artifact ID | Role | Description |
 |---|---|---|
-{% for art in payload.get('artifacts', []) %}| <code>{{ art.get('artifact_id', '—') }}</code> | <span class="aic-chip">{{ art.get('role', '—') | upper }}</span> | {% if art.get('uri') %}[{{ art.get('description', 'Link') }}]({{ art.get('uri') }}){% else %}{{ art.get('description', '—') }}{% endif %} |
+{% for art in payload.get('artifacts', []) %}{% set uri = art.get('uri') %}| <code>{{ art.get('artifact_id', '—') }}</code> | <span class="aic-chip">{{ art.get('role', '—') | upper }}</span> | {% if uri and (uri.startswith('http://') or uri.startswith('https://') or uri.startswith('mailto:')) %}[{{ art.get('description', 'Link') }}]({{ uri }}){% elif uri %}{{ art.get('description', 'File') }}: <code>{{ uri }}</code>{% else %}{{ art.get('description', '—') }}{% endif %} |
 {% endfor %}
 
 {% endif %}

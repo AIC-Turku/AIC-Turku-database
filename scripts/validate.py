@@ -1,15 +1,17 @@
-"""Validation helpers for dashboard source ledgers."""
+"""Validation helpers and CLI for dashboard source ledgers."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 import sys
 from typing import Any, Iterable
 
 import yaml
 
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
+INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 @dataclass
@@ -37,6 +39,90 @@ def _load_yaml(path: Path) -> tuple[dict[str, Any] | None, str | None]:
         return None, f"Expected YAML mapping/object at top level, found {type(payload).__name__}."
 
     return payload, None
+
+
+def _is_valid_instrument_id(value: str) -> bool:
+    return bool(INSTRUMENT_ID_PATTERN.fullmatch(value))
+
+
+def validate_instrument_ledgers(
+    *,
+    instruments_dir: Path = Path("instruments"),
+) -> tuple[set[str], list[ValidationIssue]]:
+    issues: list[ValidationIssue] = []
+    instrument_ids: set[str] = set()
+    instrument_id_to_files: dict[str, list[str]] = {}
+
+    for instrument_file in _iter_yaml_files(instruments_dir):
+        if "retired" in instrument_file.parts:
+            continue
+
+        payload, load_error = _load_yaml(instrument_file)
+        if load_error is not None:
+            issues.append(
+                ValidationIssue(
+                    code="yaml_parse_error",
+                    path=instrument_file.as_posix(),
+                    message=load_error,
+                )
+            )
+            continue
+
+        if payload is None:
+            continue
+
+        instrument_section = payload.get("instrument")
+        if not isinstance(instrument_section, dict):
+            issues.append(
+                ValidationIssue(
+                    code="missing_instrument_section",
+                    path=instrument_file.as_posix(),
+                    message="Missing required top-level mapping key 'instrument'.",
+                )
+            )
+            continue
+
+        instrument_id = instrument_section.get("instrument_id")
+        if not isinstance(instrument_id, str) or not instrument_id.strip():
+            issues.append(
+                ValidationIssue(
+                    code="missing_instrument_id",
+                    path=instrument_file.as_posix(),
+                    message="Missing required instrument.instrument_id (must be a non-empty string).",
+                )
+            )
+            continue
+
+        instrument_id = instrument_id.strip()
+        if not _is_valid_instrument_id(instrument_id):
+            issues.append(
+                ValidationIssue(
+                    code="invalid_instrument_id",
+                    path=instrument_file.as_posix(),
+                    message=(
+                        "Invalid instrument.instrument_id; expected URL-safe slug "
+                        "(lowercase letters, numbers, and single hyphens only)."
+                    ),
+                )
+            )
+            continue
+
+        instrument_ids.add(instrument_id)
+        instrument_id_to_files.setdefault(instrument_id, []).append(instrument_file.as_posix())
+
+    for instrument_id, source_files in sorted(instrument_id_to_files.items()):
+        if len(source_files) <= 1:
+            continue
+        source_list = ", ".join(sorted(source_files))
+        issues.append(
+            ValidationIssue(
+                code="duplicate_instrument_id",
+                path=instrument_id,
+                message=f"Duplicate instrument.instrument_id '{instrument_id}' defined in: {source_list}.",
+            )
+        )
+
+    return instrument_ids, issues
 
 
 def validate_event_ledgers(
@@ -141,3 +227,19 @@ def print_validation_report(issues: list[ValidationIssue]) -> None:
         print(f"  {index}. [{issue.code}] {issue.path}", file=sys.stderr)
         print(f"     {issue.message}", file=sys.stderr)
     print(f"\nTotal validation failures: {len(issues)}", file=sys.stderr)
+
+
+def main() -> int:
+    instrument_ids, issues = validate_instrument_ledgers()
+    issues.extend(validate_event_ledgers(instrument_ids=instrument_ids))
+
+    if issues:
+        print_validation_report(issues)
+        return 1
+
+    print("Validation passed.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
