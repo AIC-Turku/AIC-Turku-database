@@ -27,9 +27,9 @@ hide:
         <div><span class="aic-muted">Last Maintenance</span><br>{{ inst.status.last_maint_date or '—' }}</div>
       </div>
 
-      <div class="aic-actions">
-        <a href="instruments/{{ inst.id }}/index.md" class="md-button md-button--small">Overview</a>
-        <a href="instruments/{{ inst.id }}/history.md" class="md-button md-button--primary md-button--small">View History</a>
+      <div class="aic-actions" markdown="span">
+        [Overview](instruments/{{ inst.id }}/index.md){ .md-button .md-button--small }
+        [View History](instruments/{{ inst.id }}/history.md){ .md-button .md-button--primary .md-button--small }
       </div>
     </div>
   </div>
