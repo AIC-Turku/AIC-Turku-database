@@ -35,6 +35,7 @@ extra_css:
 extra_javascript:
 - assets/javascripts/dashboard.js
 - https://cdn.jsdelivr.net/npm/chart.js
+- assets/javascripts/charts.js
 nav:
 - Fleet Overview: index.md
 - System Health: status.md
