@@ -7,9 +7,13 @@ hide:
 # 📝 Event: {{ event_id }}
 
 <div class="aic-topactions" markdown="span">
-  [🔙 Back to Overview](../../instruments/{{ instrument_id }}/index){ .md-button }
-  [📊 View Full History](../../instruments/{{ instrument_id }}/history){ .md-button .md-button--primary }
+  [🔙 Back to Overview](../../instruments/{{ instrument_id }}/index.md){ .md-button }
+  [📊 View Full History](../../instruments/{{ instrument_id }}/history.md){ .md-button .md-button--primary }
 </div>
+
+{% set record_type = payload.get('record_type', '') | lower %}
+{% set is_maintenance = record_type.startswith('maintenance') %}
+{% set reason_or_suite = payload.get('reason') or payload.get('type') or payload.get('reason_details') or '—' %}
 
 ## 📊 Report Overview
 
@@ -20,9 +24,9 @@ hide:
       <div class="aic-card__title">Event Metadata</div>
       <div class="aic-kv">
         <div><span class="aic-muted">Record Type</span><br>{{ payload.get('record_type', '—') | replace('_', ' ') | title }}</div>
-        <div><span class="aic-muted">Reason / Suite</span><br>{{ payload.get('reason', '—') | title }}</div>
+        <div><span class="aic-muted">Reason / Suite</span><br>{{ reason_or_suite | string | title }}</div>
         
-        {% if payload.get('record_type') == 'maintenance' %}
+        {% if is_maintenance %}
         <div><span class="aic-muted">Service Provider</span><br>{{ payload.get('service_provider', '—') }}</div>
         {% else %}
         <div><span class="aic-muted">Operator</span><br>{{ operator | default('—', true) }}</div>
@@ -63,7 +67,7 @@ hide:
   </div>
   {% endif %}
 
-  {% if payload.get('record_type') == 'maintenance' or payload.get('action') %}
+  {% if is_maintenance or payload.get('action') %}
   <div class="aic-card">
     <div class="aic-card__body">
       <div class="aic-card__title">Maintenance Action</div>
