@@ -28,6 +28,7 @@ Whether you need consultation on choosing an appropriate microscope, training on
 - **Stable Routing ID:** The `instrument.instrument_id` parameter is a URL-safe slug (lowercase + hyphens).
   - It defines routing URLs: `instruments/<instrument_id>/...`
   - It must strictly match log entries under the key: `microscope: <instrument_id>`
+  - It is required in every instrument YAML; missing/empty/non-string values fail `scripts/dashboard_builder.py` in strict mode.
 
 ---
 
