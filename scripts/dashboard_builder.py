@@ -34,6 +34,7 @@ from validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     print_validation_report,
     validate_event_ledgers,
+    validate_instrument_ledgers,
 )
 
 import yaml
@@ -628,10 +629,13 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     load_errors: list[YamlLoadError] = []
     instruments = load_instruments("instruments", load_errors=load_errors)
 
-    instrument_ids = {inst.get("id") for inst in instruments if isinstance(inst.get("id"), str)}
-    validation_issues = validate_event_ledgers(
-        instrument_ids=instrument_ids,
-        allowed_record_types=allowed_record_types,
+    validated_instrument_ids, instrument_validation_issues = validate_instrument_ledgers()
+    validation_issues = list(instrument_validation_issues)
+    validation_issues.extend(
+        validate_event_ledgers(
+            instrument_ids=validated_instrument_ids,
+            allowed_record_types=allowed_record_types,
+        )
     )
 
     # Aggregations

@@ -1,0 +1,47 @@
+name: Validate Dashboard Content
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "instruments/**"
+      - "qc/**"
+      - "maintenance/**"
+      - "scripts/**"
+      - "assets/**"
+      - "templates/**"
+      - "requirements-docs.txt"
+      - ".github/workflows/validate.yml"
+      - ".github/workflows/deploy-dashboard.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: "requirements-docs.txt"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-docs.txt
+
+      - name: Validate YAML/schema/cross-references/naming
+        run: python scripts/validate.py
+
+      - name: Run dashboard builder (strict)
+        run: python scripts/dashboard_builder.py --strict
+
+      - name: Build MkDocs (strict)
+        run: mkdocs build --strict
