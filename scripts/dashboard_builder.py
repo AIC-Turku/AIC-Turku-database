@@ -312,14 +312,28 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
 
 
 def get_all_instrument_logs(
-    log_base_dir: str, instrument_id: str, load_errors: list[YamlLoadError] | None = None
+    log_base_dir: str,
+    instrument_id: str,
+    load_errors: list[YamlLoadError] | None = None,
+    preindexed_logs: dict[str, list[dict[str, Any]]] | None = None,
 ) -> list[dict[str, Any]]:
     if not instrument_id or not instrument_id.strip():
         return []
 
-    base_path = Path(log_base_dir)
     target_id = instrument_id.strip()
-    candidates: list[tuple[datetime, Path, dict[str, Any]]] = []
+    if preindexed_logs is not None:
+        return list(preindexed_logs.get(target_id, []))
+
+    return list(index_instrument_logs(log_base_dir, load_errors=load_errors).get(target_id, []))
+
+
+def index_instrument_logs(
+    log_base_dir: str, load_errors: list[YamlLoadError] | None = None
+) -> dict[str, list[dict[str, Any]]]:
+    """Load and index event logs in a single pass grouped by instrument ID."""
+
+    base_path = Path(log_base_dir)
+    grouped_candidates: dict[str, list[tuple[datetime, Path, dict[str, Any]]]] = {}
 
     for yaml_file in _iter_yaml_files(base_path):
         payload = _load_yaml_file(yaml_file, load_errors=load_errors)
@@ -330,7 +344,11 @@ def get_all_instrument_logs(
         if not isinstance(payload_instrument, str):
             payload_instrument = payload.get("instrument_id")
 
-        if payload_instrument != target_id:
+        if not isinstance(payload_instrument, str):
+            continue
+
+        instrument_id = payload_instrument.strip()
+        if not instrument_id:
             continue
 
         sort_dt = _parse_iso_datetime(payload.get("started_utc"))
@@ -339,14 +357,18 @@ def get_all_instrument_logs(
         if sort_dt is None:
             sort_dt = datetime.min.replace(tzinfo=timezone.utc)
 
-        candidates.append((sort_dt, yaml_file, payload))
+        grouped_candidates.setdefault(instrument_id, []).append((sort_dt, yaml_file, payload))
 
-    candidates.sort(key=lambda item: (item[0], item[1].as_posix()))
+    indexed_logs: dict[str, list[dict[str, Any]]] = {}
+    for instrument_id, candidates in grouped_candidates.items():
+        candidates.sort(key=lambda item: (item[0], item[1].as_posix()))
 
-    return [
-        {"source_path": path.as_posix(), "filename": path.name, "data": payload}
-        for _, path, payload in candidates
-    ]
+        indexed_logs[instrument_id] = [
+            {"source_path": path.as_posix(), "filename": path.name, "data": payload}
+            for _, path, payload in candidates
+        ]
+
+    return indexed_logs
 
 
 def evaluate_instrument_status(
@@ -628,6 +650,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     load_errors: list[YamlLoadError] = []
     instruments = load_instruments("instruments", load_errors=load_errors)
+    qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
+    maint_logs_by_instrument = index_instrument_logs("maintenance/events", load_errors=load_errors)
 
     validated_instrument_ids, instrument_validation_issues = validate_instrument_ledgers()
     validation_issues = list(instrument_validation_issues)
@@ -647,8 +671,18 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     for inst in instruments:
         instrument_id = inst["id"]
 
-        qc_logs = get_all_instrument_logs("qc/sessions", instrument_id, load_errors=load_errors)
-        maint_logs = get_all_instrument_logs("maintenance/events", instrument_id, load_errors=load_errors)
+        qc_logs = get_all_instrument_logs(
+            "qc/sessions",
+            instrument_id,
+            load_errors=load_errors,
+            preindexed_logs=qc_logs_by_instrument,
+        )
+        maint_logs = get_all_instrument_logs(
+            "maintenance/events",
+            instrument_id,
+            load_errors=load_errors,
+            preindexed_logs=maint_logs_by_instrument,
+        )
 
         latest_qc = qc_logs[-1]["data"] if qc_logs else None
         latest_maint = maint_logs[-1]["data"] if maint_logs else None
