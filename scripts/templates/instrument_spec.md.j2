@@ -1,3 +1,15 @@
+{% macro objective_label(obj) -%}
+{%- set mag = obj.magnification -%}
+{%- set immersion = (obj.immersion | capitalize) if obj.immersion else '' -%}
+{%- if mag is number -%}
+{{ mag | int }}x{% if immersion %} {{ immersion }}{% endif %}
+{%- elif mag is string and mag | trim -%}
+{{ mag | trim }}x{% if immersion %} {{ immersion }}{% endif %}
+{%- else -%}
+—x{% if immersion %} {{ immersion }}{% endif %}
+{%- endif -%}
+{%- endmacro %}
+
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
 <div class="aic-topactions" markdown="span">
@@ -296,7 +308,7 @@
   {% if obj_with_data %}
     {% for obj, obj_metrics in obj_with_data %}
 
-#### **{{ obj.magnification | int }}x {{ obj.immersion | capitalize }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
+#### **{{ objective_label(obj) }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
 
 <div class="grid cards" markdown>
 
@@ -321,7 +333,7 @@
   {% if obj_without_data %}
 ??? info "Objectives without recent data"
     {% for obj in obj_without_data %}
-    - **{{ obj.magnification | int }}x {{ obj.immersion | capitalize }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
+    - **{{ objective_label(obj) }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
     {% endfor %}
   {% endif %}
 

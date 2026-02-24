@@ -147,7 +147,7 @@ def validate_event_ledgers(
         (maintenance_base_dir, "maintenance_event"),
     ]
 
-    for base_dir, _expected_type in event_sources:
+    for base_dir, expected_type in event_sources:
         for event_file in _iter_yaml_files(base_dir):
             payload, load_error = _load_yaml(event_file)
             if load_error is not None:
@@ -203,6 +203,17 @@ def validate_event_ledgers(
                         code="invalid_record_type",
                         path=event_file.as_posix(),
                         message=f"Invalid record_type '{record_type}'. Allowed values: {allowed}.",
+                    )
+                )
+            elif record_type != expected_type:
+                issues.append(
+                    ValidationIssue(
+                        code="unexpected_record_type_for_location",
+                        path=event_file.as_posix(),
+                        message=(
+                            f"record_type '{record_type}' does not match expected value "
+                            f"'{expected_type}' for files under '{base_dir.as_posix()}'."
+                        ),
                     )
                 )
 
