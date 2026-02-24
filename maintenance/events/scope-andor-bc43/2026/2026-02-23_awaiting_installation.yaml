@@ -10,7 +10,7 @@ service_provider: "Internal"
 
 type: "issue_reported"
 
-microscope_status_before: "operational"
+microscope_status_before: "in_service"
 microscope_status_after: "out_of_service"
 
 reason_details: "System has been delivered but is currently awaiting final installation and validation."

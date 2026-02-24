@@ -10,8 +10,8 @@ service_provider: "Internal"
 
 type: "cleaning"
 
-microscope_status_before: "operational"
-microscope_status_after: "operational"
+microscope_status_before: "in_service"
+microscope_status_after: "in_service"
 
 reason_details: "Routine system cleaning."
 action: "General cleaning of the instrument chassis and incubation chamber performed by AIC Staff."

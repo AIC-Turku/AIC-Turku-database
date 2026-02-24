@@ -10,7 +10,7 @@ service_provider: "Internal"
 
 type: "issue_reported"
 
-microscope_status_before: "operational"
+microscope_status_before: "in_service"
 microscope_status_after: "limited"
 
 reason_details: "The SIM modality is no longer aligned and cannot be used."

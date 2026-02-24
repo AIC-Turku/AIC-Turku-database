@@ -11,6 +11,7 @@ from typing import Any, Iterable
 import yaml
 
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
+ALLOWED_MAINTENANCE_STATUSES: tuple[str, ...] = ("in_service", "limited", "out_of_service")
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
@@ -135,6 +136,7 @@ def validate_event_ledgers(
     issues: list[ValidationIssue] = []
     event_output_to_sources: dict[str, list[str]] = {}
     allowed_types = {value.strip() for value in allowed_record_types if isinstance(value, str) and value.strip()}
+    allowed_maintenance_statuses = set(ALLOWED_MAINTENANCE_STATUSES)
 
     event_sources = [
         (qc_base_dir, "qc_session"),
@@ -199,6 +201,37 @@ def validate_event_ledgers(
                         message=f"Invalid record_type '{record_type}'. Allowed values: {allowed}.",
                     )
                 )
+
+            if record_type == "maintenance_event":
+                for status_key in ("microscope_status_before", "microscope_status_after"):
+                    raw_status = payload.get(status_key)
+                    if raw_status is None:
+                        continue
+                    if not isinstance(raw_status, str) or not raw_status.strip():
+                        issues.append(
+                            ValidationIssue(
+                                code="invalid_maintenance_status",
+                                path=event_file.as_posix(),
+                                message=(
+                                    f"Invalid {status_key}: expected one of "
+                                    f"{', '.join(ALLOWED_MAINTENANCE_STATUSES)}."
+                                ),
+                            )
+                        )
+                        continue
+
+                    maintenance_status = raw_status.strip().lower()
+                    if maintenance_status not in allowed_maintenance_statuses:
+                        issues.append(
+                            ValidationIssue(
+                                code="invalid_maintenance_status",
+                                path=event_file.as_posix(),
+                                message=(
+                                    f"Invalid {status_key} '{raw_status}'. "
+                                    f"Allowed values: {', '.join(ALLOWED_MAINTENANCE_STATUSES)}."
+                                ),
+                            )
+                        )
 
             output_rel_path = f"events/{microscope}/{event_file.stem}.md"
             event_output_to_sources.setdefault(output_rel_path, []).append(event_file.as_posix())

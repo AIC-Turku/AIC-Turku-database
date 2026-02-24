@@ -129,7 +129,7 @@
 
     {# Dynamic Color Coding #}
     {% set s_lower = (event.status | default('', true)) | lower %}
-    {% set status_color = '#00e676' if s_lower in ['pass', 'completed', 'online']
+    {% set status_color = '#00e676' if s_lower in ['pass', 'completed', 'online', 'in_service']
       else '#ffea00' if s_lower in ['warn', 'limited']
       else '#ff1744' if s_lower in ['fail', 'out_of_service']
       else 'var(--md-default-fg-color--light)' %}
