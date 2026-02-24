@@ -386,7 +386,7 @@ def evaluate_instrument_status(
         if isinstance(raw_maint_status, str):
             maint_status = raw_maint_status.strip().lower()
 
-        for key in ("reason_details", "action"):
+        for key in ("reason_details", "action", "action_details", "reason"):
             value = latest_maint.get(key)
             if isinstance(value, str) and value.strip():
                 maint_reason = clean_text(value)
