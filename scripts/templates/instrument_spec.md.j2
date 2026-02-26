@@ -128,7 +128,7 @@
     ---
 
     <span class="aic-muted">Component:</span> {{ sw.component or '—' }}<br>
-    {% if sw.version %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}
+    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}
 
 {% endfor %}
 
@@ -245,6 +245,29 @@
 {% endif %}
 
 </div>
+
+
+
+### 🔍 Magnification Changers
+
+{% if magnification_changers %}
+<div class="grid cards" markdown>
+
+{% for mag in magnification_changers %}
+-   **{% if mag.url %}[{{ mag.model or 'Unknown Model' }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag.model or 'Unknown Model' }}{% endif %}**
+
+    ---
+
+    **Manufacturer:** {{ mag.manufacturer or '—' }}
+    {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
+    {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
+
+{% endfor %}
+
+</div>
+{% else %}
+> *No magnification changers recorded.*
+{% endif %}
 
 ---
 

@@ -284,6 +284,7 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                     {
                         "component": clean_text(item.get("component") or item.get("type") or ""),
                         "name": clean_text(item.get("name") or ""),
+                        "developer": clean_text(item.get("developer") or item.get("manufacturer") or ""),
                         "version": clean_text(item.get("version") or ""),
                         "url": clean_text(item.get("url") or ""),
                     }
@@ -297,16 +298,17 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                     {
                         "component": clean_text(component),
                         "name": clean_text(payload.get("name")),
+                        "developer": clean_text(payload.get("developer") or payload.get("manufacturer")),
                         "version": clean_text(payload.get("version")),
                         "url": clean_text(payload.get("url")),
                     }
                 )
             elif isinstance(payload, str):
-                rows.append({"component": clean_text(component), "name": clean_text(payload), "version": "", "url": ""})
+                rows.append({"component": clean_text(component), "name": clean_text(payload), "developer": "", "version": "", "url": ""})
         return [r for r in rows if any(r.values())]
 
     if isinstance(raw, str) and raw.strip():
-        return [{"component": "software", "name": clean_text(raw), "version": "", "url": ""}]
+        return [{"component": "software", "name": clean_text(raw), "developer": "", "version": "", "url": ""}]
 
     return []
 
@@ -788,6 +790,18 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             if isinstance(f, dict)
         ]
 
+        magnification_changers = [
+            {
+                "manufacturer": clean_text(m.get("manufacturer")),
+                "model": clean_text(m.get("model")),
+                "magnification": m.get("magnification"),
+                "notes": clean_text(m.get("notes")),
+                "url": clean_text(m.get("url")),
+            }
+            for m in hardware.get("magnification_changers", [])
+            if isinstance(m, dict)
+        ]
+
         instrument_dir = docs_root / "instruments" / instrument_id
         instrument_dir.mkdir(parents=True, exist_ok=True)
 
@@ -802,6 +816,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             objectives=objectives,
             splitters=splitters,
             filters=filters,
+            magnification_changers=magnification_changers,
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
