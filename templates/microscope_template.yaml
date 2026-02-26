@@ -73,6 +73,7 @@ modules:
 software:
   acquisition:
     name: "ZEN"               # e.g. ZEN, LAS X, NIS-Elements, MicroManager
+    developer: "Zeiss"        # e.g. Zeiss, Leica Microsystems, Nikon
     version: "3.4"
     url: ""                   # Link to software manual or vendor page
 
@@ -158,3 +159,11 @@ hardware:
       specialties: "DIC, UV compatible"  # e.g., STED, PH1, Correction Ring
       notes: ""
       url: ""                            # Link to objective database/specs
+
+  # --- Magnification Changers / Optovar ---
+  magnification_changers:
+    - manufacturer: "Zeiss"
+      model: "Optovar"
+      magnification: 1.5
+      notes: ""
+      url: ""
