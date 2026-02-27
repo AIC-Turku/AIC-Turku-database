@@ -40,7 +40,7 @@ software:
   acquisition:
     name: "Fusion BC43"
     developer: "Andor"
-    version: ""
+    version: "2.7.0"
     url: "https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/"
 
 # -----------------------------------------------------------------------------
