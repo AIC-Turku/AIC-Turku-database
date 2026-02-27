@@ -6,10 +6,10 @@ instrument:
   instrument_id: "scope-andor-bc43"                     
   manufacturer: "Andor"
   model: "BC43"                             
-  year_of_purchase: ""
-  funding: ""
+  year_of_purchase: "2026"
+  funding: "Research Council of Finland FIRI funding"
   stand_orientation: "benchtop"
-  location: ""
+  location: "BioCity, 5th floor, room 5149"
   notes: "Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution."
   url: "https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope"
 
