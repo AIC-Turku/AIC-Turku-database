@@ -28,7 +28,7 @@ inputs_human:
 
 laser_inputs_human:
   measurement_position: "at_objective"
-  measurement_position_details: "Measured using calibrated laser slides supplied with the BC43 package."
+  measurement_position_details: "Measured using calibrated laser slides supplied with the facility."
 
   power_meter:
     model: "calibrated laser slides"
@@ -74,6 +74,25 @@ computed_provenance:
   version: "1"
   run_utc: "2026-02-24T11:30:00Z"
 
-metrics_computed: []
+metrics_computed:
+  - metric_id: "laser.at_obj.405.100pct.power_mw"
+    value: 18.0
+    unit: "mW"
+    details: "Baseline max power at objective measured during installation."
+    
+  - metric_id: "laser.at_obj.488.100pct.power_mw"
+    value: 12.0
+    unit: "mW"
+    details: "Baseline max power at objective measured during installation."
+    
+  - metric_id: "laser.at_obj.561.100pct.power_mw"
+    value: 13.0
+    unit: "mW"
+    details: "Baseline max power at objective measured during installation."
+    
+  - metric_id: "laser.at_obj.638.100pct.power_mw"
+    value: 16.0
+    unit: "mW"
+    details: "Baseline max power at objective measured during installation."
 
 artifacts: []
