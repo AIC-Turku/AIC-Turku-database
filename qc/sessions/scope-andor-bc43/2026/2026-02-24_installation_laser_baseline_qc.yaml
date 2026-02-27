@@ -1,0 +1,79 @@
+schema_version: 1
+record_type: qc_session
+
+qc_id: "qc_scope-andor-bc43_20260224T110000Z_laser_baseline"
+microscope: "scope-andor-bc43"
+
+started_utc: "2026-02-24T11:00:00Z"
+ended_utc: "2026-02-24T11:20:00Z"
+
+performed_by: "Installation engineer"
+reason: "post_installation_baseline"
+
+summary: "Baseline laser power check completed during BC43 installation acceptance."
+notes: >
+  Laser power measured with calibrated laser slides provided with the instrument package.
+  Values captured as initial reference for future trending.
+
+performed:
+  - qc_type: "laser_power"
+    details: "Single-point baseline measurement for each installed laser line."
+    artifacts: []
+
+inputs_human:
+  - metric_id: "visual.optical_path_integrity"
+    value: "verified"
+    unit: ""
+    details: "Objectives and optical pathway integrity checked during installation acceptance."
+
+laser_inputs_human:
+  measurement_position: "at_objective"
+  measurement_position_details: "Measured using calibrated laser slides supplied with the BC43 package."
+
+  power_meter:
+    model: "calibrated laser slides"
+    serial: ""
+    calibration_due: ""
+    integration_time_s: 1.0
+    notes: "Installation acceptance baseline."
+
+  linearity_series:
+    - laser: "405"
+      setpoint_units: "percent"
+      power_units: "mW"
+      points:
+        - setpoint: 100
+          power: 18.0
+      details: "Baseline measured during installation acceptance."
+    - laser: "488"
+      setpoint_units: "percent"
+      power_units: "mW"
+      points:
+        - setpoint: 100
+          power: 12.0
+      details: "Baseline measured during installation acceptance."
+    - laser: "561"
+      setpoint_units: "percent"
+      power_units: "mW"
+      points:
+        - setpoint: 100
+          power: 13.0
+      details: "Baseline measured during installation acceptance."
+    - laser: "638"
+      setpoint_units: "percent"
+      power_units: "mW"
+      points:
+        - setpoint: 100
+          power: 16.0
+      details: "Baseline measured during installation acceptance."
+
+  stability_series: []
+
+computed_provenance:
+  pipeline: "manual_entry"
+  version: "1"
+  run_utc: "2026-02-24T11:30:00Z"
+
+metrics_computed: []
+
+artifacts: []
