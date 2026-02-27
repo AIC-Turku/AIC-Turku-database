@@ -40,7 +40,7 @@ software:
   acquisition:
     name: "Fusion BC43"               
     version: ""
-    url: "https://andor.oxinst.com/products/microscopy-software"
+    url: "https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/"
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION
