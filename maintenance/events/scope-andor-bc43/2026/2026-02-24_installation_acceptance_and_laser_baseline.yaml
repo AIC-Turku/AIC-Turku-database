@@ -1,0 +1,44 @@
+schema_version: 1
+record_type: maintenance_event
+
+maintenance_id: "maint_scope-andor-bc43_20260224_installation_acceptance"
+microscope: "scope-andor-bc43"
+
+service_provider: "vendor"
+company: "Andor"
+contact: "Installation engineer"
+reference: "BC43 installation and acceptance visit"
+
+started_utc: "2026-02-24T08:30:00Z"
+ended_utc: "2026-02-24T12:30:00Z"
+
+reason: "install"
+reason_details: >
+  Post-installation setup verification and acceptance testing after BC43 delivery.
+
+action: "calibrate"
+action_details: >
+  Ensured correct setup and Fusion/Windows-related settings. Tested imaging workflow from
+  sample-holder and incubation chamber setup/calibration through Montage, Z-Scan,
+  Multichannel Transmitted Light, and Joystick operation using provided sample slides.
+  Verified integrity of objectives and optical pathway. Completed setup and calibration of
+  the Okolab incubation system. Measured laser output using calibrated laser slides:
+  405 nm = 18 mW, 488 nm = 12 mW, 561 nm = 13 mW, 638 nm = 16 mW.
+
+microscope_status_before: "out_of_service"
+microscope_status_after: "in_service"
+downtime_hours: 4.0
+
+related_qc:
+  - "qc_scope-andor-bc43_20260224T110000Z_laser_baseline"
+attachments: []
+tags: ["installation", "acceptance", "calibration", "laser-power", "okolab"]
+
+followup: >
+  Use calibrated laser slides for routine power baseline checks and log future values in QC
+  sessions.
+next_due_date: "2026-03-24"
+
+notes: >
+  Installation engineer completed commissioning checks and confirmed instrument readiness
+  for routine operation.
