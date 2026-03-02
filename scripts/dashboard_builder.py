@@ -765,6 +765,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "immersion": clean_text(obj.get("immersion")),
                 "correction": clean_text(obj.get("correction")),
                 "afc": obj.get("afc_compatible"),
+                "is_installed": obj.get("is_installed", True),
                 "specialties": clean_text(obj.get("specialties")),
                 "notes": clean_text(obj.get("notes")),
                 "url": clean_text(obj.get("url")),
