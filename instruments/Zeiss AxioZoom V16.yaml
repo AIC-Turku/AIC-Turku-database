@@ -139,6 +139,7 @@ hardware:
       specialties: ""
       notes: "System magnification range 3.5x-56x. Field of view range 66-4 mm. ApoTome compatible: No."
       url: ""
+      is_installed: true
     - id: "1x_air"
       manufacturer: "Zeiss"
       model: "PlanApo Z"
@@ -152,3 +153,4 @@ hardware:
       specialties: ""
       notes: "System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome compatible from 40x-112x."
       url: ""
+      is_installed: true

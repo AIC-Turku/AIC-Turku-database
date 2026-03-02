@@ -146,6 +146,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "10x_air"
       manufacturer: "Zeiss"
       model: "EC Epiplan-Neofluar"
@@ -160,6 +161,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "Zeiss"
       model: "Plan Apochromat"
@@ -174,6 +176,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "63x_oil"
       manufacturer: "Zeiss"
       model: "Alpha Plan Apochromat"
@@ -188,6 +191,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Zeiss"
       model: "Alpha Plan Apochromat"
@@ -201,3 +205,4 @@ hardware:
       specialties: "TIRF"
       notes: ""
       url: ""
+      is_installed: true

@@ -123,6 +123,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "10x_air"
       manufacturer: "AMG (Thermo Fisher)"
       model: "PlanFluor"
@@ -137,6 +138,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "AMG (Thermo Fisher)"
       model: "PlanFluor"
@@ -151,6 +153,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "40x_air"
       manufacturer: "AMG (Thermo Fisher)"
       model: "PlanFluor"
@@ -164,3 +167,4 @@ hardware:
       specialties: ""
       notes: ""
       url: ""
+      is_installed: true

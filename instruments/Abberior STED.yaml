@@ -157,6 +157,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "60x_water"
       manufacturer: "Olympus"
       model: "UPLSAPO"
@@ -171,6 +172,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Olympus"
       model: "UPLSAPO"
@@ -184,3 +186,4 @@ hardware:
       specialties: ""
       notes: ""
       url: ""
+      is_installed: true

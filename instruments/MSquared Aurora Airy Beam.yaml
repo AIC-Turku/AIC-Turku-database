@@ -119,3 +119,4 @@ hardware:
       specialties: "For illumination/detection"
       notes: "Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI, and <870 µm FOV with 12 mm imaging sphere."
       url: ""
+      is_installed: true
