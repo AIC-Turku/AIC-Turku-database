@@ -43,7 +43,7 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-    const response = await fetch("assets/instruments_data.json");
+    const response = await fetch("../assets/instruments_data.json");
     const instruments = await response.json();
     
     const systemSelect = document.getElementById("system-select");
