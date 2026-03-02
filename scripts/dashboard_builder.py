@@ -501,14 +501,17 @@ def _discover_image_filename(instrument_id: str) -> str:
 
 
 def load_instruments(
-    instruments_dir: str = "instruments", load_errors: list[YamlLoadError] | None = None
+    instruments_dir: str = "instruments",
+    load_errors: list[YamlLoadError] | None = None,
+    include_retired: bool = False,
 ) -> list[dict[str, Any]]:
     base = Path(instruments_dir)
     instruments: list[dict[str, Any]] = []
 
     for yaml_file in _iter_yaml_files(base):
-        # Skip retired instruments (residing in a 'retired' directory)
-        if "retired" in yaml_file.parts:
+        # Skip retired instruments unless explicitly requested.
+        is_retired = "retired" in yaml_file.parts
+        if is_retired != include_retired:
             continue
 
         payload = _load_yaml_file(yaml_file, load_errors=load_errors)
@@ -607,6 +610,7 @@ def build_nav(instruments: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {"Fleet Overview": "index.md"},
         {"System Health": "status.md"},
+        {"Retired Instruments": "retired/index.md"},
         {"Microscopes": microscopes},
     ]
 
@@ -646,12 +650,14 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     tpl_index = jinja_env.get_template("index.md.j2")
     tpl_status = jinja_env.get_template("status.md.j2")
+    tpl_retired = jinja_env.get_template("retired_index.md.j2")
     tpl_spec = jinja_env.get_template("instrument_spec.md.j2")
     tpl_history = jinja_env.get_template("instrument_history.md.j2")
     tpl_event = jinja_env.get_template("event_detail.md.j2")
 
     load_errors: list[YamlLoadError] = []
     instruments = load_instruments("instruments", load_errors=load_errors)
+    retired_instruments = load_instruments("instruments", load_errors=load_errors, include_retired=True)
     qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
     maint_logs_by_instrument = index_instrument_logs("maintenance/events", load_errors=load_errors)
 
@@ -892,6 +898,11 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     status_md = tpl_status.render(issues=flagged)
     (docs_root / "status.md").write_text(status_md, encoding="utf-8")
+
+    retired_md = tpl_retired.render(retired_instruments=retired_instruments)
+    retired_docs_dir = docs_root / "retired"
+    retired_docs_dir.mkdir(parents=True, exist_ok=True)
+    (retired_docs_dir / "index.md").write_text(retired_md, encoding="utf-8")
 
     # Extracted site URL into environment variable to prevent hardcoding issues
     site_url = os.getenv("MKDOCS_SITE_URL", "https://aic-turku.github.io/AIC-Turku-database/")
