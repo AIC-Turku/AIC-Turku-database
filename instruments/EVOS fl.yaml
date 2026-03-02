@@ -4,9 +4,9 @@
 instrument:
   display_name: "EVOS fl"
   instrument_id: "scope-evos-fl"
-  manufacturer: "Thermo Fisher / AMG" # Typically AMG/Thermo Fisher for EVOS
+  manufacturer: "Thermo Fisher / AMG"
   model: "FL"
-  year_of_purchase: ""
+  year_of_purchase: "2011"
   funding: ""
   stand_orientation: "inverted"
   location: ""
@@ -23,7 +23,10 @@ modalities:
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
-modules: []
+modules:
+  - name: "Universal vessel holder"
+    notes: "Product code AMEP-VH009"
+    url: ""
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
@@ -51,14 +54,14 @@ hardware:
   # --- Detectors (Emission) ---
   detectors:
     - kind: "CMOS"
-      manufacturer: ""
+      manufacturer: "AMG (Thermo Fisher)"
       model: "Integrated color camera"
       notes: "For brightfield"
       url: ""
     - kind: "CMOS"
-      manufacturer: ""
-      model: "Integrated monochrome camera"
-      notes: "For fluorescence"
+      manufacturer: "AMG (Thermo Fisher)"
+      model: "AMF-4302"
+      notes: "Integrated monochrome camera for fluorescence"
       url: ""
 
   # --- Splitters (Camera/Emission) ---
@@ -72,11 +75,11 @@ hardware:
       excitation: ""
       dichroic: ""
       emission: ""
-      notes: ""
+      notes: "Included with base unit"
       url: ""
     - name: "CFP"
       location: "Light Cube Pos 2"
-      product_code: ""
+      product_code: "AMEP-4653"
       excitation: ""
       dichroic: ""
       emission: ""
@@ -88,7 +91,7 @@ hardware:
       excitation: ""
       dichroic: ""
       emission: ""
-      notes: ""
+      notes: "Included with base unit"
       url: ""
     - name: "RFP/Alexa 555"
       location: "Light Cube Pos 4"
@@ -96,11 +99,11 @@ hardware:
       excitation: ""
       dichroic: ""
       emission: ""
-      notes: ""
+      notes: "Included with base unit"
       url: ""
     - name: "Cy5/Alexa 647"
       location: "Light Cube Pos 5"
-      product_code: ""
+      product_code: "AMEP-4656"
       excitation: ""
       dichroic: ""
       emission: ""
@@ -119,10 +122,9 @@ hardware:
       immersion: "air"
       correction: "fluorite"
       afc_compatible: false
-      specialties: ""
+      specialties: "Phase Contrast (PH)"
       notes: ""
       url: ""
-      
       is_installed: true
     - id: "10x_air"
       manufacturer: "AMG (Thermo Fisher)"
@@ -135,9 +137,8 @@ hardware:
       correction: "plan_fluorite"
       afc_compatible: false
       specialties: ""
-      notes: ""
+      notes: "Fluorite (FL)"
       url: ""
-      
       is_installed: true
     - id: "20x_air"
       manufacturer: "AMG (Thermo Fisher)"
@@ -150,9 +151,8 @@ hardware:
       correction: "plan_fluorite"
       afc_compatible: false
       specialties: ""
-      notes: ""
+      notes: "Fluorite (FL)"
       url: ""
-      
       is_installed: true
     - id: "40x_air"
       manufacturer: "AMG (Thermo Fisher)"
@@ -165,6 +165,6 @@ hardware:
       correction: "plan_fluorite"
       afc_compatible: false
       specialties: ""
-      notes: ""
+      notes: "Fluorite (FL)"
       url: ""
       is_installed: true
