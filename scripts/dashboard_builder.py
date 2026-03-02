@@ -612,6 +612,7 @@ def build_nav(instruments: list[dict[str, Any]], retired_instruments: list[dict[
         {"Fleet Overview": "index.md"},
         {"System Health": "status.md"},
         {"Microscopes": microscopes},
+        {"Methods Generator": "methods_generator.md"},
         {"Retired Instruments": [{"Overview": "retired/index.md"}, *retired]},
     ]
 
@@ -655,6 +656,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     tpl_spec = jinja_env.get_template("instrument_spec.md.j2")
     tpl_history = jinja_env.get_template("instrument_history.md.j2")
     tpl_event = jinja_env.get_template("event_detail.md.j2")
+    tpl_methods = jinja_env.get_template("methods_generator.md.j2")
 
     load_errors: list[YamlLoadError] = []
     instruments = load_instruments("instruments", load_errors=load_errors)
@@ -813,6 +815,16 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             for m in hardware.get("magnification_changers", [])
             if isinstance(m, dict)
         ]
+        
+        inst["processed_hardware"] = {
+            "light_sources": light_sources,
+            "detectors": detectors,
+            "objectives": objectives,
+            "splitters": splitters,
+            "filters": filters,
+            "magnification_changers": magnification_changers
+        }
+
 
         instrument_dir = docs_root / "instruments" / instrument_id
         instrument_dir.mkdir(parents=True, exist_ok=True)
@@ -901,6 +913,14 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     # Fleet + status pages
     index_md = tpl_index.render(instruments=instruments, all_modalities=all_modalities, counts=fleet_counts)
     (docs_root / "index.md").write_text(index_md, encoding="utf-8")
+
+    # Export active instruments to JSON for the Methods Generator
+    json_path = docs_root / "assets" / "instruments_data.json"
+    json_path.write_text(json.dumps(instruments, indent=2), encoding="utf-8")
+
+    # Render Methods Generator page
+    methods_md = tpl_methods.render()
+    (docs_root / "methods_generator.md").write_text(methods_md, encoding="utf-8")
 
     status_md = tpl_status.render(issues=flagged)
     (docs_root / "status.md").write_text(status_md, encoding="utf-8")
