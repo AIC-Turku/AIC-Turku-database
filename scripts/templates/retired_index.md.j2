@@ -10,9 +10,9 @@ This page is a separate archive of instruments that are no longer in active serv
 
 {% if retired_instruments %}
 | Instrument | Manufacturer | Model | Former Location |
-|---|---|---|---|
+| --- | --- | --- | --- |
 {% for inst in retired_instruments %}
-| {{ inst.display_name }} | {{ inst.manufacturer or "—" }} | {{ inst.model or "—" }} | {{ inst.location or "—" }} |
+| [{{ inst.display_name }}](../instruments/{{ inst.id }}/index.md) | {{ inst.manufacturer or "—" }} | {{ inst.model or "—" }} | {{ inst.location or "—" }} |
 {% endfor %}
 {% else %}
 No retired instruments are currently listed.
