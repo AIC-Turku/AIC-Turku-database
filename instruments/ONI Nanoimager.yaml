@@ -125,3 +125,4 @@ hardware:
       specialties: ""
       notes: ""
       url: ""
+      is_installed: true

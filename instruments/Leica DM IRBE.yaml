@@ -104,6 +104,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "Leica"
       model: "Plan"
@@ -118,6 +119,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "40x_oil"
       manufacturer: "Leica"
       model: "Plan"
@@ -132,6 +134,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "63x_oil"
       manufacturer: "Leica"
       model: "Plan"
@@ -146,6 +149,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Leica"
       model: "Plan"
@@ -159,3 +163,4 @@ hardware:
       specialties: ""
       notes: ""
       url: ""
+      is_installed: true

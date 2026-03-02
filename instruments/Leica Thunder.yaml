@@ -198,6 +198,7 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/"
       
+      is_installed: true
     - id: "10x_air"
       manufacturer: "Leica"
       model: "10x"
@@ -212,6 +213,7 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/"
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "Leica"
       model: "20x"
@@ -226,6 +228,7 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/"
       
+      is_installed: true
     - id: "20x_multi"
       manufacturer: "Leica"
       model: "20x IMM UV"
@@ -240,6 +243,7 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/"
 
+      is_installed: true
     - id: "20x_air_2"
       manufacturer: "Leica"
       model: "20x"
@@ -254,6 +258,7 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/"
 
+      is_installed: true
     - id: "63x_oil"
       manufacturer: "Leica"
       model: "63x"
@@ -268,6 +273,7 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/"
 
+      is_installed: true
     - id: "16x_multi"
       manufacturer: "Leica"
       model: "16x"
@@ -282,6 +288,7 @@ hardware:
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/"
 
+      is_installed: true
     - id: "10x_air_2"
       manufacturer: "Leica"
       model: "10x"
@@ -296,6 +303,7 @@ hardware:
       notes: "from SP5?"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/"
 
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Leica"
       model: "100x HCX Plan Apo"
@@ -309,3 +317,4 @@ hardware:
       specialties: "STED"
       notes: "from SP5?"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/"
+      is_installed: true

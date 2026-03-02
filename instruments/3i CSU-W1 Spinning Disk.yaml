@@ -178,6 +178,7 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "Zeiss"
       model: "Plan Apochromat 20x"
@@ -192,6 +193,7 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8"
       
+      is_installed: true
     - id: "40x_water"
       manufacturer: "Zeiss"
       model: "LD C-Apochromat 40x"
@@ -206,6 +208,7 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27"
       
+      is_installed: true
     - id: "63x_air"
       manufacturer: "Zeiss"
       model: "LD Plan-Neofluar 63x"
@@ -220,6 +223,7 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421381-9971-000/Objective-LD-Plan-Neofluar-63x-0.75-Corr-Ph2-M27"
       
+      is_installed: true
     - id: "63x_water"
       manufacturer: "Zeiss"
       model: "LD C-Apochromat 63x"
@@ -234,6 +238,7 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421887-9970-000/Objective-LD-C-Apochromat-63x-1.15-W-Corr-M27"
       
+      is_installed: true
     - id: "63x_oil"
       manufacturer: "Zeiss"
       model: "Plan Apochromat 63x"
@@ -248,6 +253,7 @@ hardware:
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27"
       
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Zeiss"
       model: "Plan Apochromat 100x"
@@ -261,3 +267,4 @@ hardware:
       specialties: ""
       notes: ""
       url: ""
+      is_installed: true

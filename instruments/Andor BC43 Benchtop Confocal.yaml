@@ -147,6 +147,7 @@ hardware:
       notes: "Included in base BC43 CF"
       url: ""
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "Nikon"
       model: "20X Plan Apo LD Air"
@@ -161,6 +162,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "40x_air"
       manufacturer: "Nikon"
       model: "40X Plan Apo LD Air"
@@ -175,6 +177,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "40x_silicone"
       manufacturer: "Nikon"
       model: "40X Plan Apo LS Sil Oil"
@@ -189,6 +192,7 @@ hardware:
       notes: ""
       url: ""
 
+      is_installed: true
     - id: "60x_oil"
       manufacturer: "Nikon"
       model: "60X Plan Apo LD Oil"
@@ -203,6 +207,7 @@ hardware:
       notes: ""
       url: ""
 
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Nikon"
       model: "100x Plan Apo LD Oil"
@@ -216,3 +221,4 @@ hardware:
       specialties: "Lambda D"
       notes: ""
       url: ""
+      is_installed: true

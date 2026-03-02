@@ -212,6 +212,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "Zeiss"
       model: "Plan Apochromat"
@@ -226,6 +227,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "40x_multi"
       manufacturer: "Zeiss"
       model: "LD LCI Plan Apochromat"
@@ -240,6 +242,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "63x_oil"
       manufacturer: "Zeiss"
       model: "C Plan Apochromat"
@@ -254,6 +257,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Zeiss"
       model: "α Plan Apochromat"
@@ -267,3 +271,4 @@ hardware:
       specialties: ""
       notes: ""
       url: ""
+      is_installed: true

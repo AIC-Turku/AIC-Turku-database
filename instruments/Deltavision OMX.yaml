@@ -180,6 +180,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "60x_oil_2"
       manufacturer: "Olympus"
       model: "APO N TIRF"
@@ -193,3 +194,4 @@ hardware:
       specialties: "TIRF"
       notes: ""
       url: ""
+      is_installed: true

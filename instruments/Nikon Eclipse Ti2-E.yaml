@@ -194,6 +194,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "4x_air"
       manufacturer: "Nikon"
       model: "Plan Fluor 4x"
@@ -208,6 +209,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "4x_air_2"
       manufacturer: "Nikon"
       model: "Plan Apo Lambda D 4x"
@@ -222,6 +224,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "10x_air"
       manufacturer: "Nikon"
       model: "CFI Plan Fluor 10x"
@@ -236,6 +239,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "20x_air"
       manufacturer: "Nikon"
       model: "CFI S Plan Fluor ELWD 20x"
@@ -250,6 +254,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "20x_air_2"
       manufacturer: "Nikon"
       model: "CFI Plan Apo Lambda 20x"
@@ -264,6 +269,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "40x_air"
       manufacturer: "Nikon"
       model: "CFI S Plan Fluor ELWD ADM 40x"
@@ -278,6 +284,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "60x_oil"
       manufacturer: "Nikon"
       model: "CFI Plan Apo Lambda 60x"
@@ -292,6 +299,7 @@ hardware:
       notes: ""
       url: ""
       
+      is_installed: true
     - id: "100x_oil"
       manufacturer: "Nikon"
       model: "Apo TIRF 100x"
@@ -305,3 +313,4 @@ hardware:
       specialties: "TIRF"
       notes: ""
       url: ""
+      is_installed: true
