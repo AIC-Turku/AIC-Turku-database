@@ -65,6 +65,13 @@ hardware:
       power: "80 mW"
       notes: ""
       url: ""
+    - kind: "laser"
+      manufacturer: "Coherent OBIS"
+      model: "640 nm laser (LX)"
+      wavelength_nm: "640"
+      power: "75 mW"
+      notes: "FIBER PIGTAIL:UFC: Galaxy"
+      url: ""
 
   # --- Detectors (Emission) ---
   detectors:
