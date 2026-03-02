@@ -6,11 +6,11 @@ instrument:
   instrument_id: "scope-msquared-aurora-airy-beam"
   manufacturer: "M Squared"
   model: "Aurora Airy Beam"
-  year_of_purchase: ""
+  year_of_purchase: "2019"
   funding: ""
   stand_orientation: "other"
   location: "BioCity, 5th floor, room 5149"
-  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 600 µm FOV at 20x detection (about 20x Gaussian and 8x Bessel10), sub-1 µm axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation."
+  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -23,18 +23,21 @@ modalities:
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
-modules: []
+modules:
+  - name: "Environmental Enclosure"
+    notes: "Laser safety enclosure CUBE & BOX"
+    url: ""
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
 # -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: "MSquared Acquisition"
+    name: "M Squared Cubes Acquisition"
     version: ""
     url: ""
   deconvolution:
-    name: "MSquared Deconvolution"
+    name: "M Squared Cubes Deconvolution"
     version: ""
     url: ""
 
@@ -45,8 +48,8 @@ hardware:
   
   # --- Scanner ---
   scanner:
-    type: "none"
-    notes: ""
+    type: "galvanometric_and_resonant"
+    notes: "Galvanometric scanner and remote focusing lenses on illumination/detection; integrated Resonant scanner for beam scanning."
     url: ""
 
   # --- Light Sources (Excitation) ---
@@ -60,8 +63,8 @@ hardware:
       url: ""
     - kind: "laser"
       manufacturer: "Coherent OBIS"
-      model: "568 nm laser"
-      wavelength_nm: "568"
+      model: "561 nm laser"
+      wavelength_nm: "561"
       power: "80 mW"
       notes: ""
       url: ""
@@ -77,8 +80,8 @@ hardware:
   detectors:
     - kind: "sCMOS"
       manufacturer: "Hamamatsu"
-      model: "ORCA-Flash4.0"
-      notes: "2048x2048"
+      model: "ORCA-Flash4.0 V3 (C11440-22CU)"
+      notes: "2048x2048. Supplied with water chiller for camera chip cooling."
       url: ""
 
   # --- Splitters (Camera/Emission) ---
@@ -87,7 +90,7 @@ hardware:
   # --- Filters / Filter Cubes ---
   filters:
     - name: "GFP filter"
-      location: "Emission Wheel"
+      location: "Emission Wheel (6-position)"
       product_code: ""
       excitation: ""
       dichroic: ""
@@ -95,7 +98,7 @@ hardware:
       notes: ""
       url: ""
     - name: "GFP longpass"
-      location: "Emission Wheel"
+      location: "Emission Wheel (6-position)"
       product_code: ""
       excitation: ""
       dichroic: ""
@@ -103,7 +106,7 @@ hardware:
       notes: ""
       url: ""
     - name: "RFP longpass"
-      location: "Emission Wheel"
+      location: "Emission Wheel (6-position)"
       product_code: ""
       excitation: ""
       dichroic: ""
@@ -113,17 +116,17 @@ hardware:
 
   # --- Objectives ---
   objectives:
-    - id: "16x_multi"
+    - id: "17x_multi"
       manufacturer: "Special Optics"
-      model: "Airy beam dipping objective"
-      product_code: ""
-      magnification: 16.0
-      numerical_aperture: null
-      working_distance: ""
+      model: "54-10-12 Airy beam dipping objective"
+      product_code: "54-10-12"
+      magnification: 17.0
+      numerical_aperture: 0.4
+      working_distance: "12 mm"
       immersion: "multi"
       correction: ""
       afc_compatible: false
-      specialties: "For illumination/detection"
-      notes: "Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI, and <870 µm FOV with 12 mm imaging sphere."
+      specialties: "Cleared Tissue Imaging (CLARITY and TDE)"
+      notes: "Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI. FOV 1.2 mm diameter."
       url: ""
       is_installed: true
