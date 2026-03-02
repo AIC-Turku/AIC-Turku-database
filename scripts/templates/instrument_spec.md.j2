@@ -189,18 +189,16 @@
 <div class="grid cards" markdown>
 
 {% for obj in objectives %}
--   **{% if obj.url %}[{{ obj.name or 'Unknown Model' }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.name or 'Unknown Model' }}{% endif %}**{% if not obj.is_installed %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
+-   **{% if obj.url %}[{{ obj.name or 'Unknown Model' }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.name or 'Unknown Model' }}{% endif %}**{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
     {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
 
     ---
 
-    <div {% if not obj.is_installed %}style="opacity: 0.6;"{% endif %}>
-    **Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.na if obj.na is not none else '—' }}`
+    <span {% if obj.is_installed is sameas false %}style="opacity: 0.6; display: inline-block;"{% endif %}>**Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.na if obj.na is not none else '—' }}`
     {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
     {% if obj.wd %}<br>**WD:** {{ obj.wd }}{% endif %}
     {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
-    {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}
-    </div>
+    {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}</span>
 
 {% endfor %}
 
