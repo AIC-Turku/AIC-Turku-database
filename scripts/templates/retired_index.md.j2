@@ -8,11 +8,14 @@ hide:
 
 This page is a separate archive of instruments that are no longer in active service.
 
+{# Make this page safe even if retired_instruments is not provided in context #}
+{% set retired_instruments = retired_instruments | default([], true) %}
+
 {% if retired_instruments %}
 | Instrument | Manufacturer | Model | Former Location |
-| --- | --- | --- | --- |
-{% for inst in retired_instruments %}
-| [{{ inst.display_name }}](../instruments/{{ inst.id }}/index.md) | {{ inst.manufacturer or "—" }} | {{ inst.model or "—" }} | {{ inst.location or "—" }} |
+|:--|:--|:--|:--|
+{% for inst in retired_instruments -%}
+| [{{ inst.display_name | default(inst.id, true) | default("—", true) }}](../instruments/{{ inst.id }}/index.md) | {{ inst.manufacturer | default("—", true) }} | {{ inst.model | default("—", true) }} | {{ inst.location | default("—", true) }} |
 {% endfor %}
 {% else %}
 No retired instruments are currently listed.
