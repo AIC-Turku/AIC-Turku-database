@@ -76,8 +76,7 @@ def validate_instrument_ledgers(
     instrument_id_to_files: dict[str, list[str]] = {}
 
     for instrument_file in _iter_yaml_files(instruments_dir):
-        if "retired" in instrument_file.parts:
-            continue
+        is_retired_instrument = "retired" in instrument_file.parts
 
         payload, load_error = _load_yaml(instrument_file)
         if load_error is not None:
@@ -95,6 +94,10 @@ def validate_instrument_ledgers(
 
         instrument_section = payload.get("instrument")
         if not isinstance(instrument_section, dict):
+            if is_retired_instrument:
+                # Retired records are ignored by the dashboard renderer, so we only
+                # need best-effort ID extraction from them for event cross-references.
+                continue
             issues.append(
                 ValidationIssue(
                     code="missing_instrument_section",
@@ -106,6 +109,8 @@ def validate_instrument_ledgers(
 
         instrument_id = instrument_section.get("instrument_id")
         if not isinstance(instrument_id, str) or not instrument_id.strip():
+            if is_retired_instrument:
+                continue
             issues.append(
                 ValidationIssue(
                     code="missing_instrument_id",
@@ -117,6 +122,8 @@ def validate_instrument_ledgers(
 
         instrument_id = instrument_id.strip()
         if not _is_valid_instrument_id(instrument_id):
+            if is_retired_instrument:
+                continue
             issues.append(
                 ValidationIssue(
                     code="invalid_instrument_id",
