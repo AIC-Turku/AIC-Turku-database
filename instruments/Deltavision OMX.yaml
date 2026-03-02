@@ -5,8 +5,8 @@ instrument:
   display_name: "Deltavision OMX"
   instrument_id: "scope-deltavision-omx"
   manufacturer: "GE Healthcare"
-  model: "OMX"
-  year_of_purchase: ""
+  model: "OMX V4"
+  year_of_purchase: "2016"
   funding: ""
   stand_orientation: "inverted"
   location: "BioCity, 5th floor, room 5149"
@@ -26,14 +26,20 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "incubation"
-    notes: "Environmental chamber with temperature control"
+  - name: "Live Cell Option"
+    notes: "Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system."
     url: ""
   - name: "hardware_autofocus"
-    notes: "Ultra-focus system"
+    notes: "Ultimate Focus Hardware Autofocus Module"
     url: ""
   - name: "piezo_z_stage"
-    notes: "Motorized piezo Z stage"
+    notes: "X, Y, Z Nanomotion sample stage with fast piezo Z-axis system"
+    url: ""
+  - name: "Blaze R2 3D-SIM"
+    notes: "Proprietary electro-optical high speed structured illumination engine. 110-160 nm lateral and 320-400 nm axial resolution."
+    url: ""
+  - name: "Ring TIRF"
+    notes: "Ring TIRF optics module with integrated PhotoKinetic (PK) optics. Allows rapid wavelength switching and TIRF depth penetration modulation."
     url: ""
 
 # -----------------------------------------------------------------------------
@@ -44,7 +50,7 @@ software:
     name: "OMX Acquisition"
     version: "3.70"
     url: ""
-    notes: "Includes softWoRx Deconvolution v7.0.0"
+    notes: "Master Control on Windows. Image processing on CentOS with softWoRx 6.0 or newer for deconvolution/reconstruction."
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION
@@ -59,47 +65,47 @@ hardware:
 
   # --- Light Sources (Excitation) ---
   light_sources:
-    - kind: "laser"
+    - kind: "laser (diode)"
       manufacturer: ""
       model: "405 nm"
       wavelength_nm: "405"
       power: "100 mW"
-      notes: ""
+      notes: "Ultra-high speed Galvanometer shutter (0.2 ms)"
       url: ""
-    - kind: "laser"
+    - kind: "laser (diode)"
       manufacturer: ""
       model: "445 nm"
       wavelength_nm: "445"
       power: "100 mW"
-      notes: ""
+      notes: "Ultra-high speed Galvanometer shutter (0.2 ms)"
       url: ""
-    - kind: "laser"
+    - kind: "laser (DPSS)"
       manufacturer: ""
       model: "488 nm"
       wavelength_nm: "488"
       power: "100 mW"
-      notes: ""
+      notes: "Ultra-high speed Galvanometer shutter (0.2 ms)"
       url: ""
-    - kind: "laser"
+    - kind: "laser (DPSS)"
       manufacturer: ""
       model: "514 nm"
       wavelength_nm: "514"
       power: "100 mW"
-      notes: ""
+      notes: "Ultra-high speed Galvanometer shutter (0.2 ms)"
       url: ""
-    - kind: "laser"
+    - kind: "laser (DPSS)"
       manufacturer: ""
       model: "568 nm"
       wavelength_nm: "568"
       power: "100 mW"
-      notes: ""
+      notes: "Ultra-high speed Galvanometer shutter (0.2 ms)"
       url: ""
-    - kind: "laser"
+    - kind: "laser (diode)"
       manufacturer: ""
       model: "642 nm"
       wavelength_nm: "642"
-      power: "300 mW"
-      notes: ""
+      power: "110 mW"
+      notes: "Ultra-high speed Galvanometer shutter (0.2 ms)"
       url: ""
 
   # --- Detectors (Emission) ---
@@ -107,7 +113,7 @@ hardware:
     - kind: "sCMOS"
       manufacturer: "PCO"
       model: "Edge"
-      notes: "3x front-illuminated sCMOS cameras, 1024x1024 px, 6.5 um pixel size. Camera mapping: Cam1 DAPI+Cy5/CFP, Cam2 Alexa 488/YFP, Cam3 Alexa 568."
+      notes: "3x custom liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip, 6.5 um pixels. Operation: 512x512 for 3D-SIM, 1024x1024 for Widefield/TIRF. Camera mapping: Cam1 DAPI+Cy5/CFP, Cam2 Alexa 488/YFP, Cam3 Alexa 568."
       url: ""
 
   # --- Splitters (Camera/Emission) ---
@@ -179,8 +185,7 @@ hardware:
       specialties: "SIM"
       notes: ""
       url: ""
-      
-      is_installed: true
+      is_installed: false
     - id: "60x_oil_2"
       manufacturer: "Olympus"
       model: "APO N TIRF"
@@ -192,6 +197,6 @@ hardware:
       correction: "apochromat"
       afc_compatible: false
       specialties: "TIRF"
-      notes: ""
+      notes: "Equipped with correction collar."
       url: ""
       is_installed: true
