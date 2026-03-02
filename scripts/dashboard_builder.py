@@ -604,14 +604,15 @@ def load_instruments(
     return instruments
 
 
-def build_nav(instruments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_nav(instruments: list[dict[str, Any]], retired_instruments: list[dict[str, Any]]) -> list[dict[str, Any]]:
     microscopes = [{inst["display_name"]: f"instruments/{inst['id']}/index.md"} for inst in instruments]
+    retired = [{inst["display_name"]: f"instruments/{inst['id']}/index.md"} for inst in retired_instruments]
 
     return [
         {"Fleet Overview": "index.md"},
         {"System Health": "status.md"},
-        {"Retired Instruments": "retired/index.md"},
         {"Microscopes": microscopes},
+        {"Retired Instruments": [{"Overview": "retired/index.md"}, *retired]},
     ]
 
 
@@ -676,8 +677,11 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     fleet_counts = {"total": len(instruments), "green": 0, "yellow": 0, "red": 0}
     flagged: list[dict[str, Any]] = []
 
-    for inst in instruments:
+    retired_instrument_ids = {inst["id"] for inst in retired_instruments}
+
+    for inst in [*instruments, *retired_instruments]:
         instrument_id = inst["id"]
+        is_retired_instrument = instrument_id in retired_instrument_ids
 
         qc_logs = get_all_instrument_logs(
             "qc/sessions",
@@ -698,15 +702,16 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         status = evaluate_instrument_status(latest_qc, latest_maint)
         inst["status"] = status
 
-        if status["color"] == "green":
-            fleet_counts["green"] += 1
-        elif status["color"] == "yellow":
-            fleet_counts["yellow"] += 1
-        else:
-            fleet_counts["red"] += 1
+        if not is_retired_instrument:
+            if status["color"] == "green":
+                fleet_counts["green"] += 1
+            elif status["color"] == "yellow":
+                fleet_counts["yellow"] += 1
+            else:
+                fleet_counts["red"] += 1
 
-        if status["color"] in {"yellow", "red"}:
-            flagged.append(inst)
+            if status["color"] in {"yellow", "red"}:
+                flagged.append(inst)
 
         charts_json = _build_all_charts_data(qc_logs)
         # Roll up metrics chronologically so we always have the latest value for EVERY metric
@@ -951,7 +956,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             "https://cdn.jsdelivr.net/npm/chart.js",
             "assets/javascripts/charts.js",
         ],
-        "nav": build_nav(instruments),
+        "nav": build_nav(instruments, retired_instruments),
         # Tell MkDocs to ignore unmapped files gracefully (events and history pages)
         "validation": {
             "nav": {"omitted_files": "info"}
