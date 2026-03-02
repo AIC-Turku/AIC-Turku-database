@@ -920,7 +920,24 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     json_path.write_text(json.dumps(instruments, indent=2), encoding="utf-8")
 
     # Render Methods Generator page
-    methods_md = tpl_methods.render()
+    acknowledgements_path = repo_root / "acknowledgements.yaml"
+    if acknowledgements_path.exists():
+        ack_loaded = yaml.safe_load(acknowledgements_path.read_text(encoding="utf-8"))
+        ack_data = ack_loaded if isinstance(ack_loaded, dict) else {}
+    else:
+        ack_data = {
+            "standard": "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577.",
+            "xcelligence_addition": "Testament funds from Henna Ruusunen also supported this work.",
+        }
+        acknowledgements_path.write_text(
+            yaml.safe_dump(ack_data, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+    methods_md = tpl_methods.render(
+        ack_standard=json.dumps(ack_data.get("standard", "")),
+        ack_xcelligence=json.dumps(ack_data.get("xcelligence_addition", "")),
+    )
     (docs_root / "methods_generator.md").write_text(methods_md, encoding="utf-8")
 
     status_md = tpl_status.render(issues=flagged)

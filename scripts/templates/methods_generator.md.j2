@@ -169,12 +169,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         
         // Acknowledgements Section
         finalOutput += "\n\nAcknowledgements:\n\n";
-        finalOutput += "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577.";
+        
+        // Use the dynamically injected text from acknowledgements.yaml
+        finalOutput += {{ ack_standard }};
         
         // Check for xCELLigence usage (partial match on name)
-        const usedXcell = Array.from(usedInstrumentNames).some(name => name.includes("xcelligence"));
+        const usedXcell = Array.from(usedInstrumentNames).some(name => name.toLowerCase().includes("xcelligence"));
         if (usedXcell) {
-            finalOutput += " Testament funds from Henna Ruusunen also supported this work.";
+            finalOutput += " " + {{ ack_xcelligence }};
         }
 
         outputText.value = finalOutput;
