@@ -1,0 +1,197 @@
+---
+title: Methods Generator
+hide:
+  - toc
+---
+
+# 📝 Materials and Methods Generator
+
+This tool generates a "Materials and Methods" text block compliant with the **QUAREP-LiMi minimal reporting requirements** for light microscopy. Select a system, choose the specific hardware you used, and click **"Add to Methods"**. You can repeat this process for multiple microscopes.
+
+<div class="aic-card" style="padding: 20px; margin-bottom: 20px; background-color: var(--md-default-bg-color);">
+  <label for="system-select"><strong>1. Select Microscope:</strong></label>
+  <select id="system-select" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light);">
+    <option value="">-- Choose an instrument --</option>
+  </select>
+
+  <div id="hardware-options" style="display: none;">
+    <strong>2. Objectives:</strong>
+    <div id="obj-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>3. Light Sources (Lasers/LEDs):</strong>
+    <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    
+    <strong>4. Filters / Dichroics:</strong>
+    <div id="filter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>5. Detectors:</strong>
+    <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    
+    <button id="add-btn" class="md-button md-button--primary" style="margin-top: 10px;">+ Add to Methods</button>
+  </div>
+</div>
+
+### Generated Text
+<div style="position: relative;">
+  <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Please select an instrument and click "Add to Methods".</textarea>
+  <div style="margin-top: 10px; display: flex; gap: 10px;">
+      <button id="copy-btn" class="md-button md-button--primary">Copy to Clipboard</button>
+      <button id="clear-btn" class="md-button">Clear All</button>
+      <span id="copy-feedback" style="color: green; margin-top: 8px; display: none;">Copied!</span>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const response = await fetch("assets/instruments_data.json");
+    const instruments = await response.json();
+    
+    const systemSelect = document.getElementById("system-select");
+    const hwOptions = document.getElementById("hardware-options");
+    const outputText = document.getElementById("output-text");
+    const copyBtn = document.getElementById("copy-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    const addBtn = document.getElementById("add-btn");
+    
+    let currentInst = null;
+    let accumulatedMethods = [];
+    let usedInstrumentNames = new Set();
+
+    // Populate dropdown
+    instruments.forEach(inst => {
+        const opt = document.createElement("option");
+        opt.value = inst.id;
+        opt.textContent = inst.display_name;
+        systemSelect.appendChild(opt);
+    });
+
+    systemSelect.addEventListener("change", (e) => {
+        const instId = e.target.value;
+        currentInst = instruments.find(i => i.id === instId);
+        
+        if (!currentInst) {
+            hwOptions.style.display = "none";
+            return;
+        }
+
+        hwOptions.style.display = "block";
+        
+        // Formatting to match JCB/QUAREP-LiMi guidelines
+        populateCheckboxes("obj-list", currentInst.processed_hardware.objectives, 
+            obj => `${obj.magnification}x/${obj.na} ${obj.correction} ${obj.immersion} objective (${obj.manufacturer})`, "obj");
+            
+        populateCheckboxes("light-list", currentInst.processed_hardware.light_sources, 
+            ls => `${ls.wavelength}nm ${ls.type} (${ls.power}, ${ls.manufacturer} ${ls.name})`, "light");
+            
+        populateCheckboxes("filter-list", currentInst.processed_hardware.filters, 
+            f => `${f.name} (Ex: ${f.excitation || 'N/A'}, Di: ${f.dichroic || 'N/A'}, Em: ${f.emission || 'N/A'})`, "filter");
+            
+        populateCheckboxes("det-list", currentInst.processed_hardware.detectors, 
+            d => `${d.model} ${d.type} (${d.manufacturer})`, "det");
+    });
+
+    function populateCheckboxes(containerId, items, labelFormatter, prefix) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = "";
+        if (!items || items.length === 0) {
+            container.innerHTML = "<span style='color: gray; font-size: 0.9em;'>No data available.</span>";
+            return;
+        }
+        
+        items.forEach((item, index) => {
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "4px";
+            
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.id = `${prefix}-${index}`;
+            checkbox.value = labelFormatter(item).replace(/\s+/g, ' ').trim();
+            
+            const label = document.createElement("label");
+            label.htmlFor = `${prefix}-${index}`;
+            label.textContent = " " + checkbox.value;
+            
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            container.appendChild(wrapper);
+        });
+    }
+
+    function getCheckedValues(prefix) {
+        const checkboxes = document.querySelectorAll(`input[id^="${prefix}-"]:checked`);
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    addBtn.addEventListener("click", () => {
+        if (!currentInst) return;
+
+        const objs = getCheckedValues("obj");
+        const lights = getCheckedValues("light");
+        const filters = getCheckedValues("filter");
+        const dets = getCheckedValues("det");
+        
+        let softName = "the manufacturer's standard software";
+        if (currentInst.software && currentInst.software.length > 0) {
+            softName = `${currentInst.software[0].name} (v${currentInst.software[0].version || 'unknown'})`;
+        }
+
+        const stand = currentInst.stand_orientation && currentInst.stand_orientation !== 'other' 
+            ? currentInst.stand_orientation + " " 
+            : "";
+
+        let text = `Images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope. `;
+        
+        if (objs.length > 0) text += `The system was equipped with the following objective(s): ${objs.join(", ")}. `;
+        if (lights.length > 0) text += `Fluorescence excitation was provided by: ${lights.join(", ")}. `;
+        if (filters.length > 0) text += `Wavelength selection was performed using: ${filters.join(", ")}. `;
+        if (dets.length > 0) text += `Images were captured using: ${dets.join(", ")}. `;
+        
+        text += `Acquisition was controlled using ${softName}. `;
+        text += `[PLEASE ADD YOUR ACQUISITION SETTINGS HERE: e.g., exposure time, pinhole size in AU, z-step size, pixel size].`;
+
+        accumulatedMethods.push(text);
+        usedInstrumentNames.add(currentInst.display_name.toLowerCase());
+        
+        // Uncheck boxes after adding
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        
+        updateOutputText();
+    });
+
+    function updateOutputText() {
+        if (accumulatedMethods.length === 0) {
+            outputText.value = "Please select an instrument and click \"Add to Methods\".";
+            return;
+        }
+
+        let finalOutput = "Light Microscopy Methods:\n\n";
+        finalOutput += accumulatedMethods.join("\n\n");
+        
+        // Acknowledgements Section
+        finalOutput += "\n\nAcknowledgements:\n\n";
+        finalOutput += "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577.";
+        
+        // Check for xCELLigence usage (partial match on name)
+        const usedXcell = Array.from(usedInstrumentNames).some(name => name.includes("xcelligence"));
+        if (usedXcell) {
+            finalOutput += " Testament funds from Henna Ruusunen also supported this work.";
+        }
+
+        outputText.value = finalOutput;
+    }
+
+    clearBtn.addEventListener("click", () => {
+        accumulatedMethods = [];
+        usedInstrumentNames.clear();
+        updateOutputText();
+    });
+
+    copyBtn.addEventListener("click", () => {
+        if (accumulatedMethods.length === 0) return;
+        navigator.clipboard.writeText(outputText.value);
+        const feedback = document.getElementById("copy-feedback");
+        feedback.style.display = "inline";
+        setTimeout(() => feedback.style.display = "none", 2000);
+    });
+});
+</script>
