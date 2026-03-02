@@ -128,6 +128,7 @@ hardware:
       working_distance: "0.15 mm"
       immersion: "oil"
       correction: "plan_apochromat"
+      is_installed: false
       afc_compatible: true
       specialties: "High-NA test"
       notes: ""
