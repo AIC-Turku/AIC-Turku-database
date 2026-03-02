@@ -6,11 +6,11 @@ instrument:
   instrument_id: "scope-oni-nanoimager"
   manufacturer: "ONI"
   model: "Nanoimager"
-  year_of_purchase: ""
+  year_of_purchase: "2022"
   funding: ""
   stand_orientation: "other"
   location: ""
-  notes: "Super-resolution microscope (compact). Imaging modes: Single-molecule localization microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET imaging."
+  notes: "Super-resolution microscope (compact). Imaging modes: Single-molecule localization microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET imaging. Field of view: 50 μm x 80 μm per channel. Simultaneous 2-channel imaging (<10 nm mapping accuracy). Equipped with a closed-loop piezo stage (20/20/10 mm XYZ travel, 1 nm resolution) and continuous/one-shot autofocus."
   url: "https://oni.bio/nanoimager"
 
 # -----------------------------------------------------------------------------
@@ -23,7 +23,10 @@ modalities:
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
-modules: []
+modules:
+  - name: "Temperature Control"
+    notes: "Resistive heating without active cooling. Suitable for live cell imaging at 37°C."
+    url: ""
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
@@ -51,33 +54,33 @@ hardware:
 
   # --- Light Sources (Excitation) ---
   light_sources:
-    - kind: "laser"
-      manufacturer: ""
+    - kind: "laser (diode)"
+      manufacturer: "ONI"
       model: "405 nm violet"
       wavelength_nm: "405"
-      power: "150 mW"
-      notes: ""
+      power: "70 mW"
+      notes: "Power measured at the objective."
       url: ""
-    - kind: "laser"
-      manufacturer: ""
+    - kind: "laser (diode)"
+      manufacturer: "ONI"
       model: "488 nm blue"
       wavelength_nm: "488"
-      power: "1000 mW"
-      notes: ""
+      power: "250 mW"
+      notes: "Power measured at the objective."
       url: ""
-    - kind: "laser"
-      manufacturer: ""
+    - kind: "laser (DPSS)"
+      manufacturer: "ONI"
       model: "561 nm green"
       wavelength_nm: "561"
-      power: "500 mW"
-      notes: ""
+      power: "250 mW"
+      notes: "Power measured at the objective. DPSS technology inherently takes ~30 sec to stabilize."
       url: ""
-    - kind: "laser"
-      manufacturer: ""
+    - kind: "laser (diode)"
+      manufacturer: "ONI"
       model: "640 nm red"
       wavelength_nm: "640"
-      power: "100 mW"
-      notes: ""
+      power: "220 mW"
+      notes: "Power measured at the objective."
       url: ""
 
   # --- Detectors (Emission) ---
@@ -85,7 +88,7 @@ hardware:
     - kind: "sCMOS"
       manufacturer: "Hamamatsu"
       model: "ORCA-Flash4.0 V3"
-      notes: "Digital sCMOS camera, 100 fps full frame"
+      notes: "Digital sCMOS camera, 100 fps full frame. Typically operated with 2x2 binning."
       url: ""
 
   # --- Splitters (Camera/Emission) ---
@@ -126,3 +129,11 @@ hardware:
       notes: ""
       url: ""
       is_installed: true
+
+  # --- Magnification Changers ---
+  magnification_changers:
+    - manufacturer: "ONI"
+      model: "Custom tube lens"
+      magnification: 1.1
+      notes: "Custom tube lens provides 110x total magnification with the 100x objective. Combined with 2x2 binning, this yields a pixel size of ~117 nm."
+      url: ""
