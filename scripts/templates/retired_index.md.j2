@@ -1,0 +1,19 @@
+---
+title: Retired Instruments
+hide:
+  - toc
+---
+
+# Retired Instruments
+
+This page is a separate archive of instruments that are no longer in active service.
+
+{% if retired_instruments %}
+| Instrument | Manufacturer | Model | Former Location |
+|---|---|---|---|
+{% for inst in retired_instruments %}
+| {{ inst.display_name }} | {{ inst.manufacturer or "—" }} | {{ inst.model or "—" }} | {{ inst.location or "—" }} |
+{% endfor %}
+{% else %}
+No retired instruments are currently listed.
+{% endif %}
