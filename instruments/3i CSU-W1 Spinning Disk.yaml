@@ -18,7 +18,8 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "confocal_spinning_disk"
-  - "confocal_point"
+  - "FRAP"
+  - "photoactivation"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES

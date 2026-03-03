@@ -19,6 +19,8 @@ instrument:
 modalities:
   - "confocal_point"
   - "transmitted_brightfield"
+  - "AFM"
+  - "force_spectroscopy"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES

@@ -18,7 +18,7 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "transmitted_brightfield"
-  - "SIM"
+  - "structured_illumination_widefield"
   - "widefield_fluorescence"
 
 # -----------------------------------------------------------------------------

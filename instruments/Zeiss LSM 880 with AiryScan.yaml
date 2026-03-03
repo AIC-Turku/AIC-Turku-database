@@ -20,6 +20,7 @@ modalities:
   - "confocal_point"
   - "ISM"
   - "spectral_imaging"
+  - "transmitted_brightfield"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES

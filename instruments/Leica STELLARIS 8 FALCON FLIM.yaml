@@ -19,6 +19,9 @@ instrument:
 modalities:
   - "confocal_point"
   - "spectral_imaging"
+  - "FLIM"
+  - "FCS"
+  - "transmitted_brightfield"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
