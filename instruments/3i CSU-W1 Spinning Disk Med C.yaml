@@ -20,6 +20,7 @@ modalities:
   - "confocal_spinning_disk"
   - "widefield_fluorescence"
   - "transmitted_brightfield"
+  - "phase_contrast"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES

@@ -19,6 +19,8 @@ instrument:
 modalities:
   - "TIRF"
   - "SMLM"
+  - "SPT"
+  - "FRET"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES

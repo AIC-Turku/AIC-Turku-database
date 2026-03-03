@@ -20,7 +20,6 @@ modalities:
   - "widefield_fluorescence"
   - "transmitted_brightfield"
   - "DIC"
-  - "spectral_imaging"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
