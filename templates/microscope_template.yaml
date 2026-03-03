@@ -39,16 +39,28 @@ modalities:
   # - transmitted_brightfield
   # - phase_contrast
   # - DIC
+  # - darkfield
   # - confocal_point          (Standard LSM)
   # - confocal_spinning_disk  (SDC)
   # - TIRF
   # - light_sheet
   # - multiphoton
+  # - optical_sectioning      (ApoTome/Grid-projection)
   # - SIM                     (Structured Illumination)
   # - STED
+  # - RESOLFT
   # - SMLM                    (PALM/STORM)
+  # - SPT
   # - ISM                     (Airyscan)
+  # - FLIM
+  # - FCS
+  # - FRAP
+  # - photoactivation
+  # - FRET
   # - spectral_imaging
+  # - AFM
+  # - impedance_cytometry
+  # - live_cell_imaging
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
@@ -62,6 +74,7 @@ modules:
   # - incubation              (Temp/CO2)
   # - hardware_autofocus      (Definite/PFS/Z-drift)
   # - FRAP
+  # - photoactivation
   # - FCS
   # - FLIM
   # - optogenetics
