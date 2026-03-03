@@ -18,7 +18,7 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "transmitted_brightfield"
-  - "structured_illumination_widefield"
+  - "optical_sectioning"
   - "widefield_fluorescence"
 
 # -----------------------------------------------------------------------------
