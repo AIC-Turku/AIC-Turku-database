@@ -183,7 +183,7 @@ hardware:
       url: ""
 
   # --- Objectives ---
-objectives:
+  objectives:
     - id: "5x_air"
       manufacturer: "Leica"
       model: "N PLAN 5x/0.12 PH 0"
