@@ -6,8 +6,7 @@ hide:
 
 # 📝 Materials and Methods Generator
 
-This tool generates a "Materials and Methods" text block compliant with the **QUAREP-LiMi minimal reporting requirements** for light microscopy. Select a system, choose the specific hardware you used, and click **"Add to Methods"**. You can repeat this process for multiple microscopes.
-
+This tool generates a "Materials and Methods" text block compliant with the **QUAREP-LiMi minimal reporting requirements** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)). Select a system, choose the specific hardware you used, and click **"Add to Methods"**. You can repeat this process for multiple microscopes.
 <div class="aic-card" style="padding: 20px; margin-bottom: 20px; background-color: var(--md-default-bg-color);">
   <label for="system-select"><strong>1. Select Microscope:</strong></label>
   <select id="system-select" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light);">
@@ -24,7 +23,10 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
     <strong>4. Filters / Dichroics:</strong>
     <div id="filter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>5. Detectors:</strong>
+    <strong>5. Camera / Emission Splitters:</strong>
+    <div id="splitter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>6. Detectors:</strong>
     <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     
     <button id="add-btn" class="md-button md-button--primary" style="margin-top: 10px;">+ Add to Methods</button>
@@ -83,9 +85,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         populateCheckboxes("light-list", currentInst.processed_hardware.light_sources, 
             ls => `${ls.wavelength}nm ${ls.type} (${ls.power}, ${ls.manufacturer} ${ls.name})`, "light");
             
-        populateCheckboxes("filter-list", currentInst.processed_hardware.filters, 
-            f => `${f.name} (Ex: ${f.excitation || 'N/A'}, Di: ${f.dichroic || 'N/A'}, Em: ${f.emission || 'N/A'})`, "filter");
+        populateCheckboxes("filter-list", currentInst.processed_hardware.filters, f => {
+            let type = [];
+            if (f.excitation) type.push(`Ex: ${f.excitation}`);
+            if (f.dichroic) type.push(`Di: ${f.dichroic}`);
+            if (f.emission) type.push(`Em: ${f.emission}`);
             
+            // Label it based on what it actually does (helps users pick the right parts)
+            let label = f.name;
+            if (type.length > 0) {
+                label += ` (${type.join(', ')})`;
+            }
+            return label;
+        }, "filter");
+
+        populateCheckboxes("splitter-list", currentInst.processed_hardware.splitters, 
+            s => `${s.name} (${s.type})`, "splitter");
+
         populateCheckboxes("det-list", currentInst.processed_hardware.detectors, 
             d => `${d.model} ${d.type} (${d.manufacturer})`, "det");
     });
@@ -128,6 +144,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const objs = getCheckedValues("obj");
         const lights = getCheckedValues("light");
         const filters = getCheckedValues("filter");
+        const splitters = getCheckedValues("splitter"); 
         const dets = getCheckedValues("det");
         
         let softName = "the manufacturer's standard software";
@@ -139,15 +156,25 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? currentInst.stand_orientation + " " 
             : "";
 
-        let text = `Images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope. `;
+        // Base microscope description
+        let text = `Images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope controlled by ${softName}. `;
         
         if (objs.length > 0) text += `The system was equipped with the following objective(s): ${objs.join(", ")}. `;
-        if (lights.length > 0) text += `Fluorescence excitation was provided by: ${lights.join(", ")}. `;
-        if (filters.length > 0) text += `Wavelength selection was performed using: ${filters.join(", ")}. `;
         if (dets.length > 0) text += `Images were captured using: ${dets.join(", ")}. `;
+        if (splitters.length > 0) text += `Emission splitting to multiple cameras was performed using: ${splitters.join(", ")}. `;
+
+        text += `\n\n[CHANNEL CONFIGURATIONS - Please adjust the template below for your specific dyes]:\n`;
         
-        text += `Acquisition was controlled using ${softName}. `;
-        text += `[PLEASE ADD YOUR ACQUISITION SETTINGS HERE: e.g., exposure time, pinhole size in AU, z-step size, pixel size].`;
+        const diFilters = filters.filter(f => f.includes('Di:'));
+        const emFilters = filters.filter(f => f.includes('Em:'));        
+       
+        text += `Samples were illuminated using [General Light Engine, e.g., Leica LED 8 / Lumencor Celesta]. `;
+        text += `For [dyes a-b], the main dichroic was [Select from: ${diFilters.join(' OR ') || 'N/A'}].\n`;
+        
+        text += `- [dye a] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
+        text += `- [dye b] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
+
+        text += `\n[ACQUISITION SETTINGS]: Pinhole size: [X] AU, z-step size: [X] µm, pixel size: [X] µm/px.`;
 
         accumulatedMethods.push(text);
         usedInstrumentNames.add(currentInst.display_name.toLowerCase());
