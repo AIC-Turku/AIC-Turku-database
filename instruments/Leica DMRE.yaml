@@ -1,11 +1,11 @@
 # -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: Leica DMRE
+# MICROSCOPE CONFIGURATION: Leica DM RE
 # -----------------------------------------------------------------------------
 instrument:
-  display_name: "Leica DMRE"
+  display_name: "Leica DM RE"
   instrument_id: "scope-leica-dmre"
   manufacturer: "Leica Microsystems"
-  model: "DMRE"
+  model: "DM RE"
   year_of_purchase: ""
   funding: ""
   stand_orientation: "upright"
