@@ -198,6 +198,7 @@
     {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
     {% if obj.wd %}<br>**WD:** {{ obj.wd }}{% endif %}
     {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
+    {% if obj.specialties %}<br>**Capabilities:** {% if obj.specialties is string %}`{{ obj.specialties }}`{% elif obj.specialties is iterable %}{% for spec in obj.specialties %}`{{ spec }}`{% if not loop.last %} {% endif %}{% endfor %}{% else %}-{% endif %}{% endif %}
     {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}</span>
 
 {% endfor %}
