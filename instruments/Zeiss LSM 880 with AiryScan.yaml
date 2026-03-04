@@ -209,7 +209,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -224,7 +224,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -239,7 +239,10 @@ hardware:
       immersion: "multi"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: "Water, silicone oil, and glycerin multi-immersion"
+      specialties:
+        - "Water"
+        - "silicone oil"
+        - "and glycerin multi-immersion"
       notes: ""
       url: ""
       
@@ -254,7 +257,7 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -269,7 +272,7 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       is_installed: true

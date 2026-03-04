@@ -115,7 +115,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: "General purpose testing"
       url: ""
       
@@ -130,6 +130,7 @@ hardware:
       correction: "plan_apochromat"
       is_installed: false
       afc_compatible: true
-      specialties: "High-NA test"
+      specialties:
+        - "High-NA test"
       notes: ""
       url: ""

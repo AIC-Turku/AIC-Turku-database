@@ -127,7 +127,7 @@ hardware:
       immersion: "oil"
       correction: "apochromat"
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       is_installed: true

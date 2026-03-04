@@ -153,7 +153,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -168,7 +168,7 @@ hardware:
       immersion: "water"
       correction: "apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -183,7 +183,7 @@ hardware:
       immersion: "oil"
       correction: "apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       is_installed: true

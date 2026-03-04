@@ -143,7 +143,8 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: "Included in base BC43 CF"
       url: ""
       
@@ -158,7 +159,8 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
       
@@ -173,7 +175,8 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
       
@@ -188,7 +191,8 @@ hardware:
       immersion: "silicone"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda S"
+      specialties:
+        - "Lambda S"
       notes: ""
       url: ""
 
@@ -203,7 +207,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
 
@@ -218,7 +223,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
       is_installed: true

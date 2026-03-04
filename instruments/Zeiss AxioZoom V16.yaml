@@ -136,7 +136,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: "System magnification range 3.5x-56x. Field of view range 66-4 mm. ApoTome compatible: No."
       url: ""
       is_installed: true
@@ -150,7 +150,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: "System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome compatible from 40x-112x."
       url: ""
       is_installed: true

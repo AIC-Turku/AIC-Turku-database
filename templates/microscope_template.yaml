@@ -170,7 +170,9 @@ hardware:
       
       afc_compatible: true               # Hardware autofocus compatibility (true/false)
       is_installed: true                 # Whether objective is currently installed on the stand
-      specialties: "DIC, UV compatible"  # e.g., STED, PH1, Correction Ring
+      specialties:
+        - "DIC"
+        - "UV compatible"  # e.g., STED, PH1, Correction Ring
       notes: ""
       url: ""                            # Link to objective database/specs
 

@@ -175,7 +175,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
       
@@ -190,7 +190,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8"
       
@@ -205,7 +205,8 @@ hardware:
       immersion: "water"
       correction: "apochromat"
       afc_compatible: false
-      specialties: "cover glass 0.17"
+      specialties:
+        - "cover glass 0.17"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27"
       
@@ -220,7 +221,8 @@ hardware:
       immersion: "air"
       correction: "fluorite"
       afc_compatible: false
-      specialties: "cover glass 0.75"
+      specialties:
+        - "cover glass 0.75"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421381-9971-000/Objective-LD-Plan-Neofluar-63x-0.75-Corr-Ph2-M27"
       
@@ -235,7 +237,8 @@ hardware:
       immersion: "water"
       correction: "apochromat"
       afc_compatible: false
-      specialties: "cover glass 0.17"
+      specialties:
+        - "cover glass 0.17"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421887-9970-000/Objective-LD-C-Apochromat-63x-1.15-W-Corr-M27"
       
@@ -250,7 +253,7 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27"
       
@@ -265,7 +268,7 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       is_installed: true

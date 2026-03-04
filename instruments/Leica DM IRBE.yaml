@@ -100,7 +100,8 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: "phase compatible"
+      specialties:
+        - "phase compatible"
       notes: ""
       url: ""
       
@@ -115,7 +116,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -130,7 +131,7 @@ hardware:
       immersion: "oil"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -145,7 +146,7 @@ hardware:
       immersion: "oil"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -160,7 +161,7 @@ hardware:
       immersion: "oil"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       is_installed: true

@@ -105,7 +105,7 @@ hardware:
       immersion: "air"
       correction: "apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -120,7 +120,8 @@ hardware:
       immersion: "multi"
       correction: "apochromat"
       afc_compatible: false
-      specialties: "Correction Ring (CORR)"
+      specialties:
+        - "Correction Ring (CORR)"
       notes: ""
       url: ""
       
@@ -135,7 +136,8 @@ hardware:
       immersion: "glycerol"
       correction: "apochromat"
       afc_compatible: false
-      specialties: "Correction Ring (CORR)"
+      specialties:
+        - "Correction Ring (CORR)"
       notes: ""
       url: ""
       
@@ -150,7 +152,7 @@ hardware:
       immersion: "oil"
       correction: "apochromat"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       is_installed: true
