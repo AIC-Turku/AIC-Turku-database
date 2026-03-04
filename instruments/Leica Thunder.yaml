@@ -183,145 +183,165 @@ hardware:
       url: ""
 
   # --- Objectives ---
-  objectives:
+objectives:
     - id: "5x_air"
       manufacturer: "Leica"
-      model: "5x"
+      model: "N PLAN 5x/0.12 PH 0"
       product_code: "11506303"
       magnification: 5.0
       numerical_aperture: 0.12
       working_distance: "14.0 mm"
       immersion: "air"
-      correction: ""
+      correction: "plan_achromat"
       afc_compatible: false
       specialties:
-        - "PHO"
-      notes: ""
+        - "Phase Contrast (PH 0)"
+        - "DIC Prism B"
+        - "UV ≥365 nm"
+      notes: "FN 22"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/"
-      
       is_installed: true
+
     - id: "10x_air"
       manufacturer: "Leica"
-      model: "10x"
+      model: "HC PL APO 10x/0.45"
       product_code: "11506410"
       magnification: 10.0
       numerical_aperture: 0.45
       working_distance: "2.8 mm"
       immersion: "air"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: true
-      specialties: []
-      notes: ""
+      specialties:
+        - "DIC Prism A"
+        - "UV ≥340 nm"
+      notes: "FN 25"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/"
-      
       is_installed: true
+
     - id: "20x_air"
       manufacturer: "Leica"
-      model: "20x"
+      model: "HC PL FLUOTAR L 20x/0.40 CORR"
       product_code: "11506242"
       magnification: 20.0
-      numerical_aperture: 0.4
-      working_distance: "7.5-6.2 mm"
+      numerical_aperture: 0.40
+      working_distance: "7.5 - 6.2 mm"
       immersion: "air"
-      correction: ""
+      correction: "fluorite"
       afc_compatible: true
       specialties:
-        - "correction ring"
-      notes: ""
+        - "Correction Ring"
+        - "DIC Prism C"
+        - "UV ≥340 nm"
+      notes: "FN 25"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/"
-      
       is_installed: true
+
     - id: "20x_multi"
       manufacturer: "Leica"
-      model: "20x IMM UV"
+      model: "HC PL APO 20x/0.70 IMM CORR"
       product_code: "11506326"
       magnification: 20.0
-      numerical_aperture: 0.7
-      working_distance: "0.26 mm"
+      numerical_aperture: 0.70
+      working_distance: "0.66 mm"
       immersion: "multi"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: false
       specialties:
-        - "multi-immersion"
-      notes: ""
+        - "Multi-immersion"
+        - "Correction Ring"
+        - "DIC Prism C"
+        - "UV ≥365 nm"
+      notes: "FN 25; W/O/G Immersion"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/"
-
       is_installed: true
+
     - id: "20x_air_2"
       manufacturer: "Leica"
-      model: "20x"
+      model: "HC PL APO 20x/0.80"
       product_code: "11506529"
       magnification: 20.0
-      numerical_aperture: 0.8
+      numerical_aperture: 0.80
       working_distance: "0.4 mm"
       immersion: "air"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: true
-      specialties: []
-      notes: ""
+      specialties:
+        - "DIC Prism C"
+        - "UV ≥365 nm"
+      notes: "FN 25"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/"
-
       is_installed: true
+
     - id: "63x_oil"
       manufacturer: "Leica"
-      model: "63x"
+      model: "HC PL APO 63x/1.40 OIL CS2"
       product_code: "11506350"
       magnification: 63.0
-      numerical_aperture: 1.4
+      numerical_aperture: 1.40
       working_distance: "0.14 mm"
       immersion: "oil"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: true
-      specialties: []
-      notes: ""
+      specialties:
+        - "DIC Prism E"
+        - "UV ≥340 nm"
+      notes: "FN 25"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/"
-
       is_installed: true
+
     - id: "16x_multi"
       manufacturer: "Leica"
-      model: "16x"
+      model: "HC FLUOTAR L 16x/0.60 IMM CORR VISIR"
       product_code: "506533"
       magnification: 16.0
-      numerical_aperture: 0.6
+      numerical_aperture: 0.60
       working_distance: "2.5 mm"
       immersion: "multi"
-      correction: ""
+      correction: "fluorite"
       afc_compatible: true
       specialties:
-        - "multi-immersion; IR-compatible"
-        - "glyc/sil-oil / W / BABB"
-      notes: ""
+        - "Multi-immersion (BABB/W/Glyc/Sil-Oil)"
+        - "IR-compatible to 1300 nm"
+        - "VISIR"
+        - "Correction Ring"
+        - "DIC Prism D"
+      notes: "FN 20"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/"
+      is_installed: false
 
-      is_installed: true
     - id: "10x_air_2"
       manufacturer: "Leica"
-      model: "10x"
-      product_code: "506507"
+      model: "HC PL APO FLUOTAR 10x/0.30 PH 1"
+      product_code: "11506507"
       magnification: 10.0
-      numerical_aperture: null
-      working_distance: ""
+      numerical_aperture: 0.30
+      working_distance: "11.0 mm"
       immersion: "air"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: false
       specialties:
-        - "PH1"
-      notes: "from SP5?"
+        - "Phase Contrast (PH 1)"
+        - "DIC Prism D"
+        - "UV ≥340 nm"
+      notes: "FN 25; from SP5?"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/"
+      is_installed: false
 
-      is_installed: true
     - id: "100x_oil"
       manufacturer: "Leica"
-      model: "100x HCX Plan Apo"
-      product_code: "506316"
+      model: "HC PL APO 100x/1.40 OIL STED"
+      product_code: "11506316"
       magnification: 100.0
-      numerical_aperture: 1.4
-      working_distance: "0.09 mm"
+      numerical_aperture: 1.40
+      working_distance: "0.13 mm"
       immersion: "oil"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: false
       specialties:
         - "STED"
-      notes: "from SP5?"
+        - "DIC Prism D"
+        - "UV ≥340 nm"
+      notes: "FN 25; from SP5?"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/"
-      is_installed: true
+      is_installed: false
