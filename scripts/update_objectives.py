@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backfill `is_installed: true` for microscope objectives in instrument ledgers."""
+"""Backfill objective defaults and normalize specialties in instrument ledgers."""
 
 from __future__ import annotations
 
@@ -14,6 +14,20 @@ def iter_yaml_files(base_dir: Path):
     for path in sorted(base_dir.rglob("*.yaml")):
         if path.is_file():
             yield path
+
+
+def normalize_specialties(value):
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return []
+        return [part.strip() for part in raw.split(",") if part.strip()]
+    if value is None:
+        return []
+    cleaned = str(value).strip()
+    return [cleaned] if cleaned else []
 
 
 def update_objectives(path: Path, yaml: YAML) -> bool:
@@ -33,9 +47,18 @@ def update_objectives(path: Path, yaml: YAML) -> bool:
 
     changed = False
     for obj in objectives:
-        if isinstance(obj, dict) and "is_installed" not in obj:
+        if not isinstance(obj, dict):
+            continue
+
+        if "is_installed" not in obj:
             obj["is_installed"] = True
             changed = True
+
+        if "specialties" in obj:
+            normalized = normalize_specialties(obj.get("specialties"))
+            if obj.get("specialties") != normalized:
+                obj["specialties"] = normalized
+                changed = True
 
     if changed:
         with path.open("w", encoding="utf-8") as handle:

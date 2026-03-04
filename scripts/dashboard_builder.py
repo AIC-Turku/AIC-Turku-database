@@ -202,6 +202,14 @@ def clean_text(value: Any) -> str:
     return s.strip()
 
 
+def clean_string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [clean_text(item) for item in value if clean_text(item)]
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    return []
+
+
 def slugify(value: str) -> str:
     s = value.lower().strip()
     s = re.sub(r"\s+", "-", s)
@@ -768,7 +776,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "correction": clean_text(obj.get("correction")),
                 "afc": obj.get("afc_compatible"),
                 "is_installed": obj.get("is_installed", True),
-                "specialties": clean_text(obj.get("specialties")),
+                "specialties": clean_string_list(obj.get("specialties")),
                 "notes": clean_text(obj.get("notes")),
                 "url": clean_text(obj.get("url")),
             }

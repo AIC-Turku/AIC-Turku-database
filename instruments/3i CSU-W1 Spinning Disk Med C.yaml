@@ -192,7 +192,8 @@ hardware:
       immersion: "air"
       correction: "plan_fluorite"
       afc_compatible: false
-      specialties: "Ph1"
+      specialties:
+        - "Ph1"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420331-9911-000/Objective-EC-Plan-Neofluar-5x-0.16-Ph1-M27"
       
@@ -207,7 +208,8 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: "Ph1"
+      specialties:
+        - "Ph1"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
       
@@ -222,7 +224,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420650-9902-000/Objective-Plan-Apochromat-20x-0.8-M27"
 
@@ -237,7 +239,8 @@ hardware:
       immersion: "air"
       correction: "plan_fluorite"
       afc_compatible: true
-      specialties: "Correction collar for 0-1.5mm glass"
+      specialties:
+        - "Correction collar for 0-1.5mm glass"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421350-9971-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-M27"
       
@@ -252,7 +255,8 @@ hardware:
       immersion: "air"
       correction: "plan_fluorite"
       afc_compatible: true
-      specialties: "Correction collar for 0-1.5mm glass"
+      specialties:
+        - "Correction collar for 0-1.5mm glass"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/no/shop/objectives/421360-9971-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-M27"
 
@@ -267,7 +271,8 @@ hardware:
       immersion: "water"
       correction: "apochromat"
       afc_compatible: true
-      specialties: "Correction ring for 0.17 mm cover glass"
+      specialties:
+        - "Correction ring for 0.17 mm cover glass"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421767-9970-000/Objective-C-Apochromat-40x-1.2-W-Corr-M27"
       
@@ -282,7 +287,7 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420780-9900-000/Objective-Plan-Apochromat-63x-1.4-Oil-M27"
 
@@ -297,7 +302,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "DIC"
+      specialties:
+        - "DIC"
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9800-000/Objective-alpha-Plan-Apochromat-100x-1.46-Oil-DIC-M27"
       is_installed: true

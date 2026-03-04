@@ -137,7 +137,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: "Default. Resolution: 1.72 µm/pixel. FOV: 1.68 x 1.40 mm." #
       url: ""
 

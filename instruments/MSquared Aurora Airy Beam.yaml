@@ -126,7 +126,8 @@ hardware:
       immersion: "multi"
       correction: ""
       afc_compatible: false
-      specialties: "Cleared Tissue Imaging (CLARITY and TDE)"
+      specialties:
+        - "Cleared Tissue Imaging (CLARITY and TDE)"
       notes: "Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI. FOV 1.2 mm diameter."
       url: ""
       is_installed: true

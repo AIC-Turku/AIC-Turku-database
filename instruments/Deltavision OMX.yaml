@@ -182,7 +182,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: "SIM"
+      specialties:
+        - "SIM"
       notes: ""
       url: ""
       is_installed: false
@@ -196,7 +197,8 @@ hardware:
       immersion: "oil"
       correction: "apochromat"
       afc_compatible: false
-      specialties: "TIRF"
+      specialties:
+        - "TIRF"
       notes: "Equipped with correction collar."
       url: ""
       is_installed: true

@@ -303,7 +303,8 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: false
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
       
@@ -318,7 +319,8 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
       
@@ -333,7 +335,8 @@ hardware:
       immersion: "silicone"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda S"
+      specialties:
+        - "Lambda S"
       notes: ""
       url: ""
       
@@ -348,7 +351,9 @@ hardware:
       immersion: "water"
       correction: "apochromat"
       afc_compatible: true
-      specialties: "Lambda S, LWD"
+      specialties:
+        - "Lambda S"
+        - "LWD"
       notes: ""
       url: ""
 
@@ -363,7 +368,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
 
@@ -378,7 +384,8 @@ hardware:
       immersion: "silicone"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda S"
+      specialties:
+        - "Lambda S"
       notes: ""
       url: ""
 
@@ -393,7 +400,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "Lambda D"
+      specialties:
+        - "Lambda D"
       notes: ""
       url: ""
       is_installed: true

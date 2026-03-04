@@ -194,7 +194,8 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: "PHO"
+      specialties:
+        - "PHO"
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/"
       
@@ -209,7 +210,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/"
       
@@ -224,7 +225,8 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: true
-      specialties: "correction ring"
+      specialties:
+        - "correction ring"
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/"
       
@@ -239,7 +241,8 @@ hardware:
       immersion: "multi"
       correction: ""
       afc_compatible: false
-      specialties: "multi-immersion"
+      specialties:
+        - "multi-immersion"
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/"
 
@@ -254,7 +257,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/"
 
@@ -269,7 +272,7 @@ hardware:
       immersion: "oil"
       correction: ""
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/"
 
@@ -284,7 +287,9 @@ hardware:
       immersion: "multi"
       correction: ""
       afc_compatible: true
-      specialties: "multi-immersion; IR-compatible, glyc/sil-oil / W / BABB"
+      specialties:
+        - "multi-immersion; IR-compatible"
+        - "glyc/sil-oil / W / BABB"
       notes: ""
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/"
 
@@ -299,7 +304,8 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: "PH1"
+      specialties:
+        - "PH1"
       notes: "from SP5?"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/"
 
@@ -314,7 +320,8 @@ hardware:
       immersion: "oil"
       correction: ""
       afc_compatible: false
-      specialties: "STED"
+      specialties:
+        - "STED"
       notes: "from SP5?"
       url: "https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/"
       is_installed: true

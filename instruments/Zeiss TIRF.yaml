@@ -142,7 +142,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -157,7 +157,7 @@ hardware:
       immersion: "air"
       correction: ""
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -172,7 +172,7 @@ hardware:
       immersion: "air"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: ""
+      specialties: []
       notes: ""
       url: ""
       
@@ -187,7 +187,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "TIRF"
+      specialties:
+        - "TIRF"
       notes: ""
       url: ""
       
@@ -202,7 +203,8 @@ hardware:
       immersion: "oil"
       correction: "plan_apochromat"
       afc_compatible: true
-      specialties: "TIRF"
+      specialties:
+        - "TIRF"
       notes: ""
       url: ""
       is_installed: true

@@ -123,7 +123,8 @@ hardware:
       immersion: "air"
       correction: "fluorite"
       afc_compatible: false
-      specialties: "Phase Contrast (PH)"
+      specialties:
+        - "Phase Contrast (PH)"
       notes: ""
       url: ""
       is_installed: true
@@ -137,7 +138,7 @@ hardware:
       immersion: "air"
       correction: "plan_fluorite"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: "Fluorite (FL)"
       url: ""
       is_installed: true
@@ -151,7 +152,7 @@ hardware:
       immersion: "air"
       correction: "plan_fluorite"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: "Fluorite (FL)"
       url: ""
       is_installed: true
@@ -165,7 +166,7 @@ hardware:
       immersion: "air"
       correction: "plan_fluorite"
       afc_compatible: false
-      specialties: ""
+      specialties: []
       notes: "Fluorite (FL)"
       url: ""
       is_installed: true
