@@ -79,8 +79,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         hwOptions.style.display = "block";
         
         // Formatting to match JCB/QUAREP-LiMi guidelines
-        populateCheckboxes("obj-list", currentInst.processed_hardware.objectives, 
-            obj => `${obj.magnification}x/${obj.na} ${obj.correction} ${obj.immersion} objective (${obj.manufacturer})`, "obj");
+        populateCheckboxes("obj-list", currentInst.processed_hardware.objectives,
+            obj => formatObjectiveLabel(obj), "obj");
             
         populateCheckboxes("light-list", currentInst.processed_hardware.light_sources, 
             ls => `${ls.wavelength}nm ${ls.type} (${ls.power}, ${ls.manufacturer} ${ls.name})`, "light");
@@ -136,6 +136,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     function getCheckedValues(prefix) {
         const checkboxes = document.querySelectorAll(`input[id^="${prefix}-"]:checked`);
         return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function formatObjectiveLabel(obj) {
+        const parts = [];
+
+        const magnification = obj?.magnification ? `${obj.magnification}x` : "";
+        const na = obj?.na ? `/${obj.na}` : "";
+        const magnificationPart = `${magnification}${na}`;
+        if (magnificationPart) parts.push(magnificationPart);
+
+        const objectiveModel = obj?.model || obj?.name;
+        if (objectiveModel) parts.push(objectiveModel);
+        if (obj?.correction) parts.push(obj.correction);
+        if (obj?.immersion) parts.push(obj.immersion);
+        parts.push("objective");
+
+        const metadata = [];
+        if (obj?.manufacturer) metadata.push(obj.manufacturer);
+        if (obj?.product_code) metadata.push(`product code: ${obj.product_code}`);
+
+        return metadata.length > 0
+            ? `${parts.join(" ")} (${metadata.join(", ")})`
+            : parts.join(" ");
     }
 
     addBtn.addEventListener("click", () => {
