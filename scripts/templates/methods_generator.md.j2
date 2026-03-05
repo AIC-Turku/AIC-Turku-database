@@ -40,6 +40,14 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
 </div>
 
 ### Generated Text
+!!! tip "💡 Pro-Tip: How to find your exact imaging settings"
+    If you don't remember your exact exposure times, pixel sizes, or laser powers, you can easily extract them from your raw image files (`.nd2`, `.czi`, `.lif`, etc.):
+    
+    1. Open your raw image in **Fiji / ImageJ**.
+    2. Press **`I`** on your keyboard (or go to `Image > Show Info...`).
+    3. This will open a window with all the original hardware metadata.
+    4. **AI Shortcut:** Press `Ctrl+A` to copy all of that metadata text, paste it into an LLM (like ChatGPT or Copilot), and ask: *"Please extract the exposure time, laser power, pixel size (xy), pinhole size, and z-step from this microscope metadata."*
+
 <div style="position: relative;">
   <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Please select an instrument and click "Add to Methods".</textarea>
   <div style="margin-top: 10px; display: flex; gap: 10px;">
@@ -258,11 +266,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         text += `- [dye a] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
         text += `- [dye b] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
 
-        text += `\n[ACQUISITION SETTINGS - Note: For large papers, consider summarizing these in a supplemental table]:\n`;
+        text += `\n[ACQUISITION SETTINGS]:\n`;
+        text += `(Note: For large papers, consider summarizing these in a supplemental table. Need to find these numbers? Open your image in Fiji and press 'I' for Image Info!)\n`;
         text += `Standard imaging panels were defined for [list your main fluorophore combinations, e.g., DAPI/AF488/AF568]. `;
         text += `Exposure times and excitation powers were adjusted per sample to maximize dynamic range while strictly preventing pixel saturation. `;
-        text += `Images were acquired with a pixel size of [X] µm/px and a z-step of [X] µm, fulfilling the Nyquist sampling criterion for the objective. `;
-        text += `Pinhole size was maintained at [X AU].`;
+        text += `Images were acquired with a pixel size of [X] µm/px and a z-step of [X] µm, fulfilling the Nyquist sampling criterion for the objective. Pinhole size was maintained at [X AU].\n`;
+
+        text += `\n[DATA AVAILABILITY]:\n`;
+        text += `(Note: To support reproducible research, please consider uploading your raw microscopy images to a public repository).\n`;
+        text += `The raw microscopy images (.nd2/.czi/.lif) generated during this study are publicly available in the [BioImage Archive / Zenodo] repository under accession number [Insert Accession Number/DOI].`;
 
         accumulatedMethods.push(text);
         usedInstrumentNames.add(currentInst.display_name.toLowerCase());
