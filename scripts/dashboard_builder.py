@@ -824,7 +824,23 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             if isinstance(m, dict)
         ]
         
+        scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
+
         inst["processed_hardware"] = {
+            "modalities": [clean_text(m) for m in inst.get("modalities", []) if clean_text(m)],
+            "modules": [
+                {
+                    "name": clean_text(module.get("name")),
+                    "notes": clean_text(module.get("notes")),
+                    "url": clean_text(module.get("url")),
+                }
+                for module in inst.get("modules", [])
+                if isinstance(module, dict) and clean_text(module.get("name"))
+            ],
+            "scanner": {
+                "type": clean_text(scanner.get("type")),
+                "notes": clean_text(scanner.get("notes")),
+            },
             "light_sources": light_sources,
             "detectors": detectors,
             "objectives": objectives,
