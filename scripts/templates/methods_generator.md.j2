@@ -40,14 +40,6 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
 </div>
 
 ### Generated Text
-!!! tip "💡 Pro-Tip: How to find your exact imaging settings"
-    If you don't remember your exact exposure times, pixel sizes, or laser powers, you can easily extract them from your raw image files (`.nd2`, `.czi`, `.lif`, etc.):
-    
-    1. Open your raw image in **Fiji / ImageJ**.
-    2. Press **`I`** on your keyboard (or go to `Image > Show Info...`).
-    3. This will open a window with all the original hardware metadata.
-    4. **AI Shortcut:** Press `Ctrl+A` to copy all of that metadata text, paste it into an LLM (like ChatGPT or Copilot), and ask: *"Please extract the exposure time, laser power, pixel size (xy), pinhole size, and z-step from this microscope metadata."*
-
 <div style="position: relative;">
   <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Please select an instrument and click "Add to Methods".</textarea>
   <div style="margin-top: 10px; display: flex; gap: 10px;">
@@ -56,6 +48,14 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
       <span id="copy-feedback" style="color: green; margin-top: 8px; display: none;">Copied!</span>
   </div>
 </div>
+
+!!! tip "💡 Pro-Tip: How to find your exact imaging settings"
+    If you don't remember your exact exposure times, pixel sizes, or laser powers, you can easily extract them from your raw image files (`.nd2`, `.czi`, `.lif`, etc.):
+    
+    1. Open your raw image in **Fiji / ImageJ**.
+    2. Press **`I`** on your keyboard (or go to `Image > Show Info...`).
+    3. This will open a window with all the original hardware metadata.
+    4. **AI Shortcut:** Press `Ctrl+A` to copy all of that metadata text, paste it into an LLM (like ChatGPT or Copilot), and ask: *"Please extract the exposure time, laser power, pixel size (xy), pinhole size, and z-step from this microscope metadata."*
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
