@@ -14,19 +14,25 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
   </select>
 
   <div id="hardware-options" style="display: none;">
-    <strong>2. Objectives:</strong>
+    <strong>2. Imaging Modalities:</strong>
+    <div id="modality-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>3. Hardware Modules &amp; Environmental Control:</strong>
+    <div id="module-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>4. Objectives:</strong>
     <div id="obj-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>3. Light Sources (Lasers/LEDs):</strong>
+    <strong>5. Light Sources (Lasers/LEDs):</strong>
     <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     
-    <strong>4. Filters / Dichroics:</strong>
+    <strong>6. Filters / Dichroics:</strong>
     <div id="filter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>5. Camera / Emission Splitters:</strong>
+    <strong>7. Camera / Emission Splitters:</strong>
     <div id="splitter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>6. Detectors:</strong>
+    <strong>8. Detectors:</strong>
     <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     
     <button id="add-btn" class="md-button md-button--primary" style="margin-top: 10px;">+ Add to Methods</button>
@@ -77,6 +83,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         hwOptions.style.display = "block";
+
+        populateCheckboxes("modality-list", currentInst.processed_hardware.modalities || currentInst.modalities || [],
+            modality => toTitleCase(modality), "modality");
+
+        populateCheckboxes("module-list", currentInst.processed_hardware.modules || currentInst.modules || [],
+            module => {
+                const moduleName = toTitleCase(module?.name || module);
+                const moduleNotes = (module?.notes || "").toString().trim();
+                return moduleNotes ? `${moduleName} (${moduleNotes})` : moduleName;
+            }, "module");
         
         // Formatting to match JCB/QUAREP-LiMi guidelines
         populateCheckboxes("obj-list", currentInst.processed_hardware.objectives,
@@ -138,6 +154,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         return Array.from(checkboxes).map(cb => cb.value);
     }
 
+    function toTitleCase(value) {
+        return (value || "")
+            .toString()
+            .replace(/_/g, " ")
+            .trim()
+            .split(/\s+/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(" ");
+    }
+
+    function formatHumanList(items) {
+        if (!items || items.length === 0) return "";
+        if (items.length === 1) return items[0];
+        if (items.length === 2) return `${items[0]} and ${items[1]}`;
+        return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+    }
+
     function formatObjectiveLabel(obj) {
         const metadata = [];
         if (obj?.manufacturer) metadata.push(obj.manufacturer);
@@ -168,6 +201,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!currentInst) return;
 
         const objs = getCheckedValues("obj");
+        const modalities = getCheckedValues("modality");
+        const modules = getCheckedValues("module");
         const lights = getCheckedValues("light");
         const filters = getCheckedValues("filter");
         const splitters = getCheckedValues("splitter"); 
@@ -182,8 +217,31 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? currentInst.stand_orientation + " " 
             : "";
 
+        const scanner = currentInst?.processed_hardware?.scanner || currentInst?.hardware?.scanner || {};
+        const scannerTypeRaw = (scanner?.type || "").toString().trim();
+        const scannerType = scannerTypeRaw.replace(/_/g, " ");
+        const scannerNotes = (scanner?.notes || "").toString().trim();
+
+        const selectedModalities = modalities.length > 0
+            ? modalities
+            : (currentInst.processed_hardware.modalities || currentInst.modalities || []).map(m => toTitleCase(m));
+        const modalitiesText = selectedModalities.length > 0 ? formatHumanList(selectedModalities) : "Light microscopy";
+
         // Base microscope description
-        let text = `Images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope controlled by ${softName}. `;
+        let text = `${modalitiesText} images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope controlled by ${softName}. `;
+
+        if (scannerTypeRaw && scannerTypeRaw.toLowerCase() !== "none") {
+            text += `The system was equipped with a ${scannerType} scanner`;
+            text += scannerNotes ? ` (${scannerNotes}). ` : `. `;
+        }
+
+        if (modules.length > 0) {
+            text += `The following hardware modules were utilized: ${formatHumanList(modules)}. `;
+            const hasIncubation = modules.some(module => /incubation|incubator/i.test(module));
+            if (hasIncubation) {
+                text += `[PLEASE SPECIFY: Cells were maintained at X °C and X% CO2 during imaging]. `;
+            }
+        }
         
         if (objs.length > 0) text += `The system was equipped with the following objective(s): ${objs.join(", ")}. `;
         if (dets.length > 0) text += `Images were captured using: ${dets.join(", ")}. `;
@@ -200,7 +258,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         text += `- [dye a] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
         text += `- [dye b] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
 
-        text += `\n[ACQUISITION SETTINGS]: Pinhole size: [X] AU, z-step size: [X] µm, pixel size: [X] µm/px.`;
+        text += `\n[ACQUISITION SETTINGS - Note: For large papers, consider summarizing these in a supplemental table]:\n`;
+        text += `Standard imaging panels were defined for [list your main fluorophore combinations, e.g., DAPI/AF488/AF568]. `;
+        text += `Exposure times and excitation powers were adjusted per sample to maximize dynamic range while strictly preventing pixel saturation. `;
+        text += `Images were acquired with a pixel size of [X] µm/px and a z-step of [X] µm, fulfilling the Nyquist sampling criterion for the objective. `;
+        text += `Pinhole size was maintained at [X AU].`;
 
         accumulatedMethods.push(text);
         usedInstrumentNames.add(currentInst.display_name.toLowerCase());
