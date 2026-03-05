@@ -139,26 +139,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function formatObjectiveLabel(obj) {
-        const parts = [];
-
-        const magnification = obj?.magnification ? `${obj.magnification}x` : "";
-        const na = obj?.na ? `/${obj.na}` : "";
-        const magnificationPart = `${magnification}${na}`;
-        if (magnificationPart) parts.push(magnificationPart);
-
-        const objectiveModel = obj?.model || obj?.name;
-        if (objectiveModel) parts.push(objectiveModel);
-        if (obj?.correction) parts.push(obj.correction);
-        if (obj?.immersion) parts.push(obj.immersion);
-        parts.push("objective");
-
         const metadata = [];
         if (obj?.manufacturer) metadata.push(obj.manufacturer);
         if (obj?.product_code) metadata.push(`product code: ${obj.product_code}`);
 
+        const objectiveModel = (obj?.model || obj?.name || "").replace(/\s+/g, " ").trim();
+
+        if (objectiveModel) {
+            return metadata.length > 0
+                ? `${objectiveModel} objective (${metadata.join(", ")})`
+                : `${objectiveModel} objective`;
+        }
+
+        const fallbackParts = [];
+        const magnification = obj?.magnification ? `${obj.magnification}x` : "";
+        const na = obj?.na ? `/${obj.na}` : "";
+        const magnificationPart = `${magnification}${na}`;
+        if (magnificationPart) fallbackParts.push(magnificationPart);
+        if (obj?.immersion) fallbackParts.push(obj.immersion);
+        fallbackParts.push("objective");
+
         return metadata.length > 0
-            ? `${parts.join(" ")} (${metadata.join(", ")})`
-            : parts.join(" ");
+            ? `${fallbackParts.join(" ")} (${metadata.join(", ")})`
+            : fallbackParts.join(" ");
     }
 
     addBtn.addEventListener("click", () => {
