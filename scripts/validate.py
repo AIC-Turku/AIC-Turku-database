@@ -26,13 +26,6 @@ class ValidationIssue:
 
 
 @dataclass
-class VocabularyMatch:
-    canonical_id: str
-    matched_input: str
-    matched_as_synonym: bool
-
-
-@dataclass
 class VocabularyTerm:
     id: str
     label: str
@@ -41,24 +34,21 @@ class VocabularyTerm:
 
 
 class Vocabulary:
-    """Loads vocab/*.yaml and resolves IDs/synonyms to canonical IDs."""
+    """Loads vocab/*.yaml and validates values against canonical IDs/synonyms."""
 
     def __init__(self, vocab_dir: Path = Path("vocab")) -> None:
         self.vocab_dir = vocab_dir
         self.terms_by_vocab: dict[str, dict[str, VocabularyTerm]] = {}
-        self.lookup_by_vocab: dict[str, dict[str, str]] = {}
+        self.valid_ids_by_vocab: dict[str, set[str]] = {}
+        self.synonyms_by_vocab: dict[str, dict[str, str]] = {}
         self._load_all()
 
     @staticmethod
     def _normalize(value: str) -> str:
-        return value.strip().casefold()
-
-    @staticmethod
-    def _normalize_loose(value: str) -> str:
-        return re.sub(r"[^a-z0-9]+", "", value.casefold())
+        return value.strip()
 
     def _load_all(self) -> None:
-        for vocab_file in _iter_yaml_files(self.vocab_dir):
+        for vocab_file in sorted(self.vocab_dir.glob("*.yaml")):
             vocab_name = vocab_file.stem
             payload, load_error = _load_yaml(vocab_file)
             if load_error is not None or payload is None:
@@ -69,7 +59,8 @@ class Vocabulary:
                 continue
 
             terms: dict[str, VocabularyTerm] = {}
-            lookup: dict[str, str] = {}
+            valid_ids: set[str] = set()
+            synonym_lookup: dict[str, str] = {}
             for raw_term in raw_terms:
                 if not isinstance(raw_term, dict):
                     continue
@@ -82,7 +73,7 @@ class Vocabulary:
                 label = raw_term.get("label")
                 description = raw_term.get("description")
                 raw_synonyms = raw_term.get("synonyms")
-                synonyms = [
+                term_synonyms = [
                     synonym.strip()
                     for synonym in (raw_synonyms if isinstance(raw_synonyms, list) else [])
                     if isinstance(synonym, str) and synonym.strip()
@@ -92,30 +83,33 @@ class Vocabulary:
                     id=canonical_id,
                     label=label.strip() if isinstance(label, str) else canonical_id,
                     description=description.strip() if isinstance(description, str) else "",
-                    synonyms=synonyms,
+                    synonyms=term_synonyms,
                 )
+                valid_ids.add(canonical_id)
 
-                lookup[self._normalize(canonical_id)] = canonical_id
-                for synonym in synonyms:
-                    lookup[self._normalize(synonym)] = canonical_id
+                for synonym in term_synonyms:
+                    synonym_lookup[synonym.casefold()] = canonical_id
 
             self.terms_by_vocab[vocab_name] = terms
-            self.lookup_by_vocab[vocab_name] = lookup
+            self.valid_ids_by_vocab[vocab_name] = valid_ids
+            self.synonyms_by_vocab[vocab_name] = synonym_lookup
 
-    def match(self, vocab_name: str, raw_value: Any) -> VocabularyMatch | None:
-        if not isinstance(raw_value, str) or not raw_value.strip():
-            return None
+    def check(self, vocab_name: str, value: Any) -> tuple[bool, str | None]:
+        if not isinstance(value, str):
+            return False, None
 
-        normalized = self._normalize(raw_value)
-        canonical_id = self.lookup_by_vocab.get(vocab_name, {}).get(normalized)
-        if canonical_id is None:
-            return None
+        cleaned = self._normalize(value)
+        if not cleaned:
+            return False, None
 
-        return VocabularyMatch(
-            canonical_id=canonical_id,
-            matched_input=raw_value.strip(),
-            matched_as_synonym=(self._normalize(canonical_id) != normalized),
-        )
+        if cleaned in self.valid_ids_by_vocab.get(vocab_name, set()):
+            return True, None
+
+        canonical = self.synonyms_by_vocab.get(vocab_name, {}).get(cleaned.casefold())
+        if canonical is not None:
+            return False, canonical
+
+        return False, None
 
 
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
@@ -176,36 +170,12 @@ def validate_instrument_ledgers(
         else:
             warnings.append(issue)
 
-    def _match_with_relaxed_fallback(vocab_name: str, raw_value: str) -> VocabularyMatch | None:
-        direct = vocabulary.match(vocab_name, raw_value)
-        if direct is not None:
-            return direct
-
-        raw_loose = Vocabulary._normalize_loose(raw_value.strip())
-        for canonical_id, term in vocabulary.terms_by_vocab.get(vocab_name, {}).items():
-            if Vocabulary._normalize_loose(canonical_id) == raw_loose:
-                return VocabularyMatch(
-                    canonical_id=canonical_id,
-                    matched_input=raw_value.strip(),
-                    matched_as_synonym=True,
-                )
-            for synonym in term.synonyms:
-                if Vocabulary._normalize_loose(synonym) == raw_loose:
-                    return VocabularyMatch(
-                        canonical_id=canonical_id,
-                        matched_input=raw_value.strip(),
-                        matched_as_synonym=True,
-                    )
-        return None
-
     def _validate_vocab_value(
         *,
         path: str,
         vocab_name: str,
         raw_value: Any,
         required: bool = False,
-        unknown_is_error: bool = True,
-        invalid_is_error: bool = True,
         allow_empty: bool = False,
     ) -> None:
         if raw_value is None:
@@ -227,7 +197,7 @@ def validate_instrument_ledgers(
                     path=path,
                     message=f"Invalid term for '{vocab_name}'; expected a string.",
                 ),
-                as_error=invalid_is_error,
+                as_error=True,
             )
             return
 
@@ -241,12 +211,15 @@ def validate_instrument_ledgers(
                     path=path,
                     message=f"Invalid term for '{vocab_name}'; expected a non-empty string.",
                 ),
-                as_error=invalid_is_error,
+                as_error=True,
             )
             return
 
-        vocab_match = _match_with_relaxed_fallback(vocab_name, cleaned)
-        if vocab_match is None:
+        is_match, suggestion = vocabulary.check(vocab_name, cleaned)
+        if is_match:
+            return
+
+        if suggestion is None:
             known = ", ".join(sorted(vocabulary.terms_by_vocab.get(vocab_name, {}).keys()))
             _record(
                 ValidationIssue(
@@ -257,21 +230,20 @@ def validate_instrument_ledgers(
                         f"Use one of: {known}."
                     ),
                 ),
-                as_error=unknown_is_error,
+                as_error=True,
             )
             return
 
-        if vocab_match.matched_as_synonym:
-            warnings.append(
-                ValidationIssue(
-                    code="vocab_synonym_used",
-                    path=path,
-                    message=(
-                        f"Value '{vocab_match.matched_input}' is a synonym/variant in '{vocab_name}'. "
-                        f"Prefer canonical id '{vocab_match.canonical_id}'."
-                    ),
-                )
+        warnings.append(
+            ValidationIssue(
+                code="vocab_synonym_used",
+                path=path,
+                message=(
+                    f"Value '{cleaned}' is a synonym in '{vocab_name}'. "
+                    f"Prefer canonical id '{suggestion}'."
+                ),
             )
+        )
 
     for instrument_file in _iter_yaml_files(instruments_dir):
         is_retired_instrument = "retired" in instrument_file.parts
@@ -342,8 +314,6 @@ def validate_instrument_ledgers(
                     path=f"{instrument_file.as_posix()}:modalities[{index}]",
                     vocab_name="modalities",
                     raw_value=modality,
-                    unknown_is_error=False,
-                    invalid_is_error=False,
                 )
 
         modules = payload.get("modules")
@@ -354,8 +324,6 @@ def validate_instrument_ledgers(
                     path=f"{instrument_file.as_posix()}:modules[{index}].name",
                     vocab_name="modules",
                     raw_value=module_name,
-                    unknown_is_error=False,
-                    invalid_is_error=False,
                     allow_empty=True,
                 )
 
@@ -366,8 +334,6 @@ def validate_instrument_ledgers(
             vocab_name="scanner_types",
             raw_value=scanner.get("type"),
             required=True,
-            unknown_is_error=False,
-            invalid_is_error=False,
         )
 
         for index, source in enumerate(hardware.get("light_sources", [])):
@@ -376,8 +342,6 @@ def validate_instrument_ledgers(
                 path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].kind",
                 vocab_name="light_source_kinds",
                 raw_value=source_kind,
-                unknown_is_error=False,
-                invalid_is_error=False,
                 allow_empty=True,
             )
 
@@ -387,8 +351,6 @@ def validate_instrument_ledgers(
                 path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].kind",
                 vocab_name="detector_kinds",
                 raw_value=detector_kind,
-                unknown_is_error=False,
-                invalid_is_error=False,
                 allow_empty=True,
             )
 
@@ -399,16 +361,12 @@ def validate_instrument_ledgers(
                 path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].immersion",
                 vocab_name="objective_immersion",
                 raw_value=immersion,
-                unknown_is_error=False,
-                invalid_is_error=False,
                 allow_empty=True,
             )
             _validate_vocab_value(
                 path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].correction",
                 vocab_name="objective_corrections",
                 raw_value=correction,
-                unknown_is_error=False,
-                invalid_is_error=False,
                 allow_empty=True,
             )
 
