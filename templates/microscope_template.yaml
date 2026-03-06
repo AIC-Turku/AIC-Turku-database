@@ -107,6 +107,7 @@ hardware:
     - kind: "laser"           # Options: laser, white_light_laser, led, arc_lamp, halogen_lamp, supercontinuum
       manufacturer: "Chroma"
       model: "Solid State"
+      technology: ""        # Optional laser subtype, e.g. diode, dpss
       wavelength_nm: "488"    # e.g., "488", or "395/25" for banded LEDs
       power: "20 mW"
       notes: "488 in software"
@@ -115,6 +116,7 @@ hardware:
     - kind: "led"
       manufacturer: "CoolLED"
       model: "pE-300"
+      technology: ""
       wavelength_nm: ""
       power: ""
       notes: ""

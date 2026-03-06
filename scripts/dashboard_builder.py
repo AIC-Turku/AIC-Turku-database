@@ -806,6 +806,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "wavelength": src.get("wavelength_nm"),
                 "power": clean_text(src.get("power")),
                 "manufacturer": clean_text(src.get("manufacturer")),
+                "technology": clean_text(src.get("technology")),
                 "notes": clean_text(src.get("notes")),
                 "url": clean_text(src.get("url")),
             }
@@ -1135,6 +1136,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                         {
                             "type": norm_str(ls.get("kind")),
                             "wavelength": none_if_empty(ls.get("wavelength")),
+                            "technology": none_if_empty(ls.get("technology")) or None,
                             "model": none_if_empty(ls.get("name")) or None,
                             "notes": none_if_empty(ls.get("notes")) or None,
                         }

@@ -152,6 +152,7 @@
     ---
 
     **Type:** {{ src.type or '—' }}
+    {% if src.technology %}<br>**Technology:** `{{ src.technology }}`{% endif %}
     {% if src.wavelength %}<br>**Wavelength:** `{{ src.wavelength }} nm`{% endif %}
     {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
     {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
