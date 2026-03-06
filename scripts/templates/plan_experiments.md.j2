@@ -30,14 +30,76 @@ Download the tailored, AI-ready snapshot of our active microscope inventory. Thi
 Go to your preferred AI tool (e.g., ChatGPT, Claude) and ensure it supports file uploads.
 
 ### Step 3: Upload the file and use this prompt
-Upload the `llm_inventory.json` file you just downloaded. Then, copy and paste the prompt below, filling in the bracketed `[ ]` information with your specific experimental details:
+Upload the `llm_inventory.json` file you just downloaded. Then, describe your experiment in the input box below and copy the auto-generated prompt into your AI assistant.
 
-<div class="admonition abstract">
-  <p class="admonition-title">Copy and paste this into the AI:</p>
-  <p>I have attached a JSON file containing the exact inventory and current health status of microscopes in my core facility. I need to plan an imaging experiment. Here is a description of my experiment:</p>
-  <p><strong>[Describe your biological sample, what you are trying to observe, and any specific needs you have. For example: Do you need live-cell incubation? High-speed volumetric imaging? Deep tissue penetration? If you know the dyes or fluorophores you want to use, list them here. If not, just describe the colors or structures you are targeting.]</strong></p>
-  <p>Based ONLY on the active microscopes available in the attached file, which 1 or 2 systems would you recommend and why? Please take into account their current health status (do not recommend offline systems). Mention the specific modality, objective, and light sources that make your recommended system a good fit.</p>
+<p>Fill in the box below with your experiment details. The AI prompt will automatically update. When you are ready, click <strong>Copy Prompt</strong> and paste it into ChatGPT or Claude.</p>
+
+<div style="background-color: var(--md-default-bg-color); padding: 15px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; margin-bottom: 15px;">
+  <label for="experiment-desc" style="font-weight: bold; display: block; margin-bottom: 8px;">Describe your experiment:</label>
+  <textarea id="experiment-desc" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; background-color: var(--md-default-bg-color); font-family: inherit; resize: vertical;" placeholder="E.g., I need to image live HeLa cells over 24 hours. I am using GFP and mCherry. Needs to be very gentle (low phototoxicity) and I want optical sectioning."></textarea>
 </div>
+
+<div style="position: relative; margin-bottom: 20px;">
+  <button id="copy-prompt-btn" class="md-button md-button--primary" style="position: absolute; top: 10px; right: 10px; z-index: 10;">📋 Copy Prompt</button>
+  <textarea id="generated-prompt" rows="18" style="width: 100%; padding: 15px; padding-top: 50px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5; resize: vertical;" readonly></textarea>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const inputArea = document.getElementById("experiment-desc");
+    const outputArea = document.getElementById("generated-prompt");
+    const copyBtn = document.getElementById("copy-prompt-btn");
+
+    const basePromptTop = `You are an expert microscopy advisor for a core imaging facility.
+
+Use your general knowledge of microscopy to interpret the experiment needs, but only recommend microscopes listed in the attached JSON file. Do not assume a microscope has a capability unless it is described in the file or is a standard inference from the listed modality/components. If the experiment description is incomplete, make reasonable assumptions but state them clearly.
+
+I have attached a JSON file describing the microscopes available in my core facility, including their operational status and capabilities.
+
+I want to plan an imaging experiment.
+
+Here is what I want to do:
+`;
+
+    const basePromptBottom = `
+
+Recommend the best 1 or 2 microscopes from the attached file for this experiment.
+
+Please:
+- Exclude systems that are offline or have listed issues that make them unsuitable.
+- Explain why each recommended system fits the experiment.
+- Mention the relevant modality, objective(s), and excitation light source(s).
+- Mention useful supporting features such as incubation, autofocus, detector type, or piezo when relevant.
+- Clearly state any important assumptions, tradeoffs, or uncertainty.
+- Indicate which system is the top choice and which is the backup, if applicable.
+- Conclude your response by strongly encouraging me to discuss these recommendations with the AIC core facility staff before booking, as they can provide final validation and training.`;
+
+    function updatePrompt() {
+      const userText = inputArea.value.trim();
+      const desc = userText ? userText : "[Just describe the experiment in your own words. E.g., sample type, live/fixed, fluorophores, thick/thin, fast dynamics, etc.]";
+      outputArea.value = basePromptTop + desc + basePromptBottom;
+    }
+
+    // Update the output whenever the user types
+    inputArea.addEventListener("input", updatePrompt);
+
+    // Initialize the prompt on page load
+    updatePrompt();
+
+    // Copy to clipboard functionality
+    copyBtn.addEventListener("click", () => {
+      outputArea.select();
+      outputArea.setSelectionRange(0, 99999); // For mobile devices
+      navigator.clipboard.writeText(outputArea.value).then(() => {
+        const originalText = copyBtn.innerText;
+        copyBtn.innerText = "✅ Copied!";
+        setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    });
+  });
+</script>
 
 ---
 
