@@ -61,9 +61,18 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
 </div>
 
 <script>
+let vocabularies = {};
+
 document.addEventListener("DOMContentLoaded", async () => {
-    const response = await fetch("../assets/instruments_data.json");
-    const instruments = await response.json();
+    const [instrumentsResponse, vocabulariesResponse] = await Promise.all([
+        fetch("../assets/instruments_data.json"),
+        fetch("../assets/vocabularies.json")
+    ]);
+    const [instruments, vocabulariesPayload] = await Promise.all([
+        instrumentsResponse.json(),
+        vocabulariesResponse.json()
+    ]);
+    vocabularies = vocabulariesPayload || {};
 
     const systemSelect = document.getElementById("system-select");
     const hwOptions = document.getElementById("hardware-options");
@@ -99,7 +108,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const modalityItems = currentInst.processed_hardware?.modalities || currentInst.modalities || [];
         populateCheckboxes("modality-list", modalityItems,
-            modality => formatVocabLabel(vocab.modalities, modality), "modality");
+            modality => getLabel("modalities", modality), "modality",
+            modality => getDescription("modalities", modality));
 
         const moduleItems = currentInst.processed_hardware?.modules || currentInst.modules || [];
         populateCheckboxes("module-list", moduleItems,
@@ -148,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             d => `${d.model} ${d.type} (${d.manufacturer})`, "det");
     });
 
-    function populateCheckboxes(containerId, items, labelFormatter, prefix) {
+    function populateCheckboxes(containerId, items, labelFormatter, prefix, subtextFormatter) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
         if (!items || items.length === 0) {
@@ -171,8 +181,34 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
+
+            const subtext = subtextFormatter ? subtextFormatter(item) : "";
+            if (subtext) {
+                const subtextEl = document.createElement("div");
+                subtextEl.textContent = subtext;
+                subtextEl.style.fontSize = "0.8em";
+                subtextEl.style.fontStyle = "italic";
+                subtextEl.style.color = "gray";
+                subtextEl.style.marginLeft = "24px";
+                wrapper.appendChild(subtextEl);
+            }
+
             container.appendChild(wrapper);
         });
+    }
+
+    function getLabel(vocabName, id) {
+        if (vocabularies[vocabName] && vocabularies[vocabName][id]) {
+            return vocabularies[vocabName][id].label;
+        }
+        return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function getDescription(vocabName, id) {
+        if (vocabularies[vocabName] && vocabularies[vocabName][id]) {
+            return vocabularies[vocabName][id].description;
+        }
+        return "";
     }
 
     function getCheckedValues(prefix) {
