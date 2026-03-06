@@ -2,7 +2,7 @@ terms:
   - id: plan_apochromat
     label: "Plan Apochromat"
     description: "High-end objective with flat field correction and strong chromatic/spherical correction across wavelengths. Preferred for quantitative, multicolor imaging."
-    synonyms: ["plan-apo", "plan apo"]
+    synonyms: ["plan-apo", "plan apo", "super apochromat", "uplsapo"]
   - id: apochromat
     label: "Apochromat"
     description: "Objective with strong chromatic and spherical aberration correction, typically over multiple colors. May not guarantee full field flatness."
