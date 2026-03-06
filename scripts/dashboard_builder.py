@@ -32,6 +32,7 @@ from typing import Any, Iterable
 
 from validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
+    Vocabulary,
     print_validation_report,
     validate_event_ledgers,
     validate_instrument_ledgers,
@@ -667,12 +668,13 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     tpl_methods = jinja_env.get_template("methods_generator.md.j2")
 
     load_errors: list[YamlLoadError] = []
+    vocabulary = Vocabulary(repo_root / "vocab")
     instruments = load_instruments("instruments", load_errors=load_errors)
     retired_instruments = load_instruments("instruments", load_errors=load_errors, include_retired=True)
     qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
     maint_logs_by_instrument = index_instrument_logs("maintenance/events", load_errors=load_errors)
 
-    validated_instrument_ids, instrument_validation_issues = validate_instrument_ledgers()
+    validated_instrument_ids, instrument_validation_issues, instrument_validation_warnings = validate_instrument_ledgers()
     validation_issues = list(instrument_validation_issues)
     validation_issues.extend(
         validate_event_ledgers(
@@ -680,6 +682,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             allowed_record_types=allowed_record_types,
         )
     )
+    if instrument_validation_warnings:
+        print_validation_report(instrument_validation_warnings, report_name="warnings")
 
     # Aggregations
     all_modalities = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
@@ -941,7 +945,23 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     # Export active instruments to JSON for the Methods Generator
     json_path = docs_root / "assets" / "instruments_data.json"
     json_path.parent.mkdir(parents=True, exist_ok=True) 
-    json_path.write_text(json.dumps(instruments, indent=2), encoding="utf-8")
+    vocabularies_payload = {
+        vocab_name: [
+            {
+                "id": term.id,
+                "label": term.label,
+                "description": term.description,
+                "synonyms": term.synonyms,
+            }
+            for term in sorted(terms.values(), key=lambda t: t.id)
+        ]
+        for vocab_name, terms in sorted(vocabulary.terms_by_vocab.items())
+    }
+    json_payload = {
+        "instruments": instruments,
+        "vocabularies": vocabularies_payload,
+    }
+    json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
 
     # Render Methods Generator page
     acknowledgements_path = repo_root / "acknowledgements.yaml"
