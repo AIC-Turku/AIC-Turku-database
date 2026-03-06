@@ -25,6 +25,153 @@ class ValidationIssue:
     message: str
 
 
+@dataclass
+class ValidationWarning:
+    code: str
+    path: str
+    message: str
+
+
+class Vocabulary:
+    """Load and resolve controlled vocabularies from vocab/*.yaml files."""
+
+    def __init__(self) -> None:
+        self._terms: dict[str, dict[str, dict[str, Any]]] = {}
+        self._alias_to_id: dict[str, dict[str, str]] = {}
+
+    @staticmethod
+    def _normalize_token(value: str) -> str:
+        return value.strip().lower()
+
+    @classmethod
+    def from_dir(cls, vocab_dir: Path = Path("vocab")) -> tuple["Vocabulary", list[ValidationIssue]]:
+        vocabulary = cls()
+        issues: list[ValidationIssue] = []
+
+        for vocab_file in _iter_yaml_files(vocab_dir):
+            vocab_name = vocab_file.stem
+            payload, load_error = _load_yaml(vocab_file)
+            if load_error is not None:
+                issues.append(
+                    ValidationIssue(
+                        code="vocab_parse_error",
+                        path=vocab_file.as_posix(),
+                        message=load_error,
+                    )
+                )
+                continue
+
+            terms = payload.get("terms") if isinstance(payload, dict) else None
+            if not isinstance(terms, list):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_vocab_shape",
+                        path=vocab_file.as_posix(),
+                        message="Vocabulary file must contain a top-level 'terms' list.",
+                    )
+                )
+                continue
+
+            by_id: dict[str, dict[str, Any]] = {}
+            alias_to_id: dict[str, str] = {}
+
+            for index, term in enumerate(terms):
+                if not isinstance(term, dict):
+                    issues.append(
+                        ValidationIssue(
+                            code="invalid_vocab_term",
+                            path=vocab_file.as_posix(),
+                            message=f"Term at index {index} must be a mapping/object.",
+                        )
+                    )
+                    continue
+
+                term_id = term.get("id")
+                if not isinstance(term_id, str) or not term_id.strip():
+                    issues.append(
+                        ValidationIssue(
+                            code="invalid_vocab_term_id",
+                            path=vocab_file.as_posix(),
+                            message=f"Term at index {index} is missing non-empty 'id'.",
+                        )
+                    )
+                    continue
+
+                canonical_id = term_id.strip()
+                if canonical_id in by_id:
+                    issues.append(
+                        ValidationIssue(
+                            code="duplicate_vocab_term_id",
+                            path=vocab_file.as_posix(),
+                            message=f"Duplicate term id '{canonical_id}' in vocabulary '{vocab_name}'.",
+                        )
+                    )
+                    continue
+
+                by_id[canonical_id] = term
+                alias_to_id[cls._normalize_token(canonical_id)] = canonical_id
+
+                synonyms = term.get("synonyms")
+                if not isinstance(synonyms, list):
+                    continue
+                for synonym in synonyms:
+                    if not isinstance(synonym, str) or not synonym.strip():
+                        continue
+                    normalized_synonym = cls._normalize_token(synonym)
+                    existing = alias_to_id.get(normalized_synonym)
+                    if existing is not None and existing != canonical_id:
+                        issues.append(
+                            ValidationIssue(
+                                code="conflicting_vocab_synonym",
+                                path=vocab_file.as_posix(),
+                                message=(
+                                    f"Synonym '{synonym}' maps to multiple IDs in '{vocab_name}': "
+                                    f"'{existing}' and '{canonical_id}'."
+                                ),
+                            )
+                        )
+                        continue
+                    alias_to_id[normalized_synonym] = canonical_id
+
+            vocabulary._terms[vocab_name] = by_id
+            vocabulary._alias_to_id[vocab_name] = alias_to_id
+
+        return vocabulary, issues
+
+    def resolve(self, vocab_name: str, raw_value: Any) -> tuple[str | None, str | None, str | None]:
+        """Return (canonical_id, warning_message, error_message)."""
+        if not isinstance(raw_value, str) or not raw_value.strip():
+            return None, None, "Expected a non-empty string."
+
+        if vocab_name not in self._alias_to_id:
+            return None, None, f"Vocabulary '{vocab_name}' is not loaded."
+
+        source_value = raw_value.strip()
+        normalized = self._normalize_token(source_value)
+        canonical = self._alias_to_id[vocab_name].get(normalized)
+        if canonical is None:
+            allowed = ", ".join(sorted(self._terms[vocab_name].keys()))
+            return None, None, f"Unknown term '{source_value}'. Allowed IDs: {allowed}."
+
+        if source_value != canonical:
+            return canonical, f"Use canonical id '{canonical}' instead of '{source_value}'.", None
+
+        return canonical, None, None
+
+    def export_catalog(self) -> dict[str, list[dict[str, str]]]:
+        catalog: dict[str, list[dict[str, str]]] = {}
+        for vocab_name, terms in sorted(self._terms.items()):
+            catalog[vocab_name] = [
+                {
+                    "id": term_id,
+                    "label": str(payload.get("label", "")).strip(),
+                    "description": str(payload.get("description", "")).strip(),
+                }
+                for term_id, payload in sorted(terms.items())
+            ]
+        return catalog
+
+
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     if not base_dir.exists() or not base_dir.is_dir():
         return []
@@ -70,10 +217,33 @@ def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
 def validate_instrument_ledgers(
     *,
     instruments_dir: Path = Path("instruments"),
-) -> tuple[set[str], list[ValidationIssue]]:
+) -> tuple[set[str], list[ValidationIssue], list[ValidationWarning]]:
     issues: list[ValidationIssue] = []
+    warnings: list[ValidationWarning] = []
     instrument_ids: set[str] = set()
     instrument_id_to_files: dict[str, list[str]] = {}
+    vocabulary, vocab_issues = Vocabulary.from_dir(Path("vocab"))
+    issues.extend(vocab_issues)
+
+    def validate_term(raw_value: Any, field_path: str, vocab_name: str, source_file: Path) -> None:
+        canonical, warning_message, error_message = vocabulary.resolve(vocab_name, raw_value)
+        if error_message:
+            issues.append(
+                ValidationIssue(
+                    code="unknown_vocab_term",
+                    path=source_file.as_posix(),
+                    message=f"{field_path}: {error_message}",
+                )
+            )
+            return
+        if warning_message and canonical is not None:
+            warnings.append(
+                ValidationWarning(
+                    code="noncanonical_vocab_term",
+                    path=source_file.as_posix(),
+                    message=f"{field_path}: {warning_message}",
+                )
+            )
 
     for instrument_file in _iter_yaml_files(instruments_dir):
         is_retired_instrument = "retired" in instrument_file.parts
@@ -139,6 +309,40 @@ def validate_instrument_ledgers(
         instrument_ids.add(instrument_id)
         instrument_id_to_files.setdefault(instrument_id, []).append(instrument_file.as_posix())
 
+        if not is_retired_instrument:
+            modalities = payload.get("modalities")
+            if isinstance(modalities, list):
+                for idx, modality in enumerate(modalities):
+                    validate_term(modality, f"modalities[{idx}]", "modalities", instrument_file)
+
+            modules = payload.get("modules")
+            if isinstance(modules, list):
+                for idx, module in enumerate(modules):
+                    if isinstance(module, dict):
+                        if "name" in module:
+                            validate_term(module.get("name"), f"modules[{idx}].name", "modules", instrument_file)
+                    elif isinstance(module, str):
+                        validate_term(module, f"modules[{idx}]", "modules", instrument_file)
+
+            hardware = payload.get("hardware")
+            if isinstance(hardware, dict):
+                scanner = hardware.get("scanner")
+                if isinstance(scanner, dict) and "type" in scanner:
+                    validate_term(scanner.get("type"), "hardware.scanner.type", "scanner_types", instrument_file)
+
+                for section, key, vocab_name in (
+                    ("light_sources", "kind", "light_source_kinds"),
+                    ("detectors", "kind", "detector_kinds"),
+                    ("objectives", "immersion", "objective_immersion"),
+                    ("objectives", "correction", "objective_corrections"),
+                ):
+                    entries = hardware.get(section)
+                    if not isinstance(entries, list):
+                        continue
+                    for idx, entry in enumerate(entries):
+                        if isinstance(entry, dict) and key in entry:
+                            validate_term(entry.get(key), f"hardware.{section}[{idx}].{key}", vocab_name, instrument_file)
+
     for instrument_id, source_files in sorted(instrument_id_to_files.items()):
         if len(source_files) <= 1:
             continue
@@ -151,7 +355,7 @@ def validate_instrument_ledgers(
             )
         )
 
-    return instrument_ids, issues
+    return instrument_ids, issues, warnings
 
 
 def validate_event_ledgers(
@@ -403,9 +607,21 @@ def print_validation_report(issues: list[ValidationIssue]) -> None:
     print(f"\nTotal validation failures: {len(issues)}", file=sys.stderr)
 
 
+def print_warning_report(warnings: list[ValidationWarning]) -> None:
+    if not warnings:
+        return
+
+    print("\nValidation warnings:", file=sys.stderr)
+    for index, warning in enumerate(warnings, start=1):
+        print(f"  {index}. [{warning.code}] {warning.path}", file=sys.stderr)
+        print(f"     {warning.message}", file=sys.stderr)
+    print(f"\nTotal validation warnings: {len(warnings)}", file=sys.stderr)
+
+
 def main() -> int:
-    instrument_ids, issues = validate_instrument_ledgers()
+    instrument_ids, issues, warnings = validate_instrument_ledgers()
     issues.extend(validate_event_ledgers(instrument_ids=instrument_ids))
+    print_warning_report(warnings)
 
     if issues:
         print_validation_report(issues)

@@ -32,7 +32,9 @@ from typing import Any, Iterable
 
 from validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
+    Vocabulary,
     print_validation_report,
+    print_warning_report,
     validate_event_ledgers,
     validate_instrument_ledgers,
 )
@@ -672,7 +674,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
     maint_logs_by_instrument = index_instrument_logs("maintenance/events", load_errors=load_errors)
 
-    validated_instrument_ids, instrument_validation_issues = validate_instrument_ledgers()
+    validated_instrument_ids, instrument_validation_issues, vocabulary_warnings = validate_instrument_ledgers()
     validation_issues = list(instrument_validation_issues)
     validation_issues.extend(
         validate_event_ledgers(
@@ -680,6 +682,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             allowed_record_types=allowed_record_types,
         )
     )
+
+    vocabulary, vocabulary_issues = Vocabulary.from_dir(Path("vocab"))
+    validation_issues.extend(vocabulary_issues)
 
     # Aggregations
     all_modalities = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
@@ -940,8 +945,12 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     # Export active instruments to JSON for the Methods Generator
     json_path = docs_root / "assets" / "instruments_data.json"
-    json_path.parent.mkdir(parents=True, exist_ok=True) 
-    json_path.write_text(json.dumps(instruments, indent=2), encoding="utf-8")
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    dashboard_payload = {
+        "instruments": instruments,
+        "vocabularies": vocabulary.export_catalog(),
+    }
+    json_path.write_text(json.dumps(dashboard_payload, indent=2), encoding="utf-8")
 
     # Render Methods Generator page
     acknowledgements_path = repo_root / "acknowledgements.yaml"
@@ -1037,6 +1046,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     if validation_issues:
         print_validation_report(validation_issues)
         has_failures = True
+
+    if vocabulary_warnings:
+        print_warning_report(vocabulary_warnings)
 
     if strict and has_failures:
         _print_agent_fix_prompt(load_errors, validation_issues)
