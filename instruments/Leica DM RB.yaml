@@ -1,16 +1,16 @@
 # -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: Leica RXA
+# MICROSCOPE CONFIGURATION: Leica DM RB
 # -----------------------------------------------------------------------------
 instrument:
-  display_name: "Leica RXA"
-  instrument_id: "scope-leica-rxa"
+  display_name: "Leica DM RB"
+  instrument_id: "scope-leica-dm-rb"
   manufacturer: "Leica Microsystems"
-  model: "RXA"
+  model: "Leica DM RB"
   year_of_purchase: ""
   funding: ""
   stand_orientation: "upright"
-  location: ""
-  notes: "Widefield microscope (upright). Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield."
+  location: "BioCity, 2nd floor, room 2076"
+  notes: "Widefield microscope (upright) with camera port. Optional detector: Nikon DS-Fi2 5MP colour-CCD camera. Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -47,14 +47,28 @@ hardware:
     url: ""
 
   # --- Light Sources (Excitation) ---
-  light_sources: []
+  light_sources:
+    - kind: "halogen_lamp"
+      manufacturer: ""
+      model: "12V 100W halogen bulb"
+      wavelength_nm: ""
+      power: "100 W"
+      notes: "Transmitted light source"
+      url: ""
+    - kind: "arc_lamp"
+      manufacturer: ""
+      model: "50W HBO short arc bulb"
+      wavelength_nm: ""
+      power: "50 W"
+      notes: "Fluorescence excitation source"
+      url: ""
 
   # --- Detectors (Emission) ---
   detectors:
-    - kind: "CMOS"
+    - kind: "CCD"
       manufacturer: "Nikon"
       model: "DS-Fi2"
-      notes: "Color CMOS camera (2560x1920)"
+      notes: "Optional 5MP colour-CCD camera"
       url: ""
 
   # --- Splitters (Camera/Emission) ---
@@ -91,8 +105,8 @@ hardware:
   objectives:
     - id: "10x_air"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "PL FLUOTAR 10x/0.30"
+      product_code: "506000"
       magnification: 10.0
       numerical_aperture: 0.3
       working_distance: ""
@@ -106,13 +120,13 @@ hardware:
       is_installed: true
     - id: "20x_air"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "HC PL APO 20x/0.70 CS"
+      product_code: "506513"
       magnification: 20.0
-      numerical_aperture: 0.6
+      numerical_aperture: 0.7
       working_distance: ""
       immersion: "air"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: false
       specialties: []
       notes: ""
@@ -121,45 +135,45 @@ hardware:
       is_installed: true
     - id: "40x_oil"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "PL FLUOTAR 40x/1.00-0.50 OIL"
+      product_code: "506007"
       magnification: 40.0
-      numerical_aperture: null
+      numerical_aperture: 1.0
       working_distance: ""
       immersion: "oil"
       correction: ""
       afc_compatible: false
       specialties: []
-      notes: ""
+      notes: "NA range 1.00-0.50"
       url: ""
       
       is_installed: true
     - id: "63x_oil"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "HCX PL APO 63x/1.32-0.6 OIL"
+      product_code: "506180"
       magnification: 63.0
-      numerical_aperture: null
+      numerical_aperture: 1.32
       working_distance: ""
       immersion: "oil"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: false
       specialties: []
-      notes: ""
+      notes: "NA range 1.32-0.6"
       url: ""
       
       is_installed: true
     - id: "100x_oil"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "PL APO 100x/1.40-0.7 OIL"
+      product_code: "506038"
       magnification: 100.0
-      numerical_aperture: null
+      numerical_aperture: 1.4
       working_distance: ""
       immersion: "oil"
-      correction: ""
+      correction: "plan_apochromat"
       afc_compatible: false
       specialties: []
-      notes: ""
+      notes: "NA range 1.40-0.7"
       url: ""
       is_installed: true
