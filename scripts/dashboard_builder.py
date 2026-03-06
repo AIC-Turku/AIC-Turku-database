@@ -1090,6 +1090,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         def norm_id(val):
             return str(val).lower().replace(" ", "_").replace("(", "").replace(")", "") if val else None
 
+        def norm_str(val):
+            return str(val).lower().replace(" ", "_").replace("(", "").replace(")", "") if val else None
+
         llm_payload["active_microscopes"].append(
             {
                 "id": inst.get("id"),
@@ -1130,7 +1133,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                     ],
                     "light_sources": [
                         {
-                            "type": norm_id(ls.get("type")),
+                            "type": norm_str(ls.get("kind")),
                             "wavelength": none_if_empty(ls.get("wavelength")),
                             "model": none_if_empty(ls.get("name")) or None,
                             "notes": none_if_empty(ls.get("notes")) or None,
