@@ -1,0 +1,25 @@
+terms:
+  - id: scheduled
+    label: "Scheduled"
+    description: "Planned preventive maintenance performed at regular intervals. Includes routine service contracts and periodic inspections."
+    synonyms: ["preventive maintenance", "pm"]
+  - id: problem
+    label: "Problem"
+    description: "Triggered by a reported fault, performance issue, or unexpected behavior. Use when intervention is reactive to a defect."
+    synonyms: ["issue", "breakdown"]
+  - id: upgrade
+    label: "Upgrade"
+    description: "Initiated to improve capability, performance, or feature set beyond baseline operation. Can include hardware or software enhancement projects."
+    synonyms: ["enhancement"]
+  - id: install
+    label: "Install"
+    description: "Triggered by initial installation of a system, add-on module, or newly delivered component. Use for setup and commissioning events."
+    synonyms: ["commissioning", "setup"]
+  - id: check
+    label: "Check"
+    description: "Focused verification or inspection to confirm system status without major intervention. Includes diagnostic visits and quick health checks."
+    synonyms: ["inspection", "diagnostic"]
+  - id: other
+    label: "Other"
+    description: "Reason does not fit the predefined categories. Document the rationale in free-text details."
+    synonyms: ["misc"]

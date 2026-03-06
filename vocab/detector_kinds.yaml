@@ -1,0 +1,29 @@
+terms:
+  - id: pmt
+    label: "Photomultiplier Tube"
+    description: "Highly sensitive point detector that amplifies photoelectrons through a dynode chain. Common in confocal detection paths."
+    synonyms: ["PMT"]
+  - id: gaasp_pmt
+    label: "GaAsP Photomultiplier Tube"
+    description: "PMT using gallium arsenide phosphide photocathodes with improved quantum efficiency over conventional PMTs. Useful for low-light confocal imaging."
+    synonyms: ["GaAsP_PMT", "gaasp detector"]
+  - id: hyd
+    label: "Hybrid Detector"
+    description: "Combines features of PMTs and avalanche gain to provide high sensitivity and fast response. Frequently used in modern confocal systems."
+    synonyms: ["HyD", "hybrid pmt"]
+  - id: scmos
+    label: "Scientific CMOS"
+    description: "Low-noise, high-speed area detector with large field of view and high dynamic range. Common for widefield, spinning-disk, and fast live imaging."
+    synonyms: ["sCMOS"]
+  - id: emccd
+    label: "Electron-Multiplying CCD"
+    description: "CCD detector with on-chip gain for very low-light imaging. Useful for single-molecule and fast, dim signal applications."
+    synonyms: ["EMCCD"]
+  - id: ccd
+    label: "Charge-Coupled Device"
+    description: "Area detector technology with historically strong image quality and uniformity. Still used in some fluorescence and brightfield setups."
+    synonyms: ["CCD"]
+  - id: apd
+    label: "Avalanche Photodiode"
+    description: "Semiconductor point detector with internal gain and fast timing response. Used in photon counting and correlation-based measurements."
+    synonyms: ["APD"]

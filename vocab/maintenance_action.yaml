@@ -1,0 +1,33 @@
+terms:
+  - id: service
+    label: "Service"
+    description: "General maintenance intervention including inspection and routine adjustments. Used when work does not fit a more specific action type."
+    synonyms: ["maintenance"]
+  - id: repair
+    label: "Repair"
+    description: "Fixes a confirmed fault or malfunction by restoring or replacing failing parts. Use when resolving a broken or degraded subsystem."
+    synonyms: ["fix"]
+  - id: align
+    label: "Align"
+    description: "Adjusts optical or mechanical alignment to restore expected performance. Typical examples include beam path or stage alignment."
+    synonyms: ["realignment", "alignment"]
+  - id: calibrate
+    label: "Calibrate"
+    description: "Performs calibration against known references to ensure accurate measurement or positioning. Use for intensity, stage, focus, or scaling calibration events."
+    synonyms: ["calibration"]
+  - id: clean
+    label: "Clean"
+    description: "Removes contamination from optics, mechanics, or enclosures to recover performance and reliability. Includes routine cleaning of lenses and filters."
+    synonyms: ["cleaning"]
+  - id: replace
+    label: "Replace"
+    description: "Substitutes a component with a new or refurbished part. Use when parts are worn, failed, or upgraded directly."
+    synonyms: ["part replacement"]
+  - id: update
+    label: "Update"
+    description: "Applies software, firmware, or configuration updates to the instrument ecosystem. Use for non-hardware-change version or settings updates."
+    synonyms: ["upgrade software", "firmware update"]
+  - id: other
+    label: "Other"
+    description: "Action does not match the predefined categories. Provide specific context in free-text details."
+    synonyms: ["misc"]
