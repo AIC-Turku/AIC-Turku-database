@@ -48,14 +48,14 @@ hardware:
 
   # --- Light Sources (Excitation) ---
   light_sources:
-    - kind: "halogen"
+    - kind: "halogen_lamp"
       manufacturer: ""
       model: "12V 100W halogen bulb"
       wavelength_nm: ""
       power: "100 W"
       notes: "Transmitted light source"
       url: ""
-    - kind: "mercury_arc"
+    - kind: "arc_lamp"
       manufacturer: ""
       model: "50W HBO short arc bulb"
       wavelength_nm: ""
