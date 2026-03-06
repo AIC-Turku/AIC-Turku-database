@@ -17,16 +17,16 @@ instrument:
 # IMAGING MODALITIES
 # -----------------------------------------------------------------------------
 modalities:
-  - "TIRF"
-  - "SMLM"
-  - "SPT"
-  - "FRET"
+  - "tirf"
+  - "smlm"
+  - "spt"
+  - "fret"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "Temperature Control"
+  - name: "environmental_enclosure"
     notes: "Resistive heating without active cooling. Suitable for live cell imaging at 37°C."
     url: ""
 

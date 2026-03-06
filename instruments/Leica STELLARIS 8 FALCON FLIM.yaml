@@ -19,15 +19,15 @@ instrument:
 modalities:
   - "confocal_point"
   - "spectral_imaging"
-  - "FLIM"
-  - "FCS"
+  - "flim"
+  - "fcs"
   - "transmitted_brightfield"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "FLIM"
+  - name: "flim"
     notes: "FAST Lifetime Contrast (FALCON) module"
     url: ""
   - name: "FCS"

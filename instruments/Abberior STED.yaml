@@ -17,15 +17,15 @@ instrument:
 # IMAGING MODALITIES
 # -----------------------------------------------------------------------------
 modalities:
-  - "STED"
-  - "RESOLFT"
+  - "sted"
+  - "resolft"
   - "confocal_point"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "Easy3D_STED"
+  - name: "easy3d_sted"
     notes: "Programmable SLM-based module for 2D/3D STED phase pattern generation."
     url: ""
   - name: "adaptive_optics"
@@ -51,7 +51,7 @@ hardware:
   
   # --- Scanner ---
   scanner:
-    type: "point_scanning"
+    type: "galvo"
     notes: "STED point scanning configuration."
     url: ""
 

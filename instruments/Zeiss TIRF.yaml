@@ -19,7 +19,7 @@ instrument:
 modalities:
   - "widefield_fluorescence"
   - "transmitted_brightfield"
-  - "TIRF"
+  - "tirf"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES

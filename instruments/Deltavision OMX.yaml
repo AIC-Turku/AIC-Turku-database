@@ -18,15 +18,15 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "widefield_fluorescence"
-  - "TIRF"
-  - "SIM"
-  - "SMLM"
+  - "tirf"
+  - "sim"
+  - "smlm"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "Live Cell Option"
+  - name: "environmental_enclosure"
     notes: "Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system."
     url: ""
   - name: "hardware_autofocus"

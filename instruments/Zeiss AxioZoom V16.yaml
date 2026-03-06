@@ -25,7 +25,7 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "SIM"
+  - name: "sim_module"
     notes: "Zeiss ApoTome.2 module (structured illumination for optical sectioning)"
     url: ""
 

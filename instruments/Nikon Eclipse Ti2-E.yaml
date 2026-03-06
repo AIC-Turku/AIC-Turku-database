@@ -19,7 +19,7 @@ instrument:
 modalities:
   - "widefield_fluorescence"
   - "transmitted_brightfield"
-  - "DIC"
+  - "dic"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
