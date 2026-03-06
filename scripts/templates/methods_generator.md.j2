@@ -20,24 +20,35 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
     <strong>3. Hardware Modules &amp; Environmental Control:</strong>
     <div id="module-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>4. Objectives:</strong>
+    <strong>4. Scanner:</strong>
+    <div id="scanner-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>5. Objectives:</strong>
     <div id="obj-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>5. Light Sources (Lasers/LEDs):</strong>
+    <strong>6. Light Sources (Lasers/LEDs):</strong>
     <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
-    
-    <strong>6. Filters / Dichroics:</strong>
+
+    <strong>7. Filters / Dichroics:</strong>
     <div id="filter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>7. Camera / Emission Splitters:</strong>
+    <strong>8. Camera / Emission Splitters:</strong>
     <div id="splitter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>8. Detectors:</strong>
+    <strong>9. Detectors:</strong>
     <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
-    
+
     <button id="add-btn" class="md-button md-button--primary" style="margin-top: 10px;">+ Add to Methods</button>
   </div>
 </div>
+
+!!! tip "💡 Pro-Tip: Recover exact settings from raw metadata"
+    Need exact exposure times, pixel sizes, and laser powers? Use your raw files (`.nd2`, `.czi`, `.lif`, etc.) and let Fiji/ImageJ + an LLM do the extraction for you:
+
+    1. Open the raw image in **Fiji / ImageJ**.
+    2. Press **`I`** (or use `Image > Show Info...`) to open complete acquisition metadata.
+    3. Copy the metadata text and paste it into an LLM (e.g., ChatGPT/Copilot) with a prompt such as:
+       *"Extract exact exposure times, pixel size (xy), z-step, pinhole size, and laser powers from this metadata."*
 
 ### Generated Text
 <div style="position: relative;">
@@ -49,26 +60,18 @@ This tool generates a "Materials and Methods" text block compliant with the **QU
   </div>
 </div>
 
-!!! tip "💡 Pro-Tip: How to find your exact imaging settings"
-    If you don't remember your exact exposure times, pixel sizes, or laser powers, you can easily extract them from your raw image files (`.nd2`, `.czi`, `.lif`, etc.):
-    
-    1. Open your raw image in **Fiji / ImageJ**.
-    2. Press **`I`** on your keyboard (or go to `Image > Show Info...`).
-    3. This will open a window with all the original hardware metadata.
-    4. **AI Shortcut:** Press `Ctrl+A` to copy all of that metadata text, paste it into an LLM (like ChatGPT or Copilot), and ask: *"Please extract the exposure time, laser power, pixel size (xy), pinhole size, and z-step from this microscope metadata."*
-
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
     const response = await fetch("../assets/instruments_data.json");
     const instruments = await response.json();
-    
+
     const systemSelect = document.getElementById("system-select");
     const hwOptions = document.getElementById("hardware-options");
     const outputText = document.getElementById("output-text");
     const copyBtn = document.getElementById("copy-btn");
     const clearBtn = document.getElementById("clear-btn");
     const addBtn = document.getElementById("add-btn");
-    
+
     let currentInst = null;
     let accumulatedMethods = [];
     let usedInstrumentNames = new Set();
@@ -84,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     systemSelect.addEventListener("change", (e) => {
         const instId = e.target.value;
         currentInst = instruments.find(i => i.id === instId);
-        
+
         if (!currentInst) {
             hwOptions.style.display = "none";
             return;
@@ -92,29 +95,44 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         hwOptions.style.display = "block";
 
-        populateCheckboxes("modality-list", currentInst.processed_hardware.modalities || currentInst.modalities || [],
-            modality => toTitleCase(modality), "modality");
+        const vocab = currentInst.vocabularies || {};
 
-        populateCheckboxes("module-list", currentInst.processed_hardware.modules || currentInst.modules || [],
+        const modalityItems = currentInst.processed_hardware?.modalities || currentInst.modalities || [];
+        populateCheckboxes("modality-list", modalityItems,
+            modality => formatVocabLabel(vocab.modalities, modality), "modality");
+
+        const moduleItems = currentInst.processed_hardware?.modules || currentInst.modules || [];
+        populateCheckboxes("module-list", moduleItems,
             module => {
-                const moduleName = toTitleCase(module?.name || module);
+                const moduleId = module?.id || module?.name || module;
+                const moduleLabel = formatVocabLabel(vocab.hardware_modules, moduleId);
                 const moduleNotes = (module?.notes || "").toString().trim();
-                return moduleNotes ? `${moduleName} (${moduleNotes})` : moduleName;
+                return moduleNotes ? `${moduleLabel} (${moduleNotes})` : moduleLabel;
             }, "module");
-        
+
+        const scanner = currentInst?.processed_hardware?.scanner || currentInst?.hardware?.scanner || null;
+        const scannerItems = scanner ? [scanner] : [];
+        populateCheckboxes("scanner-list", scannerItems,
+            scannerItem => {
+                const scannerTypeRaw = scannerItem?.type || scannerItem?.id || "";
+                const scannerLabel = formatVocabLabel(vocab.scanners || vocab.scanner || vocab.scanner_types, scannerTypeRaw);
+                const scannerNotes = (scannerItem?.notes || "").toString().trim();
+                return scannerNotes ? `${scannerLabel} (${scannerNotes})` : scannerLabel;
+            }, "scanner");
+
         // Formatting to match JCB/QUAREP-LiMi guidelines
         populateCheckboxes("obj-list", currentInst.processed_hardware.objectives,
             obj => formatObjectiveLabel(obj), "obj");
-            
-        populateCheckboxes("light-list", currentInst.processed_hardware.light_sources, 
+
+        populateCheckboxes("light-list", currentInst.processed_hardware.light_sources,
             ls => `${ls.wavelength}nm ${ls.type} (${ls.power}, ${ls.manufacturer} ${ls.name})`, "light");
-            
+
         populateCheckboxes("filter-list", currentInst.processed_hardware.filters, f => {
             let type = [];
             if (f.excitation) type.push(`Ex: ${f.excitation}`);
             if (f.dichroic) type.push(`Di: ${f.dichroic}`);
             if (f.emission) type.push(`Em: ${f.emission}`);
-            
+
             // Label it based on what it actually does (helps users pick the right parts)
             let label = f.name;
             if (type.length > 0) {
@@ -123,10 +141,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             return label;
         }, "filter");
 
-        populateCheckboxes("splitter-list", currentInst.processed_hardware.splitters, 
+        populateCheckboxes("splitter-list", currentInst.processed_hardware.splitters,
             s => `${s.name} (${s.type})`, "splitter");
 
-        populateCheckboxes("det-list", currentInst.processed_hardware.detectors, 
+        populateCheckboxes("det-list", currentInst.processed_hardware.detectors,
             d => `${d.model} ${d.type} (${d.manufacturer})`, "det");
     });
 
@@ -137,20 +155,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             container.innerHTML = "<span style='color: gray; font-size: 0.9em;'>No data available.</span>";
             return;
         }
-        
+
         items.forEach((item, index) => {
             const wrapper = document.createElement("div");
             wrapper.style.marginBottom = "4px";
-            
+
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.id = `${prefix}-${index}`;
             checkbox.value = labelFormatter(item).replace(/\s+/g, ' ').trim();
-            
+
             const label = document.createElement("label");
             label.htmlFor = `${prefix}-${index}`;
             label.textContent = " " + checkbox.value;
-            
+
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
             container.appendChild(wrapper);
@@ -160,6 +178,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     function getCheckedValues(prefix) {
         const checkboxes = document.querySelectorAll(`input[id^="${prefix}-"]:checked`);
         return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function formatVocabLabel(vocabSection, value) {
+        const id = (value?.id || value?.name || value || "").toString().trim();
+        if (!id) return "Unknown";
+
+        if (vocabSection) {
+            if (Array.isArray(vocabSection)) {
+                const match = vocabSection.find(item => item?.id === id);
+                if (match?.label) return match.label;
+            } else if (typeof vocabSection === "object") {
+                const mapped = vocabSection[id];
+                if (mapped?.label) return mapped.label;
+                if (typeof mapped === "string") return mapped;
+            }
+        }
+
+        return toTitleCase(id);
     }
 
     function toTitleCase(value) {
@@ -211,37 +247,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         const objs = getCheckedValues("obj");
         const modalities = getCheckedValues("modality");
         const modules = getCheckedValues("module");
+        const scanners = getCheckedValues("scanner");
         const lights = getCheckedValues("light");
         const filters = getCheckedValues("filter");
-        const splitters = getCheckedValues("splitter"); 
+        const splitters = getCheckedValues("splitter");
         const dets = getCheckedValues("det");
-        
+
         let softName = "the manufacturer's standard software";
         if (currentInst.software && currentInst.software.length > 0) {
             softName = `${currentInst.software[0].name} (v${currentInst.software[0].version || 'unknown'})`;
         }
 
-        const stand = currentInst.stand_orientation && currentInst.stand_orientation !== 'other' 
-            ? currentInst.stand_orientation + " " 
+        const stand = currentInst.stand_orientation && currentInst.stand_orientation !== 'other'
+            ? currentInst.stand_orientation + " "
             : "";
 
-        const scanner = currentInst?.processed_hardware?.scanner || currentInst?.hardware?.scanner || {};
-        const scannerTypeRaw = (scanner?.type || "").toString().trim();
-        const scannerType = scannerTypeRaw.replace(/_/g, " ");
-        const scannerNotes = (scanner?.notes || "").toString().trim();
-
-        const selectedModalities = modalities.length > 0
-            ? modalities
-            : (currentInst.processed_hardware.modalities || currentInst.modalities || []).map(m => toTitleCase(m));
+        const vocab = currentInst.vocabularies || {};
+        const fallbackModalities = (currentInst.processed_hardware?.modalities || currentInst.modalities || [])
+            .map(m => formatVocabLabel(vocab.modalities, m));
+        const selectedModalities = modalities.length > 0 ? modalities : fallbackModalities;
         const modalitiesText = selectedModalities.length > 0 ? formatHumanList(selectedModalities) : "Light microscopy";
 
-        // Base microscope description
-        let text = `${modalitiesText} images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope controlled by ${softName}. `;
+        const scannerData = currentInst?.processed_hardware?.scanner || currentInst?.hardware?.scanner || {};
+        const scannerFallbackId = (scannerData?.type || scannerData?.id || "").toString().trim();
+        const scannerFallbackLabel = scannerFallbackId
+            ? formatVocabLabel(vocab.scanners || vocab.scanner || vocab.scanner_types, scannerFallbackId)
+            : "";
+        const selectedScanners = scanners.length > 0
+            ? scanners
+            : (scannerFallbackLabel && scannerFallbackLabel.toLowerCase() !== "none" ? [scannerFallbackLabel] : []);
 
-        if (scannerTypeRaw && scannerTypeRaw.toLowerCase() !== "none") {
-            text += `The system was equipped with a ${scannerType} scanner`;
-            text += scannerNotes ? ` (${scannerNotes}). ` : `. `;
-        }
+        const scannerClause = selectedScanners.length > 0
+            ? ` equipped with a ${formatHumanList(selectedScanners)} scanner`
+            : "";
+
+        // Base microscope description
+        let text = `${modalitiesText} images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope${scannerClause}, controlled by ${softName}. `;
 
         if (modules.length > 0) {
             text += `The following hardware modules were utilized: ${formatHumanList(modules)}. `;
@@ -250,38 +291,25 @@ document.addEventListener("DOMContentLoaded", async () => {
                 text += `[PLEASE SPECIFY: Cells were maintained at X °C and X% CO2 during imaging]. `;
             }
         }
-        
+
         if (objs.length > 0) text += `The system was equipped with the following objective(s): ${objs.join(", ")}. `;
         if (dets.length > 0) text += `Images were captured using: ${dets.join(", ")}. `;
         if (splitters.length > 0) text += `Emission splitting to multiple cameras was performed using: ${splitters.join(", ")}. `;
 
-        text += `\n\n[CHANNEL CONFIGURATIONS - Please adjust the template below for your specific dyes]:\n`;
-        
         const diFilters = filters.filter(f => f.includes('Di:'));
-        const emFilters = filters.filter(f => f.includes('Em:'));        
-       
-        text += `Samples were illuminated using [General Light Engine, e.g., Leica LED 8 / Lumencor Celesta]. `;
-        text += `For [dyes a-b], the main dichroic was [Select from: ${diFilters.join(' OR ') || 'N/A'}].\n`;
-        
-        text += `- [dye a] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
-        text += `- [dye b] was illuminated using the [Select from: ${lights.join(' OR ') || 'N/A'}] light source ([excitation power, exposure time]). Emission was selected using [Select from: ${emFilters.join(' OR ') || 'N/A'}].\n`;
+        const emFilters = filters.filter(f => f.includes('Em:'));
 
-        text += `\n[ACQUISITION SETTINGS]:\n`;
-        text += `(Note: For large papers, consider summarizing these in a supplemental table. Need to find these numbers? Open your image in Fiji and press 'I' for Image Info!)\n`;
-        text += `Standard imaging panels were defined for [list your main fluorophore combinations, e.g., DAPI/AF488/AF568]. `;
-        text += `Exposure times and excitation powers were adjusted per sample to maximize dynamic range while strictly preventing pixel saturation. `;
-        text += `Images were acquired with a pixel size of [X] µm/px and a z-step of [X] µm, fulfilling the Nyquist sampling criterion for the objective. Pinhole size was maintained at [X AU].\n`;
+        text += `Acquisition settings were optimized across imaging panels using ${lights.length > 0 ? formatHumanList(lights) : '[selected excitation lines]'} with ${diFilters.length > 0 ? formatHumanList(diFilters) : '[main dichroic(s)]'} and ${emFilters.length > 0 ? formatHumanList(emFilters) : '[emission filter(s)]'}; exposure times and excitation powers were tuned per sample to maximize dynamic range while preventing saturation. `;
+        text += `Images were acquired at a pixel size of [X] µm/px and z-step of [X] µm, with acquisition parameters selected to satisfy Nyquist sampling for the objective and fluorophore emission profile. `;
 
-        text += `\n[DATA AVAILABILITY]:\n`;
-        text += `(Note: To support reproducible research, please consider uploading your raw microscopy images to a public repository).\n`;
-        text += `The raw microscopy images (.nd2/.czi/.lif) generated during this study are publicly available in the [BioImage Archive / Zenodo] repository under accession number [Insert Accession Number/DOI].`;
+        text += `\n\n[DATA AVAILABILITY]: The raw microscopy image files (.nd2/.czi/.lif) generated in this study should be deposited in BioImage Archive or Zenodo to support Open Science and reproducibility; include the accession number or DOI in the final manuscript.`;
 
         accumulatedMethods.push(text);
         usedInstrumentNames.add(currentInst.display_name.toLowerCase());
-        
+
         // Uncheck boxes after adding
         document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-        
+
         updateOutputText();
     });
 
@@ -293,13 +321,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         let finalOutput = "Light Microscopy Methods:\n\n";
         finalOutput += accumulatedMethods.join("\n\n");
-        
+
         // Acknowledgements Section
         finalOutput += "\n\nAcknowledgements:\n\n";
-        
+
         // Use the dynamically injected text from acknowledgements.yaml
         finalOutput += {{ ack_standard }};
-        
+
         // Check for xCELLigence usage (partial match on name)
         const usedXcell = Array.from(usedInstrumentNames).some(name => name.toLowerCase().includes("xcelligence"));
         if (usedXcell) {
