@@ -1023,6 +1023,50 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     }
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
 
+    # Export AI/LLM Optimized Inventory
+    llm_inventory_path = docs_root / "assets" / "llm_inventory.json"
+    llm_payload = {
+        "facility_name": "AIC Turku",
+        "vocabulary_definitions": vocabularies_payload,
+        "active_microscopes": [],
+    }
+
+    # Notice we only iterate over active instruments (excluding retired ones)
+    for inst in instruments:
+        status = inst.get("status", {})
+        hw = inst.get("processed_hardware", {})
+
+        llm_payload["active_microscopes"].append(
+            {
+                "id": inst.get("id"),
+                "display_name": inst.get("display_name"),
+                "current_health_status": f"{status.get('badge', 'Unknown')} - {status.get('reason', 'No known issues')}",
+                "stand_orientation": inst.get("stand_orientation"),
+                "supported_modalities": hw.get("modalities", []),
+                "available_modules_and_environmental_control": [m.get("name") for m in hw.get("modules", [])],
+                "scanner_type": hw.get("scanner", {}).get("type", ""),
+                "objectives": [
+                    {
+                        "magnification_and_na": f"{obj.get('magnification')}x / {obj.get('na')} NA",
+                        "immersion": obj.get("immersion"),
+                        "capabilities": obj.get("specialties", []),
+                    }
+                    for obj in hw.get("objectives", [])
+                ],
+                "light_sources": [
+                    f"{ls.get('wavelength')}nm {ls.get('type')}" for ls in hw.get("light_sources", [])
+                ],
+                "emission_filters": [
+                    f"Ex: {f.get('excitation')} / Em: {f.get('emission')}"
+                    for f in hw.get("filters", [])
+                    if f.get("emission")
+                ],
+                "detectors": [det.get("type") for det in hw.get("detectors", [])],
+            }
+        )
+
+    llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
+
     # Render Methods Generator page
     acknowledgements_path = repo_root / "acknowledgements.yaml"
     if acknowledgements_path.exists():
