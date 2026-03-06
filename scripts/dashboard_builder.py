@@ -674,29 +674,43 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     vocab_json_path.parent.mkdir(parents=True, exist_ok=True)
     vocab_json_path.write_text(json.dumps(vocabularies, indent=2), encoding="utf-8")
 
-    vocabulary_lines = ["# Vocabulary Dictionary", ""]
-    for category, terms in sorted(vocabularies.items()):
-        vocabulary_lines.append(f"## {category}")
-        vocabulary_lines.append("")
-        for term_id, term in sorted(terms.items()):
-            term_label = clean_text(term.get("label")) if isinstance(term, dict) else ""
-            synonyms = clean_string_list(term.get("synonyms")) if isinstance(term, dict) else []
-            description = clean_text(term.get("description")) if isinstance(term, dict) else ""
+    vocabulary = Vocabulary(repo_root / "vocab")
+    # Generate Vocabulary Dictionary Markdown
+    vocab_md_lines = [
+        "---",
+        "title: Vocabulary Dictionary",
+        "description: Controlled terminology used in the AIC database.",
+        "---",
+        "",
+        "# 📖 Vocabulary Dictionary\n",
+        "This page defines the strictly controlled terminology used across the AIC database. Use the **Canonical ID** when writing YAML files, though the validation scripts will gracefully suggest corrections if you use a known **Synonym**.\n",
+    ]
 
-            vocabulary_lines.append(f"### {term_label or term_id}")
-            vocabulary_lines.append(f"- **ID:** `{term_id}`")
-            vocabulary_lines.append(
-                f"- **Label:** {term_label}" if term_label else "- **Label:** _(not provided)_"
-            )
-            vocabulary_lines.append(
-                f"- **Synonyms:** {', '.join(synonyms)}" if synonyms else "- **Synonyms:** _(none)_"
-            )
-            vocabulary_lines.append(
-                f"- **Description:** {description}" if description else "- **Description:** _(not provided)_"
-            )
-            vocabulary_lines.append("")
+    for vocab_name, terms in sorted(vocabulary.terms_by_vocab.items()):
+        # Format the title nicely (e.g., "objective_immersion" -> "Objective Immersion")
+        title = vocab_name.replace("_", " ").title()
+        vocab_md_lines.append(f"## {title}\n")
 
-    (docs_root / "vocabulary_dictionary.md").write_text("\n".join(vocabulary_lines).strip() + "\n", encoding="utf-8")
+        # Table Header
+        vocab_md_lines.append("| Label | Canonical ID | Synonyms | Description |")
+        vocab_md_lines.append("| :--- | :--- | :--- | :--- |")
+
+        # Table Rows
+        for term in sorted(terms.values(), key=lambda t: t.label.lower()):
+            label = f"**{term.label}**"
+            code_id = f"`{term.id}`"
+
+            # Format synonyms as inline code blocks separated by commas
+            syns = ", ".join([f"`{s}`" for s in term.synonyms]) if term.synonyms else "-"
+
+            # Ensure description is a single line so it doesn't break the Markdown table
+            desc = term.description.replace("\n", " ").strip() if term.description else "-"
+
+            vocab_md_lines.append(f"| {label} | {code_id} | {syns} | {desc} |")
+
+        vocab_md_lines.append("\n")  # Blank line after table
+
+    (docs_root / "vocabulary_dictionary.md").write_text("\n".join(vocab_md_lines), encoding="utf-8")
 
     # Copy assets into docs
     if (repo_root / "assets").exists():
@@ -715,7 +729,6 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     tpl_methods = jinja_env.get_template("methods_generator.md.j2")
 
     load_errors: list[YamlLoadError] = []
-    vocabulary = Vocabulary(repo_root / "vocab")
     instruments = load_instruments("instruments", load_errors=load_errors)
     retired_instruments = load_instruments("instruments", load_errors=load_errors, include_retired=True)
     qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
