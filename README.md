@@ -1,6 +1,6 @@
-# AIC-Turku Microscopy Dashboard
+# AIC-Turku Microscopy Database & Dashboard
 
-Welcome to the **AIC-Turku Microscopy Dashboard** repository. This project serves as the single source of truth for the microscopy facility using a GitOps approach. All operational state—including instrument configurations, QC results, and maintenance history—is stored here as text and evolves through Pull Requests.
+Welcome to the **AIC-Turku Microscopy Database**. This repository serves as the single source of truth for the Advanced Imaging Core (AIC) microscopy facility using a strict GitOps approach. All operational state—including instrument configurations, controlled vocabularies, QC results, and maintenance history—is stored here as YAML ledgers and evolves through Pull Requests.
 
 ### 🌐 Live Dashboard
 **Access the live database and health dashboard:** [https://aic-turku.github.io/AIC-Turku-database/](https://aic-turku.github.io/AIC-Turku-database/)
@@ -11,45 +11,70 @@ Welcome to the **AIC-Turku Microscopy Dashboard** repository. This project serve
 
 The [Advanced Imaging Core at Turku Bioscience Centre](https://bioscience.fi/aic/) is a centralized, open-access service platform dedicated to supporting conventional and advanced light microscopy. 
 
-**Our Mission:** To enhance the research environment in Turku by providing state-of-the-art instrumentation and technical expertise to researchers from both academia and industry. We proudly cooperate with Euro-BioImaging ERIC and Turku BioImaging as part of the Finnish Euro-BioImaging Node, improving the accessibility of imaging technologies nationally and internationally. 
+**Our Mission:** To enhance the research environment in Turku by providing state-of-the-art instrumentation and technical expertise to researchers from academia and industry. We cooperate with Euro-BioImaging ERIC and Turku BioImaging as part of the Finnish Euro-BioImaging Node.
 
-Whether you need consultation on choosing an appropriate microscope, training on specific instruments, or access to data analysis tools, our team is ready to support your projects at all levels.
+Whether you need consultation on choosing an appropriate microscope, training, or access to data analysis tools, our team is ready to support your projects at all levels.
 
 ---
 
 ## Repository Structure & Data Model
 
-- `instruments/*.yaml` — **Instrument Registry:** Authoritative descriptions of microscope configurations (modalities, hardware, objectives, detectors, software).
-- `qc/sessions/**/<year>/*.yaml` — **QC Ledgers:** Self-contained records of QC runs. These contain human inputs (e.g., power meter readings), OMERO artifact pointers, computed metrics, and CI evaluation results.
-- `maintenance/events/**/<year>/*.yaml` — **Maintenance Ledgers:** Records of service and maintenance interventions with minimal vocabulary and free-text details.
-- `scripts/dashboard_builder.py` — **Build Script:** Parses the YAML ledgers and builds the MkDocs Material dashboard into `dashboard_docs/`.
+This repository is strictly structured to support automated validation and static site generation.
+
+- `instruments/` — **Instrument Registry:** Authoritative YAML descriptions of active microscope configurations (modalities, hardware, objectives, detectors, etc.). Includes a `retired/` subdirectory for decommissioned systems.
+- `qc/sessions/**/<year>/` — **QC Ledgers:** Self-contained records of quality control runs, containing human measurements, OMERO artifact pointers, and computed metrics.
+- `maintenance/events/**/<year>/` — **Maintenance Ledgers:** Records of service interventions (repairs, PMs, upgrades) utilizing strict maintenance action/reason vocabularies.
+- `vocab/` — **Controlled Vocabularies:** The single source of truth for allowed terms (e.g., modalities, detectors, objective immersions). These enforce consistency across the database.
+- `scripts/` — **Pipeline Scripts:** - `validate.py`: Enforces schema, ensures relationships, and validates terms against the `vocab/` dictionaries.
+  - `dashboard_builder.py`: The primary build engine. Parses ledgers to build the MkDocs Material dashboard into `dashboard_docs/`, complete with JSON metrics and LLM-ready inventories.
+- `templates/` — **Templates:** Starter YAML templates for creating new instruments, QC sessions, and maintenance events.
 
 ### Key Conventions
-- **Stable Routing ID:** The `instrument.instrument_id` parameter is a URL-safe slug (lowercase + hyphens).
-  - It defines routing URLs: `instruments/<instrument_id>/...`
+- **Stable Routing ID:** The `instrument.instrument_id` parameter is a URL-safe slug (e.g., `scope-zeiss-lsm-880`).
+  - It dictates routing URLs: `instruments/<instrument_id>/...`
   - It must strictly match log entries under the key: `microscope: <instrument_id>`
-  - It is required in every instrument YAML; missing/empty/non-string values fail `scripts/dashboard_builder.py` in strict mode.
+  - Missing or malformed IDs will cause the `dashboard_builder.py` script to fail.
 
 ---
 
 ## Facility Workflows
 
-### 1. Adding a New Microscope
-
-1. Copy `templates/microscope_template.yaml` into `instruments/<something>.yaml`.
-2. Fill in the metadata, paying special attention to `instrument.instrument_id`.
+### 1. Adding or Modifying an Instrument
+1. Copy `templates/microscope_template.yaml` into `instruments/<instrument_id>.yaml`.
+2. Fill in metadata, strictly using canonical IDs from the [Vocabulary Dictionary](https://aic-turku.github.io/AIC-Turku-database/vocabulary_dictionary.md).
 3. *(Optional)* Add a representative image at `assets/images/<instrument_id>.jpg`.
 
 ### 2. Logging a QC Session
-
 1. Copy `templates/QC_template.yaml` into `qc/sessions/<instrument_id>/<YYYY>/`.
-2. Save it using a stable and filesystem-safe ID format (e.g., `qc_<microscope>_<YYYYMMDDThhmmZ>_<suite>.yaml`).
-3. Fill in human contexts and manual measurements. *(Note: Scripts will compute the final metrics, and GitHub Actions CI will write the evaluation pass/fail block automatically).*
+2. Save it using a stable timestamp format: `qc_<instrument_id>_<YYYYMMDDThhmmZ>_<suite>.yaml`.
+3. Fill in human contexts and metrics. The build pipeline will automatically extract metric data points to populate longitudinal tracking charts on the dashboard.
 
 ### 3. Logging a Maintenance Event
-
 1. Copy `templates/maintenance_template.yaml` into `maintenance/events/<instrument_id>/<YYYY>/`.
-2. Save it using the appropriate ID format (e.g., `maint_<microscope>_<YYYYMMDD>_<short_slug>.yaml`).
-3. Add minimal vocabulary details (reason/action/service provider) and document the service notes.
+2. Save it using: `maint_<instrument_id>_<YYYYMMDD>_<short_slug>.yaml`.
+3. Map the event using the allowed `maintenance_reason` and `maintenance_action` vocabularies, and provide free-text notes.
 
 ---
+
+## AI & LLM Integrations
+
+This repository is designed to be fully consumable by Large Language Models (LLMs) and automated agents:
+- **`llm_inventory.json`**: The build script dynamically compiles an AI-optimized representation of the facility's inventory, status, and environmental controls into `dashboard_docs/assets/llm_inventory.json`. 
+- **Agent Context**: See `docs/agent_context.md` for strict instructions tailored for GitOps AI coding assistants operating within this repository.
+- **Microscopy Assistant**: The `docs/llm_microscopy_assistant.md` file serves as a ready-made system prompt/RAG context to help AI bots map user intents (e.g., "deep tissue imaging") to canonical facility terms (e.g., `multiphoton`).
+
+---
+
+## Local Development & Building
+
+To validate records and preview the dashboard locally:
+
+```bash
+# 1. Install dependencies
+pip install pyyaml jinja2 mkdocs-material 
+
+# 2. Run the validation and dashboard generation script strictly
+python scripts/dashboard_builder.py --strict
+
+# 3. Serve the generated documentation locally
+mkdocs serve
