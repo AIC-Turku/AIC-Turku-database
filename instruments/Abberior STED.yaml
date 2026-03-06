@@ -31,7 +31,7 @@ modules:
   - name: "adaptive_optics"
     notes: "Supports deep imaging up to 75 µm into cleared tissue with 100x oil objective."
     url: ""
-  - name: "RESCue_STED"
+  - name: "rescue_sted"
     notes: "Reduction of state transition cycles mode for super-resolution live imaging with lower light dose."
     url: ""
 

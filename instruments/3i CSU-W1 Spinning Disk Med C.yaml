@@ -32,7 +32,7 @@ modules:
   - name: "hardware_autofocus"
     notes: "Zeiss Definite Focus 2"
     url: ""
-  - name: "FRAP"
+  - name: "frap"
     notes: "FRAP/Photoactivation module"
     url: ""
 
