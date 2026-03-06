@@ -25,6 +25,99 @@ class ValidationIssue:
     message: str
 
 
+@dataclass
+class VocabularyMatch:
+    canonical_id: str
+    matched_input: str
+    matched_as_synonym: bool
+
+
+@dataclass
+class VocabularyTerm:
+    id: str
+    label: str
+    description: str
+    synonyms: list[str]
+
+
+class Vocabulary:
+    """Loads vocab/*.yaml and resolves IDs/synonyms to canonical IDs."""
+
+    def __init__(self, vocab_dir: Path = Path("vocab")) -> None:
+        self.vocab_dir = vocab_dir
+        self.terms_by_vocab: dict[str, dict[str, VocabularyTerm]] = {}
+        self.lookup_by_vocab: dict[str, dict[str, str]] = {}
+        self._load_all()
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        return value.strip().casefold()
+
+    @staticmethod
+    def _normalize_loose(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", value.casefold())
+
+    def _load_all(self) -> None:
+        for vocab_file in _iter_yaml_files(self.vocab_dir):
+            vocab_name = vocab_file.stem
+            payload, load_error = _load_yaml(vocab_file)
+            if load_error is not None or payload is None:
+                continue
+
+            raw_terms = payload.get("terms")
+            if not isinstance(raw_terms, list):
+                continue
+
+            terms: dict[str, VocabularyTerm] = {}
+            lookup: dict[str, str] = {}
+            for raw_term in raw_terms:
+                if not isinstance(raw_term, dict):
+                    continue
+
+                raw_id = raw_term.get("id")
+                if not isinstance(raw_id, str) or not raw_id.strip():
+                    continue
+
+                canonical_id = raw_id.strip()
+                label = raw_term.get("label")
+                description = raw_term.get("description")
+                raw_synonyms = raw_term.get("synonyms")
+                synonyms = [
+                    synonym.strip()
+                    for synonym in (raw_synonyms if isinstance(raw_synonyms, list) else [])
+                    if isinstance(synonym, str) and synonym.strip()
+                ]
+
+                terms[canonical_id] = VocabularyTerm(
+                    id=canonical_id,
+                    label=label.strip() if isinstance(label, str) else canonical_id,
+                    description=description.strip() if isinstance(description, str) else "",
+                    synonyms=synonyms,
+                )
+
+                lookup[self._normalize(canonical_id)] = canonical_id
+                for synonym in synonyms:
+                    lookup[self._normalize(synonym)] = canonical_id
+
+            self.terms_by_vocab[vocab_name] = terms
+            self.lookup_by_vocab[vocab_name] = lookup
+
+    def match(self, vocab_name: str, raw_value: Any) -> VocabularyMatch | None:
+        if not isinstance(raw_value, str) or not raw_value.strip():
+            return None
+
+        normalized = self._normalize(raw_value)
+        canonical_id = self.lookup_by_vocab.get(vocab_name, {}).get(normalized)
+        if canonical_id is None:
+            return None
+
+        return VocabularyMatch(
+            canonical_id=canonical_id,
+            matched_input=raw_value.strip(),
+            matched_as_synonym=(self._normalize(canonical_id) != normalized),
+        )
+
+
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     if not base_dir.exists() or not base_dir.is_dir():
         return []
@@ -70,10 +163,115 @@ def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
 def validate_instrument_ledgers(
     *,
     instruments_dir: Path = Path("instruments"),
-) -> tuple[set[str], list[ValidationIssue]]:
+) -> tuple[set[str], list[ValidationIssue], list[ValidationIssue]]:
     issues: list[ValidationIssue] = []
+    warnings: list[ValidationIssue] = []
     instrument_ids: set[str] = set()
     instrument_id_to_files: dict[str, list[str]] = {}
+    vocabulary = Vocabulary()
+
+    def _record(issue: ValidationIssue, *, as_error: bool) -> None:
+        if as_error:
+            issues.append(issue)
+        else:
+            warnings.append(issue)
+
+    def _match_with_relaxed_fallback(vocab_name: str, raw_value: str) -> VocabularyMatch | None:
+        direct = vocabulary.match(vocab_name, raw_value)
+        if direct is not None:
+            return direct
+
+        raw_loose = Vocabulary._normalize_loose(raw_value.strip())
+        for canonical_id, term in vocabulary.terms_by_vocab.get(vocab_name, {}).items():
+            if Vocabulary._normalize_loose(canonical_id) == raw_loose:
+                return VocabularyMatch(
+                    canonical_id=canonical_id,
+                    matched_input=raw_value.strip(),
+                    matched_as_synonym=True,
+                )
+            for synonym in term.synonyms:
+                if Vocabulary._normalize_loose(synonym) == raw_loose:
+                    return VocabularyMatch(
+                        canonical_id=canonical_id,
+                        matched_input=raw_value.strip(),
+                        matched_as_synonym=True,
+                    )
+        return None
+
+    def _validate_vocab_value(
+        *,
+        path: str,
+        vocab_name: str,
+        raw_value: Any,
+        required: bool = False,
+        unknown_is_error: bool = True,
+        invalid_is_error: bool = True,
+        allow_empty: bool = False,
+    ) -> None:
+        if raw_value is None:
+            if required:
+                _record(
+                    ValidationIssue(
+                        code="missing_vocab_value",
+                        path=path,
+                        message=f"Missing required term for '{vocab_name}'.",
+                    ),
+                    as_error=True,
+                )
+            return
+
+        if not isinstance(raw_value, str):
+            _record(
+                ValidationIssue(
+                    code="invalid_vocab_value",
+                    path=path,
+                    message=f"Invalid term for '{vocab_name}'; expected a string.",
+                ),
+                as_error=invalid_is_error,
+            )
+            return
+
+        cleaned = raw_value.strip()
+        if not cleaned:
+            if allow_empty:
+                return
+            _record(
+                ValidationIssue(
+                    code="invalid_vocab_value",
+                    path=path,
+                    message=f"Invalid term for '{vocab_name}'; expected a non-empty string.",
+                ),
+                as_error=invalid_is_error,
+            )
+            return
+
+        vocab_match = _match_with_relaxed_fallback(vocab_name, cleaned)
+        if vocab_match is None:
+            known = ", ".join(sorted(vocabulary.terms_by_vocab.get(vocab_name, {}).keys()))
+            _record(
+                ValidationIssue(
+                    code="unknown_vocab_term",
+                    path=path,
+                    message=(
+                        f"Unknown value '{cleaned}' for vocabulary '{vocab_name}'. "
+                        f"Use one of: {known}."
+                    ),
+                ),
+                as_error=unknown_is_error,
+            )
+            return
+
+        if vocab_match.matched_as_synonym:
+            warnings.append(
+                ValidationIssue(
+                    code="vocab_synonym_used",
+                    path=path,
+                    message=(
+                        f"Value '{vocab_match.matched_input}' is a synonym/variant in '{vocab_name}'. "
+                        f"Prefer canonical id '{vocab_match.canonical_id}'."
+                    ),
+                )
+            )
 
     for instrument_file in _iter_yaml_files(instruments_dir):
         is_retired_instrument = "retired" in instrument_file.parts
@@ -95,8 +293,6 @@ def validate_instrument_ledgers(
         instrument_section = payload.get("instrument")
         if not isinstance(instrument_section, dict):
             if is_retired_instrument:
-                # Retired records are ignored by the dashboard renderer, so we only
-                # need best-effort ID extraction from them for event cross-references.
                 continue
             issues.append(
                 ValidationIssue(
@@ -139,6 +335,83 @@ def validate_instrument_ledgers(
         instrument_ids.add(instrument_id)
         instrument_id_to_files.setdefault(instrument_id, []).append(instrument_file.as_posix())
 
+        modalities = payload.get("modalities")
+        if isinstance(modalities, list):
+            for index, modality in enumerate(modalities):
+                _validate_vocab_value(
+                    path=f"{instrument_file.as_posix()}:modalities[{index}]",
+                    vocab_name="modalities",
+                    raw_value=modality,
+                    unknown_is_error=False,
+                    invalid_is_error=False,
+                )
+
+        modules = payload.get("modules")
+        if isinstance(modules, list):
+            for index, module in enumerate(modules):
+                module_name = module.get("name") if isinstance(module, dict) else module
+                _validate_vocab_value(
+                    path=f"{instrument_file.as_posix()}:modules[{index}].name",
+                    vocab_name="modules",
+                    raw_value=module_name,
+                    unknown_is_error=False,
+                    invalid_is_error=False,
+                    allow_empty=True,
+                )
+
+        hardware = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
+        scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
+        _validate_vocab_value(
+            path=f"{instrument_file.as_posix()}:hardware.scanner.type",
+            vocab_name="scanner_types",
+            raw_value=scanner.get("type"),
+            required=True,
+            unknown_is_error=False,
+            invalid_is_error=False,
+        )
+
+        for index, source in enumerate(hardware.get("light_sources", [])):
+            source_kind = source.get("kind") if isinstance(source, dict) else source
+            _validate_vocab_value(
+                path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].kind",
+                vocab_name="light_source_kinds",
+                raw_value=source_kind,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
+            )
+
+        for index, detector in enumerate(hardware.get("detectors", [])):
+            detector_kind = detector.get("kind") if isinstance(detector, dict) else detector
+            _validate_vocab_value(
+                path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].kind",
+                vocab_name="detector_kinds",
+                raw_value=detector_kind,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
+            )
+
+        for index, objective in enumerate(hardware.get("objectives", [])):
+            immersion = objective.get("immersion") if isinstance(objective, dict) else None
+            correction = objective.get("correction") if isinstance(objective, dict) else None
+            _validate_vocab_value(
+                path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].immersion",
+                vocab_name="objective_immersion",
+                raw_value=immersion,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
+            )
+            _validate_vocab_value(
+                path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].correction",
+                vocab_name="objective_corrections",
+                raw_value=correction,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
+            )
+
     for instrument_id, source_files in sorted(instrument_id_to_files.items()):
         if len(source_files) <= 1:
             continue
@@ -151,8 +424,7 @@ def validate_instrument_ledgers(
             )
         )
 
-    return instrument_ids, issues
-
+    return instrument_ids, issues, warnings
 
 def validate_event_ledgers(
     *,
@@ -392,20 +664,23 @@ def validate_event_ledgers(
     return issues
 
 
-def print_validation_report(issues: list[ValidationIssue]) -> None:
+def print_validation_report(issues: list[ValidationIssue], *, report_name: str = "failures") -> None:
     if not issues:
         return
 
-    print("\nValidation failures detected:", file=sys.stderr)
+    print(f"\nValidation {report_name} detected:", file=sys.stderr)
     for index, issue in enumerate(issues, start=1):
         print(f"  {index}. [{issue.code}] {issue.path}", file=sys.stderr)
         print(f"     {issue.message}", file=sys.stderr)
-    print(f"\nTotal validation failures: {len(issues)}", file=sys.stderr)
+    print(f"\nTotal validation {report_name}: {len(issues)}", file=sys.stderr)
 
 
 def main() -> int:
-    instrument_ids, issues = validate_instrument_ledgers()
+    instrument_ids, issues, warnings = validate_instrument_ledgers()
     issues.extend(validate_event_ledgers(instrument_ids=instrument_ids))
+
+    if warnings:
+        print_validation_report(warnings, report_name="warnings")
 
     if issues:
         print_validation_report(issues)
