@@ -1,0 +1,51 @@
+---
+title: Plan Your Experiments
+hide:
+  - toc
+---
+
+# 🧪 Plan Your Experiments
+
+**Plan your experiment before you book the microscope.** Careful experimental design is crucial for acquiring quantitative, unbiased, and reproducible imaging data.
+
+## 📖 Essential Reading
+Before starting your imaging project, we highly recommend reviewing these foundational guides:
+- [Accuracy and precision in quantitative fluorescence microscopy – A foundational guide to collecting quantitative data](https://rupress.org/jcb/article/185/7/1135/35453/Accuracy-and-precision-in-quantitative)
+- [Designing a rigorous microscopy experiment – Validating methods and avoiding bias](https://rupress.org/jcb/article/218/5/1452/120908/Designing-a-rigorous-microscopy-experiment)
+- [Believing is seeing – The deceptive influence of bias in quantitative microscopy](https://journals.biologists.com/jcs/article/137/1/jcs261567/341218/Believing-is-seeing-the-deceptive-influence-of)
+
+---
+
+## 🤖 AI-Assisted Microscope Selection
+
+Choosing the right microscope for your specific biological question can be challenging. Because our facility maintains a highly structured, machine-readable database of all our hardware, you can use AI assistants (like ChatGPT, Claude, or Copilot) to recommend the best system for your needs based on our *actual* inventory!
+
+### Step 1: Download our Facility Database
+Download the latest snapshot of our microscope inventory. This file contains all the technical specifications, modalities, and available lasers/objectives for every system.
+
+[⬇️ Download `instruments_data.json`](assets/instruments_data.json){: .md-button .md-button--primary style="margin-top: 10px; margin-bottom: 20px;" }
+
+### Step 2: Open your preferred AI Assistant
+Go to your preferred AI tool (e.g., ChatGPT, Claude) and ensure it supports file uploads.
+
+### Step 3: Upload the file and use this prompt
+Upload the `instruments_data.json` file you just downloaded. Then, copy and paste the prompt below, filling in the bracketed `[ ]` information with your specific experimental details:
+
+<div class="admonition abstract">
+  <p class="admonition-title">Copy and paste this into the AI:</p>
+  <p>I have attached a JSON file containing the exact inventory of microscopes in my core facility. I need to plan an imaging experiment. Here are my requirements:</p>
+  <ul>
+    <li><strong>Sample type:</strong> [e.g., Live cells, fixed tissue slice, organoids, cleared brain]</li>
+    <li><strong>Fluorophores / Dyes:</strong> [e.g., DAPI, Alexa Fluor 488, mCherry]</li>
+    <li><strong>Key requirements:</strong> [e.g., Fast volumetric imaging, super-resolution, deep tissue penetration, multi-well plate screening, long-term incubation]</li>
+  </ul>
+  <p>Based ONLY on the microscopes available in the attached file, which 1 or 2 systems would you recommend and why? Please mention the specific modality, objective, and light source that make it a good fit.</p>
+</div>
+
+---
+
+## 💬 Consult Our Staff
+
+While AI is a great starting point for navigating our equipment, nothing beats human expertise! If you are unsure about your experimental design, fluorophore choices, or which microscope is the perfect fit for your research, please don't hesitate to contact our core facility staff.
+
+[✉️ Contact AIC Staff](https://bioscience.fi/aic/){: .md-button }
