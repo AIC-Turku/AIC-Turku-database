@@ -1,0 +1,33 @@
+terms:
+  - id: incubation
+    label: "Incubation"
+    description: "Environmental control module for temperature, CO2, and often humidity around the specimen. Supports physiologic conditions during long-term live imaging."
+    synonyms: ["environmental chamber", "temp/co2 control"]
+  - id: hardware_autofocus
+    label: "Hardware Autofocus"
+    description: "Active focus stabilization that compensates focus drift during acquisition. Common implementations include reflected-light focus locks such as Definite Focus or PFS."
+    synonyms: ["focus lock", "z-drift compensation"]
+  - id: frap
+    label: "FRAP Module"
+    description: "Hardware or software capability to perform targeted photobleaching for recovery measurements. Typically controls ROI bleaching power and timing."
+    synonyms: ["photobleach module"]
+  - id: photoactivation
+    label: "Photoactivation Module"
+    description: "Capability to activate or uncage photoresponsive probes in defined regions. Used for selective labeling and dynamic tracking experiments."
+    synonyms: ["photo-manipulation", "pa module"]
+  - id: fcs
+    label: "FCS Module"
+    description: "Instrumentation support for fluorescence fluctuation measurements and autocorrelation analysis. Enables diffusion and concentration quantification in tiny volumes."
+    synonyms: ["correlation module"]
+  - id: flim
+    label: "FLIM Module"
+    description: "Adds lifetime-resolved detection and analysis to fluorescence imaging. Enables contrast based on fluorophore decay kinetics."
+    synonyms: ["lifetime module"]
+  - id: optogenetics
+    label: "Optogenetics"
+    description: "Provides patterned or wavelength-specific stimulation for light-controlled biological perturbations. Used to control signaling or neural activity during imaging."
+    synonyms: ["photo-stimulation"]
+  - id: adaptive_optics
+    label: "Adaptive Optics"
+    description: "Corrects sample- or system-induced aberrations using deformable elements and feedback. Improves resolution and signal quality, especially in deep or heterogeneous samples."
+    synonyms: ["ao"]

@@ -1,0 +1,105 @@
+terms:
+  - id: widefield_fluorescence
+    label: "Widefield Fluorescence"
+    description: "Illuminates and captures fluorescence from the full field of view without optical sectioning. Best for fast imaging of bright samples and thin specimens."
+    synonyms: ["epifluorescence", "widefield epi"]
+  - id: transmitted_brightfield
+    label: "Transmitted Brightfield"
+    description: "Uses transmitted white light to image absorption and scattering contrast in unstained specimens. Common for routine morphology and context imaging."
+    synonyms: ["brightfield", "bf"]
+  - id: phase_contrast
+    label: "Phase Contrast"
+    description: "Converts phase shifts from transparent specimens into intensity differences. Useful for live, unlabeled cells on standard culture plastic."
+    synonyms: ["phase", "ph"]
+  - id: dic
+    label: "Differential Interference Contrast"
+    description: "Uses polarized beam shearing to create relief-like contrast from optical path gradients. Useful for high-contrast imaging of unstained live samples."
+    synonyms: ["DIC", "nomarski"]
+  - id: darkfield
+    label: "Darkfield"
+    description: "Collects only scattered light while excluding directly transmitted illumination. Highlights small structures and edges on a dark background."
+    synonyms: ["dark field"]
+  - id: confocal_point
+    label: "Point-Scanning Confocal"
+    description: "Scans a focused laser spot with a pinhole to reject out-of-focus light. Provides optical sectioning and improved contrast in thick specimens."
+    synonyms: ["laser scanning confocal", "lsm"]
+  - id: confocal_spinning_disk
+    label: "Spinning-Disk Confocal"
+    description: "Uses a rotating pinhole disk to image many points in parallel. Enables fast, lower-phototoxicity 3D optical sectioning in live samples."
+    synonyms: ["SDC", "spinning disk"]
+  - id: tirf
+    label: "Total Internal Reflection Fluorescence"
+    description: "Excites fluorophores with an evanescent field near the coverslip interface. Ideal for membrane-proximal events within roughly the first 100–200 nm."
+    synonyms: ["TIRF"]
+  - id: light_sheet
+    label: "Light Sheet"
+    description: "Illuminates samples with a thin sheet orthogonal to detection. Supports gentle, rapid volumetric imaging with reduced out-of-focus exposure."
+    synonyms: ["SPIM", "LSFM"]
+  - id: multiphoton
+    label: "Multiphoton"
+    description: "Uses nonlinear excitation, typically with pulsed near-infrared lasers, to excite fluorophores only at the focal volume. Improves deep-tissue imaging and reduces out-of-plane photodamage."
+    synonyms: ["two-photon", "2p"]
+  - id: optical_sectioning
+    label: "Structured Optical Sectioning"
+    description: "Uses patterned illumination and computational processing to suppress out-of-focus signal. Common examples include ApoTome or grid-projection approaches."
+    synonyms: ["apotome", "grid projection"]
+  - id: sim
+    label: "Structured Illumination Microscopy"
+    description: "Uses shifted illumination patterns and reconstruction to increase resolution and sectioning performance. Suitable for super-resolution with moderate light dose."
+    synonyms: ["SIM", "structured illumination"]
+  - id: sted
+    label: "Stimulated Emission Depletion"
+    description: "Shrinks the effective fluorescence spot using a depletion beam around the excitation focus. Enables sub-diffraction super-resolution imaging."
+    synonyms: ["STED"]
+  - id: resolft
+    label: "RESOLFT"
+    description: "Achieves super-resolution using reversibly switchable fluorophores and targeted on/off control. Often allows lower light intensities than depletion-based methods."
+    synonyms: ["RESOLFT"]
+  - id: smlm
+    label: "Single-Molecule Localization Microscopy"
+    description: "Builds super-resolved images by localizing sparse single emitters over many frames. Includes methods such as PALM and STORM."
+    synonyms: ["SMLM", "PALM/STORM"]
+  - id: spt
+    label: "Single-Particle Tracking"
+    description: "Tracks individual particles or molecules over time to quantify motion and dynamics. Used for diffusion, transport, and interaction studies."
+    synonyms: ["SPT", "single molecule tracking"]
+  - id: ism
+    label: "Image Scanning Microscopy"
+    description: "Uses detector array information in scanning microscopy to improve resolution and signal usage. Airyscan implementations are a common form."
+    synonyms: ["ISM", "airyscan"]
+  - id: flim
+    label: "Fluorescence Lifetime Imaging"
+    description: "Measures fluorescence decay timing rather than only intensity. Useful for environmental sensing and interaction readouts such as FRET changes."
+    synonyms: ["FLIM"]
+  - id: fcs
+    label: "Fluorescence Correlation Spectroscopy"
+    description: "Analyzes fluorescence intensity fluctuations in a tiny observation volume. Used to estimate concentration, diffusion, and molecular kinetics."
+    synonyms: ["FCS"]
+  - id: frap
+    label: "Fluorescence Recovery After Photobleaching"
+    description: "Photobleaches a region and measures fluorescence recovery over time. Used to quantify mobility, exchange, and binding dynamics."
+    synonyms: ["FRAP"]
+  - id: photoactivation
+    label: "Photoactivation"
+    description: "Activates photoactivatable fluorophores in selected regions or times. Supports pulse-chase imaging, sparse labeling, and dynamic experiments."
+    synonyms: ["pa", "photo-activation"]
+  - id: fret
+    label: "Förster Resonance Energy Transfer"
+    description: "Measures non-radiative energy transfer between donor and acceptor fluorophores at nanometer distances. Used as a readout of molecular proximity or conformational change."
+    synonyms: ["FRET"]
+  - id: spectral_imaging
+    label: "Spectral Imaging"
+    description: "Records fluorescence across wavelength bands rather than fixed channels. Enables unmixing of overlapping fluorophores and autofluorescence separation."
+    synonyms: ["lambda imaging", "spectral detection"]
+  - id: afm
+    label: "Atomic Force Microscopy"
+    description: "Uses a nanoscale cantilever probe to measure topography and mechanical properties at high spatial resolution. Can be combined with optical microscopy workflows."
+    synonyms: ["AFM"]
+  - id: impedance_cytometry
+    label: "Impedance Cytometry"
+    description: "Measures electrical impedance changes as cells pass sensing regions to infer size and biophysical properties. Often used for label-free cell phenotyping."
+    synonyms: ["electrical cytometry"]
+  - id: live_cell_imaging
+    label: "Live Cell Imaging"
+    description: "Refers to imaging workflows optimized for viable cells over time with controlled environment and low phototoxicity. Can be combined with multiple optical modalities."
+    synonyms: ["live imaging", "time-lapse live imaging"]

@@ -1,0 +1,25 @@
+terms:
+  - id: plan_apochromat
+    label: "Plan Apochromat"
+    description: "High-end objective with flat field correction and strong chromatic/spherical correction across wavelengths. Preferred for quantitative, multicolor imaging."
+    synonyms: ["plan-apo", "plan apo"]
+  - id: apochromat
+    label: "Apochromat"
+    description: "Objective with strong chromatic and spherical aberration correction, typically over multiple colors. May not guarantee full field flatness."
+    synonyms: ["apo"]
+  - id: plan_fluorite
+    label: "Plan Fluorite"
+    description: "Objective with flat field correction and moderate-to-high aberration correction, typically between achromat and apochromat classes."
+    synonyms: ["plan fluor", "plan fluorite"]
+  - id: fluorite
+    label: "Fluorite"
+    description: "Objective class with improved color correction and transmission relative to basic achromats. Common compromise between performance and cost."
+    synonyms: ["semi-apo", "fluor"]
+  - id: plan_achromat
+    label: "Plan Achromat"
+    description: "Objective with flat field correction and basic chromatic correction for two wavelengths. Suitable for routine brightfield and general imaging."
+    synonyms: ["plan achro"]
+  - id: achromat
+    label: "Achromat"
+    description: "Basic objective correction class with limited chromatic and spherical correction. Often used for standard, non-demanding imaging tasks."
+    synonyms: ["achro"]

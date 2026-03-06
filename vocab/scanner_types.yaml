@@ -1,0 +1,29 @@
+terms:
+  - id: none
+    label: "No Scanner"
+    description: "No dedicated beam scanner is used for image formation. Typical of camera-based widefield modalities."
+    synonyms: ["camera-based"]
+  - id: galvo
+    label: "Galvanometric Scanner"
+    description: "Uses galvanometer mirrors to steer the excitation beam across the sample. Common in point-scanning confocal systems with flexible scan control."
+    synonyms: ["galvanometer", "galvo mirrors"]
+  - id: resonant
+    label: "Resonant Scanner"
+    description: "Uses a resonant oscillating mirror for very high line rates. Enables faster imaging than standard galvo scanning, often with reduced dwell time."
+    synonyms: ["resonant galvo"]
+  - id: spinning_disk
+    label: "Spinning Disk Scanner"
+    description: "Uses rotating pinhole disks to scan multiple points in parallel. Supports high-speed confocal imaging with lower phototoxicity."
+    synonyms: ["nipkow disk", "sdc scanner"]
+  - id: polygon
+    label: "Polygon Scanner"
+    description: "Uses a rotating polygon mirror for rapid beam deflection. Often used in high-speed scanning implementations."
+    synonyms: ["polygon mirror"]
+  - id: acousto_optic
+    label: "Acousto-Optic Scanner"
+    description: "Deflects beams using acousto-optic elements for rapid, inertia-free positioning. Useful for fast random-access scanning patterns."
+    synonyms: ["AOD", "acousto-optic deflector"]
+  - id: stage_scanning
+    label: "Stage Scanning"
+    description: "Forms images by moving the sample stage relative to fixed optics or beam position. Common in slide scanning and some large-area acquisitions."
+    synonyms: ["sample scanning"]

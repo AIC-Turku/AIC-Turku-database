@@ -1,0 +1,29 @@
+terms:
+  - id: air
+    label: "Air"
+    description: "Objective is used without immersion liquid, with air between front lens and coverslip. Common for lower magnification or long working distance imaging."
+    synonyms: ["dry"]
+  - id: oil
+    label: "Oil"
+    description: "Uses immersion oil to better match refractive index and increase numerical aperture. Common for high-resolution fluorescence objectives."
+    synonyms: ["oil immersion"]
+  - id: water
+    label: "Water"
+    description: "Uses water as immersion medium for improved index matching in aqueous samples. Useful for live-cell and deeper tissue imaging."
+    synonyms: ["water immersion"]
+  - id: glycerol
+    label: "Glycerol"
+    description: "Uses glycerol immersion to better match intermediate refractive indices. Useful for some cleared or thick biological specimens."
+    synonyms: ["glycerin"]
+  - id: silicone
+    label: "Silicone"
+    description: "Uses silicone oil immersion with refractive index close to tissue, improving deep imaging stability. Often used in live or thick sample imaging."
+    synonyms: ["silicone oil"]
+  - id: multi
+    label: "Multi-Immersion"
+    description: "Objective is designed to operate with multiple immersion media, often with correction adjustments. Provides flexibility across sample types."
+    synonyms: ["multi immersion"]
+  - id: dipping
+    label: "Dipping"
+    description: "Front lens is dipped directly into sample medium without coverslip contact. Common in electrophysiology and in vivo preparations."
+    synonyms: ["water dipping", "dipping objective"]
