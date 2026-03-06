@@ -15,6 +15,9 @@ terms:
     label: "Scientific CMOS"
     description: "Low-noise, high-speed area detector with large field of view and high dynamic range. Common for widefield, spinning-disk, and fast live imaging."
     synonyms: ["sCMOS"]
+  - id: cmos
+    label: "Standard CMOS"
+    description: "Standard digital camera sensor. Commonly used in routine brightfield, color histology, or basic fluorescence."
   - id: emccd
     label: "Electron-Multiplying CCD"
     description: "CCD detector with on-chip gain for very low-light imaging. Useful for single-molecule and fast, dim signal applications."
@@ -27,3 +30,6 @@ terms:
     label: "Avalanche Photodiode"
     description: "Semiconductor point detector with internal gain and fast timing response. Used in photon counting and correlation-based measurements."
     synonyms: ["APD"]
+  - id: spad
+    label: "SPAD Array"
+    description: "Single-Photon Avalanche Diode array. Provides exceptional timing resolution and single-photon sensitivity, crucial for advanced FLIM."

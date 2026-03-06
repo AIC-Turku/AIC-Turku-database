@@ -3,10 +3,18 @@ terms:
     label: "Incubation"
     description: "Environmental control module for temperature, CO2, and often humidity around the specimen. Supports physiologic conditions during long-term live imaging."
     synonyms: ["environmental chamber", "temp/co2 control"]
+  - id: microfluidics
+    label: "Microfluidics / Perfusion"
+    description: "Hardware for controlled delivery of media or drugs to the sample during live imaging."
+    synonyms: ["perfusion pump"]
   - id: hardware_autofocus
     label: "Hardware Autofocus"
     description: "Active focus stabilization that compensates focus drift during acquisition. Common implementations include reflected-light focus locks such as Definite Focus or PFS."
     synonyms: ["focus lock", "z-drift compensation"]
+  - id: motorized_stage
+    label: "Motorized Stage"
+    description: "Automated XY stage enabling multi-position imaging, large-area tiling, and multi-well plate screening."
+    synonyms: ["multiposition", "xy stage"]
   - id: frap
     label: "FRAP Module"
     description: "Hardware or software capability to perform targeted photobleaching for recovery measurements. Typically controls ROI bleaching power and timing."
