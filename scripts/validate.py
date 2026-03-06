@@ -53,6 +53,10 @@ class Vocabulary:
     def _normalize(value: str) -> str:
         return value.strip().casefold()
 
+    @staticmethod
+    def _normalize_loose(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", value.casefold())
+
     def _load_all(self) -> None:
         for vocab_file in _iter_yaml_files(self.vocab_dir):
             vocab_name = vocab_file.stem
@@ -166,46 +170,94 @@ def validate_instrument_ledgers(
     instrument_id_to_files: dict[str, list[str]] = {}
     vocabulary = Vocabulary()
 
+    def _record(issue: ValidationIssue, *, as_error: bool) -> None:
+        if as_error:
+            issues.append(issue)
+        else:
+            warnings.append(issue)
+
+    def _match_with_relaxed_fallback(vocab_name: str, raw_value: str) -> VocabularyMatch | None:
+        direct = vocabulary.match(vocab_name, raw_value)
+        if direct is not None:
+            return direct
+
+        raw_loose = Vocabulary._normalize_loose(raw_value.strip())
+        for canonical_id, term in vocabulary.terms_by_vocab.get(vocab_name, {}).items():
+            if Vocabulary._normalize_loose(canonical_id) == raw_loose:
+                return VocabularyMatch(
+                    canonical_id=canonical_id,
+                    matched_input=raw_value.strip(),
+                    matched_as_synonym=True,
+                )
+            for synonym in term.synonyms:
+                if Vocabulary._normalize_loose(synonym) == raw_loose:
+                    return VocabularyMatch(
+                        canonical_id=canonical_id,
+                        matched_input=raw_value.strip(),
+                        matched_as_synonym=True,
+                    )
+        return None
+
     def _validate_vocab_value(
         *,
         path: str,
         vocab_name: str,
         raw_value: Any,
         required: bool = False,
+        unknown_is_error: bool = True,
+        invalid_is_error: bool = True,
+        allow_empty: bool = False,
     ) -> None:
         if raw_value is None:
             if required:
-                issues.append(
+                _record(
                     ValidationIssue(
                         code="missing_vocab_value",
                         path=path,
                         message=f"Missing required term for '{vocab_name}'.",
-                    )
+                    ),
+                    as_error=True,
                 )
             return
 
-        if not isinstance(raw_value, str) or not raw_value.strip():
-            issues.append(
+        if not isinstance(raw_value, str):
+            _record(
+                ValidationIssue(
+                    code="invalid_vocab_value",
+                    path=path,
+                    message=f"Invalid term for '{vocab_name}'; expected a string.",
+                ),
+                as_error=invalid_is_error,
+            )
+            return
+
+        cleaned = raw_value.strip()
+        if not cleaned:
+            if allow_empty:
+                return
+            _record(
                 ValidationIssue(
                     code="invalid_vocab_value",
                     path=path,
                     message=f"Invalid term for '{vocab_name}'; expected a non-empty string.",
-                )
+                ),
+                as_error=invalid_is_error,
             )
             return
 
-        vocab_match = vocabulary.match(vocab_name, raw_value)
+        vocab_match = _match_with_relaxed_fallback(vocab_name, cleaned)
         if vocab_match is None:
             known = ", ".join(sorted(vocabulary.terms_by_vocab.get(vocab_name, {}).keys()))
-            issues.append(
+            _record(
                 ValidationIssue(
                     code="unknown_vocab_term",
                     path=path,
                     message=(
-                        f"Unknown value '{raw_value}' for vocabulary '{vocab_name}'. "
+                        f"Unknown value '{cleaned}' for vocabulary '{vocab_name}'. "
                         f"Use one of: {known}."
                     ),
-                )
+                ),
+                as_error=unknown_is_error,
             )
             return
 
@@ -215,7 +267,7 @@ def validate_instrument_ledgers(
                     code="vocab_synonym_used",
                     path=path,
                     message=(
-                        f"Value '{vocab_match.matched_input}' is a synonym in '{vocab_name}'. "
+                        f"Value '{vocab_match.matched_input}' is a synonym/variant in '{vocab_name}'. "
                         f"Prefer canonical id '{vocab_match.canonical_id}'."
                     ),
                 )
@@ -241,8 +293,6 @@ def validate_instrument_ledgers(
         instrument_section = payload.get("instrument")
         if not isinstance(instrument_section, dict):
             if is_retired_instrument:
-                # Retired records are ignored by the dashboard renderer, so we only
-                # need best-effort ID extraction from them for event cross-references.
                 continue
             issues.append(
                 ValidationIssue(
@@ -292,6 +342,8 @@ def validate_instrument_ledgers(
                     path=f"{instrument_file.as_posix()}:modalities[{index}]",
                     vocab_name="modalities",
                     raw_value=modality,
+                    unknown_is_error=False,
+                    invalid_is_error=False,
                 )
 
         modules = payload.get("modules")
@@ -302,6 +354,9 @@ def validate_instrument_ledgers(
                     path=f"{instrument_file.as_posix()}:modules[{index}].name",
                     vocab_name="modules",
                     raw_value=module_name,
+                    unknown_is_error=False,
+                    invalid_is_error=False,
+                    allow_empty=True,
                 )
 
         hardware = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
@@ -311,6 +366,8 @@ def validate_instrument_ledgers(
             vocab_name="scanner_types",
             raw_value=scanner.get("type"),
             required=True,
+            unknown_is_error=False,
+            invalid_is_error=False,
         )
 
         for index, source in enumerate(hardware.get("light_sources", [])):
@@ -319,6 +376,9 @@ def validate_instrument_ledgers(
                 path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].kind",
                 vocab_name="light_source_kinds",
                 raw_value=source_kind,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
             )
 
         for index, detector in enumerate(hardware.get("detectors", [])):
@@ -327,6 +387,9 @@ def validate_instrument_ledgers(
                 path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].kind",
                 vocab_name="detector_kinds",
                 raw_value=detector_kind,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
             )
 
         for index, objective in enumerate(hardware.get("objectives", [])):
@@ -336,11 +399,17 @@ def validate_instrument_ledgers(
                 path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].immersion",
                 vocab_name="objective_immersion",
                 raw_value=immersion,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
             )
             _validate_vocab_value(
                 path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].correction",
                 vocab_name="objective_corrections",
                 raw_value=correction,
+                unknown_is_error=False,
+                invalid_is_error=False,
+                allow_empty=True,
             )
 
     for instrument_id, source_files in sorted(instrument_id_to_files.items()):
@@ -356,7 +425,6 @@ def validate_instrument_ledgers(
         )
 
     return instrument_ids, issues, warnings
-
 
 def validate_event_ledgers(
     *,
