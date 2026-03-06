@@ -120,6 +120,12 @@ def load_vocabularies(vocab_dir: Path) -> dict[str, dict[str, Any]]:
     return vocabs
 
 
+def vocab_label(vocabulary: Vocabulary, vocab_name: str, term_id: str) -> str:
+    """Return a friendly vocabulary label for a canonical ID."""
+    term = vocabulary.terms_by_vocab.get(vocab_name, {}).get(term_id)
+    return term.label if term else term_id
+
+
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     if not base_dir.exists() or not base_dir.is_dir():
         return []
@@ -719,6 +725,16 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     vocab_json_path.write_text(json.dumps(vocabularies, indent=2), encoding="utf-8")
 
     vocabulary = Vocabulary(repo_root / "vocab")
+
+    for inst in [*instruments, *retired_instruments]:
+        inst["modalities_display"] = [
+            vocab_label(vocabulary, "modalities", modality_id)
+            for modality_id in inst.get("modalities", [])
+        ]
+        for module in inst.get("modules", []):
+            module_name = clean_text(module.get("name"))
+            module["display_name"] = vocab_label(vocabulary, "modules", module_name)
+
     # Generate Vocabulary Dictionary Markdown
     vocab_md_lines = [
         "---",
@@ -790,7 +806,11 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         print_validation_report(instrument_validation_warnings, report_name="warnings")
 
     # Aggregations
-    all_modalities = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
+    all_modality_ids = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
+    all_modalities = [
+        {"id": modality_id, "label": vocab_label(vocabulary, "modalities", modality_id)}
+        for modality_id in all_modality_ids
+    ]
 
     fleet_counts = {"total": len(instruments), "green": 0, "yellow": 0, "red": 0}
     flagged: list[dict[str, Any]] = []
