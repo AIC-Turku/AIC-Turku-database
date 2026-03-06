@@ -43,6 +43,14 @@ class Vocabulary:
     def _normalize_token(value: str) -> str:
         return value.strip().lower()
 
+    @staticmethod
+    def _normalized_key(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
+
+    @staticmethod
+    def _compact_key(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", value.strip().lower())
+
     @classmethod
     def from_dir(cls, vocab_dir: Path = Path("vocab")) -> tuple["Vocabulary", list[ValidationIssue]]:
         vocabulary = cls()
@@ -110,6 +118,18 @@ class Vocabulary:
 
                 by_id[canonical_id] = term
                 alias_to_id[cls._normalize_token(canonical_id)] = canonical_id
+                alias_to_id[cls._normalized_key(canonical_id)] = canonical_id
+                compact_canonical = cls._compact_key(canonical_id)
+                if compact_canonical:
+                    alias_to_id[compact_canonical] = canonical_id
+
+                label = term.get("label")
+                if isinstance(label, str) and label.strip():
+                    alias_to_id[cls._normalize_token(label)] = canonical_id
+                    alias_to_id[cls._normalized_key(label)] = canonical_id
+                    compact_label = cls._compact_key(label)
+                    if compact_label:
+                        alias_to_id[compact_label] = canonical_id
 
                 synonyms = term.get("synonyms")
                 if not isinstance(synonyms, list):
@@ -132,6 +152,10 @@ class Vocabulary:
                         )
                         continue
                     alias_to_id[normalized_synonym] = canonical_id
+                    alias_to_id[cls._normalized_key(synonym)] = canonical_id
+                    compact_synonym = cls._compact_key(synonym)
+                    if compact_synonym:
+                        alias_to_id[compact_synonym] = canonical_id
 
             vocabulary._terms[vocab_name] = by_id
             vocabulary._alias_to_id[vocab_name] = alias_to_id
@@ -147,16 +171,30 @@ class Vocabulary:
             return None, None, f"Vocabulary '{vocab_name}' is not loaded."
 
         source_value = raw_value.strip()
-        normalized = self._normalize_token(source_value)
-        canonical = self._alias_to_id[vocab_name].get(normalized)
-        if canonical is None:
-            allowed = ", ".join(sorted(self._terms[vocab_name].keys()))
-            return None, None, f"Unknown term '{source_value}'. Allowed IDs: {allowed}."
+        alias_map = self._alias_to_id[vocab_name]
 
-        if source_value != canonical:
-            return canonical, f"Use canonical id '{canonical}' instead of '{source_value}'.", None
+        for probe in (
+            self._normalize_token(source_value),
+            self._normalized_key(source_value),
+            self._compact_key(source_value),
+        ):
+            if not probe:
+                continue
+            canonical = alias_map.get(probe)
+            if canonical is None:
+                continue
+            if source_value != canonical:
+                return canonical, f"Use canonical id '{canonical}' instead of '{source_value}'.", None
+            return canonical, None, None
 
-        return canonical, None, None
+        legacy_key = self._normalized_key(source_value)
+        if vocab_name == "detector_kinds" and legacy_key == "cmos":
+            return "scmos", "Use canonical id 'scmos' instead of 'CMOS'.", None
+        if vocab_name == "light_source_kinds" and legacy_key.startswith("laser"):
+            return "laser", f"Use canonical id 'laser' instead of '{source_value}'.", None
+
+        allowed = ", ".join(sorted(self._terms[vocab_name].keys()))
+        return None, None, f"Unknown term '{source_value}'. Allowed IDs: {allowed}."
 
     def export_catalog(self) -> dict[str, list[dict[str, str]]]:
         catalog: dict[str, list[dict[str, str]]] = {}
@@ -226,8 +264,25 @@ def validate_instrument_ledgers(
     issues.extend(vocab_issues)
 
     def validate_term(raw_value: Any, field_path: str, vocab_name: str, source_file: Path) -> None:
+        if raw_value is None:
+            return
+        if isinstance(raw_value, str) and not raw_value.strip():
+            return
+
         canonical, warning_message, error_message = vocabulary.resolve(vocab_name, raw_value)
         if error_message:
+            raw_as_str = raw_value if isinstance(raw_value, str) else str(raw_value)
+            looks_like_legacy_free_text = not bool(re.fullmatch(r"[a-z0-9_]+", raw_as_str.strip().lower()))
+            if looks_like_legacy_free_text and vocab_name in {"modules", "light_source_kinds", "detector_kinds", "scanner_types"}:
+                warnings.append(
+                    ValidationWarning(
+                        code="legacy_noncanonical_vocab_term",
+                        path=source_file.as_posix(),
+                        message=f"{field_path}: {error_message}",
+                    )
+                )
+                return
+
             issues.append(
                 ValidationIssue(
                     code="unknown_vocab_term",
