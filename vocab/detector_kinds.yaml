@@ -18,6 +18,7 @@ terms:
   - id: cmos
     label: "Standard CMOS"
     description: "Standard digital camera sensor. Commonly used in routine brightfield, color histology, or basic fluorescence."
+    synonyms: ["CMOS"]
   - id: emccd
     label: "Electron-Multiplying CCD"
     description: "CCD detector with on-chip gain for very low-light imaging. Useful for single-molecule and fast, dim signal applications."

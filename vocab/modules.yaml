@@ -18,7 +18,7 @@ terms:
   - id: frap
     label: "FRAP Module"
     description: "Hardware or software capability to perform targeted photobleaching for recovery measurements. Typically controls ROI bleaching power and timing."
-    synonyms: ["photobleach module"]
+    synonyms: ["photobleach module", "FRAP"]
   - id: photoactivation
     label: "Photoactivation Module"
     description: "Capability to activate or uncage photoresponsive probes in defined regions. Used for selective labeling and dynamic tracking experiments."
@@ -26,11 +26,11 @@ terms:
   - id: fcs
     label: "FCS Module"
     description: "Instrumentation support for fluorescence fluctuation measurements and autocorrelation analysis. Enables diffusion and concentration quantification in tiny volumes."
-    synonyms: ["correlation module"]
+    synonyms: ["correlation module", "FCS"]
   - id: flim
     label: "FLIM Module"
     description: "Adds lifetime-resolved detection and analysis to fluorescence imaging. Enables contrast based on fluorophore decay kinetics."
-    synonyms: ["lifetime module"]
+    synonyms: ["lifetime module", "FLIM"]
   - id: optogenetics
     label: "Optogenetics"
     description: "Provides patterned or wavelength-specific stimulation for light-controlled biological perturbations. Used to control signaling or neural activity during imaging."
@@ -39,3 +39,55 @@ terms:
     label: "Adaptive Optics"
     description: "Corrects sample- or system-induced aberrations using deformable elements and feedback. Improves resolution and signal quality, especially in deep or heterogeneous samples."
     synonyms: ["ao"]
+  - id: piezo_z_stage
+    label: "Piezo Z-Stage"
+    description: "High-precision piezoelectric Z positioning module for rapid and repeatable axial movement during fine focus control and volume imaging."
+    synonyms: ["piezo_z_stage"]
+  - id: easy3d_sted
+    label: "Easy3D STED"
+    description: "STED imaging enhancement for simplified three-dimensional super-resolution acquisition with optimized 3D depletion beam handling."
+    synonyms: ["Easy3D_STED"]
+  - id: rescue_sted
+    label: "RESCue STED"
+    description: "Adaptive STED mode that limits depletion exposure to signal-bearing regions to reduce photobleaching and phototoxicity."
+    synonyms: ["RESCue_STED"]
+  - id: 3d_sim
+    label: "3D-SIM Module"
+    description: "Structured illumination module for three-dimensional super-resolution imaging with enhanced axial and lateral detail."
+    synonyms: ["Blaze R2 3D-SIM"]
+  - id: ring_tirf
+    label: "Ring TIRF Module"
+    description: "TIRF implementation using ring illumination to improve field uniformity near the coverslip interface."
+    synonyms: ["Ring TIRF"]
+  - id: aobs
+    label: "Acousto-Optical Beam Splitter (AOBS)"
+    description: "Acousto-optic beam splitting component for dynamic wavelength selection and flexible excitation-emission routing."
+    synonyms: ["AOBS"]
+  - id: environmental_enclosure
+    label: "Environmental Enclosure"
+    description: "Enclosure and control accessories that stabilize temperature and related conditions for live-cell compatibility."
+    synonyms: ["Environmental Enclosure", "Temperature Control", "environmental_tolerance", "Live Cell Option"]
+  - id: sim_module
+    label: "SIM Module"
+    description: "Structured illumination imaging module enabling resolution enhancement beyond diffraction-limited widefield microscopy."
+    synonyms: ["SIM"]
+  - id: afm_module
+    label: "AFM Module"
+    description: "Atomic force microscopy integration module for combining topographical or mechanical probing with optical imaging."
+    synonyms: ["AFM"]
+  - id: airyscan
+    label: "AiryScan Detector/Module"
+    description: "Detector and reconstruction module that improves confocal sensitivity and resolution via multi-element signal collection."
+    synonyms: ["AiryScan"]
+  - id: workstation
+    label: "High-Performance Workstation"
+    description: "Dedicated compute workstation for acquisition control, rapid image processing, and handling large microscopy datasets."
+    synonyms: ["workstation"]
+  - id: impedance_module
+    label: "Impedance Module"
+    description: "Module supporting impedance-based measurement workflows alongside optical imaging for complementary sample characterization."
+    synonyms: ["impedance_module"]
+  - id: universal_vessel_holder
+    label: "Universal Vessel Holder"
+    description: "Adaptable sample holder supporting multiple dish, slide, or plate formats within a single imaging setup."
+    synonyms: ["Universal vessel holder"]

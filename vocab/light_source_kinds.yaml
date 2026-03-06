@@ -2,7 +2,7 @@ terms:
   - id: laser
     label: "Laser"
     description: "Provides coherent, narrowband excitation at specific wavelengths. Common for fluorescence imaging requiring high irradiance and precise line selection."
-    synonyms: ["single-line laser"]
+    synonyms: ["single-line laser", "laser (diode)", "laser (DPSS)"]
   - id: white_light_laser
     label: "White Light Laser"
     description: "Broadband laser source with tunable output wavelengths selected by software or optics. Supports flexible excitation across many fluorophores."
