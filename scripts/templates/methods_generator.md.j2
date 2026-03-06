@@ -68,11 +68,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         fetch("../assets/instruments_data.json"),
         fetch("../assets/vocabularies.json")
     ]);
-    const [instruments, vocabulariesPayload] = await Promise.all([
+    const [instrumentsPayload, vocabulariesPayload] = await Promise.all([
         instrumentsResponse.json(),
         vocabulariesResponse.json()
     ]);
-    vocabularies = vocabulariesPayload || {};
+    const instruments = Array.isArray(instrumentsPayload)
+        ? instrumentsPayload
+        : (instrumentsPayload?.instruments || []);
+    vocabularies = vocabulariesPayload || instrumentsPayload?.vocabularies || {};
 
     const systemSelect = document.getElementById("system-select");
     const hwOptions = document.getElementById("hardware-options");
@@ -89,7 +92,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     instruments.forEach(inst => {
         const opt = document.createElement("option");
         opt.value = inst.id;
-        opt.textContent = inst.display_name;
+        opt.textContent = inst.retired ? `${inst.display_name} (Retired)` : inst.display_name;
         systemSelect.appendChild(opt);
     });
 
