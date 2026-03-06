@@ -5,12 +5,12 @@ instrument:
   display_name: "Leica DM IRBE"
   instrument_id: "scope-leica-dm-irbe"
   manufacturer: "Leica Microsystems"
-  model: "DM IRBE"
+  model: "Leica DM IRBE"
   year_of_purchase: ""
   funding: ""
   stand_orientation: "inverted"
-  location: ""
-  notes: "Widefield microscope (inverted). Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield, Phase contrast."
+  location: "BioCity, 2nd floor, room 2076"
+  notes: "Inverted microscope with camera port. Current imaging modes are widefield fluorescence, transmitted brightfield, and phase contrast. Optional 1.6x auxiliary lens in microscope body."
   url: ""
 
 # -----------------------------------------------------------------------------
@@ -20,7 +20,6 @@ modalities:
   - "widefield_fluorescence"
   - "transmitted_brightfield"
   - "phase_contrast"
-  - "darkfield"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
@@ -48,14 +47,28 @@ hardware:
     url: ""
 
   # --- Light Sources (Excitation) ---
-  light_sources: []
+  light_sources:
+    - kind: "halogen_lamp"
+      manufacturer: "Leica"
+      model: "12V 100W halogen bulb"
+      wavelength_nm: "broadband"
+      power: "100 W"
+      notes: "Transmitted light source"
+      url: ""
+    - kind: "arc_lamp"
+      manufacturer: "Leica"
+      model: "50W HBO short arc bulb"
+      wavelength_nm: "broadband"
+      power: "50 W"
+      notes: "Fluorescence excitation source"
+      url: ""
 
   # --- Detectors (Emission) ---
   detectors:
-    - kind: "CMOS"
+    - kind: "ccd"
       manufacturer: "Nikon"
-      model: "DS-L3 standalone camera control with Nikon color camera"
-      notes: ""
+      model: "DS-Fi2 5 MP color CCD camera"
+      notes: "Standalone camera system (no computer required); image storage via USB memory device"
       url: ""
 
   # --- Splitters (Camera/Emission) ---
@@ -92,13 +105,13 @@ hardware:
   objectives:
     - id: "10x_air"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "PL FLUOTAR 10x/0.30 PH1"
+      product_code: "506010"
       magnification: 10.0
       numerical_aperture: 0.3
       working_distance: ""
       immersion: "air"
-      correction: ""
+      correction: "plan_fluorite"
       afc_compatible: false
       specialties:
         - "phase compatible"
@@ -108,60 +121,47 @@ hardware:
       is_installed: true
     - id: "20x_air"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "PL FLUOTAR 20x/0.50 PH2"
+      product_code: "506013"
       magnification: 20.0
-      numerical_aperture: 0.6
+      numerical_aperture: 0.5
       working_distance: ""
       immersion: "air"
-      correction: ""
+      correction: "plan_fluorite"
       afc_compatible: false
       specialties: []
       notes: ""
       url: ""
       
       is_installed: true
-    - id: "40x_oil"
+    - id: "40x_air"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "PL FLUOTAR 40x/0.70 PH2"
+      product_code: "506014"
       magnification: 40.0
-      numerical_aperture: null
+      numerical_aperture: 0.7
       working_distance: ""
-      immersion: "oil"
-      correction: ""
+      immersion: "air"
+      correction: "plan_fluorite"
       afc_compatible: false
       specialties: []
       notes: ""
       url: ""
       
       is_installed: true
-    - id: "63x_oil"
+    - id: "63x_air"
       manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
+      model: "PL FLUOTAR 63x/0.70 CORR PH2"
+      product_code: "506062"
       magnification: 63.0
-      numerical_aperture: null
+      numerical_aperture: 0.7
       working_distance: ""
-      immersion: "oil"
-      correction: ""
+      immersion: "air"
+      correction: "plan_fluorite"
       afc_compatible: false
-      specialties: []
+      specialties:
+        - "correction collar"
       notes: ""
       url: ""
       
-      is_installed: true
-    - id: "100x_oil"
-      manufacturer: "Leica"
-      model: "Plan"
-      product_code: ""
-      magnification: 100.0
-      numerical_aperture: null
-      working_distance: ""
-      immersion: "oil"
-      correction: ""
-      afc_compatible: false
-      specialties: []
-      notes: ""
-      url: ""
       is_installed: true

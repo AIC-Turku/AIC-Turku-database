@@ -5,20 +5,20 @@ instrument:
   display_name: "Leica DM RE"
   instrument_id: "scope-leica-dmre"
   manufacturer: "Leica Microsystems"
-  model: "DM RE"
+  model: "Leica DM RE"
   year_of_purchase: ""
   funding: ""
   stand_orientation: "upright"
-  location: ""
-  notes: "Widefield microscope (upright fluorescence). Imaging modes: Fluorescence (epi-fluorescence), Brightfield (transmitted light)."
+  location: "BioCity, 2nd floor, room 2076"
+  notes: "Upright microscope with camera port in microscope body. Current imaging modes are transmitted brightfield and differential interference contrast (DIC). Fluorescence excitation is currently unavailable but can be attached."
   url: ""
 
 # -----------------------------------------------------------------------------
 # IMAGING MODALITIES
 # -----------------------------------------------------------------------------
 modalities:
-  - "widefield_fluorescence"
   - "transmitted_brightfield"
+  - "dic"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
@@ -46,7 +46,14 @@ hardware:
     url: ""
 
   # --- Light Sources (Excitation) ---
-  light_sources: []
+  light_sources:
+    - kind: "halogen_lamp"
+      manufacturer: "Leica"
+      model: "12V 100W halogen bulb"
+      wavelength_nm: "broadband"
+      power: "100 W"
+      notes: "Transmitted light source"
+      url: ""
 
   # --- Detectors (Emission) ---
   detectors: []
@@ -58,4 +65,88 @@ hardware:
   filters: []
 
   # --- Objectives ---
-  objectives: []
+  objectives:
+    - id: "10x_air"
+      manufacturer: "Leica"
+      model: "HCX PL FLUOTAR 10x/0.30"
+      product_code: "506505"
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: ""
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties:
+        - "dic compatible"
+      notes: ""
+      url: ""
+      
+      is_installed: true
+    - id: "20x_air"
+      manufacturer: "Leica"
+      model: "HC PL FLUOTAR 20x/0.50 PH2"
+      product_code: "506506"
+      magnification: 20.0
+      numerical_aperture: 0.5
+      working_distance: ""
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties:
+        - "phase compatible"
+        - "dic compatible"
+      notes: ""
+      url: ""
+      
+      is_installed: true
+    - id: "40x_air"
+      manufacturer: "Leica"
+      model: "PL FLUOTAR 40x/0.70 PH2"
+      product_code: "506014"
+      magnification: 40.0
+      numerical_aperture: 0.7
+      working_distance: ""
+      immersion: "air"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties:
+        - "phase compatible"
+        - "dic compatible"
+      notes: ""
+      url: ""
+      
+      is_installed: true
+    - id: "63x_oil"
+      manufacturer: "Leica"
+      model: "PL APO 63x/1.32 OIL PH3"
+      product_code: "506082"
+      magnification: 63.0
+      numerical_aperture: 1.32
+      working_distance: ""
+      immersion: "oil"
+      correction: "plan_apochromat"
+      afc_compatible: false
+      specialties:
+        - "phase compatible"
+        - "dic compatible"
+      notes: ""
+      url: ""
+      
+      is_installed: true
+    - id: "100x_oil"
+      manufacturer: "Leica"
+      model: "PL FLUOTAR 100x/1.30 OIL PH3"
+      product_code: "506017"
+      magnification: 100.0
+      numerical_aperture: 1.3
+      working_distance: ""
+      immersion: "oil"
+      correction: "plan_fluorite"
+      afc_compatible: false
+      specialties:
+        - "phase compatible"
+        - "dic compatible"
+      notes: ""
+      url: ""
+      
+      is_installed: true
