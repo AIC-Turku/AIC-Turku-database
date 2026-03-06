@@ -18,7 +18,7 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "confocal_point"
-  - "ISM"
+  - "ism"
   - "spectral_imaging"
   - "transmitted_brightfield"
 
@@ -26,7 +26,7 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "AiryScan"
+  - name: "airyscan"
     notes: "32-channel GaAsP area detector for super-resolution"
     url: ""
   - name: "incubation"

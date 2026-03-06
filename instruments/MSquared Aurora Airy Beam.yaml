@@ -24,7 +24,7 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "Environmental Enclosure"
+  - name: "environmental_enclosure"
     notes: "Laser safety enclosure CUBE & BOX"
     url: ""
 
@@ -48,7 +48,7 @@ hardware:
   
   # --- Scanner ---
   scanner:
-    type: "galvanometric_and_resonant"
+    type: "tandem"
     notes: "Galvanometric scanner and remote focusing lenses on illumination/detection; integrated Resonant scanner for beam scanning."
     url: ""
 

@@ -18,13 +18,13 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "widefield_fluorescence"
-  - "FLIM"
+  - "flim"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "FLIM"
+  - name: "flim"
     notes: "Lambert Instruments LIFA fast frequency-domain FLIM module"
     url: ""
 

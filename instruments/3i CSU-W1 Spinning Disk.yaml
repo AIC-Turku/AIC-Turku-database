@@ -18,14 +18,14 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "confocal_spinning_disk"
-  - "FRAP"
+  - "frap"
   - "photoactivation"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "FRAP"
+  - name: "frap"
     notes: "FRAP/Photoactivation laser module (for bleaching and activation)"
     url: ""
   - name: "piezo_z_stage"

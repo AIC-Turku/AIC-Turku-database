@@ -25,7 +25,7 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "Universal vessel holder"
+  - name: "universal_vessel_holder"
     notes: "Product code AMEP-VH009"
     url: ""
 

@@ -1,14 +1,77 @@
-"""Automatically replace vocabulary synonyms with canonical IDs in instrument YAML files."""
+"""Automatically replace vocabulary synonyms with canonical IDs in instrument YAML files.
+
+The fixer intentionally operates on raw text instead of a YAML round-trip parser so it can
+run in lightweight environments (for example CI checks that do not install optional
+format-preserving YAML tooling).
+"""
 
 from __future__ import annotations
 
 import argparse
+import ast
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
-from ruamel.yaml import YAML
 
-from validate import Vocabulary
+class Vocabulary:
+    """Minimal vocabulary loader for canonical ids and synonyms."""
+
+    def __init__(self, vocab_dir: Path) -> None:
+        self.valid_ids_by_vocab: dict[str, set[str]] = {}
+        self.synonyms_by_vocab: dict[str, dict[str, str]] = {}
+        self._load_all(vocab_dir)
+
+    def _load_all(self, vocab_dir: Path) -> None:
+        for vocab_file in sorted(vocab_dir.glob("*.yaml")):
+            vocab_name = vocab_file.stem
+            valid_ids: set[str] = set()
+            synonyms: dict[str, str] = {}
+            current_id: str | None = None
+
+            for line in vocab_file.read_text(encoding="utf-8").splitlines():
+                id_match = re.match(r"\s*-\s*id:\s*([a-zA-Z0-9_\-]+)\s*$", line)
+                if id_match is not None:
+                    current_id = id_match.group(1)
+                    valid_ids.add(current_id)
+                    continue
+
+                synonyms_match = re.match(r"\s*synonyms:\s*\[(.*)]\s*$", line)
+                if current_id is None or synonyms_match is None:
+                    continue
+
+                raw = synonyms_match.group(1).strip()
+                if not raw:
+                    continue
+
+                try:
+                    values = ast.literal_eval(f"[{raw}]")
+                except (SyntaxError, ValueError):
+                    continue
+
+                for value in values:
+                    if isinstance(value, str) and value.strip():
+                        synonyms[value.strip().casefold()] = current_id
+
+            self.valid_ids_by_vocab[vocab_name] = valid_ids
+            self.synonyms_by_vocab[vocab_name] = synonyms
+
+    def check(self, vocab_name: str, value: Any) -> tuple[bool, str | None]:
+        if not isinstance(value, str):
+            return False, None
+
+        cleaned = value.strip()
+        if not cleaned:
+            return False, None
+
+        if cleaned in self.valid_ids_by_vocab.get(vocab_name, set()):
+            return True, None
+
+        suggestion = self.synonyms_by_vocab.get(vocab_name, {}).get(cleaned.casefold())
+        if suggestion is not None:
+            return False, suggestion
+
+        return False, None
 
 
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
@@ -24,119 +87,129 @@ def _canonical_if_synonym(vocabulary: Vocabulary, vocab_name: str, value: Any) -
     return suggestion
 
 
-def _fix_string_list(values: Any, *, vocab_name: str, vocabulary: Vocabulary) -> tuple[int, bool]:
-    if not isinstance(values, list):
-        return 0, False
+def _indent_width(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
 
-    replacements = 0
+
+def _replace_quoted_value(line: str, *, key: str, vocab_name: str, vocabulary: Vocabulary) -> tuple[str, int]:
+    suffix = "\n" if line.endswith("\n") else ""
+    body = line[:-1] if suffix else line
+    match = re.match(rf'^(\s*{re.escape(key)}\s*:\s*")([^"]+)(".*)$', body)
+    if match is None:
+        return line, 0
+
+    canonical = _canonical_if_synonym(vocabulary, vocab_name, match.group(2))
+    if canonical is None:
+        return line, 0
+
+    updated = f"{match.group(1)}{canonical}{match.group(3)}{suffix}"
+    return updated, 1
+
+
+def _replace_modalities_item(line: str, *, vocabulary: Vocabulary) -> tuple[str, int]:
+    suffix = "\n" if line.endswith("\n") else ""
+    body = line[:-1] if suffix else line
+    match = re.match(r'^(\s*-\s*")([^"]+)(".*)$', body)
+    if match is None:
+        return line, 0
+
+    canonical = _canonical_if_synonym(vocabulary, "modalities", match.group(2))
+    if canonical is None:
+        return line, 0
+
+    updated = f"{match.group(1)}{canonical}{match.group(3)}{suffix}"
+    return updated, 1
+
+
+def autofix_instrument_file(path: Path, *, vocabulary: Vocabulary, check_only: bool) -> tuple[bool, int]:
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+
     changed = False
-    for index, value in enumerate(values):
-        canonical = _canonical_if_synonym(vocabulary, vocab_name, value)
-        if canonical is None:
-            continue
-        values[index] = canonical
-        replacements += 1
-        changed = True
-
-    return replacements, changed
-
-
-def _fix_nested_dict_list_key(
-    values: Any,
-    *,
-    key: str,
-    vocab_name: str,
-    vocabulary: Vocabulary,
-) -> tuple[int, bool]:
-    if not isinstance(values, list):
-        return 0, False
-
     replacements = 0
-    changed = False
-    for entry in values:
-        if not isinstance(entry, dict):
-            continue
-        canonical = _canonical_if_synonym(vocabulary, vocab_name, entry.get(key))
-        if canonical is None:
-            continue
-        entry[key] = canonical
-        replacements += 1
-        changed = True
+    result: list[str] = []
 
-    return replacements, changed
+    in_modalities = False
+    in_modules = False
+    in_hardware = False
+    in_scanner = False
+    in_light_sources = False
+    in_detectors = False
+    in_objectives = False
 
+    for line in lines:
+        stripped = line.strip()
+        indent = _indent_width(line)
 
-def autofix_instrument_file(path: Path, *, vocabulary: Vocabulary, yaml: YAML, check_only: bool) -> tuple[bool, int]:
-    with path.open("r", encoding="utf-8") as handle:
-        payload = yaml.load(handle)
+        if indent == 0 and re.match(r"^[A-Za-z_][A-Za-z0-9_]*:\s*$", stripped):
+            in_modalities = stripped.startswith("modalities:")
+            in_modules = stripped.startswith("modules:")
+            in_hardware = stripped.startswith("hardware:")
+            in_scanner = False
+            in_light_sources = False
+            in_detectors = False
+            in_objectives = False
 
-    if not isinstance(payload, dict):
-        return False, 0
+        if in_hardware and indent == 2 and re.match(r"^[A-Za-z_][A-Za-z0-9_]*:\s*$", stripped):
+            in_scanner = stripped.startswith("scanner:")
+            in_light_sources = stripped.startswith("light_sources:")
+            in_detectors = stripped.startswith("detectors:")
+            in_objectives = stripped.startswith("objectives:")
 
-    replacements = 0
-    changed = False
+        updated = line
+        count = 0
+        if in_modalities:
+            updated, count = _replace_modalities_item(updated, vocabulary=vocabulary)
+        elif in_modules:
+            updated, count = _replace_quoted_value(
+                updated,
+                key="- name",
+                vocab_name="modules",
+                vocabulary=vocabulary,
+            )
+        elif in_scanner:
+            updated, count = _replace_quoted_value(
+                updated,
+                key="type",
+                vocab_name="scanner_types",
+                vocabulary=vocabulary,
+            )
+        elif in_light_sources:
+            updated, count = _replace_quoted_value(
+                updated,
+                key="kind",
+                vocab_name="light_source_kinds",
+                vocabulary=vocabulary,
+            )
+        elif in_detectors:
+            updated, count = _replace_quoted_value(
+                updated,
+                key="kind",
+                vocab_name="detector_kinds",
+                vocabulary=vocabulary,
+            )
+        elif in_objectives:
+            updated, count = _replace_quoted_value(
+                updated,
+                key="immersion",
+                vocab_name="objective_immersion",
+                vocabulary=vocabulary,
+            )
+            if count == 0:
+                updated, count = _replace_quoted_value(
+                    updated,
+                    key="correction",
+                    vocab_name="objective_corrections",
+                    vocabulary=vocabulary,
+                )
 
-    count, did_change = _fix_string_list(payload.get("modalities"), vocab_name="modalities", vocabulary=vocabulary)
-    replacements += count
-    changed = changed or did_change
+        if count > 0:
+            replacements += count
+            changed = True
 
-    count, did_change = _fix_nested_dict_list_key(
-        payload.get("modules"),
-        key="name",
-        vocab_name="modules",
-        vocabulary=vocabulary,
-    )
-    replacements += count
-    changed = changed or did_change
-
-    hardware = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
-    scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
-
-    canonical = _canonical_if_synonym(vocabulary, "scanner_types", scanner.get("type"))
-    if canonical is not None:
-        scanner["type"] = canonical
-        replacements += 1
-        changed = True
-
-    count, did_change = _fix_nested_dict_list_key(
-        hardware.get("light_sources"),
-        key="kind",
-        vocab_name="light_source_kinds",
-        vocabulary=vocabulary,
-    )
-    replacements += count
-    changed = changed or did_change
-
-    count, did_change = _fix_nested_dict_list_key(
-        hardware.get("detectors"),
-        key="kind",
-        vocab_name="detector_kinds",
-        vocabulary=vocabulary,
-    )
-    replacements += count
-    changed = changed or did_change
-
-    objectives = hardware.get("objectives")
-    if isinstance(objectives, list):
-        for objective in objectives:
-            if not isinstance(objective, dict):
-                continue
-
-            canonical = _canonical_if_synonym(vocabulary, "objective_immersion", objective.get("immersion"))
-            if canonical is not None:
-                objective["immersion"] = canonical
-                replacements += 1
-                changed = True
-
-            canonical = _canonical_if_synonym(vocabulary, "objective_corrections", objective.get("correction"))
-            if canonical is not None:
-                objective["correction"] = canonical
-                replacements += 1
-                changed = True
+        result.append(updated)
 
     if changed and not check_only:
-        with path.open("w", encoding="utf-8") as handle:
-            yaml.dump(payload, handle)
+        path.write_text("".join(result), encoding="utf-8")
 
     return changed, replacements
 
@@ -156,10 +229,6 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
 
-    yaml = YAML(typ="rt")
-    yaml.preserve_quotes = True
-    yaml.width = 4096
-
     vocabulary = Vocabulary(Path("vocab"))
 
     instrument_dirs = [Path("instruments"), Path("instruments/retired")]
@@ -172,7 +241,6 @@ def main() -> int:
         changed, replacements = autofix_instrument_file(
             instrument_file,
             vocabulary=vocabulary,
-            yaml=yaml,
             check_only=args.check,
         )
         if changed:

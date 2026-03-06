@@ -29,7 +29,7 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "environmental_tolerance"
+  - name: "environmental_enclosure"
     notes: "Designed for operation inside cell culture incubator (20-40°C, 5-98% RH)." #
     url: ""
   - name: "hardware_autofocus"

@@ -19,21 +19,21 @@ instrument:
 modalities:
   - "confocal_point"
   - "spectral_imaging"
-  - "FLIM"
-  - "FCS"
+  - "flim"
+  - "fcs"
   - "transmitted_brightfield"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "FLIM"
+  - name: "flim"
     notes: "FAST Lifetime Contrast (FALCON) module"
     url: ""
-  - name: "FCS"
+  - name: "fcs"
     notes: "Fluorescence correlation spectroscopy module"
     url: ""
-  - name: "AOBS"
+  - name: "aobs"
     notes: "Acousto-Optical Beam Splitter (spectral splitter)"
     url: ""
 

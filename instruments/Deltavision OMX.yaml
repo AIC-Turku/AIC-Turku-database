@@ -18,15 +18,15 @@ instrument:
 # -----------------------------------------------------------------------------
 modalities:
   - "widefield_fluorescence"
-  - "TIRF"
-  - "SIM"
-  - "SMLM"
+  - "tirf"
+  - "sim"
+  - "smlm"
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "Live Cell Option"
+  - name: "environmental_enclosure"
     notes: "Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system."
     url: ""
   - name: "hardware_autofocus"
@@ -35,10 +35,10 @@ modules:
   - name: "piezo_z_stage"
     notes: "X, Y, Z Nanomotion sample stage with fast piezo Z-axis system"
     url: ""
-  - name: "Blaze R2 3D-SIM"
+  - name: "3d_sim"
     notes: "Proprietary electro-optical high speed structured illumination engine. 110-160 nm lateral and 320-400 nm axial resolution."
     url: ""
-  - name: "Ring TIRF"
+  - name: "ring_tirf"
     notes: "Ring TIRF optics module with integrated PhotoKinetic (PK) optics. Allows rapid wavelength switching and TIRF depth penetration modulation."
     url: ""
 
