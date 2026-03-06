@@ -6,7 +6,7 @@ terms:
   - id: galvo
     label: "Galvanometric Scanner"
     description: "Uses galvanometer mirrors to steer the excitation beam across the sample. Common in point-scanning confocal systems with flexible scan control."
-    synonyms: ["galvanometer", "galvo mirrors"]
+    synonyms: ["galvanometer", "galvo mirrors", "point_scanning"]
   - id: resonant
     label: "Resonant Scanner"
     description: "Uses a resonant oscillating mirror for very high line rates. Enables faster imaging than standard galvo scanning, often with reduced dwell time."
@@ -14,7 +14,7 @@ terms:
   - id: tandem
     label: "Tandem Scanner (Galvo/Resonant)"
     description: "Dual-mode scanning configuration that supports switching between galvanometric and resonant scanning behavior."
-    synonyms: ["tandem"]
+    synonyms: ["galvanometric_and_resonant"]
   - id: spinning_disk
     label: "Spinning Disk Scanner"
     description: "Uses rotating pinhole disks to scan multiple points in parallel. Supports high-speed confocal imaging with lower phototoxicity."
