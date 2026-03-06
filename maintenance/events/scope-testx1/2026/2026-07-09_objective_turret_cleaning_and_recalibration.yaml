@@ -5,7 +5,7 @@ maintenance_id: "maint_scope-testx1_20260709_objective_turret_cleaning_and_recal
 microscope: "scope-testx1"
 
 service_provider: "internal"
-company: "AIC Turku Microscopy Core"
+company: "Example Microscopy Core Facility"
 contact: "Responsible staff: Elina Vainio"
 reference: "INT-CORE-2026-411"
 

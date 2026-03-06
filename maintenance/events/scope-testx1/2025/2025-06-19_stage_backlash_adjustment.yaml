@@ -5,7 +5,7 @@ maintenance_id: "maint_scope-testx1_20250619_stage_backlash_adjustment"
 microscope: "scope-testx1"
 
 service_provider: "internal"
-company: "AIC Turku Microscopy Core"
+company: "Example Microscopy Core Facility"
 contact: "On-call staff: Mikko Salonen"
 reference: "INT-CORE-2025-233"
 

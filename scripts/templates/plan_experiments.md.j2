@@ -72,7 +72,7 @@ Please:
 - Mention useful supporting features such as incubation, autofocus, detector type, or piezo when relevant.
 - Clearly state any important assumptions, tradeoffs, or uncertainty.
 - Indicate which system is the top choice and which is the backup, if applicable.
-- Conclude your response by strongly encouraging me to discuss these recommendations with the AIC core facility staff before booking, as they can provide final validation and training.`;
+- Conclude your response by strongly encouraging me to discuss these recommendations with the {{ facility_short_name }} core facility staff before booking, as they can provide final validation and training.`;
 
     function updatePrompt() {
       const userText = inputArea.value.trim();
@@ -107,4 +107,4 @@ Please:
 
 While AI is a great starting point for navigating our equipment, nothing beats human expertise! If you are unsure about your experimental design, fluorophore choices, or which microscope is the perfect fit for your research, please don't hesitate to contact our core facility staff.
 
-[✉️ Contact AIC Staff](https://bioscience.fi/aic/){: target="_blank" .md-button }
+[✉️ Contact {{ facility_short_name }} Staff]({{ facility_contact_url }}){: target="_blank" .md-button }

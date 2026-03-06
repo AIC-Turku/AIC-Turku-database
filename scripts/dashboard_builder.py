@@ -65,6 +65,47 @@ METRIC_NAMES: dict[str, str] = {
 }
 
 
+def load_facility_config(repo_root: Path) -> dict[str, Any]:
+    """Load repository-level facility branding and copy settings."""
+    default_config: dict[str, Any] = {
+        "facility": {
+            "short_name": "AIC Turku",
+            "full_name": "Advanced Imaging Core Facility at Turku Bioscience Centre",
+            "site_name": "AIC Microscopy Dashboard",
+            "public_site_url": "https://aic-turku.github.io/AIC-Turku-database/",
+            "contact_url": "https://bioscience.fi/aic/",
+            "organization_url": "https://bioscience.fi/aic/",
+            "acknowledgements": {
+                "standard": "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577.",
+                "xcelligence_addition": "Testament funds from Henna Ruusunen also supported this work.",
+            },
+        },
+        "branding": {
+            "logo": "assets/images/logo.svg",
+            "favicon": "assets/images/favicon.svg",
+        },
+    }
+
+    cfg_path = repo_root / "facility.yaml"
+    if not cfg_path.exists():
+        return default_config
+
+    loaded = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict):
+        return default_config
+
+    def merged_dict(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        merged = dict(base)
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = merged_dict(merged[key], value)
+            else:
+                merged[key] = value
+        return merged
+
+    return merged_dict(default_config, loaded)
+
+
 def load_vocabularies(vocab_dir: Path) -> dict[str, dict[str, Any]]:
     vocabs: dict[str, dict[str, Any]] = {}
     if not vocab_dir.exists():
@@ -661,6 +702,9 @@ def _event_output_instrument(payload: dict[str, Any], fallback_instrument: str) 
 
 def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_ALLOWED_RECORD_TYPES) -> int:
     repo_root = Path.cwd()
+    facility_cfg = load_facility_config(repo_root)
+    facility = facility_cfg.get("facility", {}) if isinstance(facility_cfg.get("facility"), dict) else {}
+    branding = facility_cfg.get("branding", {}) if isinstance(facility_cfg.get("branding"), dict) else {}
     docs_root = repo_root / "dashboard_docs"
 
     # Fresh build
@@ -1027,7 +1071,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     # Export AI/LLM Optimized Decision-Support Inventory
     llm_inventory_path = docs_root / "assets" / "llm_inventory.json"
     llm_payload = {
-        "facility_name": "AIC Turku",
+        "facility_name": str(facility.get("short_name", "AIC Turku")),
         "vocabulary_definitions": vocabularies_payload,
         "active_microscopes": [],
     }
@@ -1172,18 +1216,18 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     # Render Methods Generator page
     acknowledgements_path = repo_root / "acknowledgements.yaml"
+    facility_ack = facility.get("acknowledgements", {}) if isinstance(facility.get("acknowledgements"), dict) else {}
+    ack_data = {
+        "standard": str(facility_ack.get("standard", "")),
+        "xcelligence_addition": str(facility_ack.get("xcelligence_addition", "")),
+    }
     if acknowledgements_path.exists():
         ack_loaded = yaml.safe_load(acknowledgements_path.read_text(encoding="utf-8"))
-        ack_data = ack_loaded if isinstance(ack_loaded, dict) else {}
-    else:
-        ack_data = {
-            "standard": "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577.",
-            "xcelligence_addition": "Testament funds from Henna Ruusunen also supported this work.",
-        }
-        acknowledgements_path.write_text(
-            yaml.safe_dump(ack_data, sort_keys=False, allow_unicode=True),
-            encoding="utf-8",
-        )
+        if isinstance(ack_loaded, dict):
+            ack_data = {
+                "standard": str(ack_loaded.get("standard", ack_data["standard"])),
+                "xcelligence_addition": str(ack_loaded.get("xcelligence_addition", ack_data["xcelligence_addition"])),
+            }
 
     methods_md = tpl_methods.render(
         ack_standard=json.dumps(ack_data.get("standard", "")),
@@ -1191,7 +1235,10 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     )
     (docs_root / "methods_generator.md").write_text(methods_md, encoding="utf-8")
 
-    plan_md = tpl_plan.render()
+    plan_md = tpl_plan.render(
+        facility_short_name=str(facility.get("short_name", "Core")),
+        facility_contact_url=str(facility.get("contact_url", "#")),
+    )
     (docs_root / "plan_experiments.md").write_text(plan_md, encoding="utf-8")
 
     status_md = tpl_status.render(issues=flagged)
@@ -1203,11 +1250,11 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     (retired_docs_dir / "index.md").write_text(retired_md, encoding="utf-8")
 
     # Extracted site URL into environment variable to prevent hardcoding issues
-    site_url = os.getenv("MKDOCS_SITE_URL", "https://aic-turku.github.io/AIC-Turku-database/")
+    site_url = os.getenv("MKDOCS_SITE_URL", str(facility.get("public_site_url", "")))
 
     # MkDocs config
     mkdocs_config = {
-        "site_name": "AIC Microscopy Dashboard",
+        "site_name": str(facility.get("site_name", "Microscopy Dashboard")),
         "site_url": site_url,
         "use_directory_urls": True,
         "docs_dir": "dashboard_docs",
@@ -1232,6 +1279,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                     "toggle": {"icon": "material/brightness-4", "name": "Switch to light mode"},
                 },
             ],
+            "logo": str(branding.get("logo", "assets/images/logo.svg")),
+            "favicon": str(branding.get("favicon", "assets/images/favicon.svg")),
         },
         "plugins": ["search"],
         "markdown_extensions": [
