@@ -1198,8 +1198,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                     ],
                     "light_sources": [
                         {
-                            "type": norm_str(ls.get("kind")),
-                            "wavelength": none_if_empty(ls.get("wavelength")),
+                            "type": norm_str(ls.get("type") or ls.get("kind")),
+                            "manufacturer": none_if_empty(ls.get("manufacturer")) or None,
+                            "wavelength": none_if_empty(ls.get("wavelength")) or None,
                             "technology": none_if_empty(ls.get("technology")) or None,
                             "model": none_if_empty(ls.get("name")) or None,
                             "notes": none_if_empty(ls.get("notes")) or None,
