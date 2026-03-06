@@ -1023,7 +1023,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     }
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
 
-    # Export AI/LLM Optimized Inventory
+    # Export AI/LLM Optimized Decision-Support Inventory
     llm_inventory_path = docs_root / "assets" / "llm_inventory.json"
     llm_payload = {
         "facility_name": "AIC Turku",
@@ -1035,14 +1035,90 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         status = inst.get("status", {})
         hw = inst.get("processed_hardware", {})
 
-        # Infer live-cell readiness dynamically from the modules vocabulary
+        # 1. Parse Operational Status
+        raw_badge = status.get("badge", "Unknown").lower()
+        if "online" in raw_badge:
+            overall_status = "online"
+        elif "warning" in raw_badge:
+            overall_status = "warning"
+        elif "offline" in raw_badge or "out of service" in raw_badge:
+            overall_status = "offline"
+        else:
+            overall_status = "unknown"
+
+        raw_reason = status.get("reason", "")
+        issues = []
+        if overall_status in ["warning", "offline"] and raw_reason and "operational" not in raw_reason.lower():
+            issues.append({"severity": overall_status, "description": raw_reason})
+
+        # 2. Parse Environment & Incubation
         live_cell_modules = {
             "incubation",
             "environmental_enclosure",
             "environmental_tolerance",
             "temperature_control",
         }
-        is_live_cell = any(m.get("name", "").lower() in live_cell_modules for m in hw.get("modules", []))
+        is_live_cell = False
+        temp_ctrl, co2_ctrl, hum_ctrl = False, False, False
+
+        for m in hw.get("modules", []):
+            m_name = m.get("name", "").lower()
+            if m_name in live_cell_modules:
+                is_live_cell = True
+            notes = m.get("notes", "").lower()
+            if "temp" in notes or "t/" in notes or "37c" in notes or "37 c" in notes or m_name == "temperature_control":
+                temp_ctrl = True
+            if "co2" in notes or "c/" in notes:
+                co2_ctrl = True
+            if "humidity" in notes or "h/" in notes:
+                hum_ctrl = True
+
+        env_control = {
+            "temperature_control": temp_ctrl,
+            "co2_control": co2_ctrl,
+            "humidity_control": hum_ctrl,
+        } if is_live_cell else None
+
+        # 3. Infer Fluorophore Support
+        fluorophores = {
+            "dapi_hoechst": False,
+            "gfp_fitc": False,
+            "rfp_mcherry": False,
+            "far_red_cy5": False,
+        }
+        for ls in hw.get("light_sources", []):
+            wv = str(ls.get("wavelength", "")).lower()
+            if "405" in wv or "390" in wv or "white" in wv:
+                fluorophores["dapi_hoechst"] = True
+            if "488" in wv or "470" in wv or "white" in wv:
+                fluorophores["gfp_fitc"] = True
+            if "561" in wv or "555" in wv or "white" in wv:
+                fluorophores["rfp_mcherry"] = True
+            if "633" in wv or "640" in wv or "647" in wv or "white" in wv:
+                fluorophores["far_red_cy5"] = True
+
+        # 4. Infer Best/Avoid Uses
+        best_for = []
+        avoid_for = []
+        mods = [str(m).lower() for m in hw.get("modalities", [])]
+        if "confocal_spinning_disk" in mods:
+            best_for.extend(["fast_live_cell_imaging", "gentle_timelapse", "3d_optical_sectioning"])
+        if "confocal_point" in mods:
+            best_for.extend(["high_resolution_optical_sectioning", "colocalization", "photobleaching/frap"])
+            avoid_for.append("very_fast_live_cell_dynamics")
+        if "multiphoton" in mods or "shg" in mods:
+            best_for.extend(["deep_tissue_imaging", "intravital_imaging", "thick_cleared_samples"])
+        if "tirf" in mods:
+            best_for.extend(["membrane_dynamics", "single_molecule_localization", "viral_entry"])
+        if "widefield_fluorescence" in mods and not any("confocal" in m for m in mods):
+            best_for.extend(["routine_fluorescence", "thin_samples"])
+            avoid_for.append("thick_tissue_optical_sectioning")
+        if not is_live_cell:
+            avoid_for.append("long_term_live_cell_incubation")
+
+        # Normalize Helper
+        def norm_id(val):
+            return str(val).lower().replace(" ", "_").replace("(", "").replace(")", "") if val else None
 
         llm_payload["active_microscopes"].append(
             {
@@ -1054,63 +1130,68 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                     "stand_orientation": inst.get("stand_orientation"),
                 },
                 "operational_status": {
-                    "overall_status": status.get("badge", "Unknown").split(" ", 1)[-1],  # Strip emoji
-                    "known_issues": status.get("reason", "No known issues"),
-                    "last_qc_date": status.get("last_qc_date", ""),
-                    "last_maintenance_date": status.get("last_maint_date", ""),
+                    "overall_status": overall_status,
+                    "issues": issues,
+                    "status_note": raw_reason if overall_status == "online" else None,
+                    "last_qc_date": status.get("last_qc_date", None) or None,
+                    "last_maintenance_date": status.get("last_maint_date", None) or None,
                 },
                 "capabilities": {
                     "modalities": hw.get("modalities", []),
                     "scanner": {
-                        "type": hw.get("scanner", {}).get("type", ""),
-                        "notes": hw.get("scanner", {}).get("notes", ""),
+                        "type": hw.get("scanner", {}).get("type", None) or None,
+                        "notes": hw.get("scanner", {}).get("notes", None) or None,
                     },
                     "modules": [
-                        {"name": m.get("name"), "notes": m.get("notes")}
+                        {"name": m.get("name"), "notes": m.get("notes") or None}
                         for m in hw.get("modules", [])
                     ],
                     "objectives": [
                         {
                             "magnification": obj.get("magnification"),
                             "numerical_aperture": obj.get("na"),
-                            "immersion": obj.get("immersion"),
-                            "correction_class": obj.get("correction"),
-                            "working_distance": obj.get("wd"),
+                            "immersion": norm_id(obj.get("immersion")),
+                            "correction_class": norm_id(obj.get("correction")),
+                            "working_distance": obj.get("wd") or None,
                             "specialties": obj.get("specialties", []),
-                            "notes": obj.get("notes"),
+                            "notes": obj.get("notes") or None,
                         }
                         for obj in hw.get("objectives", [])
                     ],
                     "light_sources": [
                         {
-                            "type": ls.get("type"),
+                            "type": norm_id(ls.get("type")),
                             "wavelength": ls.get("wavelength"),
-                            "model": ls.get("name"),
-                            "notes": ls.get("notes"),
+                            "model": ls.get("name") or None,
+                            "notes": ls.get("notes") or None,
                         }
                         for ls in hw.get("light_sources", [])
                     ],
                     "filters": [
                         {
-                            "name": f.get("name"),
-                            "excitation": f.get("excitation"),
-                            "emission": f.get("emission"),
-                            "dichroic": f.get("dichroic"),
+                            "name": f.get("name") or None,
+                            "excitation": f.get("excitation") or None,
+                            "emission": f.get("emission") or None,
+                            "dichroic": f.get("dichroic") or None,
                         }
                         for f in hw.get("filters", [])
                     ],
                     "detectors": [
                         {
-                            "type": det.get("type"),
-                            "model": det.get("model"),
-                            "notes": det.get("notes"),
+                            "type": norm_id(det.get("type")),
+                            "model": det.get("model") or None,
+                            "notes": det.get("notes") or None,
                         }
                         for det in hw.get("detectors", [])
                     ],
                 },
                 "experiment_guidance": {
                     "live_cell_ready": is_live_cell,
-                    "general_notes_and_recommendations": inst.get("notes_raw", ""),
+                    "environment_control": env_control,
+                    "derived_fluorophore_support": fluorophores,
+                    "best_for": list(dict.fromkeys(best_for)),
+                    "avoid_for": list(dict.fromkeys(avoid_for)),
+                    "general_notes_and_recommendations": inst.get("notes_raw", None) or None,
                 },
             }
         )
