@@ -1031,6 +1031,12 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         "active_microscopes": [],
     }
 
+    def none_if_empty(value: Any) -> Any:
+        if isinstance(value, str):
+            trimmed = value.strip()
+            return trimmed if trimmed else None
+        return value
+
     for inst in instruments:
         status = inst.get("status", {})
         hw = inst.get("processed_hardware", {})
@@ -1046,7 +1052,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         else:
             overall_status = "unknown"
 
-        raw_reason = status.get("reason", "")
+        raw_reason = none_if_empty(status.get("reason"))
         issues = []
         if overall_status in ["warning", "offline"] and raw_reason and "operational" not in raw_reason.lower():
             issues.append({"severity": overall_status, "description": raw_reason})
@@ -1079,25 +1085,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             "humidity_control": hum_ctrl,
         } if is_live_cell else None
 
-        # 3. Infer Fluorophore Support
-        fluorophores = {
-            "dapi_hoechst": False,
-            "gfp_fitc": False,
-            "rfp_mcherry": False,
-            "far_red_cy5": False,
-        }
-        for ls in hw.get("light_sources", []):
-            wv = str(ls.get("wavelength", "")).lower()
-            if "405" in wv or "390" in wv or "white" in wv:
-                fluorophores["dapi_hoechst"] = True
-            if "488" in wv or "470" in wv or "white" in wv:
-                fluorophores["gfp_fitc"] = True
-            if "561" in wv or "555" in wv or "white" in wv:
-                fluorophores["rfp_mcherry"] = True
-            if "633" in wv or "640" in wv or "647" in wv or "white" in wv:
-                fluorophores["far_red_cy5"] = True
-
-        # 4. Infer Best/Avoid Uses
+        # 3. Infer Best/Avoid Uses
         best_for = []
         avoid_for = []
         mods = [str(m).lower() for m in hw.get("modalities", [])]
@@ -1124,26 +1112,26 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             {
                 "id": inst.get("id"),
                 "identity": {
-                    "display_name": inst.get("display_name"),
-                    "manufacturer": inst.get("manufacturer"),
-                    "model": inst.get("model"),
-                    "stand_orientation": inst.get("stand_orientation"),
+                    "display_name": none_if_empty(inst.get("display_name")),
+                    "manufacturer": none_if_empty(inst.get("manufacturer")),
+                    "model": none_if_empty(inst.get("model")),
+                    "stand_orientation": none_if_empty(inst.get("stand_orientation")),
                 },
                 "operational_status": {
                     "overall_status": overall_status,
                     "issues": issues,
-                    "status_note": raw_reason if overall_status == "online" else None,
-                    "last_qc_date": status.get("last_qc_date", None) or None,
-                    "last_maintenance_date": status.get("last_maint_date", None) or None,
+                    "status_note": raw_reason if overall_status == "online" and raw_reason and "operational" not in raw_reason.lower() else None,
+                    "last_qc_date": none_if_empty(status.get("last_qc_date", None)) or None,
+                    "last_maintenance_date": none_if_empty(status.get("last_maint_date", None)) or None,
                 },
                 "capabilities": {
                     "modalities": hw.get("modalities", []),
                     "scanner": {
-                        "type": hw.get("scanner", {}).get("type", None) or None,
-                        "notes": hw.get("scanner", {}).get("notes", None) or None,
+                        "type": none_if_empty(hw.get("scanner", {}).get("type", None)) or None,
+                        "notes": none_if_empty(hw.get("scanner", {}).get("notes", None)) or None,
                     },
                     "modules": [
-                        {"name": m.get("name"), "notes": m.get("notes") or None}
+                        {"name": none_if_empty(m.get("name")), "notes": none_if_empty(m.get("notes")) or None}
                         for m in hw.get("modules", [])
                     ],
                     "objectives": [
@@ -1152,35 +1140,35 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                             "numerical_aperture": obj.get("na"),
                             "immersion": norm_id(obj.get("immersion")),
                             "correction_class": norm_id(obj.get("correction")),
-                            "working_distance": obj.get("wd") or None,
+                            "working_distance": none_if_empty(obj.get("wd")) or None,
                             "specialties": obj.get("specialties", []),
-                            "notes": obj.get("notes") or None,
+                            "notes": none_if_empty(obj.get("notes")) or None,
                         }
                         for obj in hw.get("objectives", [])
                     ],
                     "light_sources": [
                         {
                             "type": norm_id(ls.get("type")),
-                            "wavelength": ls.get("wavelength"),
-                            "model": ls.get("name") or None,
-                            "notes": ls.get("notes") or None,
+                            "wavelength": none_if_empty(ls.get("wavelength")),
+                            "model": none_if_empty(ls.get("name")) or None,
+                            "notes": none_if_empty(ls.get("notes")) or None,
                         }
                         for ls in hw.get("light_sources", [])
                     ],
                     "filters": [
                         {
-                            "name": f.get("name") or None,
-                            "excitation": f.get("excitation") or None,
-                            "emission": f.get("emission") or None,
-                            "dichroic": f.get("dichroic") or None,
+                            "name": none_if_empty(f.get("name")) or None,
+                            "excitation": none_if_empty(f.get("excitation")) or None,
+                            "emission": none_if_empty(f.get("emission")) or None,
+                            "dichroic": none_if_empty(f.get("dichroic")) or None,
                         }
                         for f in hw.get("filters", [])
                     ],
                     "detectors": [
                         {
                             "type": norm_id(det.get("type")),
-                            "model": det.get("model") or None,
-                            "notes": det.get("notes") or None,
+                            "model": none_if_empty(det.get("model")) or None,
+                            "notes": none_if_empty(det.get("notes")) or None,
                         }
                         for det in hw.get("detectors", [])
                     ],
@@ -1188,10 +1176,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "experiment_guidance": {
                     "live_cell_ready": is_live_cell,
                     "environment_control": env_control,
-                    "derived_fluorophore_support": fluorophores,
                     "best_for": list(dict.fromkeys(best_for)),
                     "avoid_for": list(dict.fromkeys(avoid_for)),
-                    "general_notes_and_recommendations": inst.get("notes_raw", None) or None,
+                    "general_notes_and_recommendations": none_if_empty(inst.get("notes_raw", None)) or None,
                 },
             }
         )
