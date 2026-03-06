@@ -3,3 +3,4 @@ mkdocs-material>=9.0,<10.0
 jinja2>=3.0
 pyyaml>=6.0
 pymdown-extensions>=10.0
+ruamel.yaml>=0.18,<1.0
