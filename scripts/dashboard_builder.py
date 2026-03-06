@@ -1085,25 +1085,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             "humidity_control": hum_ctrl,
         } if is_live_cell else None
 
-        # 3. Infer Best/Avoid Uses
-        best_for = []
-        avoid_for = []
-        mods = [str(m).lower() for m in hw.get("modalities", [])]
-        if "confocal_spinning_disk" in mods:
-            best_for.extend(["fast_live_cell_imaging", "gentle_timelapse", "3d_optical_sectioning"])
-        if "confocal_point" in mods:
-            best_for.extend(["high_resolution_optical_sectioning", "colocalization", "photobleaching/frap"])
-            avoid_for.append("very_fast_live_cell_dynamics")
-        if "multiphoton" in mods or "shg" in mods:
-            best_for.extend(["deep_tissue_imaging", "intravital_imaging", "thick_cleared_samples"])
-        if "tirf" in mods:
-            best_for.extend(["membrane_dynamics", "single_molecule_localization", "viral_entry"])
-        if "widefield_fluorescence" in mods and not any("confocal" in m for m in mods):
-            best_for.extend(["routine_fluorescence", "thin_samples"])
-            avoid_for.append("thick_tissue_optical_sectioning")
-        if not is_live_cell:
-            avoid_for.append("long_term_live_cell_incubation")
-
+        # 3. Guidance keeps only direct readiness/control metadata (no derived best/avoid tags)
         # Normalize Helper
         def norm_id(val):
             return str(val).lower().replace(" ", "_").replace("(", "").replace(")", "") if val else None
@@ -1176,8 +1158,6 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "experiment_guidance": {
                     "live_cell_ready": is_live_cell,
                     "environment_control": env_control,
-                    "best_for": list(dict.fromkeys(best_for)),
-                    "avoid_for": list(dict.fromkeys(avoid_for)),
                     "general_notes_and_recommendations": none_if_empty(inst.get("notes_raw", None)) or None,
                 },
             }
