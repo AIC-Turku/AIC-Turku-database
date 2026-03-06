@@ -65,6 +65,20 @@ METRIC_NAMES: dict[str, str] = {
 }
 
 
+def load_vocabularies(vocab_dir: Path) -> dict[str, dict[str, Any]]:
+    vocabs: dict[str, dict[str, Any]] = {}
+    if not vocab_dir.exists():
+        return vocabs
+    for yaml_file in vocab_dir.glob("*.yaml"):
+        try:
+            data = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
+            if data and "terms" in data:
+                vocabs[yaml_file.stem] = {t["id"]: t for t in data["terms"]}
+        except Exception:
+            pass
+    return vocabs
+
+
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     if not base_dir.exists() or not base_dir.is_dir():
         return []
@@ -622,6 +636,7 @@ def build_nav(instruments: list[dict[str, Any]], retired_instruments: list[dict[
         {"System Health": "status.md"},
         {"Microscopes": microscopes},
         {"Methods Generator": "methods_generator.md"},
+        {"Vocabulary Dictionary": "vocabulary_dictionary.md"},
         {"Retired Instruments": [{"Overview": "retired/index.md"}, *retired]},
     ]
 
@@ -651,6 +666,35 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         shutil.rmtree(docs_root)
     (docs_root / "instruments").mkdir(parents=True, exist_ok=True)
     (docs_root / "events").mkdir(parents=True, exist_ok=True)
+
+    vocabularies = load_vocabularies(repo_root / "vocab")
+    vocab_json_path = docs_root / "assets" / "vocabularies.json"
+    vocab_json_path.parent.mkdir(parents=True, exist_ok=True)
+    vocab_json_path.write_text(json.dumps(vocabularies, indent=2), encoding="utf-8")
+
+    vocabulary_lines = ["# Vocabulary Dictionary", ""]
+    for category, terms in sorted(vocabularies.items()):
+        vocabulary_lines.append(f"## {category}")
+        vocabulary_lines.append("")
+        for term_id, term in sorted(terms.items()):
+            term_label = clean_text(term.get("label")) if isinstance(term, dict) else ""
+            synonyms = clean_string_list(term.get("synonyms")) if isinstance(term, dict) else []
+            description = clean_text(term.get("description")) if isinstance(term, dict) else ""
+
+            vocabulary_lines.append(f"### {term_label or term_id}")
+            vocabulary_lines.append(f"- **ID:** `{term_id}`")
+            vocabulary_lines.append(
+                f"- **Label:** {term_label}" if term_label else "- **Label:** _(not provided)_"
+            )
+            vocabulary_lines.append(
+                f"- **Synonyms:** {', '.join(synonyms)}" if synonyms else "- **Synonyms:** _(none)_"
+            )
+            vocabulary_lines.append(
+                f"- **Description:** {description}" if description else "- **Description:** _(not provided)_"
+            )
+            vocabulary_lines.append("")
+
+    (docs_root / "vocabulary_dictionary.md").write_text("\n".join(vocabulary_lines).strip() + "\n", encoding="utf-8")
 
     # Copy assets into docs
     if (repo_root / "assets").exists():
