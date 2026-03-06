@@ -726,6 +726,10 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     vocabulary = Vocabulary(repo_root / "vocab")
 
+    load_errors: list[YamlLoadError] = []
+    instruments = load_instruments("instruments", load_errors=load_errors)
+    retired_instruments = load_instruments("instruments", load_errors=load_errors, include_retired=True)
+
     for inst in [*instruments, *retired_instruments]:
         inst["modalities_display"] = [
             vocab_label(vocabulary, "modalities", modality_id)
@@ -788,9 +792,6 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     tpl_plan = jinja_env.get_template("plan_experiments.md.j2")
     tpl_methods = jinja_env.get_template("methods_generator.md.j2")
 
-    load_errors: list[YamlLoadError] = []
-    instruments = load_instruments("instruments", load_errors=load_errors)
-    retired_instruments = load_instruments("instruments", load_errors=load_errors, include_retired=True)
     qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
     maint_logs_by_instrument = index_instrument_logs("maintenance/events", load_errors=load_errors)
 
