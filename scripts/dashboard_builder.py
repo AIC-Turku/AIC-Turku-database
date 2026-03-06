@@ -1031,37 +1031,87 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         "active_microscopes": [],
     }
 
-    # Notice we only iterate over active instruments (excluding retired ones)
     for inst in instruments:
         status = inst.get("status", {})
         hw = inst.get("processed_hardware", {})
 
+        # Infer live-cell readiness dynamically from the modules vocabulary
+        live_cell_modules = {
+            "incubation",
+            "environmental_enclosure",
+            "environmental_tolerance",
+            "temperature_control",
+        }
+        is_live_cell = any(m.get("name", "").lower() in live_cell_modules for m in hw.get("modules", []))
+
         llm_payload["active_microscopes"].append(
             {
                 "id": inst.get("id"),
-                "display_name": inst.get("display_name"),
-                "current_health_status": f"{status.get('badge', 'Unknown')} - {status.get('reason', 'No known issues')}",
-                "stand_orientation": inst.get("stand_orientation"),
-                "supported_modalities": hw.get("modalities", []),
-                "available_modules_and_environmental_control": [m.get("name") for m in hw.get("modules", [])],
-                "scanner_type": hw.get("scanner", {}).get("type", ""),
-                "objectives": [
-                    {
-                        "magnification_and_na": f"{obj.get('magnification')}x / {obj.get('na')} NA",
-                        "immersion": obj.get("immersion"),
-                        "capabilities": obj.get("specialties", []),
-                    }
-                    for obj in hw.get("objectives", [])
-                ],
-                "light_sources": [
-                    f"{ls.get('wavelength')}nm {ls.get('type')}" for ls in hw.get("light_sources", [])
-                ],
-                "emission_filters": [
-                    f"Ex: {f.get('excitation')} / Em: {f.get('emission')}"
-                    for f in hw.get("filters", [])
-                    if f.get("emission")
-                ],
-                "detectors": [det.get("type") for det in hw.get("detectors", [])],
+                "identity": {
+                    "display_name": inst.get("display_name"),
+                    "manufacturer": inst.get("manufacturer"),
+                    "model": inst.get("model"),
+                    "stand_orientation": inst.get("stand_orientation"),
+                },
+                "operational_status": {
+                    "overall_status": status.get("badge", "Unknown").split(" ", 1)[-1],  # Strip emoji
+                    "known_issues": status.get("reason", "No known issues"),
+                    "last_qc_date": status.get("last_qc_date", ""),
+                    "last_maintenance_date": status.get("last_maint_date", ""),
+                },
+                "capabilities": {
+                    "modalities": hw.get("modalities", []),
+                    "scanner": {
+                        "type": hw.get("scanner", {}).get("type", ""),
+                        "notes": hw.get("scanner", {}).get("notes", ""),
+                    },
+                    "modules": [
+                        {"name": m.get("name"), "notes": m.get("notes")}
+                        for m in hw.get("modules", [])
+                    ],
+                    "objectives": [
+                        {
+                            "magnification": obj.get("magnification"),
+                            "numerical_aperture": obj.get("na"),
+                            "immersion": obj.get("immersion"),
+                            "correction_class": obj.get("correction"),
+                            "working_distance": obj.get("wd"),
+                            "specialties": obj.get("specialties", []),
+                            "notes": obj.get("notes"),
+                        }
+                        for obj in hw.get("objectives", [])
+                    ],
+                    "light_sources": [
+                        {
+                            "type": ls.get("type"),
+                            "wavelength": ls.get("wavelength"),
+                            "model": ls.get("name"),
+                            "notes": ls.get("notes"),
+                        }
+                        for ls in hw.get("light_sources", [])
+                    ],
+                    "filters": [
+                        {
+                            "name": f.get("name"),
+                            "excitation": f.get("excitation"),
+                            "emission": f.get("emission"),
+                            "dichroic": f.get("dichroic"),
+                        }
+                        for f in hw.get("filters", [])
+                    ],
+                    "detectors": [
+                        {
+                            "type": det.get("type"),
+                            "model": det.get("model"),
+                            "notes": det.get("notes"),
+                        }
+                        for det in hw.get("detectors", [])
+                    ],
+                },
+                "experiment_guidance": {
+                    "live_cell_ready": is_live_cell,
+                    "general_notes_and_recommendations": inst.get("notes_raw", ""),
+                },
             }
         )
 
