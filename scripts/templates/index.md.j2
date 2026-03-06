@@ -19,7 +19,7 @@ hide:
     <select id="aicModality" class="aic-select">
       <option value="all">All</option>
       {% for mod in all_modalities %}
-      <option value="{{ mod | lower }}">{{ mod }}</option>
+      <option value="{{ mod.id | lower }}">{{ mod.label }}</option>
       {% endfor %}
     </select>
   </div>
@@ -51,11 +51,11 @@ hide:
       <div class="aic-card__meta">{{ inst.manufacturer }}{% if inst.model %} · {{ inst.model }}{% endif %}</div>
 
       <div class="aic-chiprow">
-        {% for mod in inst.modalities[:4] %}
+        {% for mod in inst.modalities_display[:4] %}
           <span class="aic-chip">{{ mod }}</span>
         {% endfor %}
-        {% if inst.modalities | length > 4 %}
-          <span class="aic-chip aic-chip--muted">+{{ (inst.modalities | length) - 4 }}</span>
+        {% if inst.modalities_display | length > 4 %}
+          <span class="aic-chip aic-chip--muted">+{{ (inst.modalities_display | length) - 4 }}</span>
         {% endif %}
       </div>
     </div>

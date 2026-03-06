@@ -61,7 +61,7 @@
     <div class="aic-section">
       <div class="aic-section__title">Modalities</div>
       <div class="aic-chiprow">
-        {% for mod in instrument.modalities %}
+        {% for mod in instrument.modalities_display %}
           <span class="aic-chip">{{ mod }}</span>
         {% else %}
           <span class="aic-muted">—</span>
@@ -75,9 +75,9 @@
       <div class="aic-chiprow">
         {% for m in instrument.modules %}
           {% if m.url %}
-            <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.name }} ↗</a>
+            <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }} ↗</a>
           {% else %}
-            <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.name }}</span>
+            <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }}</span>
           {% endif %}
         {% endfor %}
       </div>
