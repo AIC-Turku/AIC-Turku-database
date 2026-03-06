@@ -604,6 +604,7 @@ def load_instruments(
 
         instruments.append(
             {
+                "retired": is_retired,
                 "id": instrument_id,
                 "display_name": display_name,
                 "manufacturer": manufacturer,
@@ -986,7 +987,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     index_md = tpl_index.render(instruments=instruments, all_modalities=all_modalities, counts=fleet_counts)
     (docs_root / "index.md").write_text(index_md, encoding="utf-8")
 
-    # Export active instruments to JSON for the Methods Generator
+    # Export active + retired instruments to JSON for the Methods Generator
     json_path = docs_root / "assets" / "instruments_data.json"
     json_path.parent.mkdir(parents=True, exist_ok=True) 
     vocabularies_payload = {
@@ -1002,7 +1003,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         for vocab_name, terms in sorted(vocabulary.terms_by_vocab.items())
     }
     json_payload = {
-        "instruments": instruments,
+        "instruments": sorted([*instruments, *retired_instruments], key=lambda inst: inst.get("id", "")),
         "vocabularies": vocabularies_payload,
     }
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
