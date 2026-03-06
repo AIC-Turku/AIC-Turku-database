@@ -61,7 +61,7 @@ This repository is strictly structured to support automated validation and stati
 This repository is designed to be fully consumable by Large Language Models (LLMs) and automated agents:
 - **`llm_inventory.json`**: The build script dynamically compiles an AI-optimized representation of the facility's inventory, status, and environmental controls into `dashboard_docs/assets/llm_inventory.json`. 
 - **Agent Context**: See `docs/agent_context.md` for strict instructions tailored for GitOps AI coding assistants operating within this repository.
-- **Microscopy Assistant**: The `docs/llm_microscopy_assistant.md` file serves as a ready-made system prompt/RAG context to help AI bots map user intents (e.g., "deep tissue imaging") to canonical facility terms (e.g., `multiphoton`).
+- **Vocabulary Dictionary (dynamic)**: The dashboard build now generates the vocabulary dictionary page directly from `vocab/` during site generation, so no standalone committed markdown dictionary is maintained in `docs/`.
 
 ---
 
