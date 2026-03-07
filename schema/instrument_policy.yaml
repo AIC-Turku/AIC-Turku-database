@@ -16,38 +16,47 @@ status_definitions:
 
 vocab_registry:
   modalities:
-    file: vocab/modalities.yaml
+    source: file
+    path: vocab/modalities.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   modules:
-    file: vocab/modules.yaml
+    source: file
+    path: vocab/modules.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   scanner_types:
-    file: vocab/scanner_types.yaml
+    source: file
+    path: vocab/scanner_types.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   light_source_kinds:
-    file: vocab/light_source_kinds.yaml
+    source: file
+    path: vocab/light_source_kinds.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   detector_kinds:
-    file: vocab/detector_kinds.yaml
+    source: file
+    path: vocab/detector_kinds.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   objective_immersion:
-    file: vocab/objective_immersion.yaml
+    source: file
+    path: vocab/objective_immersion.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   objective_corrections:
-    file: vocab/objective_corrections.yaml
+    source: file
+    path: vocab/objective_corrections.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   # Recommended future additions if you want the policy file to own all possible options:
   # manufacturers:
-  #   file: vocab/manufacturers.yaml
+  #   source: file
+  #   path: vocab/manufacturers.yaml
   # stand_orientations:
-  #   file: vocab/stand_orientations.yaml
+  #   source: file
+  #   path: vocab/stand_orientations.yaml
 
 sections:
   - id: general_identity

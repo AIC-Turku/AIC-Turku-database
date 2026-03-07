@@ -16,55 +16,33 @@ source_of_truth_for:
 
 vocab_registry:
   qc_type:
-    source: inline
-    suggested_vocab_file: vocab/qc_types.yaml
-    allowed_values:
-      - laser_power
-      - psf
-      - alignment
-      - stage
-      - other
+    source: file
+    path: vocab/qc_type.yaml
+    field_should_store: canonical term id
   measurement_position:
-    source: inline
-    suggested_vocab_file: vocab/qc_measurement_positions.yaml
-    allowed_values:
-      - at_objective
-      - pre_objective
-      - fiber_output
+    source: file
+    path: vocab/qc_measurement_positions.yaml
+    field_should_store: canonical term id
   measurement_positions:
-    source: inline
-    suggested_vocab_file: vocab/qc_measurement_positions.yaml
-    allowed_values:
-      - at_objective
-      - pre_objective
-      - fiber_output
+    source: file
+    path: vocab/qc_measurement_positions.yaml
+    field_should_store: canonical term id
   qc_metrics:
-    source: inline
-    suggested_vocab_file: vocab/qc_metrics.yaml
-    note: >
-      Canonical metric IDs used across computed and evaluated QC outputs.
+    source: file
+    path: vocab/qc_metrics.yaml
+    field_should_store: canonical metric id
   artifact_role:
-    source: inline
-    suggested_vocab_file: vocab/qc_artifact_roles.yaml
-    allowed_values:
-      - table
-      - raw_image
-      - preview
-      - report
-      - other
+    source: file
+    path: vocab/qc_artifact_roles.yaml
+    field_should_store: canonical term id
   evaluation_status:
-    source: inline
-    suggested_vocab_file: vocab/qc_evaluation_status.yaml
-    allowed_values:
-      - pass
-      - warn
-      - fail
+    source: file
+    path: vocab/qc_evaluation_status.yaml
+    field_should_store: canonical term id
   setpoint_units:
-    source: inline
-    suggested_vocab_file: vocab/qc_setpoint_units.yaml
-    allowed_values:
-      - percent
-      - mW_setpoint
+    source: file
+    path: vocab/qc_setpoint_units.yaml
+    field_should_store: canonical term id
   metric_unit:
     source: free_text
     note: >

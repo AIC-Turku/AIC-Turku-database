@@ -1,0 +1,12 @@
+terms:
+  - id: pass
+    label: "Pass"
+    description: "Measured value meets expected criteria or threshold."
+
+  - id: warn
+    label: "Warn"
+    description: "Measured value is borderline or drifting and should be monitored."
+
+  - id: fail
+    label: "Fail"
+    description: "Measured value is out of acceptable range and requires follow-up action."
