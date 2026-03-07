@@ -151,7 +151,7 @@ sections:
         type: string
         vocab: modules
         required_if:
-          parent_present: modules[]
+          parent_present: "modules[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when a module/path is installed and materially changes imaging capabilities.
 
@@ -435,7 +435,7 @@ sections:
         title: Detector pixel pitch (um)
         status: conditional
         type: positive_number
-        aliases: [hardware.detectors[].pixel_size_um]
+        aliases: ["hardware.detectors[].pixel_size_um"]
         required_if:
           item_kind_in: [scmos, cmos, emccd, ccd]
         used_by: [audit_pdf, method_generator, dashboard]
@@ -514,7 +514,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          parent_present: hardware.filters[]
+          parent_present: "hardware.filters[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when installed optical filter sets are part of the instrument light path.
 
@@ -523,7 +523,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          parent_present: hardware.filters[]
+          parent_present: "hardware.filters[]"
         used_by: [audit_pdf, dashboard]
         rationale: Needed if multiple wheels, turrets, or positions exist.
 
@@ -588,7 +588,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          parent_present: hardware.splitters[]
+          parent_present: "hardware.splitters[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when an emission or camera splitter is installed.
 
@@ -597,7 +597,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          parent_present: hardware.splitters[]
+          parent_present: "hardware.splitters[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Needed to explain the splitter role.
 
@@ -747,7 +747,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          parent_present: hardware.magnification_changers[]
+          parent_present: "hardware.magnification_changers[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when such a device is installed.
 
@@ -756,7 +756,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          parent_present: hardware.magnification_changers[]
+          parent_present: "hardware.magnification_changers[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when such a device is installed.
 
@@ -765,7 +765,7 @@ sections:
         status: conditional
         type: positive_number
         required_if:
-          parent_present: hardware.magnification_changers[]
+          parent_present: "hardware.magnification_changers[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when such a device is installed.
 
