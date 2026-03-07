@@ -668,6 +668,7 @@ def _evaluate_event_required_if(
         'missing_csv_artifact',
         'metrics_computed_present',
         'evaluation_present',
+        'evaluation_computed_provenance_present',
     }
     unknown = [key for key in required_if if key not in supported_keys]
     if unknown:
@@ -721,6 +722,11 @@ def _evaluate_event_required_if(
         evaluation_nodes = _resolve_path_nodes(payload, 'evaluation')
         has_evaluation = bool(evaluation_nodes and isinstance(evaluation_nodes[0].value, dict))
         conditions.append(has_evaluation)
+
+    if required_if.get('evaluation_computed_provenance_present') is True:
+        provenance_nodes = _resolve_path_nodes(payload, 'evaluation.computed_provenance')
+        has_provenance = bool(provenance_nodes and isinstance(provenance_nodes[0].value, dict))
+        conditions.append(has_provenance)
 
     if not conditions:
         return False, None

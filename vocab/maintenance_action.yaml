@@ -31,3 +31,7 @@ terms:
     label: "Other"
     description: "Action does not match the predefined categories. Provide specific context in free-text details."
     synonyms: ["misc"]
+  - id: install
+    label: "Install"
+    description: "Installs a new component, module, or subsystem as part of maintenance or upgrade work."
+    synonyms: ["installation"]

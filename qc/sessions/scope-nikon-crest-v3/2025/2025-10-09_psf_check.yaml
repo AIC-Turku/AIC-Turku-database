@@ -1,6 +1,6 @@
 schema_version: 1
 record_type: qc_session
-qc_id: qc_scope-nikon-crest-v3_20251009T100000Z_psf
+qc_id: qc_scope-nikon-crest-v3_20251009T100000Z_psf_v1
 microscope: scope-nikon-crest-v3
 started_utc: '2025-10-09T10:00:00Z'
 reason: routine_psf_check
@@ -91,7 +91,11 @@ evaluation:
   evaluated_utc: '2025-10-09T14:10:00Z'
   evaluated_by: github_action:qceval
   overall_status: pass
-  results: []
+  results:
+  - metric_id: psf.60x_oil.525.fwhm_z_nm
+    status: pass
+    threshold: warn>750nm, fail>900nm
+    message: 60x oil axial PSF remained within expected range.
 artifacts:
 - artifact_id: art_psf_60x_silicone
   role: raw_image
