@@ -4,3 +4,4 @@ jinja2>=3.0
 pyyaml>=6.0
 pymdown-extensions>=10.0
 ruamel.yaml>=0.18,<1.0
+weasyprint>=62.0
