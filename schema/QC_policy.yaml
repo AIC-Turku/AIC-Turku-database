@@ -672,6 +672,8 @@ field_rules:
     used_by: [traceability]
     rationale: Useful integrity check for non-OMERO artifacts.
 
+legacy_and_migration_rules: []
+
 cross_field_rules:
   - id: qc_path_consistency
     rule: >
