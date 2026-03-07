@@ -174,17 +174,21 @@ sections:
     rules:
       - path: software.acquisition.name
         title: Acquisition software name
-        status: required
+        status: conditional
         type: string
+        required_if:
+          parent_present: software.acquisition
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Acquisition software should always be known and is used directly in methods wording.
+        rationale: Required only if the microscope is driven by computer acquisition.
 
       - path: software.acquisition.version
         title: Acquisition software version
-        status: required
+        status: conditional
         type: string_or_empty
+        required_if:
+          parent_present: software.acquisition
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Version materially affects reproducibility and methods text.
+        rationale: Version materially affects reproducibility and methods text when acquisition software is used.
 
       - path: software.acquisition.developer
         title: Acquisition software developer
@@ -246,9 +250,9 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [sim, ism]
+          parent_present: software.deconvolution
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Reconstruction version affects reproducibility and interpretation.
+        rationale: Reconstruction version affects reproducibility and interpretation when deconvolution software is used.
 
       - path: software.deconvolution.url
         title: Deconvolution or reconstruction software URL
@@ -273,9 +277,9 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [flim]
+          parent_present: software.flim
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Version matters for lifetime fitting and FLIM-derived outputs.
+        rationale: Version matters for lifetime fitting and FLIM-derived outputs when FLIM software is used.
 
       - path: software.flim.url
         title: FLIM software URL
@@ -302,7 +306,7 @@ sections:
         status: conditional
         type: positive_number
         required_if:
-          scanner_type_in: [resonant, polygon, acousto_optic]
+          scanner_type_in: [resonant, polygon, acousto_optic, tandem]
         used_by: [audit_pdf, method_generator]
         rationale: Required where speed mode is intrinsic and relevant to the scan engine.
 
@@ -311,9 +315,19 @@ sections:
         status: conditional
         type: positive_number
         required_if:
-          modalities_any_of: [confocal_point, sted]
+          scanner_type_in: [spinning_disk]
         used_by: [audit_pdf, method_generator]
-        rationale: Required for point-scanning confocal or STED-like systems when pinhole applies.
+        rationale: Required for spinning disk systems where pinhole size is fixed in hardware. Point scanners use tunable pinholes defined per-experiment.
+
+      - path: hardware.scanner.light_sheet_type
+        title: Light Sheet Architecture
+        status: conditional
+        type: string
+        allowed_values: [standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other]
+        required_if:
+          modalities_any_of: [light_sheet]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Clarifies the specific illumination geometry for light sheet systems.
 
       - path: hardware.scanner.notes
         title: Scanner notes
@@ -372,12 +386,14 @@ sections:
 
       - path: hardware.light_sources[].wavelength_nm
         title: Light source wavelength metadata
-        status: required
+        status: conditional
         type: spectral_descriptor
+        required_if:
+          item_kind_in: [laser, white_light_laser, led, multiphoton_laser, supercontinuum]
         validation:
           accepted_examples: ['405', '488', '395/25', '561', '730/40', 'tunable']
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Every excitation source needs machine-readable spectral metadata.
+        rationale: Required for line-selectable or tunable excitation sources where wavelength metadata is needed for reproducibility.
         notes: Current schema uses one descriptive field; a future schema revision could split this into line_nm, bandpass_center_nm, bandpass_width_nm, tunable_range_nm.
 
       - path: hardware.light_sources[].power
@@ -543,7 +559,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm]
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
 
@@ -552,7 +568,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm]
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when dichroics define the fluorescence path.
 
@@ -561,7 +577,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm]
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for fluorescence detection paths.
 
