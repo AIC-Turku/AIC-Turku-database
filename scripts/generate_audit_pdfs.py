@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML
+from weasyprint import CSS, HTML
 
 from audit_analyzer import analyze_instrument_completeness
 from dashboard_builder import load_facility_config, load_instruments
@@ -29,6 +29,8 @@ def main() -> None:
     logo_path = branding.get("logo")
 
     instruments = load_instruments(include_retired=False)
+    css_path = repo_root / "assets" / "stylesheets" / "dashboard.css"
+    stylesheets = [CSS(filename=css_path)] if css_path.exists() else []
 
     for instrument in instruments:
         audit_data = analyze_instrument_completeness(instrument)
@@ -41,7 +43,10 @@ def main() -> None:
 
         instrument_id = instrument.get("id") or "unknown_instrument"
         output_path = output_dir / f"{instrument_id}_audit.pdf"
-        HTML(string=rendered_html, base_url=str(repo_root)).write_pdf(output_path)
+        HTML(string=rendered_html, base_url=str(repo_root)).write_pdf(
+            output_path,
+            stylesheets=stylesheets,
+        )
 
         print(f"Generated: {output_path}")
 
