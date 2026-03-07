@@ -45,8 +45,12 @@ terms:
     synonyms: ["two-photon", "2p"]
   - id: shg
     label: "Second Harmonic Generation"
-    description: "Label-free multiphoton modality that generates signal from highly ordered, non-centrosymmetric structures like collagen fibers."
-    synonyms: ["SHG", "THG"]
+    description: "Label-free nonlinear imaging modality generating signal at half the excitation wavelength from non-centrosymmetric structures such as collagen."
+    synonyms: ["SHG"]
+  - id: thg
+    label: "Third Harmonic Generation"
+    description: "Label-free nonlinear imaging modality generating signal at one-third the excitation wavelength, often sensitive to refractive-index discontinuities."
+    synonyms: ["THG"]
   - id: optical_sectioning
     label: "Structured Optical Sectioning"
     description: "Uses patterned illumination and computational processing to suppress out-of-focus signal. Common examples include ApoTome or grid-projection approaches."

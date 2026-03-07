@@ -140,6 +140,35 @@ def _is_non_empty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _is_numeric_string(value: Any) -> bool:
+    return isinstance(value, str) and bool(re.fullmatch(r"\d+(?:\.\d+)?", value.strip()))
+
+
+def _is_positive_number(value: Any) -> bool:
+    return _is_number(value) and value > 0
+
+
+def _is_valid_wavelength(value: Any) -> bool:
+    if _is_number(value):
+        return value > 0
+
+    if not isinstance(value, str):
+        return False
+
+    cleaned = value.strip()
+    if not cleaned:
+        return False
+
+    if _is_numeric_string(cleaned):
+        return float(cleaned) > 0
+
+    return bool(re.fullmatch(r"\d+(?:\.\d+)?/\d+(?:\.\d+)?", cleaned))
+
+
 def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
     started_utc = payload.get("started_utc")
     if isinstance(started_utc, str):
@@ -307,6 +336,17 @@ def validate_instrument_ledgers(
         instrument_ids.add(instrument_id)
         instrument_id_to_files.setdefault(instrument_id, []).append(instrument_file.as_posix())
 
+        for field_name in ("display_name", "manufacturer", "model", "stand_orientation"):
+            if _is_non_empty_string(instrument_section.get(field_name)):
+                continue
+            issues.append(
+                ValidationIssue(
+                    code="missing_instrument_field",
+                    path=f"{instrument_file.as_posix()}:instrument.{field_name}",
+                    message=f"Missing required instrument field '{field_name}' (must be a non-empty string).",
+                )
+            )
+
         modalities = payload.get("modalities")
         if isinstance(modalities, list):
             for index, modality in enumerate(modalities):
@@ -337,37 +377,162 @@ def validate_instrument_ledgers(
         )
 
         for index, source in enumerate(hardware.get("light_sources", [])):
-            source_kind = source.get("kind") if isinstance(source, dict) else source
+            if not isinstance(source, dict):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_light_source_shape",
+                        path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}]",
+                        message="Each light source must be a mapping/object.",
+                    )
+                )
+                continue
+
             _validate_vocab_value(
                 path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].kind",
                 vocab_name="light_source_kinds",
-                raw_value=source_kind,
-                allow_empty=True,
+                raw_value=source.get("kind"),
+                required=True,
             )
 
+            wavelength_nm = source.get("wavelength_nm")
+            if wavelength_nm not in (None, "") and not _is_valid_wavelength(wavelength_nm):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_light_source_wavelength",
+                        path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].wavelength_nm",
+                        message=(
+                            "wavelength_nm must be numeric (or a numeric string) or a numeric band "
+                            "formatted as '<center>/<width>'."
+                        ),
+                    )
+                )
+
+        detector_kinds_present: set[str] = set()
         for index, detector in enumerate(hardware.get("detectors", [])):
-            detector_kind = detector.get("kind") if isinstance(detector, dict) else detector
+            if not isinstance(detector, dict):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_detector_shape",
+                        path=f"{instrument_file.as_posix()}:hardware.detectors[{index}]",
+                        message="Each detector must be a mapping/object.",
+                    )
+                )
+                continue
+
+            detector_kind = detector.get("kind")
             _validate_vocab_value(
                 path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].kind",
                 vocab_name="detector_kinds",
                 raw_value=detector_kind,
-                allow_empty=True,
+                required=True,
             )
+            if isinstance(detector_kind, str) and detector_kind.strip():
+                detector_kinds_present.add(detector_kind.strip().casefold())
 
+        seen_objective_ids: set[str] = set()
         for index, objective in enumerate(hardware.get("objectives", [])):
-            immersion = objective.get("immersion") if isinstance(objective, dict) else None
-            correction = objective.get("correction") if isinstance(objective, dict) else None
+            if not isinstance(objective, dict):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_objective_shape",
+                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}]",
+                        message="Each objective must be a mapping/object.",
+                    )
+                )
+                continue
+
+            obj_id = objective.get("id")
+            if not _is_non_empty_string(obj_id):
+                issues.append(
+                    ValidationIssue(
+                        code="missing_objective_id",
+                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].id",
+                        message="Objective id is required.",
+                    )
+                )
+            else:
+                normalized_id = obj_id.strip()
+                if normalized_id in seen_objective_ids:
+                    issues.append(
+                        ValidationIssue(
+                            code="duplicate_objective_id",
+                            path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].id",
+                            message=f"Duplicate objective id '{normalized_id}' within instrument.",
+                        )
+                    )
+                else:
+                    seen_objective_ids.add(normalized_id)
+
+            na = objective.get("numerical_aperture")
+            if na is not None and (not _is_number(na) or not (0 < na <= 1.7)):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_numerical_aperture",
+                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
+                        message="NA must be numeric and between 0 and 1.7.",
+                    )
+                )
+
+            magnification = objective.get("magnification")
+            if magnification is not None and not _is_positive_number(magnification):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_objective_magnification",
+                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].magnification",
+                        message="Objective magnification must be numeric and greater than 0.",
+                    )
+                )
+
             _validate_vocab_value(
                 path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].immersion",
                 vocab_name="objective_immersion",
-                raw_value=immersion,
+                raw_value=objective.get("immersion"),
                 allow_empty=True,
             )
             _validate_vocab_value(
                 path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].correction",
                 vocab_name="objective_corrections",
-                raw_value=correction,
+                raw_value=objective.get("correction"),
                 allow_empty=True,
+            )
+
+        modality_ids = {value.strip() for value in modalities if isinstance(value, str) and value.strip()} if isinstance(modalities, list) else set()
+        module_ids = {
+            module.get("name").strip()
+            for module in modules
+            if isinstance(modules, list) and isinstance(module, dict) and _is_non_empty_string(module.get("name"))
+        }
+
+        scanner_type = scanner.get("type") if isinstance(scanner.get("type"), str) else None
+        if "confocal_point" in modality_ids and scanner_type == "none":
+            warnings.append(
+                ValidationIssue(
+                    code="modality_scanner_mismatch",
+                    path=f"{instrument_file.as_posix()}:hardware.scanner.type",
+                    message="'confocal_point' modality usually requires a non-'none' scanner type.",
+                )
+            )
+
+        if "tirf" in modality_ids and not ({"ring_tirf", "tirf"} & {m.casefold() for m in module_ids}):
+            warnings.append(
+                ValidationIssue(
+                    code="tirf_module_missing",
+                    path=f"{instrument_file.as_posix()}:modules",
+                    message="'tirf' modality should usually declare a dedicated TIRF illumination module/path.",
+                )
+            )
+
+        flim_detector_kinds = {"apd", "spad", "hyd", "pmt", "gaasp_pmt"}
+        if "flim" in modality_ids and "flim" not in {m.casefold() for m in module_ids} and not (detector_kinds_present & flim_detector_kinds):
+            warnings.append(
+                ValidationIssue(
+                    code="flim_chain_incomplete",
+                    path=f"{instrument_file.as_posix()}:modalities",
+                    message=(
+                        "'flim' modality should usually declare a FLIM module or FLIM-capable detector chain "
+                        "(e.g., APD/SPAD/HyD/PMT)."
+                    ),
+                )
             )
 
     for instrument_id, source_files in sorted(instrument_id_to_files.items()):
