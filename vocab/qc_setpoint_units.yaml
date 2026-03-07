@@ -1,0 +1,8 @@
+terms:
+  - id: percent
+    label: "Percent"
+    description: "Setpoint expressed as a percentage of configured maximum or reference output."
+
+  - id: mW_setpoint
+    label: "mW Setpoint"
+    description: "Setpoint expressed directly in milliwatts."

@@ -1,0 +1,20 @@
+terms:
+  - id: vendor
+    label: "Vendor"
+    description: "Service performed directly by the original equipment manufacturer or official vendor organization."
+
+  - id: distributor
+    label: "Distributor"
+    description: "Service performed by an authorized distributor or reseller partner."
+
+  - id: third_party
+    label: "Third Party"
+    description: "Service performed by an independent external provider not classified as vendor or distributor."
+
+  - id: internal
+    label: "Internal"
+    description: "Service performed by in-house staff within the facility or institution."
+
+  - id: unknown
+    label: "Unknown"
+    description: "Service provider type is not known or not documented."

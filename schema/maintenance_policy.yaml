@@ -25,14 +25,9 @@ vocab_registry:
     path: vocab/maintenance_action.yaml
     field_should_store: canonical term id
   service_provider:
-    source: inline
-    suggested_vocab_file: vocab/service_provider.yaml
-    allowed_values:
-      - vendor
-      - distributor
-      - third_party
-      - internal
-      - unknown
+    source: file
+    path: vocab/service_provider.yaml
+    field_should_store: canonical term id
   maintenance_status:
     source: file
     path: vocab/maintenance_status.yaml

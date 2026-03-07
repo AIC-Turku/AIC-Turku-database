@@ -1,0 +1,20 @@
+terms:
+  - id: table
+    label: "Table"
+    description: "Tabular artifact such as CSV, TSV, or spreadsheet-like export."
+
+  - id: raw_image
+    label: "Raw Image"
+    description: "Original unprocessed image data artifact produced by the QC run."
+
+  - id: preview
+    label: "Preview"
+    description: "Rendered quick-look artifact intended for visual inspection."
+
+  - id: report
+    label: "Report"
+    description: "Human-readable summary report such as PDF or HTML output."
+
+  - id: other
+    label: "Other"
+    description: "Artifact role not captured by existing categories; describe in details."

@@ -1,0 +1,20 @@
+terms:
+  - id: laser_power
+    label: "Laser Power"
+    description: "Laser output and stability checks against expected setpoints."
+
+  - id: psf
+    label: "PSF"
+    description: "Point spread function measurements for optical performance and resolution tracking."
+
+  - id: alignment
+    label: "Alignment"
+    description: "Optical alignment checks such as channel registration and beam path consistency."
+
+  - id: stage
+    label: "Stage"
+    description: "Mechanical stage repeatability and positioning accuracy checks."
+
+  - id: other
+    label: "Other"
+    description: "QC activity that does not fit the predefined categories; document details in free text."

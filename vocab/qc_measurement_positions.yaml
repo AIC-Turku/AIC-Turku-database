@@ -1,0 +1,12 @@
+terms:
+  - id: at_objective
+    label: "At Objective"
+    description: "Measured at or near the objective/sample plane where illumination reaches the specimen."
+
+  - id: pre_objective
+    label: "Pre-objective"
+    description: "Measured in the optical path before the objective lens."
+
+  - id: fiber_output
+    label: "Fiber Output"
+    description: "Measured at the optical fiber output before downstream beam delivery optics."
