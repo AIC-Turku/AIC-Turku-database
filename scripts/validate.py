@@ -67,7 +67,23 @@ class Vocabulary:
             for vocab_name, vocab_spec in self.vocab_registry.items():
                 if not isinstance(vocab_spec, dict):
                     continue
-                raw_file = vocab_spec.get("file")
+                inline_allowed = vocab_spec.get("allowed_values")
+                if vocab_spec.get("source") == "inline" and isinstance(inline_allowed, list):
+                    self.terms_by_vocab[vocab_name] = {
+                        value: VocabularyTerm(
+                            id=value,
+                            label=value,
+                            description="",
+                            synonyms=[],
+                            metadata={},
+                        )
+                        for value in [str(item).strip() for item in inline_allowed if str(item).strip()]
+                    }
+                    self.valid_ids_by_vocab[vocab_name] = set(self.terms_by_vocab[vocab_name].keys())
+                    self.synonyms_by_vocab[vocab_name] = {}
+                    continue
+
+                raw_file = vocab_spec.get("file") or vocab_spec.get("path")
                 if not isinstance(raw_file, str) or not raw_file.strip():
                     continue
                 vocab_items.append((vocab_name, Path(raw_file.strip())))
@@ -269,6 +285,30 @@ class InstrumentPolicy:
     rules: list[PolicyRule]
 
 
+def load_policy(policy_path: Path) -> tuple[dict[str, Any] | None, str | None]:
+    try:
+        raw_text = policy_path.read_text(encoding='utf-8')
+    except OSError as exc:
+        return None, f"Failed loading policy '{policy_path.as_posix()}': {exc}"
+
+    try:
+        payload = yaml.safe_load(raw_text)
+    except yaml.YAMLError:
+        try:
+            payload = yaml.safe_load(_sanitize_policy_yaml(raw_text))
+        except yaml.YAMLError as exc:
+            return None, f"Failed loading policy '{policy_path.as_posix()}': {exc}"
+
+    if payload is None:
+        return None, f"Failed loading policy '{policy_path.as_posix()}': YAML document is empty."
+    if not isinstance(payload, dict):
+        return None, (
+            f"Failed loading policy '{policy_path.as_posix()}': expected YAML mapping/object at top level, "
+            f"found {type(payload).__name__}."
+        )
+    return payload, None
+
+
 def _sanitize_policy_yaml(raw_text: str) -> str:
     """Normalize known non-YAML inline path list syntax used in policy drafts."""
 
@@ -293,26 +333,9 @@ def _load_instrument_policy(
         if not candidate.exists():
             continue
 
-        try:
-            raw_text = candidate.read_text(encoding='utf-8')
-        except OSError as exc:
-            return None, f"Failed loading policy '{candidate.as_posix()}': {exc}"
-
-        try:
-            loaded_payload = yaml.safe_load(raw_text)
-        except yaml.YAMLError:
-            try:
-                loaded_payload = yaml.safe_load(_sanitize_policy_yaml(raw_text))
-            except yaml.YAMLError as exc:
-                return None, f"Failed loading policy '{candidate.as_posix()}': {exc}"
-
-        if loaded_payload is None:
-            return None, f"Failed loading policy '{candidate.as_posix()}': YAML document is empty."
-        if not isinstance(loaded_payload, dict):
-            return None, (
-                f"Failed loading policy '{candidate.as_posix()}': expected YAML mapping/object at top level, "
-                f"found {type(loaded_payload).__name__}."
-            )
+        loaded_payload, load_error = load_policy(candidate)
+        if load_error is not None or loaded_payload is None:
+            return None, load_error
 
         payload = loaded_payload
         selected = candidate
@@ -758,7 +781,18 @@ def validate_event_ledgers(
     issues: list[ValidationIssue] = []
     event_output_to_sources: dict[str, list[str]] = {}
     allowed_types = {value.strip() for value in allowed_record_types if isinstance(value, str) and value.strip()}
-    vocabulary = Vocabulary()
+    combined_registry: dict[str, dict[str, Any]] = {}
+    for policy_path in (Path("schema/QC_policy.yaml"), Path("schema/maintenance_policy.yaml")):
+        if not policy_path.exists():
+            continue
+        policy_payload, _ = load_policy(policy_path)
+        if not isinstance(policy_payload, dict):
+            continue
+        policy_vocabs = policy_payload.get("vocab_registry")
+        if isinstance(policy_vocabs, dict):
+            combined_registry.update(policy_vocabs)
+
+    vocabulary = Vocabulary(vocab_registry=combined_registry or None)
 
     event_sources = [
         (qc_base_dir, "qc_session"),
@@ -956,7 +990,8 @@ def validate_event_ledgers(
                         continue
 
                     cleaned_status = raw_status.strip()
-                    is_match, suggestion = vocabulary.check("maintenance_status", cleaned_status)
+                    status_vocab = "maintenance_status" if "maintenance_status" in vocabulary.valid_ids_by_vocab else "microscope_status"
+                    is_match, suggestion = vocabulary.check(status_vocab, cleaned_status)
                     if is_match:
                         continue
 
@@ -973,14 +1008,14 @@ def validate_event_ledgers(
                         )
                         continue
 
-                    known = ", ".join(sorted(vocabulary.terms_by_vocab.get("maintenance_status", {}).keys()))
+                    known = ", ".join(sorted(vocabulary.terms_by_vocab.get(status_vocab, {}).keys()))
                     issues.append(
                         ValidationIssue(
                             code="invalid_maintenance_status",
                             path=event_file.as_posix(),
                             message=(
                                 f"Invalid {status_key} '{raw_status}'. "
-                                f"Allowed values from maintenance_status vocabulary: {known}."
+                                f"Allowed values from {status_vocab} vocabulary: {known}."
                             ),
                         )
                     )
