@@ -33,6 +33,7 @@ from typing import Any, Iterable
 from validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     Vocabulary,
+    build_instrument_completeness_report,
     load_policy,
     print_validation_report,
     validate_event_ledgers,
@@ -384,6 +385,186 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
     return []
 
 
+
+
+def normalize_hardware(raw: Any) -> dict[str, Any]:
+    """Normalize hardware into canonical dashboard-facing sections."""
+    hardware = raw if isinstance(raw, dict) else {}
+
+    light_sources = [
+        {
+            "name": clean_text(src.get("model")),
+            "type": clean_text(src.get("kind")),
+            "wavelength": src.get("wavelength_nm"),
+            "power": clean_text(src.get("power")),
+            "manufacturer": clean_text(src.get("manufacturer")),
+            "technology": clean_text(src.get("technology")),
+            "notes": clean_text(src.get("notes")),
+            "url": clean_text(src.get("url")),
+        }
+        for src in hardware.get("light_sources", [])
+        if isinstance(src, dict)
+    ]
+
+    detectors = [
+        {
+            "name": clean_text(det.get("manufacturer")),
+            "model": clean_text(det.get("model")),
+            "type": clean_text(det.get("kind")),
+            "pixel_pitch_um": det.get("pixel_pitch_um") or det.get("pixel_size_um"),
+            "sensor_format_px": clean_text(det.get("sensor_format_px")),
+            "binning": clean_text(det.get("binning")),
+            "bit_depth": det.get("bit_depth"),
+            "qe_peak_pct": det.get("qe_peak_pct"),
+            "read_noise_e": det.get("read_noise_e"),
+            "notes": clean_text(det.get("notes")),
+            "url": clean_text(det.get("url")),
+        }
+        for det in hardware.get("detectors", [])
+        if isinstance(det, dict)
+    ]
+
+    objectives = [
+        {
+            "id": clean_text(obj.get("id")),
+            "name": clean_text(obj.get("model")),
+            "manufacturer": clean_text(obj.get("manufacturer")),
+            "product_code": clean_text(obj.get("product_code")),
+            "magnification": obj.get("magnification"),
+            "na": obj.get("numerical_aperture"),
+            "wd": clean_text(obj.get("working_distance")),
+            "immersion": clean_text(obj.get("immersion")),
+            "correction": clean_text(obj.get("correction")),
+            "afc": obj.get("afc_compatible"),
+            "is_installed": obj.get("is_installed", True),
+            "specialties": clean_string_list(obj.get("specialties")),
+            "notes": clean_text(obj.get("notes")),
+            "url": clean_text(obj.get("url")),
+        }
+        for obj in hardware.get("objectives", [])
+        if isinstance(obj, dict)
+    ]
+
+    splitters = [
+        {
+            "name": clean_text(s.get("name")),
+            "type": clean_text(s.get("type")),
+            "notes": clean_text(s.get("notes")),
+            "url": clean_text(s.get("url")),
+        }
+        for s in hardware.get("splitters", [])
+        if isinstance(s, dict)
+    ]
+
+    filters = [
+        {
+            "name": clean_text(f.get("name")),
+            "location": clean_text(f.get("location")),
+            "product_code": clean_text(f.get("product_code")),
+            "excitation": clean_text(f.get("excitation")),
+            "dichroic": clean_text(f.get("dichroic")),
+            "emission": clean_text(f.get("emission")),
+            "notes": clean_text(f.get("notes")),
+            "url": clean_text(f.get("url")),
+        }
+        for f in hardware.get("filters", [])
+        if isinstance(f, dict)
+    ]
+
+    magnification_changers = [
+        {
+            "manufacturer": clean_text(m.get("manufacturer")),
+            "model": clean_text(m.get("model")),
+            "magnification": m.get("magnification"),
+            "notes": clean_text(m.get("notes")),
+            "url": clean_text(m.get("url")),
+        }
+        for m in hardware.get("magnification_changers", [])
+        if isinstance(m, dict)
+    ]
+
+    scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
+
+    return {
+        "scanner": {
+            "type": clean_text(scanner.get("type")),
+            "line_rate_hz": scanner.get("line_rate_hz"),
+            "pinhole_um": scanner.get("pinhole_um"),
+            "notes": clean_text(scanner.get("notes")),
+        },
+        "light_sources": light_sources,
+        "detectors": detectors,
+        "objectives": objectives,
+        "splitters": splitters,
+        "filters": filters,
+        "magnification_changers": magnification_changers,
+    }
+
+
+def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, retired: bool) -> dict[str, Any] | None:
+    """Build canonical instrument DTO used by dashboard templates and exports."""
+    inst_section = payload.get("instrument")
+    if not isinstance(inst_section, dict):
+        inst_section = {}
+
+    display_name = clean_text(inst_section.get("display_name")) or source_file.stem
+    raw_instrument_id = inst_section.get("instrument_id")
+    if not isinstance(raw_instrument_id, str) or not raw_instrument_id.strip():
+        return None
+
+    instrument_id = raw_instrument_id.strip()
+    if not is_valid_instrument_id(instrument_id):
+        return None
+
+    notes_raw = clean_text(inst_section.get("notes"))
+    notes_parsed = parse_notes_compact(notes_raw) if notes_raw else {}
+
+    raw_modules = payload.get("modules") or []
+    modules = []
+    for m in raw_modules:
+        if isinstance(m, dict):
+            modules.append({"name": clean_text(m.get("name")), "notes": clean_text(m.get("notes")), "url": clean_text(m.get("url"))})
+        elif isinstance(m, str):
+            modules.append({"name": clean_text(m), "notes": "", "url": ""})
+
+    modalities = payload.get("modalities")
+    if not isinstance(modalities, list):
+        modalities = []
+
+    software = normalize_software(payload.get("software"))
+    hardware = normalize_hardware(payload.get("hardware") or {})
+    policy = build_instrument_completeness_report(payload)
+
+    return {
+        "retired": retired,
+        "id": instrument_id,
+        "display_name": display_name,
+        "manufacturer": clean_text(inst_section.get("manufacturer")),
+        "model": clean_text(inst_section.get("model")),
+        "year_of_purchase": clean_text(inst_section.get("year_of_purchase")),
+        "funding": clean_text(inst_section.get("funding")),
+        "stand_orientation": clean_text(inst_section.get("stand_orientation")),
+        "location": extract_instrument_location(inst_section.get("location"), notes_raw),
+        "notes_raw": notes_raw,
+        "notes": notes_parsed,
+        "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
+        "modules": modules,
+        "software": software,
+        "image_filename": _discover_image_filename(instrument_id),
+        "url": clean_text(inst_section.get("url")),
+        "canonical": {
+            "notes": notes_parsed,
+            "software": software,
+            "hardware": hardware,
+            "policy": {
+                "sections": policy.sections,
+                "missing_required": policy.missing_required,
+                "missing_conditional": policy.missing_conditional,
+                "alias_fallbacks": policy.alias_fallbacks,
+            },
+        },
+    }
+
 def get_all_instrument_logs(
     log_base_dir: str,
     instrument_id: str,
@@ -589,88 +770,18 @@ def load_instruments(
         if payload is None:
             continue
 
-        inst_section = payload.get("instrument")
-        if not isinstance(inst_section, dict):
-            inst_section = {}
-
-        display_name = clean_text(inst_section.get("display_name")) or yaml_file.stem
-        raw_instrument_id = inst_section.get("instrument_id")
-
-        if not isinstance(raw_instrument_id, str) or not raw_instrument_id.strip():
+        normalized = normalize_instrument_dto(payload, yaml_file, retired=is_retired)
+        if normalized is None:
             if load_errors is not None:
                 load_errors.append(
                     YamlLoadError(
                         path=yaml_file.as_posix(),
-                        message="Missing required instrument.instrument_id (must be a non-empty string).",
+                        message="Missing or invalid instrument.instrument_id (must be URL-safe slug).",
                     )
                 )
             continue
 
-        instrument_id = raw_instrument_id.strip()
-        if not is_valid_instrument_id(instrument_id):
-            if load_errors is not None:
-                load_errors.append(
-                    YamlLoadError(
-                        path=yaml_file.as_posix(),
-                        message=(
-                            "Invalid instrument.instrument_id; expected URL-safe slug "
-                            "(lowercase letters, numbers, and single hyphens only)."
-                        ),
-                    )
-                )
-            continue
-
-        manufacturer = clean_text(inst_section.get("manufacturer"))
-        model = clean_text(inst_section.get("model"))
-        year = clean_text(inst_section.get("year_of_purchase"))
-        funding = clean_text(inst_section.get("funding"))
-        stand = clean_text(inst_section.get("stand_orientation"))
-        notes_raw = clean_text(inst_section.get("notes"))
-        notes_parsed = parse_notes_compact(notes_raw) if notes_raw else {}
-        location = extract_instrument_location(inst_section.get("location"), notes_raw)
-
-        modalities = payload.get("modalities")
-        if not isinstance(modalities, list):
-            modalities = []
-        modalities = [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)]
-
-        # Handle both legacy string modules and new object-based modules
-        raw_modules = payload.get("modules") or []
-        modules = []
-        for m in raw_modules:
-            if isinstance(m, dict):
-                modules.append({
-                    "name": clean_text(m.get("name")),
-                    "notes": clean_text(m.get("notes")),
-                    "url": clean_text(m.get("url"))
-                })
-            elif isinstance(m, str):
-                modules.append({"name": clean_text(m), "notes": "", "url": ""})
-
-        software = normalize_software(payload.get("software"))
-        hardware = payload.get("hardware") or {}
-
-        instruments.append(
-            {
-                "retired": is_retired,
-                "id": instrument_id,
-                "display_name": display_name,
-                "manufacturer": manufacturer,
-                "model": model,
-                "year_of_purchase": year,
-                "funding": funding,
-                "stand_orientation": stand,
-                "location": location,
-                "notes_raw": notes_raw,
-                "notes": notes_parsed,
-                "modalities": modalities,
-                "modules": modules,
-                "software": software,
-                "hardware": hardware,
-                "image_filename": _discover_image_filename(instrument_id),
-                "url": clean_text(inst_section.get("url")),
-            }
-        )
+        instruments.append(normalized)
 
     instruments.sort(key=lambda x: x["id"])
     return instruments
@@ -877,106 +988,15 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 session_metrics = _metric_lookup(payload.get("metrics_computed"))
                 latest_metrics.update(session_metrics)
         
-        hardware = inst.get("hardware") or {}
+        canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
+        canonical_hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
 
-        # Light Sources
-        light_sources = [
-            {
-                "name": clean_text(src.get("model")),
-                "type": clean_text(src.get("kind")),
-                "wavelength": src.get("wavelength_nm"),
-                "power": clean_text(src.get("power")),
-                "manufacturer": clean_text(src.get("manufacturer")),
-                "technology": clean_text(src.get("technology")),
-                "notes": clean_text(src.get("notes")),
-                "url": clean_text(src.get("url")),
-            }
-            for src in hardware.get("light_sources", [])
-            if isinstance(src, dict)
-        ]
-
-        # Expanded Detectors
-        detectors = [
-            {
-                "name": clean_text(det.get("manufacturer")),
-                "model": clean_text(det.get("model")),
-                "type": clean_text(det.get("kind")),
-                "pixel_pitch_um": det.get("pixel_pitch_um") or det.get("pixel_size_um"),
-                "sensor_format_px": clean_text(det.get("sensor_format_px")),
-                "binning": clean_text(det.get("binning")),
-                "bit_depth": det.get("bit_depth"),
-                "qe_peak_pct": det.get("qe_peak_pct"),
-                "read_noise_e": det.get("read_noise_e"),
-                "notes": clean_text(det.get("notes")),
-                "url": clean_text(det.get("url")),
-            }
-            for det in hardware.get("detectors", [])
-            if isinstance(det, dict)
-        ]
-
-        # Expanded Objectives (Captures WD, Immersion, Correction, AFC compatibility)
-        objectives = [
-            {
-                "id": clean_text(obj.get("id")),
-                "name": clean_text(obj.get("model")),
-                "manufacturer": clean_text(obj.get("manufacturer")),
-                "product_code": clean_text(obj.get("product_code")),
-                "magnification": obj.get("magnification"),
-                "na": obj.get("numerical_aperture"),
-                "wd": clean_text(obj.get("working_distance")),
-                "immersion": clean_text(obj.get("immersion")),
-                "correction": clean_text(obj.get("correction")),
-                "afc": obj.get("afc_compatible"),
-                "is_installed": obj.get("is_installed", True),
-                "specialties": clean_string_list(obj.get("specialties")),
-                "notes": clean_text(obj.get("notes")),
-                "url": clean_text(obj.get("url")),
-            }
-            for obj in hardware.get("objectives", [])
-            if isinstance(obj, dict)
-        ]
-
-        # New: Splitters
-        splitters = [
-            {
-                "name": clean_text(s.get("name")),
-                "type": clean_text(s.get("type")),
-                "notes": clean_text(s.get("notes")),
-                "url": clean_text(s.get("url")),
-            }
-            for s in hardware.get("splitters", [])
-            if isinstance(s, dict)
-        ]
-
-        # New: Filters
-        filters = [
-            {
-                "name": clean_text(f.get("name")),
-                "location": clean_text(f.get("location")),
-                "product_code": clean_text(f.get("product_code")),
-                "excitation": clean_text(f.get("excitation")),
-                "dichroic": clean_text(f.get("dichroic")),
-                "emission": clean_text(f.get("emission")),
-                "notes": clean_text(f.get("notes")),
-                "url": clean_text(f.get("url")),
-            }
-            for f in hardware.get("filters", [])
-            if isinstance(f, dict)
-        ]
-
-        magnification_changers = [
-            {
-                "manufacturer": clean_text(m.get("manufacturer")),
-                "model": clean_text(m.get("model")),
-                "magnification": m.get("magnification"),
-                "notes": clean_text(m.get("notes")),
-                "url": clean_text(m.get("url")),
-            }
-            for m in hardware.get("magnification_changers", [])
-            if isinstance(m, dict)
-        ]
-        
-        scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
+        light_sources = canonical_hardware.get("light_sources", [])
+        detectors = canonical_hardware.get("detectors", [])
+        objectives = canonical_hardware.get("objectives", [])
+        splitters = canonical_hardware.get("splitters", [])
+        filters = canonical_hardware.get("filters", [])
+        magnification_changers = canonical_hardware.get("magnification_changers", [])
 
         inst["processed_hardware"] = {
             "modalities": [clean_text(m) for m in inst.get("modalities", []) if clean_text(m)],
@@ -989,20 +1009,14 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 for module in inst.get("modules", [])
                 if isinstance(module, dict) and clean_text(module.get("name"))
             ],
-            "scanner": {
-                "type": clean_text(scanner.get("type")),
-                "line_rate_hz": scanner.get("line_rate_hz"),
-                "pinhole_um": scanner.get("pinhole_um"),
-                "notes": clean_text(scanner.get("notes")),
-            },
+            "scanner": canonical_hardware.get("scanner") or {},
             "light_sources": light_sources,
             "detectors": detectors,
             "objectives": objectives,
             "splitters": splitters,
             "filters": filters,
-            "magnification_changers": magnification_changers
+            "magnification_changers": magnification_changers,
         }
-
 
         instrument_dir = docs_root / "instruments" / instrument_id
         instrument_dir.mkdir(parents=True, exist_ok=True)
@@ -1013,12 +1027,6 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             charts_json=charts_json,
             latest_metrics=latest_metrics,
             metric_names=METRIC_NAMES,
-            light_sources=light_sources,
-            detectors=detectors,
-            objectives=objectives,
-            splitters=splitters,
-            filters=filters,
-            magnification_changers=magnification_changers,
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 

@@ -10,6 +10,16 @@
 {%- endif -%}
 {%- endmacro %}
 
+{% set canonical = instrument.canonical if instrument.canonical else {} %}
+{% set canonical_hardware = canonical.hardware if canonical.hardware else {} %}
+{% set policy = canonical.policy if canonical.policy else {} %}
+{% set light_sources = canonical_hardware.light_sources if canonical_hardware else [] %}
+{% set detectors = canonical_hardware.detectors if canonical_hardware else [] %}
+{% set objectives = canonical_hardware.objectives if canonical_hardware else [] %}
+{% set splitters = canonical_hardware.splitters if canonical_hardware else [] %}
+{% set filters = canonical_hardware.filters if canonical_hardware else [] %}
+{% set magnification_changers = canonical_hardware.magnification_changers if canonical_hardware else [] %}
+
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
 <div class="aic-topactions" markdown="span">
@@ -87,6 +97,32 @@
   </div>
 </div>
 
+{% if policy.missing_required or policy.missing_conditional or policy.alias_fallbacks %}
+## Metadata Completeness
+
+{% if policy.missing_required %}
+- **Missing required fields:**
+{% for item in policy.missing_required %}
+  - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if policy.missing_conditional %}
+- **Missing conditional fields (currently applicable):**
+{% for item in policy.missing_conditional %}
+  - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if policy.alias_fallbacks %}
+- **Legacy aliases in use (fallback accepted):**
+{% for item in policy.alias_fallbacks %}
+  - `{{ item.alias }}` → `{{ item.path }}`
+{% endfor %}
+{% endif %}
+
+{% endif %}
+
 {% if instrument.notes %}
 ## Capabilities
 
@@ -113,7 +149,7 @@
 {% endif %}
 
 {% if instrument.notes.raw %}
-- **Notes:** {{ instrument.notes.raw }}
+- **Notes:** {{ instrument.notes.raw }} <small class="aic-muted">(legacy notes fallback)</small>
 {% endif %}
 {% endif %}
 
