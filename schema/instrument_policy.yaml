@@ -389,7 +389,7 @@ sections:
       - path: hardware.light_sources[].wavelength_nm
         title: Light source wavelength metadata
         status: conditional
-        type: spectral_descriptor
+        type: string
         required_if:
           item_kind_in: [laser, white_light_laser, led, multiphoton_laser, supercontinuum]
         validation:
@@ -558,28 +558,22 @@ sections:
 
       - path: hardware.filters[].excitation
         title: Filter excitation band
-        status: conditional
+        status: optional
         type: string
-        required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk, light_sheet, multiphoton]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
 
       - path: hardware.filters[].dichroic
         title: Filter dichroic
-        status: conditional
+        status: optional
         type: string
-        required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk, light_sheet, multiphoton]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when dichroics define the fluorescence path.
 
       - path: hardware.filters[].emission
         title: Filter emission band
-        status: conditional
+        status: optional
         type: string
-        required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk, light_sheet, multiphoton]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for fluorescence detection paths.
 
