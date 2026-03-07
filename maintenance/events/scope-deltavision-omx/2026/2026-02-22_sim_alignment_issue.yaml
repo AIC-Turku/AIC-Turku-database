@@ -7,8 +7,8 @@ service_provider: internal
 microscope_status_before: in_service
 microscope_status_after: limited
 reason_details: The SIM modality is no longer aligned and cannot be used.
-action: System restricted to TIRF imaging only. Users notified.
-parts_replaced: []
 maintenance_id: maint_scope-deltavision-omx_20260222_sim_issue
-contact: AIC Staff
 reason: issue_reported
+performed_by: AIC Staff
+action_details: System restricted to TIRF imaging only. Users notified.
+action: other

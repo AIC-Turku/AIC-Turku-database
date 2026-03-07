@@ -7,8 +7,8 @@ service_provider: internal
 microscope_status_before: in_service
 microscope_status_after: limited
 reason_details: TIRF modality is no longer working due to a hardware fault.
-action: System restricted to widefield imaging only. Awaiting service quote.
-parts_replaced: []
 maintenance_id: maint_scope-zeiss-tirf_20260222_tirf_issue
-contact: AIC Staff
 reason: issue_reported
+performed_by: AIC Staff
+action_details: System restricted to widefield imaging only. Awaiting service quote.
+action: other

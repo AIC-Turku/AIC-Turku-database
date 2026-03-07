@@ -145,4 +145,4 @@ artifacts:
   role: preview
   uri: qc/sessions/scope-testx1/2026/previews/qc_scope-testx1_20261121T1700Z_repeatability_v1_stage_repeat.png
   description: Stage repeatability plot.
-contact: Ida Laine
+performed_by: Ida Laine
