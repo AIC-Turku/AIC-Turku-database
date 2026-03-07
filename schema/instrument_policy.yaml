@@ -231,8 +231,10 @@ sections:
 
       - path: software.analysis.url
         title: Analysis software URL
-        status: optional
+        status: conditional
         type: url
+        required_if:
+          parent_present: software.analysis
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
 
@@ -559,7 +561,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk]
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk, light_sheet, multiphoton]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
 
@@ -568,7 +570,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk]
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk, light_sheet, multiphoton]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when dichroics define the fluorescence path.
 
@@ -577,7 +579,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk]
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm, confocal_spinning_disk, light_sheet, multiphoton]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for fluorescence detection paths.
 
