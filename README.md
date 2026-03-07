@@ -72,9 +72,17 @@ python scripts/dashboard_builder.py --strict
 
 ## Local Development
 
+
+> [!IMPORTANT]
+> This project currently targets **MkDocs 1.x**. If you see warnings about MkDocs 2.0 when running `mkdocs build --strict`, reinstall pinned docs dependencies:
+>
+> ```bash
+> pip install --upgrade -r requirements-docs.txt
+> ```
+
 ```bash
 # 1. Install dependencies
-pip install pyyaml jinja2 mkdocs-material
+pip install pyyaml jinja2 -r requirements-docs.txt
 
 # 2. Validate + build
 python scripts/dashboard_builder.py --strict
