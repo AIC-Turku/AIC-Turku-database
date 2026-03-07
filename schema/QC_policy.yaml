@@ -230,13 +230,11 @@ field_rules:
     rationale: Documents adapters/objective/sensor placement for reproducibility.
 
   - path: laser_inputs_human.power_meter.model
-    status: conditionally_required
+    status: optional
     type: string
-    required_if:
-      performed_contains_qc_type: laser_power
     written_by: human
     used_by: [dashboard]
-    rationale: Identifies the measurement device or surrogate standard used.
+    rationale: Identifies the external measurement device, if applicable.
 
   - path: laser_inputs_human.power_meter.serial
     status: optional
@@ -419,6 +417,56 @@ field_rules:
     written_by: human
     used_by: [dashboard]
     rationale: Captures context for the trace.
+
+  - path: laser_inputs_human.single_point_measurements
+    status: optional
+    type: list
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Supports quick single-point laser checks without creating full series arrays.
+
+  - path: laser_inputs_human.single_point_measurements[].laser
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Identifies the laser line under test.
+
+  - path: laser_inputs_human.single_point_measurements[].setpoint
+    status: required
+    type: number
+    written_by: human
+    used_by: [dashboard]
+    rationale: Required to interpret the measurement target.
+
+  - path: laser_inputs_human.single_point_measurements[].setpoint_units
+    status: required
+    type: enum
+    vocab: setpoint_units
+    written_by: human
+    used_by: [dashboard]
+    rationale: Keeps setpoint semantics machine-readable.
+
+  - path: laser_inputs_human.single_point_measurements[].power
+    status: required
+    type: number
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Captures measured output power for quick checks.
+
+  - path: laser_inputs_human.single_point_measurements[].power_units
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Required to interpret the measured power values.
+
+  - path: laser_inputs_human.single_point_measurements[].details
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard]
+    rationale: Optional context such as tolerance checks or pass/fail notes.
 
   - path: computed_provenance
     status: conditionally_required
@@ -638,15 +686,17 @@ cross_field_rules:
   - id: laser_qc_requires_structured_series
     rule: >
       If performed[].qc_type includes laser_power, at least one of
-      laser_inputs_human.linearity_series or laser_inputs_human.stability_series
-      must contain data.
+      laser_inputs_human.linearity_series, laser_inputs_human.stability_series,
+      or laser_inputs_human.single_point_measurements must contain data.
 
   - id: evaluation_is_machine_written
     rule: >
       Humans should not author pass/warn/fail fields. evaluation is populated by CI
       after benchmark comparison.
 
-  - id: performed_artifacts_should_resolve
+  - id: artifacts_should_resolve
     rule: >
-      If performed[].artifacts contains artifact IDs, each ID should resolve to an
-      entry under artifacts[].artifact_id.
+      Any artifact ID referenced in performed[].artifacts,
+      laser_inputs_human.linearity_series[].csv_artifact, or
+      laser_inputs_human.stability_series[].csv_artifact must resolve to an entry
+      under artifacts[].artifact_id.

@@ -131,6 +131,14 @@ field_rules:
     used_by: [dashboard]
     rationale: Useful for downtime calculations, but some records may still be open.
 
+  - path: system_down_since_utc
+    title: System Down Since
+    status: optional
+    type: datetime_utc
+    written_by: human
+    used_by: [dashboard, operations]
+    rationale: Essential for calculating true facility downtime, which often predates the actual maintenance started_utc.
+
   - path: reason
     status: required
     type: enum
@@ -192,6 +200,14 @@ field_rules:
     used_by: [dashboard, traceability]
     rationale: Connects maintenance to before/after QC evidence.
 
+  - path: related_maintenance
+    status: optional
+    type: list
+    item_type: maintenance_id
+    written_by: human
+    used_by: [dashboard, traceability]
+    rationale: Connects multi-visit repairs or preventive maintenance that spawned a corrective action.
+
   - path: attachments
     status: optional
     type: list
@@ -216,13 +232,11 @@ field_rules:
     rationale: Captures recommended next steps.
 
   - path: next_due_date
-    status: conditionally_required
+    status: optional
     type: date
-    required_if:
-      followup_present: true
     written_by: human
     used_by: [dashboard, operations]
-    rationale: Follow-up text is much more actionable when paired with a due date.
+    rationale: Useful when the follow-up has a concrete due date, but not all follow-up notes are date-bound.
 
   - path: notes
     status: optional
@@ -286,5 +300,5 @@ cross_field_rules:
 
   - id: next_due_date_should_pair_with_followup
     rule: >
-      If followup is present, next_due_date is strongly recommended and treated as
-      conditionally required in new records.
+      If followup is present, next_due_date is recommended when the follow-up has
+      a concrete due date.
