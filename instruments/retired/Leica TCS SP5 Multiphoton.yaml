@@ -27,7 +27,7 @@ hardware:
   light_sources:
   - kind: laser
     manufacturer: ''
-    model: "Coherent Chameleon Ultra II (tunable 690\xE2\u20AC\u201C1040 nm)"
+    model: Coherent Chameleon Ultra II (tunable 690-1040 nm)
     wavelength_nm: "1040"
     power: ''
   - kind: laser
@@ -37,7 +37,7 @@ hardware:
     power: ''
   - kind: laser
     manufacturer: ''
-    model: "Coherent Chameleon Vision II (tunable 690\xE2\u20AC\u201C1040 nm)"
+    model: Coherent Chameleon Vision II (tunable 690-1040 nm)
     wavelength_nm: "1040"
     power: ''
   detectors:
