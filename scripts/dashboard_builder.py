@@ -946,10 +946,10 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         "🛠️ Maintenance": ["maintenance_action", "maintenance_reason", "maintenance_status", "service_provider"],
         "✅ Quality Control": [
             "qc_type",
-            "qc_metrics",
+            "qc_metric_classes",
             "qc_evaluation_status",
             "qc_artifact_roles",
-            "measurement_positions",
+            "qc_measurement_positions",
             "qc_setpoint_units",
         ],
     }
