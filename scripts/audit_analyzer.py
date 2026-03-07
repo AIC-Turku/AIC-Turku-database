@@ -37,7 +37,6 @@ def _na_requires_review(value: Any) -> bool:
     return True
 
 
-
 def _is_empty(value: Any) -> bool:
     """Return True when a value should be treated as missing."""
     if value is None:
@@ -56,6 +55,7 @@ def _entry(
     *,
     is_warning: bool = False,
     warning_message: str = "",
+    is_optional: bool = False,
 ) -> dict[str, Any]:
     """Create a template-friendly completeness entry."""
     missing = _is_empty(value) if is_missing is None else is_missing
@@ -66,6 +66,7 @@ def _entry(
         "is_missing": missing,
         "is_warning": is_warning,
         "warning_message": warning_message,
+        "is_optional": is_optional,
     }
 
 
@@ -74,18 +75,32 @@ def _component_kind(component: dict[str, Any]) -> Any:
     return component.get("kind") if component.get("kind") is not None else component.get("type")
 
 
-def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any]:
     """Return completeness details for an instrument payload from ``load_instruments``."""
-    hardware = instrument.get("hardware") or {}
+    canonical = instrument.get("canonical") or {}
+    hardware = canonical.get("hardware") or {}
+    policy = canonical.get("policy") or {}
 
+    # 1. Extract Strict Schema Violations
+    missing_required = policy.get("missing_required", [])
+    missing_conditional = policy.get("missing_conditional", [])
+    
+    schema_errors = []
+    for req in missing_required:
+        schema_errors.append({"level": "Required", "path": req.get("path"), "title": req.get("title")})
+    for cond in missing_conditional:
+        schema_errors.append({"level": "Conditional", "path": cond.get("path"), "title": cond.get("title")})
+
+    # 2. Build Structural Blocks for the Audit Template
     general = [
         _entry("Display Name", instrument.get("display_name")),
         _entry("Manufacturer", instrument.get("manufacturer")),
         _entry("Model", instrument.get("model")),
-        _entry("Location", instrument.get("location")),
-        _entry("Year of Purchase", instrument.get("year_of_purchase")),
-        _entry("Funding", instrument.get("funding")),
         _entry("Stand Orientation", instrument.get("stand_orientation")),
+        _entry("Location", instrument.get("location")),
+        # Marked as optional matching the schema
+        _entry("Year of Purchase", instrument.get("year_of_purchase"), is_optional=True),
+        _entry("Funding", instrument.get("funding"), is_optional=True),
     ]
 
     modalities = instrument.get("modalities")
@@ -102,20 +117,21 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
                 continue
             software_entries.extend(
                 [
+                    _entry(f"Software {idx} Component", software_item.get("component")),
                     _entry(f"Software {idx} Name", software_item.get("name")),
-                    _entry(f"Software {idx} Developer", software_item.get("developer")),
                     _entry(f"Software {idx} Version", software_item.get("version")),
+                    _entry(f"Software {idx} Developer", software_item.get("developer"), is_optional=True),
                 ]
             )
 
-    scanner = (hardware.get("scanner") if isinstance(hardware, dict) else {}) or {}
+    scanner = hardware.get("scanner") or {}
     scanner_entries = [
         _entry("Scanner Type", scanner.get("type")),
         _entry("Scanner Line Rate (Hz)", scanner.get("line_rate_hz")),
         _entry("Scanner Pinhole (µm)", scanner.get("pinhole_um")),
     ]
 
-    objectives = hardware.get("objectives") if isinstance(hardware, dict) else None
+    objectives = hardware.get("objectives")
     objectives_entries: list[dict[str, Any]] = []
     if not isinstance(objectives, list) or len(objectives) == 0:
         objectives_entries.append(_entry("Objectives", objectives if objectives is not None else [], True))
@@ -126,20 +142,22 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
                 continue
             objectives_entries.extend(
                 [
+                    _entry(f"Objective {idx} Manufacturer", objective.get("manufacturer")),
+                    _entry(f"Objective {idx} Model", objective.get("name")),
                     _entry(f"Objective {idx} Magnification", objective.get("magnification")),
                     _entry(
                         f"Objective {idx} Numerical Aperture",
-                        objective.get("numerical_aperture"),
-                        is_warning=_na_requires_review(objective.get("numerical_aperture")),
-                        warning_message="NA is missing or non-numeric; keep descriptive value but verify against manufacturer specs.",
+                        objective.get("na"),
+                        is_warning=_na_requires_review(objective.get("na")),
+                        warning_message="NA is missing or non-numeric; verify against manufacturer specs.",
                     ),
                     _entry(f"Objective {idx} Immersion", objective.get("immersion")),
                     _entry(f"Objective {idx} Correction", objective.get("correction")),
-                    _entry(f"Objective {idx} Working Distance", objective.get("working_distance")),
+                    _entry(f"Objective {idx} Working Distance", objective.get("wd"), is_optional=True),
                 ]
             )
 
-    light_sources = hardware.get("light_sources") if isinstance(hardware, dict) else None
+    light_sources = hardware.get("light_sources")
     light_source_entries: list[dict[str, Any]] = []
     if not isinstance(light_sources, list) or len(light_sources) == 0:
         light_source_entries.append(_entry("Light Sources", light_sources if light_sources is not None else [], True))
@@ -150,18 +168,20 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
                 continue
             light_source_entries.extend(
                 [
+                    _entry(f"Light Source {idx} Manufacturer", source.get("manufacturer")),
+                    _entry(f"Light Source {idx} Model", source.get("name")),
                     _entry(f"Light Source {idx} Kind/Type", _component_kind(source)),
                     _entry(
                         f"Light Source {idx} Wavelength (nm)",
-                        source.get("wavelength_nm"),
-                        is_warning=_wavelength_requires_review(source.get("wavelength_nm")),
-                        warning_message="Wavelength is descriptive/non-standard format; keep as-is but provide numeric value when available.",
+                        source.get("wavelength"),
+                        is_warning=_wavelength_requires_review(source.get("wavelength")),
+                        warning_message="Wavelength is descriptive; provide numeric value when available.",
                     ),
-                    _entry(f"Light Source {idx} Power", source.get("power")),
+                    _entry(f"Light Source {idx} Power", source.get("power"), is_optional=True),
                 ]
             )
 
-    detectors = hardware.get("detectors") if isinstance(hardware, dict) else None
+    detectors = hardware.get("detectors")
     detector_entries: list[dict[str, Any]] = []
     if not isinstance(detectors, list) or len(detectors) == 0:
         detector_entries.append(_entry("Detectors", detectors if detectors is not None else [], True))
@@ -173,18 +193,19 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
             detector_entries.extend(
                 [
                     _entry(f"Detector {idx} Kind/Type", _component_kind(detector)),
-                    _entry(f"Detector {idx} Manufacturer", detector.get("manufacturer")),
+                    _entry(f"Detector {idx} Manufacturer", detector.get("name")),
                     _entry(f"Detector {idx} Model", detector.get("model")),
-                    _entry(f"Detector {idx} Pixel Pitch (µm)", detector.get("pixel_pitch_um") or detector.get("pixel_size_um")),
-                    _entry(f"Detector {idx} Sensor Format (px)", detector.get("sensor_format_px")),
-                    _entry(f"Detector {idx} Binning", detector.get("binning")),
-                    _entry(f"Detector {idx} Bit Depth", detector.get("bit_depth")),
-                    _entry(f"Detector {idx} QE Peak (%)", detector.get("qe_peak_pct")),
-                    _entry(f"Detector {idx} Read Noise (e-)", detector.get("read_noise_e")),
+                    _entry(f"Detector {idx} Pixel Pitch (µm)", detector.get("pixel_pitch_um")),
+                    _entry(f"Detector {idx} Sensor Format (px)", detector.get("sensor_format_px"), is_optional=True),
+                    _entry(f"Detector {idx} Binning", detector.get("binning"), is_optional=True),
+                    _entry(f"Detector {idx} Bit Depth", detector.get("bit_depth"), is_optional=True),
+                    _entry(f"Detector {idx} QE Peak (%)", detector.get("qe_peak_pct"), is_optional=True),
+                    _entry(f"Detector {idx} Read Noise (e-)", detector.get("read_noise_e"), is_optional=True),
                 ]
             )
 
     return {
+        "schema_errors": schema_errors,  # Directly drives the critical audit violations
         "general": general,
         "modalities": modalities_entries,
         "software": software_entries,
@@ -193,6 +214,5 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
         "light_sources": light_source_entries,
         "detectors": detector_entries,
     }
-
 
 __all__ = ["load_instruments", "analyze_instrument_completeness"]
