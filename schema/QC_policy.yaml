@@ -31,6 +31,18 @@ vocab_registry:
       - at_objective
       - pre_objective
       - fiber_output
+  measurement_positions:
+    source: inline
+    suggested_vocab_file: vocab/qc_measurement_positions.yaml
+    allowed_values:
+      - at_objective
+      - pre_objective
+      - fiber_output
+  qc_metrics:
+    source: inline
+    suggested_vocab_file: vocab/qc_metrics.yaml
+    note: >
+      Canonical metric IDs used across computed and evaluated QC outputs.
   artifact_role:
     source: inline
     suggested_vocab_file: vocab/qc_artifact_roles.yaml
@@ -213,7 +225,7 @@ field_rules:
   - path: laser_inputs_human.measurement_position
     status: conditionally_required
     type: enum
-    vocab: measurement_position
+    vocab: measurement_positions
     required_if:
       performed_contains_qc_type: laser_power
     written_by: human
@@ -603,9 +615,35 @@ field_rules:
   - path: evaluation.results[].metric_id
     status: required
     type: string
+    vocab: qc_metrics
     written_by: ci
     used_by: [dashboard]
     rationale: Links the verdict to a metric.
+
+  - path: evaluation.computed_provenance
+    status: optional
+    type: mapping
+    written_by: ci
+    used_by: [dashboard, audit]
+    rationale: Captures provenance metadata for automated evaluation computations.
+
+  - path: evaluation.computed_provenance.software_version
+    status: conditionally_required
+    type: string
+    required_if:
+      evaluation_computed_provenance_present: true
+    written_by: ci
+    used_by: [dashboard, audit]
+    rationale: Records the AIC-Chronicle software version used to compute results.
+
+  - path: evaluation.computed_provenance.algorithm_id
+    status: conditionally_required
+    type: string
+    required_if:
+      evaluation_computed_provenance_present: true
+    written_by: ci
+    used_by: [dashboard, audit]
+    rationale: Identifies the exact algorithm/function used for generated evaluation results.
 
   - path: evaluation.results[].status
     status: required
@@ -656,7 +694,7 @@ field_rules:
     type: uri_or_repo_path
     written_by: human_or_script
     used_by: [dashboard, traceability]
-    rationale: Location of the supporting artifact.
+    rationale: Must resolve as either an OMERO URI (for example, omero://image/12345) or a local repository-relative path (for example, local://qc/sessions/...).
 
   - path: artifacts[].description
     status: required
