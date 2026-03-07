@@ -10,6 +10,7 @@
       --background: #fff;
       --border: #d9d9d9;
       --missing: #c00000;
+      --warning: #b36b00;
     }
 
     * {
@@ -80,6 +81,11 @@
       font-weight: bold;
     }
 
+    .warning {
+      color: var(--warning);
+      font-weight: bold;
+    }
+
     .objective-header {
       margin: 20px 0 8px;
       font-size: 16px;
@@ -118,8 +124,19 @@
 
 {% macro render_value(entry) -%}
   {%- set missing = entry.is_missing or empty_value(entry.value) -%}
+  {%- set warning = entry.is_warning and not missing -%}
   {%- if missing -%}
     <span class="missing">[MISSING - PLEASE FILL IN]</span>
+  {%- elif warning -%}
+    {%- if entry.value is sequence and entry.value is not string -%}
+      {{ entry.value | join(', ') }}
+    {%- else -%}
+      {{ entry.value }}
+    {%- endif -%}
+    <span class="warning"> [REVIEW]</span>
+    {%- if entry.warning_message %}
+      <div class="warning">{{ entry.warning_message }}</div>
+    {%- endif -%}
   {%- elif entry.value is sequence and entry.value is not string -%}
     {{ entry.value | join(', ') }}
   {%- else -%}

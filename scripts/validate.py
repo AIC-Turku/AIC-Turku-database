@@ -169,6 +169,10 @@ def _is_valid_wavelength(value: Any) -> bool:
     return bool(re.fullmatch(r"\d+(?:\.\d+)?/\d+(?:\.\d+)?", cleaned))
 
 
+def _is_descriptive_wavelength(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip()) and not _is_valid_wavelength(value)
+
+
 def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
     started_utc = payload.get("started_utc")
     if isinstance(started_utc, str):
@@ -395,7 +399,18 @@ def validate_instrument_ledgers(
             )
 
             wavelength_nm = source.get("wavelength_nm")
-            if wavelength_nm not in (None, "") and not _is_valid_wavelength(wavelength_nm):
+            if _is_descriptive_wavelength(wavelength_nm):
+                warnings.append(
+                    ValidationIssue(
+                        code="non_numeric_light_source_wavelength",
+                        path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].wavelength_nm",
+                        message=(
+                            "wavelength_nm is descriptive and will be displayed as-is; "
+                            "use numeric nm or '<center>/<width>' when available."
+                        ),
+                    )
+                )
+            elif wavelength_nm not in (None, "") and not _is_valid_wavelength(wavelength_nm):
                 issues.append(
                     ValidationIssue(
                         code="invalid_light_source_wavelength",
@@ -464,12 +479,39 @@ def validate_instrument_ledgers(
                     seen_objective_ids.add(normalized_id)
 
             na = objective.get("numerical_aperture")
-            if na is not None and (not _is_number(na) or not (0 < na <= 1.7)):
-                issues.append(
+            if na in (None, ""):
+                warnings.append(
                     ValidationIssue(
-                        code="invalid_numerical_aperture",
+                        code="missing_numerical_aperture",
                         path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
-                        message="NA must be numeric and between 0 and 1.7.",
+                        message="NA is missing; value will be displayed as-is and highlighted in audit output.",
+                    )
+                )
+            elif _is_number(na):
+                if not (0 < na <= 1.7):
+                    issues.append(
+                        ValidationIssue(
+                            code="invalid_numerical_aperture",
+                            path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
+                            message="NA must be numeric and between 0 and 1.7.",
+                        )
+                    )
+            elif _is_numeric_string(na):
+                na_value = float(na.strip())
+                if not (0 < na_value <= 1.7):
+                    issues.append(
+                        ValidationIssue(
+                            code="invalid_numerical_aperture",
+                            path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
+                            message="NA must be numeric and between 0 and 1.7.",
+                        )
+                    )
+            else:
+                warnings.append(
+                    ValidationIssue(
+                        code="non_numeric_numerical_aperture",
+                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
+                        message="NA is descriptive and will be displayed as-is; provide numeric value when known.",
                     )
                 )
 
