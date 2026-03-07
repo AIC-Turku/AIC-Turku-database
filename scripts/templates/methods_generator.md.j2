@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             obj => formatObjectiveLabel(obj), "obj");
 
         populateCheckboxes("light-list", currentInst.processed_hardware.light_sources,
-            ls => `${ls.wavelength}nm ${ls.type} (${ls.power}, ${ls.manufacturer} ${ls.name})`, "light");
+            ls => formatLightSourceLabel(ls), "light");
 
         populateCheckboxes("filter-list", currentInst.processed_hardware.filters, f => {
             let type = [];
@@ -244,6 +244,36 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (items.length === 1) return items[0];
         if (items.length === 2) return `${items[0]} and ${items[1]}`;
         return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+    }
+
+    function formatWavelength(rawWavelength) {
+        const wavelength = (rawWavelength || "").toString().trim();
+        if (!wavelength) return "";
+
+        // Add "nm" only for plain numeric wavelengths (e.g., 405, 488, 561.5).
+        if (/^\d+(\.\d+)?$/.test(wavelength)) {
+            return `${wavelength} nm`;
+        }
+
+        // Keep bandpass-style values (e.g., 395/25) and descriptive entries unchanged.
+        return wavelength;
+    }
+
+    function formatLightSourceLabel(lightSource) {
+        const wavelength = formatWavelength(lightSource?.wavelength);
+        const type = (lightSource?.type || "light source").toString().trim();
+
+        const sourceParts = [
+            (lightSource?.power || "").toString().trim(),
+            [lightSource?.manufacturer, lightSource?.name]
+                .map(part => (part || "").toString().trim())
+                .filter(Boolean)
+                .join(" ")
+        ].filter(Boolean);
+
+        const detailText = sourceParts.length > 0 ? ` (${sourceParts.join(", ")})` : "";
+        const leadText = wavelength ? `${wavelength} ${type}` : type;
+        return `${leadText}${detailText}`.replace(/\s+/g, " ").trim();
     }
 
 
