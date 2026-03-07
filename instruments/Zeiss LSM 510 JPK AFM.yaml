@@ -9,8 +9,8 @@ instrument:
   year_of_purchase: ""
   funding: ""
   stand_orientation: "other"
-  location: ""
-  notes: "Confocal laser-scanning microscope with integrated AFM. Location: BioCity, floor -1 (Basement)."
+  location: "BioCity, floor -1 (Basement)"
+  notes: "Confocal laser-scanning microscope with integrated AFM."
   url: ""
 
 # -----------------------------------------------------------------------------
