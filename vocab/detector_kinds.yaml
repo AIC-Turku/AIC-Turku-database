@@ -3,34 +3,52 @@ terms:
     label: "Photomultiplier Tube"
     description: "Highly sensitive point detector that amplifies photoelectrons through a dynode chain. Common in confocal detection paths."
     synonyms: ["PMT"]
+    tags:
+      architecture: point_scanning
   - id: gaasp_pmt
     label: "GaAsP Photomultiplier Tube"
     description: "PMT using gallium arsenide phosphide photocathodes with improved quantum efficiency over conventional PMTs. Useful for low-light confocal imaging."
     synonyms: ["GaAsP_PMT", "gaasp detector"]
+    tags:
+      architecture: point_scanning
   - id: hyd
     label: "Hybrid Detector"
     description: "Combines features of PMTs and avalanche gain to provide high sensitivity and fast response. Frequently used in modern confocal systems."
     synonyms: ["HyD", "hybrid pmt"]
+    tags:
+      architecture: point_scanning
   - id: scmos
     label: "Scientific CMOS"
     description: "Low-noise, high-speed area detector with large field of view and high dynamic range. Common for widefield, spinning-disk, and fast live imaging."
     synonyms: ["sCMOS"]
+    tags:
+      architecture: camera
   - id: cmos
     label: "Standard CMOS"
     description: "Standard digital camera sensor. Commonly used in routine brightfield, color histology, or basic fluorescence."
     synonyms: ["CMOS"]
+    tags:
+      architecture: camera
   - id: emccd
     label: "Electron-Multiplying CCD"
     description: "CCD detector with on-chip gain for very low-light imaging. Useful for single-molecule and fast, dim signal applications."
     synonyms: ["EMCCD"]
+    tags:
+      architecture: camera
   - id: ccd
     label: "Charge-Coupled Device"
     description: "Area detector technology with historically strong image quality and uniformity. Still used in some fluorescence and brightfield setups."
     synonyms: ["CCD"]
+    tags:
+      architecture: camera
   - id: apd
     label: "Avalanche Photodiode"
     description: "Semiconductor point detector with internal gain and fast timing response. Used in photon counting and correlation-based measurements."
     synonyms: ["APD"]
+    tags:
+      architecture: point_scanning
   - id: spad
     label: "SPAD Array"
     description: "Single-Photon Avalanche Diode array. Provides exceptional timing resolution and single-photon sensitivity, crucial for advanced FLIM."
+    tags:
+      architecture: point_scanning

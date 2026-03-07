@@ -3,6 +3,8 @@ terms:
     label: "Incubation"
     description: "Environmental control module for temperature, CO2, and often humidity around the specimen. Supports physiologic conditions during long-term live imaging."
     synonyms: ["environmental chamber", "temp/co2 control"]
+    tags:
+      provides_modality: ["live_cell_imaging"]
   - id: microfluidics
     label: "Microfluidics / Perfusion"
     description: "Hardware for controlled delivery of media or drugs to the sample during live imaging."
@@ -19,18 +21,26 @@ terms:
     label: "FRAP Module"
     description: "Hardware or software capability to perform targeted photobleaching for recovery measurements. Typically controls ROI bleaching power and timing."
     synonyms: ["photobleach module", "FRAP"]
+    tags:
+      provides_modality: ["frap"]
   - id: photoactivation
     label: "Photoactivation Module"
     description: "Capability to activate or uncage photoresponsive probes in defined regions. Used for selective labeling and dynamic tracking experiments."
     synonyms: ["photo-manipulation", "pa module"]
+    tags:
+      provides_modality: ["photoactivation"]
   - id: fcs
     label: "FCS Module"
     description: "Instrumentation support for fluorescence fluctuation measurements and autocorrelation analysis. Enables diffusion and concentration quantification in tiny volumes."
     synonyms: ["correlation module", "FCS"]
+    tags:
+      provides_modality: ["fcs"]
   - id: flim
     label: "FLIM Module"
     description: "Adds lifetime-resolved detection and analysis to fluorescence imaging. Enables contrast based on fluorophore decay kinetics."
     synonyms: ["lifetime module", "FLIM"]
+    tags:
+      provides_modality: ["flim"]
   - id: optogenetics
     label: "Optogenetics"
     description: "Provides patterned or wavelength-specific stimulation for light-controlled biological perturbations. Used to control signaling or neural activity during imaging."
@@ -47,18 +57,32 @@ terms:
     label: "Easy3D STED"
     description: "STED imaging enhancement for simplified three-dimensional super-resolution acquisition with optimized 3D depletion beam handling."
     synonyms: ["Easy3D_STED"]
+    tags:
+      provides_modality: ["sted"]
   - id: rescue_sted
     label: "RESCue STED"
     description: "Adaptive STED mode that limits depletion exposure to signal-bearing regions to reduce photobleaching and phototoxicity."
     synonyms: ["RESCue_STED"]
+    tags:
+      provides_modality: ["sted"]
   - id: 3d_sim
     label: "3D-SIM Module"
     description: "Structured illumination module for three-dimensional super-resolution imaging with enhanced axial and lateral detail."
     synonyms: ["Blaze R2 3D-SIM"]
+    tags:
+      provides_modality: ["sim"]
   - id: ring_tirf
     label: "Ring TIRF Module"
     description: "TIRF implementation using ring illumination to improve field uniformity near the coverslip interface."
     synonyms: ["Ring TIRF"]
+    tags:
+      provides_modality: ["tirf"]
+  - id: tirf
+    label: "TIRF Module"
+    description: "Dedicated total internal reflection fluorescence illumination path for near-membrane imaging."
+    synonyms: ["TIRF"]
+    tags:
+      provides_modality: ["tirf"]
   - id: aobs
     label: "Acousto-Optical Beam Splitter (AOBS)"
     description: "Acousto-optic beam splitting component for dynamic wavelength selection and flexible excitation-emission routing."
@@ -67,18 +91,26 @@ terms:
     label: "Environmental Enclosure"
     description: "Enclosure and control accessories that stabilize temperature and related conditions for live-cell compatibility."
     synonyms: ["Environmental Enclosure", "Temperature Control", "environmental_tolerance", "Live Cell Option"]
+    tags:
+      provides_modality: ["live_cell_imaging"]
   - id: sim_module
     label: "SIM Module"
     description: "Structured illumination imaging module enabling resolution enhancement beyond diffraction-limited widefield microscopy."
     synonyms: ["SIM"]
+    tags:
+      provides_modality: ["sim"]
   - id: afm_module
     label: "AFM Module"
     description: "Atomic force microscopy integration module for combining topographical or mechanical probing with optical imaging."
     synonyms: ["AFM"]
+    tags:
+      provides_modality: ["afm"]
   - id: airyscan
     label: "AiryScan Detector/Module"
     description: "Detector and reconstruction module that improves confocal sensitivity and resolution via multi-element signal collection."
     synonyms: ["AiryScan"]
+    tags:
+      provides_modality: ["ism"]
   - id: workstation
     label: "High-Performance Workstation"
     description: "Dedicated compute workstation for acquisition control, rapid image processing, and handling large microscopy datasets."
@@ -87,6 +119,8 @@ terms:
     label: "Impedance Module"
     description: "Module supporting impedance-based measurement workflows alongside optical imaging for complementary sample characterization."
     synonyms: ["impedance_module"]
+    tags:
+      provides_modality: ["impedance_cytometry"]
   - id: universal_vessel_holder
     label: "Universal Vessel Holder"
     description: "Adaptable sample holder supporting multiple dish, slide, or plate formats within a single imaging setup."

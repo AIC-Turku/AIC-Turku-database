@@ -11,7 +11,6 @@ from typing import Any, Iterable
 import yaml
 
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
-ALLOWED_MAINTENANCE_STATUSES: tuple[str, ...] = ("in_service", "limited", "out_of_service")
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 YEAR_PATTERN = re.compile(r"^\d{4}$")
 ISO_YEAR_PATTERN = re.compile(r"^(\d{4})-")
@@ -31,6 +30,16 @@ class VocabularyTerm:
     label: str
     description: str
     synonyms: list[str]
+    metadata: dict[str, Any]
+
+    def tags(self) -> dict[str, Any]:
+        raw_tags = self.metadata.get("tags")
+        if isinstance(raw_tags, dict):
+            return raw_tags
+        return {}
+
+    def tag_value(self, key: str, default: Any = None) -> Any:
+        return self.tags().get(key, default)
 
 
 class Vocabulary:
@@ -84,6 +93,11 @@ class Vocabulary:
                     label=label.strip() if isinstance(label, str) else canonical_id,
                     description=description.strip() if isinstance(description, str) else "",
                     synonyms=term_synonyms,
+                    metadata={
+                        key: value
+                        for key, value in raw_term.items()
+                        if key not in {"id", "label", "description", "synonyms"}
+                    },
                 )
                 valid_ids.add(canonical_id)
 
@@ -110,6 +124,22 @@ class Vocabulary:
             return False, canonical
 
         return False, None
+
+    def resolve_canonical(self, vocab_name: str, value: Any) -> str | None:
+        if not isinstance(value, str):
+            return None
+
+        cleaned = self._normalize(value)
+        if not cleaned:
+            return None
+
+        if cleaned in self.valid_ids_by_vocab.get(vocab_name, set()):
+            return cleaned
+
+        return self.synonyms_by_vocab.get(vocab_name, {}).get(cleaned.casefold())
+
+    def get_term(self, vocab_name: str, canonical_id: str) -> VocabularyTerm | None:
+        return self.terms_by_vocab.get(vocab_name, {}).get(canonical_id)
 
 
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
@@ -462,9 +492,9 @@ def validate_instrument_ledgers(
                 raw_value=detector_kind,
                 required=True,
             )
-            detector_kind_normalized = detector_kind.strip().casefold() if isinstance(detector_kind, str) and detector_kind.strip() else ""
-            if detector_kind_normalized:
-                detector_kinds_present.add(detector_kind_normalized)
+            detector_kind_canonical = vocabulary.resolve_canonical("detector_kinds", detector_kind)
+            if detector_kind_canonical:
+                detector_kinds_present.add(detector_kind_canonical)
 
             for field_name in ("pixel_pitch_um", "pixel_size_um", "qe_peak_pct", "read_noise_e"):
                 raw_value = detector.get(field_name)
@@ -489,8 +519,9 @@ def validate_instrument_ledgers(
                     )
                 )
 
-            camera_detector_kinds = {"scmos", "emccd", "ccd", "cmos"}
-            if detector_kind_normalized in camera_detector_kinds and not (
+            detector_term = vocabulary.get_term("detector_kinds", detector_kind_canonical) if detector_kind_canonical else None
+            detector_tags = detector_term.tags() if detector_term is not None else {}
+            if detector_tags.get("architecture") == "camera" and not (
                 _is_positive_number_or_numeric_string(detector.get("pixel_pitch_um"))
                 or _is_positive_number_or_numeric_string(detector.get("pixel_size_um"))
             ):
@@ -599,11 +630,18 @@ def validate_instrument_ledgers(
                 allow_empty=True,
             )
 
-        modality_ids = {value.strip() for value in modalities if isinstance(value, str) and value.strip()} if isinstance(modalities, list) else set()
+        modality_ids = {
+            modality_id
+            for modality in (modalities if isinstance(modalities, list) else [])
+            for modality_id in [vocabulary.resolve_canonical("modalities", modality)]
+            if modality_id is not None
+        }
         module_ids = {
-            module.get("name").strip()
-            for module in modules
-            if isinstance(modules, list) and isinstance(module, dict) and _is_non_empty_string(module.get("name"))
+            module_id
+            for module in (modules if isinstance(modules, list) else [])
+            if isinstance(module, dict)
+            for module_id in [vocabulary.resolve_canonical("modules", module.get("name"))]
+            if module_id is not None
         }
 
         scanner_type = scanner.get("type") if isinstance(scanner.get("type"), str) else None
@@ -625,24 +663,70 @@ def validate_instrument_ledgers(
                 )
             )
 
-        if "tirf" in modality_ids and not ({"ring_tirf", "tirf"} & {m.casefold() for m in module_ids}):
-            warnings.append(
-                ValidationIssue(
-                    code="tirf_module_missing",
-                    path=f"{instrument_file.as_posix()}:modules",
-                    message="'tirf' modality should usually declare a dedicated TIRF illumination module/path.",
-                )
-            )
+        module_terms = [
+            term
+            for module_id in module_ids
+            for term in [vocabulary.get_term("modules", module_id)]
+            if term is not None
+        ]
 
-        flim_detector_kinds = {"apd", "spad", "hyd", "pmt", "gaasp_pmt"}
-        if "flim" in modality_ids and "flim" not in {m.casefold() for m in module_ids} and not (detector_kinds_present & flim_detector_kinds):
+        module_supported_modalities: set[str] = set()
+        for module_term in vocabulary.terms_by_vocab.get("modules", {}).values():
+            provides_modality = module_term.tags().get("provides_modality")
+            if isinstance(provides_modality, str) and provides_modality.strip():
+                module_supported_modalities.add(provides_modality.strip())
+            elif isinstance(provides_modality, list):
+                module_supported_modalities.update(
+                    value.strip()
+                    for value in provides_modality
+                    if isinstance(value, str) and value.strip()
+                )
+
+        provided_modalities: set[str] = set()
+        for module_term in module_terms:
+            provides_modality = module_term.tags().get("provides_modality")
+            if isinstance(provides_modality, str) and provides_modality.strip():
+                provided_modalities.add(provides_modality.strip())
+            elif isinstance(provides_modality, list):
+                provided_modalities.update(
+                    value.strip()
+                    for value in provides_modality
+                    if isinstance(value, str) and value.strip()
+                )
+
+        has_point_detector = any(
+            detector_tags.get("architecture") == "point_scanning"
+            for detector_kind_id in detector_kinds_present
+            for term in [vocabulary.get_term("detector_kinds", detector_kind_id)]
+            for detector_tags in [term.tags() if term is not None else {}]
+        )
+
+        for modality_id in sorted(modality_ids & module_supported_modalities):
+            if modality_id in provided_modalities:
+                continue
+
+            if modality_id == "flim":
+                if has_point_detector:
+                    continue
+                warnings.append(
+                    ValidationIssue(
+                        code="flim_chain_incomplete",
+                        path=f"{instrument_file.as_posix()}:modalities",
+                        message=(
+                            "'flim' modality should usually declare a FLIM module or FLIM-capable detector chain "
+                            "(e.g., APD/SPAD/HyD/PMT)."
+                        ),
+                    )
+                )
+                continue
+
             warnings.append(
                 ValidationIssue(
-                    code="flim_chain_incomplete",
-                    path=f"{instrument_file.as_posix()}:modalities",
+                    code="modality_module_missing",
+                    path=f"{instrument_file.as_posix()}:modules",
                     message=(
-                        "'flim' modality should usually declare a FLIM module or FLIM-capable detector chain "
-                        "(e.g., APD/SPAD/HyD/PMT)."
+                        f"'{modality_id}' modality is declared but no module provides it. "
+                        "Add a module whose tags.provides_modality includes this modality."
                     ),
                 )
             )
@@ -671,7 +755,7 @@ def validate_event_ledgers(
     issues: list[ValidationIssue] = []
     event_output_to_sources: dict[str, list[str]] = {}
     allowed_types = {value.strip() for value in allowed_record_types if isinstance(value, str) and value.strip()}
-    allowed_maintenance_statuses = set(ALLOWED_MAINTENANCE_STATUSES)
+    vocabulary = Vocabulary()
 
     event_sources = [
         (qc_base_dir, "qc_session"),
@@ -861,25 +945,42 @@ def validate_event_ledgers(
                                 code="invalid_maintenance_status",
                                 path=event_file.as_posix(),
                                 message=(
-                                    f"Invalid {status_key}: expected one of "
-                                    f"{', '.join(ALLOWED_MAINTENANCE_STATUSES)}."
+                                    f"Invalid {status_key}: expected a non-empty string from "
+                                    "the 'maintenance_status' vocabulary."
                                 ),
                             )
                         )
                         continue
 
-                    if raw_status.strip() not in allowed_maintenance_statuses:
+                    cleaned_status = raw_status.strip()
+                    is_match, suggestion = vocabulary.check("maintenance_status", cleaned_status)
+                    if is_match:
+                        continue
+
+                    if suggestion is not None:
                         issues.append(
                             ValidationIssue(
                                 code="invalid_maintenance_status",
                                 path=event_file.as_posix(),
                                 message=(
                                     f"Invalid {status_key} '{raw_status}'. "
-                                    "Use normalized lowercase values from: "
-                                    f"{', '.join(ALLOWED_MAINTENANCE_STATUSES)}."
+                                    f"Use canonical value '{suggestion}'."
                                 ),
                             )
                         )
+                        continue
+
+                    known = ", ".join(sorted(vocabulary.terms_by_vocab.get("maintenance_status", {}).keys()))
+                    issues.append(
+                        ValidationIssue(
+                            code="invalid_maintenance_status",
+                            path=event_file.as_posix(),
+                            message=(
+                                f"Invalid {status_key} '{raw_status}'. "
+                                f"Allowed values from maintenance_status vocabulary: {known}."
+                            ),
+                        )
+                    )
 
             output_rel_path = f"events/{microscope}/{event_file.stem}.md"
             event_output_to_sources.setdefault(output_rel_path, []).append(event_file.as_posix())
