@@ -269,6 +269,19 @@ class InstrumentPolicy:
     rules: list[PolicyRule]
 
 
+def _sanitize_policy_yaml(raw_text: str) -> str:
+    """Normalize known non-YAML inline path list syntax used in policy drafts."""
+
+    sanitized = raw_text
+    sanitized = re.sub(
+        r"^(\s*aliases:\s*)\[([A-Za-z0-9_.\[\]-]+)\]\s*$",
+        lambda m: f"{m.group(1)}['{m.group(2)}']",
+        sanitized,
+        flags=re.MULTILINE,
+    )
+    return sanitized
+
+
 def _load_instrument_policy(
     policy_path: Path = Path('instrument_metadata_policy.yaml'),
 ) -> tuple[InstrumentPolicy | None, str | None]:
@@ -279,9 +292,29 @@ def _load_instrument_policy(
     for candidate in candidate_paths:
         if not candidate.exists():
             continue
-        payload, load_error = _load_yaml(candidate)
-        if load_error is not None:
-            return None, f"Failed loading policy '{candidate.as_posix()}': {load_error}"
+
+        try:
+            raw_text = candidate.read_text(encoding='utf-8')
+        except OSError as exc:
+            return None, f"Failed loading policy '{candidate.as_posix()}': {exc}"
+
+        try:
+            loaded_payload = yaml.safe_load(raw_text)
+        except yaml.YAMLError:
+            try:
+                loaded_payload = yaml.safe_load(_sanitize_policy_yaml(raw_text))
+            except yaml.YAMLError as exc:
+                return None, f"Failed loading policy '{candidate.as_posix()}': {exc}"
+
+        if loaded_payload is None:
+            return None, f"Failed loading policy '{candidate.as_posix()}': YAML document is empty."
+        if not isinstance(loaded_payload, dict):
+            return None, (
+                f"Failed loading policy '{candidate.as_posix()}': expected YAML mapping/object at top level, "
+                f"found {type(loaded_payload).__name__}."
+            )
+
+        payload = loaded_payload
         selected = candidate
         break
 
