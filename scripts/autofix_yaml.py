@@ -1,209 +1,184 @@
-"""Automatically replace vocabulary synonyms with canonical IDs in instrument YAML files.
-
-The fixer intentionally operates on raw text instead of a YAML round-trip parser so it can
-run in lightweight environments (for example CI checks that do not install optional
-format-preserving YAML tooling).
 """
-
+Data-Driven Autofixer for the Database
+Reads declarative policy schemas, maps vocabularies to JSON paths, 
+and dynamically auto-fixes synonyms and legacy fields across all ledgers.
+"""
 from __future__ import annotations
-
 import argparse
-import re
+import yaml
 from pathlib import Path
-from typing import Any, Iterable
 
-from validate import Vocabulary, _load_instrument_policy
+def get_base_path() -> Path:
+    return Path.cwd().resolve()
 
+def load_vocabs(vocab_dir: Path) -> dict:
+    vocabs = {}
+    if not vocab_dir.exists(): return vocabs
+    
+    for v_file in vocab_dir.glob("*.yaml"):
+        with open(v_file, 'r', encoding='utf-8') as f:
+            v_data = yaml.safe_load(f) or {}
+            
+        term_map = {}
+        for term in v_data.get('terms', []):
+            canon_id = term['id']
+            # Map canonical ID to itself
+            term_map[canon_id.lower()] = canon_id
+            # Map all synonyms to canonical ID
+            for syn in term.get('synonyms', []):
+                term_map[str(syn).lower()] = canon_id
+                
+        vocabs[v_file.stem] = term_map
+    return vocabs
 
-def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
-    if not base_dir.exists() or not base_dir.is_dir():
-        return []
-    return [p for p in sorted(base_dir.rglob("*")) if p.is_file() and p.suffix.lower() in {".yaml", ".yml"}]
+def load_schema_rules(schema_file: Path) -> dict:
+    """Returns a dict mapping dot-notation paths to vocabulary names."""
+    if not schema_file.exists(): return {}
+    with open(schema_file, 'r', encoding='utf-8') as f:
+        policy = yaml.safe_load(f) or {}
+        
+    path_to_vocab = {}
+    rules = []
+    
+    if 'sections' in policy:
+        for sec in policy['sections']: rules.extend(sec.get('rules', []))
+    if 'field_rules' in policy:
+        rules.extend(policy['field_rules'])
+        
+    for rule in rules:
+        if rule.get('vocab'):
+            path_to_vocab[rule['path']] = rule['vocab']
+            
+    return path_to_vocab
 
+def get_canonical(value: str, vocab_name: str, vocabs: dict) -> str:
+    if not isinstance(value, str) or vocab_name not in vocabs:
+        return value
+    term_map = vocabs[vocab_name]
+    return term_map.get(value.lower().strip(), value)
 
-def _canonical_if_synonym(vocabulary: Vocabulary, vocab_name: str, value: Any) -> str | None:
-    is_match, suggestion = vocabulary.check(vocab_name, value)
-    if is_match or suggestion is None:
-        return None
-    return suggestion
-
-
-def _indent_width(line: str) -> int:
-    return len(line) - len(line.lstrip(" "))
-
-
-def _replace_quoted_value(line: str, *, key: str, vocab_name: str, vocabulary: Vocabulary) -> tuple[str, int]:
-    suffix = "\n" if line.endswith("\n") else ""
-    body = line[:-1] if suffix else line
-    match = re.match(rf'^(\s*{re.escape(key)}\s*:\s*")([^"]+)(".*)$', body)
-    if match is None:
-        return line, 0
-
-    canonical = _canonical_if_synonym(vocabulary, vocab_name, match.group(2))
-    if canonical is None:
-        return line, 0
-
-    updated = f"{match.group(1)}{canonical}{match.group(3)}{suffix}"
-    return updated, 1
-
-
-def _replace_modalities_item(line: str, *, vocabulary: Vocabulary) -> tuple[str, int]:
-    suffix = "\n" if line.endswith("\n") else ""
-    body = line[:-1] if suffix else line
-    match = re.match(r'^(\s*-\s*")([^"]+)(".*)$', body)
-    if match is None:
-        return line, 0
-
-    canonical = _canonical_if_synonym(vocabulary, "modalities", match.group(2))
-    if canonical is None:
-        return line, 0
-
-    updated = f"{match.group(1)}{canonical}{match.group(3)}{suffix}"
-    return updated, 1
-
-
-def autofix_instrument_file(path: Path, *, vocabulary: Vocabulary, check_only: bool) -> tuple[bool, int]:
-    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
-
+def fix_data_by_path(data: dict, parts: list[str], vocab_name: str, vocabs: dict) -> bool:
+    """Recursively walks a dict based on a path (e.g., 'hardware.detectors[].kind') and updates values."""
+    if not data or not parts: return False
     changed = False
-    replacements = 0
-    result: list[str] = []
+    current = parts[0]
+    
+    if current.endswith('[]'):
+        base = current[:-2]
+        if isinstance(data, dict) and base in data and isinstance(data[base], list):
+            for item in data[base]:
+                if fix_data_by_path(item, parts[1:], vocab_name, vocabs):
+                    changed = True
+    else:
+        if len(parts) == 1: # Reached the target key
+            if isinstance(data, dict) and current in data:
+                val = data[current]
+                if val is None: return False
+                
+                is_list = isinstance(val, list)
+                vals_to_check = val if is_list else [val]
+                new_vals = []
+                local_change = False
+                
+                for v in vals_to_check:
+                    canon = get_canonical(v, vocab_name, vocabs)
+                    if canon != v:
+                        new_vals.append(canon)
+                        local_change = True
+                    else:
+                        new_vals.append(v)
+                        
+                if local_change:
+                    data[current] = new_vals if is_list else new_vals[0]
+                    changed = True
+        else:
+            if isinstance(data, dict) and current in data:
+                if fix_data_by_path(data[current], parts[1:], vocab_name, vocabs):
+                    changed = True
+                    
+    return changed
 
-    in_modalities = False
-    in_modules = False
-    in_hardware = False
-    in_scanner = False
-    in_light_sources = False
-    in_detectors = False
-    in_objectives = False
-
-    for line in lines:
-        stripped = line.strip()
-        indent = _indent_width(line)
-
-        if indent == 0 and re.match(r"^[A-Za-z_][A-Za-z0-9_]*:\s*$", stripped):
-            in_modalities = stripped.startswith("modalities:")
-            in_modules = stripped.startswith("modules:")
-            in_hardware = stripped.startswith("hardware:")
-            in_scanner = False
-            in_light_sources = False
-            in_detectors = False
-            in_objectives = False
-
-        if in_hardware and indent == 2 and re.match(r"^[A-Za-z_][A-Za-z0-9_]*:\s*$", stripped):
-            in_scanner = stripped.startswith("scanner:")
-            in_light_sources = stripped.startswith("light_sources:")
-            in_detectors = stripped.startswith("detectors:")
-            in_objectives = stripped.startswith("objectives:")
-
-        updated = line
-        count = 0
-        if in_modalities:
-            updated, count = _replace_modalities_item(updated, vocabulary=vocabulary)
-        elif in_modules:
-            updated, count = _replace_quoted_value(
-                updated,
-                key="- name",
-                vocab_name="modules",
-                vocabulary=vocabulary,
-            )
-        elif in_scanner:
-            updated, count = _replace_quoted_value(
-                updated,
-                key="type",
-                vocab_name="scanner_types",
-                vocabulary=vocabulary,
-            )
-        elif in_light_sources:
-            updated, count = _replace_quoted_value(
-                updated,
-                key="kind",
-                vocab_name="light_source_kinds",
-                vocabulary=vocabulary,
-            )
-        elif in_detectors:
-            updated, count = _replace_quoted_value(
-                updated,
-                key="kind",
-                vocab_name="detector_kinds",
-                vocabulary=vocabulary,
-            )
-        elif in_objectives:
-            updated, count = _replace_quoted_value(
-                updated,
-                key="immersion",
-                vocab_name="objective_immersion",
-                vocabulary=vocabulary,
-            )
-            if count == 0:
-                updated, count = _replace_quoted_value(
-                    updated,
-                    key="correction",
-                    vocab_name="objective_corrections",
-                    vocabulary=vocabulary,
-                )
-
-        if count > 0:
-            replacements += count
+def fix_legacy_fields(data: dict) -> bool:
+    """Manually catches renamed/deprecated fields across older files."""
+    changed = False
+    legacy_map = {"event_id": "maintenance_id", "performed_by": "contact", "type": "reason"}
+    
+    for old_k, new_k in legacy_map.items():
+        if old_k in data:
+            data[new_k] = data.pop(old_k)
             changed = True
+            
+    # Quick fix for common service provider casing issues in older datasets
+    if "service_provider" in data and data["service_provider"] == "Internal":
+        data["service_provider"] = "internal"
+        changed = True
+        
+    return changed
 
-        result.append(updated)
+def autofix_file(filepath: Path, path_to_vocab: dict, vocabs: dict, check_only: bool) -> tuple[bool, int]:
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f) or {}
+
+    changed = fix_legacy_fields(data)
+    replacements = 1 if changed else 0
+
+    for path, vocab_name in path_to_vocab.items():
+        parts = path.split('.')
+        if fix_data_by_path(data, parts, vocab_name, vocabs):
+            changed = True
+            replacements += 1
 
     if changed and not check_only:
-        path.write_text("".join(result), encoding="utf-8")
+        with open(filepath, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False)
 
     return changed, replacements
 
-
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Replace vocabulary synonyms with canonical IDs in instrument YAML files."
-    )
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="Check mode only: report files needing fixes and exit non-zero if any would change.",
-    )
+    parser = argparse.ArgumentParser(description="Data-Driven Vocabulary Auto-Fixer")
+    parser.add_argument("--check", action="store_true", help="Check mode only. Fails script if changes are needed.")
     return parser.parse_args()
-
 
 def main() -> int:
     args = parse_args()
-    policy, policy_error = _load_instrument_policy()
-    if policy_error is not None or policy is None:
-        print(policy_error or "Failed to load instrument policy.")
-        return 1
+    base = get_base_path()
+    
+    # Load all capabilities dynamically
+    vocabs = load_vocabs(base / "vocab")
+    
+    # Load rules from schemas
+    inst_rules = load_schema_rules(base / "schema" / "instrument_policy.yaml")
+    qc_rules = load_schema_rules(base / "schema" / "QC_policy.yaml")
+    maint_rules = load_schema_rules(base / "schema" / "maintenance_policy.yaml")
 
-    vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
+    targets = [
+        (base / "instruments", inst_rules),
+        (base / "qc/sessions", qc_rules),
+        (base / "maintenance/events", maint_rules)
+    ]
 
-    instrument_dirs = [Path("instruments"), Path("instruments/retired")]
-    instrument_files = sorted({p for d in instrument_dirs for p in _iter_yaml_files(d)})
-
-    changed_files: list[Path] = []
+    changed_files = []
     total_replacements = 0
 
-    for instrument_file in instrument_files:
-        changed, replacements = autofix_instrument_file(
-            instrument_file,
-            vocabulary=vocabulary,
-            check_only=args.check,
-        )
-        if changed:
-            changed_files.append(instrument_file)
-            total_replacements += replacements
+    for target_dir, rules in targets:
+        if not target_dir.exists(): continue
+        
+        for file in list(target_dir.rglob("*.yaml")) + list(target_dir.rglob("*.yml")):
+            changed, reps = autofix_file(file, rules, vocabs, args.check)
+            if changed:
+                changed_files.append(file)
+                total_replacements += reps
 
     mode = "Would update" if args.check else "Updated"
-    print(f"{mode} {len(changed_files)} instrument file(s); replacements: {total_replacements}.")
+    print(f"{mode} {len(changed_files)} file(s); replacements: {total_replacements}.")
 
     if changed_files:
-        for changed_file in changed_files:
-            print(f" - {changed_file.as_posix()}")
-
+        for cf in changed_files:
+            print(f" - {cf.relative_to(base)}")
+            
     if args.check and changed_files:
         return 1
-
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
