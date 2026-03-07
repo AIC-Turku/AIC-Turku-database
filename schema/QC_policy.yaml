@@ -171,7 +171,7 @@ field_rules:
     type: enum
     vocab: qc_metric_classes
     written_by: human
-    used_by: [dashboard, trending]
+    used_by: [dashboard, filtering]
     rationale: Controlled category used to group related metrics across instruments and modalities.
 
   - path: inputs_human[].value
@@ -524,7 +524,7 @@ field_rules:
     type: enum
     vocab: qc_metric_classes
     written_by: script
-    used_by: [dashboard, trending, evaluation]
+    used_by: [dashboard, filtering]
     rationale: Controlled category used to group related computed metrics for filtering and automation.
 
   - path: metrics_computed[].value
