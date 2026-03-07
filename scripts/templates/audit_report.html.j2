@@ -267,17 +267,25 @@
     <table>
       <tbody>
       {% set current_prefix = namespace(value='') %}
+      {% set valid_numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'] %}
+      
       {% for entry in entries %}
         
-        {# Detect if this entry belongs to a numbered item like "Objective 1" or "Light Source 2" #}
+        {# Intelligently extract the prefix (e.g. "Objective 1" or "Light Source 2") #}
+        {% set parts = entry.label.split(' ') %}
         {% set prefix = '' %}
-        {% for i in range(1, 20) %}
-          {% if ' ' ~ i ~ ' ' in entry.label or entry.label.endswith(' ' ~ i) %}
-            {% set prefix = entry.label.split(' ' ~ i)[0] ~ ' ' ~ i %}
+        
+        {% if parts | length > 1 and parts[0] in ['Objective', 'Detector', 'Software'] %}
+          {% if parts[1] in valid_numbers %}
+            {% set prefix = parts[0] ~ ' ' ~ parts[1] %}
           {% endif %}
-        {% endfor %}
+        {% elif parts | length > 2 and parts[0] == 'Light' and parts[1] == 'Source' %}
+          {% if parts[2] in valid_numbers %}
+            {% set prefix = 'Light Source ' ~ parts[2] %}
+          {% endif %}
+        {% endif %}
 
-        {# If we hit a new prefix, insert a gorgeous sub-heading row #}
+        {# If we hit a new array item, print a sub-heading row #}
         {% if prefix != '' and prefix != current_prefix.value %}
           {% set current_prefix.value = prefix %}
           <tr class="subheading-row">
@@ -285,8 +293,8 @@
           </tr>
         {% endif %}
 
-        {# Strip the prefix out of the label so it just says "Manufacturer" instead of "Light Source 1 Manufacturer" #}
-        {% set display_label = entry.label | replace(prefix ~ ' ', '') if prefix else entry.label %}
+        {# Strip the prefix so "Objective 1 Manufacturer" just becomes "Manufacturer" #}
+        {% set display_label = entry.label | replace(prefix ~ ' ', '') if prefix != '' else entry.label %}
         
         <tr>
           <th>{{ display_label }}</th>
