@@ -129,6 +129,37 @@ def fix_legacy_fields(data: dict) -> bool:
     if "service_provider" in data and data["service_provider"] == "Internal":
         data["service_provider"] = "internal"
         changed = True
+
+    # Inject missing QC metric classes for older ledgers
+    metric_class_rules = [
+        (("fwhm_x", "fwhm_y", "fwhm_xy"), "fwhm_lateral"),
+        (("fwhm_z",), "fwhm_axial"),
+        (("shift",), "chromatic_shift"),
+        (("repeatability",), "stage_repeatability"),
+        (("power", "intensity"), "laser_power"),
+        (("noise",), "detector_dark_noise"),
+        (("uniformity",), "illumination_uniformity"),
+    ]
+
+    for section in ("metrics_computed", "inputs_human"):
+        items = data.get(section)
+        if not isinstance(items, list):
+            continue
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+
+            metric_id = item.get("metric_id")
+            if not metric_id or "metric_class" in item:
+                continue
+
+            metric_id_l = str(metric_id).lower()
+            for patterns, metric_class in metric_class_rules:
+                if any(pattern in metric_id_l for pattern in patterns):
+                    item["metric_class"] = metric_class
+                    changed = True
+                    break
         
     return changed
 
