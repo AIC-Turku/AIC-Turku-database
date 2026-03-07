@@ -133,14 +133,15 @@ def fix_legacy_fields(data: dict) -> bool:
     return changed
 
 def inject_qc_metric_classes(data: dict) -> bool:
+    # Expanded keywords to catch things like "linearity", "laser", and "stage"
     metric_class_rules = [
-        (("fwhm_x", "fwhm_y", "fwhm_xy"), "fwhm_lateral"),
-        (("fwhm_z",), "fwhm_axial"),
-        (("shift",), "chromatic_shift"),
-        (("repeatability",), "stage_repeatability"),
-        (("power", "intensity"), "laser_power"),
-        (("noise",), "detector_dark_noise"),
-        (("uniformity",), "illumination_uniformity"),
+        (("fwhm_x", "fwhm_y", "fwhm_xy", "resolution_xy"), "fwhm_lateral"),
+        (("fwhm_z", "resolution_z"), "fwhm_axial"),
+        (("shift", "coreg", "alignment"), "chromatic_shift"),
+        (("repeatability", "stage"), "stage_repeatability"),
+        (("power", "intensity", "linearity", "laser"), "laser_power"),
+        (("noise", "dark_current"), "detector_dark_noise"),
+        (("uniformity", "flatfield"), "illumination_uniformity"),
     ]
 
     changed = False
@@ -155,18 +156,26 @@ def inject_qc_metric_classes(data: dict) -> bool:
                 continue
 
             metric_id = item.get("metric_id")
-            if not metric_id or "metric_class" in item:
+            if not metric_id:
+                continue
+
+
+            existing_class = item.get("metric_class")
+            if existing_class and existing_class != "other":
                 continue
 
             metric_id_l = str(metric_id).lower()
             metric_class = "other"
+            
             for patterns, candidate in metric_class_rules:
                 if any(pattern in metric_id_l for pattern in patterns):
                     metric_class = candidate
                     break
 
-            item["metric_class"] = metric_class
-            changed = True
+            # Only update and mark as changed if the value is actually different
+            if existing_class != metric_class:
+                item["metric_class"] = metric_class
+                changed = True
 
     return changed
 
