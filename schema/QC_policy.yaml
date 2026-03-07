@@ -19,18 +19,10 @@ vocab_registry:
     source: file
     path: vocab/qc_type.yaml
     field_should_store: canonical term id
-  measurement_position:
-    source: file
-    path: vocab/qc_measurement_positions.yaml
-    field_should_store: canonical term id
   measurement_positions:
     source: file
     path: vocab/qc_measurement_positions.yaml
     field_should_store: canonical term id
-  qc_metrics:
-    source: file
-    path: vocab/qc_metrics.yaml
-    field_should_store: canonical metric id
   qc_metric_classes:
     source: file
     path: vocab/qc_metric_classes.yaml
