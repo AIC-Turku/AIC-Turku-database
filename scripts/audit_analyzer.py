@@ -1,0 +1,134 @@
+"""Analyze instrument metadata completeness for audit report generation."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from dashboard_builder import load_instruments
+
+
+def _is_empty(value: Any) -> bool:
+    """Return True when a value should be treated as missing."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == ""
+    if isinstance(value, list):
+        return len(value) == 0
+    return False
+
+
+def _entry(label: str, value: Any, is_missing: bool | None = None) -> dict[str, Any]:
+    """Create a template-friendly completeness entry."""
+    missing = _is_empty(value) if is_missing is None else is_missing
+    normalized_value = "" if value is None else value
+    return {"label": label, "value": normalized_value, "is_missing": missing}
+
+
+def _component_kind(component: dict[str, Any]) -> Any:
+    """Extract a component kind using either the ``kind`` or ``type`` field."""
+    return component.get("kind") if component.get("kind") is not None else component.get("type")
+
+
+def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Return completeness details for an instrument payload from ``load_instruments``."""
+    hardware = instrument.get("hardware") or {}
+
+    general = [
+        _entry("Display Name", instrument.get("display_name")),
+        _entry("Manufacturer", instrument.get("manufacturer")),
+        _entry("Model", instrument.get("model")),
+        _entry("Location", instrument.get("location")),
+        _entry("Year of Purchase", instrument.get("year_of_purchase")),
+        _entry("Funding", instrument.get("funding")),
+        _entry("Stand Orientation", instrument.get("stand_orientation")),
+    ]
+
+    modalities = instrument.get("modalities")
+    modalities_entries = [_entry("Modalities", modalities)]
+
+    software = instrument.get("software")
+    software_entries: list[dict[str, Any]] = []
+    if not isinstance(software, list) or len(software) == 0:
+        software_entries.append(_entry("Software", software if software is not None else [], True))
+    else:
+        for idx, software_item in enumerate(software, start=1):
+            if not isinstance(software_item, dict):
+                software_entries.append(_entry(f"Software {idx}", software_item, True))
+                continue
+            software_entries.extend(
+                [
+                    _entry(f"Software {idx} Name", software_item.get("name")),
+                    _entry(f"Software {idx} Developer", software_item.get("developer")),
+                    _entry(f"Software {idx} Version", software_item.get("version")),
+                ]
+            )
+
+    scanner = (hardware.get("scanner") if isinstance(hardware, dict) else {}) or {}
+    scanner_entries = [_entry("Scanner Type", scanner.get("type"))]
+
+    objectives = hardware.get("objectives") if isinstance(hardware, dict) else None
+    objectives_entries: list[dict[str, Any]] = []
+    if not isinstance(objectives, list) or len(objectives) == 0:
+        objectives_entries.append(_entry("Objectives", objectives if objectives is not None else [], True))
+    else:
+        for idx, objective in enumerate(objectives, start=1):
+            if not isinstance(objective, dict):
+                objectives_entries.append(_entry(f"Objective {idx}", objective, True))
+                continue
+            objectives_entries.extend(
+                [
+                    _entry(f"Objective {idx} Magnification", objective.get("magnification")),
+                    _entry(f"Objective {idx} Numerical Aperture", objective.get("numerical_aperture")),
+                    _entry(f"Objective {idx} Immersion", objective.get("immersion")),
+                    _entry(f"Objective {idx} Correction", objective.get("correction")),
+                    _entry(f"Objective {idx} Working Distance", objective.get("working_distance")),
+                ]
+            )
+
+    light_sources = hardware.get("light_sources") if isinstance(hardware, dict) else None
+    light_source_entries: list[dict[str, Any]] = []
+    if not isinstance(light_sources, list) or len(light_sources) == 0:
+        light_source_entries.append(_entry("Light Sources", light_sources if light_sources is not None else [], True))
+    else:
+        for idx, source in enumerate(light_sources, start=1):
+            if not isinstance(source, dict):
+                light_source_entries.append(_entry(f"Light Source {idx}", source, True))
+                continue
+            light_source_entries.extend(
+                [
+                    _entry(f"Light Source {idx} Kind/Type", _component_kind(source)),
+                    _entry(f"Light Source {idx} Wavelength (nm)", source.get("wavelength_nm")),
+                    _entry(f"Light Source {idx} Power", source.get("power")),
+                ]
+            )
+
+    detectors = hardware.get("detectors") if isinstance(hardware, dict) else None
+    detector_entries: list[dict[str, Any]] = []
+    if not isinstance(detectors, list) or len(detectors) == 0:
+        detector_entries.append(_entry("Detectors", detectors if detectors is not None else [], True))
+    else:
+        for idx, detector in enumerate(detectors, start=1):
+            if not isinstance(detector, dict):
+                detector_entries.append(_entry(f"Detector {idx}", detector, True))
+                continue
+            detector_entries.extend(
+                [
+                    _entry(f"Detector {idx} Kind/Type", _component_kind(detector)),
+                    _entry(f"Detector {idx} Manufacturer", detector.get("manufacturer")),
+                    _entry(f"Detector {idx} Model", detector.get("model")),
+                ]
+            )
+
+    return {
+        "general": general,
+        "modalities": modalities_entries,
+        "software": software_entries,
+        "scanner": scanner_entries,
+        "objectives": objectives_entries,
+        "light_sources": light_source_entries,
+        "detectors": detector_entries,
+    }
+
+
+__all__ = ["load_instruments", "analyze_instrument_completeness"]
