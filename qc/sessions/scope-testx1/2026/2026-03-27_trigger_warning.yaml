@@ -37,7 +37,7 @@ inputs_human:
   value: 'yes'
   unit: ''
   details: No visible residue on objective front lens.
-  metric_class: other
+  metric_class: signal_to_noise
 laser_inputs_human:
   measurement_position: at_objective
   measurement_position_details: 60x/1.4 objective with calibrated photodiode adapter.
@@ -85,7 +85,7 @@ metrics_computed:
 - metric_id: laser.488.linearity_r2
   value: 0.997
   unit: unitless
-  metric_class: other
+  metric_class: laser_power
 - metric_id: psf.60x_oil.525.fwhm_xy_max_nm
   value: 240
   unit: nm
