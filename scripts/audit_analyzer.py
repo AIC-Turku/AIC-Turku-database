@@ -140,10 +140,10 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                 objectives_entries.append(_entry(f"Objective {idx}", objective, True))
                 continue
             
-            # Convert boolean to Yes/No for the printed table
+            # Let the schema handle missing data validation. We format it nicely for the table.
             is_installed_val = objective.get("is_installed")
             if is_installed_val is None:
-                installed_text = None  # Triggers the missing flag in the UI
+                installed_text = None  # Passes to _entry as missing
             else:
                 installed_text = "Yes" if is_installed_val in (True, "true", "True") else "No"
             
@@ -161,7 +161,12 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                     _entry(f"Objective {idx} Immersion", objective.get("immersion")),
                     _entry(f"Objective {idx} Correction", objective.get("correction")),
                     _entry(f"Objective {idx} Working Distance", objective.get("wd"), is_optional=True),
-                    _entry(f"Objective {idx} Is Installed", installed_text), # <-- Ensures it shows up in the PDF table
+                    _entry(
+                        f"Objective {idx} Is Installed", 
+                        installed_text,
+                        is_warning=True,  # Force the warning UI block
+                        warning_message="Please physically verify that this objective is currently mounted.",
+                    ),
                 ]
             )
 
