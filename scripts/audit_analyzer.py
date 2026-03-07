@@ -3,8 +3,39 @@
 from __future__ import annotations
 
 from typing import Any
+import re
 
 from dashboard_builder import load_instruments
+
+
+_WAVELENGTH_BAND_PATTERN = re.compile(r"^\d+(?:\.\d+)?/\d+(?:\.\d+)?$")
+_NUMERIC_PATTERN = re.compile(r"^\d+(?:\.\d+)?$")
+
+
+def _wavelength_requires_review(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value <= 0
+    if not isinstance(value, str):
+        return True
+    cleaned = value.strip()
+    if not cleaned:
+        return False
+    if _NUMERIC_PATTERN.fullmatch(cleaned):
+        return float(cleaned) <= 0
+    return _WAVELENGTH_BAND_PATTERN.fullmatch(cleaned) is None
+
+
+def _na_requires_review(value: Any) -> bool:
+    if value in (None, ""):
+        return True
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return not (0 < value <= 1.7)
+    if isinstance(value, str) and _NUMERIC_PATTERN.fullmatch(value.strip()):
+        return not (0 < float(value.strip()) <= 1.7)
+    return True
+
 
 
 def _is_empty(value: Any) -> bool:
@@ -18,11 +49,24 @@ def _is_empty(value: Any) -> bool:
     return False
 
 
-def _entry(label: str, value: Any, is_missing: bool | None = None) -> dict[str, Any]:
+def _entry(
+    label: str,
+    value: Any,
+    is_missing: bool | None = None,
+    *,
+    is_warning: bool = False,
+    warning_message: str = "",
+) -> dict[str, Any]:
     """Create a template-friendly completeness entry."""
     missing = _is_empty(value) if is_missing is None else is_missing
     normalized_value = "" if value is None else value
-    return {"label": label, "value": normalized_value, "is_missing": missing}
+    return {
+        "label": label,
+        "value": normalized_value,
+        "is_missing": missing,
+        "is_warning": is_warning,
+        "warning_message": warning_message,
+    }
 
 
 def _component_kind(component: dict[str, Any]) -> Any:
@@ -79,7 +123,12 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
             objectives_entries.extend(
                 [
                     _entry(f"Objective {idx} Magnification", objective.get("magnification")),
-                    _entry(f"Objective {idx} Numerical Aperture", objective.get("numerical_aperture")),
+                    _entry(
+                        f"Objective {idx} Numerical Aperture",
+                        objective.get("numerical_aperture"),
+                        is_warning=_na_requires_review(objective.get("numerical_aperture")),
+                        warning_message="NA is missing or non-numeric; keep descriptive value but verify against manufacturer specs.",
+                    ),
                     _entry(f"Objective {idx} Immersion", objective.get("immersion")),
                     _entry(f"Objective {idx} Correction", objective.get("correction")),
                     _entry(f"Objective {idx} Working Distance", objective.get("working_distance")),
@@ -98,7 +147,12 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
             light_source_entries.extend(
                 [
                     _entry(f"Light Source {idx} Kind/Type", _component_kind(source)),
-                    _entry(f"Light Source {idx} Wavelength (nm)", source.get("wavelength_nm")),
+                    _entry(
+                        f"Light Source {idx} Wavelength (nm)",
+                        source.get("wavelength_nm"),
+                        is_warning=_wavelength_requires_review(source.get("wavelength_nm")),
+                        warning_message="Wavelength is descriptive/non-standard format; keep as-is but provide numeric value when available.",
+                    ),
                     _entry(f"Light Source {idx} Power", source.get("power")),
                 ]
             )
