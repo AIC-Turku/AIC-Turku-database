@@ -221,7 +221,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [sim, ism, flim, spectral_imaging]
+          parent_present: software.analysis
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Version matters when vendor analysis is part of the standard instrument workflow.
 
@@ -252,8 +252,10 @@ sections:
 
       - path: software.deconvolution.url
         title: Deconvolution or reconstruction software URL
-        status: optional
+        status: conditional
         type: url
+        required_if:
+          parent_present: software.deconvolution
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
 
@@ -277,8 +279,10 @@ sections:
 
       - path: software.flim.url
         title: FLIM software URL
-        status: optional
+        status: conditional
         type: url
+        required_if:
+          parent_present: software.flim
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
 
