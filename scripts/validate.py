@@ -43,10 +43,15 @@ class VocabularyTerm:
 
 
 class Vocabulary:
-    """Loads vocab/*.yaml and validates values against canonical IDs/synonyms."""
+    """Loads vocabulary files and validates values against canonical IDs/synonyms."""
 
-    def __init__(self, vocab_dir: Path = Path("vocab")) -> None:
+    def __init__(
+        self,
+        vocab_dir: Path = Path("vocab"),
+        vocab_registry: dict[str, dict[str, Any]] | None = None,
+    ) -> None:
         self.vocab_dir = vocab_dir
+        self.vocab_registry = vocab_registry
         self.terms_by_vocab: dict[str, dict[str, VocabularyTerm]] = {}
         self.valid_ids_by_vocab: dict[str, set[str]] = {}
         self.synonyms_by_vocab: dict[str, dict[str, str]] = {}
@@ -57,8 +62,19 @@ class Vocabulary:
         return value.strip()
 
     def _load_all(self) -> None:
-        for vocab_file in sorted(self.vocab_dir.glob("*.yaml")):
-            vocab_name = vocab_file.stem
+        if self.vocab_registry:
+            vocab_items = []
+            for vocab_name, vocab_spec in self.vocab_registry.items():
+                if not isinstance(vocab_spec, dict):
+                    continue
+                raw_file = vocab_spec.get("file")
+                if not isinstance(raw_file, str) or not raw_file.strip():
+                    continue
+                vocab_items.append((vocab_name, Path(raw_file.strip())))
+        else:
+            vocab_items = [(vocab_file.stem, vocab_file) for vocab_file in sorted(self.vocab_dir.glob("*.yaml"))]
+
+        for vocab_name, vocab_file in vocab_items:
             payload, load_error = _load_yaml(vocab_file)
             if load_error is not None or payload is None:
                 continue
@@ -225,136 +241,475 @@ def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
     return None
 
 
+@dataclass
+class PolicyRule:
+    path: str
+    status: str
+    field_type: str
+    title: str | None = None
+    validation: dict[str, Any] | None = None
+    vocab: str | None = None
+    required_if: dict[str, Any] | None = None
+    aliases: list[str] | None = None
+    superseded_by: str | None = None
+    min_items: int | None = None
+
+
+@dataclass
+class ResolvedNode:
+    value: Any
+    path: str
+    context_item: dict[str, Any] | None
+
+
+@dataclass
+class InstrumentPolicy:
+    policy_path: Path
+    vocab_registry: dict[str, dict[str, Any]]
+    rules: list[PolicyRule]
+
+
+def _sanitize_policy_yaml(raw_text: str) -> str:
+    """Normalize known non-YAML inline path list syntax used in policy drafts."""
+
+    sanitized = raw_text
+    sanitized = re.sub(
+        r"^(\s*aliases:\s*)\[([A-Za-z0-9_.\[\]-]+)\]\s*$",
+        lambda m: f"{m.group(1)}['{m.group(2)}']",
+        sanitized,
+        flags=re.MULTILINE,
+    )
+    return sanitized
+
+
+def _load_instrument_policy(
+    policy_path: Path = Path('instrument_metadata_policy.yaml'),
+) -> tuple[InstrumentPolicy | None, str | None]:
+    candidate_paths = [policy_path, Path('schema/instrument_policy.yaml')]
+    selected: Path | None = None
+    payload: dict[str, Any] | None = None
+
+    for candidate in candidate_paths:
+        if not candidate.exists():
+            continue
+
+        try:
+            raw_text = candidate.read_text(encoding='utf-8')
+        except OSError as exc:
+            return None, f"Failed loading policy '{candidate.as_posix()}': {exc}"
+
+        try:
+            loaded_payload = yaml.safe_load(raw_text)
+        except yaml.YAMLError:
+            try:
+                loaded_payload = yaml.safe_load(_sanitize_policy_yaml(raw_text))
+            except yaml.YAMLError as exc:
+                return None, f"Failed loading policy '{candidate.as_posix()}': {exc}"
+
+        if loaded_payload is None:
+            return None, f"Failed loading policy '{candidate.as_posix()}': YAML document is empty."
+        if not isinstance(loaded_payload, dict):
+            return None, (
+                f"Failed loading policy '{candidate.as_posix()}': expected YAML mapping/object at top level, "
+                f"found {type(loaded_payload).__name__}."
+            )
+
+        payload = loaded_payload
+        selected = candidate
+        break
+
+    if selected is None or payload is None:
+        return None, 'Missing instrument metadata policy file (expected instrument_metadata_policy.yaml or schema/instrument_policy.yaml).'
+
+    vocab_registry = payload.get('vocab_registry')
+    if not isinstance(vocab_registry, dict):
+        return None, f"Policy '{selected.as_posix()}' missing mapping key 'vocab_registry'."
+
+    raw_sections = payload.get('sections')
+    if not isinstance(raw_sections, list):
+        return None, f"Policy '{selected.as_posix()}' missing list key 'sections'."
+
+    rules: list[PolicyRule] = []
+    for section in raw_sections:
+        if not isinstance(section, dict):
+            continue
+        for raw_rule in section.get('rules', []):
+            if not isinstance(raw_rule, dict):
+                continue
+            path_value = raw_rule.get('path')
+            status = raw_rule.get('status')
+            field_type = raw_rule.get('type')
+            if not isinstance(path_value, str) or not path_value.strip():
+                continue
+            if not isinstance(status, str) or not status.strip():
+                continue
+            if not isinstance(field_type, str) or not field_type.strip():
+                continue
+            rules.append(
+                PolicyRule(
+                    path=path_value.strip(),
+                    status=status.strip(),
+                    field_type=field_type.strip(),
+                    title=raw_rule.get('title') if isinstance(raw_rule.get('title'), str) else None,
+                    validation=raw_rule.get('validation') if isinstance(raw_rule.get('validation'), dict) else None,
+                    vocab=raw_rule.get('vocab') if isinstance(raw_rule.get('vocab'), str) else None,
+                    required_if=raw_rule.get('required_if') if isinstance(raw_rule.get('required_if'), dict) else None,
+                    aliases=raw_rule.get('aliases') if isinstance(raw_rule.get('aliases'), list) else None,
+                    superseded_by=raw_rule.get('superseded_by') if isinstance(raw_rule.get('superseded_by'), str) else None,
+                    min_items=raw_rule.get('min_items') if isinstance(raw_rule.get('min_items'), int) else None,
+                )
+            )
+
+    return InstrumentPolicy(policy_path=selected, vocab_registry=vocab_registry, rules=rules), None
+
+
+def _resolve_path_nodes(payload: dict[str, Any], dotted_path: str) -> list[ResolvedNode]:
+    segments = dotted_path.split('.') if dotted_path else []
+    nodes: list[ResolvedNode] = [ResolvedNode(value=payload, path='', context_item=None)]
+
+    for segment in segments:
+        is_list = segment.endswith('[]')
+        key = segment[:-2] if is_list else segment
+        next_nodes: list[ResolvedNode] = []
+        for node in nodes:
+            current = node.value
+            base_path = node.path
+            if not isinstance(current, dict) or key not in current:
+                continue
+
+            child = current.get(key)
+            child_path = f"{base_path}.{key}" if base_path else key
+            if is_list:
+                if not isinstance(child, list):
+                    continue
+                for idx, item in enumerate(child):
+                    ctx = item if isinstance(item, dict) else None
+                    next_nodes.append(ResolvedNode(value=item, path=f"{child_path}[{idx}]", context_item=ctx))
+            else:
+                ctx = node.context_item if node.context_item is not None else (child if isinstance(child, dict) else None)
+                next_nodes.append(ResolvedNode(value=child, path=child_path, context_item=ctx))
+
+        nodes = next_nodes
+        if not nodes:
+            break
+
+    return nodes
+
+
+def _check_type(value: Any, field_type: str) -> bool:
+    if field_type in {'string', 'text'}:
+        return _is_non_empty_string(value)
+    if field_type == 'string_or_empty':
+        return isinstance(value, str)
+    if field_type == 'positive_number':
+        return _is_positive_number_or_numeric_string(value)
+    if field_type == 'boolean':
+        return isinstance(value, bool)
+    if field_type == 'slug':
+        return isinstance(value, str) and _is_valid_instrument_id(value.strip())
+    if field_type == 'url':
+        if not isinstance(value, str) or not value.strip():
+            return False
+        return bool(re.match(r'^https?://', value.strip()))
+    if field_type == 'list':
+        return isinstance(value, list)
+    if field_type == 'year_or_empty':
+        return value in (None, '') or (isinstance(value, str) and bool(YEAR_PATTERN.fullmatch(value.strip())))
+    if field_type == 'spectral_descriptor':
+        return _is_valid_wavelength(value) or _is_descriptive_wavelength(value)
+    return True
+
+
+def _coerce_number(value: Any) -> float | None:
+    if _is_number(value):
+        return float(value)
+    if _is_numeric_string(value):
+        return float(str(value).strip())
+    return None
+
+
+def _check_rule_validation(value: Any, rule: PolicyRule) -> str | None:
+    if rule.validation is None:
+        return None
+
+    pattern = rule.validation.get('pattern')
+    if isinstance(pattern, str) and isinstance(value, str) and not re.fullmatch(pattern, value.strip()):
+        return f"does not match required pattern '{pattern}'"
+
+    min_value = rule.validation.get('min')
+    if isinstance(min_value, (int, float)):
+        numeric = _coerce_number(value)
+        if numeric is None or numeric < float(min_value):
+            return f"must be >= {min_value}"
+
+    max_value = rule.validation.get('max')
+    if isinstance(max_value, (int, float)):
+        numeric = _coerce_number(value)
+        if numeric is None or numeric > float(max_value):
+            return f"must be <= {max_value}"
+
+    accepted_examples = rule.validation.get('accepted_examples')
+    if isinstance(accepted_examples, list) and value is not None:
+        normalized_examples = {str(v).strip() for v in accepted_examples if isinstance(v, (str, int, float))}
+        if isinstance(value, str) and value.strip() and value.strip() not in normalized_examples:
+            if rule.field_type == 'spectral_descriptor' and not _is_valid_wavelength(value):
+                return (
+                    'is not a recognized spectral descriptor example; accepted examples include '
+                    + ', '.join(sorted(normalized_examples))
+                )
+
+    return None
+
+
+def _parent_path_from_list_path(path: str) -> str:
+    return path.replace('[]', '')
+
+
+def _evaluate_required_if(
+    required_if: dict[str, Any],
+    *,
+    payload: dict[str, Any],
+    item_context: dict[str, Any] | None,
+    vocabulary: Vocabulary,
+) -> bool:
+    parent_present = required_if.get('parent_present')
+    if isinstance(parent_present, str):
+        parent_nodes = _resolve_path_nodes(payload, parent_present)
+        if parent_nodes:
+            return True
+
+    modalities_any_of = required_if.get('modalities_any_of')
+    if isinstance(modalities_any_of, list):
+        modality_values = _resolve_path_nodes(payload, 'modalities')
+        if modality_values and isinstance(modality_values[0].value, list):
+            modality_ids = {
+                canonical
+                for value in modality_values[0].value
+                for canonical in [vocabulary.resolve_canonical('modalities', value) or value if isinstance(value, str) else None]
+                if isinstance(canonical, str)
+            }
+            targets = {str(v).strip() for v in modalities_any_of if isinstance(v, str)}
+            if modality_ids & targets:
+                return True
+
+    scanner_type_in = required_if.get('scanner_type_in')
+    if isinstance(scanner_type_in, list):
+        scanner_nodes = _resolve_path_nodes(payload, 'hardware.scanner.type')
+        scanner_type = scanner_nodes[0].value if scanner_nodes else None
+        if isinstance(scanner_type, str) and scanner_type in {str(v).strip() for v in scanner_type_in if isinstance(v, str)}:
+            return True
+
+    item_kind_in = required_if.get('item_kind_in')
+    if isinstance(item_kind_in, list) and isinstance(item_context, dict):
+        kind = item_context.get('kind')
+        if isinstance(kind, str) and kind in {str(v).strip() for v in item_kind_in if isinstance(v, str)}:
+            return True
+
+    return False
+
+
 def validate_instrument_ledgers(
     *,
-    instruments_dir: Path = Path("instruments"),
+    instruments_dir: Path = Path('instruments'),
 ) -> tuple[set[str], list[ValidationIssue], list[ValidationIssue]]:
     issues: list[ValidationIssue] = []
     warnings: list[ValidationIssue] = []
     instrument_ids: set[str] = set()
     instrument_id_to_files: dict[str, list[str]] = {}
-    vocabulary = Vocabulary()
 
-    def _record(issue: ValidationIssue, *, as_error: bool) -> None:
-        if as_error:
-            issues.append(issue)
-        else:
-            warnings.append(issue)
-
-    def _validate_vocab_value(
-        *,
-        path: str,
-        vocab_name: str,
-        raw_value: Any,
-        required: bool = False,
-        allow_empty: bool = False,
-    ) -> None:
-        if raw_value is None:
-            if required:
-                _record(
-                    ValidationIssue(
-                        code="missing_vocab_value",
-                        path=path,
-                        message=f"Missing required term for '{vocab_name}'.",
-                    ),
-                    as_error=True,
-                )
-            return
-
-        if not isinstance(raw_value, str):
-            _record(
-                ValidationIssue(
-                    code="invalid_vocab_value",
-                    path=path,
-                    message=f"Invalid term for '{vocab_name}'; expected a string.",
-                ),
-                as_error=True,
-            )
-            return
-
-        cleaned = raw_value.strip()
-        if not cleaned:
-            if allow_empty:
-                return
-            _record(
-                ValidationIssue(
-                    code="invalid_vocab_value",
-                    path=path,
-                    message=f"Invalid term for '{vocab_name}'; expected a non-empty string.",
-                ),
-                as_error=True,
-            )
-            return
-
-        is_match, suggestion = vocabulary.check(vocab_name, cleaned)
-        if is_match:
-            return
-
-        if suggestion is None:
-            known = ", ".join(sorted(vocabulary.terms_by_vocab.get(vocab_name, {}).keys()))
-            _record(
-                ValidationIssue(
-                    code="unknown_vocab_term",
-                    path=path,
-                    message=(
-                        f"Unknown value '{cleaned}' for vocabulary '{vocab_name}'. "
-                        f"Use one of: {known}."
-                    ),
-                ),
-                as_error=True,
-            )
-            return
-
-        warnings.append(
+    policy, policy_error = _load_instrument_policy()
+    if policy_error is not None or policy is None:
+        issues.append(
             ValidationIssue(
-                code="vocab_synonym_used",
-                path=path,
-                message=(
-                    f"Value '{cleaned}' is a synonym in '{vocab_name}'. "
-                    f"Prefer canonical id '{suggestion}'."
-                ),
+                code='instrument_policy_load_error',
+                path='instrument_metadata_policy.yaml',
+                message=policy_error or 'Unknown instrument policy loading error.',
             )
         )
+        return instrument_ids, issues, warnings
+
+    vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
 
     for instrument_file in _iter_yaml_files(instruments_dir):
-        is_retired_instrument = "retired" in instrument_file.parts
+        is_retired_instrument = 'retired' in instrument_file.parts
 
         payload, load_error = _load_yaml(instrument_file)
         if load_error is not None:
-            issues.append(
-                ValidationIssue(
-                    code="yaml_parse_error",
-                    path=instrument_file.as_posix(),
-                    message=load_error,
-                )
-            )
+            issues.append(ValidationIssue(code='yaml_parse_error', path=instrument_file.as_posix(), message=load_error))
             continue
-
         if payload is None:
             continue
 
-        instrument_section = payload.get("instrument")
+        for rule in policy.rules:
+            resolved = _resolve_path_nodes(payload, rule.path)
+
+            if rule.aliases:
+                for alias in rule.aliases:
+                    alias_resolved = _resolve_path_nodes(payload, alias)
+                    if alias_resolved and not resolved:
+                        warnings.append(
+                            ValidationIssue(
+                                code='field_alias_used',
+                                path=f"{instrument_file.as_posix()}:{alias}",
+                                message=f"Field '{alias}' is legacy alias for '{rule.path}'. Prefer canonical field.",
+                            )
+                        )
+
+            if rule.superseded_by and resolved:
+                warnings.append(
+                    ValidationIssue(
+                        code='field_superseded',
+                        path=f"{instrument_file.as_posix()}:{rule.path}",
+                        message=f"Field '{rule.path}' is superseded by '{rule.superseded_by}'. Please migrate.",
+                    )
+                )
+
+            status = rule.status
+            is_required = status == 'required'
+            if status == 'conditional' and rule.required_if is not None:
+                is_required = _evaluate_required_if(
+                    rule.required_if,
+                    payload=payload,
+                    item_context=None,
+                    vocabulary=vocabulary,
+                )
+
+            if is_required and not resolved:
+                if is_retired_instrument:
+                    continue
+                warnings.append(
+                    ValidationIssue(
+                        code='missing_required_field',
+                        path=f"{instrument_file.as_posix()}:{rule.path}",
+                        message=f"Missing required field '{rule.path}' (reported for audit follow-up).",
+                    )
+                )
+                continue
+
+            if not resolved:
+                continue
+
+            for node in resolved:
+                value = node.value
+                full_path = f"{instrument_file.as_posix()}:{node.path}"
+
+                if status == 'conditional' and rule.required_if is not None:
+                    required_for_item = _evaluate_required_if(
+                        rule.required_if,
+                        payload=payload,
+                        item_context=node.context_item,
+                        vocabulary=vocabulary,
+                    )
+                    if required_for_item and value in (None, ''):
+                        warnings.append(
+                            ValidationIssue(
+                                code='missing_conditional_field',
+                                path=full_path,
+                                message=(
+                                    f"Field '{rule.path}' is required under current conditions "
+                                    "(reported for audit follow-up)."
+                                ),
+                            )
+                        )
+                        continue
+
+                if value in (None, ''):
+                    continue
+
+                if not _check_type(value, rule.field_type):
+                    issues.append(
+                        ValidationIssue(
+                            code='invalid_field_type',
+                            path=full_path,
+                            message=f"Invalid type/content for '{rule.path}'. Expected {rule.field_type}.",
+                        )
+                    )
+                    continue
+
+                if rule.field_type == 'list' and isinstance(value, list) and isinstance(rule.min_items, int):
+                    if len(value) < rule.min_items:
+                        warnings.append(
+                            ValidationIssue(
+                                code='list_too_short',
+                                path=full_path,
+                                message=(
+                                    f"List '{rule.path}' should contain at least {rule.min_items} item(s) "
+                                    "(reported for audit follow-up)."
+                                ),
+                            )
+                        )
+
+                validation_error = _check_rule_validation(value, rule)
+                if validation_error is not None:
+                    warnings.append(
+                        ValidationIssue(
+                            code='validation_constraint_failed',
+                            path=full_path,
+                            message=(
+                                f"Field '{rule.path}' {validation_error} "
+                                "(reported for audit follow-up)."
+                            ),
+                        )
+                    )
+
+                if rule.vocab is not None:
+                    vocab_values: list[tuple[Any, str]]
+                    if isinstance(value, list):
+                        vocab_values = [
+                            (item, f"{full_path}[{index}]")
+                            for index, item in enumerate(value)
+                        ]
+                    else:
+                        vocab_values = [(value, full_path)]
+
+                    for vocab_value, vocab_path in vocab_values:
+                        is_match, suggestion = vocabulary.check(rule.vocab, vocab_value)
+                        if is_match:
+                            continue
+                        if suggestion is not None:
+                            warnings.append(
+                                ValidationIssue(
+                                    code='vocab_synonym_used',
+                                    path=vocab_path,
+                                    message=(
+                                        f"Value '{vocab_value}' is a synonym in '{rule.vocab}'. Prefer canonical id '{suggestion}'."
+                                    ),
+                                )
+                            )
+                        else:
+                            known = ', '.join(sorted(vocabulary.terms_by_vocab.get(rule.vocab, {}).keys()))
+                            issues.append(
+                                ValidationIssue(
+                                    code='unknown_vocab_term',
+                                    path=vocab_path,
+                                    message=(
+                                        f"Unknown value '{vocab_value}' for vocabulary '{rule.vocab}'. Use one of: {known}."
+                                    ),
+                                )
+                            )
+
+        instrument_section = payload.get('instrument')
         if not isinstance(instrument_section, dict):
             if is_retired_instrument:
                 continue
             issues.append(
                 ValidationIssue(
-                    code="missing_instrument_section",
+                    code='missing_instrument_section',
                     path=instrument_file.as_posix(),
                     message="Missing required top-level mapping key 'instrument'.",
                 )
             )
             continue
 
-        instrument_id = instrument_section.get("instrument_id")
+        instrument_id = instrument_section.get('instrument_id')
         if not isinstance(instrument_id, str) or not instrument_id.strip():
             if is_retired_instrument:
                 continue
             issues.append(
                 ValidationIssue(
-                    code="missing_instrument_id",
+                    code='missing_instrument_id',
                     path=instrument_file.as_posix(),
-                    message="Missing required instrument.instrument_id (must be a non-empty string).",
+                    message='Missing required instrument.instrument_id (must be a non-empty string).',
                 )
             )
             continue
@@ -365,11 +720,11 @@ def validate_instrument_ledgers(
                 continue
             issues.append(
                 ValidationIssue(
-                    code="invalid_instrument_id",
+                    code='invalid_instrument_id',
                     path=instrument_file.as_posix(),
                     message=(
-                        "Invalid instrument.instrument_id; expected URL-safe slug "
-                        "(lowercase letters, numbers, and single hyphens only)."
+                        'Invalid instrument.instrument_id; expected URL-safe slug '
+                        '(lowercase letters, numbers, and single hyphens only).'
                     ),
                 )
             )
@@ -378,372 +733,20 @@ def validate_instrument_ledgers(
         instrument_ids.add(instrument_id)
         instrument_id_to_files.setdefault(instrument_id, []).append(instrument_file.as_posix())
 
-        for field_name in ("display_name", "manufacturer", "model", "stand_orientation"):
-            if _is_non_empty_string(instrument_section.get(field_name)):
-                continue
-            issues.append(
-                ValidationIssue(
-                    code="missing_instrument_field",
-                    path=f"{instrument_file.as_posix()}:instrument.{field_name}",
-                    message=f"Missing required instrument field '{field_name}' (must be a non-empty string).",
-                )
-            )
-
-        modalities = payload.get("modalities")
-        if isinstance(modalities, list):
-            for index, modality in enumerate(modalities):
-                _validate_vocab_value(
-                    path=f"{instrument_file.as_posix()}:modalities[{index}]",
-                    vocab_name="modalities",
-                    raw_value=modality,
-                )
-
-        modules = payload.get("modules")
-        if isinstance(modules, list):
-            for index, module in enumerate(modules):
-                module_name = module.get("name") if isinstance(module, dict) else module
-                _validate_vocab_value(
-                    path=f"{instrument_file.as_posix()}:modules[{index}].name",
-                    vocab_name="modules",
-                    raw_value=module_name,
-                    allow_empty=True,
-                )
-
-        hardware = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
-        scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
-        _validate_vocab_value(
-            path=f"{instrument_file.as_posix()}:hardware.scanner.type",
-            vocab_name="scanner_types",
-            raw_value=scanner.get("type"),
-            required=True,
-        )
-
-        for scanner_numeric_field in ("line_rate_hz", "pinhole_um"):
-            scanner_value = scanner.get(scanner_numeric_field)
-            if scanner_value in (None, ""):
-                continue
-            if not _is_positive_number_or_numeric_string(scanner_value):
-                warnings.append(
-                    ValidationIssue(
-                        code=f"non_numeric_scanner_{scanner_numeric_field}",
-                        path=f"{instrument_file.as_posix()}:hardware.scanner.{scanner_numeric_field}",
-                        message=f"{scanner_numeric_field} should be a positive numeric value when provided.",
-                    )
-                )
-
-        for index, source in enumerate(hardware.get("light_sources", [])):
-            if not isinstance(source, dict):
-                issues.append(
-                    ValidationIssue(
-                        code="invalid_light_source_shape",
-                        path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}]",
-                        message="Each light source must be a mapping/object.",
-                    )
-                )
-                continue
-
-            _validate_vocab_value(
-                path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].kind",
-                vocab_name="light_source_kinds",
-                raw_value=source.get("kind"),
-                required=True,
-            )
-
-            wavelength_nm = source.get("wavelength_nm")
-            if _is_descriptive_wavelength(wavelength_nm):
-                warnings.append(
-                    ValidationIssue(
-                        code="non_numeric_light_source_wavelength",
-                        path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].wavelength_nm",
-                        message=(
-                            "wavelength_nm is descriptive and will be displayed as-is; "
-                            "use numeric nm or '<center>/<width>' when available."
-                        ),
-                    )
-                )
-            elif wavelength_nm not in (None, "") and not _is_valid_wavelength(wavelength_nm):
-                issues.append(
-                    ValidationIssue(
-                        code="invalid_light_source_wavelength",
-                        path=f"{instrument_file.as_posix()}:hardware.light_sources[{index}].wavelength_nm",
-                        message=(
-                            "wavelength_nm must be numeric (or a numeric string) or a numeric band "
-                            "formatted as '<center>/<width>'."
-                        ),
-                    )
-                )
-
-        detector_kinds_present: set[str] = set()
-        for index, detector in enumerate(hardware.get("detectors", [])):
-            if not isinstance(detector, dict):
-                issues.append(
-                    ValidationIssue(
-                        code="invalid_detector_shape",
-                        path=f"{instrument_file.as_posix()}:hardware.detectors[{index}]",
-                        message="Each detector must be a mapping/object.",
-                    )
-                )
-                continue
-
-            detector_kind = detector.get("kind")
-            _validate_vocab_value(
-                path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].kind",
-                vocab_name="detector_kinds",
-                raw_value=detector_kind,
-                required=True,
-            )
-            detector_kind_canonical = vocabulary.resolve_canonical("detector_kinds", detector_kind)
-            if detector_kind_canonical:
-                detector_kinds_present.add(detector_kind_canonical)
-
-            for field_name in ("pixel_pitch_um", "pixel_size_um", "qe_peak_pct", "read_noise_e"):
-                raw_value = detector.get(field_name)
-                if raw_value in (None, ""):
-                    continue
-                if not _is_positive_number_or_numeric_string(raw_value):
-                    warnings.append(
-                        ValidationIssue(
-                            code=f"non_numeric_{field_name}",
-                            path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].{field_name}",
-                            message=f"{field_name} should be a positive numeric value when provided.",
-                        )
-                    )
-
-            bit_depth = detector.get("bit_depth")
-            if bit_depth not in (None, "") and not _is_positive_number_or_numeric_string(bit_depth):
-                warnings.append(
-                    ValidationIssue(
-                        code="non_numeric_detector_bit_depth",
-                        path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].bit_depth",
-                        message="bit_depth should be a positive numeric value when provided.",
-                    )
-                )
-
-            detector_term = vocabulary.get_term("detector_kinds", detector_kind_canonical) if detector_kind_canonical else None
-            detector_tags = detector_term.tags() if detector_term is not None else {}
-            if detector_tags.get("architecture") == "camera" and not (
-                _is_positive_number_or_numeric_string(detector.get("pixel_pitch_um"))
-                or _is_positive_number_or_numeric_string(detector.get("pixel_size_um"))
-            ):
-                warnings.append(
-                    ValidationIssue(
-                        code="camera_detector_pixel_pitch_missing",
-                        path=f"{instrument_file.as_posix()}:hardware.detectors[{index}]",
-                        message=(
-                            "Camera-based detectors should usually include pixel_pitch_um (or pixel_size_um) "
-                            "for methods reporting completeness."
-                        ),
-                    )
-                )
-
-        seen_objective_ids: set[str] = set()
-        for index, objective in enumerate(hardware.get("objectives", [])):
-            if not isinstance(objective, dict):
-                issues.append(
-                    ValidationIssue(
-                        code="invalid_objective_shape",
-                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}]",
-                        message="Each objective must be a mapping/object.",
-                    )
-                )
-                continue
-
-            obj_id = objective.get("id")
-            if not _is_non_empty_string(obj_id):
-                issues.append(
-                    ValidationIssue(
-                        code="missing_objective_id",
-                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].id",
-                        message="Objective id is required.",
-                    )
-                )
-            else:
-                normalized_id = obj_id.strip()
-                if normalized_id in seen_objective_ids:
-                    issues.append(
-                        ValidationIssue(
-                            code="duplicate_objective_id",
-                            path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].id",
-                            message=f"Duplicate objective id '{normalized_id}' within instrument.",
-                        )
-                    )
-                else:
-                    seen_objective_ids.add(normalized_id)
-
-            na = objective.get("numerical_aperture")
-            if na in (None, ""):
-                warnings.append(
-                    ValidationIssue(
-                        code="missing_numerical_aperture",
-                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
-                        message="NA is missing; value will be displayed as-is and highlighted in audit output.",
-                    )
-                )
-            elif _is_number(na):
-                if not (0 < na <= 1.7):
-                    issues.append(
-                        ValidationIssue(
-                            code="invalid_numerical_aperture",
-                            path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
-                            message="NA must be numeric and between 0 and 1.7.",
-                        )
-                    )
-            elif _is_numeric_string(na):
-                na_value = float(na.strip())
-                if not (0 < na_value <= 1.7):
-                    issues.append(
-                        ValidationIssue(
-                            code="invalid_numerical_aperture",
-                            path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
-                            message="NA must be numeric and between 0 and 1.7.",
-                        )
-                    )
-            else:
-                warnings.append(
-                    ValidationIssue(
-                        code="non_numeric_numerical_aperture",
-                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].numerical_aperture",
-                        message="NA is descriptive and will be displayed as-is; provide numeric value when known.",
-                    )
-                )
-
-            magnification = objective.get("magnification")
-            if magnification is not None and not _is_positive_number(magnification):
-                issues.append(
-                    ValidationIssue(
-                        code="invalid_objective_magnification",
-                        path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].magnification",
-                        message="Objective magnification must be numeric and greater than 0.",
-                    )
-                )
-
-            _validate_vocab_value(
-                path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].immersion",
-                vocab_name="objective_immersion",
-                raw_value=objective.get("immersion"),
-                allow_empty=True,
-            )
-            _validate_vocab_value(
-                path=f"{instrument_file.as_posix()}:hardware.objectives[{index}].correction",
-                vocab_name="objective_corrections",
-                raw_value=objective.get("correction"),
-                allow_empty=True,
-            )
-
-        modality_ids = {
-            modality_id
-            for modality in (modalities if isinstance(modalities, list) else [])
-            for modality_id in [vocabulary.resolve_canonical("modalities", modality)]
-            if modality_id is not None
-        }
-        module_ids = {
-            module_id
-            for module in (modules if isinstance(modules, list) else [])
-            if isinstance(module, dict)
-            for module_id in [vocabulary.resolve_canonical("modules", module.get("name"))]
-            if module_id is not None
-        }
-
-        scanner_type = scanner.get("type") if isinstance(scanner.get("type"), str) else None
-        if "confocal_point" in modality_ids and scanner_type == "none":
-            warnings.append(
-                ValidationIssue(
-                    code="modality_scanner_mismatch",
-                    path=f"{instrument_file.as_posix()}:hardware.scanner.type",
-                    message="'confocal_point' modality usually requires a non-'none' scanner type.",
-                )
-            )
-
-        if "confocal_point" in modality_ids and scanner_type in {"galvo", "resonant"} and scanner.get("pinhole_um") in (None, ""):
-            warnings.append(
-                ValidationIssue(
-                    code="confocal_pinhole_missing",
-                    path=f"{instrument_file.as_posix()}:hardware.scanner.pinhole_um",
-                    message="Point-scanning confocal setups should usually include pinhole_um for methods completeness.",
-                )
-            )
-
-        module_terms = [
-            term
-            for module_id in module_ids
-            for term in [vocabulary.get_term("modules", module_id)]
-            if term is not None
-        ]
-
-        module_supported_modalities: set[str] = set()
-        for module_term in vocabulary.terms_by_vocab.get("modules", {}).values():
-            provides_modality = module_term.tags().get("provides_modality")
-            if isinstance(provides_modality, str) and provides_modality.strip():
-                module_supported_modalities.add(provides_modality.strip())
-            elif isinstance(provides_modality, list):
-                module_supported_modalities.update(
-                    value.strip()
-                    for value in provides_modality
-                    if isinstance(value, str) and value.strip()
-                )
-
-        provided_modalities: set[str] = set()
-        for module_term in module_terms:
-            provides_modality = module_term.tags().get("provides_modality")
-            if isinstance(provides_modality, str) and provides_modality.strip():
-                provided_modalities.add(provides_modality.strip())
-            elif isinstance(provides_modality, list):
-                provided_modalities.update(
-                    value.strip()
-                    for value in provides_modality
-                    if isinstance(value, str) and value.strip()
-                )
-
-        has_point_detector = any(
-            detector_tags.get("architecture") == "point_scanning"
-            for detector_kind_id in detector_kinds_present
-            for term in [vocabulary.get_term("detector_kinds", detector_kind_id)]
-            for detector_tags in [term.tags() if term is not None else {}]
-        )
-
-        for modality_id in sorted(modality_ids & module_supported_modalities):
-            if modality_id in provided_modalities:
-                continue
-
-            if modality_id == "flim":
-                if has_point_detector:
-                    continue
-                warnings.append(
-                    ValidationIssue(
-                        code="flim_chain_incomplete",
-                        path=f"{instrument_file.as_posix()}:modalities",
-                        message=(
-                            "'flim' modality should usually declare a FLIM module or FLIM-capable detector chain "
-                            "(e.g., APD/SPAD/HyD/PMT)."
-                        ),
-                    )
-                )
-                continue
-
-            warnings.append(
-                ValidationIssue(
-                    code="modality_module_missing",
-                    path=f"{instrument_file.as_posix()}:modules",
-                    message=(
-                        f"'{modality_id}' modality is declared but no module provides it. "
-                        "Add a module whose tags.provides_modality includes this modality."
-                    ),
-                )
-            )
-
     for instrument_id, source_files in sorted(instrument_id_to_files.items()):
         if len(source_files) <= 1:
             continue
-        source_list = ", ".join(sorted(source_files))
+        source_list = ', '.join(sorted(source_files))
         issues.append(
             ValidationIssue(
-                code="duplicate_instrument_id",
+                code='duplicate_instrument_id',
                 path=instrument_id,
                 message=f"Duplicate instrument.instrument_id '{instrument_id}' defined in: {source_list}.",
             )
         )
 
     return instrument_ids, issues, warnings
+
 
 def validate_event_ledgers(
     *,
