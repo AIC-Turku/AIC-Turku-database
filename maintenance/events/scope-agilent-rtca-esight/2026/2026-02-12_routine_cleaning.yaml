@@ -9,7 +9,7 @@ microscope_status_after: in_service
 reason_details: Routine system cleaning.
 maintenance_id: maint_scope-agilent-rtca-esight_20260212_cleaning
 reason: cleaning
-contact: AIC Staff
 action_details: General cleaning of the instrument chassis and incubation chamber
   performed by AIC Staff.
 action: other
+performed_by: AIC Staff

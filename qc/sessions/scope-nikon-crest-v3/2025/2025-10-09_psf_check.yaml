@@ -39,12 +39,15 @@ metrics_computed:
   value: 288.3
   unit: nm
   details: 'StdDev: 4.9. N=93 beads.'
+  metric_class: fwhm_lateral
 - metric_id: psf.60x_silicone.525.fwhm_xy_min_nm
   value: 267.1
   unit: nm
+  metric_class: fwhm_lateral
 - metric_id: psf.60x_silicone.525.fwhm_z_nm
   value: 853.2
   unit: nm
+  metric_class: fwhm_axial
 - metric_id: psf.60x_silicone.525.asymmetry
   value: 0.93
   unit: unitless
@@ -52,16 +55,20 @@ metrics_computed:
   value: 127.5
   unit: nm
   details: Axial shift of Blue 425 relative to Green 525.
+  metric_class: chromatic_shift
 - metric_id: psf.60x_oil.525.fwhm_xy_max_nm
   value: 291.1
   unit: nm
   details: 'StdDev: 7.6. N=356 beads.'
+  metric_class: fwhm_lateral
 - metric_id: psf.60x_oil.525.fwhm_xy_min_nm
   value: 260.2
   unit: nm
+  metric_class: fwhm_lateral
 - metric_id: psf.60x_oil.525.fwhm_z_nm
   value: 686.8
   unit: nm
+  metric_class: fwhm_axial
 - metric_id: psf.60x_oil.525.asymmetry
   value: 0.93
   unit: unitless
@@ -69,16 +76,20 @@ metrics_computed:
   value: 118.7
   unit: nm
   details: Axial shift of Blue 425 relative to Green 525.
+  metric_class: chromatic_shift
 - metric_id: psf.100x_oil.525.fwhm_xy_max_nm
   value: 210.0
   unit: nm
   details: 'StdDev: 1.5. N=85 beads.'
+  metric_class: fwhm_lateral
 - metric_id: psf.100x_oil.525.fwhm_xy_min_nm
   value: 203.1
   unit: nm
+  metric_class: fwhm_lateral
 - metric_id: psf.100x_oil.525.fwhm_z_nm
   value: 585.5
   unit: nm
+  metric_class: fwhm_axial
 - metric_id: psf.100x_oil.525.asymmetry
   value: 0.97
   unit: unitless
@@ -86,6 +97,7 @@ metrics_computed:
   value: -25.4
   unit: nm
   details: Axial shift of Blue 425 relative to Green 525.
+  metric_class: chromatic_shift
 evaluation:
   benchmark_ref: benchmarks/scope-nikon-crest-v3.yaml@main
   evaluated_utc: '2025-10-09T14:10:00Z'
