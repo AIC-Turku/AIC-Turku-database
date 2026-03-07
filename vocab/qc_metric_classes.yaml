@@ -1,24 +1,32 @@
 terms:
-  - id: optical_resolution
-    label: "Optical Resolution"
-    description: "Metrics describing lateral or axial resolution performance, including PSF-derived widths."
+  - id: fwhm_lateral
+    label: "Lateral (XY) Full Width at Half Maximum"
+    description: "Class of resolution metrics describing lateral point-spread width in the imaging plane."
 
-  - id: chromatic_registration
-    label: "Chromatic Registration"
-    description: "Metrics describing channel-to-channel spatial offsets or chromatic aberration."
+  - id: fwhm_axial
+    label: "Axial (Z) Full Width at Half Maximum"
+    description: "Class of resolution metrics describing axial point-spread width along the optical axis."
 
-  - id: illumination_power
-    label: "Illumination Power"
-    description: "Metrics describing absolute illumination output, linearity, and stability over time."
+  - id: signal_to_noise
+    label: "Signal-to-noise or contrast ratio"
+    description: "Class of image quality metrics describing signal strength relative to background noise or contrast."
 
-  - id: mechanical_positioning
-    label: "Mechanical Positioning"
-    description: "Metrics describing stage repeatability, drift, or positioning accuracy."
+  - id: chromatic_shift
+    label: "Spatial offset between color channels"
+    description: "Class of alignment metrics describing chromatic displacement between channels in multicolor imaging."
 
-  - id: signal_quality
-    label: "Signal Quality"
-    description: "Metrics describing noise, contrast, dynamic range, and related signal characteristics."
+  - id: stage_repeatability
+    label: "Error or variance in stage repositioning"
+    description: "Class of positioning metrics describing precision and repeatability of stage return to target coordinates."
 
-  - id: other
-    label: "Other"
-    description: "Fallback class for metrics that do not match predefined classes; provide details in metric_id/details."
+  - id: laser_power
+    label: "Absolute or relative illumination intensity"
+    description: "Class of illumination metrics describing measured excitation intensity or power output."
+
+  - id: illumination_uniformity
+    label: "Flatness of the field of view"
+    description: "Class of illumination metrics describing spatial uniformity of intensity across the field."
+
+  - id: detector_dark_noise
+    label: "Baseline noise of the camera/detector"
+    description: "Class of detector metrics describing dark signal and baseline electronic noise without illumination."
