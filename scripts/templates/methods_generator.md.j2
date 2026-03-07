@@ -64,18 +64,12 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
 let vocabularies = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const [instrumentsResponse, vocabulariesResponse] = await Promise.all([
-        fetch("../assets/instruments_data.json"),
-        fetch("../assets/vocabularies.json")
-    ]);
-    const [instrumentsPayload, vocabulariesPayload] = await Promise.all([
-        instrumentsResponse.json(),
-        vocabulariesResponse.json()
-    ]);
+    const instrumentsResponse = await fetch("../assets/instruments_data.json");
+    const instrumentsPayload = await instrumentsResponse.json();
     const instruments = Array.isArray(instrumentsPayload)
         ? instrumentsPayload
         : (instrumentsPayload?.instruments || []);
-    vocabularies = vocabulariesPayload || instrumentsPayload?.vocabularies || {};
+    vocabularies = instrumentsPayload?.vocabularies || {};
 
     const systemSelect = document.getElementById("system-select");
     const hwOptions = document.getElementById("hardware-options");
@@ -107,8 +101,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         hwOptions.style.display = "block";
 
-        const vocab = currentInst.vocabularies || {};
-
         const modalityItems = currentInst.processed_hardware?.modalities || currentInst.modalities || [];
         populateCheckboxes("modality-list", modalityItems,
             modality => getLabel("modalities", modality), "modality",
@@ -118,7 +110,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         populateCheckboxes("module-list", moduleItems,
             module => {
                 const moduleId = module?.id || module?.name || module;
-                const moduleLabel = formatVocabLabel(vocab.hardware_modules, moduleId);
+                const moduleLabel = formatVocabLabel(vocabularies.modules, moduleId);
                 const moduleNotes = (module?.notes || "").toString().trim();
                 return moduleNotes ? `${moduleLabel} (${moduleNotes})` : moduleLabel;
             }, "module");
@@ -128,7 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         populateCheckboxes("scanner-list", scannerItems,
             scannerItem => {
                 const scannerTypeRaw = scannerItem?.type || scannerItem?.id || "";
-                const scannerLabel = formatVocabLabel(vocab.scanners || vocab.scanner || vocab.scanner_types, scannerTypeRaw);
+                const scannerLabel = formatVocabLabel(vocabularies.scanner_types, scannerTypeRaw);
                 const scannerNotes = (scannerItem?.notes || "").toString().trim();
                 return scannerNotes ? `${scannerLabel} (${scannerNotes})` : scannerLabel;
             }, "scanner");
@@ -344,16 +336,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? currentInst.stand_orientation + " "
             : "";
 
-        const vocab = currentInst.vocabularies || {};
         const fallbackModalities = (currentInst.processed_hardware?.modalities || currentInst.modalities || [])
-            .map(m => formatVocabLabel(vocab.modalities, m));
+            .map(m => formatVocabLabel(vocabularies.modalities, m));
         const selectedModalities = modalities.length > 0 ? modalities : fallbackModalities;
         const modalitiesText = selectedModalities.length > 0 ? formatHumanList(selectedModalities) : "Light microscopy";
 
         const scannerData = currentInst?.processed_hardware?.scanner || currentInst?.hardware?.scanner || {};
         const scannerFallbackId = (scannerData?.type || scannerData?.id || "").toString().trim();
         const scannerFallbackLabel = scannerFallbackId
-            ? formatVocabLabel(vocab.scanners || vocab.scanner || vocab.scanner_types, scannerFallbackId)
+            ? formatVocabLabel(vocabularies.scanner_types, scannerFallbackId)
             : "";
         const selectedScanners = scanners.length > 0
             ? scanners
