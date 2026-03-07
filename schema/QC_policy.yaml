@@ -1,0 +1,652 @@
+schema_version: 1
+policy_name: QC_policy
+record_type: qc_session
+applies_to:
+  template: templates/QC_template.yaml
+  directories:
+    - qc/sessions
+purpose: >
+  Completeness and normalization policy for QC ledgers. This policy distinguishes
+  human-entered fields, script-generated fields, and CI-generated evaluation fields.
+source_of_truth_for:
+  - scripts/validate.py
+  - scripts/dashboard_builder.py
+  - future QC completeness checks
+  - future autofix/normalization tooling
+
+vocab_registry:
+  qc_type:
+    source: inline
+    suggested_vocab_file: vocab/qc_types.yaml
+    allowed_values:
+      - laser_power
+      - psf
+      - alignment
+      - stage
+      - other
+  measurement_position:
+    source: inline
+    suggested_vocab_file: vocab/qc_measurement_positions.yaml
+    allowed_values:
+      - at_objective
+      - pre_objective
+      - fiber_output
+  artifact_role:
+    source: inline
+    suggested_vocab_file: vocab/qc_artifact_roles.yaml
+    allowed_values:
+      - table
+      - raw_image
+      - preview
+      - report
+      - other
+  evaluation_status:
+    source: inline
+    suggested_vocab_file: vocab/qc_evaluation_status.yaml
+    allowed_values:
+      - pass
+      - warn
+      - fail
+  setpoint_units:
+    source: inline
+    suggested_vocab_file: vocab/qc_setpoint_units.yaml
+    allowed_values:
+      - percent
+      - mW_setpoint
+  metric_unit:
+    source: free_text
+    note: >
+      Leave free-text for now because units span mW, nm, percent, unitless, C,
+      and modality-specific terms.
+
+field_rules:
+  - path: schema_version
+    status: required
+    type: integer
+    allowed_values: [1]
+    written_by: human
+    used_by: [validation]
+    rationale: Locks interpretation of the QC ledger shape.
+
+  - path: record_type
+    status: required
+    type: string
+    allowed_values: [qc_session]
+    written_by: human
+    used_by: [validation]
+    rationale: Distinguishes QC ledgers from maintenance ledgers.
+
+  - path: qc_id
+    status: required
+    type: string
+    pattern: '^qc_[a-z0-9-]+_[0-9]{8}T[0-9]{6}Z_[a-z0-9_-]+$'
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Stable unique key for the QC session.
+
+  - path: microscope
+    status: required
+    type: instrument_id
+    must_match_registry: instrument.instrument_id
+    must_match_path_segment: true
+    written_by: human
+    used_by: [validation, dashboard, trending]
+    rationale: Links QC records to the instrument registry.
+
+  - path: started_utc
+    status: required
+    type: datetime_utc
+    written_by: human
+    used_by: [validation, dashboard, trending]
+    rationale: Required for chronology and longitudinal analysis.
+
+  - path: ended_utc
+    status: optional
+    type: datetime_utc
+    written_by: human
+    used_by: [dashboard]
+    rationale: Useful for duration and traceability, but not essential.
+
+  - path: performed_by
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Traceability for who executed the QC session.
+
+  - path: reason
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard, filtering]
+    rationale: Explains why the QC was run (monthly_qc, post_service, troubleshooting, etc.).
+
+  - path: summary
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard, reports]
+    rationale: Human-readable session summary without verdict semantics.
+
+  - path: notes
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard, reports]
+    rationale: Holds contextual nuance that does not fit structured fields.
+
+  - path: performed
+    status: required
+    type: list
+    min_items: 1
+    written_by: human
+    used_by: [dashboard, validation]
+    rationale: Defines what QC activities were actually performed.
+
+  - path: performed[].qc_type
+    status: required
+    type: enum
+    vocab: qc_type
+    written_by: human
+    used_by: [dashboard, validation]
+    rationale: Main structured QC activity classifier.
+
+  - path: performed[].details
+    status: required
+    type: text
+    written_by: human
+    used_by: [dashboard, reports]
+    rationale: Captures protocol-level context for each performed activity.
+
+  - path: performed[].artifacts
+    status: optional
+    type: list
+    item_type: artifact_id
+    written_by: human
+    used_by: [dashboard]
+    rationale: Links performed activities to artifact pointers when available.
+
+  - path: inputs_human
+    status: optional
+    type: list
+    written_by: human
+    used_by: [dashboard, validation]
+    rationale: Flexible slot for manual checks and environment readings.
+
+  - path: inputs_human[].metric_id
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Stable manual metric key.
+
+  - path: inputs_human[].value
+    status: required
+    type: scalar
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Stores numeric or categorical observations.
+
+  - path: inputs_human[].unit
+    status: optional
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Unit may be empty for checklist values.
+
+  - path: inputs_human[].details
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard]
+    rationale: Useful supporting context for manual metrics.
+
+  - path: laser_inputs_human
+    status: conditionally_required
+    type: mapping
+    required_if:
+      performed_contains_qc_type: laser_power
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Laser QC should be represented with structured measurement metadata.
+
+  - path: laser_inputs_human.measurement_position
+    status: conditionally_required
+    type: enum
+    vocab: measurement_position
+    required_if:
+      performed_contains_qc_type: laser_power
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Measurement position determines comparability across sessions.
+
+  - path: laser_inputs_human.measurement_position_details
+    status: conditionally_required
+    type: text
+    required_if:
+      performed_contains_qc_type: laser_power
+    written_by: human
+    used_by: [dashboard]
+    rationale: Documents adapters/objective/sensor placement for reproducibility.
+
+  - path: laser_inputs_human.power_meter.model
+    status: conditionally_required
+    type: string
+    required_if:
+      performed_contains_qc_type: laser_power
+    written_by: human
+    used_by: [dashboard]
+    rationale: Identifies the measurement device or surrogate standard used.
+
+  - path: laser_inputs_human.power_meter.serial
+    status: optional
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Useful traceability when available.
+
+  - path: laser_inputs_human.power_meter.calibration_due
+    status: optional
+    type: date_or_text
+    written_by: human
+    used_by: [dashboard]
+    rationale: Good practice for calibrated instruments, but not always available.
+
+  - path: laser_inputs_human.power_meter.integration_time_s
+    status: optional
+    type: number
+    written_by: human
+    used_by: [dashboard]
+    rationale: Helpful for noisy traces and protocol comparability.
+
+  - path: laser_inputs_human.power_meter.notes
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard]
+    rationale: Captures attenuators, adapters, sensor type, or exceptional setup details.
+
+  - path: laser_inputs_human.linearity_series
+    status: conditionally_required
+    type: list
+    required_if:
+      performed_contains_qc_type: laser_power
+      no_stability_series: true
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: At least one structured laser data series should exist for laser QC.
+
+  - path: laser_inputs_human.linearity_series[].laser
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Identifies the laser line under test.
+
+  - path: laser_inputs_human.linearity_series[].setpoint_units
+    status: required
+    type: enum
+    vocab: setpoint_units
+    written_by: human
+    used_by: [dashboard]
+    rationale: Required to interpret linearity points correctly.
+
+  - path: laser_inputs_human.linearity_series[].power_units
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Required to interpret the measured power values.
+
+  - path: laser_inputs_human.linearity_series[].points
+    status: conditionally_required
+    type: list
+    min_items: 1
+    required_if:
+      missing_csv_artifact: true
+    written_by: human
+    used_by: [dashboard]
+    rationale: Inline points are required unless the full series is stored as an artifact.
+
+  - path: laser_inputs_human.linearity_series[].points[].setpoint
+    status: required
+    type: number
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Required for linearity analysis.
+
+  - path: laser_inputs_human.linearity_series[].points[].power
+    status: required
+    type: number
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Required for linearity analysis.
+
+  - path: laser_inputs_human.linearity_series[].csv_artifact
+    status: optional
+    type: artifact_id
+    written_by: human
+    used_by: [dashboard]
+    rationale: Preferred for dense or replicated series.
+
+  - path: laser_inputs_human.linearity_series[].details
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard]
+    rationale: Captures protocol specifics for each sweep.
+
+  - path: laser_inputs_human.stability_series
+    status: conditionally_required
+    type: list
+    required_if:
+      performed_contains_qc_type: laser_power
+      no_linearity_series: true
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Stability-only laser QC should still be representable as structured series.
+
+  - path: laser_inputs_human.stability_series[].laser
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Identifies the laser line under test.
+
+  - path: laser_inputs_human.stability_series[].setpoint
+    status: required
+    type: number
+    written_by: human
+    used_by: [dashboard]
+    rationale: Needed to interpret drift measurements.
+
+  - path: laser_inputs_human.stability_series[].setpoint_units
+    status: required
+    type: enum
+    vocab: setpoint_units
+    written_by: human
+    used_by: [dashboard]
+    rationale: Keeps setpoint semantics machine-readable.
+
+  - path: laser_inputs_human.stability_series[].sampling
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Required when full timestamps are not embedded inline.
+
+  - path: laser_inputs_human.stability_series[].power_units
+    status: required
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Required to interpret power values.
+
+  - path: laser_inputs_human.stability_series[].timepoints
+    status: conditionally_required
+    type: list
+    min_items: 1
+    required_if:
+      missing_csv_artifact: true
+    written_by: human
+    used_by: [dashboard]
+    rationale: Inline timepoints are required unless a CSV artifact is provided.
+
+  - path: laser_inputs_human.stability_series[].timepoints[].t_s
+    status: required
+    type: number
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Required for time-resolved stability analysis.
+
+  - path: laser_inputs_human.stability_series[].timepoints[].power
+    status: required
+    type: number
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Required for stability analysis.
+
+  - path: laser_inputs_human.stability_series[].csv_artifact
+    status: optional
+    type: artifact_id
+    written_by: human
+    used_by: [dashboard]
+    rationale: Preferred for long time series.
+
+  - path: laser_inputs_human.stability_series[].details
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard]
+    rationale: Captures context for the trace.
+
+  - path: computed_provenance
+    status: conditionally_required
+    type: mapping
+    required_if:
+      metrics_computed_present: true
+    written_by: script
+    used_by: [validation, dashboard]
+    rationale: Computed metrics should always carry provenance.
+
+  - path: computed_provenance.pipeline
+    status: conditionally_required
+    type: string
+    required_if:
+      metrics_computed_present: true
+    written_by: script
+    used_by: [validation, dashboard]
+    rationale: Identifies the analysis pipeline.
+
+  - path: computed_provenance.version
+    status: conditionally_required
+    type: string
+    required_if:
+      metrics_computed_present: true
+    written_by: script
+    used_by: [dashboard]
+    rationale: Pipeline version is essential for reproducibility.
+
+  - path: computed_provenance.git_commit
+    status: optional
+    type: string
+    written_by: script
+    used_by: [dashboard]
+    rationale: Highly useful when the analysis code is version-controlled.
+
+  - path: computed_provenance.run_utc
+    status: conditionally_required
+    type: datetime_utc
+    required_if:
+      metrics_computed_present: true
+    written_by: script
+    used_by: [dashboard]
+    rationale: Needed to know when analysis was produced.
+
+  - path: metrics_computed
+    status: optional
+    type: list
+    written_by: script
+    used_by: [dashboard, trending, evaluation]
+    rationale: Computed outputs are optional at authoring time but central after analysis.
+
+  - path: metrics_computed[].metric_id
+    status: required
+    type: string
+    written_by: script
+    used_by: [dashboard, trending, evaluation]
+    rationale: Stable metric namespace is needed for longitudinal plots.
+
+  - path: metrics_computed[].value
+    status: required
+    type: scalar
+    written_by: script
+    used_by: [dashboard, trending, evaluation]
+    rationale: Numeric or categorical result payload.
+
+  - path: metrics_computed[].unit
+    status: required
+    type: string
+    written_by: script
+    used_by: [dashboard, trending, evaluation]
+    rationale: Required for display and threshold interpretation.
+
+  - path: metrics_computed[].details
+    status: optional
+    type: text
+    written_by: script
+    used_by: [dashboard]
+    rationale: Stores fit details or aggregation notes.
+
+  - path: evaluation
+    status: optional
+    type: mapping
+    written_by: ci
+    used_by: [dashboard, alerting]
+    rationale: Evaluation is expected after benchmark comparison, not at initial authoring.
+
+  - path: evaluation.benchmark_ref
+    status: conditionally_required
+    type: string
+    required_if:
+      evaluation_present: true
+    written_by: ci
+    used_by: [dashboard, audit]
+    rationale: Makes pass/warn/fail judgments reproducible.
+
+  - path: evaluation.evaluated_utc
+    status: conditionally_required
+    type: datetime_utc
+    required_if:
+      evaluation_present: true
+    written_by: ci
+    used_by: [dashboard]
+    rationale: Records when the benchmark comparison was run.
+
+  - path: evaluation.evaluated_by
+    status: conditionally_required
+    type: string
+    required_if:
+      evaluation_present: true
+    written_by: ci
+    used_by: [dashboard]
+    rationale: Identifies the CI actor or pipeline.
+
+  - path: evaluation.overall_status
+    status: conditionally_required
+    type: enum
+    vocab: evaluation_status
+    required_if:
+      evaluation_present: true
+    written_by: ci
+    used_by: [dashboard, alerting]
+    rationale: Session-level QC verdict.
+
+  - path: evaluation.results
+    status: conditionally_required
+    type: list
+    min_items: 1
+    required_if:
+      evaluation_present: true
+    written_by: ci
+    used_by: [dashboard]
+    rationale: Machine-readable per-metric evaluation breakdown.
+
+  - path: evaluation.results[].metric_id
+    status: required
+    type: string
+    written_by: ci
+    used_by: [dashboard]
+    rationale: Links the verdict to a metric.
+
+  - path: evaluation.results[].status
+    status: required
+    type: enum
+    vocab: evaluation_status
+    written_by: ci
+    used_by: [dashboard, alerting]
+    rationale: Per-metric verdict.
+
+  - path: evaluation.results[].threshold
+    status: required
+    type: string
+    written_by: ci
+    used_by: [dashboard]
+    rationale: Human-readable decision rule recorded with the verdict.
+
+  - path: evaluation.results[].message
+    status: optional
+    type: text
+    written_by: ci
+    used_by: [dashboard]
+    rationale: Optional explanatory note.
+
+  - path: artifacts
+    status: optional
+    type: list
+    written_by: human_or_script
+    used_by: [dashboard, traceability]
+    rationale: Ledger pointers to raw data, tables, previews, and reports.
+
+  - path: artifacts[].artifact_id
+    status: required
+    type: string
+    written_by: human_or_script
+    used_by: [dashboard, cross_reference]
+    rationale: Stable pointer key referenced elsewhere in the QC ledger.
+
+  - path: artifacts[].role
+    status: required
+    type: enum
+    vocab: artifact_role
+    written_by: human_or_script
+    used_by: [dashboard]
+    rationale: Artifact role drives UI treatment.
+
+  - path: artifacts[].uri
+    status: required
+    type: uri_or_repo_path
+    written_by: human_or_script
+    used_by: [dashboard, traceability]
+    rationale: Location of the supporting artifact.
+
+  - path: artifacts[].description
+    status: required
+    type: text
+    written_by: human_or_script
+    used_by: [dashboard]
+    rationale: Human-readable description of the artifact.
+
+  - path: artifacts[].checksum_sha256
+    status: optional
+    type: string
+    written_by: human_or_script
+    used_by: [traceability]
+    rationale: Useful integrity check for non-OMERO artifacts.
+
+cross_field_rules:
+  - id: qc_path_consistency
+    rule: >
+      The file must live under qc/sessions/<microscope>/<YYYY>/ and the microscope
+      path segment must equal the payload microscope field.
+
+  - id: qc_year_consistency
+    rule: >
+      The <YYYY> path segment must match the year derived from started_utc or the
+      filename date prefix.
+
+  - id: laser_qc_requires_structured_series
+    rule: >
+      If performed[].qc_type includes laser_power, at least one of
+      laser_inputs_human.linearity_series or laser_inputs_human.stability_series
+      must contain data.
+
+  - id: evaluation_is_machine_written
+    rule: >
+      Humans should not author pass/warn/fail fields. evaluation is populated by CI
+      after benchmark comparison.
+
+  - id: performed_artifacts_should_resolve
+    rule: >
+      If performed[].artifacts contains artifact IDs, each ID should resolve to an
+      entry under artifacts[].artifact_id.

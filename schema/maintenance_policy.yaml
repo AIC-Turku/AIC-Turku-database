@@ -1,0 +1,293 @@
+schema_version: 1
+policy_name: maintenance_policy
+record_type: maintenance_event
+applies_to:
+  template: templates/maintenance_template.yaml
+  directories:
+    - maintenance/events
+purpose: >
+  Completeness, normalization, and migration policy for maintenance ledgers.
+  Supports both the newer structured template shape and older legacy records already
+  present in the repository.
+source_of_truth_for:
+  - scripts/validate.py
+  - dashboard_builder
+  - future maintenance completeness checks
+  - future autofix/normalization tooling
+
+vocab_registry:
+  reason:
+    source: file
+    path: vocab/maintenance_reason.yaml
+    field_should_store: canonical term id
+  action:
+    source: file
+    path: vocab/maintenance_action.yaml
+    field_should_store: canonical term id
+  service_provider:
+    source: inline
+    suggested_vocab_file: vocab/service_provider.yaml
+    allowed_values:
+      - vendor
+      - distributor
+      - third_party
+      - internal
+      - unknown
+  microscope_status:
+    source: inline
+    suggested_vocab_file: vocab/microscope_status.yaml
+    allowed_values:
+      - in_service
+      - limited
+      - out_of_service
+
+field_rules:
+  - path: schema_version
+    status: required
+    type: integer
+    allowed_values: [1]
+    written_by: human
+    used_by: [validation]
+    rationale: Locks interpretation of the maintenance ledger shape.
+
+  - path: record_type
+    status: required
+    type: string
+    allowed_values: [maintenance_event]
+    written_by: human
+    used_by: [validation]
+    rationale: Distinguishes maintenance ledgers from QC ledgers.
+
+  - path: maintenance_id
+    status: conditionally_required
+    type: string
+    pattern: '^maint_[a-z0-9-]+_[0-9]{8}_[a-z0-9_-]+$'
+    required_if:
+      missing_legacy_event_id: true
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Preferred stable ID for maintenance events.
+
+  - path: event_id
+    status: legacy_alias
+    type: string
+    pattern: '^maint_[a-z0-9-]+_[0-9]{8}_[a-z0-9_-]+$'
+    replacement: maintenance_id
+    written_by: human
+    used_by: [migration]
+    rationale: Legacy field still present in existing records; normalize to maintenance_id.
+
+  - path: microscope
+    status: required
+    type: instrument_id
+    must_match_registry: instrument.instrument_id
+    must_match_path_segment: true
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Links the event to the instrument registry.
+
+  - path: service_provider
+    status: required
+    type: enum
+    vocab: service_provider
+    normalization:
+      Internal: internal
+      Vendor: vendor
+    written_by: human
+    used_by: [dashboard, filtering]
+    rationale: High-value filter for who performed the work.
+
+  - path: company
+    status: conditionally_required
+    type: string
+    required_if:
+      service_provider_in: [vendor, distributor, third_party]
+    written_by: human
+    used_by: [dashboard]
+    rationale: Needed when the provider is external.
+
+  - path: contact
+    status: optional
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Useful reference for the named engineer or support contact.
+
+  - path: reference
+    status: optional
+    type: string
+    written_by: human
+    used_by: [dashboard]
+    rationale: Ticket, PO, invoice, or case number.
+
+  - path: started_utc
+    status: required
+    type: datetime_utc
+    written_by: human
+    used_by: [validation, dashboard]
+    rationale: Required to place the event on the maintenance timeline.
+
+  - path: ended_utc
+    status: optional
+    type: datetime_utc
+    written_by: human
+    used_by: [dashboard]
+    rationale: Useful for downtime calculations, but some records may still be open.
+
+  - path: reason
+    status: required
+    type: enum
+    vocab: reason
+    written_by: human
+    used_by: [dashboard, filtering]
+    rationale: Main structured reason for the intervention.
+
+  - path: reason_details
+    status: required
+    type: text
+    written_by: human
+    used_by: [dashboard, reports]
+    rationale: Explains the maintenance trigger in plain language.
+
+  - path: action
+    status: required
+    type: enum
+    vocab: action
+    written_by: human
+    used_by: [dashboard, filtering]
+    rationale: Main structured intervention type.
+
+  - path: action_details
+    status: required
+    type: text
+    written_by: human
+    used_by: [dashboard, reports]
+    rationale: Describes what was actually done.
+
+  - path: microscope_status_before
+    status: optional
+    type: enum
+    vocab: microscope_status
+    written_by: human
+    used_by: [dashboard]
+    rationale: Good context but not always captured in legacy events.
+
+  - path: microscope_status_after
+    status: required
+    type: enum
+    vocab: microscope_status
+    written_by: human
+    used_by: [dashboard, operations]
+    rationale: Operational outcome after the intervention is essential.
+
+  - path: downtime_hours
+    status: optional
+    type: number
+    written_by: human
+    used_by: [dashboard, operations]
+    rationale: Useful KPI, but can be derived from timestamps when both are present.
+
+  - path: related_qc
+    status: optional
+    type: list
+    item_type: qc_id
+    written_by: human
+    used_by: [dashboard, traceability]
+    rationale: Connects maintenance to before/after QC evidence.
+
+  - path: attachments
+    status: optional
+    type: list
+    item_type: uri_or_repo_path
+    written_by: human
+    used_by: [dashboard, traceability]
+    rationale: Holds reports, invoices, or calibration documents.
+
+  - path: tags
+    status: optional
+    type: list
+    item_type: string
+    written_by: human
+    used_by: [dashboard, filtering]
+    rationale: Flexible secondary faceting.
+
+  - path: followup
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard, operations]
+    rationale: Captures recommended next steps.
+
+  - path: next_due_date
+    status: conditionally_required
+    type: date
+    required_if:
+      followup_present: true
+    written_by: human
+    used_by: [dashboard, operations]
+    rationale: Follow-up text is much more actionable when paired with a due date.
+
+  - path: notes
+    status: optional
+    type: text
+    written_by: human
+    used_by: [dashboard]
+    rationale: Additional context that does not fit structured fields.
+
+legacy_and_migration_rules:
+  - path: event_id
+    status: supported_for_backwards_compatibility
+    migrate_to: maintenance_id
+    migration_prompt: >
+      Rename event_id to maintenance_id and keep the value unchanged.
+
+  - path: performed_by
+    status: legacy_optional
+    replacement: contact
+    rationale: >
+      Older records store the operator here. Keep for history if useful, but prefer
+      contact for named service personnel and service_provider/company for provider metadata.
+
+  - path: type
+    status: legacy_optional
+    replacement_strategy: split_into_reason_and_action
+    rationale: >
+      Older records use a single coarse event type such as cleaning or issue_reported.
+      New records should use controlled reason plus controlled action.
+
+  - path: parts_replaced
+    status: legacy_optional
+    replacement_strategy: keep_until_structured_parts_array_exists
+    rationale: >
+      Present in older minimal records. Retain for history or fold details into
+      action_details until a dedicated structured parts schema is added.
+
+cross_field_rules:
+  - id: maintenance_path_consistency
+    rule: >
+      The file must live under maintenance/events/<microscope>/<YYYY>/ and the
+      microscope path segment must equal the payload microscope field.
+
+  - id: maintenance_year_consistency
+    rule: >
+      The <YYYY> path segment must match the year derived from started_utc or the
+      filename date prefix.
+
+  - id: exactly_one_primary_id
+    rule: >
+      New files should use maintenance_id only. Legacy files may still use event_id,
+      but exactly one of these identifiers should be populated.
+
+  - id: related_qc_should_reference_existing_sessions
+    rule: >
+      If related_qc is present, each entry should resolve to an existing qc_id.
+
+  - id: external_provider_requires_company
+    rule: >
+      company should be populated when service_provider is vendor, distributor, or
+      third_party.
+
+  - id: next_due_date_should_pair_with_followup
+    rule: >
+      If followup is present, next_due_date is strongly recommended and treated as
+      conditionally required in new records.
