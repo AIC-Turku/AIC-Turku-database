@@ -40,10 +40,9 @@ vocab_registry:
     path: vocab/qc_setpoint_units.yaml
     field_should_store: canonical term id
   metric_unit:
-    source: free_text
-    note: >
-      Leave free-text for now because units span mW, nm, percent, unitless, C,
-      and modality-specific terms.
+    source: file
+    path: vocab/metric_unit.yaml
+    field_should_store: canonical term id
 
 field_rules:
   - path: schema_version
@@ -605,7 +604,6 @@ field_rules:
   - path: evaluation.results[].metric_id
     status: required
     type: string
-    vocab: qc_metrics
     written_by: ci
     used_by: [dashboard]
     rationale: Links the verdict to a metric.
@@ -716,9 +714,7 @@ cross_field_rules:
       or laser_inputs_human.single_point_measurements must contain data.
 
   - id: metric_class_matches_id_pattern
-    rule: >
-      metric_class should logically match metric_id naming and avoid obvious
-      contradictions (e.g., fwhm class with power metric id text).
+    rule: "The assigned metric_class must logically align with the keywords present in the metric_id."
 
   - id: evaluation_is_machine_written
     rule: >
