@@ -1,274 +1,239 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: 3i CSU-W1 Spinning Disk
-# -----------------------------------------------------------------------------
 instrument:
-  display_name: "3i CSU-W1 Spinning Disk"
-  instrument_id: "scope-3i-csu-w1-spinning-disk"
-  manufacturer: "3i / Zeiss"
-  model: "Marianas CSU-W1 Spinning Disk Confocal"
-  year_of_purchase: ""
-  funding: ""
-  stand_orientation: "inverted"
-  location: "BioCity, 5th floor, room 5149"
-  notes: "Confocal spinning-disk microscope (inverted) with 50 µm pinholes. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: Confocal (spinning disk), Live-cell time-lapse, FRAP, Photoactivation."
-  url: ""
-
-# -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
+  display_name: 3i CSU-W1 Spinning Disk
+  instrument_id: scope-3i-csu-w1-spinning-disk
+  manufacturer: 3i / Zeiss
+  model: Marianas CSU-W1 Spinning Disk Confocal
+  year_of_purchase: ''
+  funding: ''
+  stand_orientation: inverted
+  location: BioCity, 5th floor, room 5149
+  notes: "Confocal spinning-disk microscope (inverted) with 50 \xB5m pinholes. Optimized\
+    \ for fast, gentle imaging of live samples and large fields of view. Imaging modes:\
+    \ Confocal (spinning disk), Live-cell time-lapse, FRAP, Photoactivation."
+  url: ''
 modalities:
-  - "confocal_spinning_disk"
-  - "frap"
-  - "photoactivation"
-
-# -----------------------------------------------------------------------------
-# HARDWARE MODULES
-# -----------------------------------------------------------------------------
+- confocal_spinning_disk
+- frap
+- photoactivation
 modules:
-  - name: "frap"
-    notes: "FRAP/Photoactivation laser module (for bleaching and activation)"
-    url: ""
-  - name: "piezo_z_stage"
-    notes: "ASI piezo stage (300 µm travel)"
-    url: ""
-  - name: "hardware_autofocus"
-    notes: "Definite Focus"
-    url: ""
-  - name: "incubation"
-    notes: "Okolab environment chamber with temperature control"
-    url: ""
-
-# -----------------------------------------------------------------------------
-# SOFTWARE
-# -----------------------------------------------------------------------------
+- name: frap
+  notes: FRAP/Photoactivation laser module (for bleaching and activation)
+  url: ''
+- name: piezo_z_stage
+  notes: "ASI piezo stage (300 \xB5m travel)"
+  url: ''
+- name: hardware_autofocus
+  notes: Definite Focus
+  url: ''
+- name: incubation
+  notes: Okolab environment chamber with temperature control
+  url: ''
 software:
   acquisition:
-    name: "3i SlideBook"
-    version: "6"
-    url: ""
-
-# -----------------------------------------------------------------------------
-# HARDWARE CONFIGURATION
-# -----------------------------------------------------------------------------
+    name: 3i SlideBook
+    version: '6'
+    url: ''
 hardware:
-  
-  # --- Scanner ---
   scanner:
-    type: "spinning_disk"
-    notes: "Yokogawa CSU-W1 with 50 µm pinhole disk"
-    url: ""
-
-  # --- Light Sources (Excitation) ---
+    type: spinning_disk
+    notes: "Yokogawa CSU-W1 with 50 \xB5m pinhole disk"
+    url: ''
   light_sources:
-    - kind: "laser"
-      manufacturer: ""
-      model: "405 nm"
-      wavelength_nm: "405"
-      power: "100 mW"
-      notes: ""
-      url: ""
-    - kind: "laser"
-      manufacturer: ""
-      model: "488 nm"
-      wavelength_nm: "488"
-      power: "150 mW"
-      notes: ""
-      url: ""
-    - kind: "laser"
-      manufacturer: ""
-      model: "561 nm"
-      wavelength_nm: "561"
-      power: "100 mW"
-      notes: ""
-      url: ""
-    - kind: "laser"
-      manufacturer: ""
-      model: "640 nm"
-      wavelength_nm: "640"
-      power: "100 mW"
-      notes: ""
-      url: ""
-    - kind: "laser"
-      manufacturer: ""
-      model: "730 nm"
-      wavelength_nm: "730"
-      power: "40 mW"
-      notes: ""
-      url: ""
-
-  # --- Detectors (Emission) ---
+  - kind: laser
+    manufacturer: ''
+    model: 405 nm
+    wavelength_nm: '405'
+    power: 100 mW
+    notes: ''
+    url: ''
+  - kind: laser
+    manufacturer: ''
+    model: 488 nm
+    wavelength_nm: '488'
+    power: 150 mW
+    notes: ''
+    url: ''
+  - kind: laser
+    manufacturer: ''
+    model: 561 nm
+    wavelength_nm: '561'
+    power: 100 mW
+    notes: ''
+    url: ''
+  - kind: laser
+    manufacturer: ''
+    model: 640 nm
+    wavelength_nm: '640'
+    power: 100 mW
+    notes: ''
+    url: ''
+  - kind: laser
+    manufacturer: ''
+    model: 730 nm
+    wavelength_nm: '730'
+    power: 40 mW
+    notes: ''
+    url: ''
   detectors:
-    - kind: "sCMOS"
-      manufacturer: "Hamamatsu"
-      model: "Orca Flash4.0"
-      notes: "2048 x 2048 pixels, 6.5 x 6.5 µm pixel size"
-      url: ""
-    - kind: "EMCCD"
-      manufacturer: "Photometrics"
-      model: "Evolve"
-      notes: "10 MHz back-illuminated EMCCD, 512 x 512 pixels, 16 x 16 µm pixel size"
-      url: ""
-
-  # --- Splitters (Camera/Emission) ---
+  - kind: scmos
+    manufacturer: Hamamatsu
+    model: Orca Flash4.0
+    notes: "2048 x 2048 pixels, 6.5 x 6.5 \xB5m pixel size"
+    url: ''
+  - kind: emccd
+    manufacturer: Photometrics
+    model: Evolve
+    notes: "10 MHz back-illuminated EMCCD, 512 x 512 pixels, 16 x 16 \xB5m pixel size"
+    url: ''
   splitters: []
-
-  # --- Filters / Filter Cubes ---
   filters:
-    - name: "Quad-band Dichroic"
-      location: "Dichroic Wheel"
-      product_code: ""
-      excitation: "440/40; 521/21; 607/34; 700/45"
-      dichroic: ""
-      emission: ""
-      notes: ""
-      url: ""
-    - name: "DAPI"
-      location: "Emission Wheel"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "445/45"
-      notes: ""
-      url: ""
-    - name: "GFP"
-      location: "Emission Wheel"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "525/50"
-      notes: "Previously 525/30 before 18.08.21"
-      url: ""
-    - name: "Cy3/Alexa 568"
-      location: "Emission Wheel"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "617/73 or 600/37"
-      notes: ""
-      url: ""
-    - name: "Cy5/Alexa 647"
-      location: "Emission Wheel"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "692/40"
-      notes: ""
-      url: ""
-    - name: "Alexa 750"
-      location: "Emission Wheel"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "809/81"
-      notes: ""
-      url: ""
-
-  # --- Objectives ---
+  - name: Quad-band Dichroic
+    location: Dichroic Wheel
+    product_code: ''
+    excitation: 440/40; 521/21; 607/34; 700/45
+    dichroic: ''
+    emission: ''
+    notes: ''
+    url: ''
+  - name: DAPI
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 445/45
+    notes: ''
+    url: ''
+  - name: GFP
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 525/50
+    notes: Previously 525/30 before 18.08.21
+    url: ''
+  - name: Cy3/Alexa 568
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 617/73 or 600/37
+    notes: ''
+    url: ''
+  - name: Cy5/Alexa 647
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 692/40
+    notes: ''
+    url: ''
+  - name: Alexa 750
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 809/81
+    notes: ''
+    url: ''
   objectives:
-    - id: "10x_air"
-      manufacturer: "Zeiss"
-      model: "Plan Apochromat 10x"
-      product_code: "420641-9910-000"
-      magnification: 10.0
-      numerical_aperture: 0.45
-      working_distance: "2.0 mm"
-      immersion: "air"
-      correction: "plan_apochromat"
-      afc_compatible: false
-      specialties: []
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
-      
-      is_installed: true
-    - id: "20x_air"
-      manufacturer: "Zeiss"
-      model: "Plan Apochromat 20x"
-      product_code: "440640-9903-000"
-      magnification: 20.0
-      numerical_aperture: 0.8
-      working_distance: "0.55 mm"
-      immersion: "air"
-      correction: "plan_apochromat"
-      afc_compatible: false
-      specialties: []
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8"
-      
-      is_installed: true
-    - id: "40x_water"
-      manufacturer: "Zeiss"
-      model: "LD C-Apochromat 40x"
-      product_code: "421867-9970-000"
-      magnification: 40.0
-      numerical_aperture: 1.1
-      working_distance: "0.62 mm"
-      immersion: "water"
-      correction: "apochromat"
-      afc_compatible: false
-      specialties:
-        - "cover glass 0.17"
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27"
-      
-      is_installed: true
-    - id: "63x_air"
-      manufacturer: "Zeiss"
-      model: "LD Plan-Neofluar 63x"
-      product_code: "421381-9971-000"
-      magnification: 63.0
-      numerical_aperture: 0.75
-      working_distance: "1.7 mm"
-      immersion: "air"
-      correction: "fluorite"
-      afc_compatible: false
-      specialties:
-        - "cover glass 0.75"
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421381-9971-000/Objective-LD-Plan-Neofluar-63x-0.75-Corr-Ph2-M27"
-      
-      is_installed: true
-    - id: "63x_water"
-      manufacturer: "Zeiss"
-      model: "LD C-Apochromat 63x"
-      product_code: "421887-9970-000"
-      magnification: 63.0
-      numerical_aperture: 1.15
-      working_distance: "0.60 mm"
-      immersion: "water"
-      correction: "apochromat"
-      afc_compatible: false
-      specialties:
-        - "cover glass 0.17"
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421887-9970-000/Objective-LD-C-Apochromat-63x-1.15-W-Corr-M27"
-      
-      is_installed: true
-    - id: "63x_oil"
-      manufacturer: "Zeiss"
-      model: "Plan Apochromat 63x"
-      product_code: "420782-9900-799"
-      magnification: 63.0
-      numerical_aperture: 1.4
-      working_distance: "0.19 mm"
-      immersion: "oil"
-      correction: "plan_apochromat"
-      afc_compatible: false
-      specialties: []
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27"
-      
-      is_installed: true
-    - id: "100x_oil"
-      manufacturer: "Zeiss"
-      model: "Plan Apochromat 100x"
-      product_code: ""
-      magnification: 100.0
-      numerical_aperture: 1.4
-      working_distance: "0.17 mm"
-      immersion: "oil"
-      correction: "plan_apochromat"
-      afc_compatible: false
-      specialties: []
-      notes: ""
-      url: ""
-      is_installed: true
+  - id: 10x_air
+    manufacturer: Zeiss
+    model: Plan Apochromat 10x
+    product_code: 420641-9910-000
+    magnification: 10.0
+    numerical_aperture: 0.45
+    working_distance: 2.0 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Zeiss
+    model: Plan Apochromat 20x
+    product_code: 440640-9903-000
+    magnification: 20.0
+    numerical_aperture: 0.8
+    working_distance: 0.55 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8
+    is_installed: true
+  - id: 40x_water
+    manufacturer: Zeiss
+    model: LD C-Apochromat 40x
+    product_code: 421867-9970-000
+    magnification: 40.0
+    numerical_aperture: 1.1
+    working_distance: 0.62 mm
+    immersion: water
+    correction: apochromat
+    afc_compatible: false
+    specialties:
+    - cover glass 0.17
+    notes: ''
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27
+    is_installed: true
+  - id: 63x_air
+    manufacturer: Zeiss
+    model: LD Plan-Neofluar 63x
+    product_code: 421381-9971-000
+    magnification: 63.0
+    numerical_aperture: 0.75
+    working_distance: 1.7 mm
+    immersion: air
+    correction: fluorite
+    afc_compatible: false
+    specialties:
+    - cover glass 0.75
+    notes: ''
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421381-9971-000/Objective-LD-Plan-Neofluar-63x-0.75-Corr-Ph2-M27
+    is_installed: true
+  - id: 63x_water
+    manufacturer: Zeiss
+    model: LD C-Apochromat 63x
+    product_code: 421887-9970-000
+    magnification: 63.0
+    numerical_aperture: 1.15
+    working_distance: 0.60 mm
+    immersion: water
+    correction: apochromat
+    afc_compatible: false
+    specialties:
+    - cover glass 0.17
+    notes: ''
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421887-9970-000/Objective-LD-C-Apochromat-63x-1.15-W-Corr-M27
+    is_installed: true
+  - id: 63x_oil
+    manufacturer: Zeiss
+    model: Plan Apochromat 63x
+    product_code: 420782-9900-799
+    magnification: 63.0
+    numerical_aperture: 1.4
+    working_distance: 0.19 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Zeiss
+    model: Plan Apochromat 100x
+    product_code: ''
+    magnification: 100.0
+    numerical_aperture: 1.4
+    working_distance: 0.17 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true

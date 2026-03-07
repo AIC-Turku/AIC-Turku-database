@@ -1,18 +1,15 @@
 schema_version: 1
 record_type: maintenance_event
-
-event_id: "maint_scope-agilent-rtca-esight_20260212_cleaning"
-microscope: "scope-agilent-rtca-esight"
-started_utc: "2026-02-12T10:00:00Z"
-ended_utc: "2026-02-12T11:00:00Z"
-performed_by: "AIC Staff"
-service_provider: "Internal"
-
-type: "cleaning"
-
-microscope_status_before: "in_service"
-microscope_status_after: "in_service"
-
-reason_details: "Routine system cleaning."
-action: "General cleaning of the instrument chassis and incubation chamber performed by AIC Staff."
+microscope: scope-agilent-rtca-esight
+started_utc: '2026-02-12T10:00:00Z'
+ended_utc: '2026-02-12T11:00:00Z'
+service_provider: internal
+microscope_status_before: in_service
+microscope_status_after: in_service
+reason_details: Routine system cleaning.
+action: General cleaning of the instrument chassis and incubation chamber performed
+  by AIC Staff.
 parts_replaced: []
+maintenance_id: maint_scope-agilent-rtca-esight_20260212_cleaning
+contact: AIC Staff
+reason: cleaning

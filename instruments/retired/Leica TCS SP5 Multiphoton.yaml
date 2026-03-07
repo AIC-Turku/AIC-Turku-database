@@ -3,10 +3,10 @@ instrument:
   instrument_id: scope-leica-tcs-sp5-multiphoton
   manufacturer: Leica Microsystems
   model: TCS SP5 Multiphoton
-  year_of_purchase: ""
-  funding: ""
+  year_of_purchase: ''
+  funding: ''
   stand_orientation: upright
-  location: ""
+  location: ''
   notes: 'type: "Multiphoton confocal microscope (upright)" | filters: [{"Main Beam
     Splitter LP505 nm"=>["SHG 440 (440/20)", "CFP (483/32)", "YFP (535/20)"]}, {"Main
     Beam Splitter LP560 nm"=>["DAPI (457/50)", "FITC (525/52)", "TRITC (585/40)",
@@ -27,7 +27,7 @@ hardware:
   light_sources:
   - kind: laser
     manufacturer: ''
-    model: Coherent Chameleon Ultra II (tunable 690â€“1040 nm)
+    model: "Coherent Chameleon Ultra II (tunable 690\xE2\u20AC\u201C1040 nm)"
     wavelength_nm: 1040
     power: ''
   - kind: laser
@@ -37,15 +37,15 @@ hardware:
     power: ''
   - kind: laser
     manufacturer: ''
-    model: Coherent Chameleon Vision II (tunable 690â€“1040 nm)
+    model: "Coherent Chameleon Vision II (tunable 690\xE2\u20AC\u201C1040 nm)"
     wavelength_nm: 1040
     power: ''
   detectors:
-  - kind: PMT
+  - kind: pmt
     manufacturer: ''
     model: Photomultiplier Tubes (non-descanned)
   objectives:
-  - id: "20x_water"
+  - id: 20x_water
     manufacturer: Leica
     model: HCX APO L
     magnification: 20.0
@@ -53,7 +53,7 @@ hardware:
     working_distance: 1.95 mm
     immersion: water
     correction: apochromat
-  - id: "25x_water"
+  - id: 25x_water
     manufacturer: Leica
     model: HCX IR APO L
     magnification: 25.0

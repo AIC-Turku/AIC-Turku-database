@@ -1,172 +1,142 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: EVOS fl
-# -----------------------------------------------------------------------------
 instrument:
-  display_name: "EVOS fl"
-  instrument_id: "scope-evos-fl"
-  manufacturer: "Thermo Fisher / AMG"
-  model: "FL"
-  year_of_purchase: "2011"
-  funding: ""
-  stand_orientation: "inverted"
-  location: "Local Cell Culture Lab, Biocity 5th Floor"
-  notes: "Widefield fluorescence microscope (inverted). Imaging modes: Brightfield (transmitted), Fluorescence (LED illumination)."
-  url: ""
-
-# -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
+  display_name: EVOS fl
+  instrument_id: scope-evos-fl
+  manufacturer: Thermo Fisher / AMG
+  model: FL
+  year_of_purchase: '2011'
+  funding: ''
+  stand_orientation: inverted
+  location: Local Cell Culture Lab, Biocity 5th Floor
+  notes: 'Widefield fluorescence microscope (inverted). Imaging modes: Brightfield
+    (transmitted), Fluorescence (LED illumination).'
+  url: ''
 modalities:
-  - "widefield_fluorescence"
-  - "transmitted_brightfield"
-  - "phase_contrast"
-
-# -----------------------------------------------------------------------------
-# HARDWARE MODULES
-# -----------------------------------------------------------------------------
+- widefield_fluorescence
+- transmitted_brightfield
+- phase_contrast
 modules:
-  - name: "universal_vessel_holder"
-    notes: "Product code AMEP-VH009"
-    url: ""
-
-# -----------------------------------------------------------------------------
-# SOFTWARE
-# -----------------------------------------------------------------------------
+- name: universal_vessel_holder
+  notes: Product code AMEP-VH009
+  url: ''
 software:
   acquisition:
-    name: "On-board EVOS interface"
-    version: "no external software, USB storage"
-    url: ""
-
-# -----------------------------------------------------------------------------
-# HARDWARE CONFIGURATION
-# -----------------------------------------------------------------------------
+    name: On-board EVOS interface
+    version: no external software, USB storage
+    url: ''
 hardware:
-  
-  # --- Scanner ---
   scanner:
-    type: "none"
-    notes: ""
-    url: ""
-
-  # --- Light Sources (Excitation) ---
+    type: none
+    notes: ''
+    url: ''
   light_sources: []
-
-  # --- Detectors (Emission) ---
   detectors:
-    - kind: "CMOS"
-      manufacturer: "AMG (Thermo Fisher)"
-      model: "Integrated color camera"
-      notes: "For brightfield"
-      url: ""
-    - kind: "CMOS"
-      manufacturer: "AMG (Thermo Fisher)"
-      model: "AMF-4302"
-      notes: "Integrated monochrome camera for fluorescence"
-      url: ""
-
-  # --- Splitters (Camera/Emission) ---
+  - kind: cmos
+    manufacturer: AMG (Thermo Fisher)
+    model: Integrated color camera
+    notes: For brightfield
+    url: ''
+  - kind: cmos
+    manufacturer: AMG (Thermo Fisher)
+    model: AMF-4302
+    notes: Integrated monochrome camera for fluorescence
+    url: ''
   splitters: []
-
-  # --- Filters / Filter Cubes ---
   filters:
-    - name: "DAPI"
-      location: "Light Cube Pos 1"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: "Included with base unit"
-      url: ""
-    - name: "CFP"
-      location: "Light Cube Pos 2"
-      product_code: "AMEP-4653"
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: ""
-      url: ""
-    - name: "GFP/Alexa 488"
-      location: "Light Cube Pos 3"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: "Included with base unit"
-      url: ""
-    - name: "RFP/Alexa 555"
-      location: "Light Cube Pos 4"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: "Included with base unit"
-      url: ""
-    - name: "Cy5/Alexa 647"
-      location: "Light Cube Pos 5"
-      product_code: "AMEP-4656"
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: ""
-      url: ""
-
-  # --- Objectives ---
+  - name: DAPI
+    location: Light Cube Pos 1
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: ''
+    notes: Included with base unit
+    url: ''
+  - name: CFP
+    location: Light Cube Pos 2
+    product_code: AMEP-4653
+    excitation: ''
+    dichroic: ''
+    emission: ''
+    notes: ''
+    url: ''
+  - name: GFP/Alexa 488
+    location: Light Cube Pos 3
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: ''
+    notes: Included with base unit
+    url: ''
+  - name: RFP/Alexa 555
+    location: Light Cube Pos 4
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: ''
+    notes: Included with base unit
+    url: ''
+  - name: Cy5/Alexa 647
+    location: Light Cube Pos 5
+    product_code: AMEP-4656
+    excitation: ''
+    dichroic: ''
+    emission: ''
+    notes: ''
+    url: ''
   objectives:
-    - id: "4x_air"
-      manufacturer: "Olympus"
-      model: "UPlanFLN"
-      product_code: ""
-      magnification: 4.0
-      numerical_aperture: 0.13
-      working_distance: "16.4 mm"
-      immersion: "air"
-      correction: "fluorite"
-      afc_compatible: false
-      specialties:
-        - "Phase Contrast (PH)"
-      notes: ""
-      url: ""
-      is_installed: true
-    - id: "10x_air"
-      manufacturer: "AMG (Thermo Fisher)"
-      model: "PlanFluor"
-      product_code: ""
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: "8.3 mm"
-      immersion: "air"
-      correction: "plan_fluorite"
-      afc_compatible: false
-      specialties: []
-      notes: "Fluorite (FL)"
-      url: ""
-      is_installed: true
-    - id: "20x_air"
-      manufacturer: "AMG (Thermo Fisher)"
-      model: "PlanFluor"
-      product_code: ""
-      magnification: 20.0
-      numerical_aperture: 0.45
-      working_distance: "7.1 mm"
-      immersion: "air"
-      correction: "plan_fluorite"
-      afc_compatible: false
-      specialties: []
-      notes: "Fluorite (FL)"
-      url: ""
-      is_installed: true
-    - id: "40x_air"
-      manufacturer: "AMG (Thermo Fisher)"
-      model: "PlanFluor"
-      product_code: ""
-      magnification: 40.0
-      numerical_aperture: 0.65
-      working_distance: "2.8 mm"
-      immersion: "air"
-      correction: "plan_fluorite"
-      afc_compatible: false
-      specialties: []
-      notes: "Fluorite (FL)"
-      url: ""
-      is_installed: true
+  - id: 4x_air
+    manufacturer: Olympus
+    model: UPlanFLN
+    product_code: ''
+    magnification: 4.0
+    numerical_aperture: 0.13
+    working_distance: 16.4 mm
+    immersion: air
+    correction: fluorite
+    afc_compatible: false
+    specialties:
+    - Phase Contrast (PH)
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 10x_air
+    manufacturer: AMG (Thermo Fisher)
+    model: PlanFluor
+    product_code: ''
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: 8.3 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: Fluorite (FL)
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: AMG (Thermo Fisher)
+    model: PlanFluor
+    product_code: ''
+    magnification: 20.0
+    numerical_aperture: 0.45
+    working_distance: 7.1 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: Fluorite (FL)
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: AMG (Thermo Fisher)
+    model: PlanFluor
+    product_code: ''
+    magnification: 40.0
+    numerical_aperture: 0.65
+    working_distance: 2.8 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: Fluorite (FL)
+    url: ''
+    is_installed: true
