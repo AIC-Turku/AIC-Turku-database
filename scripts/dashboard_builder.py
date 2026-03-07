@@ -33,6 +33,7 @@ from typing import Any, Iterable
 from validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     Vocabulary,
+    load_policy,
     print_validation_report,
     validate_event_ledgers,
     validate_instrument_ledgers,
@@ -724,7 +725,19 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     vocab_json_path.parent.mkdir(parents=True, exist_ok=True)
     vocab_json_path.write_text(json.dumps(vocabularies, indent=2), encoding="utf-8")
 
-    vocabulary = Vocabulary(repo_root / "vocab")
+    combined_registry: dict[str, dict[str, Any]] = {}
+    for policy_file in ("schema/instrument_policy.yaml", "schema/QC_policy.yaml", "schema/maintenance_policy.yaml"):
+        policy_path = repo_root / policy_file
+        if not policy_path.exists():
+            continue
+        payload, _ = load_policy(policy_path)
+        if not isinstance(payload, dict):
+            continue
+        vocab_registry = payload.get("vocab_registry")
+        if isinstance(vocab_registry, dict):
+            combined_registry.update(vocab_registry)
+
+    vocabulary = Vocabulary(repo_root / "vocab", vocab_registry=combined_registry or None)
 
     load_errors: list[YamlLoadError] = []
     instruments = load_instruments("instruments", load_errors=load_errors)

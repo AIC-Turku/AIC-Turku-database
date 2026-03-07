@@ -8,70 +8,11 @@ format-preserving YAML tooling).
 from __future__ import annotations
 
 import argparse
-import ast
 import re
 from pathlib import Path
 from typing import Any, Iterable
 
-
-class Vocabulary:
-    """Minimal vocabulary loader for canonical ids and synonyms."""
-
-    def __init__(self, vocab_dir: Path) -> None:
-        self.valid_ids_by_vocab: dict[str, set[str]] = {}
-        self.synonyms_by_vocab: dict[str, dict[str, str]] = {}
-        self._load_all(vocab_dir)
-
-    def _load_all(self, vocab_dir: Path) -> None:
-        for vocab_file in sorted(vocab_dir.glob("*.yaml")):
-            vocab_name = vocab_file.stem
-            valid_ids: set[str] = set()
-            synonyms: dict[str, str] = {}
-            current_id: str | None = None
-
-            for line in vocab_file.read_text(encoding="utf-8").splitlines():
-                id_match = re.match(r"\s*-\s*id:\s*([a-zA-Z0-9_\-]+)\s*$", line)
-                if id_match is not None:
-                    current_id = id_match.group(1)
-                    valid_ids.add(current_id)
-                    continue
-
-                synonyms_match = re.match(r"\s*synonyms:\s*\[(.*)]\s*$", line)
-                if current_id is None or synonyms_match is None:
-                    continue
-
-                raw = synonyms_match.group(1).strip()
-                if not raw:
-                    continue
-
-                try:
-                    values = ast.literal_eval(f"[{raw}]")
-                except (SyntaxError, ValueError):
-                    continue
-
-                for value in values:
-                    if isinstance(value, str) and value.strip():
-                        synonyms[value.strip().casefold()] = current_id
-
-            self.valid_ids_by_vocab[vocab_name] = valid_ids
-            self.synonyms_by_vocab[vocab_name] = synonyms
-
-    def check(self, vocab_name: str, value: Any) -> tuple[bool, str | None]:
-        if not isinstance(value, str):
-            return False, None
-
-        cleaned = value.strip()
-        if not cleaned:
-            return False, None
-
-        if cleaned in self.valid_ids_by_vocab.get(vocab_name, set()):
-            return True, None
-
-        suggestion = self.synonyms_by_vocab.get(vocab_name, {}).get(cleaned.casefold())
-        if suggestion is not None:
-            return False, suggestion
-
-        return False, None
+from validate import Vocabulary, _load_instrument_policy
 
 
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
@@ -228,8 +169,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    policy, policy_error = _load_instrument_policy()
+    if policy_error is not None or policy is None:
+        print(policy_error or "Failed to load instrument policy.")
+        return 1
 
-    vocabulary = Vocabulary(Path("vocab"))
+    vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
 
     instrument_dirs = [Path("instruments"), Path("instruments/retired")]
     instrument_files = sorted({p for d in instrument_dirs for p in _iter_yaml_files(d)})

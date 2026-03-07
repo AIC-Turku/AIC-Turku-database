@@ -33,13 +33,10 @@ vocab_registry:
       - third_party
       - internal
       - unknown
-  microscope_status:
-    source: inline
-    suggested_vocab_file: vocab/microscope_status.yaml
-    allowed_values:
-      - in_service
-      - limited
-      - out_of_service
+  maintenance_status:
+    source: file
+    path: vocab/maintenance_status.yaml
+    field_should_store: canonical term id
 
 field_rules:
   - path: schema_version
@@ -167,7 +164,7 @@ field_rules:
   - path: microscope_status_before
     status: optional
     type: enum
-    vocab: microscope_status
+    vocab: maintenance_status
     written_by: human
     used_by: [dashboard]
     rationale: Good context but not always captured in legacy events.
@@ -175,7 +172,7 @@ field_rules:
   - path: microscope_status_after
     status: required
     type: enum
-    vocab: microscope_status
+    vocab: maintenance_status
     written_by: human
     used_by: [dashboard, operations]
     rationale: Operational outcome after the intervention is essential.
