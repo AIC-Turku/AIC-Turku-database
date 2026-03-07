@@ -4,52 +4,67 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ instrument.id or 'Unknown Instrument' }} - Data Audit Report</title>
-  <link rel="stylesheet" href="assets/stylesheets/dashboard.css" />
   <style>
     :root {
-      --text: #000;
-      --background: #fff;
-      --border: #d9d9d9;
-      --missing: #c00000;
-      --warning: #b36b00;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --background: #ffffff;
+      --page-bg: #f9fafb;
+      --border: #e5e7eb;
+      --border-dark: #d1d5db;
+      --missing-bg: #fef2f2;
+      --missing-text: #dc2626;
+      --warning-bg: #fffbeb;
+      --warning-text: #d97706;
+      --primary: #2563eb;
+      --table-header-bg: #f3f4f6;
+      --table-stripe: #f8fafc;
     }
 
     * {
       box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     body {
       margin: 0;
-      padding: 24px;
-      font-family: Arial, Helvetica, sans-serif;
-      color: var(--text);
-      background: var(--background);
-      line-height: 1.4;
-      font-size: 14px;
+      padding: 32px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
+      background: var(--page-bg);
+      line-height: 1.5;
+      font-size: 13px;
     }
 
     .report {
-      max-width: 980px;
+      max-width: 900px;
       margin: 0 auto;
+      background: var(--background);
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     header {
-      border-bottom: 2px solid #000;
-      padding-bottom: 12px;
-      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border-dark);
+      padding-bottom: 16px;
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
     }
 
     .facility-branding {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+      gap: 16px;
     }
 
     .facility-logo {
-      max-height: 42px;
+      max-height: 48px;
       width: auto;
-      max-width: 180px;
+      max-width: 200px;
       object-fit: contain;
     }
 
@@ -57,97 +72,177 @@
       margin: 0;
       font-size: 14px;
       font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    h1 {
-      margin: 0;
+    .header-titles h1 {
+      margin: 0 0 8px 0;
       font-size: 28px;
-      font-weight: 700;
+      font-weight: 800;
+      color: var(--text-main);
     }
 
-    .instrument-id {
-      margin-top: 8px;
+    .instrument-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+
+    /* Schema Errors Box */
+    .schema-errors-box {
+      background-color: var(--missing-bg);
+      border: 1px solid #f87171;
+      border-left: 6px solid var(--missing-text);
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin-bottom: 32px;
+    }
+
+    .schema-errors-box h3 {
+      margin: 0 0 10px 0;
+      color: var(--missing-text);
       font-size: 16px;
     }
 
+    .schema-errors-box ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #991b1b;
+    }
+
+    .schema-errors-box li {
+      margin-bottom: 4px;
+    }
+
+    .schema-errors-box code {
+      background: rgba(255,255,255,0.6);
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
     h2 {
-      margin: 28px 0 10px;
-      font-size: 20px;
-      border-bottom: 1px solid #000;
-      padding-bottom: 4px;
+      margin: 32px 0 16px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
     }
 
     table {
       width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 10px;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 24px;
     }
 
-    th,
-    td {
-      border: 1px solid var(--border);
-      padding: 8px 10px;
+    th, td {
+      padding: 10px 14px;
       vertical-align: top;
       text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child th, 
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:nth-child(even):not(.subheading-row) {
+      background-color: var(--table-stripe);
     }
 
     th {
-      width: 36%;
+      width: 35%;
+      font-weight: 600;
+      color: var(--text-main);
+      background: var(--background);
+      border-right: 1px solid var(--border);
+    }
+
+    .subheading {
+      background-color: var(--table-header-bg);
+      color: var(--text-muted);
       font-weight: 700;
-      background: #fff;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      border-right: none;
     }
 
     .missing {
-      color: var(--missing);
-      font-weight: bold;
-    }
-
-    .warning {
-      color: var(--warning);
-      font-weight: bold;
-    }
-
-    .objective-header {
-      margin: 20px 0 8px;
-      font-size: 16px;
+      color: var(--missing-text);
       font-weight: 700;
     }
 
-    .blank-line {
-      color: var(--missing);
-      font-weight: bold;
-      letter-spacing: 1px;
-      white-space: nowrap;
+    .warning {
+      color: var(--warning-text);
+      font-weight: 700;
+    }
+
+    .optional {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .warning-note {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--warning-text);
+      background: var(--warning-bg);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #fde68a;
     }
 
     @page {
       size: A4;
-      margin: 14mm 12mm 16mm;
+      margin: 15mm;
     }
 
     @media print {
       body {
         padding: 0;
+        background: white;
       }
-
-      h2,
-      .objective-header {
+      .report {
+        padding: 0;
+        box-shadow: none;
+        border: none;
+      }
+      h2, .subheading-row {
         page-break-after: avoid;
       }
-
-      table {
+      tr {
         page-break-inside: avoid;
       }
     }
   </style>
 </head>
-<body class="md-typeset">
+<body>
 
 {% macro render_value(entry) -%}
   {%- set missing = entry.is_missing -%}
   {%- set warning = entry.is_warning and not missing -%}
-  {%- if missing -%}
-    <span class="missing">[MISSING - PLEASE FILL IN]</span>
+  {%- set optional = entry.is_optional | default(false) -%}
+  
+  {%- if missing and optional -%}
+    <span class="optional">Not provided (Optional)</span>
+  {%- elif missing -%}
+    <span class="missing">[MISSING - REQUIRED]</span>
   {%- elif warning -%}
     {%- if entry.value is sequence and entry.value is not string -%}
       {{ entry.value | join(', ') }}
@@ -156,7 +251,7 @@
     {%- endif -%}
     <span class="warning"> [REVIEW]</span>
     {%- if entry.warning_message %}
-      <div class="warning">{{ entry.warning_message }}</div>
+      <span class="warning-note">{{ entry.warning_message }}</span>
     {%- endif -%}
   {%- elif entry.value is sequence and entry.value is not string -%}
     {{ entry.value | join(', ') }}
@@ -165,96 +260,83 @@
   {%- endif -%}
 {%- endmacro %}
 
-{% macro objective_name(objective, index) -%}
-  {%- set name = objective.name if objective is mapping else none -%}
-  {%- if name -%}
-    {{ name }}
-  {%- elif objective is mapping and objective.magnification -%}
-    Objective {{ index }} ({{ objective.magnification }}x)
-  {%- else -%}
-    Objective {{ index }}
-  {%- endif -%}
-{%- endmacro %}
-
-{% macro render_standard_section(title, entries) -%}
+{% macro render_smart_section(title, entries) -%}
+  {% if entries %}
   <section>
     <h2>{{ title }}</h2>
     <table>
       <tbody>
+      {% set current_prefix = namespace(value='') %}
       {% for entry in entries %}
+        
+        {# Detect if this entry belongs to a numbered item like "Objective 1" or "Light Source 2" #}
+        {% set prefix = '' %}
+        {% for i in range(1, 20) %}
+          {% if ' ' ~ i ~ ' ' in entry.label or entry.label.endswith(' ' ~ i) %}
+            {% set prefix = entry.label.split(' ' ~ i)[0] ~ ' ' ~ i %}
+          {% endif %}
+        {% endfor %}
+
+        {# If we hit a new prefix, insert a gorgeous sub-heading row #}
+        {% if prefix != '' and prefix != current_prefix.value %}
+          {% set current_prefix.value = prefix %}
+          <tr class="subheading-row">
+            <th colspan="2" class="subheading">{{ prefix }}</th>
+          </tr>
+        {% endif %}
+
+        {# Strip the prefix out of the label so it just says "Manufacturer" instead of "Light Source 1 Manufacturer" #}
+        {% set display_label = entry.label | replace(prefix ~ ' ', '') if prefix else entry.label %}
+        
         <tr>
-          <th>{{ entry.label }}</th>
+          <th>{{ display_label }}</th>
           <td>{{ render_value(entry) }}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
   </section>
+  {% endif %}
 {%- endmacro %}
 
   <div class="report">
     <header>
+      <div class="header-titles">
+        <h1>Instrument Audit Report</h1>
+        <div class="instrument-badge">{{ instrument.id or 'UNKNOWN ID' }}</div>
+      </div>
       {% if facility_name or facility_logo_path %}
       <div class="facility-branding">
-        {% if facility_logo_path %}
-        <img src="{{ facility_logo_path }}" alt="{{ facility_name or 'Facility logo' }}" class="facility-logo" />
-        {% endif %}
         {% if facility_name %}
         <p class="facility-name">{{ facility_name }}</p>
         {% endif %}
+        {% if facility_logo_path %}
+        <img src="{{ facility_logo_path }}" alt="Facility logo" class="facility-logo" />
+        {% endif %}
       </div>
       {% endif %}
-      <h1>Data Audit Report</h1>
-      <div class="instrument-id"><strong>Instrument ID:</strong> {{ instrument.id or '[MISSING - PLEASE FILL IN]' }}</div>
     </header>
 
-    {{ render_standard_section('General', audit_data.general) }}
-    {{ render_standard_section('Modalities', audit_data.modalities) }}
-    {{ render_standard_section('Software', audit_data.software) }}
-
-    <section>
-      <h2>Objectives</h2>
-      {% set objective_items = instrument.hardware.objectives if instrument.hardware is mapping and instrument.hardware.objectives is sequence else [] %}
-
-      {% if objective_items and audit_data.objectives %}
-        {% for objective in objective_items %}
-          {% set obj_index = loop.index %}
-          <div class="objective-header">{{ objective_name(objective, obj_index) }}</div>
-          <table>
-            <tbody>
-            {% for entry in audit_data.objectives if entry.label.startswith('Objective ' ~ obj_index ~ ' ') %}
-              {% set is_wd = 'Working Distance' in entry.label %}
-              {% set missing = entry.is_missing %}
-              <tr>
-                <th>{{ entry.label }}</th>
-                <td>
-                  {% if is_wd and missing %}
-                    <span class="missing">[MISSING - PLEASE FILL IN] <span class="blank-line">_______</span></span>
-                  {% else %}
-                    {{ render_value(entry) }}
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
+    {% if audit_data.schema_errors and audit_data.schema_errors | length > 0 %}
+    <div class="schema-errors-box">
+      <h3>⚠️ Critical Schema Violations</h3>
+      <p style="margin-top: 0; font-size: 13px;">The following fields are strictly required by your YAML schema policy but are missing:</p>
+      <ul>
+        {% for err in audit_data.schema_errors %}
+        <li><strong>{{ err.level }}:</strong> {{ err.title }} (<code>{{ err.path }}</code>)</li>
         {% endfor %}
-      {% else %}
-        <table>
-          <tbody>
-          {% for entry in audit_data.objectives %}
-            <tr>
-              <th>{{ entry.label }}</th>
-              <td>{{ render_value(entry) }}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      {% endif %}
-    </section>
+      </ul>
+    </div>
+    {% endif %}
 
-    {{ render_standard_section('Light Sources', audit_data.light_sources) }}
-    {{ render_standard_section('Detectors', audit_data.detectors) }}
+    {{ render_smart_section('General Identity', audit_data.general) }}
+    {{ render_smart_section('Imaging Modalities', audit_data.modalities) }}
+    {{ render_smart_section('Software Configuration', audit_data.software) }}
+    {{ render_smart_section('Scanner', audit_data.scanner) }}
+    {{ render_smart_section('Objectives', audit_data.objectives) }}
+    {{ render_smart_section('Light Sources', audit_data.light_sources) }}
+    {{ render_smart_section('Detectors', audit_data.detectors) }}
+
   </div>
 </body>
 </html>
