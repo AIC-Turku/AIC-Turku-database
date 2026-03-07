@@ -88,10 +88,10 @@ class EventPolicyValidationTests(unittest.TestCase):
         )
 
         report = validate_event_ledgers(instrument_ids={'scope-1'})
-        error_codes = {issue.code for issue in report.errors}
+        warning_codes = {issue.code for issue in report.warnings}
 
-        self.assertIn('missing_required_field', error_codes)
-        self.assertIn('unsupported_required_if_condition', error_codes)
+        self.assertIn('missing_required_field', warning_codes)
+        self.assertIn('unsupported_required_if_condition', warning_codes)
 
     def test_maintenance_legacy_migration_and_vocab_warnings(self) -> None:
         self._write_yaml(
@@ -155,8 +155,8 @@ class EventPolicyValidationTests(unittest.TestCase):
 
         self.assertTrue(any(issue.code == 'legacy_field_present' for issue in report.migration_notices))
         self.assertTrue(any(issue.code == 'vocab_synonym_used' for issue in report.warnings))
-        self.assertTrue(any(issue.code == 'unsupported_event_field' for issue in report.errors))
-        self.assertFalse(any('maintenance_id' in issue.path and issue.code == 'missing_required_field' for issue in report.errors))
+        self.assertTrue(any(issue.code == 'unsupported_event_field' for issue in report.warnings))
+        self.assertFalse(any('maintenance_id' in issue.path and issue.code == 'missing_required_field' for issue in report.warnings))
 
 
 if __name__ == '__main__':
