@@ -101,12 +101,29 @@ def fix_data_by_path(data: dict, parts: list[str], vocab_name: str, vocabs: dict
 def fix_legacy_fields(data: dict) -> bool:
     """Manually catches renamed/deprecated fields across older files."""
     changed = False
-    legacy_map = {"event_id": "maintenance_id", "performed_by": "contact", "type": "reason"}
+
+    # 1. Fix QC field names
+    if "contact" in data and "performed_by" not in data:
+        data["performed_by"] = data.pop("contact")
+        changed = True
+
+    # 2. Add other legacy maps
+    legacy_map = {
+        "event_id": "maintenance_id",
+        "type": "reason",
+        "parts_replaced": "action_details",
+    }
     
     for old_k, new_k in legacy_map.items():
         if old_k in data:
             data[new_k] = data.pop(old_k)
             changed = True
+
+    # 3. Move long-form action strings into action_details
+    if "action" in data and len(str(data["action"])) > 20:
+        data["action_details"] = data.pop("action")
+        data["action"] = "other"
+        changed = True
             
     # Quick fix for common service provider casing issues in older datasets
     if "service_provider" in data and data["service_provider"] == "Internal":
