@@ -35,6 +35,10 @@ terms:
     label: "Total Internal Reflection Fluorescence"
     description: "Excites fluorophores with an evanescent field near the coverslip interface. Ideal for membrane-proximal events within roughly the first 100–200 nm."
     synonyms: ["TIRF"]
+  - id: tirf_sim
+    label: "TIRF-SIM"
+    description: "Combines Total Internal Reflection with Structured Illumination for high-speed, high-contrast, super-resolved surface imaging."
+    synonyms: ["TIRF-SIM", "2D TIRF-SIM"]
   - id: light_sheet
     label: "Light Sheet"
     description: "Illuminates samples with a thin sheet orthogonal to detection. Supports gentle, rapid volumetric imaging with reduced out-of-focus exposure."
