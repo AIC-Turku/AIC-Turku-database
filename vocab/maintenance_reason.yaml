@@ -23,3 +23,11 @@ terms:
     label: "Other"
     description: "Reason does not fit the predefined categories. Document the rationale in free-text details."
     synonyms: ["misc"]
+  - id: issue_reported
+    label: "Issue Reported"
+    description: "Triggered by an issue report indicating degraded or failed operation, often before root cause is confirmed."
+    synonyms: ["incident", "fault reported"]
+  - id: cleaning
+    label: "Cleaning"
+    description: "Triggered specifically by planned or corrective cleaning activity."
+    synonyms: ["clean"]
