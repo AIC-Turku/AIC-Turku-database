@@ -951,6 +951,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             "qc_artifact_roles",
             "qc_measurement_positions",
             "qc_setpoint_units",
+            "metric_unit",
         ],
     }
 

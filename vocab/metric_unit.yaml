@@ -1,0 +1,24 @@
+terms:
+  - id: unitless
+    label: "Unitless"
+    description: "Dimensionless value with no physical unit."
+
+  - id: percent
+    label: "Percent"
+    description: "Percentage value represented in %."
+
+  - id: mW
+    label: "Milliwatt"
+    description: "Optical power expressed in milliwatts."
+
+  - id: nm
+    label: "Nanometer"
+    description: "Length expressed in nanometers."
+
+  - id: um
+    label: "Micrometer"
+    description: "Length expressed in micrometers."
+
+  - id: celsius
+    label: "Degrees Celsius"
+    description: "Temperature expressed in degrees Celsius."
