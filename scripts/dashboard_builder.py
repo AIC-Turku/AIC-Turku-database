@@ -1183,6 +1183,15 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     llm_inventory_path = docs_root / "assets" / "llm_inventory.json"
     llm_payload = {
         "facility_name": str(facility.get("short_name", "AIC Turku")),
+        "policy": {
+            "intent": "LLM-safe experiment planning inventory",
+            "grounding_requirement": "Only use fields explicitly present in this JSON file.",
+            "do_not_infer_constraints": [
+                "Do not invent hardware specifications, accessories, wavelengths, objectives, detector performance, or automation features that are not explicitly listed.",
+                "Treat null values and listed missing fields as unknown. Unknown does not mean available.",
+                "When required details are missing, ask follow-up questions or clearly state uncertainty.",
+            ],
+        },
         "vocabulary_definitions": vocabularies_payload,
         "active_microscopes": [],
     }
@@ -1192,6 +1201,36 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             trimmed = value.strip()
             return trimmed if trimmed else None
         return value
+
+    def collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str], list[str]]:
+        known_fields: list[str] = []
+        missing_fields: list[str] = []
+
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_prefix = f"{prefix}.{key}" if prefix else str(key)
+                child_known, child_missing = collect_known_missing_paths(child, child_prefix)
+                known_fields.extend(child_known)
+                missing_fields.extend(child_missing)
+            return known_fields, missing_fields
+
+        if isinstance(value, list):
+            if not value:
+                known_fields.append(prefix)
+                return known_fields, missing_fields
+            for index, child in enumerate(value):
+                child_prefix = f"{prefix}[{index}]"
+                child_known, child_missing = collect_known_missing_paths(child, child_prefix)
+                known_fields.extend(child_known)
+                missing_fields.extend(child_missing)
+            return known_fields, missing_fields
+
+        if value is None:
+            missing_fields.append(prefix)
+        else:
+            known_fields.append(prefix)
+
+        return known_fields, missing_fields
 
     for inst in instruments:
         status = inst.get("status", {})
@@ -1249,88 +1288,97 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         def norm_str(val):
             return str(val).lower().replace(" ", "_").replace("(", "").replace(")", "") if val else None
 
-        llm_payload["active_microscopes"].append(
-            {
-                "id": inst.get("id"),
-                "identity": {
-                    "display_name": none_if_empty(inst.get("display_name")),
-                    "manufacturer": none_if_empty(inst.get("manufacturer")),
-                    "model": none_if_empty(inst.get("model")),
-                    "stand_orientation": none_if_empty(inst.get("stand_orientation")),
+        microscope_payload = {
+            "id": inst.get("id"),
+            "identity": {
+                "display_name": none_if_empty(inst.get("display_name")),
+                "manufacturer": none_if_empty(inst.get("manufacturer")),
+                "model": none_if_empty(inst.get("model")),
+                "stand_orientation": none_if_empty(inst.get("stand_orientation")),
+            },
+            "operational_status": {
+                "overall_status": overall_status,
+                "issues": issues,
+                "status_note": raw_reason if overall_status == "online" and raw_reason and "operational" not in raw_reason.lower() else None,
+                "last_qc_date": none_if_empty(status.get("last_qc_date", None)) or None,
+                "last_maintenance_date": none_if_empty(status.get("last_maint_date", None)) or None,
+            },
+            "capabilities": {
+                "modalities": hw.get("modalities", []),
+                "scanner": {
+                    "type": none_if_empty(hw.get("scanner", {}).get("type", None)) or None,
+                    "line_rate_hz": hw.get("scanner", {}).get("line_rate_hz"),
+                    "pinhole_um": hw.get("scanner", {}).get("pinhole_um"),
+                    "notes": none_if_empty(hw.get("scanner", {}).get("notes", None)) or None,
                 },
-                "operational_status": {
-                    "overall_status": overall_status,
-                    "issues": issues,
-                    "status_note": raw_reason if overall_status == "online" and raw_reason and "operational" not in raw_reason.lower() else None,
-                    "last_qc_date": none_if_empty(status.get("last_qc_date", None)) or None,
-                    "last_maintenance_date": none_if_empty(status.get("last_maint_date", None)) or None,
-                },
-                "capabilities": {
-                    "modalities": hw.get("modalities", []),
-                    "scanner": {
-                        "type": none_if_empty(hw.get("scanner", {}).get("type", None)) or None,
-                        "line_rate_hz": hw.get("scanner", {}).get("line_rate_hz"),
-                        "pinhole_um": hw.get("scanner", {}).get("pinhole_um"),
-                        "notes": none_if_empty(hw.get("scanner", {}).get("notes", None)) or None,
-                    },
-                    "modules": [
-                        {"name": none_if_empty(m.get("name")), "notes": none_if_empty(m.get("notes")) or None}
-                        for m in hw.get("modules", [])
-                    ],
-                    "objectives": [
-                        {
-                            "magnification": obj.get("magnification"),
-                            "numerical_aperture": obj.get("na"),
-                            "immersion": norm_id(obj.get("immersion")),
-                            "correction_class": norm_id(obj.get("correction")),
-                            "working_distance": none_if_empty(obj.get("wd")) or None,
-                            "specialties": obj.get("specialties", []),
-                            "notes": none_if_empty(obj.get("notes")) or None,
-                        }
-                        for obj in hw.get("objectives", [])
-                    ],
-                    "light_sources": [
-                        {
-                            "type": norm_str(ls.get("type") or ls.get("kind")),
-                            "manufacturer": none_if_empty(ls.get("manufacturer")) or None,
-                            "wavelength": none_if_empty(ls.get("wavelength")) or None,
-                            "technology": none_if_empty(ls.get("technology")) or None,
-                            "model": none_if_empty(ls.get("name")) or None,
-                            "notes": none_if_empty(ls.get("notes")) or None,
-                        }
-                        for ls in hw.get("light_sources", [])
-                    ],
-                    "filters": [
-                        {
-                            "name": none_if_empty(f.get("name")) or None,
-                            "excitation": none_if_empty(f.get("excitation")) or None,
-                            "emission": none_if_empty(f.get("emission")) or None,
-                            "dichroic": none_if_empty(f.get("dichroic")) or None,
-                        }
-                        for f in hw.get("filters", [])
-                    ],
-                    "detectors": [
-                        {
-                            "type": norm_id(det.get("type")),
-                            "model": none_if_empty(det.get("model")) or None,
-                            "pixel_pitch_um": det.get("pixel_pitch_um"),
-                            "sensor_format_px": none_if_empty(det.get("sensor_format_px")) or None,
-                            "binning": none_if_empty(det.get("binning")) or None,
-                            "bit_depth": det.get("bit_depth"),
-                            "qe_peak_pct": det.get("qe_peak_pct"),
-                            "read_noise_e": det.get("read_noise_e"),
-                            "notes": none_if_empty(det.get("notes")) or None,
-                        }
-                        for det in hw.get("detectors", [])
-                    ],
-                },
-                "experiment_guidance": {
-                    "live_cell_ready": is_live_cell,
-                    "environment_control": env_control,
-                    "general_notes_and_recommendations": none_if_empty(inst.get("notes_raw", None)) or None,
-                },
-            }
-        )
+                "modules": [
+                    {"name": none_if_empty(m.get("name")), "notes": none_if_empty(m.get("notes")) or None}
+                    for m in hw.get("modules", [])
+                ],
+                "objectives": [
+                    {
+                        "magnification": obj.get("magnification"),
+                        "numerical_aperture": obj.get("na"),
+                        "immersion": norm_id(obj.get("immersion")),
+                        "correction_class": norm_id(obj.get("correction")),
+                        "working_distance": none_if_empty(obj.get("wd")) or None,
+                        "specialties": obj.get("specialties", []),
+                        "notes": none_if_empty(obj.get("notes")) or None,
+                    }
+                    for obj in hw.get("objectives", [])
+                ],
+                "light_sources": [
+                    {
+                        "type": norm_str(ls.get("type") or ls.get("kind")),
+                        "manufacturer": none_if_empty(ls.get("manufacturer")) or None,
+                        "wavelength": none_if_empty(ls.get("wavelength")) or None,
+                        "technology": none_if_empty(ls.get("technology")) or None,
+                        "model": none_if_empty(ls.get("name")) or None,
+                        "notes": none_if_empty(ls.get("notes")) or None,
+                    }
+                    for ls in hw.get("light_sources", [])
+                ],
+                "filters": [
+                    {
+                        "name": none_if_empty(f.get("name")) or None,
+                        "excitation": none_if_empty(f.get("excitation")) or None,
+                        "emission": none_if_empty(f.get("emission")) or None,
+                        "dichroic": none_if_empty(f.get("dichroic")) or None,
+                    }
+                    for f in hw.get("filters", [])
+                ],
+                "detectors": [
+                    {
+                        "type": norm_id(det.get("type")),
+                        "model": none_if_empty(det.get("model")) or None,
+                        "pixel_pitch_um": det.get("pixel_pitch_um"),
+                        "sensor_format_px": none_if_empty(det.get("sensor_format_px")) or None,
+                        "binning": none_if_empty(det.get("binning")) or None,
+                        "bit_depth": det.get("bit_depth"),
+                        "qe_peak_pct": det.get("qe_peak_pct"),
+                        "read_noise_e": det.get("read_noise_e"),
+                        "notes": none_if_empty(det.get("notes")) or None,
+                    }
+                    for det in hw.get("detectors", [])
+                ],
+            },
+            "experiment_guidance": {
+                "live_cell_ready": is_live_cell,
+                "environment_control": env_control,
+                "general_notes_and_recommendations": none_if_empty(inst.get("notes_raw", None)) or None,
+            },
+        }
+
+        known_fields, missing_fields = collect_known_missing_paths(microscope_payload)
+        microscope_payload["inventory_completeness"] = {
+            "known_fields": sorted(known_fields),
+            "missing_fields": sorted(missing_fields),
+            "known_field_count": len(known_fields),
+            "missing_field_count": len(missing_fields),
+            "uncertainty_note": "Missing fields are unknown and must not be assumed.",
+        }
+
+        llm_payload["active_microscopes"].append(microscope_payload)
 
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
