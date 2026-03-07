@@ -31,6 +31,7 @@ instrument:
 # -----------------------------------------------------------------------------
 # Remove lines that do not apply.
 modalities:
+  # Use canonical ID from vocab/
   - "confocal_point"
   - "widefield_fluorescence"
   
@@ -38,27 +39,27 @@ modalities:
   # - widefield_fluorescence
   # - transmitted_brightfield
   # - phase_contrast
-  # - DIC
+  # - dic
   # - darkfield
   # - confocal_point          (Standard LSM)
   # - confocal_spinning_disk  (SDC)
-  # - TIRF
+  # - tirf
   # - light_sheet
   # - multiphoton
   # - optical_sectioning      (ApoTome/Grid-projection)
-  # - SIM                     (Structured Illumination)
-  # - STED
-  # - RESOLFT
-  # - SMLM                    (PALM/STORM)
-  # - SPT
-  # - ISM                     (Airyscan)
-  # - FLIM
-  # - FCS
-  # - FRAP
+  # - sim                     (Structured Illumination)
+  # - sted
+  # - resolft
+  # - smlm                    (PALM/STORM)
+  # - spt
+  # - ism                     (Airyscan)
+  # - flim
+  # - fcs
+  # - frap
   # - photoactivation
-  # - FRET
+  # - fret
   # - spectral_imaging
-  # - AFM
+  # - afm
   # - impedance_cytometry
   # - live_cell_imaging
 
@@ -66,17 +67,17 @@ modalities:
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
 modules:
-  - name: "hardware_autofocus"
+  - name: "hardware_autofocus"  # Use canonical ID from vocab/
     notes: "e.g., Definite Focus / PFS. Add specific hardware limitations here."
     url: ""
   
   # Available Options for 'name':
   # - incubation              (Temp/CO2)
   # - hardware_autofocus      (Definite/PFS/Z-drift)
-  # - FRAP
+  # - frap
   # - photoactivation
-  # - FCS
-  # - FLIM
+  # - fcs
+  # - flim
   # - optogenetics
   # - adaptive_optics
 
@@ -97,6 +98,7 @@ hardware:
   
   # --- Scanner ---
   scanner:
+    # Use canonical ID from vocab/
     # Options: none, galvo, resonant, spinning_disk, polygon, acousto_optic, stage_scanning
     type: "galvo"
     line_rate_hz: null         # Optional, e.g. 8000 for resonant scanners
@@ -106,7 +108,7 @@ hardware:
 
   # --- Light Sources (Excitation) ---
   light_sources:
-    - kind: "laser"           # Options: laser, white_light_laser, led, arc_lamp, halogen_lamp, supercontinuum
+    - kind: "laser"           # Use canonical ID from vocab/. Options: laser, white_light_laser, led, arc_lamp, halogen_lamp, supercontinuum
       manufacturer: "Chroma"
       model: "Solid State"
       technology: ""        # Optional laser subtype, e.g. diode, dpss
@@ -115,7 +117,7 @@ hardware:
       notes: "488 in software"
       url: ""                 # Link to laser/LED spec sheet
       
-    - kind: "led"
+    - kind: "led"            # Use canonical ID from vocab/
       manufacturer: "CoolLED"
       model: "pE-300"
       technology: ""
@@ -126,7 +128,7 @@ hardware:
 
   # --- Detectors (Emission) ---
   detectors:
-    - kind: "GaAsP_PMT"       # Options: PMT, GaAsP_PMT, HyD, sCMOS, EMCCD, CCD, APD
+    - kind: "gaasp_pmt"       # Use canonical ID from vocab/. Options: pmt, gaasp_pmt, hyd, scmos, emccd, ccd, apd
       manufacturer: "Zeiss"
       model: "Quasar"
       pixel_pitch_um: null      # Optional, e.g. 6.5 for camera-based detectors
@@ -138,7 +140,7 @@ hardware:
       notes: "Channel 1"
       url: ""                 # Link to detector spec sheet
       
-    - kind: "sCMOS"
+    - kind: "scmos"          # Use canonical ID from vocab/
       manufacturer: "Hamamatsu"
       model: "Flash 4.0"
       notes: ""
@@ -172,16 +174,18 @@ hardware:
       numerical_aperture: 1.4
       working_distance: "0.19 mm"
       
+      # Use canonical ID from vocab/
       # Options: air, oil, water, glycerol, silicone, multi, dipping
       immersion: "oil"
       
+      # Use canonical ID from vocab/
       # Options: plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
       correction: "plan_apochromat"
       
       afc_compatible: true               # Hardware autofocus compatibility (true/false)
       is_installed: true                 # Whether objective is currently installed on the stand
       specialties:
-        - "DIC"
+        - "dic"
         - "UV compatible"  # e.g., STED, PH1, Correction Ring
       notes: ""
       url: ""                            # Link to objective database/specs
