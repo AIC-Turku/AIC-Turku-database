@@ -37,6 +37,26 @@
       margin-bottom: 24px;
     }
 
+    .facility-branding {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .facility-logo {
+      max-height: 42px;
+      width: auto;
+      max-width: 180px;
+      object-fit: contain;
+    }
+
+    .facility-name {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
     h1 {
       margin: 0;
       font-size: 28px;
@@ -93,9 +113,14 @@
       white-space: nowrap;
     }
 
+    @page {
+      size: A4;
+      margin: 14mm 12mm 16mm;
+    }
+
     @media print {
       body {
-        padding: 8mm;
+        padding: 0;
       }
 
       h2,
@@ -156,6 +181,16 @@
 
   <div class="report">
     <header>
+      {% if facility_name or facility_logo_path %}
+      <div class="facility-branding">
+        {% if facility_logo_path %}
+        <img src="{{ facility_logo_path }}" alt="{{ facility_name or 'Facility logo' }}" class="facility-logo" />
+        {% endif %}
+        {% if facility_name %}
+        <p class="facility-name">{{ facility_name }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
       <h1>Data Audit Report</h1>
       <div class="instrument-id"><strong>Instrument ID:</strong> {{ instrument.id or '[MISSING - PLEASE FILL IN]' }}</div>
     </header>
