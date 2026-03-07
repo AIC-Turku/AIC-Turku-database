@@ -10,7 +10,7 @@ reason_details: System has been delivered but is currently awaiting final instal
   and validation.
 maintenance_id: maint_scope-andor-bc43_20260223_not_installed
 reason: issue_reported
-contact: AIC Staff
 action_details: Marked as offline until installation is complete and initial QC is
   passed.
 action: other
+performed_by: AIC Staff

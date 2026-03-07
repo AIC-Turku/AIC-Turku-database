@@ -9,6 +9,6 @@ microscope_status_after: limited
 reason_details: TIRF modality is no longer working due to a hardware fault.
 maintenance_id: maint_scope-zeiss-tirf_20260222_tirf_issue
 reason: issue_reported
-contact: AIC Staff
 action_details: System restricted to widefield imaging only. Awaiting service quote.
 action: other
+performed_by: AIC Staff
