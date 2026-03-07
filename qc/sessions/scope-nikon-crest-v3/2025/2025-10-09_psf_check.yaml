@@ -20,6 +20,7 @@ inputs_human:
   value: 20
   unit: C
   details: Recorded from PSF report metadata.
+  metric_class: other
 laser_inputs_human:
   measurement_position: at_objective
   measurement_position_details: Not measured in this PSF-only session.
@@ -51,6 +52,7 @@ metrics_computed:
 - metric_id: psf.60x_silicone.525.asymmetry
   value: 0.93
   unit: unitless
+  metric_class: other
 - metric_id: chromatic_shift.60x_silicone.425_to_525.z_nm
   value: 127.5
   unit: nm
@@ -72,6 +74,7 @@ metrics_computed:
 - metric_id: psf.60x_oil.525.asymmetry
   value: 0.93
   unit: unitless
+  metric_class: other
 - metric_id: chromatic_shift.60x_oil.425_to_525.z_nm
   value: 118.7
   unit: nm
@@ -93,6 +96,7 @@ metrics_computed:
 - metric_id: psf.100x_oil.525.asymmetry
   value: 0.97
   unit: unitless
+  metric_class: other
 - metric_id: chromatic_shift.100x_oil.425_to_525.z_nm
   value: -25.4
   unit: nm
