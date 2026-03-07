@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ instrument.id or 'Unknown Instrument' }} - Data Audit Report</title>
+  <style>
+    :root {
+      --text: #000;
+      --background: #fff;
+      --border: #d9d9d9;
+      --missing: #c00000;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--background);
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .report {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    header {
+      border-bottom: 2px solid #000;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .instrument-id {
+      margin-top: 8px;
+      font-size: 16px;
+    }
+
+    h2 {
+      margin: 28px 0 10px;
+      font-size: 20px;
+      border-bottom: 1px solid #000;
+      padding-bottom: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      width: 36%;
+      font-weight: 700;
+      background: #fff;
+    }
+
+    .missing {
+      color: var(--missing);
+      font-weight: bold;
+    }
+
+    .objective-header {
+      margin: 20px 0 8px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .blank-line {
+      color: var(--missing);
+      font-weight: bold;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    @media print {
+      body {
+        padding: 8mm;
+      }
+
+      h2,
+      .objective-header {
+        page-break-after: avoid;
+      }
+
+      table {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+{% macro empty_value(value) -%}
+  {{- value is none
+      or (value is string and not value|trim)
+      or (value is sequence and value is not string and (value|length == 0)) -}}
+{%- endmacro %}
+
+{% macro render_value(entry) -%}
+  {%- set missing = entry.is_missing or empty_value(entry.value) -%}
+  {%- if missing -%}
+    <span class="missing">[MISSING - PLEASE FILL IN]</span>
+  {%- elif entry.value is sequence and entry.value is not string -%}
+    {{ entry.value | join(', ') }}
+  {%- else -%}
+    {{ entry.value }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro objective_name(objective, index) -%}
+  {%- set name = objective.name if objective is mapping else none -%}
+  {%- if name -%}
+    {{ name }}
+  {%- elif objective is mapping and objective.magnification -%}
+    Objective {{ index }} ({{ objective.magnification }}x)
+  {%- else -%}
+    Objective {{ index }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_standard_section(title, entries) -%}
+  <section>
+    <h2>{{ title }}</h2>
+    <table>
+      <tbody>
+      {% for entry in entries %}
+        <tr>
+          <th>{{ entry.label }}</th>
+          <td>{{ render_value(entry) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{%- endmacro %}
+
+  <div class="report">
+    <header>
+      <h1>Data Audit Report</h1>
+      <div class="instrument-id"><strong>Instrument ID:</strong> {{ instrument.id or '[MISSING - PLEASE FILL IN]' }}</div>
+    </header>
+
+    {{ render_standard_section('General', audit_data.general) }}
+    {{ render_standard_section('Modalities', audit_data.modalities) }}
+    {{ render_standard_section('Software', audit_data.software) }}
+
+    <section>
+      <h2>Objectives</h2>
+      {% set objective_items = instrument.hardware.objectives if instrument.hardware is mapping and instrument.hardware.objectives is sequence else [] %}
+
+      {% if objective_items and audit_data.objectives %}
+        {% for objective in objective_items %}
+          {% set obj_index = loop.index %}
+          <div class="objective-header">{{ objective_name(objective, obj_index) }}</div>
+          <table>
+            <tbody>
+            {% for entry in audit_data.objectives if entry.label.startswith('Objective ' ~ obj_index ~ ' ') %}
+              {% set is_wd = 'Working Distance' in entry.label %}
+              {% set missing = entry.is_missing or empty_value(entry.value) %}
+              <tr>
+                <th>{{ entry.label }}</th>
+                <td>
+                  {% if is_wd and missing %}
+                    <span class="missing">[MISSING - PLEASE FILL IN] <span class="blank-line">_______</span></span>
+                  {% else %}
+                    {{ render_value(entry) }}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% endfor %}
+      {% else %}
+        <table>
+          <tbody>
+          {% for entry in audit_data.objectives %}
+            <tr>
+              <th>{{ entry.label }}</th>
+              <td>{{ render_value(entry) }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </section>
+
+    {{ render_standard_section('Light Sources', audit_data.light_sources) }}
+    {{ render_standard_section('Detectors', audit_data.detectors) }}
+  </div>
+</body>
+</html>
