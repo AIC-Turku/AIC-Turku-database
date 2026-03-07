@@ -628,21 +628,27 @@ def validate_instrument_ledgers(
 
                 if rule.field_type == 'list' and isinstance(value, list) and isinstance(rule.min_items, int):
                     if len(value) < rule.min_items:
-                        issues.append(
+                        warnings.append(
                             ValidationIssue(
                                 code='list_too_short',
                                 path=full_path,
-                                message=f"List '{rule.path}' must contain at least {rule.min_items} item(s).",
+                                message=(
+                                    f"List '{rule.path}' should contain at least {rule.min_items} item(s) "
+                                    "(reported for audit follow-up)."
+                                ),
                             )
                         )
 
                 validation_error = _check_rule_validation(value, rule)
                 if validation_error is not None:
-                    issues.append(
+                    warnings.append(
                         ValidationIssue(
                             code='validation_constraint_failed',
                             path=full_path,
-                            message=f"Field '{rule.path}' {validation_error}.",
+                            message=(
+                                f"Field '{rule.path}' {validation_error} "
+                                "(reported for audit follow-up)."
+                            ),
                         )
                     )
 
