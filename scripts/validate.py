@@ -1353,6 +1353,32 @@ def validate_event_ledgers(
                     has_next_due = _is_non_empty_string(payload.get('next_due_date'))
                     if has_followup and not has_next_due:
                         warnings.append(ValidationIssue(code='cross_field_rule_warning', path=event_file.as_posix(), message="Cross-field rule 'next_due_date_should_pair_with_followup': next_due_date is recommended when followup is present."))
+                elif rule_id == 'metric_class_matches_id_pattern':
+                    # Ensures the assigned metric_class logically matches the metric_id text.
+                    for section in ('inputs_human', 'metrics_computed'):
+                        nodes = _resolve_path_nodes(payload, f"{section}[]")
+                        for node in nodes:
+                            if not isinstance(node.value, dict):
+                                continue
+                            m_id = str(node.value.get('metric_id', '')).lower()
+                            m_class = str(node.value.get('metric_class', ''))
+
+                            mismatches = [
+                                (m_class == 'fwhm_lateral' and 'power' in m_id),
+                                (m_class == 'laser_power' and 'fwhm' in m_id),
+                                (m_class == 'stage_repeatability' and 'noise' in m_id),
+                            ]
+                            if any(mismatches):
+                                warnings.append(
+                                    ValidationIssue(
+                                        code='metric_class_pattern_mismatch',
+                                        path=f"{event_file.as_posix()}:{node.path}",
+                                        message=(
+                                            f"Cross-field rule '{rule_id}' failed: metric_class "
+                                            f"'{m_class}' contradicts metric_id '{m_id}'."
+                                        ),
+                                    )
+                                )
                 elif rule_id == 'evaluation_is_machine_written':
                     # Supported rule with no machine-author metadata available in ledgers yet.
                     continue

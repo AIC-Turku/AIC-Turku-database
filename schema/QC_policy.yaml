@@ -715,6 +715,11 @@ cross_field_rules:
       laser_inputs_human.linearity_series, laser_inputs_human.stability_series,
       or laser_inputs_human.single_point_measurements must contain data.
 
+  - id: metric_class_matches_id_pattern
+    rule: >
+      metric_class should logically match metric_id naming and avoid obvious
+      contradictions (e.g., fwhm class with power metric id text).
+
   - id: evaluation_is_machine_written
     rule: >
       Humans should not author pass/warn/fail fields. evaluation is populated by CI
