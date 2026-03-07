@@ -1,0 +1,24 @@
+terms:
+  - id: optical_resolution
+    label: "Optical Resolution"
+    description: "Metrics describing lateral or axial resolution performance, including PSF-derived widths."
+
+  - id: chromatic_registration
+    label: "Chromatic Registration"
+    description: "Metrics describing channel-to-channel spatial offsets or chromatic aberration."
+
+  - id: illumination_power
+    label: "Illumination Power"
+    description: "Metrics describing absolute illumination output, linearity, and stability over time."
+
+  - id: mechanical_positioning
+    label: "Mechanical Positioning"
+    description: "Metrics describing stage repeatability, drift, or positioning accuracy."
+
+  - id: signal_quality
+    label: "Signal Quality"
+    description: "Metrics describing noise, contrast, dynamic range, and related signal characteristics."
+
+  - id: other
+    label: "Other"
+    description: "Fallback class for metrics that do not match predefined classes; provide details in metric_id/details."
