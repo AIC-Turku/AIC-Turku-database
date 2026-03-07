@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ instrument.id or 'Unknown Instrument' }} - Data Audit Report</title>
+  <link rel="stylesheet" href="assets/stylesheets/dashboard.css" />
   <style>
     :root {
       --text: #000;
@@ -140,15 +141,10 @@
     }
   </style>
 </head>
-<body>
-{% macro empty_value(value) -%}
-  {{- value is none
-      or (value is string and not value|trim)
-      or (value is sequence and value is not string and (value|length == 0)) -}}
-{%- endmacro %}
+<body class="md-typeset">
 
 {% macro render_value(entry) -%}
-  {%- set missing = entry.is_missing or empty_value(entry.value) -%}
+  {%- set missing = entry.is_missing -%}
   {%- set warning = entry.is_warning and not missing -%}
   {%- if missing -%}
     <span class="missing">[MISSING - PLEASE FILL IN]</span>
@@ -228,7 +224,7 @@
             <tbody>
             {% for entry in audit_data.objectives if entry.label.startswith('Objective ' ~ obj_index ~ ' ') %}
               {% set is_wd = 'Working Distance' in entry.label %}
-              {% set missing = entry.is_missing or empty_value(entry.value) %}
+              {% set missing = entry.is_missing %}
               <tr>
                 <th>{{ entry.label }}</th>
                 <td>
