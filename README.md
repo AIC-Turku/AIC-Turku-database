@@ -1,10 +1,12 @@
-# Microscopy Database & Dashboard Template
+# AIC Turku Microscopy Database & Dashboard
 
-Welcome to the **Microscopy Database & Dashboard** repository template. It is designed as a reusable GitOps-style source of truth for microscopy facilities. Operational state—including instrument configurations, controlled vocabularies, QC results, and maintenance history—is stored as YAML ledgers and versioned through Pull Requests.
+Welcome to the **AIC Turku Microscopy Database & Dashboard** repository. This repository is the operational source of truth for the **Advanced Imaging Core Facility at Turku Bioscience Centre** and tracks instrument configurations, controlled vocabularies, QC outcomes, and maintenance history as versioned YAML ledgers.
+
+➡️ **Generated dashboard:** https://aic-turku.github.io/AIC-Turku-database/
 
 ---
 
-## Portability & Facility Configuration
+## Facility Identity & Configuration
 
 Facility-specific branding and user-facing copy are centralized in `facility.yaml`.
 
@@ -14,7 +16,7 @@ This includes:
 - default acknowledgements text
 - visual branding assets (`logo`, `favicon`)
 
-To adapt this template for another facility, update `facility.yaml` and run:
+For AIC Turku deployments, keep `facility.yaml` as the canonical location for names, links, and acknowledgements. If this repository is reused for another facility, update `facility.yaml` and run:
 
 ```bash
 python scripts/dashboard_builder.py --strict
@@ -41,7 +43,7 @@ python scripts/dashboard_builder.py --strict
 
 ---
 
-## Facility Workflows
+## AIC Turku Workflows
 
 ### 1. Add or Modify an Instrument
 1. Copy `templates/microscope_template.yaml` into `instruments/<instrument_id>.yaml`.
@@ -80,3 +82,9 @@ python scripts/dashboard_builder.py --strict
 # 3. Serve locally
 mkdocs serve
 ```
+
+---
+
+## About AIC Turku
+
+The Advanced Imaging Core Facility (AIC Turku) at Turku Bioscience Centre supports microscopy and imaging workflows for researchers and maintains this ledger-driven dashboard to provide transparent instrument status, QC history, and maintenance documentation.
