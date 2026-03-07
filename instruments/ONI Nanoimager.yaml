@@ -1,145 +1,119 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: ONI Nanoimager
-# -----------------------------------------------------------------------------
 instrument:
-  display_name: "ONI Nanoimager"
-  instrument_id: "scope-oni-nanoimager"
-  manufacturer: "ONI"
-  model: "Nanoimager"
-  year_of_purchase: "2022"
-  funding: ""
-  stand_orientation: "other"
-  location: ""
-  notes: "Super-resolution microscope (compact). Imaging modes: Single-molecule localization microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET imaging. Field of view: 50 μm x 80 μm per channel. Simultaneous 2-channel imaging (<10 nm mapping accuracy). Equipped with a closed-loop piezo stage (20/20/10 mm XYZ travel, 1 nm resolution) and continuous/one-shot autofocus."
-  url: "https://oni.bio/nanoimager"
-
-# -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
+  display_name: ONI Nanoimager
+  instrument_id: scope-oni-nanoimager
+  manufacturer: ONI
+  model: Nanoimager
+  year_of_purchase: '2022'
+  funding: ''
+  stand_orientation: other
+  location: ''
+  notes: "Super-resolution microscope (compact). Imaging modes: Single-molecule localization\
+    \ microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging,\
+    \ FRET imaging. Field of view: 50 \u03BCm x 80 \u03BCm per channel. Simultaneous\
+    \ 2-channel imaging (<10 nm mapping accuracy). Equipped with a closed-loop piezo\
+    \ stage (20/20/10 mm XYZ travel, 1 nm resolution) and continuous/one-shot autofocus."
+  url: https://oni.bio/nanoimager
 modalities:
-  - "tirf"
-  - "smlm"
-  - "spt"
-  - "fret"
-
-# -----------------------------------------------------------------------------
-# HARDWARE MODULES
-# -----------------------------------------------------------------------------
+- tirf
+- smlm
+- spt
+- fret
 modules:
-  - name: "environmental_enclosure"
-    notes: "Resistive heating without active cooling. Suitable for live cell imaging at 37°C."
-    url: ""
-
-# -----------------------------------------------------------------------------
-# SOFTWARE
-# -----------------------------------------------------------------------------
+- name: environmental_enclosure
+  notes: "Resistive heating without active cooling. Suitable for live cell imaging\
+    \ at 37\xB0C."
+  url: ''
 software:
   acquisition:
-    name: "NimOS microscope control software"
-    version: ""
-    url: ""
+    name: NimOS microscope control software
+    version: ''
+    url: ''
   analysis:
-    name: "CODI analysis software"
-    version: ""
-    url: ""
-
-# -----------------------------------------------------------------------------
-# HARDWARE CONFIGURATION
-# -----------------------------------------------------------------------------
+    name: CODI analysis software
+    version: ''
+    url: ''
 hardware:
-  
-  # --- Scanner ---
   scanner:
-    type: "none"
-    notes: ""
-    url: ""
-
-  # --- Light Sources (Excitation) ---
+    type: none
+    notes: ''
+    url: ''
   light_sources:
-    - kind: "laser"
-      manufacturer: "ONI"
-      model: "405 nm violet"
-      technology: "diode"
-      wavelength_nm: "405"
-      power: "70 mW"
-      notes: "Power measured at the objective."
-      url: ""
-    - kind: "laser"
-      manufacturer: "ONI"
-      model: "488 nm blue"
-      technology: "diode"
-      wavelength_nm: "488"
-      power: "250 mW"
-      notes: "Power measured at the objective."
-      url: ""
-    - kind: "laser"
-      manufacturer: "ONI"
-      model: "561 nm green"
-      technology: "dpss"
-      wavelength_nm: "561"
-      power: "250 mW"
-      notes: "Power measured at the objective. DPSS technology inherently takes ~30 sec to stabilize."
-      url: ""
-    - kind: "laser"
-      manufacturer: "ONI"
-      model: "640 nm red"
-      technology: "diode"
-      wavelength_nm: "640"
-      power: "220 mW"
-      notes: "Power measured at the objective."
-      url: ""
-
-  # --- Detectors (Emission) ---
+  - kind: laser
+    manufacturer: ONI
+    model: 405 nm violet
+    technology: diode
+    wavelength_nm: '405'
+    power: 70 mW
+    notes: Power measured at the objective.
+    url: ''
+  - kind: laser
+    manufacturer: ONI
+    model: 488 nm blue
+    technology: diode
+    wavelength_nm: '488'
+    power: 250 mW
+    notes: Power measured at the objective.
+    url: ''
+  - kind: laser
+    manufacturer: ONI
+    model: 561 nm green
+    technology: dpss
+    wavelength_nm: '561'
+    power: 250 mW
+    notes: Power measured at the objective. DPSS technology inherently takes ~30 sec
+      to stabilize.
+    url: ''
+  - kind: laser
+    manufacturer: ONI
+    model: 640 nm red
+    technology: diode
+    wavelength_nm: '640'
+    power: 220 mW
+    notes: Power measured at the objective.
+    url: ''
   detectors:
-    - kind: "sCMOS"
-      manufacturer: "Hamamatsu"
-      model: "ORCA-Flash4.0 V3"
-      notes: "Digital sCMOS camera, 100 fps full frame. Typically operated with 2x2 binning."
-      url: ""
-
-  # --- Splitters (Camera/Emission) ---
+  - kind: scmos
+    manufacturer: Hamamatsu
+    model: ORCA-Flash4.0 V3
+    notes: Digital sCMOS camera, 100 fps full frame. Typically operated with 2x2 binning.
+    url: ''
   splitters: []
-
-  # --- Filters / Filter Cubes ---
   filters:
-    - name: "Channel 0 Dual-band"
-      location: "Internal"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "498-551; 576-620"
-      notes: ""
-      url: ""
-    - name: "Channel 1"
-      location: "Internal"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "665-705"
-      notes: ""
-      url: ""
-
-  # --- Objectives ---
+  - name: Channel 0 Dual-band
+    location: Internal
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 498-551; 576-620
+    notes: ''
+    url: ''
+  - name: Channel 1
+    location: Internal
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 665-705
+    notes: ''
+    url: ''
   objectives:
-    - id: "100x_oil"
-      manufacturer: "Olympus"
-      model: "UPLXAPO100XO"
-      product_code: ""
-      magnification: 100.0
-      numerical_aperture: 1.45
-      working_distance: "0.13 mm"
-      immersion: "oil"
-      correction: "apochromat"
-      afc_compatible: true
-      specialties: []
-      notes: ""
-      url: ""
-      is_installed: true
-
-  # --- Magnification Changers ---
+  - id: 100x_oil
+    manufacturer: Olympus
+    model: UPLXAPO100XO
+    product_code: ''
+    magnification: 100.0
+    numerical_aperture: 1.45
+    working_distance: 0.13 mm
+    immersion: oil
+    correction: apochromat
+    afc_compatible: true
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
   magnification_changers:
-    - manufacturer: "ONI"
-      model: "Custom tube lens"
-      magnification: 1.1
-      notes: "Custom tube lens provides 110x total magnification with the 100x objective. Combined with 2x2 binning, this yields a pixel size of ~117 nm."
-      url: ""
+  - manufacturer: ONI
+    model: Custom tube lens
+    magnification: 1.1
+    notes: Custom tube lens provides 110x total magnification with the 100x objective.
+      Combined with 2x2 binning, this yields a pixel size of ~117 nm.
+    url: ''

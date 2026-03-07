@@ -1,136 +1,104 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: Test Scope X1
-# -----------------------------------------------------------------------------
 instrument:
-  display_name: "Test Scope X1"
-  instrument_id: "scope-testx1"
-  manufacturer: "Custom"
-  model: "X1 Research Platform"
-  year_of_purchase: "2024"
-  funding: "Internal development budget"
-  stand_orientation: "inverted"
-  location: ""
-  notes: "Synthetic test instrument for dashboard visualization and integration testing."
-  url: "https://github.com/aic-turku/aic-turku-database"
-
-# -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
+  display_name: Test Scope X1
+  instrument_id: scope-testx1
+  manufacturer: Custom
+  model: X1 Research Platform
+  year_of_purchase: '2024'
+  funding: Internal development budget
+  stand_orientation: inverted
+  location: ''
+  notes: Synthetic test instrument for dashboard visualization and integration testing.
+  url: https://github.com/aic-turku/aic-turku-database
 modalities:
-  - "widefield_fluorescence"
-  - "confocal_point"
-  - "transmitted_brightfield"
-
-# -----------------------------------------------------------------------------
-# HARDWARE MODULES
-# -----------------------------------------------------------------------------
+- widefield_fluorescence
+- confocal_point
+- transmitted_brightfield
 modules:
-  - name: "hardware_autofocus"
-    notes: "Standard Z-drift compensation"
-    url: ""
-  - name: "incubation"
-    notes: "Temperature and CO2 control enabled"
-    url: ""
-  - name: "optogenetics"
-    notes: "Integrated 445nm stimulator"
-    url: ""
-
-# -----------------------------------------------------------------------------
-# SOFTWARE
-# -----------------------------------------------------------------------------
+- name: hardware_autofocus
+  notes: Standard Z-drift compensation
+  url: ''
+- name: incubation
+  notes: Temperature and CO2 control enabled
+  url: ''
+- name: optogenetics
+  notes: Integrated 445nm stimulator
+  url: ''
 software:
   acquisition:
-    name: "MicroManager"
-    version: "2.0"
-    url: "https://micro-manager.org/"
-
-# -----------------------------------------------------------------------------
-# HARDWARE CONFIGURATION
-# -----------------------------------------------------------------------------
+    name: MicroManager
+    version: '2.0'
+    url: https://micro-manager.org/
 hardware:
-  
-  # --- Scanner ---
   scanner:
-    type: "galvo"
-    notes: "Single-mirror galvo path for confocal test acquisitions."
-    url: ""
-
-  # --- Light Sources (Excitation) ---
+    type: galvo
+    notes: Single-mirror galvo path for confocal test acquisitions.
+    url: ''
   light_sources:
-    - kind: "laser"
-      manufacturer: "Custom Photonics"
-      model: "Sapphire 488"
-      wavelength_nm: "488"
-      power: "50 mW"
-      notes: "Pulsed mode active"
-      url: ""
-    - kind: "led"
-      manufacturer: "CoolLED"
-      model: "pE-300"
-      wavelength_nm: "multi-band"
-      power: "25 mW"
-      notes: "Software alias: 'CoolLED_Main'"
-      url: "https://www.coolled.com/products/pe-300-series/"
-
-  # --- Detectors (Emission) ---
+  - kind: laser
+    manufacturer: Custom Photonics
+    model: Sapphire 488
+    wavelength_nm: '488'
+    power: 50 mW
+    notes: Pulsed mode active
+    url: ''
+  - kind: led
+    manufacturer: CoolLED
+    model: pE-300
+    wavelength_nm: multi-band
+    power: 25 mW
+    notes: 'Software alias: ''CoolLED_Main'''
+    url: https://www.coolled.com/products/pe-300-series/
   detectors:
-    - kind: "sCMOS"
-      manufacturer: "Hamamatsu"
-      model: "ORCA-Flash4.0 V3"
-      notes: "Master detector"
-      url: ""
-    - kind: "PMT"
-      manufacturer: "Custom Photonics"
-      model: "PMT-R928"
-      notes: "Confocal channel A"
-      url: ""
-
-  # --- Splitters (Camera/Emission) ---
+  - kind: scmos
+    manufacturer: Hamamatsu
+    model: ORCA-Flash4.0 V3
+    notes: Master detector
+    url: ''
+  - kind: pmt
+    manufacturer: Custom Photonics
+    model: PMT-R928
+    notes: Confocal channel A
+    url: ''
   splitters:
-    - name: "Custom 50/50"
-      type: "emission_splitter"
-      notes: "Even split for dual-camera testing"
-      url: ""
-
-  # --- Filters / Filter Cubes ---
+  - name: Custom 50/50
+    type: emission_splitter
+    notes: Even split for dual-camera testing
+    url: ''
   filters:
-    - name: "Chroma Test Quad"
-      location: "Turret Pos 1"
-      product_code: "CH-99001"
-      excitation: "405/20; 488/20; 561/20; 640/20"
-      dichroic: "420; 500; 580; 660"
-      emission: "450/50; 525/50; 600/50; 680/50"
-      notes: "Main testing cube"
-      url: "https://www.chroma.com/"
-
-  # --- Objectives ---
+  - name: Chroma Test Quad
+    location: Turret Pos 1
+    product_code: CH-99001
+    excitation: 405/20; 488/20; 561/20; 640/20
+    dichroic: 420; 500; 580; 660
+    emission: 450/50; 525/50; 600/50; 680/50
+    notes: Main testing cube
+    url: https://www.chroma.com/
   objectives:
-    - id: "20x_air"
-      manufacturer: "Olympus"
-      model: "UPlanSApo 20x/0.75"
-      product_code: "OLY-20X-SA"
-      magnification: 20.0
-      numerical_aperture: 0.75
-      working_distance: "0.60 mm"
-      immersion: "air"
-      correction: "plan_apochromat"
-      afc_compatible: true
-      specialties: []
-      notes: "General purpose testing"
-      url: ""
-      
-    - id: "60x_oil"
-      manufacturer: "Olympus"
-      model: "UPlanSApo 60x/1.35"
-      product_code: "OLY-60X-SA"
-      magnification: 60.0
-      numerical_aperture: 1.35
-      working_distance: "0.15 mm"
-      immersion: "oil"
-      correction: "plan_apochromat"
-      is_installed: false
-      afc_compatible: true
-      specialties:
-        - "High-NA test"
-      notes: ""
-      url: ""
+  - id: 20x_air
+    manufacturer: Olympus
+    model: UPlanSApo 20x/0.75
+    product_code: OLY-20X-SA
+    magnification: 20.0
+    numerical_aperture: 0.75
+    working_distance: 0.60 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: General purpose testing
+    url: ''
+  - id: 60x_oil
+    manufacturer: Olympus
+    model: UPlanSApo 60x/1.35
+    product_code: OLY-60X-SA
+    magnification: 60.0
+    numerical_aperture: 1.35
+    working_distance: 0.15 mm
+    immersion: oil
+    correction: plan_apochromat
+    is_installed: false
+    afc_compatible: true
+    specialties:
+    - High-NA test
+    notes: ''
+    url: ''

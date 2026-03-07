@@ -1,133 +1,109 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: MSquared Aurora Airy Beam
-# -----------------------------------------------------------------------------
 instrument:
-  display_name: "MSquared Aurora Airy Beam"
-  instrument_id: "scope-msquared-aurora-airy-beam"
-  manufacturer: "M Squared"
-  model: "Aurora Airy Beam"
-  year_of_purchase: "2019"
-  funding: ""
-  stand_orientation: "other"
-  location: "BioCity, 5th floor, room 5149"
-  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation."
-  url: ""
-
-# -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
+  display_name: MSquared Aurora Airy Beam
+  instrument_id: scope-msquared-aurora-airy-beam
+  manufacturer: M Squared
+  model: Aurora Airy Beam
+  year_of_purchase: '2019'
+  funding: ''
+  stand_orientation: other
+  location: BioCity, 5th floor, room 5149
+  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term\
+    \ volumetric live imaging with reduced photobleaching and striping artefacts.\
+    \ Approximate performance claims: up to 800 \xB5m FOV (with 15.3x Special Optics),\
+    \ sub-1 \xB5m axial resolution, and lower phototoxic burden due to single exposure\
+    \ per z-slice and self-healing/non-diffractive beam propagation."
+  url: ''
 modalities:
-  - "light_sheet"
-  - "widefield_fluorescence"
-
-# -----------------------------------------------------------------------------
-# HARDWARE MODULES
-# -----------------------------------------------------------------------------
+- light_sheet
+- widefield_fluorescence
 modules:
-  - name: "environmental_enclosure"
-    notes: "Laser safety enclosure CUBE & BOX"
-    url: ""
-
-# -----------------------------------------------------------------------------
-# SOFTWARE
-# -----------------------------------------------------------------------------
+- name: environmental_enclosure
+  notes: Laser safety enclosure CUBE & BOX
+  url: ''
 software:
   acquisition:
-    name: "M Squared Cubes Acquisition"
-    version: ""
-    url: ""
+    name: M Squared Cubes Acquisition
+    version: ''
+    url: ''
   deconvolution:
-    name: "M Squared Cubes Deconvolution"
-    version: ""
-    url: ""
-
-# -----------------------------------------------------------------------------
-# HARDWARE CONFIGURATION
-# -----------------------------------------------------------------------------
+    name: M Squared Cubes Deconvolution
+    version: ''
+    url: ''
 hardware:
-  
-  # --- Scanner ---
   scanner:
-    type: "tandem"
-    notes: "Galvanometric scanner and remote focusing lenses on illumination/detection; integrated Resonant scanner for beam scanning."
-    url: ""
-
-  # --- Light Sources (Excitation) ---
+    type: tandem
+    notes: Galvanometric scanner and remote focusing lenses on illumination/detection;
+      integrated Resonant scanner for beam scanning.
+    url: ''
   light_sources:
-    - kind: "laser"
-      manufacturer: "Coherent OBIS"
-      model: "488 nm laser"
-      wavelength_nm: "488"
-      power: "100 mW"
-      notes: ""
-      url: ""
-    - kind: "laser"
-      manufacturer: "Coherent OBIS"
-      model: "561 nm laser"
-      wavelength_nm: "561"
-      power: "80 mW"
-      notes: ""
-      url: ""
-    - kind: "laser"
-      manufacturer: "Coherent OBIS"
-      model: "640 nm laser (LX)"
-      wavelength_nm: "640"
-      power: "75 mW"
-      notes: "FIBER PIGTAIL:UFC: Galaxy"
-      url: ""
-
-  # --- Detectors (Emission) ---
+  - kind: laser
+    manufacturer: Coherent OBIS
+    model: 488 nm laser
+    wavelength_nm: '488'
+    power: 100 mW
+    notes: ''
+    url: ''
+  - kind: laser
+    manufacturer: Coherent OBIS
+    model: 561 nm laser
+    wavelength_nm: '561'
+    power: 80 mW
+    notes: ''
+    url: ''
+  - kind: laser
+    manufacturer: Coherent OBIS
+    model: 640 nm laser (LX)
+    wavelength_nm: '640'
+    power: 75 mW
+    notes: 'FIBER PIGTAIL:UFC: Galaxy'
+    url: ''
   detectors:
-    - kind: "sCMOS"
-      manufacturer: "Hamamatsu"
-      model: "ORCA-Flash4.0 V3 (C11440-22CU)"
-      notes: "2048x2048. Supplied with water chiller for camera chip cooling."
-      url: ""
-
-  # --- Splitters (Camera/Emission) ---
+  - kind: scmos
+    manufacturer: Hamamatsu
+    model: ORCA-Flash4.0 V3 (C11440-22CU)
+    notes: 2048x2048. Supplied with water chiller for camera chip cooling.
+    url: ''
   splitters: []
-
-  # --- Filters / Filter Cubes ---
   filters:
-    - name: "GFP filter"
-      location: "Emission Wheel (6-position)"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "520/40"
-      notes: ""
-      url: ""
-    - name: "GFP longpass"
-      location: "Emission Wheel (6-position)"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "LP 500"
-      notes: ""
-      url: ""
-    - name: "RFP longpass"
-      location: "Emission Wheel (6-position)"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: "LP 570"
-      notes: ""
-      url: ""
-
-  # --- Objectives ---
+  - name: GFP filter
+    location: Emission Wheel (6-position)
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: 520/40
+    notes: ''
+    url: ''
+  - name: GFP longpass
+    location: Emission Wheel (6-position)
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: LP 500
+    notes: ''
+    url: ''
+  - name: RFP longpass
+    location: Emission Wheel (6-position)
+    product_code: ''
+    excitation: ''
+    dichroic: ''
+    emission: LP 570
+    notes: ''
+    url: ''
   objectives:
-    - id: "17x_multi"
-      manufacturer: "Special Optics"
-      model: "54-10-12 Airy beam dipping objective"
-      product_code: "54-10-12"
-      magnification: 17.0
-      numerical_aperture: 0.4
-      working_distance: "12 mm"
-      immersion: "multi"
-      correction: ""
-      afc_compatible: false
-      specialties:
-        - "Cleared Tissue Imaging (CLARITY and TDE)"
-      notes: "Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI. FOV 1.2 mm diameter."
-      url: ""
-      is_installed: true
+  - id: 17x_multi
+    manufacturer: Special Optics
+    model: 54-10-12 Airy beam dipping objective
+    product_code: 54-10-12
+    magnification: 17.0
+    numerical_aperture: 0.4
+    working_distance: 12 mm
+    immersion: multi
+    correction: ''
+    afc_compatible: false
+    specialties:
+    - Cleared Tissue Imaging (CLARITY and TDE)
+    notes: Excitation and detection objectives designed for dipping media with refractive
+      index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across
+      RI. FOV 1.2 mm diameter.
+    url: ''
+    is_installed: true
