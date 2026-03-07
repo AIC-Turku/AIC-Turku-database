@@ -921,7 +921,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             module_name = clean_text(module.get("name"))
             module["display_name"] = vocab_label(vocabulary, "modules", module_name)
 
-    # Generate Vocabulary Dictionary Markdown
+    # Generate Vocabulary Dictionary Markdown with Tabs
     vocab_md_lines = [
         "---",
         "title: Vocabulary Dictionary",
@@ -932,29 +932,71 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         "This page defines the strictly controlled terminology used across the AIC database. Use the **Canonical ID** when writing YAML files, though the validation scripts will gracefully suggest corrections if you use a known **Synonym**.\n",
     ]
 
-    for vocab_name, terms in sorted(vocabulary.terms_by_vocab.items()):
-        # Format the title nicely (e.g., "objective_immersion" -> "Objective Immersion")
-        title = vocab_name.replace("_", " ").title()
-        vocab_md_lines.append(f"## {title}\n")
+    # Group vocabularies into logical categories
+    categories = {
+        "🔬 Instruments": [
+            "modalities",
+            "modules",
+            "detector_kinds",
+            "light_source_kinds",
+            "scanner_types",
+            "objective_corrections",
+            "objective_immersion",
+        ],
+        "🛠️ Maintenance": ["maintenance_action", "maintenance_reason", "maintenance_status", "service_provider"],
+        "✅ Quality Control": [
+            "qc_type",
+            "qc_metrics",
+            "qc_evaluation_status",
+            "qc_artifact_roles",
+            "measurement_positions",
+            "qc_setpoint_units",
+        ],
+    }
 
-        # Table Header
-        vocab_md_lines.append("| Label | Canonical ID | Synonyms | Description |")
-        vocab_md_lines.append("| :--- | :--- | :--- | :--- |")
+    # Keep track of what we've rendered so we can dump uncategorized ones in an "Other" tab
+    rendered_vocabs = set()
 
-        # Table Rows
-        for term in sorted(terms.values(), key=lambda t: t.label.lower()):
-            label = f"**{term.label}**"
-            code_id = f"`{term.id}`"
+    for cat_title, expected_vocabs in categories.items():
+        vocab_md_lines.append(f'=== "{cat_title}"\n')
 
-            # Format synonyms as inline code blocks separated by commas
-            syns = ", ".join([f"`{s}`" for s in term.synonyms]) if term.synonyms else "-"
+        has_content = False
+        for vocab_name in expected_vocabs:
+            if vocab_name in vocabulary.terms_by_vocab:
+                has_content = True
+                rendered_vocabs.add(vocab_name)
+                title = vocab_name.replace("_", " ").title()
+                vocab_md_lines.append(f"    ## {title}\n")
+                vocab_md_lines.append("    | Label | Canonical ID | Synonyms | Description |")
+                vocab_md_lines.append("    | :--- | :--- | :--- | :--- |")
 
-            # Ensure description is a single line so it doesn't break the Markdown table
-            desc = term.description.replace("\n", " ").strip() if term.description else "-"
+                for term in sorted(vocabulary.terms_by_vocab[vocab_name].values(), key=lambda t: t.label.lower()):
+                    label = f"**{term.label}**"
+                    code_id = f"`{term.id}`"
+                    syns = ", ".join([f"`{s}`" for s in term.synonyms]) if term.synonyms else "-"
+                    desc = term.description.replace("\n", " ").strip() if term.description else "-"
+                    vocab_md_lines.append(f"    | {label} | {code_id} | {syns} | {desc} |")
+                vocab_md_lines.append("\n")
 
-            vocab_md_lines.append(f"| {label} | {code_id} | {syns} | {desc} |")
+        if not has_content:
+            vocab_md_lines.append("    _No vocabularies currently defined for this category._\n\n")
 
-        vocab_md_lines.append("\n")  # Blank line after table
+    # Catch-all for any vocabularies not explicitly categorized above
+    other_vocabs = [v for v in vocabulary.terms_by_vocab.keys() if v not in rendered_vocabs]
+    if other_vocabs:
+        vocab_md_lines.append('=== "📦 Other"\n')
+        for vocab_name in sorted(other_vocabs):
+            title = vocab_name.replace("_", " ").title()
+            vocab_md_lines.append(f"    ## {title}\n")
+            vocab_md_lines.append("    | Label | Canonical ID | Synonyms | Description |")
+            vocab_md_lines.append("    | :--- | :--- | :--- | :--- |")
+            for term in sorted(vocabulary.terms_by_vocab[vocab_name].values(), key=lambda t: t.label.lower()):
+                label = f"**{term.label}**"
+                code_id = f"`{term.id}`"
+                syns = ", ".join([f"`{s}`" for s in term.synonyms]) if term.synonyms else "-"
+                desc = term.description.replace("\n", " ").strip() if term.description else "-"
+                vocab_md_lines.append(f"    | {label} | {code_id} | {syns} | {desc} |")
+            vocab_md_lines.append("\n")
 
     (docs_root / "vocabulary_dictionary.md").write_text("\n".join(vocab_md_lines), encoding="utf-8")
 
