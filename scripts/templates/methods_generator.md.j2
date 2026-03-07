@@ -6,7 +6,7 @@ hide:
 
 # 📝 Materials and Methods Generator
 
-This tool generates a "Materials and Methods" text block compliant with the **QUAREP-LiMi minimal reporting requirements** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)). Select a system, choose the specific hardware you used, and click **"Add to Methods"**. You can repeat this process for multiple microscopes.
+This tool generates a draft "Materials and Methods" text block aligned with the **QUAREP-LiMi minimal reporting requirements** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)). Select a system, choose the specific hardware you used, and click **"Add to Methods"**. You can repeat this process for multiple microscopes and then complete any placeholders with experiment-specific metadata before publication.
 <div class="aic-card" style="padding: 20px; margin-bottom: 20px; background-color: var(--md-default-bg-color);">
   <label for="system-select"><strong>1. Select Microscope:</strong></label>
   <select id="system-select" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light);">
@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             s => `${s.name} (${s.type})`, "splitter");
 
         populateCheckboxes("det-list", currentInst.processed_hardware.detectors,
-            d => `${d.model} ${d.type} (${d.manufacturer})`, "det");
+            d => formatDetectorLabel(d), "det");
     });
 
     function populateCheckboxes(containerId, items, labelFormatter, prefix, subtextFormatter) {
@@ -254,6 +254,49 @@ document.addEventListener("DOMContentLoaded", async () => {
         return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
     }
 
+
+    function formatScannerDetails(scannerData) {
+        if (!scannerData || !scannerData.type || scannerData.type.toLowerCase() === "none") return "";
+        const details = [];
+        if (scannerData?.line_rate_hz) details.push(`line rate ${scannerData.line_rate_hz} Hz`);
+        if (scannerData?.pinhole_um) details.push(`pinhole ${scannerData.pinhole_um} µm`);
+        return details.length > 0 ? ` (${details.join(", ")})` : "";
+    }
+
+    function formatDetectorLabel(detector) {
+        const label = `${detector?.model || "Unknown detector"} ${detector?.type || ""} (${detector?.manufacturer || "Unknown manufacturer"})`.replace(/\s+/g, " ").trim();
+        const details = [];
+        if (detector?.pixel_pitch_um) details.push(`${detector.pixel_pitch_um} µm pixel pitch`);
+        if (detector?.sensor_format_px) details.push(`sensor ${detector.sensor_format_px} px`);
+        if (detector?.binning) details.push(`binning ${detector.binning}`);
+        if (detector?.bit_depth) details.push(`${detector.bit_depth}-bit`);
+        return details.length > 0 ? `${label}; ${details.join(", ")}` : label;
+    }
+
+    function formatProcessingMetadata(inst) {
+        const software = Array.isArray(inst?.software) ? inst.software : [];
+        const moduleItems = inst?.processed_hardware?.modules || inst?.modules || [];
+        const moduleText = moduleItems
+            .map(module => (module?.id || module?.name || module || "").toString().trim())
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+        const processingKeywords = ["airyscan", "thunder", "deconvolution", "sim", "reconstruction", "flim", "lifetime"];
+        const matchedKeywords = processingKeywords.filter(keyword => moduleText.includes(keyword));
+
+        const softwareText = software
+            .map(s => `${s?.name || "Unknown software"}${s?.version ? ` (v${s.version})` : ""}`)
+            .join(", ");
+
+        if (matchedKeywords.length === 0 && !softwareText) {
+            return "[PLEASE SPECIFY: Deconvolution/reconstruction/lifetime-fitting pipeline, including software name and version]. ";
+        }
+
+        const processingMethods = matchedKeywords.length > 0 ? formatHumanList(matchedKeywords.map(toTitleCase)) : "processing";
+        const softwareClause = softwareText || "[software/version not specified]";
+        return `Post-acquisition processing included ${processingMethods}; software used: ${softwareClause}. `;
+    }
     function formatObjectiveLabel(obj) {
         const metadata = [];
         if (obj?.manufacturer) metadata.push(obj.manufacturer);
@@ -317,7 +360,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             : (scannerFallbackLabel && scannerFallbackLabel.toLowerCase() !== "none" ? [scannerFallbackLabel] : []);
 
         const scannerClause = selectedScanners.length > 0
-            ? ` equipped with a ${formatHumanList(selectedScanners)} scanner`
+            ? ` equipped with a ${formatHumanList(selectedScanners)} scanner${formatScannerDetails(scannerData)}`
             : "";
 
         // Base microscope description
@@ -325,11 +368,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (modules.length > 0) {
             text += `The following hardware modules were utilized: ${formatHumanList(modules)}. `;
-            const hasIncubation = modules.some(module => /incubation|incubator/i.test(module));
+            const hasIncubation = modules.some(module => /incubation|incubator|environment|temperature|co2|humidity/i.test(module));
             if (hasIncubation) {
-                text += `[PLEASE SPECIFY: Cells were maintained at X °C and X% CO2 during imaging]. `;
+                text += `[PLEASE SPECIFY: Imaging environment setpoints, e.g., temperature (°C), CO2 (%), humidity (%), and stage-top incubation module]. `;
             }
         }
+
+        text += `[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)]. `;
 
         if (objs.length > 0) text += `The system was equipped with the following objective(s): ${objs.join(", ")}. `;
         if (dets.length > 0) text += `Images were captured using: ${dets.join(", ")}. `;
@@ -338,8 +383,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         const diFilters = filters.filter(f => f.includes('Di:'));
         const emFilters = filters.filter(f => f.includes('Em:'));
 
-        text += `Acquisition settings were optimized across imaging panels using ${lights.length > 0 ? formatHumanList(lights) : '[selected excitation lines]'} with ${diFilters.length > 0 ? formatHumanList(diFilters) : '[main dichroic(s)]'} and ${emFilters.length > 0 ? formatHumanList(emFilters) : '[emission filter(s)]'}; exposure times and excitation powers were tuned per sample to maximize dynamic range while preventing saturation. `;
-        text += `Images were acquired at a pixel size of [X] µm/px and z-step of [X] µm, with acquisition parameters selected to satisfy Nyquist sampling for the objective and fluorophore emission profile. `;
+        text += `Acquisition used ${lights.length > 0 ? formatHumanList(lights) : '[selected excitation lines]'} with ${diFilters.length > 0 ? formatHumanList(diFilters) : '[main dichroic(s)]'} and ${emFilters.length > 0 ? formatHumanList(emFilters) : '[emission filter(s)]'}. `;
+        text += `[PLEASE SPECIFY: Exposure time(s), excitation power(s), camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable]. `;
+        text += `Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile. `;
+
+        const modalityNeeds = [];
+        if (selectedModalities.some(m => /confocal/i.test(m))) modalityNeeds.push('confocal pinhole size and scanner mode (resonant vs galvo)');
+        if (selectedModalities.some(m => /sim|structured illumination/i.test(m))) modalityNeeds.push('SIM reconstruction settings and software version');
+        if (selectedModalities.some(m => /sted/i.test(m))) modalityNeeds.push('depletion wavelength, power, and depletion timing mode (CW/pulsed)');
+        if (selectedModalities.some(m => /flim/i.test(m))) modalityNeeds.push('lifetime fitting model, IRF handling, and photon count thresholds');
+        if (selectedModalities.some(m => /tirf/i.test(m))) modalityNeeds.push('incident angle/penetration depth and alignment procedure');
+        if (modalityNeeds.length > 0) {
+            text += `[PLEASE SPECIFY modality-specific metadata: ${formatHumanList(modalityNeeds)}]. `;
+        }
+
+        text += formatProcessingMetadata(currentInst);
 
         text += `\n\n[DATA AVAILABILITY]: The raw microscopy image files (.nd2/.czi/.lif) generated in this study should be deposited in BioImage Archive or Zenodo to support Open Science and reproducibility; include the accession number or DOI in the final manuscript.`;
 

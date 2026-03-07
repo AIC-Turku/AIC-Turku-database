@@ -152,6 +152,14 @@ def _is_positive_number(value: Any) -> bool:
     return _is_number(value) and value > 0
 
 
+def _is_positive_number_or_numeric_string(value: Any) -> bool:
+    if _is_positive_number(value):
+        return True
+    if _is_numeric_string(value):
+        return float(str(value).strip()) > 0
+    return False
+
+
 def _is_valid_wavelength(value: Any) -> bool:
     if _is_number(value):
         return value > 0
@@ -380,6 +388,19 @@ def validate_instrument_ledgers(
             required=True,
         )
 
+        for scanner_numeric_field in ("line_rate_hz", "pinhole_um"):
+            scanner_value = scanner.get(scanner_numeric_field)
+            if scanner_value in (None, ""):
+                continue
+            if not _is_positive_number_or_numeric_string(scanner_value):
+                warnings.append(
+                    ValidationIssue(
+                        code=f"non_numeric_scanner_{scanner_numeric_field}",
+                        path=f"{instrument_file.as_posix()}:hardware.scanner.{scanner_numeric_field}",
+                        message=f"{scanner_numeric_field} should be a positive numeric value when provided.",
+                    )
+                )
+
         for index, source in enumerate(hardware.get("light_sources", [])):
             if not isinstance(source, dict):
                 issues.append(
@@ -441,8 +462,48 @@ def validate_instrument_ledgers(
                 raw_value=detector_kind,
                 required=True,
             )
-            if isinstance(detector_kind, str) and detector_kind.strip():
-                detector_kinds_present.add(detector_kind.strip().casefold())
+            detector_kind_normalized = detector_kind.strip().casefold() if isinstance(detector_kind, str) and detector_kind.strip() else ""
+            if detector_kind_normalized:
+                detector_kinds_present.add(detector_kind_normalized)
+
+            for field_name in ("pixel_pitch_um", "pixel_size_um", "qe_peak_pct", "read_noise_e"):
+                raw_value = detector.get(field_name)
+                if raw_value in (None, ""):
+                    continue
+                if not _is_positive_number_or_numeric_string(raw_value):
+                    warnings.append(
+                        ValidationIssue(
+                            code=f"non_numeric_{field_name}",
+                            path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].{field_name}",
+                            message=f"{field_name} should be a positive numeric value when provided.",
+                        )
+                    )
+
+            bit_depth = detector.get("bit_depth")
+            if bit_depth not in (None, "") and not _is_positive_number_or_numeric_string(bit_depth):
+                warnings.append(
+                    ValidationIssue(
+                        code="non_numeric_detector_bit_depth",
+                        path=f"{instrument_file.as_posix()}:hardware.detectors[{index}].bit_depth",
+                        message="bit_depth should be a positive numeric value when provided.",
+                    )
+                )
+
+            camera_detector_kinds = {"scmos", "emccd", "ccd", "cmos"}
+            if detector_kind_normalized in camera_detector_kinds and not (
+                _is_positive_number_or_numeric_string(detector.get("pixel_pitch_um"))
+                or _is_positive_number_or_numeric_string(detector.get("pixel_size_um"))
+            ):
+                warnings.append(
+                    ValidationIssue(
+                        code="camera_detector_pixel_pitch_missing",
+                        path=f"{instrument_file.as_posix()}:hardware.detectors[{index}]",
+                        message=(
+                            "Camera-based detectors should usually include pixel_pitch_um (or pixel_size_um) "
+                            "for methods reporting completeness."
+                        ),
+                    )
+                )
 
         seen_objective_ids: set[str] = set()
         for index, objective in enumerate(hardware.get("objectives", [])):
@@ -552,6 +613,15 @@ def validate_instrument_ledgers(
                     code="modality_scanner_mismatch",
                     path=f"{instrument_file.as_posix()}:hardware.scanner.type",
                     message="'confocal_point' modality usually requires a non-'none' scanner type.",
+                )
+            )
+
+        if "confocal_point" in modality_ids and scanner_type in {"galvo", "resonant"} and scanner.get("pinhole_um") in (None, ""):
+            warnings.append(
+                ValidationIssue(
+                    code="confocal_pinhole_missing",
+                    path=f"{instrument_file.as_posix()}:hardware.scanner.pinhole_um",
+                    message="Point-scanning confocal setups should usually include pinhole_um for methods completeness.",
                 )
             )
 

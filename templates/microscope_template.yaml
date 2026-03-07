@@ -99,6 +99,8 @@ hardware:
   scanner:
     # Options: none, galvo, resonant, spinning_disk, polygon, acousto_optic, stage_scanning
     type: "galvo"
+    line_rate_hz: null         # Optional, e.g. 8000 for resonant scanners
+    pinhole_um: null           # Optional; recommended for point-scanning confocal
     notes: ""
     url: ""
 
@@ -127,6 +129,12 @@ hardware:
     - kind: "GaAsP_PMT"       # Options: PMT, GaAsP_PMT, HyD, sCMOS, EMCCD, CCD, APD
       manufacturer: "Zeiss"
       model: "Quasar"
+      pixel_pitch_um: null      # Optional, e.g. 6.5 for camera-based detectors
+      sensor_format_px: ""      # Optional, e.g. "2048x2048"
+      binning: ""               # Optional, e.g. "2x2"
+      bit_depth: null           # Optional, e.g. 16
+      qe_peak_pct: null         # Optional, e.g. 95
+      read_noise_e: null        # Optional, e.g. 1.0
       notes: "Channel 1"
       url: ""                 # Link to detector spec sheet
       
