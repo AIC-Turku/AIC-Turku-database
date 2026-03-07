@@ -29,6 +29,3 @@ terms:
   - id: stage_error_z
     label: "Stage Error Z"
     description: "Maximum stage positioning error in the Z direction, reported in micrometers (um)."
-  - id: psf.60x_oil.525.fwhm_z_nm
-    label: "PSF 60x Oil 525 FWHM Z (nm)"
-    description: "Axial full width at half maximum for the 60x oil objective in the 525 nm channel, reported in nanometers."
