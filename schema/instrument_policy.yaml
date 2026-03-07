@@ -1,0 +1,784 @@
+version: 1
+schema_id: instrument_metadata_policy
+applies_to:
+  template: templates/microscope_template.yaml
+  instruments_glob: instruments/*.yaml
+purpose:
+  - drive instrument metadata completeness audits
+  - define required vs conditional vs optional fields
+  - provide one source of truth for validation and method-generator inclusion
+  - reference controlled vocabularies without duplicating their contents
+
+status_definitions:
+  required: must be present for all instruments
+  conditional: must be present when the stated condition is true
+  optional: useful but not required for instrument-level reporting completeness
+
+vocab_registry:
+  modalities:
+    file: vocab/modalities.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  modules:
+    file: vocab/modules.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  scanner_types:
+    file: vocab/scanner_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  light_source_kinds:
+    file: vocab/light_source_kinds.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  detector_kinds:
+    file: vocab/detector_kinds.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  objective_immersion:
+    file: vocab/objective_immersion.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  objective_corrections:
+    file: vocab/objective_corrections.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  # Recommended future additions if you want the policy file to own all possible options:
+  # manufacturers:
+  #   file: vocab/manufacturers.yaml
+  # stand_orientations:
+  #   file: vocab/stand_orientations.yaml
+
+sections:
+  - id: general_identity
+    title: General instrument identity
+    rules:
+      - path: instrument.display_name
+        title: Display name
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Primary human-readable instrument name shown in reports and methods output.
+
+      - path: instrument.instrument_id
+        title: Instrument ID
+        status: required
+        type: slug
+        validation:
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        used_by: [audit_pdf, method_generator, dashboard, qc_mapping, maintenance]
+        rationale: Stable machine-readable key used across QC, maintenance, and dashboard routing.
+
+      - path: instrument.manufacturer
+        title: Manufacturer
+        status: required
+        type: string
+        vocab: null
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for instrument identification and methods wording.
+
+      - path: instrument.model
+        title: Model
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for instrument identification and methods wording.
+
+      - path: instrument.year_of_purchase
+        title: Year of purchase
+        status: optional
+        type: year_or_empty
+        used_by: [audit_pdf, dashboard]
+        rationale: Operational context and lifecycle planning; not essential for methods completeness.
+
+      - path: instrument.funding
+        title: Funding
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Operational and acknowledgement context; not required for methods reporting.
+
+      - path: instrument.stand_orientation
+        title: Stand orientation
+        status: required
+        type: string
+        allowed_values: [upright, inverted, stereo, benchtop, other]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Used directly by methods generator and helps classify the platform.
+
+      - path: instrument.location
+        title: Location
+        status: required
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: required for operational metadata; not necessary for methods text.
+
+      - path: instrument.notes
+        title: Notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Free text is useful for staff but should not replace structured fields.
+
+      - path: instrument.url
+        title: Instrument URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Helpful for staff lookup and manuals, not essential for methods completeness.
+
+      - path: modalities
+        title: Imaging modalities
+        status: required
+        type: list
+        item_type: string
+        min_items: 1
+        vocab: modalities
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Core reporting category in QUAREP/JCB-style instrumentation metadata.
+
+      - path: modules
+        title: Installed modules
+        status: optional
+        type: list
+        item_type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Only present when installed modules materially change imaging capabilities.
+
+      - path: modules[].name
+        title: Module name
+        status: conditional
+        type: string
+        vocab: modules
+        required_if:
+          parent_present: modules[]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when a module/path is installed and materially changes imaging capabilities.
+
+      - path: modules[].notes
+        title: Module notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful for operational nuances and limitations.
+
+      - path: modules[].url
+        title: Module URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Helpful vendor or manual reference.
+
+  - id: software
+    title: Software
+    rules:
+      - path: software.acquisition.name
+        title: Acquisition software name
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Acquisition software should always be known and is used directly in methods wording.
+
+      - path: software.acquisition.version
+        title: Acquisition software version
+        status: required
+        type: string_or_empty
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Version materially affects reproducibility and methods text.
+
+      - path: software.acquisition.developer
+        title: Acquisition software developer
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Usually inferable from software name/vendor, so not minimal.
+
+      - path: software.acquisition.notes
+        title: Acquisition software notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful for describing split workflows or bundled processing.
+
+      - path: software.acquisition.url
+        title: Acquisition software URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+      - path: software.analysis.name
+        title: Analysis software name
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [sim, ism, flim, spectral_imaging]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when instrument-associated analysis is part of standard output.
+
+      - path: software.analysis.version
+        title: Analysis software version
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [sim, ism, flim, spectral_imaging]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Version matters when vendor analysis is part of the standard instrument workflow.
+
+      - path: software.analysis.url
+        title: Analysis software URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+      - path: software.deconvolution.name
+        title: Deconvolution or reconstruction software name
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [sim, ism]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when reconstruction is integral to the instrument output.
+
+      - path: software.deconvolution.version
+        title: Deconvolution or reconstruction software version
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [sim, ism]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Reconstruction version affects reproducibility and interpretation.
+
+      - path: software.deconvolution.url
+        title: Deconvolution or reconstruction software URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+      - path: software.flim.name
+        title: FLIM software name
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [flim]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when lifetime fitting or FLIM reconstruction is part of standard workflow.
+
+      - path: software.flim.version
+        title: FLIM software version
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [flim]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Version matters for lifetime fitting and FLIM-derived outputs.
+
+      - path: software.flim.url
+        title: FLIM software URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+  - id: scanner
+    title: Scanner
+    rules:
+      - path: hardware.scanner.type
+        title: Scanner type
+        status: required
+        type: string
+        vocab: scanner_types
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Core hardware discriminator for methods completeness.
+
+      - path: hardware.scanner.line_rate_hz
+        title: Scanner line rate (Hz)
+        status: conditional
+        type: positive_number
+        required_if:
+          scanner_type_in: [resonant, polygon, acousto_optic]
+        used_by: [audit_pdf, method_generator]
+        rationale: Required where speed mode is intrinsic and relevant to the scan engine.
+
+      - path: hardware.scanner.pinhole_um
+        title: Pinhole diameter (um)
+        status: conditional
+        type: positive_number
+        required_if:
+          modalities_any_of: [confocal_point, sted]
+        used_by: [audit_pdf, method_generator]
+        rationale: Required for point-scanning confocal or STED-like systems when pinhole applies.
+
+      - path: hardware.scanner.notes
+        title: Scanner notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful for mode-specific caveats.
+
+      - path: hardware.scanner.url
+        title: Scanner URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+  - id: light_sources
+    title: Light sources
+    rules:
+      - path: hardware.light_sources
+        title: Light sources
+        status: required
+        type: list
+        item_type: object
+        min_items: 1
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Each instrument needs at least one declared excitation source.
+
+      - path: hardware.light_sources[].kind
+        title: Light source kind
+        status: required
+        type: string
+        vocab: light_source_kinds
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Core excitation-source class.
+
+      - path: hardware.light_sources[].manufacturer
+        title: Light source manufacturer
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for unambiguous hardware identification.
+
+      - path: hardware.light_sources[].model
+        title: Light source model
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for unambiguous hardware identification.
+
+      - path: hardware.light_sources[].technology
+        title: Light source technology subtype
+        status: optional
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Helpful subtype information for lasers or LED engines.
+
+      - path: hardware.light_sources[].wavelength_nm
+        title: Light source wavelength metadata
+        status: required
+        type: spectral_descriptor
+        validation:
+          accepted_examples: ['405', '488', '395/25', '561', '730/40', 'tunable']
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Every excitation source needs machine-readable spectral metadata.
+        notes: Current schema uses one descriptive field; a future schema revision could split this into line_nm, bandpass_center_nm, bandpass_width_nm, tunable_range_nm.
+
+      - path: hardware.light_sources[].power
+        title: Light source nominal power
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
+
+      - path: hardware.light_sources[].notes
+        title: Light source notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful for software aliases and caveats.
+
+      - path: hardware.light_sources[].url
+        title: Light source URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+  - id: detectors
+    title: Detectors
+    rules:
+      - path: hardware.detectors
+        title: Detectors
+        status: required
+        type: list
+        item_type: object
+        min_items: 1
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: At least one detector chain must be declared.
+
+      - path: hardware.detectors[].kind
+        title: Detector kind
+        status: required
+        type: string
+        vocab: detector_kinds
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Core detector class.
+
+      - path: hardware.detectors[].manufacturer
+        title: Detector manufacturer
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for hardware identification.
+
+      - path: hardware.detectors[].model
+        title: Detector model
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for hardware identification.
+
+      - path: hardware.detectors[].pixel_pitch_um
+        title: Detector pixel pitch (um)
+        status: conditional
+        type: positive_number
+        aliases: [hardware.detectors[].pixel_size_um]
+        required_if:
+          item_kind_in: [scmos, cmos, emccd, ccd]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required for camera-based detectors because reporting completeness depends on it.
+
+      - path: hardware.detectors[].pixel_size_um
+        title: Detector pixel size (legacy alias)
+        status: optional
+        type: positive_number
+        superseded_by: hardware.detectors[].pixel_pitch_um
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Backward-compatible alias retained for existing files; normalize to pixel_pitch_um when possible.
+
+      - path: hardware.detectors[].sensor_format_px
+        title: Detector sensor format (px)
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful capability metadata, not minimal.
+
+      - path: hardware.detectors[].binning
+        title: Detector binning
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Usually acquisition-specific rather than fixed hardware metadata.
+
+      - path: hardware.detectors[].bit_depth
+        title: Detector bit depth
+        status: optional
+        type: positive_number
+        used_by: [audit_pdf, dashboard]
+        rationale: Capability metadata; useful but not minimal.
+
+      - path: hardware.detectors[].qe_peak_pct
+        title: Detector peak quantum efficiency (%)
+        status: optional
+        type: positive_number
+        used_by: [audit_pdf, dashboard]
+        rationale: Capability metadata.
+
+      - path: hardware.detectors[].read_noise_e
+        title: Detector read noise (e-)
+        status: optional
+        type: positive_number
+        used_by: [audit_pdf, dashboard]
+        rationale: Capability metadata.
+
+      - path: hardware.detectors[].notes
+        title: Detector notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful for channel assignments or operating modes.
+
+      - path: hardware.detectors[].url
+        title: Detector URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+  - id: filters_and_splitters
+    title: Filters and splitters
+    rules:
+      - path: hardware.filters
+        title: Installed filters or filter sets
+        status: optional
+        type: list
+        item_type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required only for instrument classes where optical filter sets define the imaging path.
+
+      - path: hardware.filters[].name
+        title: Filter or filter-set name
+        status: conditional
+        type: string
+        required_if:
+          parent_present: hardware.filters[]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when installed optical filter sets are part of the instrument light path.
+
+      - path: hardware.filters[].location
+        title: Filter location
+        status: conditional
+        type: string
+        required_if:
+          parent_present: hardware.filters[]
+        used_by: [audit_pdf, dashboard]
+        rationale: Needed if multiple wheels, turrets, or positions exist.
+
+      - path: hardware.filters[].product_code
+        title: Filter product code
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Helpful for staff verification.
+
+      - path: hardware.filters[].excitation
+        title: Filter excitation band
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
+
+      - path: hardware.filters[].dichroic
+        title: Filter dichroic
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when dichroics define the fluorescence path.
+
+      - path: hardware.filters[].emission
+        title: Filter emission band
+        status: conditional
+        type: string
+        required_if:
+          modalities_any_of: [widefield_fluorescence, tirf, sim, smlm]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required for fluorescence detection paths.
+
+      - path: hardware.filters[].notes
+        title: Filter notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful for operational nuance.
+
+      - path: hardware.filters[].url
+        title: Filter URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+      - path: hardware.splitters
+        title: Installed splitters
+        status: optional
+        type: list
+        item_type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Present when an emission or camera splitter is installed.
+
+      - path: hardware.splitters[].name
+        title: Splitter name
+        status: conditional
+        type: string
+        required_if:
+          parent_present: hardware.splitters[]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when an emission or camera splitter is installed.
+
+      - path: hardware.splitters[].type
+        title: Splitter type
+        status: conditional
+        type: string
+        required_if:
+          parent_present: hardware.splitters[]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed to explain the splitter role.
+
+      - path: hardware.splitters[].notes
+        title: Splitter notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful operational nuance.
+
+      - path: hardware.splitters[].url
+        title: Splitter URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+  - id: objectives
+    title: Objectives
+    rules:
+      - path: hardware.objectives
+        title: Objectives
+        status: required
+        type: list
+        item_type: object
+        min_items: 1
+        used_by: [audit_pdf, method_generator, dashboard, qc_mapping]
+        rationale: Objective inventory is central to instrument completeness and QC mapping.
+
+      - path: hardware.objectives[].id
+        title: Objective ID
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard, qc_mapping]
+        rationale: Stable per-objective key used for QC mapping.
+
+      - path: hardware.objectives[].manufacturer
+        title: Objective manufacturer
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for objective identification.
+
+      - path: hardware.objectives[].model
+        title: Objective model
+        status: required
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Needed for objective identification.
+
+      - path: hardware.objectives[].product_code
+        title: Objective product code
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Very useful for staff lookup, but not minimal.
+
+      - path: hardware.objectives[].magnification
+        title: Objective magnification
+        status: required
+        type: positive_number
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Core reporting field.
+
+      - path: hardware.objectives[].numerical_aperture
+        title: Objective numerical aperture
+        status: required
+        type: positive_number
+        validation:
+          min: 0
+          max: 1.7
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Core reporting field.
+
+      - path: hardware.objectives[].working_distance
+        title: Objective working distance
+        status: optional
+        type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Helpful reference metadata, not usually minimal for methods.
+
+      - path: hardware.objectives[].immersion
+        title: Objective immersion
+        status: required
+        type: string
+        vocab: objective_immersion
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Core reporting field.
+
+      - path: hardware.objectives[].correction
+        title: Objective correction class
+        status: required
+        type: string
+        vocab: objective_corrections
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Important to characterize the objective class.
+
+      - path: hardware.objectives[].afc_compatible
+        title: AFC compatible
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, dashboard]
+        rationale: Operational capability metadata.
+
+      - path: hardware.objectives[].is_installed
+        title: Is objective installed
+        status: required
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Prevents methods generator and dashboard from advertising unavailable optics.
+
+      - path: hardware.objectives[].specialties
+        title: Objective specialties
+        status: optional
+        type: list
+        item_type: string
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful capability annotations.
+
+      - path: hardware.objectives[].notes
+        title: Objective notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful free-text nuance.
+
+      - path: hardware.objectives[].url
+        title: Objective URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
+
+  - id: magnification_changers
+    title: Magnification changers
+    rules:
+      - path: hardware.magnification_changers
+        title: Magnification changers
+        status: optional
+        type: list
+        item_type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Present only when optovar or additional magnification changers are installed.
+
+      - path: hardware.magnification_changers[].manufacturer
+        title: Magnification changer manufacturer
+        status: conditional
+        type: string
+        required_if:
+          parent_present: hardware.magnification_changers[]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when such a device is installed.
+
+      - path: hardware.magnification_changers[].model
+        title: Magnification changer model
+        status: conditional
+        type: string
+        required_if:
+          parent_present: hardware.magnification_changers[]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when such a device is installed.
+
+      - path: hardware.magnification_changers[].magnification
+        title: Magnification changer factor
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: hardware.magnification_changers[]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required when such a device is installed.
+
+      - path: hardware.magnification_changers[].notes
+        title: Magnification changer notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Useful nuance.
+
+      - path: hardware.magnification_changers[].url
+        title: Magnification changer URL
+        status: optional
+        type: url
+        used_by: [audit_pdf, dashboard]
+        rationale: Reference only.
