@@ -1,6 +1,6 @@
 schema_version: 1
 record_type: qc_session
-qc_id: qc_scope-andor-bc43_20260224T110000Z_laser_baseline_v1
+qc_id: qc_scope-andor-bc43_20260224T1100Z_laser_baseline_v1
 microscope: scope-andor-bc43
 started_utc: '2026-02-24T11:00:00Z'
 ended_utc: '2026-02-24T11:20:00Z'
@@ -86,4 +86,4 @@ metrics_computed:
   details: Baseline max power at objective measured during installation.
   metric_class: laser_power
 artifacts: []
-performed_by: Installation engineer
+contact: Installation engineer

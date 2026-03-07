@@ -25,7 +25,7 @@ microscope_status_before: out_of_service
 microscope_status_after: in_service
 downtime_hours: 4.0
 related_qc:
-- qc_scope-andor-bc43_20260224T110000Z_laser_baseline
+- qc_scope-andor-bc43_20260224T1100Z_laser_baseline
 attachments: []
 tags:
 - installation
@@ -42,4 +42,4 @@ notes: 'Installation engineer completed commissioning checks and confirmed instr
   readiness for routine operation.
 
   '
-performed_by: Installation engineer
+contact: Installation engineer

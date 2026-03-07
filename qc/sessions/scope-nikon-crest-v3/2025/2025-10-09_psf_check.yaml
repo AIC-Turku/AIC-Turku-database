@@ -1,6 +1,6 @@
 schema_version: 1
 record_type: qc_session
-qc_id: qc_scope-nikon-crest-v3_20251009T100000Z_psf_v1
+qc_id: qc_scope-nikon-crest-v3_20251009T1000Z_psf_v1
 microscope: scope-nikon-crest-v3
 started_utc: '2025-10-09T10:00:00Z'
 reason: routine_psf_check
@@ -125,4 +125,4 @@ artifacts:
   role: raw_image
   uri: omero://<server>/<group>/image/<id>
   description: Raw z-stack for PLAN APO AD 100x OIL.
-performed_by: AIC Staff
+contact: AIC Staff
