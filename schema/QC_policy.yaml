@@ -31,6 +31,10 @@ vocab_registry:
     source: file
     path: vocab/qc_metrics.yaml
     field_should_store: canonical metric id
+  qc_metric_classes:
+    source: file
+    path: vocab/qc_metric_classes.yaml
+    field_should_store: canonical metric class id
   artifact_role:
     source: file
     path: vocab/qc_artifact_roles.yaml
@@ -168,7 +172,15 @@ field_rules:
     type: string
     written_by: human
     used_by: [dashboard, trending]
-    rationale: Stable manual metric key.
+    rationale: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
+
+  - path: inputs_human[].metric_class
+    status: required
+    type: enum
+    vocab: qc_metric_classes
+    written_by: human
+    used_by: [dashboard, trending]
+    rationale: Controlled category used to group related metrics across instruments and modalities.
 
   - path: inputs_human[].value
     status: required
@@ -513,7 +525,15 @@ field_rules:
     type: string
     written_by: script
     used_by: [dashboard, trending, evaluation]
-    rationale: Stable metric namespace is needed for longitudinal plots.
+    rationale: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
+
+  - path: metrics_computed[].metric_class
+    status: required
+    type: enum
+    vocab: qc_metric_classes
+    written_by: script
+    used_by: [dashboard, trending, evaluation]
+    rationale: Controlled category used to group related computed metrics for filtering and automation.
 
   - path: metrics_computed[].value
     status: required
@@ -606,19 +626,15 @@ field_rules:
     rationale: Captures provenance metadata for automated evaluation computations.
 
   - path: evaluation.computed_provenance.software_version
-    status: conditionally_required
+    status: required
     type: string
-    required_if:
-      evaluation_computed_provenance_present: true
     written_by: ci
     used_by: [dashboard, audit]
     rationale: Records the AIC-Chronicle software version used to compute results.
 
   - path: evaluation.computed_provenance.algorithm_id
-    status: conditionally_required
+    status: required
     type: string
-    required_if:
-      evaluation_computed_provenance_present: true
     written_by: ci
     used_by: [dashboard, audit]
     rationale: Identifies the exact algorithm/function used for generated evaluation results.
