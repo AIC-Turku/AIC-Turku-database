@@ -531,9 +531,66 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     if not isinstance(modalities, list):
         modalities = []
 
+    software_raw = payload.get("software") if isinstance(payload.get("software"), dict) else {}
     software = normalize_software(payload.get("software"))
     hardware = normalize_hardware(payload.get("hardware") or {})
     policy = build_instrument_completeness_report(payload)
+
+    methods_blocker_paths = {
+        "instrument.display_name",
+        "instrument.manufacturer",
+        "instrument.model",
+        "instrument.stand_orientation",
+        "modalities",
+        "hardware.scanner.type",
+        "software.acquisition.name",
+        "software.acquisition.version",
+        "software.analysis.name",
+        "software.analysis.version",
+        "software.deconvolution.name",
+        "software.deconvolution.version",
+        "software.flim.name",
+        "software.flim.version",
+    }
+    software_roles = ("acquisition", "analysis", "deconvolution", "flim")
+
+    software_by_role: dict[str, dict[str, Any]] = {}
+    for role in software_roles:
+        role_payload = software_raw.get(role) if isinstance(software_raw, dict) and isinstance(software_raw.get(role), dict) else {}
+        role_name = clean_text(role_payload.get("name"))
+        role_version = clean_text(role_payload.get("version"))
+        software_by_role[role] = {
+            "present": bool(role_payload),
+            "name": role_name,
+            "version": role_version,
+            "is_complete": bool(role_name and role_version),
+        }
+
+    missing_entries = [*policy.missing_required, *policy.missing_conditional]
+    methods_blockers: list[dict[str, str]] = []
+    for entry in missing_entries:
+        path = clean_text(entry.get("path"))
+        if not path or path not in methods_blocker_paths:
+            continue
+
+        role = ""
+        if path.startswith("software."):
+            role = path.split(".")[1]
+
+        methods_blockers.append(
+            {
+                "path": path,
+                "title": clean_text(entry.get("title")) or path,
+                "role": role,
+                "kind": "instrument_metadata",
+            }
+        )
+
+    methods_generation = {
+        "is_blocked": bool(methods_blockers),
+        "blockers": methods_blockers,
+        "software_by_role": software_by_role,
+    }
 
     return {
         "retired": retired,
@@ -563,6 +620,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
                 "alias_fallbacks": policy.alias_fallbacks,
             },
         },
+        "methods_generation": methods_generation,
     }
 
 def get_all_instrument_logs(

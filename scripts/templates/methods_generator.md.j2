@@ -13,6 +13,12 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
     <option value="">-- Choose an instrument --</option>
   </select>
 
+  <div id="methods-metadata-warning" class="admonition warning" style="display: none; margin-bottom: 15px;">
+    <p class="admonition-title">Methods metadata blocker</p>
+    <p style="margin: 0 0 8px 0;">This instrument is missing policy-critical metadata required for trustworthy method text generation.</p>
+    <ul id="methods-metadata-blockers" style="margin: 0; padding-left: 20px;"></ul>
+  </div>
+
   <div id="hardware-options" style="display: none;">
     <strong>2. Imaging Modalities:</strong>
     <div id="modality-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
@@ -82,6 +88,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     let accumulatedMethods = [];
     let usedInstrumentNames = new Set();
 
+    const methodsMetadataWarning = document.getElementById("methods-metadata-warning");
+    const methodsMetadataBlockers = document.getElementById("methods-metadata-blockers");
+
     // Populate dropdown
     instruments.forEach(inst => {
         const opt = document.createElement("option");
@@ -90,16 +99,59 @@ document.addEventListener("DOMContentLoaded", async () => {
         systemSelect.appendChild(opt);
     });
 
+
+    function formatBlockerLabel(blocker) {
+        const title = (blocker?.title || blocker?.path || "Missing field").toString().trim();
+        const role = (blocker?.role || "").toString().trim();
+        if (role) return `${title} (${toTitleCase(role)} software)`;
+        return title;
+    }
+
+    function getMethodsMetadataStatus(inst) {
+        const metadata = inst?.methods_generation || {};
+        const blockers = Array.isArray(metadata?.blockers)
+            ? metadata.blockers.filter(item => item?.kind === "instrument_metadata")
+            : [];
+
+        return {
+            isBlocked: Boolean(metadata?.is_blocked) && blockers.length > 0,
+            blockers,
+            softwareByRole: metadata?.software_by_role || {},
+        };
+    }
+
+    function renderMethodsMetadataWarning(inst) {
+        const status = getMethodsMetadataStatus(inst);
+        methodsMetadataBlockers.innerHTML = "";
+
+        if (!status.isBlocked) {
+            methodsMetadataWarning.style.display = "none";
+            return status;
+        }
+
+        status.blockers.forEach(blocker => {
+            const item = document.createElement("li");
+            item.textContent = formatBlockerLabel(blocker);
+            methodsMetadataBlockers.appendChild(item);
+        });
+
+        methodsMetadataWarning.style.display = "block";
+        return status;
+    }
+
     systemSelect.addEventListener("change", (e) => {
         const instId = e.target.value;
         currentInst = instruments.find(i => i.id === instId);
 
         if (!currentInst) {
             hwOptions.style.display = "none";
+            methodsMetadataWarning.style.display = "none";
+            methodsMetadataBlockers.innerHTML = "";
             return;
         }
 
         hwOptions.style.display = "block";
+        renderMethodsMetadataWarning(currentInst);
 
         const modalityItems = currentInst.processed_hardware?.modalities || currentInst.modalities || [];
         populateCheckboxes("modality-list", modalityItems,
@@ -296,6 +348,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function formatProcessingMetadata(inst) {
+        const softwareByRole = inst?.methods_generation?.software_by_role || {};
+        const analysisRole = softwareByRole.analysis || {};
+        const deconvolutionRole = softwareByRole.deconvolution || {};
+        const flimRole = softwareByRole.flim || {};
         const software = Array.isArray(inst?.software) ? inst.software : [];
         const moduleItems = inst?.processed_hardware?.modules || inst?.modules || [];
         const moduleText = moduleItems
@@ -307,9 +363,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         const processingKeywords = ["airyscan", "thunder", "deconvolution", "sim", "reconstruction", "flim", "lifetime"];
         const matchedKeywords = processingKeywords.filter(keyword => moduleText.includes(keyword));
 
-        const softwareText = software
-            .map(s => `${s?.name || "Unknown software"}${s?.version ? ` (v${s.version})` : ""}`)
-            .join(", ");
+        const roleSoftware = [analysisRole, deconvolutionRole, flimRole]
+            .filter(role => role?.name && role?.version)
+            .map(role => `${role.name} (v${role.version})`);
+
+        const softwareText = (roleSoftware.length > 0
+            ? roleSoftware
+            : software.map(s => `${s?.name || "Unknown software"}${s?.version ? ` (v${s.version})` : ""}`)
+        ).join(", ");
 
         if (matchedKeywords.length === 0 && !softwareText) {
             return "[PLEASE SPECIFY: Deconvolution/reconstruction/lifetime-fitting pipeline, including software name and version]. ";
@@ -357,9 +418,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         const splitters = getCheckedValues("splitter");
         const dets = getCheckedValues("det");
 
-        let softName = "the manufacturer's standard software";
-        if (currentInst.software && currentInst.software.length > 0) {
-            softName = `${currentInst.software[0].name} (v${currentInst.software[0].version || 'unknown'})`;
+        const methodsMetadataStatus = getMethodsMetadataStatus(currentInst);
+        if (methodsMetadataStatus.isBlocked) {
+            renderMethodsMetadataWarning(currentInst);
+            const blockedFields = methodsMetadataStatus.blockers.map(formatBlockerLabel);
+            const blockerSummary = blockedFields.length > 0
+                ? formatHumanList(blockedFields)
+                : "policy-critical instrument metadata";
+            const blockedMessage = `Methods text for ${currentInst.display_name} cannot be generated yet because required instrument metadata is missing: ${blockerSummary}. Please complete the instrument metadata policy fields before generating authoritative methods text.`;
+
+            accumulatedMethods.push(blockedMessage);
+            updateOutputText();
+            return;
+        }
+
+        const softwareByRole = methodsMetadataStatus.softwareByRole || {};
+        const acquisitionSoftware = softwareByRole.acquisition || {};
+
+        let softName = "[MISSING ACQUISITION SOFTWARE NAME AND VERSION]";
+        if (acquisitionSoftware.name && acquisitionSoftware.version) {
+            softName = `${acquisitionSoftware.name} (v${acquisitionSoftware.version})`;
         }
 
         const stand = currentInst.stand_orientation && currentInst.stand_orientation !== 'other'
