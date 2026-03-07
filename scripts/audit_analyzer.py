@@ -98,7 +98,6 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
         _entry("Model", instrument.get("model")),
         _entry("Stand Orientation", instrument.get("stand_orientation")),
         _entry("Location", instrument.get("location")),
-        # Marked as optional matching the schema
         _entry("Year of Purchase", instrument.get("year_of_purchase"), is_optional=True),
         _entry("Funding", instrument.get("funding"), is_optional=True),
     ]
@@ -140,6 +139,14 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
             if not isinstance(objective, dict):
                 objectives_entries.append(_entry(f"Objective {idx}", objective, True))
                 continue
+            
+            # Convert boolean to Yes/No for the printed table
+            is_installed_val = objective.get("is_installed")
+            if is_installed_val is None:
+                installed_text = None  # Triggers the missing flag in the UI
+            else:
+                installed_text = "Yes" if is_installed_val in (True, "true", "True") else "No"
+            
             objectives_entries.extend(
                 [
                     _entry(f"Objective {idx} Manufacturer", objective.get("manufacturer")),
@@ -154,6 +161,7 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                     _entry(f"Objective {idx} Immersion", objective.get("immersion")),
                     _entry(f"Objective {idx} Correction", objective.get("correction")),
                     _entry(f"Objective {idx} Working Distance", objective.get("wd"), is_optional=True),
+                    _entry(f"Objective {idx} Is Installed", installed_text), # <-- Ensures it shows up in the PDF table
                 ]
             )
 
@@ -205,7 +213,7 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
             )
 
     return {
-        "schema_errors": schema_errors,  # Directly drives the critical audit violations
+        "schema_errors": schema_errors,
         "general": general,
         "modalities": modalities_entries,
         "software": software_entries,
