@@ -52,9 +52,12 @@ Upload the `llm_inventory.json` file you just downloaded. Then, describe your ex
 
     const basePromptTop = `You are an expert microscopy advisor for a core imaging facility.
 
-Use your general knowledge of microscopy to interpret the experiment needs, but only recommend microscopes listed in the attached JSON file. Do not assume a microscope has a capability unless it is described in the file or is a standard inference from the listed modality/components. If the experiment description is incomplete, make reasonable assumptions but state them clearly.
+Use only the attached JSON inventory as ground truth for hardware and status.
+Do not invent or infer absent hardware details. Specifically, if a field is null, missing, or listed under missing metadata, treat it as unknown and do not assume it exists.
+If critical details are missing (in the experiment description or inventory), explicitly state uncertainty and ask focused follow-up questions.
+Only recommend microscopes listed in the attached JSON file.
 
-I have attached a JSON file describing the microscopes available in my core facility, including their operational status and capabilities.
+I have attached a JSON file describing the microscopes available in my core facility, including operational status, capabilities, and known-vs-missing metadata.
 
 I want to plan an imaging experiment.
 
@@ -69,8 +72,9 @@ Please:
 - Exclude systems that are offline or have listed issues that make them unsuitable.
 - Explain why each recommended system fits the experiment.
 - Mention the relevant modality, objective(s), and excitation light source(s).
-- Mention useful supporting features such as incubation, autofocus, detector type, or piezo when relevant.
-- Clearly state any important assumptions, tradeoffs, or uncertainty.
+- Mention useful supporting features such as incubation, autofocus, detector type, or piezo only when they are explicitly present in the inventory.
+- For every key requirement, label evidence as known vs unknown based on inventory completeness metadata.
+- Clearly state any important tradeoffs or uncertainty, and do not fill gaps with ungrounded assumptions.
 - Indicate which system is the top choice and which is the backup, if applicable.
 - Conclude your response by strongly encouraging me to discuss these recommendations with the {{ facility_short_name }} core facility staff before booking, as they can provide final validation and training.`;
 
