@@ -28,17 +28,17 @@ hardware:
   - kind: laser
     manufacturer: ''
     model: Coherent Chameleon Ultra II (tunable 690â€“1040 nm)
-    wavelength_nm: 1040
+    wavelength_nm: "1040"
     power: ''
   - kind: laser
     manufacturer: ''
     model: Coherent Compact OPO (extends tunable range to 1600 nm)
-    wavelength_nm: 1600
+    wavelength_nm: "1600"
     power: ''
   - kind: laser
     manufacturer: ''
     model: Coherent Chameleon Vision II (tunable 690â€“1040 nm)
-    wavelength_nm: 1040
+    wavelength_nm: "1040"
     power: ''
   detectors:
   - kind: PMT
