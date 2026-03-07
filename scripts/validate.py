@@ -577,11 +577,11 @@ def validate_instrument_ledgers(
             if is_required and not resolved:
                 if is_retired_instrument:
                     continue
-                issues.append(
+                warnings.append(
                     ValidationIssue(
                         code='missing_required_field',
                         path=f"{instrument_file.as_posix()}:{rule.path}",
-                        message=f"Missing required field '{rule.path}'.",
+                        message=f"Missing required field '{rule.path}' (reported for audit follow-up).",
                     )
                 )
                 continue
@@ -601,11 +601,14 @@ def validate_instrument_ledgers(
                         vocabulary=vocabulary,
                     )
                     if required_for_item and value in (None, ''):
-                        issues.append(
+                        warnings.append(
                             ValidationIssue(
                                 code='missing_conditional_field',
                                 path=full_path,
-                                message=f"Field '{rule.path}' is required under current conditions.",
+                                message=(
+                                    f"Field '{rule.path}' is required under current conditions "
+                                    "(reported for audit follow-up)."
+                                ),
                             )
                         )
                         continue
@@ -644,30 +647,40 @@ def validate_instrument_ledgers(
                     )
 
                 if rule.vocab is not None:
-                    is_match, suggestion = vocabulary.check(rule.vocab, value)
-                    if is_match:
-                        continue
-                    if suggestion is not None:
-                        warnings.append(
-                            ValidationIssue(
-                                code='vocab_synonym_used',
-                                path=full_path,
-                                message=(
-                                    f"Value '{value}' is a synonym in '{rule.vocab}'. Prefer canonical id '{suggestion}'."
-                                ),
-                            )
-                        )
+                    vocab_values: list[tuple[Any, str]]
+                    if isinstance(value, list):
+                        vocab_values = [
+                            (item, f"{full_path}[{index}]")
+                            for index, item in enumerate(value)
+                        ]
                     else:
-                        known = ', '.join(sorted(vocabulary.terms_by_vocab.get(rule.vocab, {}).keys()))
-                        issues.append(
-                            ValidationIssue(
-                                code='unknown_vocab_term',
-                                path=full_path,
-                                message=(
-                                    f"Unknown value '{value}' for vocabulary '{rule.vocab}'. Use one of: {known}."
-                                ),
+                        vocab_values = [(value, full_path)]
+
+                    for vocab_value, vocab_path in vocab_values:
+                        is_match, suggestion = vocabulary.check(rule.vocab, vocab_value)
+                        if is_match:
+                            continue
+                        if suggestion is not None:
+                            warnings.append(
+                                ValidationIssue(
+                                    code='vocab_synonym_used',
+                                    path=vocab_path,
+                                    message=(
+                                        f"Value '{vocab_value}' is a synonym in '{rule.vocab}'. Prefer canonical id '{suggestion}'."
+                                    ),
+                                )
                             )
-                        )
+                        else:
+                            known = ', '.join(sorted(vocabulary.terms_by_vocab.get(rule.vocab, {}).keys()))
+                            issues.append(
+                                ValidationIssue(
+                                    code='unknown_vocab_term',
+                                    path=vocab_path,
+                                    message=(
+                                        f"Unknown value '{vocab_value}' for vocabulary '{rule.vocab}'. Use one of: {known}."
+                                    ),
+                                )
+                            )
 
         instrument_section = payload.get('instrument')
         if not isinstance(instrument_section, dict):
