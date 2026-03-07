@@ -285,6 +285,23 @@ class InstrumentPolicy:
     rules: list[PolicyRule]
 
 
+@dataclass
+class EventPolicy:
+    policy_path: Path
+    record_type: str
+    vocab_registry: dict[str, dict[str, Any]]
+    field_rules: list[dict[str, Any]]
+    legacy_and_migration_rules: list[dict[str, Any]]
+    cross_field_rules: list[dict[str, Any]]
+
+
+@dataclass
+class EventValidationReport:
+    errors: list[ValidationIssue]
+    warnings: list[ValidationIssue]
+    migration_notices: list[ValidationIssue]
+
+
 def load_policy(policy_path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
         raw_text = policy_path.read_text(encoding='utf-8')
@@ -421,7 +438,7 @@ def _resolve_path_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
 
 def _check_type(value: Any, field_type: str) -> bool:
     if field_type in {'string', 'text'}:
-        return _is_non_empty_string(value)
+        return isinstance(value, str)
     if field_type == 'string_or_empty':
         return isinstance(value, str)
     if field_type == 'positive_number':
@@ -529,6 +546,143 @@ def _evaluate_required_if(
             return True
 
     return False
+
+
+def _evaluate_event_required_if(
+    required_if: dict[str, Any],
+    *,
+    payload: dict[str, Any],
+    item_context: dict[str, Any] | None,
+) -> tuple[bool | None, str | None]:
+    supported_keys = {
+        'performed_contains_qc_type',
+        'service_provider_in',
+        'missing_legacy_event_id',
+        'no_stability_series',
+        'no_linearity_series',
+        'missing_csv_artifact',
+        'metrics_computed_present',
+        'evaluation_present',
+    }
+    unknown = [key for key in required_if if key not in supported_keys]
+    if unknown:
+        return None, f"Unsupported required_if condition(s): {', '.join(sorted(unknown))}."
+
+    conditions: list[bool] = []
+
+    if 'performed_contains_qc_type' in required_if:
+        expected = required_if.get('performed_contains_qc_type')
+        performed_nodes = _resolve_path_nodes(payload, 'performed[]')
+        found = {
+            item.value.get('qc_type')
+            for item in performed_nodes
+            if isinstance(item.value, dict) and isinstance(item.value.get('qc_type'), str)
+        }
+        conditions.append(isinstance(expected, str) and expected in found)
+
+    if 'service_provider_in' in required_if:
+        allowed = required_if.get('service_provider_in')
+        provider = payload.get('service_provider')
+        if not isinstance(allowed, list):
+            return None, "Condition 'service_provider_in' must be a list."
+        conditions.append(isinstance(provider, str) and provider in {str(v).strip() for v in allowed if isinstance(v, str)})
+
+    if required_if.get('missing_legacy_event_id') is True:
+        conditions.append(not _is_non_empty_string(payload.get('event_id')))
+
+    if required_if.get('no_stability_series') is True:
+        nodes = _resolve_path_nodes(payload, 'laser_inputs_human.stability_series')
+        has_stability = bool(nodes and isinstance(nodes[0].value, list) and len(nodes[0].value) > 0)
+        conditions.append(not has_stability)
+
+    if required_if.get('no_linearity_series') is True:
+        nodes = _resolve_path_nodes(payload, 'laser_inputs_human.linearity_series')
+        has_linearity = bool(nodes and isinstance(nodes[0].value, list) and len(nodes[0].value) > 0)
+        conditions.append(not has_linearity)
+
+    if required_if.get('missing_csv_artifact') is True:
+        if not isinstance(item_context, dict):
+            conditions.append(False)
+        else:
+            csv_artifact = item_context.get('csv_artifact')
+            conditions.append(not _is_non_empty_string(csv_artifact))
+
+    if required_if.get('metrics_computed_present') is True:
+        metrics_nodes = _resolve_path_nodes(payload, 'metrics_computed')
+        has_metrics = bool(metrics_nodes and isinstance(metrics_nodes[0].value, list) and len(metrics_nodes[0].value) > 0)
+        conditions.append(has_metrics)
+
+    if required_if.get('evaluation_present') is True:
+        evaluation_nodes = _resolve_path_nodes(payload, 'evaluation')
+        has_evaluation = bool(evaluation_nodes and isinstance(evaluation_nodes[0].value, dict))
+        conditions.append(has_evaluation)
+
+    if not conditions:
+        return False, None
+
+    return all(conditions), None
+
+
+def _check_event_type(value: Any, field_type: str) -> bool:
+    if field_type in {'string', 'text'}:
+        return isinstance(value, str)
+    if field_type == 'integer':
+        return isinstance(value, int) and not isinstance(value, bool)
+    if field_type == 'number':
+        return _is_number(value)
+    if field_type == 'scalar':
+        return isinstance(value, (str, int, float, bool))
+    if field_type == 'list':
+        return isinstance(value, list)
+    if field_type == 'mapping':
+        return isinstance(value, dict)
+    if field_type == 'enum':
+        return _is_non_empty_string(value)
+    if field_type == 'instrument_id':
+        return _is_non_empty_string(value)
+    if field_type == 'datetime_utc':
+        return isinstance(value, str) and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value.strip()))
+    if field_type == 'date':
+        return isinstance(value, str) and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", value.strip()))
+    if field_type == 'date_or_text':
+        return isinstance(value, str)
+    if field_type in {'artifact_id', 'qc_id', 'maintenance_id', 'uri_or_repo_path'}:
+        return _is_non_empty_string(value)
+    return False
+
+
+def _load_event_policy(policy_path: Path) -> tuple[EventPolicy | None, str | None]:
+    payload, load_error = load_policy(policy_path)
+    if load_error is not None or payload is None:
+        return None, load_error
+
+    record_type = payload.get('record_type')
+    if not isinstance(record_type, str) or not record_type.strip():
+        return None, f"Policy '{policy_path.as_posix()}' missing required string 'record_type'."
+
+    field_rules = payload.get('field_rules')
+    if not isinstance(field_rules, list):
+        return None, f"Policy '{policy_path.as_posix()}' missing required list 'field_rules'."
+
+    vocab_registry = payload.get('vocab_registry')
+    if not isinstance(vocab_registry, dict):
+        vocab_registry = {}
+
+    legacy_rules = payload.get('legacy_and_migration_rules')
+    if not isinstance(legacy_rules, list):
+        legacy_rules = []
+    cross_rules = payload.get('cross_field_rules')
+    if not isinstance(cross_rules, list):
+        cross_rules = []
+
+    return EventPolicy(
+        policy_path=policy_path,
+        record_type=record_type.strip(),
+        vocab_registry=vocab_registry,
+        field_rules=[r for r in field_rules if isinstance(r, dict)],
+        legacy_and_migration_rules=[r for r in legacy_rules if isinstance(r, dict)],
+        cross_field_rules=[r for r in cross_rules if isinstance(r, dict)],
+    ), None
 
 
 def validate_instrument_ledgers(
@@ -777,20 +931,21 @@ def validate_event_ledgers(
     qc_base_dir: Path = Path("qc/sessions"),
     maintenance_base_dir: Path = Path("maintenance/events"),
     allowed_record_types: Iterable[str] = DEFAULT_ALLOWED_RECORD_TYPES,
-) -> list[ValidationIssue]:
-    issues: list[ValidationIssue] = []
+) -> EventValidationReport:
+    errors: list[ValidationIssue] = []
+    warnings: list[ValidationIssue] = []
+    migration_notices: list[ValidationIssue] = []
     event_output_to_sources: dict[str, list[str]] = {}
     allowed_types = {value.strip() for value in allowed_record_types if isinstance(value, str) and value.strip()}
+    event_policies: dict[str, EventPolicy] = {}
     combined_registry: dict[str, dict[str, Any]] = {}
     for policy_path in (Path("schema/QC_policy.yaml"), Path("schema/maintenance_policy.yaml")):
-        if not policy_path.exists():
+        policy, policy_error = _load_event_policy(policy_path)
+        if policy_error is not None or policy is None:
+            errors.append(ValidationIssue(code='event_policy_load_error', path=policy_path.as_posix(), message=policy_error or 'Unknown event policy load error.'))
             continue
-        policy_payload, _ = load_policy(policy_path)
-        if not isinstance(policy_payload, dict):
-            continue
-        policy_vocabs = policy_payload.get("vocab_registry")
-        if isinstance(policy_vocabs, dict):
-            combined_registry.update(policy_vocabs)
+        event_policies[policy.record_type] = policy
+        combined_registry.update(policy.vocab_registry)
 
     vocabulary = Vocabulary(vocab_registry=combined_registry or None)
 
@@ -808,7 +963,7 @@ def validate_event_ledgers(
 
             payload, load_error = _load_yaml(event_file)
             if load_error is not None:
-                issues.append(
+                errors.append(
                     ValidationIssue(
                         code="yaml_parse_error",
                         path=event_file.as_posix(),
@@ -822,7 +977,7 @@ def validate_event_ledgers(
 
             microscope = payload.get("microscope")
             if not isinstance(microscope, str) or not microscope.strip():
-                issues.append(
+                errors.append(
                     ValidationIssue(
                         code="missing_microscope",
                         path=event_file.as_posix(),
@@ -833,7 +988,7 @@ def validate_event_ledgers(
 
             if microscope not in instrument_ids:
                 known = ", ".join(sorted(instrument_ids))
-                issues.append(
+                errors.append(
                     ValidationIssue(
                         code="unknown_microscope",
                         path=event_file.as_posix(),
@@ -845,7 +1000,7 @@ def validate_event_ledgers(
                 )
 
             if len(rel_parts) < 3:
-                issues.append(
+                errors.append(
                     ValidationIssue(
                         code="invalid_event_path_structure",
                         path=event_file.as_posix(),
@@ -860,7 +1015,7 @@ def validate_event_ledgers(
                 path_year = rel_parts[1]
 
                 if microscope != path_microscope:
-                    issues.append(
+                    errors.append(
                         ValidationIssue(
                             code="microscope_mismatch_with_path",
                             path=event_file.as_posix(),
@@ -872,7 +1027,7 @@ def validate_event_ledgers(
                     )
 
                 if not YEAR_PATTERN.fullmatch(path_year):
-                    issues.append(
+                    errors.append(
                         ValidationIssue(
                             code="invalid_event_year_folder",
                             path=event_file.as_posix(),
@@ -885,7 +1040,7 @@ def validate_event_ledgers(
                 else:
                     event_year = _get_started_year(payload, event_file)
                     if event_year is None:
-                        issues.append(
+                        errors.append(
                             ValidationIssue(
                                 code="missing_event_year_source",
                                 path=event_file.as_posix(),
@@ -896,7 +1051,7 @@ def validate_event_ledgers(
                             )
                         )
                     elif path_year != event_year:
-                        issues.append(
+                        errors.append(
                             ValidationIssue(
                                 code="year_mismatch_with_path",
                                 path=event_file.as_posix(),
@@ -909,7 +1064,7 @@ def validate_event_ledgers(
 
             record_type = payload.get("record_type")
             if not isinstance(record_type, str) or not record_type.strip():
-                issues.append(
+                errors.append(
                     ValidationIssue(
                         code="missing_record_type",
                         path=event_file.as_posix(),
@@ -918,7 +1073,7 @@ def validate_event_ledgers(
                 )
             elif record_type not in allowed_types:
                 allowed = ", ".join(sorted(allowed_types))
-                issues.append(
+                errors.append(
                     ValidationIssue(
                         code="invalid_record_type",
                         path=event_file.as_posix(),
@@ -926,7 +1081,7 @@ def validate_event_ledgers(
                     )
                 )
             elif record_type != expected_type:
-                issues.append(
+                errors.append(
                     ValidationIssue(
                         code="unexpected_record_type_for_location",
                         path=event_file.as_posix(),
@@ -937,88 +1092,161 @@ def validate_event_ledgers(
                     )
                 )
 
-            if record_type == "maintenance_event":
-                required_maintenance_fields = (
-                    "started_utc",
-                    "service_provider",
-                    "reason_details",
-                    "action",
-                )
-                for field_name in required_maintenance_fields:
-                    if _is_non_empty_string(payload.get(field_name)):
-                        continue
-                    issues.append(
-                        ValidationIssue(
-                            code="missing_maintenance_field",
-                            path=event_file.as_posix(),
-                            message=(
-                                f"Missing required maintenance field '{field_name}' "
-                                "(must be a non-empty string)."
-                            ),
-                        )
-                    )
+            policy = event_policies.get(record_type) if isinstance(record_type, str) else None
+            if policy is None:
+                errors.append(ValidationIssue(code='missing_policy_for_record_type', path=event_file.as_posix(), message=f"No event policy loaded for record_type '{record_type}'."))
+                continue
 
-                has_maintenance_id = _is_non_empty_string(payload.get("maintenance_id"))
-                has_event_id = _is_non_empty_string(payload.get("event_id"))
-                if has_maintenance_id == has_event_id:
-                    issues.append(
-                        ValidationIssue(
-                            code="invalid_maintenance_id_shape",
-                            path=event_file.as_posix(),
-                            message=(
-                                "Maintenance events must include exactly one ID field: "
-                                "either 'maintenance_id' or 'event_id'."
-                            ),
-                        )
-                    )
+            allowed_roots = set()
+            for rule in policy.field_rules:
+                path_value = rule.get('path')
+                if isinstance(path_value, str) and path_value:
+                    allowed_roots.add(path_value.split('.')[0].replace('[]', ''))
+            for legacy in policy.legacy_and_migration_rules:
+                legacy_path = legacy.get('path')
+                if isinstance(legacy_path, str) and legacy_path:
+                    allowed_roots.add(legacy_path.split('.')[0])
+            for top_key in payload:
+                if top_key not in allowed_roots:
+                    warnings.append(ValidationIssue(code='unsupported_event_field', path=f"{event_file.as_posix()}:{top_key}", message=f"Field '{top_key}' is not declared in policy '{policy.policy_path.as_posix()}'."))
 
-                for status_key in ("microscope_status_before", "microscope_status_after"):
-                    raw_status = payload.get(status_key)
-                    if raw_status is None:
-                        continue
-                    if not _is_non_empty_string(raw_status):
-                        issues.append(
-                            ValidationIssue(
-                                code="invalid_maintenance_status",
-                                path=event_file.as_posix(),
-                                message=(
-                                    f"Invalid {status_key}: expected a non-empty string from "
-                                    "the 'maintenance_status' vocabulary."
-                                ),
-                            )
-                        )
-                        continue
+            for rule in policy.field_rules:
+                path_value = rule.get('path')
+                status = rule.get('status')
+                field_type = rule.get('type')
+                if not isinstance(path_value, str) or not isinstance(status, str) or not isinstance(field_type, str):
+                    warnings.append(ValidationIssue(code='invalid_policy_field_rule', path=policy.policy_path.as_posix(), message=f"Invalid field rule entry: {rule}."))
+                    continue
 
-                    cleaned_status = raw_status.strip()
-                    status_vocab = "maintenance_status" if "maintenance_status" in vocabulary.valid_ids_by_vocab else "microscope_status"
-                    is_match, suggestion = vocabulary.check(status_vocab, cleaned_status)
-                    if is_match:
+                resolved = _resolve_path_nodes(payload, path_value)
+                required = status == 'required'
+                if status == 'conditionally_required':
+                    required_if = rule.get('required_if')
+                    if not isinstance(required_if, dict):
+                        warnings.append(ValidationIssue(code='unsupported_required_if_condition', path=policy.policy_path.as_posix(), message=f"Conditionally required rule '{path_value}' is missing required_if mapping."))
                         continue
-
-                    if suggestion is not None:
-                        issues.append(
-                            ValidationIssue(
-                                code="invalid_maintenance_status",
-                                path=event_file.as_posix(),
-                                message=(
-                                    f"Invalid {status_key} '{raw_status}'. "
-                                    f"Use canonical value '{suggestion}'."
-                                ),
-                            )
-                        )
+                    required_eval, condition_error = _evaluate_event_required_if(required_if, payload=payload, item_context=None)
+                    if condition_error is not None or required_eval is None:
+                        warnings.append(ValidationIssue(code='unsupported_required_if_condition', path=policy.policy_path.as_posix(), message=condition_error or f"Unsupported required_if for '{path_value}'."))
                         continue
+                    required = required_eval
+                elif status not in {'required', 'optional', 'legacy_alias'}:
+                    warnings.append(ValidationIssue(code='unsupported_field_status', path=policy.policy_path.as_posix(), message=f"Unsupported field status '{status}' for path '{path_value}'."))
+                    continue
 
-                    known = ", ".join(sorted(vocabulary.terms_by_vocab.get(status_vocab, {}).keys()))
-                    issues.append(
-                        ValidationIssue(
-                            code="invalid_maintenance_status",
-                            path=event_file.as_posix(),
-                            message=(
-                                f"Invalid {status_key} '{raw_status}'. "
-                                f"Allowed values from {status_vocab} vocabulary: {known}."
-                            ),
+                if required and not resolved:
+                    parent_path = path_value.rsplit('.', 1)[0] if '.' in path_value else ''
+                    if parent_path:
+                        parent_nodes = _resolve_path_nodes(payload, parent_path)
+                        if not parent_nodes:
+                            continue
+                    warnings.append(ValidationIssue(code='missing_required_field', path=f"{event_file.as_posix()}:{path_value}", message=f"Missing required field '{path_value}'."))
+                    continue
+
+                allowed_values = rule.get('allowed_values')
+                pattern = rule.get('pattern')
+                min_items = rule.get('min_items') if isinstance(rule.get('min_items'), int) else None
+                vocab_name = rule.get('vocab') if isinstance(rule.get('vocab'), str) else None
+                for node in resolved:
+                    full_path = f"{event_file.as_posix()}:{node.path}"
+                    if not _check_event_type(node.value, field_type):
+                        warnings.append(ValidationIssue(code='invalid_field_type', path=full_path, message=f"Invalid value for '{path_value}'. Expected type '{field_type}'."))
+                        continue
+                    if isinstance(allowed_values, list) and node.value not in allowed_values:
+                        warnings.append(ValidationIssue(code='invalid_allowed_value', path=full_path, message=f"Value '{node.value}' is not in allowed_values for '{path_value}'."))
+                    if isinstance(pattern, str) and isinstance(node.value, str) and not re.fullmatch(pattern, node.value.strip()):
+                        warnings.append(ValidationIssue(code='invalid_pattern', path=full_path, message=f"Value '{node.value}' does not match pattern for '{path_value}'."))
+                    if isinstance(min_items, int) and isinstance(node.value, list) and len(node.value) < min_items:
+                        warnings.append(ValidationIssue(code='list_too_short', path=full_path, message=f"List '{path_value}' must have at least {min_items} item(s)."))
+                    if vocab_name is not None:
+                        values = node.value if isinstance(node.value, list) else [node.value]
+                        for vocab_value in values:
+                            is_match, suggestion = vocabulary.check(vocab_name, vocab_value)
+                            if is_match:
+                                continue
+                            if suggestion is not None:
+                                warnings.append(ValidationIssue(code='vocab_synonym_used', path=full_path, message=f"Value '{vocab_value}' maps to canonical '{suggestion}' in vocab '{vocab_name}'."))
+                            else:
+                                warnings.append(ValidationIssue(code='unknown_vocab_term', path=full_path, message=f"Unknown value '{vocab_value}' for vocabulary '{vocab_name}'."))
+
+            for legacy_rule in policy.legacy_and_migration_rules:
+                legacy_path = legacy_rule.get('path')
+                if not isinstance(legacy_path, str):
+                    continue
+                if _resolve_path_nodes(payload, legacy_path):
+                    replacement = legacy_rule.get('migrate_to') or legacy_rule.get('replacement')
+                    message = legacy_rule.get('migration_prompt') if isinstance(legacy_rule.get('migration_prompt'), str) else None
+                    default_message = f"Legacy field '{legacy_path}' is present." + (f" Migrate to '{replacement}'." if isinstance(replacement, str) else "")
+                    migration_notices.append(ValidationIssue(code='legacy_field_present', path=f"{event_file.as_posix()}:{legacy_path}", message=message or default_message))
+
+            for cross_rule in policy.cross_field_rules:
+                rule_id = cross_rule.get('id')
+                if not isinstance(rule_id, str):
+                    continue
+                if rule_id.endswith('_path_consistency'):
+                    if len(rel_parts) >= 1 and microscope != rel_parts[0]:
+                        warnings.append(ValidationIssue(code='cross_field_rule_failed', path=event_file.as_posix(), message=f"Cross-field rule '{rule_id}' failed: microscope/path mismatch."))
+                elif rule_id.endswith('_year_consistency'):
+                    if len(rel_parts) >= 2 and YEAR_PATTERN.fullmatch(rel_parts[1]):
+                        event_year = _get_started_year(payload, event_file)
+                        if event_year is not None and rel_parts[1] != event_year:
+                            warnings.append(ValidationIssue(code='cross_field_rule_failed', path=event_file.as_posix(), message=f"Cross-field rule '{rule_id}' failed: year mismatch."))
+                elif rule_id == 'exactly_one_primary_id':
+                    if (_is_non_empty_string(payload.get('maintenance_id')) + _is_non_empty_string(payload.get('event_id'))) != 1:
+                        warnings.append(ValidationIssue(code='cross_field_rule_failed', path=event_file.as_posix(), message="Cross-field rule 'exactly_one_primary_id' failed."))
+                elif rule_id == 'external_provider_requires_company':
+                    if payload.get('service_provider') in {'vendor', 'distributor', 'third_party'} and not _is_non_empty_string(payload.get('company')):
+                        warnings.append(ValidationIssue(code='cross_field_rule_failed', path=event_file.as_posix(), message="Cross-field rule 'external_provider_requires_company' failed."))
+                elif rule_id == 'laser_qc_requires_structured_series':
+                    performed_types = {
+                        item.value.get('qc_type')
+                        for item in _resolve_path_nodes(payload, 'performed[]')
+                        if isinstance(item.value, dict) and isinstance(item.value.get('qc_type'), str)
+                    }
+                    if 'laser_power' in performed_types:
+                        series_paths = (
+                            'laser_inputs_human.linearity_series',
+                            'laser_inputs_human.stability_series',
+                            'laser_inputs_human.single_point_measurements',
                         )
-                    )
+                        has_data = False
+                        for series_path in series_paths:
+                            nodes = _resolve_path_nodes(payload, series_path)
+                            if nodes and isinstance(nodes[0].value, list) and nodes[0].value:
+                                has_data = True
+                                break
+                        if not has_data:
+                            warnings.append(ValidationIssue(code='cross_field_rule_failed', path=event_file.as_posix(), message="Cross-field rule 'laser_qc_requires_structured_series' failed."))
+                elif rule_id == 'artifacts_should_resolve':
+                    artifact_ids = {
+                        item.value
+                        for item in _resolve_path_nodes(payload, 'artifacts[].artifact_id')
+                        if isinstance(item.value, str) and item.value.strip()
+                    }
+                    ref_paths = [
+                        'performed[].artifacts[]',
+                        'laser_inputs_human.linearity_series[].csv_artifact',
+                        'laser_inputs_human.stability_series[].csv_artifact',
+                    ]
+                    for ref_path in ref_paths:
+                        for ref_node in _resolve_path_nodes(payload, ref_path):
+                            if isinstance(ref_node.value, str) and ref_node.value.strip() and ref_node.value not in artifact_ids:
+                                warnings.append(ValidationIssue(code='cross_field_rule_failed', path=f"{event_file.as_posix()}:{ref_node.path}", message=f"Cross-field rule 'artifacts_should_resolve' failed: unknown artifact id '{ref_node.value}'."))
+                elif rule_id == 'related_qc_should_reference_existing_sessions':
+                    for related_node in _resolve_path_nodes(payload, 'related_qc[]'):
+                        if isinstance(related_node.value, str) and related_node.value.strip() and related_node.value.startswith('qc_'):
+                            continue
+                        warnings.append(ValidationIssue(code='cross_field_rule_failed', path=f"{event_file.as_posix()}:{related_node.path}", message="Cross-field rule 'related_qc_should_reference_existing_sessions' failed."))
+                elif rule_id == 'next_due_date_should_pair_with_followup':
+                    has_followup = _is_non_empty_string(payload.get('followup'))
+                    has_next_due = _is_non_empty_string(payload.get('next_due_date'))
+                    if has_followup and not has_next_due:
+                        warnings.append(ValidationIssue(code='cross_field_rule_warning', path=event_file.as_posix(), message="Cross-field rule 'next_due_date_should_pair_with_followup': next_due_date is recommended when followup is present."))
+                elif rule_id == 'evaluation_is_machine_written':
+                    # Supported rule with no machine-author metadata available in ledgers yet.
+                    continue
+                else:
+                    warnings.append(ValidationIssue(code='unsupported_cross_field_rule', path=policy.policy_path.as_posix(), message=f"Unsupported cross_field_rules id '{rule_id}'."))
 
             output_rel_path = f"events/{microscope}/{event_file.stem}.md"
             event_output_to_sources.setdefault(output_rel_path, []).append(event_file.as_posix())
@@ -1027,7 +1255,7 @@ def validate_event_ledgers(
         if len(source_files) <= 1:
             continue
         source_list = ", ".join(sorted(source_files))
-        issues.append(
+        errors.append(
             ValidationIssue(
                 code="duplicate_event_output_path",
                 path=output_rel_path,
@@ -1035,7 +1263,7 @@ def validate_event_ledgers(
             )
         )
 
-    return issues
+    return EventValidationReport(errors=errors, warnings=warnings, migration_notices=migration_notices)
 
 
 def print_validation_report(issues: list[ValidationIssue], *, report_name: str = "failures") -> None:
@@ -1051,10 +1279,15 @@ def print_validation_report(issues: list[ValidationIssue], *, report_name: str =
 
 def main() -> int:
     instrument_ids, issues, warnings = validate_instrument_ledgers()
-    issues.extend(validate_event_ledgers(instrument_ids=instrument_ids))
+    event_report = validate_event_ledgers(instrument_ids=instrument_ids)
+    issues.extend(event_report.errors)
+    warnings.extend(event_report.warnings)
 
     if warnings:
         print_validation_report(warnings, report_name="warnings")
+
+    if event_report.migration_notices:
+        print_validation_report(event_report.migration_notices, report_name='migration notices')
 
     if issues:
         print_validation_report(issues)

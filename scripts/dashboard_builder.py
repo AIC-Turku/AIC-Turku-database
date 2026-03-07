@@ -810,14 +810,17 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     validated_instrument_ids, instrument_validation_issues, instrument_validation_warnings = validate_instrument_ledgers()
     validation_issues = list(instrument_validation_issues)
-    validation_issues.extend(
-        validate_event_ledgers(
-            instrument_ids=validated_instrument_ids,
-            allowed_record_types=allowed_record_types,
-        )
+    event_validation_report = validate_event_ledgers(
+        instrument_ids=validated_instrument_ids,
+        allowed_record_types=allowed_record_types,
     )
+    validation_issues.extend(event_validation_report.errors)
     if instrument_validation_warnings:
         print_validation_report(instrument_validation_warnings, report_name="warnings")
+    if event_validation_report.warnings:
+        print_validation_report(event_validation_report.warnings, report_name="warnings")
+    if event_validation_report.migration_notices:
+        print_validation_report(event_validation_report.migration_notices, report_name="migration notices")
 
     # Aggregations
     all_modality_ids = sorted({m for inst in instruments for m in inst.get("modalities", []) if isinstance(m, str)})
