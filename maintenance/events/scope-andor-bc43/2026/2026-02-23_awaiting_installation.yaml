@@ -8,8 +8,9 @@ microscope_status_before: in_service
 microscope_status_after: out_of_service
 reason_details: System has been delivered but is currently awaiting final installation
   and validation.
-action: Marked as offline until installation is complete and initial QC is passed.
-parts_replaced: []
 maintenance_id: maint_scope-andor-bc43_20260223_not_installed
-contact: AIC Staff
 reason: issue_reported
+performed_by: AIC Staff
+action_details: Marked as offline until installation is complete and initial QC is
+  passed.
+action: other

@@ -1,37 +1,32 @@
 schema_version: 1
 record_type: maintenance_event
+maintenance_id: maint_scope-msquared-aurora-airy-beam_20250615_640nm_laser_install
+microscope: scope-msquared-aurora-airy-beam
+service_provider: internal
+company: Abo Akademi University
+reference: Quote COHR-340008-2
+started_utc: '2025-06-15T09:00:00Z'
+ended_utc: '2025-06-15T13:00:00Z'
+reason: upgrade
+reason_details: 'Expansion of excitation capabilities with the addition of a 640 nm
+  laser.
 
-maintenance_id: "maint_scope-msquared-aurora-airy-beam_20250615_640nm_laser_install"
-microscope: "scope-msquared-aurora-airy-beam"
+  '
+action: install
+action_details: 'Installed Coherent OBIS 640nm LX 75mW LASER (FIBER PIGTAIL:UFC: Galaxy,
+  Product No: 1236445).
 
-service_provider: "internal"                    
-company: "Abo Akademi University"            
-contact: "AIC staff"
-reference: "Quote COHR-340008-2"
-
-started_utc: "2025-06-15T09:00:00Z"
-ended_utc: "2025-06-15T13:00:00Z"             
-
-# ---- Simple controlled vocabulary + free text -------------------------------
-reason: "upgrade"                           
-reason_details: >
-  Expansion of excitation capabilities with the addition of a 640 nm laser.
-
-action: "install"                             
-action_details: >
-  Installed Coherent OBIS 640nm LX 75mW LASER (FIBER PIGTAIL:UFC: Galaxy, Product No: 1236445).
-
-# ---- Operational impact ------------------------------------------------------
-microscope_status_after: "in_service"          
-downtime_hours: 4.0                           
-
-# ---- Linkages (kept simple) --------------------------------------------------
+  '
+microscope_status_after: in_service
+downtime_hours: 4.0
 related_qc: []
 attachments:
-  - "COHR-340008-2.pdf"
+- COHR-340008-2.pdf
+tags:
+- laser
+- upgrade
+- coherent
+notes: 'Laser purchased via Coherent Europe B.V.
 
-tags: ["laser", "upgrade", "coherent"]
-
-# ---- Follow-up ---------------------------------------------------------------
-notes: >
-  Laser purchased via Coherent Europe B.V.
+  '
+performed_by: AIC staff

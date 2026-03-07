@@ -145,4 +145,4 @@ artifacts:
   role: preview
   uri: qc/sessions/scope-testx1/2025/previews/qc_scope-testx1_20250619T1110Z_stagegrid_v1_stage_repeat.png
   description: Stage repeatability plot.
-contact: Mikko Salonen
+performed_by: Mikko Salonen

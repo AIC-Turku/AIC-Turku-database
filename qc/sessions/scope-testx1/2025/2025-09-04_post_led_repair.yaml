@@ -145,4 +145,4 @@ artifacts:
   role: preview
   uri: qc/sessions/scope-testx1/2025/previews/qc_scope-testx1_20250904T0805Z_intensity_v1_stage_repeat.png
   description: Stage repeatability plot.
-contact: Elina Vainio
+performed_by: Elina Vainio
