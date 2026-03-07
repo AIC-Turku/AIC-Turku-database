@@ -164,6 +164,18 @@
 > *No light sources recorded.*
 {% endif %}
 
+### 🧭 Scanner
+
+{% set scanner = instrument.processed_hardware.scanner if instrument.processed_hardware else None %}
+{% if scanner and scanner.type and scanner.type != 'none' %}
+- **Type:** {{ scanner.type }}
+  {% if scanner.line_rate_hz %}<br>**Line rate:** `{{ scanner.line_rate_hz }} Hz`{% endif %}
+  {% if scanner.pinhole_um %}<br>**Pinhole:** `{{ scanner.pinhole_um }} µm`{% endif %}
+  {% if scanner.notes %}<br><small class="aic-muted">{{ scanner.notes }}</small>{% endif %}
+{% else %}
+> *No scanner details recorded.*
+{% endif %}
+
 ### 📷 Detectors
 
 {% if detectors %}
@@ -175,6 +187,12 @@
     ---
 
     **Type:** {{ det.type or '—' }}
+    {% if det.pixel_pitch_um %}<br>**Pixel Pitch:** `{{ det.pixel_pitch_um }} µm`{% endif %}
+    {% if det.sensor_format_px %}<br>**Sensor Format:** `{{ det.sensor_format_px }}`{% endif %}
+    {% if det.binning %}<br>**Binning:** `{{ det.binning }}`{% endif %}
+    {% if det.bit_depth %}<br>**Bit Depth:** `{{ det.bit_depth }}`{% endif %}
+    {% if det.qe_peak_pct %}<br>**QE (peak):** `{{ det.qe_peak_pct }}%`{% endif %}
+    {% if det.read_noise_e %}<br>**Read Noise:** `{{ det.read_noise_e }} e-`{% endif %}
     {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
 
 {% endfor %}

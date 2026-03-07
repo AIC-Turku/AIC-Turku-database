@@ -885,6 +885,12 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "name": clean_text(det.get("manufacturer")),
                 "model": clean_text(det.get("model")),
                 "type": clean_text(det.get("kind")),
+                "pixel_pitch_um": det.get("pixel_pitch_um") or det.get("pixel_size_um"),
+                "sensor_format_px": clean_text(det.get("sensor_format_px")),
+                "binning": clean_text(det.get("binning")),
+                "bit_depth": det.get("bit_depth"),
+                "qe_peak_pct": det.get("qe_peak_pct"),
+                "read_noise_e": det.get("read_noise_e"),
                 "notes": clean_text(det.get("notes")),
                 "url": clean_text(det.get("url")),
             }
@@ -969,6 +975,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             ],
             "scanner": {
                 "type": clean_text(scanner.get("type")),
+                "line_rate_hz": scanner.get("line_rate_hz"),
+                "pinhole_um": scanner.get("pinhole_um"),
                 "notes": clean_text(scanner.get("notes")),
             },
             "light_sources": light_sources,
@@ -1179,6 +1187,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                     "modalities": hw.get("modalities", []),
                     "scanner": {
                         "type": none_if_empty(hw.get("scanner", {}).get("type", None)) or None,
+                        "line_rate_hz": hw.get("scanner", {}).get("line_rate_hz"),
+                        "pinhole_um": hw.get("scanner", {}).get("pinhole_um"),
                         "notes": none_if_empty(hw.get("scanner", {}).get("notes", None)) or None,
                     },
                     "modules": [
@@ -1221,6 +1231,12 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                         {
                             "type": norm_id(det.get("type")),
                             "model": none_if_empty(det.get("model")) or None,
+                            "pixel_pitch_um": det.get("pixel_pitch_um"),
+                            "sensor_format_px": none_if_empty(det.get("sensor_format_px")) or None,
+                            "binning": none_if_empty(det.get("binning")) or None,
+                            "bit_depth": det.get("bit_depth"),
+                            "qe_peak_pct": det.get("qe_peak_pct"),
+                            "read_noise_e": det.get("read_noise_e"),
                             "notes": none_if_empty(det.get("notes")) or None,
                         }
                         for det in hw.get("detectors", [])

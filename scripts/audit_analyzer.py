@@ -109,7 +109,11 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
             )
 
     scanner = (hardware.get("scanner") if isinstance(hardware, dict) else {}) or {}
-    scanner_entries = [_entry("Scanner Type", scanner.get("type"))]
+    scanner_entries = [
+        _entry("Scanner Type", scanner.get("type")),
+        _entry("Scanner Line Rate (Hz)", scanner.get("line_rate_hz")),
+        _entry("Scanner Pinhole (µm)", scanner.get("pinhole_um")),
+    ]
 
     objectives = hardware.get("objectives") if isinstance(hardware, dict) else None
     objectives_entries: list[dict[str, Any]] = []
@@ -171,6 +175,12 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, lis
                     _entry(f"Detector {idx} Kind/Type", _component_kind(detector)),
                     _entry(f"Detector {idx} Manufacturer", detector.get("manufacturer")),
                     _entry(f"Detector {idx} Model", detector.get("model")),
+                    _entry(f"Detector {idx} Pixel Pitch (µm)", detector.get("pixel_pitch_um") or detector.get("pixel_size_um")),
+                    _entry(f"Detector {idx} Sensor Format (px)", detector.get("sensor_format_px")),
+                    _entry(f"Detector {idx} Binning", detector.get("binning")),
+                    _entry(f"Detector {idx} Bit Depth", detector.get("bit_depth")),
+                    _entry(f"Detector {idx} QE Peak (%)", detector.get("qe_peak_pct")),
+                    _entry(f"Detector {idx} Read Noise (e-)", detector.get("read_noise_e")),
                 ]
             )
 
