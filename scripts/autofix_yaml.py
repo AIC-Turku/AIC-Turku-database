@@ -130,7 +130,9 @@ def fix_legacy_fields(data: dict) -> bool:
         data["service_provider"] = "internal"
         changed = True
 
-    # Inject missing QC metric classes for older ledgers
+    return changed
+
+def inject_qc_metric_classes(data: dict) -> bool:
     metric_class_rules = [
         (("fwhm_x", "fwhm_y", "fwhm_xy"), "fwhm_lateral"),
         (("fwhm_z",), "fwhm_axial"),
@@ -141,7 +143,9 @@ def fix_legacy_fields(data: dict) -> bool:
         (("uniformity",), "illumination_uniformity"),
     ]
 
-    for section in ("metrics_computed", "inputs_human"):
+    changed = False
+
+    for section in ("inputs_human", "metrics_computed"):
         items = data.get(section)
         if not isinstance(items, list):
             continue
@@ -155,12 +159,15 @@ def fix_legacy_fields(data: dict) -> bool:
                 continue
 
             metric_id_l = str(metric_id).lower()
-            for patterns, metric_class in metric_class_rules:
+            metric_class = "other"
+            for patterns, candidate in metric_class_rules:
                 if any(pattern in metric_id_l for pattern in patterns):
-                    item["metric_class"] = metric_class
-                    changed = True
+                    metric_class = candidate
                     break
-        
+
+            item["metric_class"] = metric_class
+            changed = True
+
     return changed
 
 def autofix_file(filepath: Path, path_to_vocab: dict, vocabs: dict, check_only: bool) -> tuple[bool, int]:
@@ -168,6 +175,8 @@ def autofix_file(filepath: Path, path_to_vocab: dict, vocabs: dict, check_only: 
         data = yaml.safe_load(f) or {}
 
     changed = fix_legacy_fields(data)
+    if inject_qc_metric_classes(data):
+        changed = True
     replacements = 1 if changed else 0
 
     for path, vocab_name in path_to_vocab.items():
