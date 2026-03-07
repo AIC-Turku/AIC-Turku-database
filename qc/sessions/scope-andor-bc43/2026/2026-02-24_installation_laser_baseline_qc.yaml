@@ -19,6 +19,7 @@ inputs_human:
   value: verified
   unit: ''
   details: Objectives and optical pathway integrity checked during installation acceptance.
+  metric_class: other
 laser_inputs_human:
   measurement_position: at_objective
   measurement_position_details: Measured using calibrated laser slides supplied with
