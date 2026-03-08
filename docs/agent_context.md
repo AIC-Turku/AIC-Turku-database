@@ -56,6 +56,12 @@ When instructions conflict, prefer:
 6. `README.md`
 7. this context file (orientation only)
 
+### Non-Blocking Validation Philosophy
+
+- Validation scripts (`scripts/validate.py`) are strictly informative for metadata policy compliance.
+- Missing required/conditional fields, unknown vocabulary terms, and invalid types must log clear warnings but **must not** fail the CI build (exit code 0).
+- Only fatal structural errors (e.g., malformed YAML or missing primary IDs) should trigger a non-zero exit code.
+
 ### Canonical naming requirement
 
 - `scripts/` and `scripts/templates/` implementations must conform to schema-native canonical field names from `schema/instrument_policy.yaml`.
