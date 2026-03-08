@@ -7,156 +7,160 @@ instrument:
   funding: ''
   stand_orientation: other
   location: BioCity, 5th floor, BioPhysics room 5086
-  notes: "Abberior STED. Sophisticated and highly flexible open platform that can\
-    \ be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and\
-    \ ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator\
-    \ (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables\
-    \ deep imaging up to 75 \xB5m into cleared tissue with a 100x oil objective. RESCue\
-    \ STED is available for live super-resolution imaging with reduced light dose."
+  notes: "Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 \xB5m into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose."
   url: ''
+
 modalities:
-- sted
-- resolft
-- confocal_point
+  - sted
+  - resolft
+  - confocal_point
+
 modules:
-- name: easy3d_sted
-  notes: Programmable SLM-based module for 2D/3D STED phase pattern generation.
-  url: ''
-- name: adaptive_optics
-  notes: "Supports deep imaging up to 75 \xB5m into cleared tissue with 100x oil objective."
-  url: ''
-- name: rescue_sted
-  notes: Reduction of state transition cycles mode for super-resolution live imaging
-    with lower light dose.
-  url: ''
+  - name: easy3d_sted # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+    notes: Programmable SLM-based module for 2D/3D STED phase pattern generation.
+    url: ''
+  - name: adaptive_optics # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+    notes: "Supports deep imaging up to 75 \xB5m into cleared tissue with 100x oil objective."
+    url: ''
+  - name: rescue_sted # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+    notes: Reduction of state transition cycles mode for super-resolution live imaging with lower light dose.
+    url: ''
+
 software:
-  acquisition:
+  - role: acquisition
     name: Abberior Imspector
     version: ''
     url: ''
+
 hardware:
   scanner:
     type: galvo
     notes: STED point scanning configuration.
     url: ''
+
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm
-    wavelength_nm: '488'
-    power: ''
-    notes: pulsed excitation
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 561 nm
-    wavelength_nm: '561'
-    power: ''
-    notes: pulsed excitation
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 640 nm
-    wavelength_nm: '640'
-    power: ''
-    notes: pulsed excitation
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 580 nm
-    wavelength_nm: '580'
-    power: ''
-    notes: STED depletion (continuous, for 488 nm)
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 775 nm
-    wavelength_nm: '775'
-    power: ''
-    notes: STED depletion (pulsed, for 561 & 640 nm)
-    url: ''
+    - kind: laser
+      manufacturer: '' # Flag: Required field. Needs a manufacturer.
+      model: 488 nm
+      wavelength_nm: '488'
+      power: ''
+      notes: pulsed excitation
+      url: ''
+    - kind: laser
+      manufacturer: '' # Flag: Required field.
+      model: 561 nm
+      wavelength_nm: '561'
+      power: ''
+      notes: pulsed excitation
+      url: ''
+    - kind: laser
+      manufacturer: '' # Flag: Required field.
+      model: 640 nm
+      wavelength_nm: '640'
+      power: ''
+      notes: pulsed excitation
+      url: ''
+    - kind: laser
+      manufacturer: '' # Flag: Required field.
+      model: 580 nm
+      wavelength_nm: '580'
+      power: ''
+      notes: STED depletion (continuous, for 488 nm)
+      url: ''
+    - kind: laser
+      manufacturer: '' # Flag: Required field.
+      model: 775 nm
+      wavelength_nm: '775'
+      power: ''
+      notes: STED depletion (pulsed, for 561 & 640 nm)
+      url: ''
+
   detectors:
-  - kind: pmt
-    manufacturer: ''
-    model: Photomultiplier Tube
-    notes: ''
-    url: ''
-  - kind: apd
-    manufacturer: ''
-    model: Avalanche Photodiode
-    notes: 2 detectors
-    url: ''
-  - kind: ccd
-    manufacturer: ''
-    model: Monochrome CCD camera
-    notes: 1280x960 pixels
-    url: ''
+    - kind: pmt
+      manufacturer: '' # Flag: Required field.
+      model: Photomultiplier Tube
+      notes: ''
+      url: ''
+    - kind: apd
+      manufacturer: '' # Flag: Required field.
+      model: Avalanche Photodiode
+      notes: 2 detectors
+      url: ''
+    - kind: ccd
+      manufacturer: '' # Flag: Required field.
+      model: Monochrome CCD camera
+      pixel_pitch_um: null # Flag: Required conditionally for ccd. Please add physical pixel size.
+      notes: 1280x960 pixels
+      url: ''
+
   splitters: []
+
   filters:
-  - name: GFP
-    location: ''
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 525/25
-    notes: ''
-    url: ''
-  - name: CY3
-    location: ''
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 615/10
-    notes: ''
-    url: ''
-  - name: CY5
-    location: ''
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 685/35
-    notes: ''
-    url: ''
+    - name: GFP
+      location: '' # Flag: Required field when filters are declared.
+      product_code: ''
+      excitation: ''
+      dichroic: ''
+      emission: 525/25
+      notes: ''
+      url: ''
+    - name: CY3
+      location: '' # Flag: Required field.
+      product_code: ''
+      excitation: ''
+      dichroic: ''
+      emission: 615/10
+      notes: ''
+      url: ''
+    - name: CY5
+      location: '' # Flag: Required field.
+      product_code: ''
+      excitation: ''
+      dichroic: ''
+      emission: 685/35
+      notes: ''
+      url: ''
+
   objectives:
-  - id: 20x_air
-    manufacturer: Olympus
-    model: Plan
-    product_code: ''
-    magnification: 20.0
-    numerical_aperture: 0.4
-    working_distance: 1.2 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 60x_water
-    manufacturer: Olympus
-    model: UPLSAPO
-    product_code: ''
-    magnification: 60.0
-    numerical_aperture: 1.2
-    working_distance: 0.28 mm
-    immersion: water
-    correction: apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 100x_oil
-    manufacturer: Olympus
-    model: UPLSAPO
-    product_code: ''
-    magnification: 100.0
-    numerical_aperture: 1.4
-    working_distance: 0.13 mm
-    immersion: oil
-    correction: apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
+    - id: 20x_air
+      manufacturer: Olympus
+      model: Plan
+      product_code: ''
+      magnification: 20.0
+      numerical_aperture: 0.4
+      working_distance: 1.2 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 60x_water
+      manufacturer: Olympus
+      model: UPLSAPO
+      product_code: ''
+      magnification: 60.0
+      numerical_aperture: 1.2
+      working_distance: 0.28 mm
+      immersion: water
+      correction: apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 100x_oil
+      manufacturer: Olympus
+      model: UPLSAPO
+      product_code: ''
+      magnification: 100.0
+      numerical_aperture: 1.4
+      working_distance: 0.13 mm
+      immersion: oil
+      correction: apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
