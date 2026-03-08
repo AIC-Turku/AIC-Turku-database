@@ -146,6 +146,36 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
+        self.assertTrue(
+            _evaluate_required_if(
+                {'software_roles_any_of': ['acquisition']},
+                payload={
+                    'software': [
+                        {'role': 'acquisition', 'name': 'ZEN'},
+                        {'role': 'analysis', 'name': 'ImageJ'},
+                    ]
+                },
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertTrue(
+            _evaluate_required_if(
+                {'software_roles_none_of': ['acquisition']},
+                payload={'software': [{'role': 'processing', 'name': 'Huygens'}]},
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertFalse(
+            _evaluate_required_if(
+                {'software_roles_none_of': ['acquisition']},
+                payload={'software': [{'role': 'acquisition', 'name': 'ZEN'}]},
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+
     def test_completeness_report_preserves_used_by_and_flags_missing_item_leaf(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',

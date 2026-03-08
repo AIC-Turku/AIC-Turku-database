@@ -393,43 +393,67 @@ def strip_empty_values(data: Any) -> Any:
 
 
 def normalize_software(raw: Any) -> list[dict[str, str]]:
-    """Normalize software sections into a list of rows, including URLs."""
+    """Normalize software metadata to schema-native `software[]` role rows."""
+    allowed_roles = {"acquisition", "processing", "analysis", "hardware_control", "other"}
+    legacy_role_map = {
+        "acquisition": "acquisition",
+        "analysis": "analysis",
+        "deconvolution": "processing",
+        "reconstruction": "processing",
+        "post_processing": "processing",
+        "flim": "analysis",
+        "control": "hardware_control",
+        "hardware_control": "hardware_control",
+    }
+
+    def normalize_role(value: Any, fallback: str = "other") -> str:
+        role = clean_text(value).lower()
+        if role in allowed_roles:
+            return role
+        if role in legacy_role_map:
+            return legacy_role_map[role]
+        return fallback
+
     rows: list[dict[str, str]] = []
 
     if isinstance(raw, list):
         for item in raw:
-            if isinstance(item, dict):
-                rows.append(
-                    {
-                        "component": clean_text(item.get("component") or item.get("type") or ""),
-                        "name": clean_text(item.get("name") or ""),
-                        "developer": clean_text(item.get("developer") or item.get("manufacturer") or ""),
-                        "version": clean_text(item.get("version") or ""),
-                        "url": clean_text(item.get("url") or ""),
-                    }
-                )
+            if not isinstance(item, dict):
+                continue
+            rows.append(
+                {
+                    "role": normalize_role(item.get("role") or item.get("component") or item.get("type")),
+                    "name": clean_text(item.get("name") or ""),
+                    "version": clean_text(item.get("version") or ""),
+                    "developer": clean_text(item.get("developer") or item.get("manufacturer") or ""),
+                    "notes": clean_text(item.get("notes") or ""),
+                    "url": clean_text(item.get("url") or ""),
+                }
+            )
         cleaned_rows = [strip_empty_values(r) for r in rows]
         return [r for r in cleaned_rows if isinstance(r, dict) and r]
 
     if isinstance(raw, dict):
-        for component, payload in raw.items():
+        for role_or_name, payload in raw.items():
+            normalized_role = normalize_role(role_or_name)
             if isinstance(payload, dict):
                 rows.append(
                     {
-                        "component": clean_text(component),
-                        "name": clean_text(payload.get("name")),
-                        "developer": clean_text(payload.get("developer") or payload.get("manufacturer")),
-                        "version": clean_text(payload.get("version")),
-                        "url": clean_text(payload.get("url")),
+                        "role": normalized_role,
+                        "name": clean_text(payload.get("name") or ""),
+                        "version": clean_text(payload.get("version") or ""),
+                        "developer": clean_text(payload.get("developer") or payload.get("manufacturer") or ""),
+                        "notes": clean_text(payload.get("notes") or ""),
+                        "url": clean_text(payload.get("url") or ""),
                     }
                 )
             elif isinstance(payload, str):
-                rows.append({"component": clean_text(component), "name": clean_text(payload), "developer": "", "version": "", "url": ""})
+                rows.append({"role": normalized_role, "name": clean_text(payload), "version": "", "developer": "", "notes": "", "url": ""})
         cleaned_rows = [strip_empty_values(r) for r in rows]
         return [r for r in cleaned_rows if isinstance(r, dict) and r]
 
     if isinstance(raw, str) and raw.strip():
-        cleaned_row = strip_empty_values({"component": "software", "name": clean_text(raw), "developer": "", "version": "", "url": ""})
+        cleaned_row = strip_empty_values({"role": "other", "name": clean_text(raw), "version": "", "developer": "", "notes": "", "url": ""})
         return [cleaned_row] if isinstance(cleaned_row, dict) and cleaned_row else []
 
     return []
@@ -568,16 +592,22 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     if not isinstance(modalities, list):
         modalities = []
 
-    software_raw = payload.get("software") if isinstance(payload.get("software"), dict) else {}
     software = strip_empty_values(normalize_software(payload.get("software")))
     hardware = strip_empty_values(normalize_hardware(payload.get("hardware") or {}))
     policy = build_instrument_completeness_report(payload)
 
-    software_roles = ("acquisition", "analysis", "deconvolution", "flim")
+    software_roles = ("acquisition", "processing", "analysis", "hardware_control", "other")
 
     software_by_role: dict[str, dict[str, Any]] = {}
     for role in software_roles:
-        role_payload = software_raw.get(role) if isinstance(software_raw, dict) and isinstance(software_raw.get(role), dict) else {}
+        role_payload = next(
+            (
+                sw
+                for sw in software
+                if isinstance(sw, dict) and clean_text(sw.get("role")).lower() == role
+            ),
+            {},
+        )
         role_name = clean_text(role_payload.get("name"))
         role_version = clean_text(role_payload.get("version"))
         software_by_role[role] = {
@@ -599,8 +629,8 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
             continue
 
         role = ""
-        if path.startswith("software."):
-            role = path.split(".")[1]
+        if path.startswith("software[") and isinstance(entry, dict):
+            role = clean_text(entry.get("role"))
 
         methods_blockers.append(
             {
