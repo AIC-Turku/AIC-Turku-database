@@ -7,136 +7,151 @@ instrument:
   funding: ''
   stand_orientation: inverted
   location: Local Cell Culture Lab, Biocity 5th Floor
-  notes: 'Widefield fluorescence microscope (inverted). Imaging modes: Brightfield
-    (transmitted), Fluorescence (LED illumination).'
+  notes: 'Widefield fluorescence microscope (inverted). Imaging modes: Brightfield (transmitted), Fluorescence (LED illumination).'
   url: ''
+
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
+  - widefield_fluorescence
+  - transmitted_brightfield
+  - phase_contrast
+
 modules:
-- name: universal_vessel_holder
-  notes: Product code AMEP-VH009
-  url: ''
-software:
-  acquisition:
-    name: On-board EVOS interface
-    version: no external software, USB storage
+  - name: universal_vessel_holder # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+    notes: Product code AMEP-VH009
     url: ''
+
+software:
+  - role: acquisition
+    name: On-board EVOS interface
+    version: ''
+    notes: 'no external software, USB storage'
+    url: ''
+
 hardware:
   scanner:
-    type: none
+    type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml
     notes: ''
     url: ''
-  light_sources: []
+
+  light_sources:
+    - kind: led # Flag: Added placeholder. Policy strictly requires min_items: 1 for light_sources.
+      manufacturer: '' # Flag: Required field.
+      model: '' # Flag: Required field.
+      notes: Placeholder added to satisfy schema validation. EVOS uses LED Light Cubes.
+
   detectors:
-  - kind: cmos
-    manufacturer: AMG (Thermo Fisher)
-    model: Integrated color camera
-    notes: For brightfield
-    url: ''
-  - kind: cmos
-    manufacturer: AMG (Thermo Fisher)
-    model: AMF-4302
-    notes: Integrated monochrome camera for fluorescence
-    url: ''
+    - kind: cmos
+      manufacturer: AMG (Thermo Fisher)
+      model: Integrated color camera
+      pixel_pitch_um: null # Flag: Required field because detector is CMOS.
+      notes: For brightfield
+      url: ''
+    - kind: cmos
+      manufacturer: AMG (Thermo Fisher)
+      model: AMF-4302
+      pixel_pitch_um: null # Flag: Required field because detector is CMOS.
+      notes: Integrated monochrome camera for fluorescence
+      url: ''
+
   splitters: []
+
   filters:
-  - name: DAPI
-    location: Light Cube Pos 1
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Included with base unit
-    url: ''
-  - name: CFP
-    location: Light Cube Pos 2
-    product_code: AMEP-4653
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: ''
-    url: ''
-  - name: GFP/Alexa 488
-    location: Light Cube Pos 3
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Included with base unit
-    url: ''
-  - name: RFP/Alexa 555
-    location: Light Cube Pos 4
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Included with base unit
-    url: ''
-  - name: Cy5/Alexa 647
-    location: Light Cube Pos 5
-    product_code: AMEP-4656
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: ''
-    url: ''
+    - name: DAPI
+      location: Light Cube Pos 1
+      product_code: ''
+      excitation: '' # Flag: Conditionally required because widefield_fluorescence is present.
+      dichroic: ''   # Flag: Conditionally required because widefield_fluorescence is present.
+      emission: ''   # Flag: Conditionally required because widefield_fluorescence is present.
+      notes: Included with base unit
+      url: ''
+    - name: CFP
+      location: Light Cube Pos 2
+      product_code: AMEP-4653
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: ''
+      url: ''
+    - name: GFP/Alexa 488
+      location: Light Cube Pos 3
+      product_code: ''
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: Included with base unit
+      url: ''
+    - name: RFP/Alexa 555
+      location: Light Cube Pos 4
+      product_code: ''
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: Included with base unit
+      url: ''
+    - name: Cy5/Alexa 647
+      location: Light Cube Pos 5
+      product_code: AMEP-4656
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: ''
+      url: ''
+
   objectives:
-  - id: 4x_air
-    manufacturer: Olympus
-    model: UPlanFLN
-    product_code: ''
-    magnification: 4.0
-    numerical_aperture: 0.13
-    working_distance: 16.4 mm
-    immersion: air
-    correction: fluorite
-    afc_compatible: false
-    specialties:
-    - Phase Contrast (PH)
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 10x_air
-    manufacturer: AMG (Thermo Fisher)
-    model: PlanFluor
-    product_code: ''
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: 8.3 mm
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: false
-    specialties: []
-    notes: Fluorite (FL)
-    url: ''
-    is_installed: true
-  - id: 20x_air
-    manufacturer: AMG (Thermo Fisher)
-    model: PlanFluor
-    product_code: ''
-    magnification: 20.0
-    numerical_aperture: 0.45
-    working_distance: 7.1 mm
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: false
-    specialties: []
-    notes: Fluorite (FL)
-    url: ''
-    is_installed: true
-  - id: 40x_air
-    manufacturer: AMG (Thermo Fisher)
-    model: PlanFluor
-    product_code: ''
-    magnification: 40.0
-    numerical_aperture: 0.65
-    working_distance: 2.8 mm
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: false
-    specialties: []
-    notes: Fluorite (FL)
-    url: ''
-    is_installed: true
+    - id: 4x_air
+      manufacturer: Olympus
+      model: UPlanFLN
+      product_code: ''
+      magnification: 4.0
+      numerical_aperture: 0.13
+      working_distance: 16.4 mm
+      immersion: air
+      correction: fluorite # Flag: Make sure 'fluorite' is a valid ID in vocab/objective_corrections.yaml
+      afc_compatible: false
+      specialties:
+        - Phase Contrast (PH)
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 10x_air
+      manufacturer: AMG (Thermo Fisher)
+      model: PlanFluor
+      product_code: ''
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: 8.3 mm
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties: []
+      notes: Fluorite (FL)
+      url: ''
+      is_installed: true
+    - id: 20x_air
+      manufacturer: AMG (Thermo Fisher)
+      model: PlanFluor
+      product_code: ''
+      magnification: 20.0
+      numerical_aperture: 0.45
+      working_distance: 7.1 mm
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties: []
+      notes: Fluorite (FL)
+      url: ''
+      is_installed: true
+    - id: 40x_air
+      manufacturer: AMG (Thermo Fisher)
+      model: PlanFluor
+      product_code: ''
+      magnification: 40.0
+      numerical_aperture: 0.65
+      working_distance: 2.8 mm
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties: []
+      notes: Fluorite (FL)
+      url: ''
+      is_installed: true
