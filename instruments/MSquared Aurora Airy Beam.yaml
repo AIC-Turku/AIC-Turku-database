@@ -20,11 +20,11 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: M Squared Cubes Acquisition
     version: ''
     url: ''
-  - role: image_processing # Flag: Verify 'image_processing' is a valid canonical ID in vocab/software_roles.yaml
+  processing:
     name: M Squared Cubes Deconvolution
     version: ''
     url: ''

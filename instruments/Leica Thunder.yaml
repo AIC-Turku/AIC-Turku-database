@@ -20,7 +20,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: LAS X with Navigator
     version: ''
     url: https://www.leica-microsystems.com/products/microscope-software/p/leica-las-x-ls/
@@ -33,7 +33,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
 
   light_sources:
     - kind: led

@@ -27,7 +27,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: NIS-Elements AR
     version: 
     notes: Includes 6D, JOBS 2.0, 3D Measurement, and RT Acquisition
@@ -40,7 +40,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
 
   stages:
     - type: piezo # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml

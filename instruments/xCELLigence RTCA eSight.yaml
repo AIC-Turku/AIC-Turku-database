@@ -28,7 +28,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: RTCA eSight Software
     version: ''
     url: https://www.agilent.com/lifesciences/eSight
@@ -42,7 +42,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: image_based # Flag: Verify 'image_based' is a valid canonical ID in vocab/autofocus_types.yaml.
+    type: contrast_based # Flag: Verify 'image_based' is a valid canonical ID in vocab/autofocus_types.yaml.
 
   scanner:
     type: stage_scanning
