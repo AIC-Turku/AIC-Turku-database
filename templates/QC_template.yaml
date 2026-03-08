@@ -4,261 +4,164 @@
 # -----------------------------------------------------------------------------
 # SCHEMA VERSION
 # -----------------------------------------------------------------------------
-# Schema Version: Locks interpretation of the QC ledger shape.
-# Allowed values: 1
-schema_version: 1
+schema_version: 1  # Schema Version: Locks interpretation of the QC ledger shape. | Allowed values: 1
 
 # -----------------------------------------------------------------------------
 # RECORD TYPE
 # -----------------------------------------------------------------------------
-# Record Type: Distinguishes QC ledgers from maintenance ledgers.
-# Allowed values: qc_session
-record_type: "qc_session"
+record_type: "qc_session"  # Record Type: Distinguishes QC ledgers from maintenance ledgers. | Allowed values: qc_session
 
 # -----------------------------------------------------------------------------
 # QC ID
 # -----------------------------------------------------------------------------
-# Qc Id: Stable unique key for the QC session.
-qc_id: ""
+qc_id: ""  # Qc Id: Stable unique key for the QC session.
 
 # -----------------------------------------------------------------------------
 # MICROSCOPE
 # -----------------------------------------------------------------------------
-# Microscope: Links QC records to the instrument registry.
-microscope: ""
+microscope: ""  # Microscope: Links QC records to the instrument registry.
 
 # -----------------------------------------------------------------------------
 # STARTED UTC
 # -----------------------------------------------------------------------------
-# Started Utc: Required for chronology and longitudinal analysis.
-started_utc: ""
+started_utc: ""  # Started Utc: Required for chronology and longitudinal analysis.
 
 # -----------------------------------------------------------------------------
 # ENDED UTC
 # -----------------------------------------------------------------------------
-# Ended Utc: Useful for duration and traceability, but not essential.
-ended_utc: ""
+ended_utc: ""  # Ended Utc: Useful for duration and traceability, but not essential.
 
 # -----------------------------------------------------------------------------
 # PERFORMED BY
 # -----------------------------------------------------------------------------
-# Performed By: Traceability for who executed the QC session.
-performed_by: ""
+performed_by: ""  # Performed By: Traceability for who executed the QC session.
 
 # -----------------------------------------------------------------------------
 # REASON
 # -----------------------------------------------------------------------------
-# Reason: Explains why the QC was run (monthly_qc, post_service, troubleshooting, etc.).
-reason: ""
+reason: ""  # Reason: Explains why the QC was run (monthly_qc, post_service, troubleshooting, etc.).
 
 # -----------------------------------------------------------------------------
 # SUMMARY
 # -----------------------------------------------------------------------------
-# Summary: Human-readable session summary without verdict semantics.
-summary: ""
+summary: ""  # Summary: Human-readable session summary without verdict semantics.
 
 # -----------------------------------------------------------------------------
 # NOTES
 # -----------------------------------------------------------------------------
-# Notes: Holds contextual nuance that does not fit structured fields.
-notes: ""
+notes: ""  # Notes: Holds contextual nuance that does not fit structured fields.
 
 # -----------------------------------------------------------------------------
 # PERFORMED
 # -----------------------------------------------------------------------------
-# Performed: Defines what QC activities were actually performed.
-performed:
+performed:  # Performed: Defines what QC activities were actually performed.
   -
-    # Qc Type: Main structured QC activity classifier.
-    # Allowed values (canonical IDs): laser_power, psf, alignment, stage, other
-    qc_type: ""
-    # Details: Captures protocol-level context for each performed activity.
-    details: ""
-    # Artifacts: Links performed activities to artifact pointers when available.
-    artifacts:
+    qc_type: ""  # Qc Type: Main structured QC activity classifier. | Allowed values (canonical IDs): laser_power, psf, alignment, stage, other
+    details: ""  # Details: Captures protocol-level context for each performed activity.
+    artifacts:  # Artifacts: Links performed activities to artifact pointers when available.
       - ""
 
 # -----------------------------------------------------------------------------
 # INPUTS HUMAN
 # -----------------------------------------------------------------------------
-# Inputs Human: Flexible slot for manual checks and environment readings.
-inputs_human:
+inputs_human:  # Inputs Human: Flexible slot for manual checks and environment readings.
   -
-    # Metric Id: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
-    metric_id: ""
-    # Metric Class: Controlled category used to group related metrics across instruments and modalities.
-    # Allowed values (canonical IDs): fwhm_lateral, fwhm_axial, signal_to_noise, chromatic_shift, stage_repeatability, laser_power, illumination_uniformity, detector_dark_noise
-    metric_class: ""
-    # Value: Stores numeric or categorical observations.
-    value: ""
-    # Unit: Unit may be empty for checklist values.
-    unit: ""
-    # Details: Useful supporting context for manual metrics.
-    details: ""
+    metric_id: ""  # Metric Id: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
+    metric_class: ""  # Metric Class: Controlled category used to group related metrics across instruments and modalities. | Allowed values (canonical IDs): fwhm_lateral, fwhm_axial, signal_to_noise, chromatic_shift, stage_repeatability, laser_power, illumination_uniformity, detector_dark_noise
+    value: ""  # Value: Stores numeric or categorical observations.
+    unit: ""  # Unit: Unit may be empty for checklist values.
+    details: ""  # Details: Useful supporting context for manual metrics.
 
 # -----------------------------------------------------------------------------
 # LASER INPUTS HUMAN
 # -----------------------------------------------------------------------------
-# Laser Inputs Human: Laser QC should be represented with structured measurement metadata.
-laser_inputs_human:
-  # Measurement Position: Measurement position determines comparability across sessions.
-  # Allowed values (canonical IDs): at_objective, pre_objective, fiber_output
-  measurement_position: ""
-  # Measurement Position Details: Documents adapters/objective/sensor placement for reproducibility.
-  measurement_position_details: ""
+laser_inputs_human:  # Laser Inputs Human: Laser QC should be represented with structured measurement metadata.
+  measurement_position: ""  # Measurement Position: Measurement position determines comparability across sessions. | Allowed values (canonical IDs): at_objective, pre_objective, fiber_output
+  measurement_position_details: ""  # Measurement Position Details: Documents adapters/objective/sensor placement for reproducibility.
   power_meter:
-    # Model: Identifies the external measurement device, if applicable.
-    model: ""
-    # Serial: Useful traceability when available.
-    serial: ""
-    # Calibration Due: Good practice for calibrated instruments, but not always available.
-    calibration_due: ""
-    # Integration Time S: Helpful for noisy traces and protocol comparability.
-    integration_time_s: 0.0
-    # Notes: Captures attenuators, adapters, sensor type, or exceptional setup details.
-    notes: ""
-  # Linearity Series: At least one structured laser data series should exist for laser QC.
-  linearity_series:
+    model: ""  # Model: Identifies the external measurement device, if applicable.
+    serial: ""  # Serial: Useful traceability when available.
+    calibration_due: ""  # Calibration Due: Good practice for calibrated instruments, but not always available.
+    integration_time_s: 0.0  # Integration Time S: Helpful for noisy traces and protocol comparability.
+    notes: ""  # Notes: Captures attenuators, adapters, sensor type, or exceptional setup details.
+  linearity_series:  # Linearity Series: At least one structured laser data series should exist for laser QC.
     -
-      # Laser: Identifies the laser line under test.
-      laser: ""
-      # Setpoint Units: Required to interpret linearity points correctly.
-      # Allowed values (canonical IDs): percent, mW_setpoint
-      setpoint_units: ""
-      # Power Units: Required to interpret the measured power values.
-      power_units: ""
-      # Points: Inline points are required unless the full series is stored as an artifact.
-      points:
+      laser: ""  # Laser: Identifies the laser line under test.
+      setpoint_units: ""  # Setpoint Units: Required to interpret linearity points correctly. | Allowed values (canonical IDs): percent, mW_setpoint
+      power_units: ""  # Power Units: Required to interpret the measured power values.
+      points:  # Points: Inline points are required unless the full series is stored as an artifact.
         -
-          # Setpoint: Required for linearity analysis.
-          setpoint: 0.0
-          # Power: Required for linearity analysis.
-          power: 0.0
-      # Csv Artifact: Preferred for dense or replicated series.
-      csv_artifact: ""
-      # Details: Captures protocol specifics for each sweep.
-      details: ""
-  # Stability Series: Stability-only laser QC should still be representable as structured series.
-  stability_series:
+          setpoint: 0.0  # Setpoint: Required for linearity analysis.
+          power: 0.0  # Power: Required for linearity analysis.
+      csv_artifact: ""  # Csv Artifact: Preferred for dense or replicated series.
+      details: ""  # Details: Captures protocol specifics for each sweep.
+  stability_series:  # Stability Series: Stability-only laser QC should still be representable as structured series.
     -
-      # Laser: Identifies the laser line under test.
-      laser: ""
-      # Setpoint: Needed to interpret drift measurements.
-      setpoint: 0.0
-      # Setpoint Units: Keeps setpoint semantics machine-readable.
-      # Allowed values (canonical IDs): percent, mW_setpoint
-      setpoint_units: ""
-      # Sampling: Required when full timestamps are not embedded inline.
-      sampling: ""
-      # Power Units: Required to interpret power values.
-      power_units: ""
-      # Timepoints: Inline timepoints are required unless a CSV artifact is provided.
-      timepoints:
+      laser: ""  # Laser: Identifies the laser line under test.
+      setpoint: 0.0  # Setpoint: Needed to interpret drift measurements.
+      setpoint_units: ""  # Setpoint Units: Keeps setpoint semantics machine-readable. | Allowed values (canonical IDs): percent, mW_setpoint
+      sampling: ""  # Sampling: Required when full timestamps are not embedded inline.
+      power_units: ""  # Power Units: Required to interpret power values.
+      timepoints:  # Timepoints: Inline timepoints are required unless a CSV artifact is provided.
         -
-          # T S: Required for time-resolved stability analysis.
-          t_s: 0.0
-          # Power: Required for stability analysis.
-          power: 0.0
-      # Csv Artifact: Preferred for long time series.
-      csv_artifact: ""
-      # Details: Captures context for the trace.
-      details: ""
-  # Single Point Measurements: Supports quick single-point laser checks without creating full series arrays.
-  single_point_measurements:
+          t_s: 0.0  # T S: Required for time-resolved stability analysis.
+          power: 0.0  # Power: Required for stability analysis.
+      csv_artifact: ""  # Csv Artifact: Preferred for long time series.
+      details: ""  # Details: Captures context for the trace.
+  single_point_measurements:  # Single Point Measurements: Supports quick single-point laser checks without creating full series arrays.
     -
-      # Laser: Identifies the laser line under test.
-      laser: ""
-      # Setpoint: Required to interpret the measurement target.
-      setpoint: 0.0
-      # Setpoint Units: Keeps setpoint semantics machine-readable.
-      # Allowed values (canonical IDs): percent, mW_setpoint
-      setpoint_units: ""
-      # Power: Captures measured output power for quick checks.
-      power: 0.0
-      # Power Units: Required to interpret the measured power values.
-      power_units: ""
-      # Details: Optional context such as tolerance checks or pass/fail notes.
-      details: ""
+      laser: ""  # Laser: Identifies the laser line under test.
+      setpoint: 0.0  # Setpoint: Required to interpret the measurement target.
+      setpoint_units: ""  # Setpoint Units: Keeps setpoint semantics machine-readable. | Allowed values (canonical IDs): percent, mW_setpoint
+      power: 0.0  # Power: Captures measured output power for quick checks.
+      power_units: ""  # Power Units: Required to interpret the measured power values.
+      details: ""  # Details: Optional context such as tolerance checks or pass/fail notes.
 
 # -----------------------------------------------------------------------------
 # COMPUTED PROVENANCE
 # -----------------------------------------------------------------------------
-# Computed Provenance: Computed metrics should always carry provenance.
-computed_provenance:
-  # Pipeline: Identifies the analysis pipeline.
-  pipeline: ""
-  # Version: Pipeline version is essential for reproducibility.
-  version: ""
-  # Git Commit: Highly useful when the analysis code is version-controlled.
-  git_commit: ""
-  # Run Utc: Needed to know when analysis was produced.
-  run_utc: ""
+computed_provenance:  # Computed Provenance: Computed metrics should always carry provenance.
+  pipeline: ""  # Pipeline: Identifies the analysis pipeline.
+  version: ""  # Version: Pipeline version is essential for reproducibility.
+  git_commit: ""  # Git Commit: Highly useful when the analysis code is version-controlled.
+  run_utc: ""  # Run Utc: Needed to know when analysis was produced.
 
 # -----------------------------------------------------------------------------
 # METRICS COMPUTED
 # -----------------------------------------------------------------------------
-# Metrics Computed: Computed outputs are optional at authoring time but central after analysis.
-metrics_computed:
+metrics_computed:  # Metrics Computed: Computed outputs are optional at authoring time but central after analysis.
   -
-    # Metric Id: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
-    metric_id: ""
-    # Metric Class: Controlled category used to group related computed metrics for filtering and automation.
-    # Allowed values (canonical IDs): fwhm_lateral, fwhm_axial, signal_to_noise, chromatic_shift, stage_repeatability, laser_power, illumination_uniformity, detector_dark_noise
-    metric_class: ""
-    # Value: Numeric or categorical result payload.
-    value: ""
-    # Unit: Required for display and threshold interpretation.
-    unit: ""
-    # Details: Stores fit details or aggregation notes.
-    details: ""
+    metric_id: ""  # Metric Id: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
+    metric_class: ""  # Metric Class: Controlled category used to group related computed metrics for filtering and automation. | Allowed values (canonical IDs): fwhm_lateral, fwhm_axial, signal_to_noise, chromatic_shift, stage_repeatability, laser_power, illumination_uniformity, detector_dark_noise
+    value: ""  # Value: Numeric or categorical result payload.
+    unit: ""  # Unit: Required for display and threshold interpretation.
+    details: ""  # Details: Stores fit details or aggregation notes.
 
 # -----------------------------------------------------------------------------
 # EVALUATION
 # -----------------------------------------------------------------------------
-# Evaluation: Evaluation is expected after benchmark comparison, not at initial authoring.
-evaluation:
-  # Benchmark Ref: Makes pass/warn/fail judgments reproducible.
-  benchmark_ref: ""
-  # Evaluated Utc: Records when the benchmark comparison was run.
-  evaluated_utc: ""
-  # Evaluated By: Identifies the CI actor or pipeline.
-  evaluated_by: ""
-  # Overall Status: Session-level QC verdict.
-  # Allowed values (canonical IDs): pass, warn, fail
-  overall_status: ""
-  # Results: Machine-readable per-metric evaluation breakdown.
-  results:
+evaluation:  # Evaluation: Evaluation is expected after benchmark comparison, not at initial authoring.
+  benchmark_ref: ""  # Benchmark Ref: Makes pass/warn/fail judgments reproducible.
+  evaluated_utc: ""  # Evaluated Utc: Records when the benchmark comparison was run.
+  evaluated_by: ""  # Evaluated By: Identifies the CI actor or pipeline.
+  overall_status: ""  # Overall Status: Session-level QC verdict. | Allowed values (canonical IDs): pass, warn, fail
+  results:  # Results: Machine-readable per-metric evaluation breakdown.
     -
-      # Metric Id: Links the verdict to a metric.
-      metric_id: ""
-      # Status: Per-metric verdict.
-      # Allowed values (canonical IDs): pass, warn, fail
-      status: ""
-      # Threshold: Human-readable decision rule recorded with the verdict.
-      threshold: ""
-      # Message: Optional explanatory note.
-      message: ""
-  # Computed Provenance: Captures provenance metadata for automated evaluation computations.
-  computed_provenance:
-    # Software Version: Records the AIC-Chronicle software version used to compute results.
-    software_version: ""
-    # Algorithm Id: Identifies the exact algorithm/function used for generated evaluation results.
-    algorithm_id: ""
+      metric_id: ""  # Metric Id: Links the verdict to a metric.
+      status: ""  # Status: Per-metric verdict. | Allowed values (canonical IDs): pass, warn, fail
+      threshold: ""  # Threshold: Human-readable decision rule recorded with the verdict.
+      message: ""  # Message: Optional explanatory note.
+  computed_provenance:  # Computed Provenance: Captures provenance metadata for automated evaluation computations.
+    software_version: ""  # Software Version: Records the AIC-Chronicle software version used to compute results.
+    algorithm_id: ""  # Algorithm Id: Identifies the exact algorithm/function used for generated evaluation results.
 
 # -----------------------------------------------------------------------------
 # ARTIFACTS
 # -----------------------------------------------------------------------------
-# Artifacts: Ledger pointers to raw data, tables, previews, and reports.
-artifacts:
+artifacts:  # Artifacts: Ledger pointers to raw data, tables, previews, and reports.
   -
-    # Artifact Id: Stable pointer key referenced elsewhere in the QC ledger.
-    artifact_id: ""
-    # Role: Artifact role drives UI treatment.
-    # Allowed values (canonical IDs): table, raw_image, preview, report, other
-    role: ""
-    # Uri: Must resolve as either an OMERO URI (for example, omero://image/12345) or a local repository-relative path (for example, local://qc/sessions/...).
-    uri: ""
-    # Description: Human-readable description of the artifact.
-    description: ""
-    # Checksum Sha256: Useful integrity check for non-OMERO artifacts.
-    checksum_sha256: ""
+    artifact_id: ""  # Artifact Id: Stable pointer key referenced elsewhere in the QC ledger.
+    role: ""  # Role: Artifact role drives UI treatment. | Allowed values (canonical IDs): table, raw_image, preview, report, other
+    uri: ""  # Uri: Must resolve as either an OMERO URI (for example, omero://image/12345) or a local repository-relative path (for example, local://qc/sessions/...).
+    description: ""  # Description: Human-readable description of the artifact.
+    checksum_sha256: ""  # Checksum Sha256: Useful integrity check for non-OMERO artifacts.
