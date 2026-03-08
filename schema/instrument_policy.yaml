@@ -65,6 +65,61 @@ vocab_registry:
     path: vocab/objective_corrections.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  maintenance_action:
+    source: file
+    path: vocab/maintenance_action.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  maintenance_reason:
+    source: file
+    path: vocab/maintenance_reason.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  maintenance_status:
+    source: file
+    path: vocab/maintenance_status.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  metric_unit:
+    source: file
+    path: vocab/metric_unit.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  qc_artifact_roles:
+    source: file
+    path: vocab/qc_artifact_roles.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  qc_evaluation_status:
+    source: file
+    path: vocab/qc_evaluation_status.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  qc_measurement_positions:
+    source: file
+    path: vocab/qc_measurement_positions.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  qc_metric_classes:
+    source: file
+    path: vocab/qc_metric_classes.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  qc_setpoint_units:
+    source: file
+    path: vocab/qc_setpoint_units.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  qc_type:
+    source: file
+    path: vocab/qc_type.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  service_provider:
+    source: file
+    path: vocab/service_provider.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
   # Recommended future additions if you want the policy file to own all possible options:
   # manufacturers:
   #   source: file
@@ -255,10 +310,8 @@ sections:
 
       - path: software.analysis.url
         title: Analysis software URL
-        status: conditional
+        status: optional
         type: url
-        required_if:
-          parent_present: software.analysis
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
 
@@ -282,10 +335,8 @@ sections:
 
       - path: software.deconvolution.url
         title: Deconvolution or reconstruction software URL
-        status: conditional
+        status: optional
         type: url
-        required_if:
-          parent_present: software.deconvolution
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
 
@@ -309,10 +360,8 @@ sections:
 
       - path: software.flim.url
         title: FLIM software URL
-        status: conditional
+        status: optional
         type: url
-        required_if:
-          parent_present: software.flim
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
 
@@ -413,7 +462,7 @@ sections:
       - path: hardware.light_sources[].wavelength_nm
         title: Light source wavelength metadata
         status: conditional
-        type: string
+        type: spectral_descriptor
         required_if:
           item_kind_in: [laser, white_light_laser, led, multiphoton_laser, supercontinuum]
         validation:
@@ -518,8 +567,10 @@ sections:
 
       - path: hardware.detectors[].qe_peak_pct
         title: Detector peak quantum efficiency (%)
-        status: optional
+        status: conditional
         type: positive_number
+        required_if:
+          modalities_any_of: [confocal_point, confocal_spinning_disk, ism]
         used_by: [audit_pdf, dashboard]
         rationale: Capability metadata.
 
@@ -549,9 +600,13 @@ sections:
     rules:
       - path: hardware.filters
         title: Installed filters or filter sets
-        status: optional
+        status: conditional
         type: list
         item_type: object
+        required_if:
+          all_of:
+            - parent_present: hardware
+            - modalities_any_of: [widefield_fluorescence, tirf, tirf_sim, optical_sectioning]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required only for instrument classes where optical filter sets define the imaging path.
 
@@ -582,22 +637,34 @@ sections:
 
       - path: hardware.filters[].excitation
         title: Filter excitation band
-        status: optional
+        status: conditional
         type: string
+        required_if:
+          all_of:
+            - parent_present: "hardware.filters[]"
+            - modalities_any_of: [widefield_fluorescence, tirf, tirf_sim, optical_sectioning]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
 
       - path: hardware.filters[].dichroic
         title: Filter dichroic
-        status: optional
+        status: conditional
         type: string
+        required_if:
+          all_of:
+            - parent_present: "hardware.filters[]"
+            - modalities_any_of: [widefield_fluorescence, tirf, tirf_sim, optical_sectioning]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required when dichroics define the fluorescence path.
 
       - path: hardware.filters[].emission
         title: Filter emission band
-        status: optional
+        status: conditional
         type: string
+        required_if:
+          all_of:
+            - parent_present: "hardware.filters[]"
+            - modalities_any_of: [widefield_fluorescence, tirf, tirf_sim, optical_sectioning]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required for fluorescence detection paths.
 
@@ -714,8 +781,10 @@ sections:
 
       - path: hardware.objectives[].working_distance
         title: Objective working distance
-        status: optional
+        status: conditional
         type: string
+        required_if:
+          modalities_any_of: [confocal_point, confocal_spinning_disk, ism]
         used_by: [audit_pdf, dashboard]
         rationale: Helpful reference metadata, not usually minimal for methods.
 
