@@ -7,140 +7,138 @@ instrument:
   funding: ''
   stand_orientation: upright
   location: BioCity, 2nd floor, room 2076
-  notes: 'Widefield microscope (upright) with camera port. Optional detector: Nikon
-    DS-Fi2 5MP colour-CCD camera. Imaging modes: Fluorescence (epifluorescence), Brightfield
-    (transmitted light), Darkfield.'
+  notes: 'Widefield microscope (upright) with camera port. Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield.'
   url: ''
+
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- darkfield
+  - widefield_fluorescence
+  - transmitted_brightfield
+  - darkfield
+
 modules: []
-software:
-  acquisition:
-    name: Unknown
-    version: ''
-    url: ''
+
 hardware:
   scanner:
-    type: none
+    type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml (often 'widefield' or 'camera_based' is preferred)
     notes: ''
     url: ''
+
   light_sources:
-  - kind: halogen_lamp
-    manufacturer: ''
-    model: 12V 100W halogen bulb
-    wavelength_nm: ''
-    power: 100 W
-    notes: Transmitted light source
-    url: ''
-  - kind: arc_lamp
-    manufacturer: ''
-    model: 50W HBO short arc bulb
-    wavelength_nm: ''
-    power: 50 W
-    notes: Fluorescence excitation source
-    url: ''
-  detectors:
-  - kind: ccd
-    manufacturer: Nikon
-    model: DS-Fi2
-    notes: Optional 5MP colour-CCD camera
-    url: ''
-  splitters: []
+    - kind: halogen_lamp
+      manufacturer: '' # Flag: Required field. Needs a manufacturer.
+      model: 12V 100W halogen bulb
+      wavelength_nm: ''
+      power: 100 W
+      notes: Transmitted light source
+      url: ''
+    - kind: arc_lamp
+      manufacturer: '' # Flag: Required field. Needs a manufacturer.
+      model: 50W HBO short arc bulb
+      wavelength_nm: ''
+      power: 50 W
+      notes: Fluorescence excitation source
+      url: ''
+
+  splitters:
+    - name: Camera Port
+      type: emission_splitter # Flag: Verify exact terminology in your splitters vocabulary
+      notes: Camera port for optional Nikon detector.
+      url: ''
+
   filters:
-  - name: DAPI/Hoechst
-    location: Fluorescence Turret
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: ''
-    url: ''
-  - name: GFP/Alexa 488
-    location: Fluorescence Turret
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: ''
-    url: ''
-  - name: TRITC/RFP
-    location: Fluorescence Turret
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: ''
-    url: ''
+    - name: DAPI/Hoechst
+      location: Fluorescence Turret
+      product_code: ''
+      excitation: '' # Flag: Required because widefield_fluorescence is present.
+      dichroic: ''   # Flag: Required because widefield_fluorescence is present.
+      emission: ''   # Flag: Required because widefield_fluorescence is present.
+      notes: ''
+      url: ''
+    - name: GFP/Alexa 488
+      location: Fluorescence Turret
+      product_code: ''
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: ''
+      url: ''
+    - name: TRITC/RFP
+      location: Fluorescence Turret
+      product_code: ''
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: ''
+      url: ''
+
   objectives:
-  - id: 10x_air
-    manufacturer: Leica
-    model: PL FLUOTAR 10x/0.30
-    product_code: '506000'
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: ''
-    immersion: air
-    correction: ''
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 20x_air
-    manufacturer: Leica
-    model: HC PL APO 20x/0.70 CS
-    product_code: '506513'
-    magnification: 20.0
-    numerical_aperture: 0.7
-    working_distance: ''
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 40x_oil
-    manufacturer: Leica
-    model: PL FLUOTAR 40x/1.00-0.50 OIL
-    product_code: '506007'
-    magnification: 40.0
-    numerical_aperture: 1.0
-    working_distance: ''
-    immersion: oil
-    correction: ''
-    afc_compatible: false
-    specialties: []
-    notes: NA range 1.00-0.50
-    url: ''
-    is_installed: true
-  - id: 63x_oil
-    manufacturer: Leica
-    model: HCX PL APO 63x/1.32-0.6 OIL
-    product_code: '506180'
-    magnification: 63.0
-    numerical_aperture: 1.32
-    working_distance: ''
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties: []
-    notes: NA range 1.32-0.6
-    url: ''
-    is_installed: true
-  - id: 100x_oil
-    manufacturer: Leica
-    model: PL APO 100x/1.40-0.7 OIL
-    product_code: '506038'
-    magnification: 100.0
-    numerical_aperture: 1.4
-    working_distance: ''
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties: []
-    notes: NA range 1.40-0.7
-    url: ''
-    is_installed: true
+    - id: 10x_air
+      manufacturer: Leica
+      model: PL FLUOTAR 10x/0.30
+      product_code: '506000'
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: ''
+      immersion: air
+      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 20x_air
+      manufacturer: Leica
+      model: HC PL APO 20x/0.70 CS
+      product_code: '506513'
+      magnification: 20.0
+      numerical_aperture: 0.7
+      working_distance: ''
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 40x_oil
+      manufacturer: Leica
+      model: PL FLUOTAR 40x/1.00-0.50 OIL
+      product_code: '506007'
+      magnification: 40.0
+      numerical_aperture: 1.0
+      working_distance: ''
+      immersion: oil
+      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      afc_compatible: false
+      specialties: []
+      notes: NA range 1.00-0.50
+      url: ''
+      is_installed: true
+    - id: 63x_oil
+      manufacturer: Leica
+      model: HCX PL APO 63x/1.32-0.6 OIL
+      product_code: '506180'
+      magnification: 63.0
+      numerical_aperture: 1.32
+      working_distance: ''
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: NA range 1.32-0.6
+      url: ''
+      is_installed: true
+    - id: 100x_oil
+      manufacturer: Leica
+      model: PL APO 100x/1.40-0.7 OIL
+      product_code: '506038'
+      magnification: 100.0
+      numerical_aperture: 1.4
+      working_distance: ''
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: NA range 1.40-0.7
+      url: ''
+      is_installed: true
