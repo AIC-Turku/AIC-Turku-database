@@ -7,189 +7,210 @@ instrument:
   funding: Research Council of Finland FIRI funding
   stand_orientation: benchtop
   location: BioCity, 5th floor, room 5149
-  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and
-    ClearView GPU-accelerated deconvolution.
+  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution.
   url: https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope
+
 modalities:
-- confocal_spinning_disk
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
+  - confocal_spinning_disk
+  - widefield_fluorescence
+  - transmitted_brightfield
+  - phase_contrast
+
 modules:
-- name: hardware_autofocus
-  notes: Dual function Focus Seek and Lock
-  url: ''
-- name: incubation
-  notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
-  url: ''
+  - name: hardware_autofocus
+    notes: Dual function Focus Seek and Lock
+    url: ''
+  - name: incubation
+    notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
+    url: ''
+
 software:
-  acquisition:
+  - role: acquisition
     name: Fusion BC43
     developer: Andor
     version: 2.7.0
     url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
+
 hardware:
+  environment:
+    temperature_control: true
+    co2_control: true
+    humidity_control: true
+    notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
+
+  hardware_autofocus:
+    is_installed: true
+    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+
   scanner:
     type: spinning_disk
+    pinhole_um: null # Flag: strictly required by policy for spinning_disk. Please provide size (e.g., 40, 50).
     notes: Microlens-spinning disk multipoint confocal
     url: ''
+
   light_sources:
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: '405'
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: '488'
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: '561'
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: '638'
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
+    - kind: laser
+      manufacturer: Andor
+      model: Borealis Illumination
+      wavelength_nm: '405'
+      power: ''
+      notes: Part of BC43 excitation lines
+      url: ''
+    - kind: laser
+      manufacturer: Andor
+      model: Borealis Illumination
+      wavelength_nm: '488'
+      power: ''
+      notes: Part of BC43 excitation lines
+      url: ''
+    - kind: laser
+      manufacturer: Andor
+      model: Borealis Illumination
+      wavelength_nm: '561'
+      power: ''
+      notes: Part of BC43 excitation lines
+      url: ''
+    - kind: laser
+      manufacturer: Andor
+      model: Borealis Illumination
+      wavelength_nm: '638'
+      power: ''
+      notes: Part of BC43 excitation lines
+      url: ''
+
   detectors:
-  - kind: scmos
-    manufacturer: Andor
-    model: 4.1 MP sCMOS
-    notes: "6.5\xB5m pixel, 16-bit, up to 82% QE. 18.4 mm field of view."
-    url: ''
+    - kind: scmos
+      manufacturer: Andor
+      model: 4.1 MP sCMOS
+      pixel_pitch_um: 6.5
+      qe_peak_pct: 82
+      notes: "16-bit. 18.4 mm field of view."
+      url: ''
+
   splitters: []
+
   filters:
-  - name: DAPI
-    location: Internal Emission Filter
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Standard emission filter for DAPI included in BC43
-    url: ''
-  - name: GFP
-    location: Internal Emission Filter
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Standard emission filter for GFP included in BC43
-    url: ''
-  - name: mCherry
-    location: Internal Emission Filter
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Standard emission filter for mCherry included in BC43
-    url: ''
-  - name: CY5
-    location: Internal Emission Filter
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Standard emission filter for CY5 included in BC43
-    url: ''
+    - name: DAPI
+      location: Internal Emission Filter
+      product_code: ''
+      excitation: '' # Flag: Required because widefield_fluorescence is present.
+      dichroic: '' # Flag: Required because widefield_fluorescence is present.
+      emission: '' # Flag: Required because widefield_fluorescence is present.
+      notes: Standard emission filter for DAPI included in BC43
+      url: ''
+    - name: GFP
+      location: Internal Emission Filter
+      product_code: ''
+      excitation: '' # Flag: Required because widefield_fluorescence is present.
+      dichroic: '' # Flag: Required because widefield_fluorescence is present.
+      emission: '' # Flag: Required because widefield_fluorescence is present.
+      notes: Standard emission filter for GFP included in BC43
+      url: ''
+    - name: mCherry
+      location: Internal Emission Filter
+      product_code: ''
+      excitation: '' # Flag: Required because widefield_fluorescence is present.
+      dichroic: '' # Flag: Required because widefield_fluorescence is present.
+      emission: '' # Flag: Required because widefield_fluorescence is present.
+      notes: Standard emission filter for mCherry included in BC43
+      url: ''
+    - name: CY5
+      location: Internal Emission Filter
+      product_code: ''
+      excitation: '' # Flag: Required because widefield_fluorescence is present.
+      dichroic: '' # Flag: Required because widefield_fluorescence is present.
+      emission: '' # Flag: Required because widefield_fluorescence is present.
+      notes: Standard emission filter for CY5 included in BC43
+      url: ''
+
   objectives:
-  - id: 10x_air
-    manufacturer: Nikon
-    model: 10X Plan Apo LD Air
-    product_code: INS-OBJ-10D-045
-    magnification: 10.0
-    numerical_aperture: 0.45
-    working_distance: 4.0 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - Lambda D
-    notes: Included in base BC43 CF
-    url: ''
-    is_installed: true
-  - id: 20x_air
-    manufacturer: Nikon
-    model: 20X Plan Apo LD Air
-    product_code: INS-OBJ-20D-080
-    magnification: 20.0
-    numerical_aperture: 0.8
-    working_distance: 0.8 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - Lambda D
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 40x_air
-    manufacturer: Nikon
-    model: 40X Plan Apo LD Air
-    product_code: INS-OBJ-40D-095
-    magnification: 40.0
-    numerical_aperture: 0.95
-    working_distance: 0.21 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - Lambda D
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 40x_silicone
-    manufacturer: Nikon
-    model: 40X Plan Apo LS Sil Oil
-    product_code: INS-OBJ-40S-125-SIL
-    magnification: 40.0
-    numerical_aperture: 1.25
-    working_distance: 0.3 mm
-    immersion: silicone
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - Lambda S
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 60x_oil
-    manufacturer: Nikon
-    model: 60X Plan Apo LD Oil
-    product_code: INS-OBJ-60D-142-0
-    magnification: 60.0
-    numerical_aperture: 1.42
-    working_distance: 0.15 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - Lambda D
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 100x_oil
-    manufacturer: Nikon
-    model: 100x Plan Apo LD Oil
-    product_code: INS-OBJ-100D-145-0
-    magnification: 100.0
-    numerical_aperture: 1.45
-    working_distance: 0.13 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - Lambda D
-    notes: ''
-    url: ''
-    is_installed: true
+    - id: 10x_air
+      manufacturer: Nikon
+      model: 10X Plan Apo LD Air
+      product_code: INS-OBJ-10D-045
+      magnification: 10.0
+      numerical_aperture: 0.45
+      working_distance: 4.0 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - Lambda D
+      notes: Included in base BC43 CF
+      url: ''
+      is_installed: true
+    - id: 20x_air
+      manufacturer: Nikon
+      model: 20X Plan Apo LD Air
+      product_code: INS-OBJ-20D-080
+      magnification: 20.0
+      numerical_aperture: 0.8
+      working_distance: 0.8 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - Lambda D
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 40x_air
+      manufacturer: Nikon
+      model: 40X Plan Apo LD Air
+      product_code: INS-OBJ-40D-095
+      magnification: 40.0
+      numerical_aperture: 0.95
+      working_distance: 0.21 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - Lambda D
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 40x_silicone
+      manufacturer: Nikon
+      model: 40X Plan Apo LS Sil Oil
+      product_code: INS-OBJ-40S-125-SIL
+      magnification: 40.0
+      numerical_aperture: 1.25
+      working_distance: 0.3 mm
+      immersion: silicone # Flag: verify 'silicone' vs 'silicone_oil' in vocab/objective_immersion.yaml
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - Lambda S
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 60x_oil
+      manufacturer: Nikon
+      model: 60X Plan Apo LD Oil
+      product_code: INS-OBJ-60D-142-0
+      magnification: 60.0
+      numerical_aperture: 1.42
+      working_distance: 0.15 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - Lambda D
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 100x_oil
+      manufacturer: Nikon
+      model: 100x Plan Apo LD Oil
+      product_code: INS-OBJ-100D-145-0
+      magnification: 100.0
+      numerical_aperture: 1.45
+      working_distance: 0.13 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - Lambda D
+      notes: ''
+      url: ''
+      is_installed: true
