@@ -38,7 +38,9 @@ software:
 hardware:
   environment:
     temperature_control: true
-    notes: Okolab environment chamber with temperature control
+    co2_control: true
+    o2_control: true
+    notes: Okolab Full Enclosure Incubator with Temperature and digital CO2/O2 Control
 
   stages:
     - type: piezo # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml
