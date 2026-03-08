@@ -359,6 +359,39 @@ def extract_instrument_location(raw_location: str, notes: str) -> str:
     return clean_text(extracted)
 
 
+def strip_empty_values(data: Any) -> Any:
+    """Recursively remove empty optional values while preserving False/0."""
+
+    def is_empty(value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return value == ""
+        if isinstance(value, list):
+            return len(value) == 0
+        if isinstance(value, dict):
+            return len(value) == 0
+        return False
+
+    if isinstance(data, dict):
+        pruned: dict[str, Any] = {}
+        for key, value in data.items():
+            cleaned = strip_empty_values(value)
+            if not is_empty(cleaned):
+                pruned[key] = cleaned
+        return pruned
+
+    if isinstance(data, list):
+        pruned_list = []
+        for item in data:
+            cleaned = strip_empty_values(item)
+            if not is_empty(cleaned):
+                pruned_list.append(cleaned)
+        return pruned_list
+
+    return data
+
+
 def normalize_software(raw: Any) -> list[dict[str, str]]:
     """Normalize software sections into a list of rows, including URLs."""
     rows: list[dict[str, str]] = []
@@ -375,7 +408,8 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                         "url": clean_text(item.get("url") or ""),
                     }
                 )
-        return [r for r in rows if any(r.values())]
+        cleaned_rows = [strip_empty_values(r) for r in rows]
+        return [r for r in cleaned_rows if isinstance(r, dict) and r]
 
     if isinstance(raw, dict):
         for component, payload in raw.items():
@@ -391,10 +425,12 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                 )
             elif isinstance(payload, str):
                 rows.append({"component": clean_text(component), "name": clean_text(payload), "developer": "", "version": "", "url": ""})
-        return [r for r in rows if any(r.values())]
+        cleaned_rows = [strip_empty_values(r) for r in rows]
+        return [r for r in cleaned_rows if isinstance(r, dict) and r]
 
     if isinstance(raw, str) and raw.strip():
-        return [{"component": "software", "name": clean_text(raw), "developer": "", "version": "", "url": ""}]
+        cleaned_row = strip_empty_values({"component": "software", "name": clean_text(raw), "developer": "", "version": "", "url": ""})
+        return [cleaned_row] if isinstance(cleaned_row, dict) and cleaned_row else []
 
     return []
 
@@ -439,8 +475,8 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         modalities = []
 
     software_raw = payload.get("software") if isinstance(payload.get("software"), dict) else {}
-    software = normalize_software(payload.get("software"))
-    hardware = normalize_hardware(payload.get("hardware") or {})
+    software = strip_empty_values(normalize_software(payload.get("software")))
+    hardware = strip_empty_values(normalize_hardware(payload.get("hardware") or {}))
     policy = build_instrument_completeness_report(payload)
 
     software_roles = ("acquisition", "analysis", "deconvolution", "flim")
