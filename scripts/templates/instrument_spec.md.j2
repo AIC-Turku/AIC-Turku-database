@@ -32,6 +32,7 @@
 {% set hardware_autofocus = canonical_hardware.hardware_autofocus if canonical_hardware and canonical_hardware.hardware_autofocus else {} %}
 {% set triggering = canonical_hardware.triggering if canonical_hardware and canonical_hardware.triggering else {} %}
 {% set scanner = canonical_hardware.scanner if canonical_hardware and canonical_hardware.scanner else {} %}
+{% set module_names = instrument.modules | map(attribute='name') | list if instrument.modules else [] %}
 
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
@@ -235,7 +236,7 @@
 
 ### 📷 Detectors
 
-{% if detectors %}
+{% if detectors and detectors | length > 0 %}
 <div class="grid cards" markdown>
 
 {% for det in detectors %}
@@ -259,8 +260,10 @@
 {% endfor %}
 
 </div>
+{% elif 'camera_port' in module_names %}
+> *No integrated digital detectors. An external camera port is available for third-party imaging devices.*
 {% else %}
-> *No detectors recorded.*
+> *Manual observation only (no digital detectors).*
 {% endif %}
 
 ### 🔬 Objectives
