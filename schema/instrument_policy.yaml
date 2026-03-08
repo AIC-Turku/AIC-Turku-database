@@ -497,12 +497,12 @@ sections:
     rules:
       - path: hardware.detectors
         title: Detectors
-        status: required
+        status: optional
         type: list
         item_type: object
         min_items: 1
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: At least one detector chain must be declared.
+        rationale: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
 
       - path: hardware.detectors[].kind
         title: Detector kind

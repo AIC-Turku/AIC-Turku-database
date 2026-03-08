@@ -125,3 +125,7 @@ terms:
     label: "Universal Vessel Holder"
     description: "Adaptable sample holder supporting multiple dish, slide, or plate formats within a single imaging setup."
     synonyms: ["Universal vessel holder"]
+  - id: camera_port
+    label: "External Camera Port"
+    description: "An available optical port (e.g., trinocular head or side port) and c-mount adapter allowing users to attach external or third-party imaging devices."
+    synonyms: ["trinocular head", "c-mount port", "photo port"]
