@@ -167,7 +167,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return moduleNotes ? `${moduleLabel} (${moduleNotes})` : moduleLabel;
             }, "module");
 
-        const scanner = currentInst?.processed_hardware?.scanner || currentInst?.hardware?.scanner || null;
+        const canonicalHardware = currentInst?.canonical?.hardware || currentInst?.hardware || {};
+        const scanner = canonicalHardware?.scanner || currentInst?.processed_hardware?.scanner || null;
         const scannerItems = scanner ? [scanner] : [];
         populateCheckboxes("scanner-list", scannerItems,
             scannerItem => {
@@ -178,13 +179,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             }, "scanner");
 
         // Formatting to match JCB/QUAREP-LiMi guidelines
-        populateCheckboxes("obj-list", currentInst.processed_hardware.objectives,
+        populateCheckboxes("obj-list", canonicalHardware?.objectives || currentInst?.processed_hardware?.objectives || [],
             obj => formatObjectiveLabel(obj), "obj");
 
-        populateCheckboxes("light-list", currentInst.processed_hardware.light_sources,
+        populateCheckboxes("light-list", canonicalHardware?.light_sources || currentInst?.processed_hardware?.light_sources || [],
             ls => formatLightSourceLabel(ls), "light");
 
-        populateCheckboxes("filter-list", currentInst.processed_hardware.filters, f => {
+        populateCheckboxes("filter-list", canonicalHardware?.filters || currentInst?.processed_hardware?.filters || [], f => {
             let type = [];
             if (f.excitation) type.push(`Ex: ${f.excitation}`);
             if (f.dichroic) type.push(`Di: ${f.dichroic}`);
@@ -198,10 +199,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             return label;
         }, "filter");
 
-        populateCheckboxes("splitter-list", currentInst.processed_hardware.splitters,
+        populateCheckboxes("splitter-list", canonicalHardware?.splitters || currentInst?.processed_hardware?.splitters || [],
             s => `${s.name} (${s.type})`, "splitter");
 
-        populateCheckboxes("det-list", currentInst.processed_hardware.detectors,
+        populateCheckboxes("det-list", canonicalHardware?.detectors || currentInst?.processed_hardware?.detectors || [],
             d => formatDetectorLabel(d), "det");
     });
 
@@ -312,12 +313,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function formatLightSourceLabel(lightSource) {
-        const wavelength = formatWavelength(lightSource?.wavelength);
-        const type = (lightSource?.type || "light source").toString().trim();
+        const wavelength = formatWavelength(lightSource?.wavelength_nm);
+        const type = (lightSource?.kind || "light source").toString().trim();
 
         const sourceParts = [
             (lightSource?.power || "").toString().trim(),
-            [lightSource?.manufacturer, lightSource?.name]
+            [lightSource?.manufacturer, lightSource?.model]
                 .map(part => (part || "").toString().trim())
                 .filter(Boolean)
                 .join(" ")
@@ -338,7 +339,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function formatDetectorLabel(detector) {
-        const label = `${detector?.model || "Unknown detector"} ${detector?.type || ""} (${detector?.manufacturer || "Unknown manufacturer"})`.replace(/\s+/g, " ").trim();
+        const manufacturer = (detector?.manufacturer || detector?.name || "").toString().trim();
+        const model = (detector?.model || "Unknown detector").toString().trim();
+        const kind = (detector?.kind || detector?.type || "").toString().trim();
+        const label = [manufacturer, model].filter(Boolean).join(" ") + (kind ? ` (${kind})` : "");
         const details = [];
         if (detector?.pixel_pitch_um) details.push(`${detector.pixel_pitch_um} µm pixel pitch`);
         if (detector?.sensor_format_px) details.push(`sensor ${detector.sensor_format_px} px`);
@@ -413,6 +417,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const deconvolutionRole = softwareByRole.deconvolution || {};
         const flimRole = softwareByRole.flim || {};
         const software = Array.isArray(inst?.software) ? inst.software : [];
+        const softwareObject = (!Array.isArray(inst?.software) && inst?.software && typeof inst.software === "object") ? inst.software : {};
         const moduleItems = inst?.processed_hardware?.modules || inst?.modules || [];
         const moduleText = moduleItems
             .map(module => (module?.id || module?.name || module || "").toString().trim())
@@ -427,10 +432,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             .filter(role => role?.name && role?.version)
             .map(role => `${role.name} (v${role.version})`);
 
-        const softwareText = (roleSoftware.length > 0
-            ? roleSoftware
-            : software.map(s => `${s?.name || "Unknown software"}${s?.version ? ` (v${s.version})` : ""}`)
-        ).join(", ");
+        const softwareObjectProcessing = ["analysis", "deconvolution", "flim", "post_processing", "reconstruction"]
+            .map(roleName => softwareObject?.[roleName])
+            .filter(role => role?.name || role?.version)
+            .map(role => `${role?.name || "Unknown software"}${role?.version ? ` (v${role.version})` : ""}`);
+
+        const listProcessingSoftware = software
+            .filter(s => {
+                const role = (s?.role || "").toString().toLowerCase();
+                return role ? !/(acquisition|control|capture)/.test(role) : false;
+            })
+            .map(s => `${s?.name || "Unknown software"}${s?.version ? ` (v${s.version})` : ""}`);
+
+        const fallbackProcessingSoftware = softwareObjectProcessing.length > 0 ? softwareObjectProcessing : listProcessingSoftware;
+        const softwareText = (roleSoftware.length > 0 ? roleSoftware : fallbackProcessingSoftware).join(", ");
 
         if (matchedKeywords.length === 0 && !softwareText) {
             return "[PLEASE SPECIFY: Deconvolution/reconstruction/lifetime-fitting pipeline, including software name and version]. ";
@@ -455,7 +470,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const fallbackParts = [];
         const magnification = obj?.magnification ? `${obj.magnification}x` : "";
-        const na = obj?.na ? `/${obj.na}` : "";
+        const na = obj?.numerical_aperture ? `/${obj.numerical_aperture}` : "";
         const magnificationPart = `${magnification}${na}`;
         if (magnificationPart) fallbackParts.push(magnificationPart);
         if (obj?.immersion) fallbackParts.push(obj.immersion);
@@ -509,7 +524,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const selectedModalities = modalities.length > 0 ? modalities : fallbackModalities;
         const modalitiesText = selectedModalities.length > 0 ? formatHumanList(selectedModalities) : "Light microscopy";
 
-        const scannerData = currentInst?.processed_hardware?.scanner || currentInst?.hardware?.scanner || {};
+        const canonicalHardware = currentInst?.canonical?.hardware || currentInst?.hardware || {};
+        const scannerData = canonicalHardware?.scanner || currentInst?.processed_hardware?.scanner || {};
         const scannerFallbackId = (scannerData?.type || scannerData?.id || "").toString().trim();
         const scannerFallbackLabel = scannerFallbackId
             ? formatVocabLabel(vocabularies.scanner_types, scannerFallbackId)
@@ -523,7 +539,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             : "";
 
         // Base microscope description
-        let text = `${modalitiesText} images were acquired using a ${currentInst.manufacturer} ${currentInst.model} ${stand}microscope${scannerClause}, controlled by ${softName}. `;
+        const microscopeIdentity = [currentInst?.manufacturer, currentInst?.model]
+            .map(part => (part || "").toString().trim())
+            .filter(Boolean)
+            .join(" ");
+        const microscopeDescriptor = microscopeIdentity
+            ? `the ${microscopeIdentity} ${stand}microscope`
+            : `a ${stand}microscope system`;
+
+        let text = `${modalitiesText} images were acquired using ${microscopeDescriptor}${scannerClause}, controlled by ${softName}. `;
 
         if (modules.length > 0) {
             text += `The following hardware modules were utilized: ${formatHumanList(modules)}. `;
