@@ -31,6 +31,7 @@
 {% set stages = canonical_hardware.stages if canonical_hardware and canonical_hardware.stages else [] %}
 {% set hardware_autofocus = canonical_hardware.hardware_autofocus if canonical_hardware and canonical_hardware.hardware_autofocus else {} %}
 {% set triggering = canonical_hardware.triggering if canonical_hardware and canonical_hardware.triggering else {} %}
+{% set scanner = canonical_hardware.scanner if canonical_hardware and canonical_hardware.scanner else {} %}
 
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
@@ -195,13 +196,13 @@
 <div class="grid cards" markdown>
 
 {% for src in light_sources %}
--   **{% if src.url %}[{{ src.name or 'Unknown Model' }}]({{ src.url }}){:target="_blank"}{% else %}{{ src.name or 'Unknown Model' }}{% endif %}**
+-   **{% if src.url %}[{{ src.model or 'Unknown Model' }}]({{ src.url }}){:target="_blank"}{% else %}{{ src.model or 'Unknown Model' }}{% endif %}**
 
     ---
 
-    **Type:** {{ src.type or '—' }}
+    **Type:** {{ src.kind or '—' }}
     {% if src.technology %}<br>**Technology:** `{{ src.technology }}`{% endif %}
-    {% if src.wavelength %}<br>**Wavelength:** `{{ src.wavelength }} nm`{% endif %}
+    {% if src.wavelength_nm %}<br>**Wavelength:** `{{ src.wavelength_nm }} nm`{% endif %}
     {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
     {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
 
@@ -214,11 +215,12 @@
 
 ### 🧭 Scanner
 
-{% set scanner = instrument.processed_hardware.scanner if instrument.processed_hardware else None %}
 {% if scanner and scanner.type and scanner.type != 'none' %}
 - **Type:** {{ scanner.type }}
+  {% if scanner.light_sheet_type %}<br>**Light-sheet type:** {{ scanner.light_sheet_type }}{% endif %}
   {% if scanner.line_rate_hz %}<br>**Line rate:** `{{ scanner.line_rate_hz }} Hz`{% endif %}
   {% if scanner.pinhole_um %}<br>**Pinhole:** `{{ scanner.pinhole_um }} µm`{% endif %}
+  {% if scanner.url %}<br>**Reference:** [{{ scanner.url }}]({{ scanner.url }}){:target="_blank"}{% endif %}
   {% if scanner.notes %}<br><small class="aic-muted">{{ scanner.notes }}</small>{% endif %}
 {% else %}
 > *No scanner details recorded.*
@@ -230,11 +232,11 @@
 <div class="grid cards" markdown>
 
 {% for det in detectors %}
--   **{% if det.url %}[{{ det.name or 'Unknown' }} {{ det.model or '' }}]({{ det.url }}){:target="_blank"}{% else %}{{ det.name or 'Unknown' }} {{ det.model or '' }}{% endif %}**
+-   **{% if det.url %}[{{ det.manufacturer or 'Unknown' }} {{ det.model or '' }}]({{ det.url }}){:target="_blank"}{% else %}{{ det.manufacturer or 'Unknown' }} {{ det.model or '' }}{% endif %}**
 
     ---
 
-    **Type:** {{ det.type or '—' }}
+    **Type:** {{ det.kind or '—' }}
     {% if det.pixel_pitch_um %}<br>**Pixel Pitch:** `{{ det.pixel_pitch_um }} µm`{% endif %}
     {% if det.sensor_format_px %}<br>**Sensor Format:** `{{ det.sensor_format_px }}`{% endif %}
     {% if det.binning %}<br>**Binning:** `{{ det.binning }}`{% endif %}
@@ -256,15 +258,17 @@
 <div class="grid cards" markdown>
 
 {% for obj in objectives %}
--   **{% if obj.url %}[{{ obj.name or 'Unknown Model' }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.name or 'Unknown Model' }}{% endif %}**{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
+-   **{% if obj.url %}[{{ obj.model or 'Unknown Model' }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.model or 'Unknown Model' }}{% endif %}**{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
     {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
 
     ---
 
-    <span {% if obj.is_installed is sameas false %}style="opacity: 0.6; display: inline-block;"{% endif %}>**Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.na if obj.na is not none else '—' }}`
+    <span {% if obj.is_installed is sameas false %}style="opacity: 0.6; display: inline-block;"{% endif %}>**Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.numerical_aperture if obj.numerical_aperture is not none else '—' }}`
     {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
-    {% if obj.wd %}<br>**WD:** {{ obj.wd }}{% endif %}
+    {% if obj.working_distance %}<br>**WD:** {{ obj.working_distance }}{% endif %}
     {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
+    {% if obj.product_code %}<br>**Product code:** `{{ obj.product_code }}`{% endif %}
+    {% if obj.afc_compatible is not none %}<br>**AFC compatible:** {{ bool_label(obj.afc_compatible) }}{% endif %}
     {% if obj.specialties %}<br>**Capabilities:** {% if obj.specialties is string %}`{{ obj.specialties }}`{% elif obj.specialties is iterable %}{% for spec in obj.specialties %}`{{ spec }}`{% if not loop.last %} {% endif %}{% endfor %}{% else %}-{% endif %}{% endif %}
     {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}</span>
 
@@ -290,6 +294,10 @@
       {% if f.excitation or f.emission %}
       <br><small class="aic-muted">EX: {{ f.excitation or '-' }} | EM: {{ f.emission or '-' }}</small>
       {% endif %}
+      {% if f.location or f.product_code or f.dichroic %}
+      <br><small class="aic-muted">Location: {{ f.location or '-' }} | Product code: {{ f.product_code or '-' }} | Dichroic: {{ f.dichroic or '-' }}</small>
+      {% endif %}
+      {% if f.notes %}<br><small class="aic-muted">{{ f.notes }}</small>{% endif %}
     {% endfor %}
 {% endif %}
 
@@ -301,6 +309,7 @@
     {% for s in splitters %}
     * {% if s.url %}[**{{ s.name or 'Splitter' }}**]({{ s.url }}){:target="_blank"}{% else %}**{{ s.name or 'Splitter' }}**{% endif %}
       {% if s.type %}<br><small class="aic-muted">Type: {{ s.type }}</small>{% endif %}
+      {% if s.notes %}<br><small class="aic-muted">{{ s.notes }}</small>{% endif %}
     {% endfor %}
 {% endif %}
 
