@@ -1,6 +1,6 @@
 {% macro objective_label(obj) -%}
 {%- set mag = obj.magnification -%}
-{%- set immersion = (obj.immersion | replace('_', ' ') | title) if obj.immersion else '' -%}
+{%- set immersion = (obj.immersion | capitalize) if obj.immersion else '' -%}
 {%- if mag is number -%}
 {{ mag | int }}x{% if immersion %} {{ immersion }}{% endif %}
 {%- elif mag is string and mag | trim -%}
@@ -40,343 +40,79 @@
   [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
 </div>
 
-<div class="aic-chiprow" style="margin-bottom: 30px;">
-  {% for mod in instrument.modalities_display %}
-    <span class="aic-chip" style="font-weight: 600; font-size: 1.1em; padding: 6px 12px; background-color: var(--md-primary-fg-color--light); color: var(--md-primary-bg-color);">{{ mod }}</span>
-  {% endfor %}
-  {% for m in instrument.modules %}
-    {% if m.url %}
-      <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or pretty_id(m.name) }} ↗</a>
-    {% else %}
-      <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or pretty_id(m.name) }}</span>
-    {% endif %}
-  {% endfor %}
-</div>
-
-## 📍 Overview
+{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
+!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
+    {{ instrument.status.reason }}
 
 <div class="aic-hero">
   <div class="aic-hero__media">
     <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
-         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" style="border-radius: 4px;" />
+         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
   </div>
 
   <div class="aic-hero__facts">
-    {% if instrument.notes and instrument.notes.raw %}
-    <p style="font-size: 1.1em; line-height: 1.5;">{{ instrument.notes.raw }}</p>
-    {% endif %}
-    
     <div class="aic-facts">
-      <div class="aic-fact">
-        <div class="aic-muted">Location</div>
-        <div><strong>{{ instrument.location | default('—', true) }}</strong></div>
-      </div>
       <div class="aic-fact">
         <div class="aic-muted">Instrument ID</div>
         <div><code>{{ instrument.id }}</code></div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Manufacturer</div>
-        <div>{{ instrument.manufacturer | default('—', true) }}</div>
+        <div>{{ instrument.manufacturer or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Model</div>
-        <div>{{ instrument.model | default('—', true) }}</div>
+        <div>{{ instrument.model or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Stand</div>
-        <div>{{ pretty_id(instrument.stand_orientation) }}</div>
+        <div>{{ instrument.stand_orientation or '—' }}</div>
+      </div>
+      <div class="aic-fact">
+        <div class="aic-muted">Location</div>
+        <div>{{ instrument.location or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Purchased</div>
-        <div>{{ instrument.year_of_purchase | default('—', true) }}</div>
+        <div>{{ instrument.year_of_purchase or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Funding</div>
-        <div>{{ instrument.funding | default('—', true) }}</div>
+        <div>{{ instrument.funding or '—' }}</div>
       </div>
     </div>
+
+    <div class="aic-section">
+      <div class="aic-section__title">Modalities</div>
+      <div class="aic-chiprow">
+        {% for mod in instrument.modalities_display %}
+          <span class="aic-chip">{{ mod }}</span>
+        {% else %}
+          <span class="aic-muted">—</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if instrument.modules %}
+    <div class="aic-section">
+      <div class="aic-section__title">Modules</div>
+      <div class="aic-chiprow">
+        {% for m in instrument.modules %}
+          {% if m.url %}
+            <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }} ↗</a>
+          {% else %}
+            <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 </div>
 
-{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
-!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
-    {{ instrument.status.reason }}
-
-{% if environment.temperature_control or environment.co2_control %}
-!!! tip "🌱 Live-Cell Ready"
-    This instrument is equipped with environmental temperature control{% if environment.co2_control %} and CO2 regulation{% endif %}.
-{% endif %}
-
-{% if instrument.notes and (instrument.notes.type or instrument.notes.imaging_modes or instrument.notes.filters or instrument.notes.additional_hardware) %}
-??? note "Legacy Capabilities Notes"
-    {% if instrument.notes.type %}- **Type:** {{ instrument.notes.type }}{% endif %}
-    {% if instrument.notes.imaging_modes %}- **Imaging modes:** {{ instrument.notes.imaging_modes | join(', ') }}{% endif %}
-    {% if instrument.notes.filters %}- **Filters:** {{ instrument.notes.filters | join(', ') }}{% endif %}
-    {% if instrument.notes.additional_hardware %}- **Additional hardware:** {{ instrument.notes.additional_hardware | join(', ') }}{% endif %}
-{% endif %}
-
----
-
-## 🔬 Objectives
-
-{% if objectives %}
-<div class="grid cards" markdown>
-
-{% for obj in objectives %}
-{% set obj_title = obj.model %}
-{% if obj_title %}-   **{% if obj.url %}[{{ obj_title }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj_title }}{% endif %}**{% endif %}{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
-    {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
-
-    ---
-
-    <span {% if obj.is_installed is sameas false %}style="opacity: 0.6; display: inline-block;"{% endif %}>
-    **Mag:** `{{ obj.magnification | default('—', true) }}x` | **NA:** `{{ obj.numerical_aperture | default('—', true) }}`
-    {% if obj.immersion %}<br>**Immersion:** {{ pretty_id(obj.immersion) }}{% endif %}
-    {% if obj.working_distance %}<br>**WD:** {{ obj.working_distance }}{% endif %}
-    {% if obj.correction %}<br>**Correction:** {{ pretty_id(obj.correction) }}{% endif %}
-    {% if obj.product_code %}<br>**Product code:** `{{ obj.product_code }}`{% endif %}
-    {% if obj.afc_compatible is not none %}<br>**AFC compatible:** {{ bool_label(obj.afc_compatible) }}{% endif %}
-    {% if obj.specialties %}<br>**Capabilities:** {% if obj.specialties is string %}`{{ obj.specialties }}`{% elif obj.specialties is iterable %}{% for spec in obj.specialties %}`{{ spec }}`{% if not loop.last %} {% endif %}{% endfor %}{% else %}-{% endif %}{% endif %}
-    {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}
-    </span>
-{% endfor %}
-
-</div>
-{% else %}
-> *No objectives recorded.*
-{% endif %}
-
----
-
-## 🔦 Light Sources & 📷 Detectors
-
-### Light Sources (Excitation)
-{% if light_sources %}
-<div class="grid cards" markdown>
-
-{% for src in light_sources %}
-{% set src_title = src.model or src.manufacturer or src.kind %}
-{% set has_src_details = src.kind or src.technology or src.wavelength_nm or src.power or src.notes %}
-{% if src_title or has_src_details %}
--   {% if src_title %}**{% if src.url %}[{{ src_title }}]({{ src.url }}){:target="_blank"}{% else %}{{ src_title }}{% endif %}**{% endif %}
-
-    {% if has_src_details %}---{% endif %}
-
-    {% if src.kind %}**Type:** {{ pretty_id(src.kind) }}{% endif %}
-    {% if src.technology %}<br>**Technology:** `{{ pretty_id(src.technology) }}`{% endif %}
-    {% if src.wavelength_nm %}<br>**Wavelength:** `{{ src.wavelength_nm }}{% if src.wavelength_nm != 'tunable' and src.wavelength_nm != 'broadband' %} nm{% endif %}`{% endif %}
-    {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
-    {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
-{% endif %}
-{% endfor %}
-
-</div>
-{% else %}
-> *No light sources recorded.*
-{% endif %}
-
-### Detectors (Emission)
-{% if detectors and detectors | length > 0 %}
-<div class="grid cards" markdown>
-
-{% for det in detectors %}
-{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.kind %}
-{% set has_det_details = det.kind or det.pixel_pitch_um or det.sensor_format_px or det.binning or det.bit_depth or det.qe_peak_pct or det.read_noise_e or det.notes %}
-{% if det_title or has_det_details %}
--   {% if det_title %}**{% if det.url %}[{{ det_title }}]({{ det.url }}){:target="_blank"}{% else %}{{ det_title }}{% endif %}**{% endif %}
-
-    {% if has_det_details %}---{% endif %}
-
-    {% if det.kind %}**Type:** {{ pretty_id(det.kind) }}{% endif %}
-    {% if det.pixel_pitch_um %}<br>**Pixel Pitch:** `{{ det.pixel_pitch_um }} µm`{% endif %}
-    {% if det.sensor_format_px %}<br>**Sensor Format:** `{{ det.sensor_format_px }}`{% endif %}
-    {% if det.binning %}<br>**Binning:** `{{ det.binning }}`{% endif %}
-    {% if det.bit_depth %}<br>**Bit Depth:** `{{ det.bit_depth }}`{% endif %}
-    {% if det.qe_peak_pct %}<br>**QE (peak):** `{{ det.qe_peak_pct }}%`{% endif %}
-    {% if det.read_noise_e %}<br>**Read Noise:** `{{ det.read_noise_e }} e-`{% endif %}
-    {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
-{% endif %}
-{% endfor %}
-
-</div>
-{% elif 'camera_port' in module_names %}
-> *No integrated digital detectors. An external camera port is available for third-party imaging devices.*
-{% else %}
-> *Manual observation only (no digital detectors).*
-{% endif %}
-
----
-
-## 🎛️ Filters & Splitters
-
-<div class="grid cards" markdown>
-
-{% if filters %}
--   **Optical Filters**
-
-    ---
-
-    {% for f in filters %}
-    * {% if f.url %}[**{{ f.name | default('Filter', true) }}**]({{ f.url }}){:target="_blank"}{% else %}**{{ f.name | default('Filter', true) }}**{% endif %}
-      {% if f.excitation or f.emission %}
-      <br><small class="aic-muted">EX: {{ f.excitation | default('—', true) }} | EM: {{ f.emission | default('—', true) }}</small>
-      {% endif %}
-      {% if f.location or f.product_code or f.dichroic %}
-      <br><small class="aic-muted">Location: {{ f.location | default('—', true) }} | Part: {{ f.product_code | default('—', true) }} | Dichroic: {{ f.dichroic | default('—', true) }}</small>
-      {% endif %}
-      {% if f.notes %}<br><small class="aic-muted">{{ f.notes }}</small>{% endif %}
-    {% endfor %}
-{% endif %}
-
-{% if splitters %}
--   **Splitters / Dichroics**
-
-    ---
-
-    {% for s in splitters %}
-    * {% if s.url %}[**{{ s.name | default('Splitter', true) }}**]({{ s.url }}){:target="_blank"}{% else %}**{{ s.name | default('Splitter', true) }}**{% endif %}
-      {% if s.type %}<br><small class="aic-muted">Type: {{ pretty_id(s.type) }}</small>{% endif %}
-      {% if s.notes %}<br><small class="aic-muted">{{ s.notes }}</small>{% endif %}
-    {% endfor %}
-{% endif %}
-
-{% if not filters and not splitters %}
--   **Optical Components**
-
-    ---
-
-    > *No filters or splitters recorded.*
-{% endif %}
-
-</div>
-
----
-
-## ⚙️ Advanced Hardware
-
-### 🧭 Scanner
-
-{% if scanner and scanner.type and scanner.type != 'none' %}
-- **Type:** {{ pretty_id(scanner.type) }}
-  {% if scanner.light_sheet_type %}<br>**Light-sheet type:** {{ pretty_id(scanner.light_sheet_type) }}{% endif %}
-  {% if scanner.line_rate_hz %}<br>**Line rate:** `{{ scanner.line_rate_hz }} Hz`{% endif %}
-  {% if scanner.pinhole_um %}<br>**Pinhole:** `{{ scanner.pinhole_um }} µm`{% endif %}
-  {% if scanner.url %}<br>**Reference:** [{{ scanner.url }}]({{ scanner.url }}){:target="_blank"}{% endif %}
-  {% if scanner.notes %}<br><small class="aic-muted">{{ scanner.notes }}</small>{% endif %}
-{% else %}
-> *No automated scanner details recorded.*
-{% endif %}
-
-### 🎚️ Stages & Focus Drives
-
-{% if stages %}
-| Type | Manufacturer | Model | Step Size (µm) |
-| :--- | :--- | :--- | :--- |
-{% for stage in stages -%}
-| {{ pretty_id(stage.type) | default('—', true) }} | {{ stage.manufacturer | default('—', true) }} | {{ stage.model | default('—', true) }} | {{ stage.step_size_um | default('—', true) }} |
-{% endfor %}
-{% else %}
-> *No advanced stages or focus drives recorded.*
-{% endif %}
-
-{% set autofocus_type = hardware_autofocus.type | trim if hardware_autofocus.type is string else hardware_autofocus.type %}
-{% set has_autofocus = hardware_autofocus.is_installed is not none or autofocus_type %}
-{% set has_triggering = triggering.primary_mode or triggering.notes %}
-
-{% if has_autofocus or has_triggering %}
-### ⏱️ Autofocus & Triggering
-
-{% if has_autofocus %}
-- **Hardware Autofocus:** {{ bool_label(hardware_autofocus.is_installed) }}{% if autofocus_type and hardware_autofocus.is_installed is not sameas false %} — *{{ pretty_id(autofocus_type) }}*{% endif %}
-{% endif %}
-{% if has_triggering %}
-- **Triggering Mode:** {% if triggering.primary_mode %}{{ pretty_id(triggering.primary_mode) }}{% else %}—{% endif %}{% if triggering.notes %} — {{ triggering.notes }}{% endif %}
-{% endif %}
-{% endif %}
-
-### 🌡️ Environmental Control
-
-{% set show_temperature = environment.temperature_control is sameas true or environment.temperature_range %}
-{% set show_co2 = environment.co2_control is sameas true or environment.co2_range %}
-{% set show_o2 = environment.o2_control is sameas true or environment.o2_range %}
-{% set show_humidity = environment.humidity_control is sameas true %}
-{% set has_environment = show_temperature or show_co2 or show_o2 or show_humidity or environment.notes %}
-{% if has_environment %}
-{% if show_temperature %}
-- **Temperature Control:** {{ bool_label(environment.temperature_control) }}
-  {% if environment.temperature_range %} (`{{ environment.temperature_range }}`){% endif %}
-{% endif %}
-{% if show_co2 %}
-- **CO2 Control:** {{ bool_label(environment.co2_control) }}
-  {% if environment.co2_range %} (`{{ environment.co2_range }}`){% endif %}
-{% endif %}
-{% if show_o2 %}
-- **O2 Control:** {{ bool_label(environment.o2_control) }}
-  {% if environment.o2_range %} (`{{ environment.o2_range }}`){% endif %}
-{% endif %}
-{% if show_humidity %}
-- **Humidity Control:** {{ bool_label(environment.humidity_control) }}
-{% endif %}
-{% if environment.notes %}
-- **Notes:** {{ environment.notes }}
-{% endif %}
-{% else %}
-> *No active environmental control details recorded.*
-{% endif %}
-
-{% if magnification_changers %}
-### 🔍 Magnification Changers
-
-<div class="grid cards" markdown>
-
-{% for mag in magnification_changers %}
-{% set mag_title = mag.model or mag.name %}
-{% set has_mag_details = mag.manufacturer or mag.magnification is not none or mag.notes %}
-{% if mag_title or has_mag_details %}
--   {% if mag_title %}**{% if mag.url %}[{{ mag_title }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag_title }}{% endif %}**{% endif %}
-
-    {% if has_mag_details %}---{% endif %}
-
-    {% if mag.manufacturer %}**Manufacturer:** {{ mag.manufacturer }}{% endif %}
-    {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
-    {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
-{% endif %}
-{% endfor %}
-
-</div>
-{% endif %}
-
----
-
-## 💻 Software
-
-{% if instrument.software %}
-<div class="grid cards" markdown>
-
-{% for sw in instrument.software %}
-{% set has_sw_content = sw.name or sw.role or sw.developer or sw.version or sw.notes %}
-{% if has_sw_content %}
--   {% if sw.name %}**{% if sw.url %}[{{ sw.name }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name }}{% endif %}**{% endif %}
-
-    {% if sw.role or sw.developer or sw.version or sw.notes %}---{% endif %}
-
-    {% if sw.role %}<span class="aic-muted">Role:</span> {{ pretty_id(sw.role) }}<br>{% endif %}
-    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer or sw.role %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}{% if sw.notes %}{% if sw.developer or sw.version or sw.role %}<br>{% endif %}<small class="aic-muted">{{ sw.notes }}</small>{% endif %}
-{% endif %}
-
-{% endfor %}
-
-</div>
-{% else %}
-> *No software configurations recorded.*
-{% endif %}
-
-
 {% if policy.missing_required or policy.missing_conditional or policy.alias_fallbacks %}
----
-
-## ⚠️ Metadata Completeness Audit
+## Metadata Completeness
 
 {% if policy.missing_required %}
 - **Missing required fields:**
@@ -401,9 +137,295 @@
 
 {% endif %}
 
+{% if instrument.notes %}
+## Capabilities
+
+{% if instrument.notes.type %}
+- **Type:** {{ instrument.notes.type }}
+{% endif %}
+
+{% if instrument.notes.imaging_modes %}
+- **Imaging modes:** {{ instrument.notes.imaging_modes | join(', ') }}
+{% endif %}
+
+{% if instrument.notes.filters %}
+- **Filters:**
+{% for f in instrument.notes.filters %}
+  - {{ f }}
+{% endfor %}
+{% endif %}
+
+{% if instrument.notes.additional_hardware %}
+- **Additional hardware:**
+{% for h in instrument.notes.additional_hardware %}
+  - {{ h }}
+{% endfor %}
+{% endif %}
+
+{% if instrument.notes.raw %}
+- **Notes:** {{ instrument.notes.raw }} <small class="aic-muted">(legacy notes fallback)</small>
+{% endif %}
+{% endif %}
+
+## Software Environment
+
+{% if instrument.software %}
+<div class="grid cards" markdown>
+
+{% for sw in instrument.software %}
+{% set has_sw_content = sw.name or sw.role or sw.developer or sw.version or sw.notes %}
+{% if has_sw_content %}
+-   {% if sw.name %}**{% if sw.url %}[{{ sw.name }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name }}{% endif %}**{% endif %}
+
+    {% if sw.role or sw.developer or sw.version or sw.notes %}---{% endif %}
+
+    {% if sw.role %}<span class="aic-muted">Role:</span> {{ sw.role | replace("_", " ") | title }}<br>{% endif %}
+    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer or sw.role %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}{% if sw.notes %}{% if sw.developer or sw.version or sw.role %}<br>{% endif %}<small class="aic-muted">{{ sw.notes }}</small>{% endif %}
+{% endif %}
+
+{% endfor %}
+
+</div>
+{% else %}
+> *No software configurations recorded.*
+{% endif %}
+
 ---
 
-## 📊 QC Metrics: Latest Measurements
+## Hardware Configuration
+
+### 🌡️ Environmental Control
+
+{% set show_temperature = environment.temperature_control is sameas true or environment.temperature_range %}
+{% set show_co2 = environment.co2_control is sameas true or environment.co2_range %}
+{% set show_o2 = environment.o2_control is sameas true or environment.o2_range %}
+{% set show_humidity = environment.humidity_control is sameas true %}
+{% set has_environment = show_temperature or show_co2 or show_o2 or show_humidity or environment.notes %}
+{% if has_environment %}
+{% if show_temperature %}
+- **Temperature Control:** {{ bool_label(environment.temperature_control) }}
+  {% if environment.temperature_range %}<br>**Temperature Range:** `{{ environment.temperature_range }}`{% endif %}
+{% endif %}
+{% if show_co2 %}
+- **CO2 Control:** {{ bool_label(environment.co2_control) }}
+  {% if environment.co2_range %}<br>**CO2 Range:** `{{ environment.co2_range }}`{% endif %}
+{% endif %}
+{% if show_o2 %}
+- **O2 Control:** {{ bool_label(environment.o2_control) }}
+  {% if environment.o2_range %}<br>**O2 Range:** `{{ environment.o2_range }}`{% endif %}
+{% endif %}
+{% if show_humidity %}
+- **Humidity Control:** {{ bool_label(environment.humidity_control) }}
+{% endif %}
+{% if environment.notes %}
+- **Notes:** {{ environment.notes }}
+{% endif %}
+{% else %}
+> *No environmental control details recorded.*
+{% endif %}
+
+### 💡 Light Sources
+
+{% if light_sources %}
+<div class="grid cards" markdown>
+
+{% for src in light_sources %}
+{% set src_title = src.model or src.manufacturer or src.kind %}
+{% set has_src_details = src.kind or src.technology or src.wavelength_nm or src.power or src.notes %}
+{% if src_title or has_src_details %}
+-   {% if src_title %}**{% if src.url %}[{{ src_title }}]({{ src.url }}){:target="_blank"}{% else %}{{ src_title }}{% endif %}**{% endif %}
+
+    {% if has_src_details %}---{% endif %}
+
+    {% if src.kind %}**Type:** {{ src.kind }}{% endif %}
+    {% if src.technology %}<br>**Technology:** `{{ src.technology }}`{% endif %}
+    {% if src.wavelength_nm %}<br>**Wavelength:** `{{ src.wavelength_nm }} nm`{% endif %}
+    {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
+    {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
+{% endif %}
+
+{% endfor %}
+
+</div>
+{% else %}
+> *No light sources recorded.*
+{% endif %}
+
+### 🧭 Scanner
+
+{% if scanner and scanner.type and scanner.type != 'none' %}
+- **Type:** {{ scanner.type }}
+  {% if scanner.light_sheet_type %}<br>**Light-sheet type:** {{ scanner.light_sheet_type }}{% endif %}
+  {% if scanner.line_rate_hz %}<br>**Line rate:** `{{ scanner.line_rate_hz }} Hz`{% endif %}
+  {% if scanner.pinhole_um %}<br>**Pinhole:** `{{ scanner.pinhole_um }} µm`{% endif %}
+  {% if scanner.url %}<br>**Reference:** [{{ scanner.url }}]({{ scanner.url }}){:target="_blank"}{% endif %}
+  {% if scanner.notes %}<br><small class="aic-muted">{{ scanner.notes }}</small>{% endif %}
+{% else %}
+> *No scanner details recorded.*
+{% endif %}
+
+### 📷 Detectors
+
+{% if detectors and detectors | length > 0 %}
+<div class="grid cards" markdown>
+
+{% for det in detectors %}
+{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.kind %}
+{% set has_det_details = det.kind or det.pixel_pitch_um or det.sensor_format_px or det.binning or det.bit_depth or det.qe_peak_pct or det.read_noise_e or det.notes %}
+{% if det_title or has_det_details %}
+-   {% if det_title %}**{% if det.url %}[{{ det_title }}]({{ det.url }}){:target="_blank"}{% else %}{{ det_title }}{% endif %}**{% endif %}
+
+    {% if has_det_details %}---{% endif %}
+
+    {% if det.kind %}**Type:** {{ det.kind }}{% endif %}
+    {% if det.pixel_pitch_um %}<br>**Pixel Pitch:** `{{ det.pixel_pitch_um }} µm`{% endif %}
+    {% if det.sensor_format_px %}<br>**Sensor Format:** `{{ det.sensor_format_px }}`{% endif %}
+    {% if det.binning %}<br>**Binning:** `{{ det.binning }}`{% endif %}
+    {% if det.bit_depth %}<br>**Bit Depth:** `{{ det.bit_depth }}`{% endif %}
+    {% if det.qe_peak_pct %}<br>**QE (peak):** `{{ det.qe_peak_pct }}%`{% endif %}
+    {% if det.read_noise_e %}<br>**Read Noise:** `{{ det.read_noise_e }} e-`{% endif %}
+    {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
+{% endif %}
+
+{% endfor %}
+
+</div>
+{% elif 'camera_port' in module_names %}
+> *No integrated digital detectors. An external camera port is available for third-party imaging devices.*
+{% else %}
+> *Manual observation only (no digital detectors).*
+{% endif %}
+
+### 🔬 Objectives
+
+{% if objectives %}
+<div class="grid cards" markdown>
+
+{% for obj in objectives %}
+{% set obj_title = obj.model %}
+{% if obj_title %}-   **{% if obj.url %}[{{ obj_title }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj_title }}{% endif %}**{% endif %}{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
+    {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
+
+    ---
+
+    <span {% if obj.is_installed is sameas false %}style="opacity: 0.6; display: inline-block;"{% endif %}>**Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.numerical_aperture if obj.numerical_aperture is not none else '—' }}`
+    {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
+    {% if obj.working_distance %}<br>**WD:** {{ obj.working_distance }}{% endif %}
+    {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
+    {% if obj.product_code %}<br>**Product code:** `{{ obj.product_code }}`{% endif %}
+    {% if obj.afc_compatible is not none %}<br>**AFC compatible:** {{ bool_label(obj.afc_compatible) }}{% endif %}
+    {% if obj.specialties %}<br>**Capabilities:** {% if obj.specialties is string %}`{{ obj.specialties }}`{% elif obj.specialties is iterable %}{% for spec in obj.specialties %}`{{ spec }}`{% if not loop.last %} {% endif %}{% endfor %}{% else %}-{% endif %}{% endif %}
+    {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}</span>
+
+{% endfor %}
+
+</div>
+{% else %}
+> *No objectives recorded.*
+{% endif %}
+
+
+### 🎛️ Filters & Splitters
+
+<div class="grid cards" markdown>
+
+{% if filters %}
+-   **Optical Filters**
+
+    ---
+
+    {% for f in filters %}
+    * {% if f.url %}[**{{ f.name or 'Filter' }}**]({{ f.url }}){:target="_blank"}{% else %}**{{ f.name or 'Filter' }}**{% endif %}
+      {% if f.excitation or f.emission %}
+      <br><small class="aic-muted">EX: {{ f.excitation or '-' }} | EM: {{ f.emission or '-' }}</small>
+      {% endif %}
+      {% if f.location or f.product_code or f.dichroic %}
+      <br><small class="aic-muted">Location: {{ f.location or '-' }} | Product code: {{ f.product_code or '-' }} | Dichroic: {{ f.dichroic or '-' }}</small>
+      {% endif %}
+      {% if f.notes %}<br><small class="aic-muted">{{ f.notes }}</small>{% endif %}
+    {% endfor %}
+{% endif %}
+
+{% if splitters %}
+-   **Splitters / Dichroics**
+
+    ---
+
+    {% for s in splitters %}
+    * {% if s.url %}[**{{ s.name or 'Splitter' }}**]({{ s.url }}){:target="_blank"}{% else %}**{{ s.name or 'Splitter' }}**{% endif %}
+      {% if s.type %}<br><small class="aic-muted">Type: {{ s.type }}</small>{% endif %}
+      {% if s.notes %}<br><small class="aic-muted">{{ s.notes }}</small>{% endif %}
+    {% endfor %}
+{% endif %}
+
+{% if not filters and not splitters %}
+-   **Optical Components**
+
+    ---
+
+    > *No filters or splitters recorded.*
+{% endif %}
+
+</div>
+
+
+
+### 🔍 Magnification Changers
+
+{% if magnification_changers %}
+<div class="grid cards" markdown>
+
+{% for mag in magnification_changers %}
+{% set mag_title = mag.model or mag.name %}
+{% set has_mag_details = mag.manufacturer or mag.magnification is not none or mag.notes %}
+{% if mag_title or has_mag_details %}
+-   {% if mag_title %}**{% if mag.url %}[{{ mag_title }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag_title }}{% endif %}**{% endif %}
+
+    {% if has_mag_details %}---{% endif %}
+
+    {% if mag.manufacturer %}**Manufacturer:** {{ mag.manufacturer }}{% endif %}
+    {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
+    {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
+{% endif %}
+
+{% endfor %}
+
+</div>
+{% else %}
+> *No magnification changers recorded.*
+{% endif %}
+
+### 🧭 Stages & Focus Drives
+
+{% if stages %}
+| Type | Manufacturer | Model | Step Size (µm) |
+| --- | --- | --- | --- |
+{% for stage in stages %}
+| {{ pretty_id(stage.type) }} | {{ stage.manufacturer or '—' }} | {{ stage.model or '—' }} | {{ stage.step_size_um if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) else '—' }} |
+{% endfor %}
+{% else %}
+> *No stages or focus drives recorded.*
+{% endif %}
+
+### ⚙️ Advanced Hardware
+
+{% set autofocus_type = hardware_autofocus.type | trim if hardware_autofocus.type is string else hardware_autofocus.type %}
+{% set has_autofocus = hardware_autofocus.is_installed is not none or autofocus_type %}
+{% set has_triggering = triggering.primary_mode or triggering.notes %}
+{% if has_autofocus or has_triggering %}
+{% if has_autofocus %}
+- **Hardware Autofocus:** {{ bool_label(hardware_autofocus.is_installed) }}{% if autofocus_type and hardware_autofocus.is_installed is not sameas false %} — {{ pretty_id(autofocus_type) }}{% endif %}
+{% endif %}
+{% if has_triggering %}
+- **Triggering:** {% if triggering.primary_mode %}{{ pretty_id(triggering.primary_mode) }}{% else %}—{% endif %}{% if triggering.notes %} — {{ triggering.notes }}{% endif %}
+{% endif %}
+{% else %}
+> *No advanced hardware features recorded.*
+{% endif %}
+
+---
+
+## QC Metrics: Latest Measurements
 
 {% set laser_metrics = {} %}
 {% set other_metrics = {} %}
