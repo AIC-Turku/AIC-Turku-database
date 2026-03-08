@@ -1,20 +1,20 @@
 terms:
-  - id: nikon_perfect_focus
-    label: "Nikon Perfect Focus System"
-    description: "Nikon hardware autofocus system that compensates for focus drift during imaging."
-    synonyms: ["PFS", "perfect focus"]
-  - id: zeiss_definite_focus
-    label: "Zeiss Definite Focus"
-    description: "Zeiss hardware autofocus system for maintaining focal position over time."
-    synonyms: ["definite focus", "Definite Focus"]
-  - id: leica_afc
-    label: "Leica AFC"
-    description: "Leica adaptive focus control hardware autofocus system."
-    synonyms: ["AFC", "adaptive focus control"]
-  - id: olympus_zdc
-    label: "Olympus ZDC"
-    description: "Olympus zero drift compensation hardware autofocus system."
-    synonyms: ["ZDC", "zero drift compensation"]
+  - id: infrared_reflection
+    label: "Infrared Reflection Autofocus"
+    description: "Hardware autofocus based on infrared reflection from the coverslip or sample interface to compensate focus drift."
+    synonyms: ["PFS", "perfect focus", "Nikon Perfect Focus", "Nikon Perfect Focus System", "Definite Focus", "Zeiss Definite Focus", "Leica AFC", "Olympus ZDC"]
+  - id: contrast_based
+    label: "Contrast-Based Autofocus"
+    description: "Autofocus that optimizes image sharpness or contrast directly from the captured image signal."
+    synonyms: ["image-based autofocus", "software autofocus", "focus metric"]
+  - id: laser_reflection
+    label: "Laser Reflection Autofocus"
+    description: "Hardware autofocus that uses reflected laser light to maintain focal position during imaging."
+    synonyms: ["reflection autofocus", "hardware focus lock"]
+  - id: capacitance_based
+    label: "Capacitance-Based Autofocus"
+    description: "Autofocus using capacitive sensing to track objective-to-sample distance and stabilize focus."
+    synonyms: ["capacitive autofocus"]
   - id: other
     label: "Other"
     description: "Hardware autofocus implementation not covered by the predefined terms."
