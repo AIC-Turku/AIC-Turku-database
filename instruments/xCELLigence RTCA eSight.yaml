@@ -7,103 +7,117 @@ instrument:
   funding: Testament funds from Henna Ruusunen
   stand_orientation: benchtop
   location: BioCity, 5th floor
-  notes: "Real-time cell analysis system combining label-free impedance monitoring\
-    \ with live-cell imaging.\nDimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg.\nPlaced\
-    \ inside a standard CO2 incubator for operation (Operating range: 20-40\xB0C,\
-    \ 5-98% RH).\n"
+  notes: "Real-time cell analysis system combining label-free impedance monitoring with live-cell imaging.\nDimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg.\nPlaced inside a standard CO2 incubator for operation (Operating range: 20-40°C, 5-98% RH)."
   url: https://www.agilent.com/lifesciences/eSight
+
 modalities:
-- impedance_cytometry
-- widefield_fluorescence
-- transmitted_brightfield
-- live_cell_imaging
+  - impedance_cytometry
+  - widefield_fluorescence
+  - transmitted_brightfield
+  - live_cell_imaging
+
 modules:
-- name: environmental_enclosure
-  notes: "Designed for operation inside cell culture incubator (20-40\xB0C, 5-98%\
-    \ RH)."
-  url: ''
-- name: hardware_autofocus
-  notes: Image-based autofocus.
-  url: ''
-- name: impedance_module
-  notes: 22 mV rms +/- 20% at 10 kHz; Accuracy +/- (1.5% + 1 Ohm).
-  url: ''
+  - name: environmental_enclosure
+    notes: "Designed for operation inside cell culture incubator (20-40°C, 5-98% RH)."
+    url: ''
+  - name: hardware_autofocus # Flag: 'Image-based' is typically software AF. Verify if this should be declared as a hardware module.
+    notes: Image-based autofocus.
+    url: ''
+  - name: impedance_module
+    notes: 22 mV rms +/- 20% at 10 kHz; Accuracy +/- (1.5% + 1 Ohm).
+    url: ''
+
 software:
-  acquisition:
+  - role: acquisition
     name: RTCA eSight Software
     version: ''
     url: https://www.agilent.com/lifesciences/eSight
+
 hardware:
+  environment:
+    temperature_control: true # Flag: Conditionally required due to 'environmental_enclosure' module.
+    co2_control: true
+    humidity_control: true
+    notes: "Operates inside a standard cell culture incubator."
+
+  hardware_autofocus:
+    is_installed: true
+    type: image_based # Flag: Verify 'image_based' is a valid canonical ID in vocab/autofocus_types.yaml.
+
   scanner:
     type: stage_scanning
     notes: Supports E-Plate 96, E-Plate VIEW 96, and ANSI/SLAS standard plates.
     url: ''
+
   light_sources:
-  - kind: led
-    manufacturer: Agilent
-    model: High-power LED (Blue)
-    wavelength_nm: 381-404
-    power: ''
-    notes: Blue Excitation
-    url: ''
-  - kind: led
-    manufacturer: Agilent
-    model: High-power LED (Green)
-    wavelength_nm: 473-491
-    power: ''
-    notes: Green Excitation
-    url: ''
-  - kind: led
-    manufacturer: Agilent
-    model: High-power LED (Red)
-    wavelength_nm: 584-605
-    power: ''
-    notes: Red Excitation
-    url: ''
+    - kind: led
+      manufacturer: Agilent
+      model: High-power LED (Blue)
+      wavelength_nm: 381-404 # Flag: Verify if your spectral_descriptor regex supports this format (vs center/width like 392/23)
+      power: ''
+      notes: Blue Excitation
+      url: ''
+    - kind: led
+      manufacturer: Agilent
+      model: High-power LED (Green)
+      wavelength_nm: 473-491
+      power: ''
+      notes: Green Excitation
+      url: ''
+    - kind: led
+      manufacturer: Agilent
+      model: High-power LED (Red)
+      wavelength_nm: 584-605
+      power: ''
+      notes: Red Excitation
+      url: ''
+
   detectors:
-  - kind: scmos
-    manufacturer: Sony
-    model: 5.0 MP Monochromatic CMOS
-    notes: "3.45 \xB5m pixel size, up to 35 fps."
-    url: ''
-  splitters: []
+    - kind: cmos # Changed from scmos to cmos based on notes
+      manufacturer: Sony
+      model: 5.0 MP Monochromatic CMOS
+      pixel_pitch_um: 3.45
+      notes: "up to 35 fps."
+      url: ''
+
   filters:
-  - name: Blue Channel
-    location: Internal
-    product_code: ''
-    excitation: 381-404
-    dichroic: ''
-    emission: 427-462
-    notes: e.g., DAPI/Hoechst
-    url: ''
-  - name: Green Channel
-    location: Internal
-    product_code: ''
-    excitation: 473-491
-    dichroic: ''
-    emission: 503-561
-    notes: e.g., FITC/GFP
-    url: ''
-  - name: Red Channel
-    location: Internal
-    product_code: ''
-    excitation: 584-605
-    dichroic: ''
-    emission: 621-720
-    notes: e.g., Cy3/Texas Red
-    url: ''
+    - name: Blue Channel
+      location: Internal
+      product_code: ''
+      excitation: 381-404
+      dichroic: '' # Flag: Required because widefield_fluorescence is present.
+      emission: 427-462
+      notes: e.g., DAPI/Hoechst
+      url: ''
+    - name: Green Channel
+      location: Internal
+      product_code: ''
+      excitation: 473-491
+      dichroic: '' # Flag: Required because widefield_fluorescence is present.
+      emission: 503-561
+      notes: e.g., FITC/GFP
+      url: ''
+    - name: Red Channel
+      location: Internal
+      product_code: ''
+      excitation: 584-605
+      dichroic: '' # Flag: Required because widefield_fluorescence is present.
+      emission: 621-720
+      notes: e.g., Cy3/Texas Red
+      url: ''
+
   objectives:
-  - id: 10x_air
-    manufacturer: Agilent
-    model: 10x Objective
-    product_code: ''
-    magnification: 10.0
-    numerical_aperture: ''
-    working_distance: ''
-    immersion: air
-    correction: ''
-    afc_compatible: true
-    specialties: []
-    notes: "Default. Resolution: 1.72 \xB5m/pixel. FOV: 1.68 x 1.40 mm."
-    url: ''
-    is_installed: true
+    - id: 10x_air
+      manufacturer: Agilent
+      model: 10x Objective
+      product_code: ''
+      magnification: 10.0
+      numerical_aperture: null # Flag: Required field. Needs a positive number.
+      working_distance: ''
+      immersion: air
+      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      afc_compatible: true
+      specialties: []
+      notes: "Default. Resolution: 1.72 \xB5m/pixel. FOV: 1.68 x 1.40 mm."
+      url: ''
+      is_installed: true
