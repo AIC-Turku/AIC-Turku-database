@@ -240,7 +240,7 @@
 <div class="grid cards" markdown>
 
 {% for det in detectors %}
-{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.name or det.kind %}
+{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.kind %}
 {% set has_det_details = det.kind or det.pixel_pitch_um or det.sensor_format_px or det.binning or det.bit_depth or det.qe_peak_pct or det.read_noise_e or det.notes %}
 {% if det_title or has_det_details %}
 -   {% if det_title %}**{% if det.url %}[{{ det_title }}]({{ det.url }}){:target="_blank"}{% else %}{{ det_title }}{% endif %}**{% endif %}
@@ -272,7 +272,7 @@
 <div class="grid cards" markdown>
 
 {% for obj in objectives %}
-{% set obj_title = obj.model or obj.name %}
+{% set obj_title = obj.model %}
 {% if obj_title %}-   **{% if obj.url %}[{{ obj_title }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj_title }}{% endif %}**{% endif %}{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
     {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
 
