@@ -172,12 +172,15 @@
 <div class="grid cards" markdown>
 
 {% for sw in instrument.software %}
--   **{% if sw.url %}[{{ sw.name or 'Unknown Software' }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name or 'Unknown Software' }}{% endif %}**
+{% set has_sw_content = sw.name or sw.component or sw.developer or sw.version %}
+{% if has_sw_content %}
+-   {% if sw.name %}**{% if sw.url %}[{{ sw.name }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name }}{% endif %}**{% endif %}
 
-    ---
+    {% if sw.component or sw.developer or sw.version %}---{% endif %}
 
-    <span class="aic-muted">Component:</span> {{ sw.component or '—' }}<br>
-    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}
+    {% if sw.component %}<span class="aic-muted">Component:</span> {{ sw.component }}<br>{% endif %}
+    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer %}<br>{% elif sw.component %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}
+{% endif %}
 
 {% endfor %}
 
@@ -196,15 +199,19 @@
 <div class="grid cards" markdown>
 
 {% for src in light_sources %}
--   **{% if src.url %}[{{ src.model or 'Unknown Model' }}]({{ src.url }}){:target="_blank"}{% else %}{{ src.model or 'Unknown Model' }}{% endif %}**
+{% set src_title = src.model or src.manufacturer or src.kind %}
+{% set has_src_details = src.kind or src.technology or src.wavelength_nm or src.power or src.notes %}
+{% if src_title or has_src_details %}
+-   {% if src_title %}**{% if src.url %}[{{ src_title }}]({{ src.url }}){:target="_blank"}{% else %}{{ src_title }}{% endif %}**{% endif %}
 
-    ---
+    {% if has_src_details %}---{% endif %}
 
-    **Type:** {{ src.kind or '—' }}
+    {% if src.kind %}**Type:** {{ src.kind }}{% endif %}
     {% if src.technology %}<br>**Technology:** `{{ src.technology }}`{% endif %}
     {% if src.wavelength_nm %}<br>**Wavelength:** `{{ src.wavelength_nm }} nm`{% endif %}
     {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
     {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
+{% endif %}
 
 {% endfor %}
 
@@ -232,11 +239,14 @@
 <div class="grid cards" markdown>
 
 {% for det in detectors %}
--   **{% if det.url %}[{{ det.manufacturer or 'Unknown' }} {{ det.model or '' }}]({{ det.url }}){:target="_blank"}{% else %}{{ det.manufacturer or 'Unknown' }} {{ det.model or '' }}{% endif %}**
+{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.name or det.kind %}
+{% set has_det_details = det.kind or det.pixel_pitch_um or det.sensor_format_px or det.binning or det.bit_depth or det.qe_peak_pct or det.read_noise_e or det.notes %}
+{% if det_title or has_det_details %}
+-   {% if det_title %}**{% if det.url %}[{{ det_title }}]({{ det.url }}){:target="_blank"}{% else %}{{ det_title }}{% endif %}**{% endif %}
 
-    ---
+    {% if has_det_details %}---{% endif %}
 
-    **Type:** {{ det.kind or '—' }}
+    {% if det.kind %}**Type:** {{ det.kind }}{% endif %}
     {% if det.pixel_pitch_um %}<br>**Pixel Pitch:** `{{ det.pixel_pitch_um }} µm`{% endif %}
     {% if det.sensor_format_px %}<br>**Sensor Format:** `{{ det.sensor_format_px }}`{% endif %}
     {% if det.binning %}<br>**Binning:** `{{ det.binning }}`{% endif %}
@@ -244,6 +254,7 @@
     {% if det.qe_peak_pct %}<br>**QE (peak):** `{{ det.qe_peak_pct }}%`{% endif %}
     {% if det.read_noise_e %}<br>**Read Noise:** `{{ det.read_noise_e }} e-`{% endif %}
     {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
+{% endif %}
 
 {% endfor %}
 
@@ -258,7 +269,8 @@
 <div class="grid cards" markdown>
 
 {% for obj in objectives %}
--   **{% if obj.url %}[{{ obj.model or 'Unknown Model' }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.model or 'Unknown Model' }}{% endif %}**{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
+{% set obj_title = obj.model or obj.name %}
+{% if obj_title %}-   **{% if obj.url %}[{{ obj_title }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj_title }}{% endif %}**{% endif %}{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
     {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
 
     ---
@@ -331,13 +343,17 @@
 <div class="grid cards" markdown>
 
 {% for mag in magnification_changers %}
--   **{% if mag.url %}[{{ mag.model or 'Unknown Model' }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag.model or 'Unknown Model' }}{% endif %}**
+{% set mag_title = mag.model or mag.name %}
+{% set has_mag_details = mag.manufacturer or mag.magnification is not none or mag.notes %}
+{% if mag_title or has_mag_details %}
+-   {% if mag_title %}**{% if mag.url %}[{{ mag_title }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag_title }}{% endif %}**{% endif %}
 
-    ---
+    {% if has_mag_details %}---{% endif %}
 
-    **Manufacturer:** {{ mag.manufacturer or '—' }}
+    {% if mag.manufacturer %}**Manufacturer:** {{ mag.manufacturer }}{% endif %}
     {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
     {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
+{% endif %}
 
 {% endfor %}
 

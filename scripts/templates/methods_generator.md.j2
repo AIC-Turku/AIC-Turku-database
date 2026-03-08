@@ -266,7 +266,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function formatVocabLabel(vocabSection, value) {
         const id = (value?.id || value?.name || value || "").toString().trim();
-        if (!id) return "Unknown";
+        if (!id) return "";
 
         if (vocabSection) {
             if (Array.isArray(vocabSection)) {
@@ -340,7 +340,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function formatDetectorLabel(detector) {
         const manufacturer = (detector?.manufacturer || detector?.name || "").toString().trim();
-        const model = (detector?.model || "Unknown detector").toString().trim();
+        const model = (detector?.model || "").toString().trim();
         const kind = (detector?.kind || detector?.type || "").toString().trim();
         const label = [manufacturer, model].filter(Boolean).join(" ") + (kind ? ` (${kind})` : "");
         const details = [];
@@ -435,14 +435,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         const softwareObjectProcessing = ["analysis", "deconvolution", "flim", "post_processing", "reconstruction"]
             .map(roleName => softwareObject?.[roleName])
             .filter(role => role?.name || role?.version)
-            .map(role => `${role?.name || "Unknown software"}${role?.version ? ` (v${role.version})` : ""}`);
+            .map(role => {
+                const roleName = (role?.name || "").toString().trim();
+                if (!roleName) return "";
+                return `${roleName}${role?.version ? ` (v${role.version})` : ""}`;
+            })
+            .filter(Boolean);
 
         const listProcessingSoftware = software
             .filter(s => {
                 const role = (s?.role || "").toString().toLowerCase();
                 return role ? !/(acquisition|control|capture)/.test(role) : false;
             })
-            .map(s => `${s?.name || "Unknown software"}${s?.version ? ` (v${s.version})` : ""}`);
+            .map(s => {
+                const softwareName = (s?.name || "").toString().trim();
+                if (!softwareName) return "";
+                return `${softwareName}${s?.version ? ` (v${s.version})` : ""}`;
+            })
+            .filter(Boolean);
 
         const fallbackProcessingSoftware = softwareObjectProcessing.length > 0 ? softwareObjectProcessing : listProcessingSoftware;
         const softwareText = (roleSoftware.length > 0 ? roleSoftware : fallbackProcessingSoftware).join(", ");
