@@ -253,6 +253,24 @@ sections:
         used_by: [audit_pdf, dashboard]
         rationale: Helpful vendor or manual reference.
 
+      - path: modules[].manufacturer
+        title: Module manufacturer
+        status: conditional
+        type: string
+        required_if:
+          parent_present: "modules[]"
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
+
+      - path: modules[].model
+        title: Module model
+        status: conditional
+        type: string
+        required_if:
+          parent_present: "modules[]"
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
+
   - id: software
     title: Software
     rules:
