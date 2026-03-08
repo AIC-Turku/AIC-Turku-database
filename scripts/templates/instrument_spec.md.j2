@@ -194,6 +194,36 @@
 
 ## Hardware Configuration
 
+### 🌡️ Environmental Control
+
+{% set show_temperature = environment.temperature_control is sameas true or environment.temperature_range %}
+{% set show_co2 = environment.co2_control is sameas true or environment.co2_range %}
+{% set show_o2 = environment.o2_control is sameas true or environment.o2_range %}
+{% set show_humidity = environment.humidity_control is sameas true %}
+{% set has_environment = show_temperature or show_co2 or show_o2 or show_humidity or environment.notes %}
+{% if has_environment %}
+{% if show_temperature %}
+- **Temperature Control:** {{ bool_label(environment.temperature_control) }}
+  {% if environment.temperature_range %}<br>**Temperature Range:** `{{ environment.temperature_range }}`{% endif %}
+{% endif %}
+{% if show_co2 %}
+- **CO2 Control:** {{ bool_label(environment.co2_control) }}
+  {% if environment.co2_range %}<br>**CO2 Range:** `{{ environment.co2_range }}`{% endif %}
+{% endif %}
+{% if show_o2 %}
+- **O2 Control:** {{ bool_label(environment.o2_control) }}
+  {% if environment.o2_range %}<br>**O2 Range:** `{{ environment.o2_range }}`{% endif %}
+{% endif %}
+{% if show_humidity %}
+- **Humidity Control:** {{ bool_label(environment.humidity_control) }}
+{% endif %}
+{% if environment.notes %}
+- **Notes:** {{ environment.notes }}
+{% endif %}
+{% else %}
+> *No environmental control details recorded.*
+{% endif %}
+
 ### 💡 Light Sources
 
 {% if light_sources %}
@@ -365,29 +395,13 @@
 > *No magnification changers recorded.*
 {% endif %}
 
-### 🌡️ Environmental Control
-
-{% set has_environment = environment.temperature_control is not none or environment.temperature_range or environment.co2_control is not none or environment.co2_range or environment.o2_control is not none or environment.o2_range or environment.humidity_control is not none or environment.notes %}
-{% if has_environment %}
-- **Temperature Control:** {{ bool_label(environment.temperature_control) }}
-  {% if environment.temperature_range %}<br>**Temperature Range:** `{{ environment.temperature_range }}`{% endif %}
-  {% if environment.co2_control is not none %}<br>**CO2 Control:** {{ bool_label(environment.co2_control) }}{% endif %}
-  {% if environment.co2_range %}<br>**CO2 Range:** `{{ environment.co2_range }}`{% endif %}
-  {% if environment.o2_control is not none %}<br>**O2 Control:** {{ bool_label(environment.o2_control) }}{% endif %}
-  {% if environment.o2_range %}<br>**O2 Range:** `{{ environment.o2_range }}`{% endif %}
-  {% if environment.humidity_control is not none %}<br>**Humidity Control:** {{ bool_label(environment.humidity_control) }}{% endif %}
-  {% if environment.notes %}<br><small class="aic-muted">{{ environment.notes }}</small>{% endif %}
-{% else %}
-> *No environmental control details recorded.*
-{% endif %}
-
 ### 🧭 Stages & Focus Drives
 
 {% if stages %}
 | Type | Manufacturer | Model | Step Size (µm) |
 | --- | --- | --- | --- |
 {% for stage in stages %}
-| {{ pretty_id(stage.type) }} | {{ stage.manufacturer or '—' }} | {{ stage.model or '—' }} | {{ stage.step_size_um if stage.step_size_um is not none else '—' }} |
+| {{ pretty_id(stage.type) }} | {{ stage.manufacturer or '—' }} | {{ stage.model or '—' }} | {{ stage.step_size_um if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) else '—' }} |
 {% endfor %}
 {% else %}
 > *No stages or focus drives recorded.*
@@ -395,11 +409,12 @@
 
 ### ⚙️ Advanced Hardware
 
-{% set has_autofocus = hardware_autofocus.is_installed is not none or hardware_autofocus.type %}
+{% set autofocus_type = hardware_autofocus.type | trim if hardware_autofocus.type is string else hardware_autofocus.type %}
+{% set has_autofocus = hardware_autofocus.is_installed is not none or autofocus_type %}
 {% set has_triggering = triggering.primary_mode or triggering.notes %}
 {% if has_autofocus or has_triggering %}
 {% if has_autofocus %}
-- **Hardware Autofocus:** {{ bool_label(hardware_autofocus.is_installed) }}{% if hardware_autofocus.type %} — {{ pretty_id(hardware_autofocus.type) }}{% endif %}
+- **Hardware Autofocus:** {{ bool_label(hardware_autofocus.is_installed) }}{% if autofocus_type and hardware_autofocus.is_installed is not sameas false %} — {{ pretty_id(autofocus_type) }}{% endif %}
 {% endif %}
 {% if has_triggering %}
 - **Triggering:** {% if triggering.primary_mode %}{{ pretty_id(triggering.primary_mode) }}{% else %}—{% endif %}{% if triggering.notes %} — {{ triggering.notes }}{% endif %}
