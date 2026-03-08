@@ -128,6 +128,19 @@ def vocab_label(vocabulary: Vocabulary, vocab_name: str, term_id: str) -> str:
     return term.label if term else term_id
 
 
+def normalize_optional_bool(value: Any) -> bool | None:
+    """Normalize YAML-style booleans while preserving missing values as None."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "yes", "y", "1"}:
+            return True
+        if normalized in {"false", "no", "n", "0"}:
+            return False
+    return None
+
+
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     if not base_dir.exists() or not base_dir.is_dir():
         return []
@@ -484,6 +497,41 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
     ]
 
     scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
+    environment_raw = hardware.get("environment") if isinstance(hardware.get("environment"), dict) else {}
+    hardware_autofocus_raw = hardware.get("hardware_autofocus") if isinstance(hardware.get("hardware_autofocus"), dict) else {}
+    triggering_raw = hardware.get("triggering") if isinstance(hardware.get("triggering"), dict) else {}
+
+    environment = {
+        "temperature_control": normalize_optional_bool(environment_raw.get("temperature_control")),
+        "temperature_range": clean_text(environment_raw.get("temperature_range")),
+        "co2_control": normalize_optional_bool(environment_raw.get("co2_control")),
+        "co2_range": clean_text(environment_raw.get("co2_range")),
+        "o2_control": normalize_optional_bool(environment_raw.get("o2_control")),
+        "o2_range": clean_text(environment_raw.get("o2_range")),
+        "humidity_control": normalize_optional_bool(environment_raw.get("humidity_control")),
+        "notes": clean_text(environment_raw.get("notes")),
+    }
+
+    stages = [
+        {
+            "type": clean_text(stage.get("type")),
+            "manufacturer": clean_text(stage.get("manufacturer")),
+            "model": clean_text(stage.get("model")),
+            "step_size_um": stage.get("step_size_um"),
+        }
+        for stage in hardware.get("stages", [])
+        if isinstance(stage, dict)
+    ]
+
+    hardware_autofocus = {
+        "is_installed": normalize_optional_bool(hardware_autofocus_raw.get("is_installed")),
+        "type": clean_text(hardware_autofocus_raw.get("type")),
+    }
+
+    triggering = {
+        "primary_mode": clean_text(triggering_raw.get("primary_mode")),
+        "notes": clean_text(triggering_raw.get("notes")),
+    }
 
     return {
         "scanner": {
@@ -498,6 +546,10 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
         "splitters": splitters,
         "filters": filters,
         "magnification_changers": magnification_changers,
+        "environment": environment,
+        "stages": stages,
+        "hardware_autofocus": hardware_autofocus,
+        "triggering": triggering,
     }
 
 
@@ -1098,6 +1150,10 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         splitters = canonical_hardware.get("splitters", [])
         filters = canonical_hardware.get("filters", [])
         magnification_changers = canonical_hardware.get("magnification_changers", [])
+        environment = canonical_hardware.get("environment") if isinstance(canonical_hardware.get("environment"), dict) else {}
+        stages = canonical_hardware.get("stages", [])
+        hardware_autofocus = canonical_hardware.get("hardware_autofocus") if isinstance(canonical_hardware.get("hardware_autofocus"), dict) else {}
+        triggering = canonical_hardware.get("triggering") if isinstance(canonical_hardware.get("triggering"), dict) else {}
 
         inst["processed_hardware"] = {
             "modalities": [clean_text(m) for m in inst.get("modalities", []) if clean_text(m)],
@@ -1117,6 +1173,10 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             "splitters": splitters,
             "filters": filters,
             "magnification_changers": magnification_changers,
+            "environment": environment,
+            "stages": stages,
+            "hardware_autofocus": hardware_autofocus,
+            "triggering": triggering,
         }
 
         instrument_dir = docs_root / "instruments" / instrument_id

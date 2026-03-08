@@ -40,6 +40,21 @@ vocab_registry:
     path: vocab/detector_kinds.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  stage_types:
+    source: file
+    path: vocab/stage_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  autofocus_types:
+    source: file
+    path: vocab/autofocus_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  triggering_modes:
+    source: file
+    path: vocab/triggering_modes.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
   objective_immersion:
     source: file
     path: vocab/objective_immersion.yaml
@@ -807,3 +822,130 @@ sections:
         type: url
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
+
+
+  - id: advanced_hardware
+    title: Advanced hardware features
+    rules:
+      - path: hardware.environment.temperature_control
+        title: Temperature control available
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Indicates whether the system supports active temperature control for environmental regulation.
+
+      - path: hardware.environment.temperature_range
+        title: Temperature control range
+        status: optional
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Documents the supported temperature range or setpoint range for live-cell or environmentally controlled imaging.
+
+      - path: hardware.environment.co2_control
+        title: CO2 control available
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Indicates whether the system supports active CO2 regulation for live-cell imaging.
+
+      - path: hardware.environment.co2_range
+        title: CO2 control range
+        status: optional
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Documents the supported CO2 range or configured operating range when gas control is available.
+
+      - path: hardware.environment.o2_control
+        title: O2 control available
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Indicates whether the system supports active oxygen control for hypoxia or specialized environmental studies.
+
+      - path: hardware.environment.o2_range
+        title: O2 control range
+        status: optional
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Documents the supported O2 range or configured operating range when oxygen control is available.
+
+      - path: hardware.environment.humidity_control
+        title: Humidity control available
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Indicates whether the system provides humidity control as part of environmental regulation.
+
+      - path: hardware.environment.notes
+        title: Environmental control notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Free-text notes for environmental chamber configuration, limitations, or operating guidance.
+
+      - path: hardware.stages
+        title: Stages and focus drives
+        status: optional
+        type: list
+        item_type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Present when motorized or specialized stage and focus hardware is documented.
+
+      - path: hardware.stages[].type
+        title: Stage or focus drive type
+        status: optional
+        type: string
+        vocab: stage_types
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Classifies the stage or focus-drive hardware that is installed.
+
+      - path: hardware.stages[].manufacturer
+        title: Stage manufacturer
+        status: optional
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Helps identify the installed stage or focus-drive hardware.
+
+      - path: hardware.stages[].model
+        title: Stage model
+        status: optional
+        type: string
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Helps identify the installed stage or focus-drive hardware.
+
+      - path: hardware.stages[].step_size_um
+        title: Stage step size (um)
+        status: optional
+        type: positive_number
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Useful capability metadata for motorized stage or focus-drive hardware.
+
+      - path: hardware.hardware_autofocus.is_installed
+        title: Hardware autofocus installed
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Indicates whether a hardware autofocus system is currently installed.
+
+      - path: hardware.hardware_autofocus.type
+        title: Hardware autofocus type
+        status: optional
+        type: string
+        vocab: autofocus_types
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Describes the installed hardware autofocus implementation when present.
+
+      - path: hardware.triggering.primary_mode
+        title: Triggering primary mode
+        status: optional
+        type: string
+        vocab: triggering_modes
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Indicates whether synchronization is primarily hardware-triggered, software-triggered, or mixed.
+
+      - path: hardware.triggering.notes
+        title: Triggering notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Free-text notes for synchronization, timing, or external trigger details.

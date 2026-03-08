@@ -197,3 +197,33 @@ hardware:
       magnification: 1.5
       notes: ""
       url: ""
+
+
+  # TIER 3: Advanced Hardware Features (Optional)
+  # environment:
+  #   temperature_control: true
+  #   temperature_range: "Ambient to 45°C"
+  #   co2_control: true
+  #   co2_range: "0-10%"
+  #   o2_control: false
+  #   o2_range: "1-21%"
+  #   humidity_control: true
+  #   notes: "Stage-top incubation chamber for live-cell imaging"
+
+  # stages:
+  #   - type: xy_motorized
+  #     manufacturer: "ASI"
+  #     model: "MS-2000"
+  #     step_size_um: 0.1
+  #   - type: z_piezo
+  #     manufacturer: "Physik Instrumente"
+  #     model: "P-736"
+  #     step_size_um: 0.02
+
+  # hardware_autofocus:
+  #   is_installed: true
+  #   type: nikon_perfect_focus
+
+  # triggering:
+  #   primary_mode: hardware
+  #   notes: "Camera and illumination synchronized through TTL triggering"
