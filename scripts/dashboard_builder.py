@@ -438,10 +438,104 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
 
 
 def normalize_hardware(raw: Any) -> dict[str, Any]:
-    """Preserve hardware exactly as provided by YAML using schema-native keys."""
+    """Normalize hardware into schema-native canonical keys and strip empty values."""
     if not isinstance(raw, dict):
         return {}
-    return copy.deepcopy(raw)
+
+    def get_val(data: dict[str, Any], *keys: str) -> Any:
+        for key in keys:
+            if key in data:
+                return data.get(key)
+        return None
+
+    hw: dict[str, Any] = {}
+
+    scanner = raw.get("scanner")
+    if isinstance(scanner, dict):
+        hw["scanner"] = {
+            "type": get_val(scanner, "type", "id"),
+            "line_rate_hz": get_val(scanner, "line_rate_hz"),
+            "pinhole_um": get_val(scanner, "pinhole_um"),
+            "light_sheet_type": get_val(scanner, "light_sheet_type"),
+            "notes": get_val(scanner, "notes"),
+            "url": get_val(scanner, "url"),
+        }
+
+    light_sources_raw = raw.get("light_sources")
+    if isinstance(light_sources_raw, list):
+        hw["light_sources"] = [
+            {
+                "kind": get_val(light_source, "kind", "type"),
+                "manufacturer": get_val(light_source, "manufacturer"),
+                "model": get_val(light_source, "model", "name"),
+                "technology": get_val(light_source, "technology"),
+                "wavelength_nm": get_val(light_source, "wavelength_nm", "wavelength"),
+                "power": get_val(light_source, "power"),
+                "notes": get_val(light_source, "notes"),
+                "url": get_val(light_source, "url"),
+            }
+            for light_source in light_sources_raw
+            if isinstance(light_source, dict)
+        ]
+
+    detectors_raw = raw.get("detectors")
+    if isinstance(detectors_raw, list):
+        hw["detectors"] = [
+            {
+                "kind": get_val(detector, "kind", "type"),
+                "manufacturer": get_val(detector, "manufacturer", "name"),
+                "model": get_val(detector, "model"),
+                "pixel_pitch_um": get_val(detector, "pixel_pitch_um", "pixel_size_um"),
+                "sensor_format_px": get_val(detector, "sensor_format_px"),
+                "binning": get_val(detector, "binning"),
+                "bit_depth": get_val(detector, "bit_depth"),
+                "qe_peak_pct": get_val(detector, "qe_peak_pct"),
+                "read_noise_e": get_val(detector, "read_noise_e"),
+                "notes": get_val(detector, "notes"),
+                "url": get_val(detector, "url"),
+            }
+            for detector in detectors_raw
+            if isinstance(detector, dict)
+        ]
+
+    objectives_raw = raw.get("objectives")
+    if isinstance(objectives_raw, list):
+        hw["objectives"] = [
+            {
+                "id": get_val(objective, "id"),
+                "manufacturer": get_val(objective, "manufacturer"),
+                "model": get_val(objective, "model", "name"),
+                "product_code": get_val(objective, "product_code"),
+                "magnification": get_val(objective, "magnification"),
+                "numerical_aperture": get_val(objective, "numerical_aperture", "na"),
+                "working_distance": get_val(objective, "working_distance", "wd"),
+                "immersion": get_val(objective, "immersion"),
+                "correction": get_val(objective, "correction", "correction_class"),
+                "afc_compatible": get_val(objective, "afc_compatible", "afc"),
+                "is_installed": get_val(objective, "is_installed"),
+                "specialties": get_val(objective, "specialties"),
+                "notes": get_val(objective, "notes"),
+                "url": get_val(objective, "url"),
+            }
+            for objective in objectives_raw
+            if isinstance(objective, dict)
+        ]
+
+    passthrough_keys = [
+        "filters",
+        "splitters",
+        "magnification_changers",
+        "environment",
+        "stages",
+        "hardware_autofocus",
+        "triggering",
+    ]
+    for key in passthrough_keys:
+        if key in raw:
+            hw[key] = raw.get(key)
+
+    cleaned = strip_empty_values(hw)
+    return cleaned if isinstance(cleaned, dict) else {}
 
 
 def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, retired: bool) -> dict[str, Any] | None:
