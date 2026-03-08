@@ -140,32 +140,100 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                 objectives_entries.append(_entry(f"Objective {idx}", objective, True))
                 continue
             
-            # Let the schema handle missing data validation. We format it nicely for the table.
             is_installed_val = objective.get("is_installed")
             if is_installed_val is None:
-                installed_text = None  # Passes to _entry as missing
+                installed_text = None
             else:
                 installed_text = "Yes" if is_installed_val in (True, "true", "True") else "No"
             
             objectives_entries.extend(
                 [
                     _entry(f"Objective {idx} Manufacturer", objective.get("manufacturer")),
-                    _entry(f"Objective {idx} Model", objective.get("name")),
+                    _entry(f"Objective {idx} Model", objective.get("model")),
                     _entry(f"Objective {idx} Magnification", objective.get("magnification")),
                     _entry(
                         f"Objective {idx} Numerical Aperture",
-                        objective.get("na"),
-                        is_warning=_na_requires_review(objective.get("na")),
+                        objective.get("numerical_aperture"),
+                        is_warning=_na_requires_review(objective.get("numerical_aperture")),
                         warning_message="NA is missing or non-numeric; verify against manufacturer specs.",
                     ),
                     _entry(f"Objective {idx} Immersion", objective.get("immersion")),
                     _entry(f"Objective {idx} Correction", objective.get("correction")),
-                    _entry(f"Objective {idx} Working Distance", objective.get("wd"), is_optional=True),
+                    _entry(f"Objective {idx} Working Distance", objective.get("working_distance"), is_optional=True),
                     _entry(
                         f"Objective {idx} Is Installed", 
                         installed_text,
-                        is_warning=True,  # Force the warning UI block
-                        warning_message="Please physically verify that this objective is currently mounted.",
+                    ),
+                ]
+            )
+
+    filters = hardware.get("filters")
+    filter_entries: list[dict[str, Any]] = []
+    if not isinstance(filters, list) or len(filters) == 0:
+        filter_entries.append(_entry("Filters", filters if filters is not None else [], True))
+    else:
+        for idx, component in enumerate(filters, start=1):
+            if not isinstance(component, dict):
+                filter_entries.append(_entry(f"Filter {idx}", component, True))
+                continue
+            filter_entries.extend(
+                [
+                    _entry(f"Filter {idx} Manufacturer", component.get("manufacturer")),
+                    _entry(f"Filter {idx} Model", component.get("model")),
+                    _entry(f"Filter {idx} Wavelength (nm)", component.get("wavelength_nm"), is_optional=True),
+                    _entry(f"Filter {idx} Numerical Aperture", component.get("numerical_aperture"), is_optional=True),
+                    _entry(f"Filter {idx} Working Distance", component.get("working_distance"), is_optional=True),
+                ]
+            )
+
+    splitters = hardware.get("splitters")
+    splitter_entries: list[dict[str, Any]] = []
+    if not isinstance(splitters, list) or len(splitters) == 0:
+        splitter_entries.append(_entry("Splitters", splitters if splitters is not None else [], True))
+    else:
+        for idx, component in enumerate(splitters, start=1):
+            if not isinstance(component, dict):
+                splitter_entries.append(_entry(f"Splitter {idx}", component, True))
+                continue
+            splitter_entries.extend(
+                [
+                    _entry(f"Splitter {idx} Manufacturer", component.get("manufacturer")),
+                    _entry(f"Splitter {idx} Model", component.get("model")),
+                    _entry(f"Splitter {idx} Wavelength (nm)", component.get("wavelength_nm"), is_optional=True),
+                    _entry(f"Splitter {idx} Numerical Aperture", component.get("numerical_aperture"), is_optional=True),
+                    _entry(f"Splitter {idx} Working Distance", component.get("working_distance"), is_optional=True),
+                ]
+            )
+
+    magnification_changers = hardware.get("magnification_changers")
+    magnification_changer_entries: list[dict[str, Any]] = []
+    if not isinstance(magnification_changers, list) or len(magnification_changers) == 0:
+        magnification_changer_entries.append(
+            _entry("Magnification Changers", magnification_changers if magnification_changers is not None else [], True)
+        )
+    else:
+        for idx, component in enumerate(magnification_changers, start=1):
+            if not isinstance(component, dict):
+                magnification_changer_entries.append(_entry(f"Magnification Changer {idx}", component, True))
+                continue
+            magnification_changer_entries.extend(
+                [
+                    _entry(f"Magnification Changer {idx} Manufacturer", component.get("manufacturer")),
+                    _entry(f"Magnification Changer {idx} Model", component.get("model")),
+                    _entry(
+                        f"Magnification Changer {idx} Wavelength (nm)",
+                        component.get("wavelength_nm"),
+                        is_optional=True,
+                    ),
+                    _entry(
+                        f"Magnification Changer {idx} Numerical Aperture",
+                        component.get("numerical_aperture"),
+                        is_optional=True,
+                    ),
+                    _entry(
+                        f"Magnification Changer {idx} Working Distance",
+                        component.get("working_distance"),
+                        is_optional=True,
                     ),
                 ]
             )
@@ -182,12 +250,12 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
             light_source_entries.extend(
                 [
                     _entry(f"Light Source {idx} Manufacturer", source.get("manufacturer")),
-                    _entry(f"Light Source {idx} Model", source.get("name")),
+                    _entry(f"Light Source {idx} Model", source.get("model")),
                     _entry(f"Light Source {idx} Kind/Type", _component_kind(source)),
                     _entry(
                         f"Light Source {idx} Wavelength (nm)",
-                        source.get("wavelength"),
-                        is_warning=_wavelength_requires_review(source.get("wavelength")),
+                        source.get("wavelength_nm"),
+                        is_warning=_wavelength_requires_review(source.get("wavelength_nm")),
                         warning_message="Wavelength is descriptive; provide numeric value when available.",
                     ),
                     _entry(f"Light Source {idx} Power", source.get("power"), is_optional=True),
@@ -206,7 +274,7 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
             detector_entries.extend(
                 [
                     _entry(f"Detector {idx} Kind/Type", _component_kind(detector)),
-                    _entry(f"Detector {idx} Manufacturer", detector.get("name")),
+                    _entry(f"Detector {idx} Manufacturer", detector.get("manufacturer")),
                     _entry(f"Detector {idx} Model", detector.get("model")),
                     _entry(f"Detector {idx} Pixel Pitch (µm)", detector.get("pixel_pitch_um")),
                     _entry(f"Detector {idx} Sensor Format (px)", detector.get("sensor_format_px"), is_optional=True),
@@ -272,6 +340,9 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
         "software": software_entries,
         "scanner": scanner_entries,
         "objectives": objectives_entries,
+        "filters": filter_entries,
+        "splitters": splitter_entries,
+        "magnification_changers": magnification_changer_entries,
         "light_sources": light_source_entries,
         "detectors": detector_entries,
         "environment": environment_entries,
