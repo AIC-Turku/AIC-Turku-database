@@ -11,72 +11,16 @@
 {%- endmacro %}
 
 {% macro bool_label(value) -%}
-{%- if value is sameas true -%}Yes
-{%- elif value is sameas false -%}No
-{%- else -%}—
-{%- endif -%}
+{%- if value is sameas true -%}Yes{%- elif value is sameas false -%}No{%- else -%}—{%- endif -%}
 {%- endmacro %}
 
 {% macro pretty_id(value) -%}
-{%- if value -%}{{ value | replace('_', ' ') | title }}
-{%- else -%}—
-{%- endif -%}
-{%- endmacro %}
-
-{% macro ext_link(label, url=None) -%}
-{%- if label -%}
-  {%- if url -%}[{{ label }}]({{ url }}){:target="_blank"}
-  {%- else -%}{{ label }}
-  {%- endif -%}
-{%- else -%}—
-{%- endif -%}
-{%- endmacro %}
-
-{% macro muted_value(value, code=false) -%}
-{%- if value is not none and value != '' and value != [] -%}
-  {%- if code -%}`{{ value }}`
-  {%- else -%}{{ value }}
-  {%- endif -%}
-{%- else -%}<span class="aic-muted">—</span>
-{%- endif -%}
-{%- endmacro %}
-
-{% macro chip(text, muted=false) -%}
-{%- if text -%}
-<span class="aic-chip{% if muted %} aic-chip--muted{% endif %}">{{ text }}</span>
-{%- endif -%}
-{%- endmacro %}
-
-{% macro chips(values, muted=false) -%}
-{%- if values -%}
-<div class="aic-chiprow">
-  {%- for item in values %}
-    {{ chip(item, muted=muted) }}
-  {%- endfor %}
-</div>
-{%- else -%}
-<span class="aic-muted">—</span>
-{%- endif -%}
-{%- endmacro %}
-
-{% macro kv(label, value, code=false) -%}
-{%- if value is not none and value != '' and value != [] -%}
-<div><span class="aic-muted">{{ label }}:</span> {% if code %}`{{ value }}`{% else %}{{ value }}{% endif %}</div>
-{%- endif -%}
-{%- endmacro %}
-
-{% macro render_notes(value) -%}
-{%- if value -%}<small class="aic-muted">{{ value }}</small>{%- endif -%}
-{%- endmacro %}
-
-{% macro section_empty(text) -%}
-> *{{ text }}*
+{%- if value -%}{{ value | replace('_', ' ') | title }}{%- else -%}—{%- endif -%}
 {%- endmacro %}
 
 {% set canonical = instrument.canonical if instrument.canonical else {} %}
 {% set canonical_hardware = canonical.hardware if canonical.hardware else {} %}
 {% set policy = canonical.policy if canonical.policy else {} %}
-
 {% set light_sources = canonical_hardware.light_sources if canonical_hardware else [] %}
 {% set detectors = canonical_hardware.detectors if canonical_hardware else [] %}
 {% set objectives = canonical_hardware.objectives if canonical_hardware else [] %}
@@ -90,22 +34,19 @@
 {% set scanner = canonical_hardware.scanner if canonical_hardware and canonical_hardware.scanner else {} %}
 {% set module_names = instrument.modules | map(attribute='name') | list if instrument.modules else [] %}
 
-{% set hardware_count = (light_sources | length) + (detectors | length) + (objectives | length) + (filters | length) + (splitters | length) + (stages | length) %}
-{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
-
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
 <div class="aic-topactions" markdown="span">
   [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
 </div>
 
+{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
 !!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
     {{ instrument.status.reason }}
 
 <div class="aic-hero">
   <div class="aic-hero__media">
-    <img src="../../assets/images/{{ instrument.image_filename }}"
-         alt="{{ instrument.display_name }}"
+    <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
          onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
   </div>
 
@@ -139,15 +80,17 @@
         <div class="aic-muted">Funding</div>
         <div>{{ instrument.funding or '—' }}</div>
       </div>
-      <div class="aic-fact">
-        <div class="aic-muted">Recorded Components</div>
-        <div>{{ hardware_count }}</div>
-      </div>
     </div>
 
     <div class="aic-section">
       <div class="aic-section__title">Modalities</div>
-      {{ chips(instrument.modalities_display) }}
+      <div class="aic-chiprow">
+        {% for mod in instrument.modalities_display %}
+          <span class="aic-chip">{{ mod }}</span>
+        {% else %}
+          <span class="aic-muted">—</span>
+        {% endfor %}
+      </div>
     </div>
 
     {% if instrument.modules %}
@@ -164,280 +107,200 @@
       </div>
     </div>
     {% endif %}
+
   </div>
 </div>
-
-## Overview
-
-<div class="grid cards" markdown>
-
--   **Acquisition Summary**
-
-    ---
-
-    {{ kv('Manufacturer', instrument.manufacturer) }}
-    {{ kv('Model', instrument.model) }}
-    {{ kv('Stand Orientation', instrument.stand_orientation) }}
-    {{ kv('Location', instrument.location) }}
-    {{ kv('Year of Purchase', instrument.year_of_purchase) }}
-    {{ kv('Funding', instrument.funding) }}
-
--   **Hardware Summary**
-
-    ---
-
-    {{ kv('Objectives', objectives | length) }}
-    {{ kv('Detectors', detectors | length) }}
-    {{ kv('Light Sources', light_sources | length) }}
-    {{ kv('Filters', filters | length) }}
-    {{ kv('Splitters', splitters | length) }}
-    {{ kv('Stages', stages | length) }}
-
--   **Advanced Features**
-
-    ---
-
-    {{ kv('Environmental Control', 'Present' if (environment.temperature_control is sameas true or environment.co2_control is sameas true or environment.o2_control is sameas true or environment.humidity_control is sameas true or environment.temperature_range or environment.co2_range or environment.o2_range or environment.notes) else 'Not recorded') }}
-    {{ kv('Hardware Autofocus', bool_label(hardware_autofocus.is_installed) if hardware_autofocus.is_installed is not none else '—') }}
-    {{ kv('Triggering', pretty_id(triggering.primary_mode) if triggering.primary_mode else '—') }}
-    {{ kv('Scanner', pretty_id(scanner.type) if scanner and scanner.type and scanner.type != 'none' else '—') }}
-
-</div>
-
-{% if policy.missing_required or policy.missing_conditional or policy.alias_fallbacks %}
-## Metadata Completeness
-
-{% if policy.missing_required %}
-!!! danger "Missing required fields"
-    {% for item in policy.missing_required %}
-    - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
-    {% endfor %}
-{% endif %}
-
-{% if policy.missing_conditional %}
-!!! warning "Missing conditional fields currently applicable"
-    {% for item in policy.missing_conditional %}
-    - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
-    {% endfor %}
-{% endif %}
-
-{% if policy.alias_fallbacks %}
-??? info "Legacy aliases currently accepted"
-    {% for item in policy.alias_fallbacks %}
-    - `{{ item.alias }}` → `{{ item.path }}`
-    {% endfor %}
-{% endif %}
-{% endif %}
 
 {% if instrument.notes %}
 ## Capabilities
 
-<div class="grid cards" markdown>
+{% if instrument.notes.type %}
+- **Type:** {{ instrument.notes.type }}
+{% endif %}
 
--   **Recorded Capabilities**
+{% if instrument.notes.imaging_modes %}
+- **Imaging modes:** {{ instrument.notes.imaging_modes | join(', ') }}
+{% endif %}
 
-    ---
+{% if instrument.notes.filters %}
+- **Filters:**
+{% for f in instrument.notes.filters %}
+  - {{ f }}
+{% endfor %}
+{% endif %}
 
-    {% if instrument.notes.type %}{{ kv('Type', instrument.notes.type) }}{% endif %}
-    {% if instrument.notes.imaging_modes %}{{ kv('Imaging Modes', instrument.notes.imaging_modes | join(', ')) }}{% endif %}
-    {% if instrument.notes.raw %}{{ kv('Legacy Notes', instrument.notes.raw) }}{% endif %}
+{% if instrument.notes.additional_hardware %}
+- **Additional hardware:**
+{% for h in instrument.notes.additional_hardware %}
+  - {{ h }}
+{% endfor %}
+{% endif %}
 
--   **Additional Hardware**
-
-    ---
-
-    {% if instrument.notes.additional_hardware %}
-    {% for h in instrument.notes.additional_hardware %}
-    - {{ h }}
-    {% endfor %}
-    {% else %}
-    <span class="aic-muted">—</span>
-    {% endif %}
-
--   **Legacy Filter Notes**
-
-    ---
-
-    {% if instrument.notes.filters %}
-    {% for f in instrument.notes.filters %}
-    - {{ f }}
-    {% endfor %}
-    {% else %}
-    <span class="aic-muted">—</span>
-    {% endif %}
-
-</div>
+{% if instrument.notes.raw %}
+- **Notes:** {{ instrument.notes.raw }} <small class="aic-muted">(legacy notes fallback)</small>
+{% endif %}
 {% endif %}
 
 ## Software Environment
 
 {% if instrument.software %}
 <div class="grid cards" markdown>
+
 {% for sw in instrument.software %}
 {% set has_sw_content = sw.name or sw.role or sw.developer or sw.version or sw.notes %}
 {% if has_sw_content %}
--   **{{ ext_link(sw.name or 'Software', sw.url) }}**
+-   {% if sw.name %}**{% if sw.url %}[{{ sw.name }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name }}{% endif %}**{% endif %}
 
-    ---
+    {% if sw.role or sw.developer or sw.version or sw.notes %}---{% endif %}
 
-    {{ kv('Role', sw.role | replace("_", " ") | title if sw.role else None) }}
-    {{ kv('Developer', sw.developer) }}
-    {{ kv('Version', sw.version, code=true) }}
-    {% if sw.notes %}<small class="aic-muted">{{ sw.notes }}</small>{% endif %}
+    {% if sw.role %}<span class="aic-muted">Role:</span> {{ sw.role | replace("_", " ") | title }}<br>{% endif %}
+    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer or sw.role %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}{% if sw.notes %}{% if sw.developer or sw.version or sw.role %}<br>{% endif %}<small class="aic-muted">{{ sw.notes }}</small>{% endif %}
 {% endif %}
+
 {% endfor %}
+
 </div>
 {% else %}
-{{ section_empty('No software configurations recorded.') }}
+> *No software configurations recorded.*
 {% endif %}
 
 ---
 
 ## Hardware Configuration
 
-### Environmental Control
+### 🌡️ Environmental Control
 
 {% set show_temperature = environment.temperature_control is sameas true or environment.temperature_range %}
 {% set show_co2 = environment.co2_control is sameas true or environment.co2_range %}
 {% set show_o2 = environment.o2_control is sameas true or environment.o2_range %}
 {% set show_humidity = environment.humidity_control is sameas true %}
 {% set has_environment = show_temperature or show_co2 or show_o2 or show_humidity or environment.notes %}
-
 {% if has_environment %}
-<div class="grid cards" markdown>
-
--   **Temperature**
-
-    ---
-
-    {{ kv('Control', bool_label(environment.temperature_control)) }}
-    {{ kv('Range', environment.temperature_range, code=true) }}
-
--   **Gas Control**
-
-    ---
-
-    {{ kv('CO2 Control', bool_label(environment.co2_control)) }}
-    {{ kv('CO2 Range', environment.co2_range, code=true) }}
-    {{ kv('O2 Control', bool_label(environment.o2_control)) }}
-    {{ kv('O2 Range', environment.o2_range, code=true) }}
-
--   **Humidity & Notes**
-
-    ---
-
-    {{ kv('Humidity Control', bool_label(environment.humidity_control)) }}
-    {% if environment.notes %}<small class="aic-muted">{{ environment.notes }}</small>{% endif %}
-
-</div>
+{% if show_temperature %}
+- **Temperature Control:** {{ bool_label(environment.temperature_control) }}
+  {% if environment.temperature_range %}<br>**Temperature Range:** `{{ environment.temperature_range }}`{% endif %}
+{% endif %}
+{% if show_co2 %}
+- **CO2 Control:** {{ bool_label(environment.co2_control) }}
+  {% if environment.co2_range %}<br>**CO2 Range:** `{{ environment.co2_range }}`{% endif %}
+{% endif %}
+{% if show_o2 %}
+- **O2 Control:** {{ bool_label(environment.o2_control) }}
+  {% if environment.o2_range %}<br>**O2 Range:** `{{ environment.o2_range }}`{% endif %}
+{% endif %}
+{% if show_humidity %}
+- **Humidity Control:** {{ bool_label(environment.humidity_control) }}
+{% endif %}
+{% if environment.notes %}
+- **Notes:** {{ environment.notes }}
+{% endif %}
 {% else %}
-{{ section_empty('No environmental control details recorded.') }}
+> *No environmental control details recorded.*
 {% endif %}
 
-### Light Sources
+### 💡 Light Sources
 
 {% if light_sources %}
 <div class="grid cards" markdown>
+
 {% for src in light_sources %}
-{% set src_title = ([src.manufacturer, src.model] | select | join(' ')) or src.kind or 'Light Source' %}
+{% set src_title = src.model or src.manufacturer or src.kind %}
 {% set has_src_details = src.kind or src.technology or src.wavelength_nm or src.power or src.notes %}
--   **{{ ext_link(src_title, src.url) }}**
+{% if src_title or has_src_details %}
+-   {% if src_title %}**{% if src.url %}[{{ src_title }}]({{ src.url }}){:target="_blank"}{% else %}{{ src_title }}{% endif %}**{% endif %}
 
-    ---
+    {% if has_src_details %}---{% endif %}
 
-    {{ kv('Type', pretty_id(src.kind) if src.kind else None) }}
-    {{ kv('Technology', pretty_id(src.technology) if src.technology else None, code=src.technology is not none) }}
-    {{ kv('Wavelength', src.wavelength_nm ~ ' nm' if src.wavelength_nm else None, code=src.wavelength_nm is not none) }}
-    {{ kv('Power', src.power, code=true) }}
-    {% if src.notes %}<small class="aic-muted">{{ src.notes }}</small>{% endif %}
-{% endfor %}
-</div>
-{% else %}
-{{ section_empty('No light sources recorded.') }}
+    {% if src.kind %}**Type:** {{ src.kind }}{% endif %}
+    {% if src.technology %}<br>**Technology:** `{{ src.technology }}`{% endif %}
+    {% if src.wavelength_nm %}<br>**Wavelength:** `{{ src.wavelength_nm }} nm`{% endif %}
+    {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
+    {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
 {% endif %}
 
-### Scanner
+{% endfor %}
+
+</div>
+{% else %}
+> *No light sources recorded.*
+{% endif %}
+
+### 🧭 Scanner
 
 {% if scanner and scanner.type and scanner.type != 'none' %}
-<div class="grid cards" markdown>
-
--   **Scanner Configuration**
-
-    ---
-
-    {{ kv('Type', pretty_id(scanner.type)) }}
-    {{ kv('Light-sheet Type', pretty_id(scanner.light_sheet_type) if scanner.light_sheet_type else None) }}
-    {{ kv('Line Rate', scanner.line_rate_hz ~ ' Hz' if scanner.line_rate_hz else None, code=scanner.line_rate_hz is not none) }}
-    {{ kv('Pinhole', scanner.pinhole_um ~ ' µm' if scanner.pinhole_um else None, code=scanner.pinhole_um is not none) }}
-    {% if scanner.url %}{{ kv('Reference', '[' ~ scanner.url ~ '](' ~ scanner.url ~ '){:target="_blank"}') }}{% endif %}
-    {% if scanner.notes %}<small class="aic-muted">{{ scanner.notes }}</small>{% endif %}
-
-</div>
+- **Type:** {{ scanner.type }}
+  {% if scanner.light_sheet_type %}<br>**Light-sheet type:** {{ scanner.light_sheet_type }}{% endif %}
+  {% if scanner.line_rate_hz %}<br>**Line rate:** `{{ scanner.line_rate_hz }} Hz`{% endif %}
+  {% if scanner.pinhole_um %}<br>**Pinhole:** `{{ scanner.pinhole_um }} µm`{% endif %}
+  {% if scanner.url %}<br>**Reference:** [{{ scanner.url }}]({{ scanner.url }}){:target="_blank"}{% endif %}
+  {% if scanner.notes %}<br><small class="aic-muted">{{ scanner.notes }}</small>{% endif %}
 {% else %}
-{{ section_empty('No scanner details recorded.') }}
+> *No scanner details recorded.*
 {% endif %}
 
-### Detectors
+### 📷 Detectors
 
 {% if detectors and detectors | length > 0 %}
 <div class="grid cards" markdown>
+
 {% for det in detectors %}
-{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.kind or 'Detector' %}
--   **{{ ext_link(det_title, det.url) }}**
+{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.kind %}
+{% set has_det_details = det.kind or det.pixel_pitch_um or det.sensor_format_px or det.binning or det.bit_depth or det.qe_peak_pct or det.read_noise_e or det.notes %}
+{% if det_title or has_det_details %}
+-   {% if det_title %}**{% if det.url %}[{{ det_title }}]({{ det.url }}){:target="_blank"}{% else %}{{ det_title }}{% endif %}**{% endif %}
 
-    ---
+    {% if has_det_details %}---{% endif %}
 
-    {{ kv('Type', pretty_id(det.kind) if det.kind else None) }}
-    {{ kv('Pixel Pitch', det.pixel_pitch_um ~ ' µm' if det.pixel_pitch_um else None, code=det.pixel_pitch_um is not none) }}
-    {{ kv('Sensor Format', det.sensor_format_px, code=true) }}
-    {{ kv('Binning', det.binning, code=true) }}
-    {{ kv('Bit Depth', det.bit_depth, code=true) }}
-    {{ kv('QE (peak)', det.qe_peak_pct ~ '%' if det.qe_peak_pct else None, code=det.qe_peak_pct is not none) }}
-    {{ kv('Read Noise', det.read_noise_e ~ ' e-' if det.read_noise_e else None, code=det.read_noise_e is not none) }}
-    {% if det.notes %}<small class="aic-muted">{{ det.notes }}</small>{% endif %}
-{% endfor %}
-</div>
-{% elif 'camera_port' in module_names %}
-{{ section_empty('No integrated digital detectors. An external camera port is available for third-party imaging devices.') }}
-{% else %}
-{{ section_empty('Manual observation only (no digital detectors).') }}
+    {% if det.kind %}**Type:** {{ det.kind }}{% endif %}
+    {% if det.pixel_pitch_um %}<br>**Pixel Pitch:** `{{ det.pixel_pitch_um }} µm`{% endif %}
+    {% if det.sensor_format_px %}<br>**Sensor Format:** `{{ det.sensor_format_px }}`{% endif %}
+    {% if det.binning %}<br>**Binning:** `{{ det.binning }}`{% endif %}
+    {% if det.bit_depth %}<br>**Bit Depth:** `{{ det.bit_depth }}`{% endif %}
+    {% if det.qe_peak_pct %}<br>**QE (peak):** `{{ det.qe_peak_pct }}%`{% endif %}
+    {% if det.read_noise_e %}<br>**Read Noise:** `{{ det.read_noise_e }} e-`{% endif %}
+    {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
 {% endif %}
 
-### Objectives
+{% endfor %}
+
+</div>
+{% elif 'camera_port' in module_names %}
+> *No integrated digital detectors. An external camera port is available for third-party imaging devices.*
+{% else %}
+> *Manual observation only (no digital detectors).*
+{% endif %}
+
+### 🔬 Objectives
 
 {% if objectives %}
 <div class="grid cards" markdown>
+
 {% for obj in objectives %}
-{% set obj_title = obj.model or objective_label(obj) %}
--   **{{ ext_link(obj_title, obj.url) }}**{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
+{% set obj_title = obj.model %}
+{% if obj_title %}-   **{% if obj.url %}[{{ obj_title }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj_title }}{% endif %}**{% endif %}{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
+    {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
 
     ---
 
-    {{ kv('Objective ID', obj.id, code=true) }}
-    {{ kv('Magnification', (obj.magnification ~ 'x') if obj.magnification is not none else None, code=obj.magnification is not none) }}
-    {{ kv('NA', obj.numerical_aperture, code=obj.numerical_aperture is not none) }}
-    {{ kv('Immersion', pretty_id(obj.immersion) if obj.immersion else None) }}
-    {{ kv('Working Distance', obj.working_distance) }}
-    {{ kv('Correction', obj.correction) }}
-    {{ kv('Product Code', obj.product_code, code=true) }}
-    {% if obj.afc_compatible is not none %}{{ kv('AFC Compatible', bool_label(obj.afc_compatible)) }}{% endif %}
-    {% if obj.specialties %}
-      {% if obj.specialties is string %}
-        {{ kv('Capabilities', obj.specialties, code=true) }}
-      {% elif obj.specialties is iterable %}
-        {{ kv('Capabilities', obj.specialties | join(', ')) }}
-      {% endif %}
-    {% endif %}
-    {% if obj.notes %}<small class="aic-muted">{{ obj.notes }}</small>{% endif %}
+    <span {% if obj.is_installed is sameas false %}style="opacity: 0.6; display: inline-block;"{% endif %}>**Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.numerical_aperture if obj.numerical_aperture is not none else '—' }}`
+    {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
+    {% if obj.working_distance %}<br>**WD:** {{ obj.working_distance }}{% endif %}
+    {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
+    {% if obj.product_code %}<br>**Product code:** `{{ obj.product_code }}`{% endif %}
+    {% if obj.afc_compatible is not none %}<br>**AFC compatible:** {{ bool_label(obj.afc_compatible) }}{% endif %}
+    {% if obj.specialties %}<br>**Capabilities:** {% if obj.specialties is string %}`{{ obj.specialties }}`{% elif obj.specialties is iterable %}{% for spec in obj.specialties %}`{{ spec }}`{% if not loop.last %} {% endif %}{% endfor %}{% else %}-{% endif %}{% endif %}
+    {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}</span>
+
 {% endfor %}
+
 </div>
 {% else %}
-{{ section_empty('No objectives recorded.') }}
+> *No objectives recorded.*
 {% endif %}
 
-### Filters & Splitters
 
-{% if filters or splitters %}
+### 🎛️ Filters & Splitters
+
 <div class="grid cards" markdown>
 
 {% if filters %}
@@ -446,14 +309,14 @@
     ---
 
     {% for f in filters %}
-    **{{ ext_link(f.name or 'Filter', f.url) }}**  
-    <span class="aic-muted">Location:</span> {{ f.location or '—' }}  
-    <span class="aic-muted">Product code:</span> {{ f.product_code or '—' }}  
-    <span class="aic-muted">Excitation:</span> {{ f.excitation or '—' }}  
-    <span class="aic-muted">Dichroic:</span> {{ f.dichroic or '—' }}  
-    <span class="aic-muted">Emission:</span> {{ f.emission or '—' }}  
-    {% if f.notes %}<small class="aic-muted">{{ f.notes }}</small>{% endif %}
-    {% if not loop.last %}<br><br>{% endif %}
+    * {% if f.url %}[**{{ f.name or 'Filter' }}**]({{ f.url }}){:target="_blank"}{% else %}**{{ f.name or 'Filter' }}**{% endif %}
+      {% if f.excitation or f.emission %}
+      <br><small class="aic-muted">EX: {{ f.excitation or '-' }} | EM: {{ f.emission or '-' }}</small>
+      {% endif %}
+      {% if f.location or f.product_code or f.dichroic %}
+      <br><small class="aic-muted">Location: {{ f.location or '-' }} | Product code: {{ f.product_code or '-' }} | Dichroic: {{ f.dichroic or '-' }}</small>
+      {% endif %}
+      {% if f.notes %}<br><small class="aic-muted">{{ f.notes }}</small>{% endif %}
     {% endfor %}
 {% endif %}
 
@@ -463,38 +326,50 @@
     ---
 
     {% for s in splitters %}
-    **{{ ext_link(s.name or 'Splitter', s.url) }}**  
-    <span class="aic-muted">Type:</span> {{ s.type or '—' }}  
-    {% if s.notes %}<small class="aic-muted">{{ s.notes }}</small>{% endif %}
-    {% if not loop.last %}<br><br>{% endif %}
+    * {% if s.url %}[**{{ s.name or 'Splitter' }}**]({{ s.url }}){:target="_blank"}{% else %}**{{ s.name or 'Splitter' }}**{% endif %}
+      {% if s.type %}<br><small class="aic-muted">Type: {{ s.type }}</small>{% endif %}
+      {% if s.notes %}<br><small class="aic-muted">{{ s.notes }}</small>{% endif %}
     {% endfor %}
 {% endif %}
 
-</div>
-{% else %}
-{{ section_empty('No filters or splitters recorded.') }}
-{% endif %}
-
-### Magnification Changers
-
-{% if magnification_changers %}
-<div class="grid cards" markdown>
-{% for mag in magnification_changers %}
-{% set mag_title = mag.model or mag.name or 'Magnification Changer' %}
--   **{{ ext_link(mag_title, mag.url) }}**
+{% if not filters and not splitters %}
+-   **Optical Components**
 
     ---
 
-    {{ kv('Manufacturer', mag.manufacturer) }}
-    {{ kv('Magnification', mag.magnification ~ 'x' if mag.magnification is not none else None, code=mag.magnification is not none) }}
-    {% if mag.notes %}<small class="aic-muted">{{ mag.notes }}</small>{% endif %}
-{% endfor %}
-</div>
-{% else %}
-{{ section_empty('No magnification changers recorded.') }}
+    > *No filters or splitters recorded.*
 {% endif %}
 
-### Stages & Focus Drives
+</div>
+
+
+
+### 🔍 Magnification Changers
+
+{% if magnification_changers %}
+<div class="grid cards" markdown>
+
+{% for mag in magnification_changers %}
+{% set mag_title = mag.model or mag.name %}
+{% set has_mag_details = mag.manufacturer or mag.magnification is not none or mag.notes %}
+{% if mag_title or has_mag_details %}
+-   {% if mag_title %}**{% if mag.url %}[{{ mag_title }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag_title }}{% endif %}**{% endif %}
+
+    {% if has_mag_details %}---{% endif %}
+
+    {% if mag.manufacturer %}**Manufacturer:** {{ mag.manufacturer }}{% endif %}
+    {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
+    {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
+{% endif %}
+
+{% endfor %}
+
+</div>
+{% else %}
+> *No magnification changers recorded.*
+{% endif %}
+
+### 🧭 Stages & Focus Drives
 
 {% if stages %}
 | Type | Manufacturer | Model | Step Size (µm) |
@@ -503,44 +378,28 @@
 | {{ pretty_id(stage.type) }} | {{ stage.manufacturer or '—' }} | {{ stage.model or '—' }} | {{ stage.step_size_um if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) else '—' }} |
 {% endfor %}
 {% else %}
-{{ section_empty('No stages or focus drives recorded.') }}
+> *No stages or focus drives recorded.*
 {% endif %}
 
-### Advanced Hardware
+### ⚙️ Advanced Hardware
 
 {% set autofocus_type = hardware_autofocus.type | trim if hardware_autofocus.type is string else hardware_autofocus.type %}
 {% set has_autofocus = hardware_autofocus.is_installed is not none or autofocus_type %}
 {% set has_triggering = triggering.primary_mode or triggering.notes %}
-
 {% if has_autofocus or has_triggering %}
-<div class="grid cards" markdown>
-
 {% if has_autofocus %}
--   **Hardware Autofocus**
-
-    ---
-
-    {{ kv('Installed', bool_label(hardware_autofocus.is_installed)) }}
-    {{ kv('Type', pretty_id(autofocus_type) if autofocus_type and hardware_autofocus.is_installed is not sameas false else None) }}
+- **Hardware Autofocus:** {{ bool_label(hardware_autofocus.is_installed) }}{% if autofocus_type and hardware_autofocus.is_installed is not sameas false %} — {{ pretty_id(autofocus_type) }}{% endif %}
 {% endif %}
-
 {% if has_triggering %}
--   **Triggering**
-
-    ---
-
-    {{ kv('Primary Mode', pretty_id(triggering.primary_mode) if triggering.primary_mode else None) }}
-    {% if triggering.notes %}<small class="aic-muted">{{ triggering.notes }}</small>{% endif %}
+- **Triggering:** {% if triggering.primary_mode %}{{ pretty_id(triggering.primary_mode) }}{% else %}—{% endif %}{% if triggering.notes %} — {{ triggering.notes }}{% endif %}
 {% endif %}
-
-</div>
 {% else %}
-{{ section_empty('No advanced hardware features recorded.') }}
+> *No advanced hardware features recorded.*
 {% endif %}
 
 ---
 
-## QC Metrics
+## QC Metrics: Latest Measurements
 
 {% set laser_metrics = {} %}
 {% set other_metrics = {} %}
@@ -552,37 +411,11 @@
   {% endif %}
 {% endfor %}
 
-### Summary
-
-<div class="grid cards" markdown>
-
--   **Objectives**
-    
-    ---
-    
-    <span style="font-size: 1.4em; font-weight: 700;">{{ objectives | length }}</span><br>
-    <span class="aic-muted">Configured</span>
-
--   **Laser Metrics**
-    
-    ---
-    
-    <span style="font-size: 1.4em; font-weight: 700;">{{ laser_metrics | length }}</span><br>
-    <span class="aic-muted">Latest measurements</span>
-
--   **Other Metrics**
-    
-    ---
-    
-    <span style="font-size: 1.4em; font-weight: 700;">{{ other_metrics | length }}</span><br>
-    <span class="aic-muted">Environment / stage / misc.</span>
-
-</div>
-
-### Laser Performance
+### 🔦 Laser Performance
 
 {% if laser_metrics %}
 <div class="grid cards" markdown>
+
 {% for m_id, m_val in laser_metrics.items() %}
 -   **{{ metric_names.get(m_id, m_id) }}**
 
@@ -590,18 +423,21 @@
 
     <span style="font-size: 1.5em; font-weight: bold; color: var(--md-primary-fg-color);">{{ m_val }}</span><br>
     <span class="aic-muted" style="font-size: 0.8em;"><code>{{ m_id }}</code></span>
+
 {% endfor %}
+
 </div>
 {% else %}
-{{ section_empty('No laser performance metrics recorded recently.') }}
+> *No laser performance metrics recorded recently.*
 {% endif %}
 
-### Optical Resolution (PSF & Alignment)
+### 🔬 Optical Resolution (PSF & Alignment)
 
 {% if objectives %}
   {% set obj_with_data = [] %}
   {% set obj_without_data = [] %}
 
+  {# 1. Sort objectives into "has data" and "no data" buckets #}
   {% for obj in objectives %}
     {% if obj.id %}
       {% set obj_metrics = {} %}
@@ -619,11 +455,14 @@
     {% endif %}
   {% endfor %}
 
+  {# 2. Display objectives with data #}
   {% if obj_with_data %}
     {% for obj, obj_metrics in obj_with_data %}
-#### {{ objective_label(obj) }} <small class="aic-muted">(`{{ obj.id }}`)</small>
+
+#### **{{ objective_label(obj) }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
 
 <div class="grid cards" markdown>
+
 {% for m_id, m_val in obj_metrics.items() %}
 -   **{{ metric_names.get(m_id, m_id.split('.')[-1] | replace('_', ' ') | title ) }}**
 
@@ -631,27 +470,33 @@
 
     <span style="font-size: 1.5em; font-weight: bold; color: var(--md-primary-fg-color);">{{ m_val }}</span><br>
     <span class="aic-muted" style="font-size: 0.75em;"><code>{{ m_id }}</code></span>
+
 {% endfor %}
+
 </div>
+
     {% endfor %}
   {% else %}
-{{ section_empty('No recent PSF or chromatic shift metrics available for any objectives.') }}
+> *No recent PSF or chromatic shift metrics available for any objectives.*
   {% endif %}
 
+  {# 3. Collapse objectives without data into an expandable block #}
   {% if obj_without_data %}
 ??? info "Objectives without recent data"
     {% for obj in obj_without_data %}
     - **{{ objective_label(obj) }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
     {% endfor %}
   {% endif %}
+
 {% else %}
-{{ section_empty('No objectives defined for this instrument.') }}
+> *No objectives defined for this instrument.*
 {% endif %}
 
 {% if other_metrics %}
-### Environment & Stage Performance
+### ⚙️ Environment & Stage Performance
 
 <div class="grid cards" markdown>
+
 {% for m_id, m_val in other_metrics.items() %}
 -   **{{ metric_names.get(m_id, m_id) }}**
 
@@ -659,6 +504,34 @@
 
     <span style="font-size: 1.5em; font-weight: bold; color: var(--md-primary-fg-color);">{{ m_val }}</span><br>
     <span class="aic-muted" style="font-size: 0.8em;"><code>{{ m_id }}</code></span>
+
 {% endfor %}
+
 </div>
+{% endif %}
+
+{% if policy.missing_required or policy.missing_conditional or policy.alias_fallbacks %}
+## Metadata Completeness
+
+{% if policy.missing_required %}
+- **Missing required fields:**
+{% for item in policy.missing_required %}
+  - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if policy.missing_conditional %}
+- **Missing conditional fields (currently applicable):**
+{% for item in policy.missing_conditional %}
+  - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if policy.alias_fallbacks %}
+- **Legacy aliases in use (fallback accepted):**
+{% for item in policy.alias_fallbacks %}
+  - `{{ item.alias }}` → `{{ item.path }}`
+{% endfor %}
+{% endif %}
+
 {% endif %}
