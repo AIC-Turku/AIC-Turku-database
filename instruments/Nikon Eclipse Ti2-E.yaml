@@ -24,7 +24,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: Nikon NIS-Elements AR
     version: '5.11'
     url: ''
@@ -38,7 +38,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
 
   scanner:
     type: none

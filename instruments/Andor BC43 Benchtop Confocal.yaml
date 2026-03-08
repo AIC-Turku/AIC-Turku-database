@@ -25,7 +25,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: Fusion BC43
     developer: Andor
     version: 2.7.0
@@ -40,7 +40,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
 
   scanner:
     type: spinning_disk

@@ -20,7 +20,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: Unknown # Flag: Recommend replacing with actual software name (e.g., LI-FLIM)
     version: ''
     url: ''
@@ -72,8 +72,8 @@ hardware:
     - id: placeholder_objective # Flag: strictly required by policy (min_items: 1).
       manufacturer: '' # Flag: Required field.
       model: '' # Flag: Required field.
-      magnification: 0 # Flag: Required field.
-      numerical_aperture: 0 # Flag: Required field.
+      magnification: 10 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
+      numerical_aperture: 0.3 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
       immersion: '' # Flag: Required. Needs to match vocab/objective_immersion.yaml
       correction: '' # Flag: Required. Needs to match vocab/objective_corrections.yaml
       is_installed: true

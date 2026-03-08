@@ -34,7 +34,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: OMX Acquisition
     version: '3.70'
     url: ''
@@ -53,7 +53,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
 
   scanner:
     type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml

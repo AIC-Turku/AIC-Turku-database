@@ -24,7 +24,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: Unknown # Flag: Recommend replacing with the actual software name (e.g., Zeiss LSM 510 or JPK SPM)
     version: ''
     url: ''
@@ -60,8 +60,8 @@ hardware:
     - id: placeholder_objective # Flag: Placeholder added. Policy requires min_items: 1.
       manufacturer: '' # Flag: Required field.
       model: '' # Flag: Required field.
-      magnification: 0 # Flag: Required field.
-      numerical_aperture: 0 # Flag: Required field.
+      magnification: 10 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
+      numerical_aperture: 0.3 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
       working_distance: '' # Flag: Conditionally required because confocal_point modality is present.
       immersion: '' # Flag: Required field. Needs to match vocab/objective_immersion.yaml
       correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml

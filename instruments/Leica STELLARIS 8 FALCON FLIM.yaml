@@ -29,7 +29,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: Leica LAS X with FALCON (FLIM)
     version: ''
     url: ''

@@ -27,7 +27,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: Unknown # Flag: Recommend replacing with actual software name (e.g., Zeiss ZEN blue)
     version: ''
     url: ''
@@ -39,10 +39,10 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
 
   stages:
-    - type: motorized # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml
+    - type: xy_motorized # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml
       notes: Motorized XY stage
 
   scanner:

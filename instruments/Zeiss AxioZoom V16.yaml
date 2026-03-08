@@ -21,7 +21,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: Zeiss ZEN Pro
     version: ''
     url: ''

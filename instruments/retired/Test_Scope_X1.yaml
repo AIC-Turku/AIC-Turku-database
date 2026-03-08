@@ -27,7 +27,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: MicroManager
     version: '2.0'
     url: https://micro-manager.org/
@@ -40,7 +40,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
 
   scanner:
     type: galvo
