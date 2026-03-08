@@ -1,167 +1,139 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: Leica DM IRBE
-# -----------------------------------------------------------------------------
 instrument:
-  display_name: "Leica DM IRBE"
-  instrument_id: "scope-leica-dm-irbe"
-  manufacturer: "Leica Microsystems"
-  model: "Leica DM IRBE"
-  year_of_purchase: ""
-  funding: ""
-  stand_orientation: "inverted"
-  location: "BioCity, 2nd floor, room 2076"
-  notes: "Inverted microscope with camera port. Current imaging modes are widefield fluorescence, transmitted brightfield, and phase contrast. Optional 1.6x auxiliary lens in microscope body."
-  url: ""
+  display_name: Leica DM IRBE
+  instrument_id: scope-leica-dm-irbe
+  manufacturer: Leica Microsystems
+  model: Leica DM IRBE
+  year_of_purchase: ''
+  funding: ''
+  stand_orientation: inverted
+  location: BioCity, 2nd floor, room 2076
+  notes: Inverted microscope with camera port. Current imaging modes are widefield fluorescence, transmitted brightfield, and phase contrast. Optional 1.6x auxiliary lens in microscope body.
+  url: ''
 
-# -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
 modalities:
-  - "widefield_fluorescence"
-  - "transmitted_brightfield"
-  - "phase_contrast"
+  - widefield_fluorescence
+  - transmitted_brightfield
+  - phase_contrast
 
-# -----------------------------------------------------------------------------
-# HARDWARE MODULES
-# -----------------------------------------------------------------------------
 modules: []
 
-# -----------------------------------------------------------------------------
-# SOFTWARE
-# -----------------------------------------------------------------------------
-software:
-  acquisition:
-    name: "Unknown"
-    version: ""
-    url: ""
-
-# -----------------------------------------------------------------------------
-# HARDWARE CONFIGURATION
-# -----------------------------------------------------------------------------
 hardware:
-  
-  # --- Scanner ---
   scanner:
-    type: "none"
-    notes: ""
-    url: ""
+    type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml (often 'widefield' or 'camera_based' is preferred)
+    notes: ''
+    url: ''
 
-  # --- Light Sources (Excitation) ---
   light_sources:
-    - kind: "halogen_lamp"
-      manufacturer: "Leica"
-      model: "12V 100W halogen bulb"
-      wavelength_nm: "broadband"
-      power: "100 W"
-      notes: "Transmitted light source"
-      url: ""
-    - kind: "arc_lamp"
-      manufacturer: "Leica"
-      model: "50W HBO short arc bulb"
-      wavelength_nm: "broadband"
-      power: "50 W"
-      notes: "Fluorescence excitation source"
-      url: ""
+    - kind: halogen_lamp
+      manufacturer: Leica
+      model: 12V 100W halogen bulb
+      wavelength_nm: broadband
+      power: 100 W
+      notes: Transmitted light source
+      url: ''
+    - kind: arc_lamp
+      manufacturer: Leica
+      model: 50W HBO short arc bulb
+      wavelength_nm: broadband
+      power: 50 W
+      notes: Fluorescence excitation source
+      url: ''
 
-  # --- Detectors (Emission) ---
-  detectors:
-    - kind: "ccd"
-      manufacturer: "Nikon"
-      model: "DS-Fi2 5 MP color CCD camera"
-      notes: "Standalone camera system (no computer required); image storage via USB memory device"
-      url: ""
+  splitters:
+    - name: Camera Port
+      type: emission_splitter # Flag: Verify exact terminology in your splitters vocabulary if one exists
+      notes: Port Standalone camera system (no computer required); image storage via USB memory device
+      url: ''
 
-  # --- Splitters (Camera/Emission) ---
-  splitters: []
-
-  # --- Filters / Filter Cubes ---
   filters:
-    - name: "DAPI/Hoechst"
-      location: "Fluorescence Turret"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: "UV excitation"
-      url: ""
-    - name: "GFP/Alexa 488"
-      location: "Fluorescence Turret"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: ""
-      url: ""
-    - name: "TRITC/RFP"
-      location: "Fluorescence Turret"
-      product_code: ""
-      excitation: ""
-      dichroic: ""
-      emission: ""
-      notes: ""
-      url: ""
+    - name: DAPI/Hoechst
+      location: Fluorescence Turret
+      product_code: ''
+      excitation: '' # Flag: Required because widefield_fluorescence is present.
+      dichroic: ''   # Flag: Required because widefield_fluorescence is present.
+      emission: ''   # Flag: Required because widefield_fluorescence is present.
+      notes: UV excitation
+      url: ''
+    - name: GFP/Alexa 488
+      location: Fluorescence Turret
+      product_code: ''
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: ''
+      url: ''
+    - name: TRITC/RFP
+      location: Fluorescence Turret
+      product_code: ''
+      excitation: '' # Flag: Required field.
+      dichroic: ''   # Flag: Required field.
+      emission: ''   # Flag: Required field.
+      notes: ''
+      url: ''
 
-  # --- Objectives ---
   objectives:
-    - id: "10x_air"
-      manufacturer: "Leica"
-      model: "PL FLUOTAR 10x/0.30 PH1"
-      product_code: "506010"
+    - id: 10x_air
+      manufacturer: Leica
+      model: PL FLUOTAR 10x/0.30 PH1
+      product_code: '506010'
       magnification: 10.0
       numerical_aperture: 0.3
-      working_distance: ""
-      immersion: "air"
-      correction: "plan_fluorite"
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
       afc_compatible: false
       specialties:
-        - "phase compatible"
-      notes: ""
-      url: ""
-      
+        - phase compatible
+      notes: ''
+      url: ''
       is_installed: true
-    - id: "20x_air"
-      manufacturer: "Leica"
-      model: "PL FLUOTAR 20x/0.50 PH2"
-      product_code: "506013"
+    - id: 20x_air
+      manufacturer: Leica
+      model: PL FLUOTAR 20x/0.50 PH2
+      product_code: '506013'
       magnification: 20.0
       numerical_aperture: 0.5
-      working_distance: ""
-      immersion: "air"
-      correction: "plan_fluorite"
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
       afc_compatible: false
       specialties: []
-      notes: ""
-      url: ""
-      
+      notes: ''
+      url: ''
       is_installed: true
-    - id: "40x_air"
-      manufacturer: "Leica"
-      model: "PL FLUOTAR 40x/0.70 PH2"
-      product_code: "506014"
+    - id: 40x_air
+      manufacturer: Leica
+      model: PL FLUOTAR 40x/0.70 PH2
+      product_code: '506014'
       magnification: 40.0
       numerical_aperture: 0.7
-      working_distance: ""
-      immersion: "air"
-      correction: "plan_fluorite"
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
       afc_compatible: false
       specialties: []
-      notes: ""
-      url: ""
-      
+      notes: ''
+      url: ''
       is_installed: true
-    - id: "63x_air"
-      manufacturer: "Leica"
-      model: "PL FLUOTAR 63x/0.70 CORR PH2"
-      product_code: "506062"
+    - id: 63x_air
+      manufacturer: Leica
+      model: PL FLUOTAR 63x/0.70 CORR PH2
+      product_code: '506062'
       magnification: 63.0
       numerical_aperture: 0.7
-      working_distance: ""
-      immersion: "air"
-      correction: "plan_fluorite"
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
       afc_compatible: false
       specialties:
-        - "correction collar"
-      notes: ""
-      url: ""
-      
+        - correction collar
+      notes: ''
+      url: ''
       is_installed: true
+
+  magnification_changers:
+    - manufacturer: Leica
+      model: 1.6x Auxiliary Lens
+      magnification: 1.6
+      notes: Optional 1.6x auxiliary lens in microscope body.
+      url: ''
