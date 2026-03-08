@@ -40,6 +40,26 @@
   [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
 </div>
 
+<div class="aic-chiprow" style="margin-bottom: 30px;">
+  {% for mod in instrument.modalities_display %}
+    <span class="aic-chip" style="font-weight: 600; font-size: 1.1em; padding: 6px 12px; background-color: var(--md-primary-fg-color--light); color: var(--md-primary-bg-color);">{{ mod }}</span>
+  {% endfor %}
+  {% for m in instrument.modules %}
+    {% if m.url %}
+      <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or pretty_id(m.name) }} ↗</a>
+    {% else %}
+      <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or pretty_id(m.name) }}</span>
+    {% endif %}
+  {% endfor %}
+</div>
+
+## 📍 Overview
+
+<div class="aic-hero">
+  <div class="aic-hero__media" markdown="1">
+    <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
+         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" style="margin-bottom: 16px; border-radius: 4px;" />
+
 {% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
 !!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
     {{ instrument.status.reason }}
@@ -48,18 +68,11 @@
 !!! tip "🌱 Live-Cell Ready"
     This instrument is equipped with environmental temperature control{% if environment.co2_control %} and CO2 regulation{% endif %}.
 {% endif %}
-
-## 📍 Overview
-
-<div class="aic-hero">
-  <div class="aic-hero__media">
-    <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
-         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
   </div>
 
   <div class="aic-hero__facts">
     {% if instrument.notes and instrument.notes.raw %}
-    <p><strong>Description:</strong> {{ instrument.notes.raw }}</p>
+    <p style="font-size: 1.1em; line-height: 1.5;">{{ instrument.notes.raw }}</p>
     {% endif %}
     
     <div class="aic-facts">
@@ -102,18 +115,6 @@
     {% if instrument.notes.filters %}- **Filters:** {{ instrument.notes.filters | join(', ') }}{% endif %}
     {% if instrument.notes.additional_hardware %}- **Additional hardware:** {{ instrument.notes.additional_hardware | join(', ') }}{% endif %}
 {% endif %}
-
----
-
-## 🌟 Imaging Modalities
-
-<div class="aic-chiprow" style="margin-bottom: 20px;">
-  {% for mod in instrument.modalities_display %}
-    <span class="aic-chip" style="font-weight: 600; font-size: 1.1em; padding: 8px 16px;">{{ mod }}</span>
-  {% else %}
-    <span class="aic-muted">—</span>
-  {% endfor %}
-</div>
 
 ---
 
@@ -252,19 +253,7 @@
 
 ---
 
-## ⚙️ Modules & Advanced Hardware
-
-{% if instrument.modules %}
-<div class="aic-chiprow" style="margin-bottom: 20px;">
-  {% for m in instrument.modules %}
-    {% if m.url %}
-      <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or pretty_id(m.name) }} ↗</a>
-    {% else %}
-      <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or pretty_id(m.name) }}</span>
-    {% endif %}
-  {% endfor %}
-</div>
-{% endif %}
+## ⚙️ Advanced Hardware
 
 ### 🧭 Scanner
 
@@ -335,7 +324,6 @@
 {% else %}
 > *No active environmental control details recorded.*
 {% endif %}
-
 
 {% if magnification_changers %}
 ### 🔍 Magnification Changers
