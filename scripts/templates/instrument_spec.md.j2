@@ -82,34 +82,6 @@
   </div>
 </div>
 
-<div class="aic-section" style="margin-top: 20px;">
-  <div class="aic-section__title">Modalities</div>
-  <div class="aic-chiprow">
-    {% for mod in instrument.modalities_display %}
-      <span class="aic-chip">{{ mod }}</span>
-    {% else %}
-      <span class="aic-muted">—</span>
-    {% endfor %}
-  </div>
-</div>
-
-{% if instrument.modules %}
-<div class="aic-section">
-  <div class="aic-section__title">Modules</div>
-  <div class="aic-chiprow">
-    {% for m in instrument.modules %}
-      {% if m.url %}
-        <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }} ↗</a>
-      {% else %}
-        <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }}</span>
-      {% endif %}
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-<br>
-
 {% if instrument.notes %}
 ## Capabilities
 
@@ -139,6 +111,35 @@
 - **Notes:** {{ instrument.notes.raw }} <small class="aic-muted">(legacy notes fallback)</small>
 {% endif %}
 {% endif %}
+
+<div class="aic-section" style="margin-top: 20px;">
+  <div class="aic-section__title">Modalities</div>
+  <div class="aic-chiprow">
+    {% for mod in instrument.modalities_display %}
+      <span class="aic-chip">{{ mod }}</span>
+    {% else %}
+      <span class="aic-muted">—</span>
+    {% endfor %}
+  </div>
+</div>
+
+{% if instrument.modules %}
+<div class="aic-section">
+  <div class="aic-section__title">Modules</div>
+  <div class="aic-chiprow">
+    {% for m in instrument.modules %}
+      {% if m.url %}
+        <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }} ↗</a>
+      {% else %}
+        <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }}</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<br>
+
 
 ## Software Environment
 
@@ -371,13 +372,10 @@
 ### 🧭 Stages & Focus Drives
 
 {% if stages %}
-
-| Type | Manufacturer | Model | Step Size (µm) |
-| --- | --- | --- | --- |
 {% for stage in stages %}
-| {{ pretty_id(stage.type) }} | {{ stage.manufacturer or '—' }} | {{ stage.model or '—' }} | {{ stage.step_size_um if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) else '—' }} |
+- **{{ pretty_id(stage.type) }}** — {{ stage.manufacturer or '—' }} {{ stage.model or '—' }} 
+  <br><small class="aic-muted">Step size: `{{ stage.step_size_um if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) else '—' }}{% if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) %} µm{% endif %}`</small>
 {% endfor %}
-
 {% else %}
 > *No stages or focus drives recorded.*
 {% endif %}
