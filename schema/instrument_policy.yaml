@@ -256,7 +256,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          parent_present: software.acquisition
+          detector_kinds_any_of: [scmos, cmos, ccd, emccd, pmt, gaasp_pmt, hyd, apd, spad]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Required only if the microscope is driven by computer acquisition.
 
@@ -265,7 +265,7 @@ sections:
         status: conditional
         type: string_or_empty
         required_if:
-          parent_present: software.acquisition
+          detector_kinds_any_of: [scmos, cmos, ccd, emccd, pmt, gaasp_pmt, hyd, apd, spad]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Version materially affects reproducibility and methods text when acquisition software is used.
 
@@ -898,8 +898,12 @@ sections:
     rules:
       - path: hardware.environment.temperature_control
         title: Temperature control available
-        status: optional
+        status: conditional
         type: boolean
+        required_if:
+          any_of:
+            - modules_any_of: [incubation]
+            - modules_any_of: [environmental_enclosure]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Indicates whether the system supports active temperature control for environmental regulation.
 
@@ -954,17 +958,25 @@ sections:
 
       - path: hardware.stages
         title: Stages and focus drives
-        status: optional
+        status: conditional
         type: list
         item_type: object
+        required_if:
+          any_of:
+            - modules_any_of: [motorized_stage]
+            - modules_any_of: [piezo_z_stage]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Present when motorized or specialized stage and focus hardware is documented.
 
       - path: hardware.stages[].type
         title: Stage or focus drive type
-        status: optional
+        status: conditional
         type: string
         vocab: stage_types
+        required_if:
+          any_of:
+            - modules_any_of: [motorized_stage]
+            - modules_any_of: [piezo_z_stage]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Classifies the stage or focus-drive hardware that is installed.
 
@@ -998,9 +1010,11 @@ sections:
 
       - path: hardware.hardware_autofocus.type
         title: Hardware autofocus type
-        status: optional
+        status: conditional
         type: string
         vocab: autofocus_types
+        required_if:
+          modules_any_of: [hardware_autofocus]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Describes the installed hardware autofocus implementation when present.
 

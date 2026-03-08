@@ -720,6 +720,38 @@ def _evaluate_required_if(
                 and kind in {str(v).strip() for v in item_kind_in if isinstance(v, str)}
             )
 
+        modules_any_of = condition_spec.get('modules_any_of')
+        if isinstance(modules_any_of, list):
+            module_nodes = _resolve_path_nodes(payload, 'modules')
+            has_module_match = False
+            if module_nodes and isinstance(module_nodes[0].value, list):
+                module_ids = {
+                    canonical
+                    for module in module_nodes[0].value
+                    for raw_name in [module.get('name') if isinstance(module, dict) else None]
+                    for canonical in [vocabulary.resolve_canonical('modules', raw_name) or raw_name if isinstance(raw_name, str) else None]
+                    if isinstance(canonical, str)
+                }
+                targets = {str(v).strip() for v in modules_any_of if isinstance(v, str)}
+                has_module_match = bool(module_ids & targets)
+            conditions.append(has_module_match)
+
+        detector_kinds_any_of = condition_spec.get('detector_kinds_any_of')
+        if isinstance(detector_kinds_any_of, list):
+            detector_nodes = _resolve_path_nodes(payload, 'hardware.detectors')
+            has_detector_match = False
+            if detector_nodes and isinstance(detector_nodes[0].value, list):
+                detector_kinds = {
+                    canonical
+                    for detector in detector_nodes[0].value
+                    for raw_kind in [detector.get('kind') if isinstance(detector, dict) else None]
+                    for canonical in [vocabulary.resolve_canonical('detector_kinds', raw_kind) or raw_kind if isinstance(raw_kind, str) else None]
+                    if isinstance(canonical, str)
+                }
+                targets = {str(v).strip() for v in detector_kinds_any_of if isinstance(v, str)}
+                has_detector_match = bool(detector_kinds & targets)
+            conditions.append(has_detector_match)
+
         if not conditions:
             return False
         return all(conditions)
@@ -749,7 +781,14 @@ def _evaluate_required_if(
     simple_result = _evaluate_simple_conditions(required_if)
     has_simple_conditions = any(
         key in required_if
-        for key in ('parent_present', 'modalities_any_of', 'scanner_type_in', 'item_kind_in')
+        for key in (
+            'parent_present',
+            'modalities_any_of',
+            'scanner_type_in',
+            'item_kind_in',
+            'modules_any_of',
+            'detector_kinds_any_of',
+        )
     )
 
     if has_simple_conditions:
