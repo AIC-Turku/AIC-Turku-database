@@ -48,9 +48,15 @@ Avoid hardcoding facility names, URLs, acknowledgements, and branding in scripts
 ## 5) Source-of-Truth Priority
 
 When instructions conflict, prefer:
-1. actual code behavior and repository files
-2. validation constraints in `scripts/validate.py`
-3. controlled vocabularies in `vocab/*.yaml`
-4. template structures in `templates/`
-5. `README.md`
-6. this context file (orientation only)
+1. `schema/instrument_policy.yaml` (absolute primary source of truth for instrument metadata schema and required canonical paths)
+2. actual code behavior and repository files
+3. validation constraints in `scripts/validate.py`
+4. controlled vocabularies in `vocab/*.yaml`
+5. template structures in `templates/`
+6. `README.md`
+7. this context file (orientation only)
+
+### Canonical naming requirement
+
+- `scripts/` and `scripts/templates/` implementations must conform to schema-native canonical field names from `schema/instrument_policy.yaml`.
+- Avoid introducing alias-only field names in generated exports; aliases are compatibility fallbacks, not canonical schema keys.

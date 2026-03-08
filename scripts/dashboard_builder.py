@@ -1260,7 +1260,16 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     for inst in instruments:
         status = inst.get("status", {})
-        hw = inst.get("processed_hardware", {})
+        canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
+        canonical_hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
+        hw = inst.get("processed_hardware", {}) if isinstance(inst.get("processed_hardware"), dict) else {}
+
+        def pick_summary_value(canonical_value: Any, processed_value: Any, fallback: Any) -> Any:
+            if canonical_value not in (None, "", []):
+                return canonical_value
+            if processed_value not in (None, "", []):
+                return processed_value
+            return fallback
 
         # 1. Parse Operational Status
         raw_badge = status.get("badge", "Unknown").lower()
@@ -1316,6 +1325,15 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
         microscope_payload = {
             "id": inst.get("id"),
+            "canonical": {
+                "software": copy.deepcopy(canonical.get("software") if isinstance(canonical.get("software"), list) else []),
+                "hardware": copy.deepcopy(canonical_hardware),
+                "policy": copy.deepcopy(canonical.get("policy") if isinstance(canonical.get("policy"), dict) else {
+                    "missing_required": [],
+                    "missing_conditional": [],
+                    "alias_fallbacks": [],
+                }),
+            },
             "identity": {
                 "display_name": none_if_empty(inst.get("display_name")),
                 "manufacturer": none_if_empty(inst.get("manufacturer")),
@@ -1330,39 +1348,42 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "last_maintenance_date": none_if_empty(status.get("last_maint_date", None)) or None,
             },
             "capabilities": {
-                "modalities": hw.get("modalities", []),
+                "modalities": pick_summary_value(canonical_hardware.get("modalities"), hw.get("modalities", []), []),
                 "scanner": {
-                    "type": none_if_empty(hw.get("scanner", {}).get("type", None)) or None,
-                    "line_rate_hz": hw.get("scanner", {}).get("line_rate_hz"),
-                    "pinhole_um": hw.get("scanner", {}).get("pinhole_um"),
-                    "notes": none_if_empty(hw.get("scanner", {}).get("notes", None)) or None,
+                    "type": none_if_empty(pick_summary_value(canonical_hardware.get("scanner", {}).get("type"), hw.get("scanner", {}).get("type", None), None)) or None,
+                    "line_rate_hz": pick_summary_value(canonical_hardware.get("scanner", {}).get("line_rate_hz"), hw.get("scanner", {}).get("line_rate_hz"), None),
+                    "pinhole_um": pick_summary_value(canonical_hardware.get("scanner", {}).get("pinhole_um"), hw.get("scanner", {}).get("pinhole_um"), None),
+                    "notes": none_if_empty(pick_summary_value(canonical_hardware.get("scanner", {}).get("notes"), hw.get("scanner", {}).get("notes", None), None)) or None,
                 },
                 "modules": [
                     {"name": none_if_empty(m.get("name")), "notes": none_if_empty(m.get("notes")) or None}
-                    for m in hw.get("modules", [])
+                    for m in pick_summary_value(canonical_hardware.get("modules"), hw.get("modules", []), [])
+                    if isinstance(m, dict)
                 ],
                 "objectives": [
                     {
                         "magnification": obj.get("magnification"),
-                        "numerical_aperture": obj.get("na"),
+                        "numerical_aperture": pick_summary_value(obj.get("numerical_aperture"), obj.get("na"), None),
                         "immersion": norm_id(obj.get("immersion")),
-                        "correction_class": norm_id(obj.get("correction")),
-                        "working_distance": none_if_empty(obj.get("wd")) or None,
+                        "correction_class": norm_id(pick_summary_value(obj.get("correction_class"), obj.get("correction"), None)),
+                        "working_distance": none_if_empty(pick_summary_value(obj.get("working_distance"), obj.get("wd"), None)) or None,
                         "specialties": obj.get("specialties", []),
                         "notes": none_if_empty(obj.get("notes")) or None,
                     }
-                    for obj in hw.get("objectives", [])
+                    for obj in pick_summary_value(canonical_hardware.get("objectives"), hw.get("objectives", []), [])
+                    if isinstance(obj, dict)
                 ],
                 "light_sources": [
                     {
-                        "type": norm_str(ls.get("type") or ls.get("kind")),
+                        "type": norm_str(pick_summary_value(ls.get("type"), ls.get("kind"), None)),
                         "manufacturer": none_if_empty(ls.get("manufacturer")) or None,
-                        "wavelength": none_if_empty(ls.get("wavelength")) or None,
+                        "wavelength": none_if_empty(pick_summary_value(ls.get("wavelength_nm"), ls.get("wavelength"), None)) or None,
                         "technology": none_if_empty(ls.get("technology")) or None,
-                        "model": none_if_empty(ls.get("name")) or None,
+                        "model": none_if_empty(pick_summary_value(ls.get("model"), ls.get("name"), None)) or None,
                         "notes": none_if_empty(ls.get("notes")) or None,
                     }
-                    for ls in hw.get("light_sources", [])
+                    for ls in pick_summary_value(canonical_hardware.get("light_sources"), hw.get("light_sources", []), [])
+                    if isinstance(ls, dict)
                 ],
                 "filters": [
                     {
@@ -1371,13 +1392,14 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                         "emission": none_if_empty(f.get("emission")) or None,
                         "dichroic": none_if_empty(f.get("dichroic")) or None,
                     }
-                    for f in hw.get("filters", [])
+                    for f in pick_summary_value(canonical_hardware.get("filters"), hw.get("filters", []), [])
+                    if isinstance(f, dict)
                 ],
                 "detectors": [
                     {
-                        "type": norm_id(det.get("type")),
+                        "type": norm_id(pick_summary_value(det.get("kind"), det.get("type"), None)),
                         "model": none_if_empty(det.get("model")) or None,
-                        "pixel_pitch_um": det.get("pixel_pitch_um"),
+                        "pixel_pitch_um": pick_summary_value(det.get("pixel_pitch_um"), det.get("pixel_size_um"), None),
                         "sensor_format_px": none_if_empty(det.get("sensor_format_px")) or None,
                         "binning": none_if_empty(det.get("binning")) or None,
                         "bit_depth": det.get("bit_depth"),
@@ -1385,7 +1407,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                         "read_noise_e": det.get("read_noise_e"),
                         "notes": none_if_empty(det.get("notes")) or None,
                     }
-                    for det in hw.get("detectors", [])
+                    for det in pick_summary_value(canonical_hardware.get("detectors"), hw.get("detectors", []), [])
+                    if isinstance(det, dict)
                 ],
             },
             "experiment_guidance": {
