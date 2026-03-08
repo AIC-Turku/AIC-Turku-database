@@ -1,68 +1,72 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION: Zeiss LSM 510 JPK AFM
-# -----------------------------------------------------------------------------
 instrument:
-  display_name: "Zeiss LSM 510 JPK AFM"
-  instrument_id: "scope-zeiss-lsm-510-jpk-afm"
-  manufacturer: "Zeiss"
-  model: "LSM 510 JPK AFM"
-  year_of_purchase: ""
-  funding: ""
-  stand_orientation: "other"
-  location: "BioCity, floor -1 (Basement)"
-  notes: "Confocal laser-scanning microscope with integrated AFM."
-  url: ""
+  display_name: Zeiss LSM 510 JPK AFM
+  instrument_id: scope-zeiss-lsm-510-jpk-afm
+  manufacturer: Zeiss
+  model: LSM 510 JPK AFM
+  year_of_purchase: ''
+  funding: ''
+  stand_orientation: other
+  location: BioCity, floor -1 (Basement)
+  notes: Confocal laser-scanning microscope with integrated AFM.
+  url: ''
 
-# -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
 modalities:
-  - "confocal_point"
-  - "transmitted_brightfield"
-  - "afm"
+  - confocal_point
+  - transmitted_brightfield
+  - afm
 
-# -----------------------------------------------------------------------------
-# HARDWARE MODULES
-# -----------------------------------------------------------------------------
 modules:
-  - name: "afm_module"
-    notes: "JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range). Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force Mapping, Force Modulation, and Manipulation."
-    url: ""
-  - name: "incubation"
-    notes: "Incubation chamber (live-cell environment)"
-    url: ""
+  - name: afm_module
+    notes: JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range). Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force Mapping, Force Modulation, and Manipulation.
+    url: ''
+  - name: incubation
+    notes: Incubation chamber (live-cell environment)
+    url: ''
 
-# -----------------------------------------------------------------------------
-# SOFTWARE
-# -----------------------------------------------------------------------------
 software:
-  acquisition:
-    name: "Unknown"
-    version: ""
-    url: ""
+  - role: acquisition
+    name: Unknown # Flag: Recommend replacing with the actual software name (e.g., Zeiss LSM 510 or JPK SPM)
+    version: ''
+    url: ''
 
-# -----------------------------------------------------------------------------
-# HARDWARE CONFIGURATION
-# -----------------------------------------------------------------------------
 hardware:
-  
-  # --- Scanner ---
+  environment:
+    temperature_control: true # Flag: Conditionally required due to 'incubation' module
+    notes: Incubation chamber (live-cell environment)
+
   scanner:
-    type: "stage_scanning"
-    notes: ""
-    url: ""
+    type: stage_scanning # Flag: Verify if this should be 'galvo' for the LSM optical scanner vs 'stage_scanning' for the AFM.
+    notes: ''
+    url: ''
 
-  # --- Light Sources (Excitation) ---
-  light_sources: []
+  light_sources:
+    - kind: laser # Flag: Placeholder added. Policy requires min_items: 1.
+      manufacturer: '' # Flag: Required field.
+      model: '' # Flag: Required field.
+      wavelength_nm: '' # Flag: Required field.
+      power: ''
+      notes: Placeholder excitation source.
+      url: ''
 
-  # --- Detectors (Emission) ---
-  detectors: []
+  detectors:
+    - kind: pmt # Flag: Placeholder added.
+      manufacturer: Zeiss
+      model: '' # Flag: Required field.
+      qe_peak_pct: null # Flag: Conditionally required because confocal_point modality is present.
+      notes: Placeholder detector.
+      url: ''
 
-  # --- Splitters (Camera/Emission) ---
-  splitters: []
-
-  # --- Filters / Filter Cubes ---
-  filters: []
-
-  # --- Objectives ---
-  objectives: []
+  objectives:
+    - id: placeholder_objective # Flag: Placeholder added. Policy requires min_items: 1.
+      manufacturer: '' # Flag: Required field.
+      model: '' # Flag: Required field.
+      magnification: 0 # Flag: Required field.
+      numerical_aperture: 0 # Flag: Required field.
+      working_distance: '' # Flag: Conditionally required because confocal_point modality is present.
+      immersion: '' # Flag: Required field. Needs to match vocab/objective_immersion.yaml
+      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml
+      afc_compatible: false
+      specialties: []
+      notes: Placeholder objective.
+      url: ''
+      is_installed: true
