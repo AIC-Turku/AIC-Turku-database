@@ -275,13 +275,17 @@
         {% set parts = entry.label.split(' ') %}
         {% set prefix = '' %}
         
-        {% if parts | length > 1 and parts[0] in ['Objective', 'Detector', 'Software', 'Stage'] %}
+        {% if parts | length > 1 and parts[0] in ['Objective', 'Detector', 'Software', 'Stage', 'Filter', 'Splitter'] %}
           {% if parts[1] in valid_numbers %}
             {% set prefix = parts[0] ~ ' ' ~ parts[1] %}
           {% endif %}
         {% elif parts | length > 2 and parts[0] == 'Light' and parts[1] == 'Source' %}
           {% if parts[2] in valid_numbers %}
             {% set prefix = 'Light Source ' ~ parts[2] %}
+          {% endif %}
+        {% elif parts | length > 3 and parts[0] == 'Magnification' and parts[1] == 'Changer' %}
+          {% if parts[2] in valid_numbers %}
+            {% set prefix = 'Magnification Changer ' ~ parts[2] %}
           {% endif %}
         {% endif %}
 
@@ -342,6 +346,9 @@
     {{ render_smart_section('Software Configuration', audit_data.software) }}
     {{ render_smart_section('Scanner', audit_data.scanner) }}
     {{ render_smart_section('Objectives', audit_data.objectives) }}
+    {{ render_smart_section('Filters', audit_data.filters) }}
+    {{ render_smart_section('Splitters', audit_data.splitters) }}
+    {{ render_smart_section('Magnification Changers', audit_data.magnification_changers) }}
     {{ render_smart_section('Light Sources', audit_data.light_sources) }}
     {{ render_smart_section('Detectors', audit_data.detectors) }}
     {{ render_smart_section('Environmental Control', audit_data.environment) }}
