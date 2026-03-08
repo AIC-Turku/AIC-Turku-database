@@ -125,4 +125,4 @@ artifacts:
   role: raw_image
   uri: omero://<server>/<group>/image/<id>
   description: Raw z-stack for PLAN APO AD 100x OIL.
-contact: AIC Staff
+performed_by: AIC Staff
