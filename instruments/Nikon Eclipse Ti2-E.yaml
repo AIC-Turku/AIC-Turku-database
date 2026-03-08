@@ -32,6 +32,8 @@ software:
 hardware:
   environment:
     temperature_control: true
+    co2_control: true
+    humidity_control: true
     notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
 
   hardware_autofocus:
