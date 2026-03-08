@@ -263,9 +263,23 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
             )
 
     detectors = hardware.get("detectors")
+    modules = instrument.get("modules")
+    module_names = {
+        module.get("name")
+        for module in modules
+        if isinstance(module, dict) and module.get("name")
+    } if isinstance(modules, list) else set()
+
     detector_entries: list[dict[str, Any]] = []
     if not isinstance(detectors, list) or len(detectors) == 0:
-        detector_entries.append(_entry("Detectors", detectors if detectors is not None else [], True))
+        if "camera_port" in module_names:
+            detector_entries.append(
+                _entry("Detector Capabilities", "External Camera Port Available", is_optional=True)
+            )
+        else:
+            detector_entries.append(
+                _entry("Detector Capabilities", "Manual Observation Only", is_optional=True)
+            )
     else:
         for idx, detector in enumerate(detectors, start=1):
             if not isinstance(detector, dict):
