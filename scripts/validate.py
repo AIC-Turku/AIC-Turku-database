@@ -752,6 +752,32 @@ def _evaluate_required_if(
                 has_detector_match = bool(detector_kinds & targets)
             conditions.append(has_detector_match)
 
+        software_roles_any_of = condition_spec.get('software_roles_any_of')
+        if isinstance(software_roles_any_of, list):
+            software_nodes = _resolve_path_nodes(payload, 'software')
+            present_roles = {
+                str(item.get('role')).strip().lower()
+                for node in software_nodes
+                if isinstance(node.value, list)
+                for item in node.value
+                if isinstance(item, dict) and isinstance(item.get('role'), str)
+            }
+            targets = {str(v).strip().lower() for v in software_roles_any_of if isinstance(v, str)}
+            conditions.append(bool(present_roles & targets))
+
+        software_roles_none_of = condition_spec.get('software_roles_none_of')
+        if isinstance(software_roles_none_of, list):
+            software_nodes = _resolve_path_nodes(payload, 'software')
+            present_roles = {
+                str(item.get('role')).strip().lower()
+                for node in software_nodes
+                if isinstance(node.value, list)
+                for item in node.value
+                if isinstance(item, dict) and isinstance(item.get('role'), str)
+            }
+            blocked = {str(v).strip().lower() for v in software_roles_none_of if isinstance(v, str)}
+            conditions.append(present_roles.isdisjoint(blocked))
+
         if not conditions:
             return False
         return all(conditions)
@@ -788,6 +814,8 @@ def _evaluate_required_if(
             'item_kind_in',
             'modules_any_of',
             'detector_kinds_any_of',
+            'software_roles_any_of',
+            'software_roles_none_of',
         )
     )
 

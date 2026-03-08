@@ -412,58 +412,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function formatProcessingMetadata(inst) {
-        const softwareByRole = inst?.methods_generation?.software_by_role || {};
-        const analysisRole = softwareByRole.analysis || {};
-        const deconvolutionRole = softwareByRole.deconvolution || {};
-        const flimRole = softwareByRole.flim || {};
         const software = Array.isArray(inst?.software) ? inst.software : [];
-        const softwareObject = (!Array.isArray(inst?.software) && inst?.software && typeof inst.software === "object") ? inst.software : {};
-        const moduleItems = inst?.processed_hardware?.modules || inst?.modules || [];
-        const moduleText = moduleItems
-            .map(module => (module?.id || module?.name || module || "").toString().trim())
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-
-        const processingKeywords = ["airyscan", "thunder", "deconvolution", "sim", "reconstruction", "flim", "lifetime"];
-        const matchedKeywords = processingKeywords.filter(keyword => moduleText.includes(keyword));
-
-        const roleSoftware = [analysisRole, deconvolutionRole, flimRole]
-            .filter(role => role?.name && role?.version)
-            .map(role => `${role.name} (v${role.version})`);
-
-        const softwareObjectProcessing = ["analysis", "deconvolution", "flim", "post_processing", "reconstruction"]
-            .map(roleName => softwareObject?.[roleName])
-            .filter(role => role?.name || role?.version)
-            .map(role => {
-                const roleName = (role?.name || "").toString().trim();
-                if (!roleName) return "";
-                return `${roleName}${role?.version ? ` (v${role.version})` : ""}`;
-            })
-            .filter(Boolean);
-
-        const listProcessingSoftware = software
+        const processingSoftware = software
             .filter(s => {
-                const role = (s?.role || "").toString().toLowerCase();
-                return role ? !/(acquisition|control|capture)/.test(role) : false;
+                const role = (s?.role || "").toString().trim().toLowerCase();
+                return role === "processing" || role === "analysis";
             })
             .map(s => {
                 const softwareName = (s?.name || "").toString().trim();
                 if (!softwareName) return "";
-                return `${softwareName}${s?.version ? ` (v${s.version})` : ""}`;
+                const softwareVersion = (s?.version || "").toString().trim();
+                return softwareVersion ? `${softwareName} (v${softwareVersion})` : softwareName;
             })
             .filter(Boolean);
 
-        const fallbackProcessingSoftware = softwareObjectProcessing.length > 0 ? softwareObjectProcessing : listProcessingSoftware;
-        const softwareText = (roleSoftware.length > 0 ? roleSoftware : fallbackProcessingSoftware).join(", ");
-
-        if (matchedKeywords.length === 0 && !softwareText) {
-            return "[PLEASE SPECIFY: Deconvolution/reconstruction/lifetime-fitting pipeline, including software name and version]. ";
+        if (processingSoftware.length === 0) {
+            return "[PLEASE SPECIFY: Post-acquisition processing/analysis pipeline, including software name and version]. ";
         }
 
-        const processingMethods = matchedKeywords.length > 0 ? formatHumanList(matchedKeywords.map(toTitleCase)) : "processing";
-        const softwareClause = softwareText || "[software/version not specified]";
-        return `Post-acquisition processing included ${processingMethods}; software used: ${softwareClause}. `;
+        return `Post-acquisition processing and analysis were performed using ${formatHumanList(processingSoftware)}. `;
     }
     function formatObjectiveLabel(obj) {
         const metadata = [];
@@ -517,11 +484,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        const softwareByRole = methodsMetadataStatus.softwareByRole || {};
-        const acquisitionSoftware = softwareByRole.acquisition || {};
+        const software = Array.isArray(currentInst?.software) ? currentInst.software : [];
+        const acquisitionSoftware = software.find(s => ((s?.role || "").toString().trim().toLowerCase() === "acquisition")) || {};
 
         let softName = "[MISSING ACQUISITION SOFTWARE NAME AND VERSION]";
-        if (acquisitionSoftware.name && acquisitionSoftware.version) {
+        if (acquisitionSoftware?.name && acquisitionSoftware?.version) {
             softName = `${acquisitionSoftware.name} (v${acquisitionSoftware.version})`;
         }
 

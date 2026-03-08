@@ -1,0 +1,21 @@
+terms:
+  - id: acquisition
+    label: "Acquisition"
+    description: "Software used for instrument control and image acquisition."
+    synonyms: ["capture"]
+  - id: processing
+    label: "Processing"
+    description: "Software used for post-acquisition image processing and reconstruction workflows."
+    synonyms: ["reconstruction", "deconvolution", "post_processing"]
+  - id: analysis
+    label: "Analysis"
+    description: "Software used for quantitative analysis, fitting, and measurement."
+    synonyms: ["quantification"]
+  - id: hardware_control
+    label: "Hardware Control"
+    description: "Software used to control ancillary hardware subsystems."
+    synonyms: ["control"]
+  - id: other
+    label: "Other"
+    description: "Software that does not fit acquisition, processing, analysis, or hardware control roles."
+    synonyms: []

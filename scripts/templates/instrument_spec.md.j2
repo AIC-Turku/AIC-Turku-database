@@ -173,14 +173,14 @@
 <div class="grid cards" markdown>
 
 {% for sw in instrument.software %}
-{% set has_sw_content = sw.name or sw.component or sw.developer or sw.version %}
+{% set has_sw_content = sw.name or sw.role or sw.developer or sw.version or sw.notes %}
 {% if has_sw_content %}
 -   {% if sw.name %}**{% if sw.url %}[{{ sw.name }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name }}{% endif %}**{% endif %}
 
-    {% if sw.component or sw.developer or sw.version %}---{% endif %}
+    {% if sw.role or sw.developer or sw.version or sw.notes %}---{% endif %}
 
-    {% if sw.component %}<span class="aic-muted">Component:</span> {{ sw.component }}<br>{% endif %}
-    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer %}<br>{% elif sw.component %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}
+    {% if sw.role %}<span class="aic-muted">Role:</span> {{ sw.role | replace("_", " ") | title }}<br>{% endif %}
+    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer or sw.role %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}{% if sw.notes %}{% if sw.developer or sw.version or sw.role %}<br>{% endif %}<small class="aic-muted">{{ sw.notes }}</small>{% endif %}
 {% endif %}
 
 {% endfor %}
