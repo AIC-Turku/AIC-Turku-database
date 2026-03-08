@@ -29,7 +29,8 @@ modules:
 software:
   - role: acquisition
     name: NIS-Elements AR
-    version: Includes 6D, JOBS 2.0, 3D Measurement, and RT Acquisition
+    version: 
+    notes: Includes 6D, JOBS 2.0, 3D Measurement, and RT Acquisition
     url: https://www.microscope.healthcare.nikon.com/products/software/nis-elements
 
 hardware:
