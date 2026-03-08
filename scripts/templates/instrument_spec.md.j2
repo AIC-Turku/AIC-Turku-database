@@ -56,18 +56,9 @@
 ## 📍 Overview
 
 <div class="aic-hero">
-  <div class="aic-hero__media" markdown="1">
+  <div class="aic-hero__media">
     <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
-         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" style="margin-bottom: 16px; border-radius: 4px;" />
-
-{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
-!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
-    {{ instrument.status.reason }}
-
-{% if environment.temperature_control or environment.co2_control %}
-!!! tip "🌱 Live-Cell Ready"
-    This instrument is equipped with environmental temperature control{% if environment.co2_control %} and CO2 regulation{% endif %}.
-{% endif %}
+         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" style="border-radius: 4px;" />
   </div>
 
   <div class="aic-hero__facts">
@@ -107,6 +98,15 @@
     </div>
   </div>
 </div>
+
+{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
+!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
+    {{ instrument.status.reason }}
+
+{% if environment.temperature_control or environment.co2_control %}
+!!! tip "🌱 Live-Cell Ready"
+    This instrument is equipped with environmental temperature control{% if environment.co2_control %} and CO2 regulation{% endif %}.
+{% endif %}
 
 {% if instrument.notes and (instrument.notes.type or instrument.notes.imaging_modes or instrument.notes.filters or instrument.notes.additional_hardware) %}
 ??? note "Legacy Capabilities Notes"
@@ -273,7 +273,7 @@
 {% if stages %}
 | Type | Manufacturer | Model | Step Size (µm) |
 | :--- | :--- | :--- | :--- |
-{% for stage in stages %}
+{% for stage in stages -%}
 | {{ pretty_id(stage.type) | default('—', true) }} | {{ stage.manufacturer | default('—', true) }} | {{ stage.model | default('—', true) }} | {{ stage.step_size_um | default('—', true) }} |
 {% endfor %}
 {% else %}
