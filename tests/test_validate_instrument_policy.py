@@ -100,6 +100,52 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
+
+    def test_evaluate_required_if_supports_modules_and_detector_kind_conditions(self) -> None:
+        vocabulary = Vocabulary(
+            vocab_registry={
+                'modules': {'source': 'inline', 'allowed_values': ['incubation', 'hardware_autofocus']},
+                'detector_kinds': {'source': 'inline', 'allowed_values': ['scmos', 'pmt']},
+            }
+        )
+        payload = {
+            'modules': [{'name': 'incubation'}],
+            'hardware': {'detectors': [{'kind': 'scmos'}]},
+        }
+
+        self.assertTrue(
+            _evaluate_required_if(
+                {'modules_any_of': ['incubation']},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertTrue(
+            _evaluate_required_if(
+                {'detector_kinds_any_of': ['scmos']},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertTrue(
+            _evaluate_required_if(
+                {'any_of': [{'modules_any_of': ['hardware_autofocus']}, {'detector_kinds_any_of': ['scmos']}]},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertFalse(
+            _evaluate_required_if(
+                {'modules_any_of': ['hardware_autofocus']},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+
     def test_completeness_report_preserves_used_by_and_flags_missing_item_leaf(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
