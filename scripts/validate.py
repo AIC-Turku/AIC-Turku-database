@@ -271,6 +271,7 @@ class PolicyRule:
     aliases: list[str] | None = None
     superseded_by: str | None = None
     min_items: int | None = None
+    used_by: list[str] | None = None
 
 
 @dataclass
@@ -411,6 +412,9 @@ def _load_instrument_policy(
                     aliases=raw_rule.get('aliases') if isinstance(raw_rule.get('aliases'), list) else None,
                     superseded_by=raw_rule.get('superseded_by') if isinstance(raw_rule.get('superseded_by'), str) else None,
                     min_items=raw_rule.get('min_items') if isinstance(raw_rule.get('min_items'), int) else None,
+                    used_by=[str(v).strip() for v in raw_rule.get('used_by') if isinstance(v, str)]
+                    if isinstance(raw_rule.get('used_by'), list)
+                    else None,
                 )
             )
 
@@ -450,6 +454,64 @@ def _resolve_path_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
     return nodes
 
 
+def _resolve_rule_nodes(payload: dict[str, Any], dotted_path: str) -> list[ResolvedNode]:
+    """Resolve policy rule nodes while emitting missing leaf nodes for existing parent items."""
+    if not dotted_path:
+        return [ResolvedNode(value=payload, path='', context_item=None)]
+
+    segments = dotted_path.split('.')
+    if len(segments) == 1:
+        nodes = _resolve_path_nodes(payload, dotted_path)
+        if nodes:
+            return nodes
+        key = segments[0][:-2] if segments[0].endswith('[]') else segments[0]
+        return [ResolvedNode(value=None, path=key, context_item=None)]
+
+    parent_nodes = _resolve_path_nodes(payload, '.'.join(segments[:-1]))
+    if not parent_nodes:
+        return []
+
+    leaf_segment = segments[-1]
+    is_leaf_list = leaf_segment.endswith('[]')
+    leaf_key = leaf_segment[:-2] if is_leaf_list else leaf_segment
+    resolved_nodes: list[ResolvedNode] = []
+    for parent in parent_nodes:
+        if not isinstance(parent.value, dict):
+            continue
+
+        child_path = f"{parent.path}.{leaf_key}" if parent.path else leaf_key
+        if leaf_key not in parent.value:
+            resolved_nodes.append(
+                ResolvedNode(
+                    value=None,
+                    path=child_path,
+                    context_item=parent.context_item if parent.context_item is not None else parent.value,
+                )
+            )
+            continue
+
+        child = parent.value.get(leaf_key)
+        if is_leaf_list:
+            if not isinstance(child, list):
+                resolved_nodes.append(
+                    ResolvedNode(
+                        value=child,
+                        path=child_path,
+                        context_item=parent.context_item if parent.context_item is not None else parent.value,
+                    )
+                )
+                continue
+            for idx, item in enumerate(child):
+                ctx = item if isinstance(item, dict) else None
+                resolved_nodes.append(ResolvedNode(value=item, path=f"{child_path}[{idx}]", context_item=ctx))
+            continue
+
+        ctx = parent.context_item if parent.context_item is not None else (child if isinstance(child, dict) else None)
+        resolved_nodes.append(ResolvedNode(value=child, path=child_path, context_item=ctx))
+
+    return resolved_nodes
+
+
 def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentCompletenessReport:
     """Build policy-driven completeness metadata for a single instrument payload."""
     policy, policy_error = _load_instrument_policy()
@@ -468,11 +530,11 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
     alias_fallbacks: list[dict[str, str]] = []
 
     for rule in policy.rules:
-        resolved = _resolve_path_nodes(payload, rule.path)
+        resolved = _resolve_rule_nodes(payload, rule.path)
         alias_hits: list[str] = []
         if rule.aliases:
             for alias in rule.aliases:
-                if _resolve_path_nodes(payload, alias):
+                if _resolve_rule_nodes(payload, alias):
                     alias_hits.append(alias)
                     alias_fallbacks.append({
                         'path': rule.path,
@@ -480,12 +542,12 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
                         'title': rule.title or rule.path,
                     })
 
-        present = bool(resolved or alias_hits)
+        present = bool(any(node.value not in (None, '') for node in resolved) or alias_hits)
         condition_triggered = False
         missing = False
 
         if rule.status == 'required':
-            missing = not present
+            missing = not present or any(node.value in (None, '') for node in resolved)
             if missing:
                 missing_required.append({'path': rule.path, 'title': rule.title or rule.path})
         elif rule.status == 'conditional' and rule.required_if is not None:
@@ -521,6 +583,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
                 'condition_triggered': condition_triggered,
                 'alias_used': bool(alias_hits),
                 'aliases': alias_hits,
+                'used_by': list(rule.used_by) if rule.used_by is not None else [],
             }
         )
 
@@ -617,40 +680,81 @@ def _evaluate_required_if(
     item_context: dict[str, Any] | None,
     vocabulary: Vocabulary,
 ) -> bool:
-    parent_present = required_if.get('parent_present')
-    if isinstance(parent_present, str):
-        parent_nodes = _resolve_path_nodes(payload, parent_present)
-        if parent_nodes:
-            return True
+    def _evaluate_simple_conditions(condition_spec: dict[str, Any]) -> bool:
+        conditions: list[bool] = []
 
-    modalities_any_of = required_if.get('modalities_any_of')
-    if isinstance(modalities_any_of, list):
-        modality_values = _resolve_path_nodes(payload, 'modalities')
-        if modality_values and isinstance(modality_values[0].value, list):
-            modality_ids = {
-                canonical
-                for value in modality_values[0].value
-                for canonical in [vocabulary.resolve_canonical('modalities', value) or value if isinstance(value, str) else None]
-                if isinstance(canonical, str)
-            }
-            targets = {str(v).strip() for v in modalities_any_of if isinstance(v, str)}
-            if modality_ids & targets:
-                return True
+        parent_present = condition_spec.get('parent_present')
+        if isinstance(parent_present, str):
+            parent_nodes = _resolve_path_nodes(payload, parent_present)
+            conditions.append(bool(parent_nodes))
 
-    scanner_type_in = required_if.get('scanner_type_in')
-    if isinstance(scanner_type_in, list):
-        scanner_nodes = _resolve_path_nodes(payload, 'hardware.scanner.type')
-        scanner_type = scanner_nodes[0].value if scanner_nodes else None
-        if isinstance(scanner_type, str) and scanner_type in {str(v).strip() for v in scanner_type_in if isinstance(v, str)}:
-            return True
+        modalities_any_of = condition_spec.get('modalities_any_of')
+        if isinstance(modalities_any_of, list):
+            modality_values = _resolve_path_nodes(payload, 'modalities')
+            has_match = False
+            if modality_values and isinstance(modality_values[0].value, list):
+                modality_ids = {
+                    canonical
+                    for value in modality_values[0].value
+                    for canonical in [vocabulary.resolve_canonical('modalities', value) or value if isinstance(value, str) else None]
+                    if isinstance(canonical, str)
+                }
+                targets = {str(v).strip() for v in modalities_any_of if isinstance(v, str)}
+                has_match = bool(modality_ids & targets)
+            conditions.append(has_match)
 
-    item_kind_in = required_if.get('item_kind_in')
-    if isinstance(item_kind_in, list) and isinstance(item_context, dict):
-        kind = item_context.get('kind')
-        if isinstance(kind, str) and kind in {str(v).strip() for v in item_kind_in if isinstance(v, str)}:
-            return True
+        scanner_type_in = condition_spec.get('scanner_type_in')
+        if isinstance(scanner_type_in, list):
+            scanner_nodes = _resolve_path_nodes(payload, 'hardware.scanner.type')
+            scanner_type = scanner_nodes[0].value if scanner_nodes else None
+            conditions.append(
+                isinstance(scanner_type, str)
+                and scanner_type in {str(v).strip() for v in scanner_type_in if isinstance(v, str)}
+            )
 
-    return False
+        item_kind_in = condition_spec.get('item_kind_in')
+        if isinstance(item_kind_in, list):
+            kind = item_context.get('kind') if isinstance(item_context, dict) else None
+            conditions.append(
+                isinstance(kind, str)
+                and kind in {str(v).strip() for v in item_kind_in if isinstance(v, str)}
+            )
+
+        if not conditions:
+            return False
+        return all(conditions)
+
+    all_of = required_if.get('all_of')
+    if isinstance(all_of, list):
+        all_of_results = [
+            _evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary)
+            for condition in all_of
+            if isinstance(condition, dict)
+        ]
+        if not all_of_results:
+            return False
+        if not all(all_of_results):
+            return False
+
+    any_of = required_if.get('any_of')
+    if isinstance(any_of, list):
+        any_of_results = [
+            _evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary)
+            for condition in any_of
+            if isinstance(condition, dict)
+        ]
+        if not any_of_results or not any(any_of_results):
+            return False
+
+    simple_result = _evaluate_simple_conditions(required_if)
+    has_simple_conditions = any(
+        key in required_if
+        for key in ('parent_present', 'modalities_any_of', 'scanner_type_in', 'item_kind_in')
+    )
+
+    if has_simple_conditions:
+        return simple_result
+    return isinstance(all_of, list) or isinstance(any_of, list)
 
 
 def _evaluate_event_required_if(
@@ -829,11 +933,11 @@ def validate_instrument_ledgers(
             continue
 
         for rule in policy.rules:
-            resolved = _resolve_path_nodes(payload, rule.path)
+            resolved = _resolve_rule_nodes(payload, rule.path)
 
             if rule.aliases:
                 for alias in rule.aliases:
-                    alias_resolved = _resolve_path_nodes(payload, alias)
+                    alias_resolved = _resolve_rule_nodes(payload, alias)
                     if alias_resolved and not resolved:
                         warnings.append(
                             ValidationIssue(
