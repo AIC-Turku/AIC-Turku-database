@@ -28,7 +28,7 @@ modules:
     url: ''
 
 software:
-  - role: acquisition
+  acquisition:
     name: 3i SlideBook
     version: '6'
     url: ''
@@ -42,7 +42,7 @@ hardware:
     
   hardware_autofocus:
     is_installed: true
-    type: reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection
 
   scanner:
     type: spinning_disk
