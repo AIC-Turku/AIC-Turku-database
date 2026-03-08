@@ -6,58 +6,142 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: upright
-  location: ''
-  notes: 'type: "Multiphoton confocal microscope (upright)" | filters: [{"Main Beam
-    Splitter LP505 nm"=>["SHG 440 (440/20)", "CFP (483/32)", "YFP (535/20)"]}, {"Main
-    Beam Splitter LP560 nm"=>["DAPI (457/50)", "FITC (525/52)", "TRITC (585/40)",
-    "Alexa 633 (650/50)"]}] | imaging_modes: ["Multiphoton (two-photon) fluorescence",
-    "Deep tissue intravital imaging", "Resonant scanning (video-rate)"]'
+  location: '' # Flag: Required field. Please provide the physical location.
+  notes: 'Multiphoton confocal microscope (upright). Imaging modes: Multiphoton (two-photon) fluorescence, Deep tissue intravital imaging, Resonant scanning (video-rate).'
+  url: ''
+
 modalities:
-- confocal_point
-- multiphoton
-modules: []
+  - confocal_point
+  - multiphoton
+
 software:
-  acquisition:
+  - role: acquisition
     name: Leica LAS AF
     version: ''
+    url: ''
+
 hardware:
   scanner:
     type: resonant
+    line_rate_hz: null # Flag: Required because scanner type is 'resonant'. Please provide the resonant scanner speed in Hz.
     notes: ''
+    url: ''
+
   light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: Coherent Chameleon Ultra II (tunable 690-1040 nm)
-    wavelength_nm: "1040"
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: Coherent Compact OPO (extends tunable range to 1600 nm)
-    wavelength_nm: "1600"
-    power: ''
-  - kind: laser
-    manufacturer: ''
-    model: Coherent Chameleon Vision II (tunable 690-1040 nm)
-    wavelength_nm: "1040"
-    power: ''
+    - kind: multiphoton_laser
+      manufacturer: Coherent # Extracted from model string
+      model: Chameleon Ultra II
+      wavelength_nm: tunable
+      power: ''
+      notes: 'tunable 690-1040 nm'
+      url: ''
+    - kind: multiphoton_laser
+      manufacturer: Coherent # Extracted from model string
+      model: Compact OPO
+      wavelength_nm: tunable
+      power: ''
+      notes: 'extends tunable range to 1600 nm'
+      url: ''
+    - kind: multiphoton_laser
+      manufacturer: Coherent # Extracted from model string
+      model: Chameleon Vision II
+      wavelength_nm: tunable
+      power: ''
+      notes: 'tunable 690-1040 nm'
+      url: ''
+
   detectors:
-  - kind: pmt
-    manufacturer: ''
-    model: Photomultiplier Tubes (non-descanned)
+    - kind: pmt
+      manufacturer: '' # Flag: Required field (e.g., Leica).
+      model: Photomultiplier Tubes (non-descanned)
+      qe_peak_pct: null # Flag: Conditionally required because confocal_point modality is present.
+      notes: ''
+      url: ''
+
+  filters:
+    - name: SHG 440
+      location: NDD Block
+      product_code: ''
+      excitation: ''
+      dichroic: LP 505
+      emission: 440/20
+      notes: Main Beam Splitter LP505 nm
+      url: ''
+    - name: CFP
+      location: NDD Block
+      product_code: ''
+      excitation: ''
+      dichroic: LP 505
+      emission: 483/32
+      notes: Main Beam Splitter LP505 nm
+      url: ''
+    - name: YFP
+      location: NDD Block
+      product_code: ''
+      excitation: ''
+      dichroic: LP 505
+      emission: 535/20
+      notes: Main Beam Splitter LP505 nm
+      url: ''
+    - name: DAPI
+      location: NDD Block
+      product_code: ''
+      excitation: ''
+      dichroic: LP 560
+      emission: 457/50
+      notes: Main Beam Splitter LP560 nm
+      url: ''
+    - name: FITC
+      location: NDD Block
+      product_code: ''
+      excitation: ''
+      dichroic: LP 560
+      emission: 525/52
+      notes: Main Beam Splitter LP560 nm
+      url: ''
+    - name: TRITC
+      location: NDD Block
+      product_code: ''
+      excitation: ''
+      dichroic: LP 560
+      emission: 585/40
+      notes: Main Beam Splitter LP560 nm
+      url: ''
+    - name: Alexa 633
+      location: NDD Block
+      product_code: ''
+      excitation: ''
+      dichroic: LP 560
+      emission: 650/50
+      notes: Main Beam Splitter LP560 nm
+      url: ''
+
   objectives:
-  - id: 20x_water
-    manufacturer: Leica
-    model: HCX APO L
-    magnification: 20.0
-    numerical_aperture: 1.0
-    working_distance: 1.95 mm
-    immersion: water
-    correction: apochromat
-  - id: 25x_water
-    manufacturer: Leica
-    model: HCX IR APO L
-    magnification: 25.0
-    numerical_aperture: 0.95
-    working_distance: 2.50 mm
-    immersion: water
-    correction: apochromat
+    - id: 20x_water
+      manufacturer: Leica
+      model: HCX APO L
+      product_code: ''
+      magnification: 20.0
+      numerical_aperture: 1.0
+      working_distance: 1.95 mm
+      immersion: water
+      correction: apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true # Flag: Required field.
+    - id: 25x_water
+      manufacturer: Leica
+      model: HCX IR APO L
+      product_code: ''
+      magnification: 25.0
+      numerical_aperture: 0.95
+      working_distance: 2.50 mm
+      immersion: water
+      correction: apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true # Flag: Required field.
