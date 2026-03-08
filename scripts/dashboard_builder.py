@@ -20,6 +20,7 @@ The builder is intentionally deterministic: same inputs -> same output tree.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import re
@@ -401,156 +402,10 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
 
 
 def normalize_hardware(raw: Any) -> dict[str, Any]:
-    """Normalize hardware into canonical dashboard-facing sections."""
-    hardware = raw if isinstance(raw, dict) else {}
-
-    light_sources = [
-        {
-            "name": clean_text(src.get("model")),
-            "type": clean_text(src.get("kind")),
-            "wavelength": src.get("wavelength_nm"),
-            "power": clean_text(src.get("power")),
-            "manufacturer": clean_text(src.get("manufacturer")),
-            "technology": clean_text(src.get("technology")),
-            "notes": clean_text(src.get("notes")),
-            "url": clean_text(src.get("url")),
-        }
-        for src in hardware.get("light_sources", [])
-        if isinstance(src, dict)
-    ]
-
-    detectors = [
-        {
-            "name": clean_text(det.get("manufacturer")),
-            "model": clean_text(det.get("model")),
-            "type": clean_text(det.get("kind")),
-            "pixel_pitch_um": det.get("pixel_pitch_um") or det.get("pixel_size_um"),
-            "sensor_format_px": clean_text(det.get("sensor_format_px")),
-            "binning": clean_text(det.get("binning")),
-            "bit_depth": det.get("bit_depth"),
-            "qe_peak_pct": det.get("qe_peak_pct"),
-            "read_noise_e": det.get("read_noise_e"),
-            "notes": clean_text(det.get("notes")),
-            "url": clean_text(det.get("url")),
-        }
-        for det in hardware.get("detectors", [])
-        if isinstance(det, dict)
-    ]
-
-    objectives = [
-        {
-            "id": clean_text(obj.get("id")),
-            "name": clean_text(obj.get("model")),
-            "manufacturer": clean_text(obj.get("manufacturer")),
-            "product_code": clean_text(obj.get("product_code")),
-            "magnification": obj.get("magnification"),
-            "na": obj.get("numerical_aperture"),
-            "wd": clean_text(obj.get("working_distance")),
-            "immersion": clean_text(obj.get("immersion")),
-            "correction": clean_text(obj.get("correction")),
-            "afc": obj.get("afc_compatible"),
-            "is_installed": obj.get("is_installed", True),
-            "specialties": clean_string_list(obj.get("specialties")),
-            "notes": clean_text(obj.get("notes")),
-            "url": clean_text(obj.get("url")),
-        }
-        for obj in hardware.get("objectives", [])
-        if isinstance(obj, dict)
-    ]
-
-    splitters = [
-        {
-            "name": clean_text(s.get("name")),
-            "type": clean_text(s.get("type")),
-            "notes": clean_text(s.get("notes")),
-            "url": clean_text(s.get("url")),
-        }
-        for s in hardware.get("splitters", [])
-        if isinstance(s, dict)
-    ]
-
-    filters = [
-        {
-            "name": clean_text(f.get("name")),
-            "location": clean_text(f.get("location")),
-            "product_code": clean_text(f.get("product_code")),
-            "excitation": clean_text(f.get("excitation")),
-            "dichroic": clean_text(f.get("dichroic")),
-            "emission": clean_text(f.get("emission")),
-            "notes": clean_text(f.get("notes")),
-            "url": clean_text(f.get("url")),
-        }
-        for f in hardware.get("filters", [])
-        if isinstance(f, dict)
-    ]
-
-    magnification_changers = [
-        {
-            "manufacturer": clean_text(m.get("manufacturer")),
-            "model": clean_text(m.get("model")),
-            "magnification": m.get("magnification"),
-            "notes": clean_text(m.get("notes")),
-            "url": clean_text(m.get("url")),
-        }
-        for m in hardware.get("magnification_changers", [])
-        if isinstance(m, dict)
-    ]
-
-    scanner = hardware.get("scanner") if isinstance(hardware.get("scanner"), dict) else {}
-    environment_raw = hardware.get("environment") if isinstance(hardware.get("environment"), dict) else {}
-    hardware_autofocus_raw = hardware.get("hardware_autofocus") if isinstance(hardware.get("hardware_autofocus"), dict) else {}
-    triggering_raw = hardware.get("triggering") if isinstance(hardware.get("triggering"), dict) else {}
-
-    environment = {
-        "temperature_control": normalize_optional_bool(environment_raw.get("temperature_control")),
-        "temperature_range": clean_text(environment_raw.get("temperature_range")),
-        "co2_control": normalize_optional_bool(environment_raw.get("co2_control")),
-        "co2_range": clean_text(environment_raw.get("co2_range")),
-        "o2_control": normalize_optional_bool(environment_raw.get("o2_control")),
-        "o2_range": clean_text(environment_raw.get("o2_range")),
-        "humidity_control": normalize_optional_bool(environment_raw.get("humidity_control")),
-        "notes": clean_text(environment_raw.get("notes")),
-    }
-
-    stages = [
-        {
-            "type": clean_text(stage.get("type")),
-            "manufacturer": clean_text(stage.get("manufacturer")),
-            "model": clean_text(stage.get("model")),
-            "step_size_um": stage.get("step_size_um"),
-        }
-        for stage in hardware.get("stages", [])
-        if isinstance(stage, dict)
-    ]
-
-    hardware_autofocus = {
-        "is_installed": normalize_optional_bool(hardware_autofocus_raw.get("is_installed")),
-        "type": clean_text(hardware_autofocus_raw.get("type")),
-    }
-
-    triggering = {
-        "primary_mode": clean_text(triggering_raw.get("primary_mode")),
-        "notes": clean_text(triggering_raw.get("notes")),
-    }
-
-    return {
-        "scanner": {
-            "type": clean_text(scanner.get("type")),
-            "line_rate_hz": scanner.get("line_rate_hz"),
-            "pinhole_um": scanner.get("pinhole_um"),
-            "notes": clean_text(scanner.get("notes")),
-        },
-        "light_sources": light_sources,
-        "detectors": detectors,
-        "objectives": objectives,
-        "splitters": splitters,
-        "filters": filters,
-        "magnification_changers": magnification_changers,
-        "environment": environment,
-        "stages": stages,
-        "hardware_autofocus": hardware_autofocus,
-        "triggering": triggering,
-    }
+    """Preserve hardware exactly as provided by YAML using schema-native keys."""
+    if not isinstance(raw, dict):
+        return {}
+    return copy.deepcopy(raw)
 
 
 def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, retired: bool) -> dict[str, Any] | None:
@@ -588,22 +443,6 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     hardware = normalize_hardware(payload.get("hardware") or {})
     policy = build_instrument_completeness_report(payload)
 
-    methods_blocker_paths = {
-        "instrument.display_name",
-        "instrument.manufacturer",
-        "instrument.model",
-        "instrument.stand_orientation",
-        "modalities",
-        "hardware.scanner.type",
-        "software.acquisition.name",
-        "software.acquisition.version",
-        "software.analysis.name",
-        "software.analysis.version",
-        "software.deconvolution.name",
-        "software.deconvolution.version",
-        "software.flim.name",
-        "software.flim.version",
-    }
     software_roles = ("acquisition", "analysis", "deconvolution", "flim")
 
     software_by_role: dict[str, dict[str, Any]] = {}
@@ -621,8 +460,12 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     missing_entries = [*policy.missing_required, *policy.missing_conditional]
     methods_blockers: list[dict[str, str]] = []
     for entry in missing_entries:
+        used_by = entry.get("used_by") if isinstance(entry, dict) else None
+        if not isinstance(used_by, list) or "method_generator" not in used_by:
+            continue
+
         path = clean_text(entry.get("path"))
-        if not path or path not in methods_blocker_paths:
+        if not path:
             continue
 
         role = ""
@@ -1154,6 +997,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         stages = canonical_hardware.get("stages", [])
         hardware_autofocus = canonical_hardware.get("hardware_autofocus") if isinstance(canonical_hardware.get("hardware_autofocus"), dict) else {}
         triggering = canonical_hardware.get("triggering") if isinstance(canonical_hardware.get("triggering"), dict) else {}
+        scanner = canonical_hardware.get("scanner") if isinstance(canonical_hardware.get("scanner"), dict) else {}
 
         inst["processed_hardware"] = {
             "modalities": [clean_text(m) for m in inst.get("modalities", []) if clean_text(m)],
@@ -1166,17 +1010,96 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 for module in inst.get("modules", [])
                 if isinstance(module, dict) and clean_text(module.get("name"))
             ],
-            "scanner": canonical_hardware.get("scanner") or {},
-            "light_sources": light_sources,
-            "detectors": detectors,
-            "objectives": objectives,
+            "scanner": {
+                "type": clean_text(scanner.get("type")),
+                "line_rate_hz": scanner.get("line_rate_hz"),
+                "pinhole_um": scanner.get("pinhole_um"),
+                "light_sheet_type": clean_text(scanner.get("light_sheet_type")),
+                "notes": clean_text(scanner.get("notes")),
+                "url": clean_text(scanner.get("url")),
+            },
+            "light_sources": [
+                {
+                    "name": clean_text(src.get("model")),
+                    "type": clean_text(src.get("kind")),
+                    "wavelength": src.get("wavelength_nm"),
+                    "power": clean_text(src.get("power")),
+                    "manufacturer": clean_text(src.get("manufacturer")),
+                    "technology": clean_text(src.get("technology")),
+                    "notes": clean_text(src.get("notes")),
+                    "url": clean_text(src.get("url")),
+                }
+                for src in light_sources
+                if isinstance(src, dict)
+            ],
+            "detectors": [
+                {
+                    "name": clean_text(det.get("manufacturer")),
+                    "model": clean_text(det.get("model")),
+                    "type": clean_text(det.get("kind")),
+                    "pixel_pitch_um": det.get("pixel_pitch_um") or det.get("pixel_size_um"),
+                    "sensor_format_px": clean_text(det.get("sensor_format_px")),
+                    "binning": clean_text(det.get("binning")),
+                    "bit_depth": det.get("bit_depth"),
+                    "qe_peak_pct": det.get("qe_peak_pct"),
+                    "read_noise_e": det.get("read_noise_e"),
+                    "notes": clean_text(det.get("notes")),
+                    "url": clean_text(det.get("url")),
+                }
+                for det in detectors
+                if isinstance(det, dict)
+            ],
+            "objectives": [
+                {
+                    "id": clean_text(obj.get("id")),
+                    "name": clean_text(obj.get("model")),
+                    "manufacturer": clean_text(obj.get("manufacturer")),
+                    "product_code": clean_text(obj.get("product_code")),
+                    "magnification": obj.get("magnification"),
+                    "na": obj.get("numerical_aperture"),
+                    "wd": clean_text(obj.get("working_distance")),
+                    "immersion": clean_text(obj.get("immersion")),
+                    "correction": clean_text(obj.get("correction")),
+                    "afc": obj.get("afc_compatible"),
+                    "is_installed": obj.get("is_installed"),
+                    "specialties": clean_string_list(obj.get("specialties")),
+                    "notes": clean_text(obj.get("notes")),
+                    "url": clean_text(obj.get("url")),
+                }
+                for obj in objectives
+                if isinstance(obj, dict)
+            ],
             "splitters": splitters,
             "filters": filters,
             "magnification_changers": magnification_changers,
-            "environment": environment,
-            "stages": stages,
-            "hardware_autofocus": hardware_autofocus,
-            "triggering": triggering,
+            "environment": {
+                "temperature_control": normalize_optional_bool(environment.get("temperature_control")),
+                "temperature_range": clean_text(environment.get("temperature_range")),
+                "co2_control": normalize_optional_bool(environment.get("co2_control")),
+                "co2_range": clean_text(environment.get("co2_range")),
+                "o2_control": normalize_optional_bool(environment.get("o2_control")),
+                "o2_range": clean_text(environment.get("o2_range")),
+                "humidity_control": normalize_optional_bool(environment.get("humidity_control")),
+                "notes": clean_text(environment.get("notes")),
+            },
+            "stages": [
+                {
+                    "type": clean_text(stage.get("type")),
+                    "manufacturer": clean_text(stage.get("manufacturer")),
+                    "model": clean_text(stage.get("model")),
+                    "step_size_um": stage.get("step_size_um"),
+                }
+                for stage in stages
+                if isinstance(stage, dict)
+            ],
+            "hardware_autofocus": {
+                "is_installed": normalize_optional_bool(hardware_autofocus.get("is_installed")),
+                "type": clean_text(hardware_autofocus.get("type")),
+            },
+            "triggering": {
+                "primary_mode": clean_text(triggering.get("primary_mode")),
+                "notes": clean_text(triggering.get("notes")),
+            },
         }
 
         instrument_dir = docs_root / "instruments" / instrument_id
