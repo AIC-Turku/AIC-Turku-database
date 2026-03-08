@@ -36,13 +36,11 @@
 
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
-<div class="aic-topactions" markdown="span">
-  [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
-</div>
-
 {% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
 !!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
     {{ instrument.status.reason }}
+    
+    [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
 
 <div class="aic-hero">
   <div class="aic-hero__media">
