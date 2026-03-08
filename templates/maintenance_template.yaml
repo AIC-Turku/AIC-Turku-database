@@ -4,166 +4,133 @@
 # -----------------------------------------------------------------------------
 # SCHEMA VERSION
 # -----------------------------------------------------------------------------
-# Schema Version: Locks interpretation of the maintenance ledger shape.
-# Allowed values: 1
-schema_version: 1
+schema_version: 1  # Schema Version: Locks interpretation of the maintenance ledger shape. | Allowed values: 1
 
 # -----------------------------------------------------------------------------
 # RECORD TYPE
 # -----------------------------------------------------------------------------
-# Record Type: Distinguishes maintenance ledgers from QC ledgers.
-# Allowed values: maintenance_event
-record_type: "maintenance_event"
+record_type: "maintenance_event"  # Record Type: Distinguishes maintenance ledgers from QC ledgers. | Allowed values: maintenance_event
 
 # -----------------------------------------------------------------------------
 # MAINTENANCE ID
 # -----------------------------------------------------------------------------
-# Maintenance Id: Preferred stable ID for maintenance events.
-maintenance_id: ""
+maintenance_id: ""  # Maintenance Id: Preferred stable ID for maintenance events.
 
 # -----------------------------------------------------------------------------
 # EVENT ID
 # -----------------------------------------------------------------------------
-# Event Id: Legacy field still present in existing records; normalize to maintenance_id.
-event_id: ""
+event_id: ""  # Event Id: Legacy field still present in existing records; normalize to maintenance_id.
 
 # -----------------------------------------------------------------------------
 # MICROSCOPE
 # -----------------------------------------------------------------------------
-# Microscope: Links the event to the instrument registry.
-microscope: ""
+microscope: ""  # Microscope: Links the event to the instrument registry.
 
 # -----------------------------------------------------------------------------
 # SERVICE PROVIDER
 # -----------------------------------------------------------------------------
-# Service Provider: High-value filter for who performed the work.
-# Allowed values (canonical IDs): vendor, distributor, third_party, internal, unknown
-service_provider: ""
+service_provider: ""  # Service Provider: High-value filter for who performed the work. | Allowed values (canonical IDs): vendor, distributor, third_party, internal, unknown
 
 # -----------------------------------------------------------------------------
 # COMPANY
 # -----------------------------------------------------------------------------
-# Company: Needed when the provider is external.
-company: ""
+company: ""  # Company: Needed when the provider is external.
 
 # -----------------------------------------------------------------------------
 # CONTACT
 # -----------------------------------------------------------------------------
-# Contact: Useful reference for the named engineer or support contact.
-contact: ""
+contact: ""  # Contact: Useful reference for the named engineer or support contact.
 
 # -----------------------------------------------------------------------------
 # REFERENCE
 # -----------------------------------------------------------------------------
-# Reference: Ticket, PO, invoice, or case number.
-reference: ""
+reference: ""  # Reference: Ticket, PO, invoice, or case number.
 
 # -----------------------------------------------------------------------------
 # STARTED UTC
 # -----------------------------------------------------------------------------
-# Started Utc: Required to place the event on the maintenance timeline.
-started_utc: ""
+started_utc: ""  # Started Utc: Required to place the event on the maintenance timeline.
 
 # -----------------------------------------------------------------------------
 # ENDED UTC
 # -----------------------------------------------------------------------------
-# Ended Utc: Useful for downtime calculations, but some records may still be open.
-ended_utc: ""
+ended_utc: ""  # Ended Utc: Useful for downtime calculations, but some records may still be open.
 
 # -----------------------------------------------------------------------------
 # SYSTEM DOWN SINCE UTC
 # -----------------------------------------------------------------------------
-# System Down Since: Essential for calculating true facility downtime, which often predates the actual maintenance started_utc.
-system_down_since_utc: ""
+system_down_since_utc: ""  # System Down Since: Essential for calculating true facility downtime, which often predates the actual maintenance started_utc.
 
 # -----------------------------------------------------------------------------
 # REASON
 # -----------------------------------------------------------------------------
-# Reason: Main structured reason for the intervention.
-# Allowed values (canonical IDs): scheduled, problem, upgrade, install, check, other, issue_reported, cleaning
-reason: ""
+reason: ""  # Reason: Main structured reason for the intervention. | Allowed values (canonical IDs): scheduled, problem, upgrade, install, check, other, issue_reported, cleaning
 
 # -----------------------------------------------------------------------------
 # REASON DETAILS
 # -----------------------------------------------------------------------------
-# Reason Details: Explains the maintenance trigger in plain language.
-reason_details: ""
+reason_details: ""  # Reason Details: Explains the maintenance trigger in plain language.
 
 # -----------------------------------------------------------------------------
 # ACTION
 # -----------------------------------------------------------------------------
-# Action: Main structured intervention type.
-# Allowed values (canonical IDs): service, repair, align, calibrate, clean, replace, update, other, install
-action: ""
+action: ""  # Action: Main structured intervention type. | Allowed values (canonical IDs): service, repair, align, calibrate, clean, replace, update, other, install
 
 # -----------------------------------------------------------------------------
 # ACTION DETAILS
 # -----------------------------------------------------------------------------
-# Action Details: Describes what was actually done.
-action_details: ""
+action_details: ""  # Action Details: Describes what was actually done.
 
 # -----------------------------------------------------------------------------
 # MICROSCOPE STATUS BEFORE
 # -----------------------------------------------------------------------------
-# Microscope Status Before: Good context but not always captured in legacy events.
-# Allowed values (canonical IDs): in_service, limited, out_of_service
-microscope_status_before: ""
+microscope_status_before: ""  # Microscope Status Before: Good context but not always captured in legacy events. | Allowed values (canonical IDs): in_service, limited, out_of_service
 
 # -----------------------------------------------------------------------------
 # MICROSCOPE STATUS AFTER
 # -----------------------------------------------------------------------------
-# Microscope Status After: Operational outcome after the intervention is essential.
-# Allowed values (canonical IDs): in_service, limited, out_of_service
-microscope_status_after: ""
+microscope_status_after: ""  # Microscope Status After: Operational outcome after the intervention is essential. | Allowed values (canonical IDs): in_service, limited, out_of_service
 
 # -----------------------------------------------------------------------------
 # DOWNTIME HOURS
 # -----------------------------------------------------------------------------
-# Downtime Hours: Useful KPI, but can be derived from timestamps when both are present.
-downtime_hours: 0.0
+downtime_hours: 0.0  # Downtime Hours: Useful KPI, but can be derived from timestamps when both are present.
 
 # -----------------------------------------------------------------------------
 # RELATED QC
 # -----------------------------------------------------------------------------
-# Related Qc: Connects maintenance to before/after QC evidence.
-related_qc:
+related_qc:  # Related Qc: Connects maintenance to before/after QC evidence.
   - ""
 
 # -----------------------------------------------------------------------------
 # RELATED MAINTENANCE
 # -----------------------------------------------------------------------------
-# Related Maintenance: Connects multi-visit repairs or preventive maintenance that spawned a corrective action.
-related_maintenance:
+related_maintenance:  # Related Maintenance: Connects multi-visit repairs or preventive maintenance that spawned a corrective action.
   - ""
 
 # -----------------------------------------------------------------------------
 # ATTACHMENTS
 # -----------------------------------------------------------------------------
-# Attachments: Holds reports, invoices, or calibration documents.
-attachments:
+attachments:  # Attachments: Holds reports, invoices, or calibration documents.
   - ""
 
 # -----------------------------------------------------------------------------
 # TAGS
 # -----------------------------------------------------------------------------
-# Tags: Flexible secondary faceting.
-tags:
+tags:  # Tags: Flexible secondary faceting.
   - ""
 
 # -----------------------------------------------------------------------------
 # FOLLOWUP
 # -----------------------------------------------------------------------------
-# Followup: Captures recommended next steps.
-followup: ""
+followup: ""  # Followup: Captures recommended next steps.
 
 # -----------------------------------------------------------------------------
 # NEXT DUE DATE
 # -----------------------------------------------------------------------------
-# Next Due Date: Useful when the follow-up has a concrete due date, but not all follow-up notes are date-bound.
-next_due_date: ""
+next_due_date: ""  # Next Due Date: Useful when the follow-up has a concrete due date, but not all follow-up notes are date-bound.
 
 # -----------------------------------------------------------------------------
 # NOTES
 # -----------------------------------------------------------------------------
-# Notes: Additional context that does not fit structured fields.
-notes: ""
+notes: ""  # Notes: Additional context that does not fit structured fields.

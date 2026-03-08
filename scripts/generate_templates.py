@@ -265,22 +265,19 @@ def _allowed_values_comment(rule: Rule, vocab_values: dict[str, list[str]]) -> s
     return None
 
 
-def _comment_lines(rule: Rule | None, indent: int, vocab_values: dict[str, list[str]]) -> list[str]:
+def _inline_comment(rule: Rule | None, vocab_values: dict[str, list[str]]) -> str:
     if rule is None:
-        return []
+        return ""
 
-    lines = []
-    prefix = " " * indent
-    line = f"# {rule.title}"
+    line = rule.title
     if rule.rationale:
         line += f": {rule.rationale}"
-    lines.append(f"{prefix}{line}")
 
     allowed = _allowed_values_comment(rule, vocab_values)
     if allowed:
-        lines.append(f"{prefix}# {allowed}")
+        line += f" | {allowed}"
 
-    return lines
+    return f"  # {line}"
 
 
 def _render_node(
@@ -303,17 +300,17 @@ def _render_node(
                 lines.extend(_banner(group))
                 current_group = group
 
-        lines.extend(_comment_lines(child.rule, indent, vocab_values))
+        inline_comment = _inline_comment(child.rule, vocab_values)
         if child.kind == "scalar":
-            lines.append(f"{prefix}{key}: {_yaml_scalar(_rule_default_value(child.rule))}")
+            lines.append(f"{prefix}{key}: {_yaml_scalar(_rule_default_value(child.rule))}{inline_comment}")
             continue
 
         if child.kind == "list":
-            lines.append(f"{prefix}{key}:")
+            lines.append(f"{prefix}{key}:{inline_comment}")
             lines.extend(_render_list(child, indent + 2, vocab_values, top_key_groups))
             continue
 
-        lines.append(f"{prefix}{key}:")
+        lines.append(f"{prefix}{key}:{inline_comment}")
         lines.extend(_render_node(child, indent + 2, vocab_values, top_key_groups, top_level=False))
 
     return lines

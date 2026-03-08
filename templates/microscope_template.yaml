@@ -5,269 +5,148 @@
 # INSTRUMENT
 # -----------------------------------------------------------------------------
 instrument:
-  # Display name: Primary human-readable instrument name shown in reports and methods output.
-  display_name: ""
-  # Instrument ID: Stable machine-readable key used across QC, maintenance, and dashboard routing.
-  instrument_id: ""
-  # Manufacturer: Needed for instrument identification and methods wording.
-  manufacturer: ""
-  # Model: Needed for instrument identification and methods wording.
-  model: ""
-  # Year of purchase: Operational context and lifecycle planning; not essential for methods completeness.
-  year_of_purchase: ""
-  # Funding: Operational and acknowledgement context; not required for methods reporting.
-  funding: ""
-  # Stand orientation: Used directly by methods generator and helps classify the platform.
-  # Allowed values: upright, inverted, stereo, benchtop, other
-  stand_orientation: "upright"
-  # Location: required for operational metadata; not necessary for methods text.
-  location: ""
-  # Notes: Free text is useful for staff but should not replace structured fields.
-  notes: ""
-  # Instrument URL: Helpful for staff lookup and manuals, not essential for methods completeness.
-  url: ""
+  display_name: ""  # Display name: Primary human-readable instrument name shown in reports and methods output.
+  instrument_id: ""  # Instrument ID: Stable machine-readable key used across QC, maintenance, and dashboard routing.
+  manufacturer: ""  # Manufacturer: Needed for instrument identification and methods wording.
+  model: ""  # Model: Needed for instrument identification and methods wording.
+  year_of_purchase: ""  # Year of purchase: Operational context and lifecycle planning; not essential for methods completeness.
+  funding: ""  # Funding: Operational and acknowledgement context; not required for methods reporting.
+  stand_orientation: "upright"  # Stand orientation: Used directly by methods generator and helps classify the platform. | Allowed values: upright, inverted, stereo, benchtop, other
+  location: ""  # Location: required for operational metadata; not necessary for methods text.
+  notes: ""  # Notes: Free text is useful for staff but should not replace structured fields.
+  url: ""  # Instrument URL: Helpful for staff lookup and manuals, not essential for methods completeness.
 
 # -----------------------------------------------------------------------------
 # IMAGING MODALITIES
 # -----------------------------------------------------------------------------
-# Imaging modalities: Core reporting category in QUAREP/JCB-style instrumentation metadata.
-# Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging
-modalities:
+modalities:  # Imaging modalities: Core reporting category in QUAREP/JCB-style instrumentation metadata. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging
   - ""
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
-# Installed modules: Only present when installed modules materially change imaging capabilities.
-modules:
+modules:  # Installed modules: Only present when installed modules materially change imaging capabilities.
   -
-    # Module name: Required when a module/path is installed and materially changes imaging capabilities.
-    # Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, workstation, impedance_module, universal_vessel_holder
-    name: ""
-    # Module notes: Useful for operational nuances and limitations.
-    notes: ""
-    # Module URL: Helpful vendor or manual reference.
-    url: ""
+    name: ""  # Module name: Required when a module/path is installed and materially changes imaging capabilities. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, workstation, impedance_module, universal_vessel_holder
+    notes: ""  # Module notes: Useful for operational nuances and limitations.
+    url: ""  # Module URL: Helpful vendor or manual reference.
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
 # -----------------------------------------------------------------------------
 software:
   acquisition:
-    # Acquisition software name: Required only if the microscope is driven by computer acquisition.
-    name: ""
-    # Acquisition software version: Version materially affects reproducibility and methods text when acquisition software is used.
-    version: ""
-    # Acquisition software developer: Usually inferable from software name/vendor, so not minimal.
-    developer: ""
-    # Acquisition software notes: Useful for describing split workflows or bundled processing.
-    notes: ""
-    # Acquisition software URL: Reference only.
-    url: ""
+    name: ""  # Acquisition software name: Required only if the microscope is driven by computer acquisition.
+    version: ""  # Acquisition software version: Version materially affects reproducibility and methods text when acquisition software is used.
+    developer: ""  # Acquisition software developer: Usually inferable from software name/vendor, so not minimal.
+    notes: ""  # Acquisition software notes: Useful for describing split workflows or bundled processing.
+    url: ""  # Acquisition software URL: Reference only.
   analysis:
-    # Analysis software name: Required when instrument-associated analysis is part of standard output.
-    name: ""
-    # Analysis software version: Version matters when vendor analysis is part of the standard instrument workflow.
-    version: ""
-    # Analysis software URL: Reference only.
-    url: ""
+    name: ""  # Analysis software name: Required when instrument-associated analysis is part of standard output.
+    version: ""  # Analysis software version: Version matters when vendor analysis is part of the standard instrument workflow.
+    url: ""  # Analysis software URL: Reference only.
   deconvolution:
-    # Deconvolution or reconstruction software name: Required when reconstruction is integral to the instrument output.
-    name: ""
-    # Deconvolution or reconstruction software version: Reconstruction version affects reproducibility and interpretation when deconvolution software is used.
-    version: ""
-    # Deconvolution or reconstruction software URL: Reference only.
-    url: ""
+    name: ""  # Deconvolution or reconstruction software name: Required when reconstruction is integral to the instrument output.
+    version: ""  # Deconvolution or reconstruction software version: Reconstruction version affects reproducibility and interpretation when deconvolution software is used.
+    url: ""  # Deconvolution or reconstruction software URL: Reference only.
   flim:
-    # FLIM software name: Required when lifetime fitting or FLIM reconstruction is part of standard workflow.
-    name: ""
-    # FLIM software version: Version matters for lifetime fitting and FLIM-derived outputs when FLIM software is used.
-    version: ""
-    # FLIM software URL: Reference only.
-    url: ""
+    name: ""  # FLIM software name: Required when lifetime fitting or FLIM reconstruction is part of standard workflow.
+    version: ""  # FLIM software version: Version matters for lifetime fitting and FLIM-derived outputs when FLIM software is used.
+    url: ""  # FLIM software URL: Reference only.
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION
 # -----------------------------------------------------------------------------
 hardware:
   scanner:
-    # Scanner type: Core hardware discriminator for methods completeness.
-    # Allowed values (canonical IDs): none, galvo, resonant, tandem, spinning_disk, polygon, acousto_optic, stage_scanning
-    type: ""
-    # Scanner line rate (Hz): Required where speed mode is intrinsic and relevant to the scan engine.
-    line_rate_hz: ""
-    # Pinhole diameter (um): Required for spinning disk systems where pinhole size is fixed in hardware. Point scanners use tunable pinholes defined per-experiment.
-    pinhole_um: ""
-    # Light Sheet Architecture: Clarifies the specific illumination geometry for light sheet systems.
-    # Allowed values: standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other
-    light_sheet_type: "standard_spim"
-    # Scanner notes: Useful for mode-specific caveats.
-    notes: ""
-    # Scanner URL: Reference only.
-    url: ""
-  # Light sources: Each instrument needs at least one declared excitation source.
-  light_sources:
+    type: ""  # Scanner type: Core hardware discriminator for methods completeness. | Allowed values (canonical IDs): none, galvo, resonant, tandem, spinning_disk, polygon, acousto_optic, stage_scanning
+    line_rate_hz: ""  # Scanner line rate (Hz): Required where speed mode is intrinsic and relevant to the scan engine.
+    pinhole_um: ""  # Pinhole diameter (um): Required for spinning disk systems where pinhole size is fixed in hardware. Point scanners use tunable pinholes defined per-experiment.
+    light_sheet_type: "standard_spim"  # Light Sheet Architecture: Clarifies the specific illumination geometry for light sheet systems. | Allowed values: standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other
+    notes: ""  # Scanner notes: Useful for mode-specific caveats.
+    url: ""  # Scanner URL: Reference only.
+  light_sources:  # Light sources: Each instrument needs at least one declared excitation source.
     -
-      # Light source kind: Core excitation-source class.
-      # Allowed values (canonical IDs): laser, white_light_laser, led, arc_lamp, metal_halide, halogen_lamp, multiphoton_laser, supercontinuum
-      kind: ""
-      # Light source manufacturer: Needed for unambiguous hardware identification.
-      manufacturer: ""
-      # Light source model: Needed for unambiguous hardware identification.
-      model: ""
-      # Light source technology subtype: Helpful subtype information for lasers or LED engines.
-      technology: ""
-      # Light source wavelength metadata: Required for line-selectable or tunable excitation sources where wavelength metadata is needed for reproducibility.
-      wavelength_nm: ""
-      # Light source nominal power: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
-      power: ""
-      # Light source notes: Useful for software aliases and caveats.
-      notes: ""
-      # Light source URL: Reference only.
-      url: ""
-  # Detectors: At least one detector chain must be declared.
-  detectors:
+      kind: ""  # Light source kind: Core excitation-source class. | Allowed values (canonical IDs): laser, white_light_laser, led, arc_lamp, metal_halide, halogen_lamp, multiphoton_laser, supercontinuum
+      manufacturer: ""  # Light source manufacturer: Needed for unambiguous hardware identification.
+      model: ""  # Light source model: Needed for unambiguous hardware identification.
+      technology: ""  # Light source technology subtype: Helpful subtype information for lasers or LED engines.
+      wavelength_nm: ""  # Light source wavelength metadata: Required for line-selectable or tunable excitation sources where wavelength metadata is needed for reproducibility.
+      power: ""  # Light source nominal power: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
+      notes: ""  # Light source notes: Useful for software aliases and caveats.
+      url: ""  # Light source URL: Reference only.
+  detectors:  # Detectors: At least one detector chain must be declared.
     -
-      # Detector kind: Core detector class.
-      # Allowed values (canonical IDs): pmt, gaasp_pmt, hyd, scmos, cmos, emccd, ccd, apd, spad
-      kind: ""
-      # Detector manufacturer: Needed for hardware identification.
-      manufacturer: ""
-      # Detector model: Needed for hardware identification.
-      model: ""
-      # Detector pixel pitch (um): Required for camera-based detectors because reporting completeness depends on it.
-      pixel_pitch_um: ""
-      # Detector pixel size (legacy alias): Backward-compatible alias retained for existing files; normalize to pixel_pitch_um when possible.
-      pixel_size_um: ""
-      # Detector sensor format (px): Useful capability metadata, not minimal.
-      sensor_format_px: ""
-      # Detector binning: Usually acquisition-specific rather than fixed hardware metadata.
-      binning: ""
-      # Detector bit depth: Capability metadata; useful but not minimal.
-      bit_depth: ""
-      # Detector peak quantum efficiency (%): Capability metadata.
-      qe_peak_pct: ""
-      # Detector read noise (e-): Capability metadata.
-      read_noise_e: ""
-      # Detector notes: Useful for channel assignments or operating modes.
-      notes: ""
-      # Detector URL: Reference only.
-      url: ""
-  # Installed filters or filter sets: Required only for instrument classes where optical filter sets define the imaging path.
-  filters:
+      kind: ""  # Detector kind: Core detector class. | Allowed values (canonical IDs): pmt, gaasp_pmt, hyd, scmos, cmos, emccd, ccd, apd, spad
+      manufacturer: ""  # Detector manufacturer: Needed for hardware identification.
+      model: ""  # Detector model: Needed for hardware identification.
+      pixel_pitch_um: ""  # Detector pixel pitch (um): Required for camera-based detectors because reporting completeness depends on it.
+      pixel_size_um: ""  # Detector pixel size (legacy alias): Backward-compatible alias retained for existing files; normalize to pixel_pitch_um when possible.
+      sensor_format_px: ""  # Detector sensor format (px): Useful capability metadata, not minimal.
+      binning: ""  # Detector binning: Usually acquisition-specific rather than fixed hardware metadata.
+      bit_depth: ""  # Detector bit depth: Capability metadata; useful but not minimal.
+      qe_peak_pct: ""  # Detector peak quantum efficiency (%): Capability metadata.
+      read_noise_e: ""  # Detector read noise (e-): Capability metadata.
+      notes: ""  # Detector notes: Useful for channel assignments or operating modes.
+      url: ""  # Detector URL: Reference only.
+  filters:  # Installed filters or filter sets: Required only for instrument classes where optical filter sets define the imaging path.
     -
-      # Filter or filter-set name: Required when installed optical filter sets are part of the instrument light path.
-      name: ""
-      # Filter location: Needed if multiple wheels, turrets, or positions exist.
-      location: ""
-      # Filter product code: Helpful for staff verification.
-      product_code: ""
-      # Filter excitation band: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
-      excitation: ""
-      # Filter dichroic: Required when dichroics define the fluorescence path.
-      dichroic: ""
-      # Filter emission band: Required for fluorescence detection paths.
-      emission: ""
-      # Filter notes: Useful for operational nuance.
-      notes: ""
-      # Filter URL: Reference only.
-      url: ""
-  # Installed splitters: Present when an emission or camera splitter is installed.
-  splitters:
+      name: ""  # Filter or filter-set name: Required when installed optical filter sets are part of the instrument light path.
+      location: ""  # Filter location: Needed if multiple wheels, turrets, or positions exist.
+      product_code: ""  # Filter product code: Helpful for staff verification.
+      excitation: ""  # Filter excitation band: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
+      dichroic: ""  # Filter dichroic: Required when dichroics define the fluorescence path.
+      emission: ""  # Filter emission band: Required for fluorescence detection paths.
+      notes: ""  # Filter notes: Useful for operational nuance.
+      url: ""  # Filter URL: Reference only.
+  splitters:  # Installed splitters: Present when an emission or camera splitter is installed.
     -
-      # Splitter name: Required when an emission or camera splitter is installed.
-      name: ""
-      # Splitter type: Needed to explain the splitter role.
-      type: ""
-      # Splitter notes: Useful operational nuance.
-      notes: ""
-      # Splitter URL: Reference only.
-      url: ""
-  # Objectives: Objective inventory is central to instrument completeness and QC mapping.
-  objectives:
+      name: ""  # Splitter name: Required when an emission or camera splitter is installed.
+      type: ""  # Splitter type: Needed to explain the splitter role.
+      notes: ""  # Splitter notes: Useful operational nuance.
+      url: ""  # Splitter URL: Reference only.
+  objectives:  # Objectives: Objective inventory is central to instrument completeness and QC mapping.
     -
-      # Objective ID: Stable per-objective key used for QC mapping.
-      id: ""
-      # Objective manufacturer: Needed for objective identification.
-      manufacturer: ""
-      # Objective model: Needed for objective identification.
-      model: ""
-      # Objective product code: Very useful for staff lookup, but not minimal.
-      product_code: ""
-      # Objective magnification: Core reporting field.
-      magnification: ""
-      # Objective numerical aperture: Core reporting field.
-      numerical_aperture: ""
-      # Objective working distance: Helpful reference metadata, not usually minimal for methods.
-      working_distance: ""
-      # Objective immersion: Core reporting field.
-      # Allowed values (canonical IDs): air, oil, water, glycerol, silicone, multi, dipping
-      immersion: ""
-      # Objective correction class: Important to characterize the objective class.
-      # Allowed values (canonical IDs): plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
-      correction: ""
-      # AFC compatible: Operational capability metadata.
-      afc_compatible: false
-      # Is objective installed: Prevents methods generator and dashboard from advertising unavailable optics.
-      is_installed: false
-      # Objective specialties: Useful capability annotations.
-      specialties:
+      id: ""  # Objective ID: Stable per-objective key used for QC mapping.
+      manufacturer: ""  # Objective manufacturer: Needed for objective identification.
+      model: ""  # Objective model: Needed for objective identification.
+      product_code: ""  # Objective product code: Very useful for staff lookup, but not minimal.
+      magnification: ""  # Objective magnification: Core reporting field.
+      numerical_aperture: ""  # Objective numerical aperture: Core reporting field.
+      working_distance: ""  # Objective working distance: Helpful reference metadata, not usually minimal for methods.
+      immersion: ""  # Objective immersion: Core reporting field. | Allowed values (canonical IDs): air, oil, water, glycerol, silicone, multi, dipping
+      correction: ""  # Objective correction class: Important to characterize the objective class. | Allowed values (canonical IDs): plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
+      afc_compatible: false  # AFC compatible: Operational capability metadata.
+      is_installed: false  # Is objective installed: Prevents methods generator and dashboard from advertising unavailable optics.
+      specialties:  # Objective specialties: Useful capability annotations.
         - ""
-      # Objective notes: Useful free-text nuance.
-      notes: ""
-      # Objective URL: Reference only.
-      url: ""
-  # Magnification changers: Present only when optovar or additional magnification changers are installed.
-  magnification_changers:
+      notes: ""  # Objective notes: Useful free-text nuance.
+      url: ""  # Objective URL: Reference only.
+  magnification_changers:  # Magnification changers: Present only when optovar or additional magnification changers are installed.
     -
-      # Magnification changer manufacturer: Required when such a device is installed.
-      manufacturer: ""
-      # Magnification changer model: Required when such a device is installed.
-      model: ""
-      # Magnification changer factor: Required when such a device is installed.
-      magnification: ""
-      # Magnification changer notes: Useful nuance.
-      notes: ""
-      # Magnification changer URL: Reference only.
-      url: ""
+      manufacturer: ""  # Magnification changer manufacturer: Required when such a device is installed.
+      model: ""  # Magnification changer model: Required when such a device is installed.
+      magnification: ""  # Magnification changer factor: Required when such a device is installed.
+      notes: ""  # Magnification changer notes: Useful nuance.
+      url: ""  # Magnification changer URL: Reference only.
   environment:
-    # Temperature control available: Indicates whether the system supports active temperature control for environmental regulation.
-    temperature_control: false
-    # Temperature control range: Documents the supported temperature range or setpoint range for live-cell or environmentally controlled imaging.
-    temperature_range: ""
-    # CO2 control available: Indicates whether the system supports active CO2 regulation for live-cell imaging.
-    co2_control: false
-    # CO2 control range: Documents the supported CO2 range or configured operating range when gas control is available.
-    co2_range: ""
-    # O2 control available: Indicates whether the system supports active oxygen control for hypoxia or specialized environmental studies.
-    o2_control: false
-    # O2 control range: Documents the supported O2 range or configured operating range when oxygen control is available.
-    o2_range: ""
-    # Humidity control available: Indicates whether the system provides humidity control as part of environmental regulation.
-    humidity_control: false
-    # Environmental control notes: Free-text notes for environmental chamber configuration, limitations, or operating guidance.
-    notes: ""
-  # Stages and focus drives: Present when motorized or specialized stage and focus hardware is documented.
-  stages:
+    temperature_control: false  # Temperature control available: Indicates whether the system supports active temperature control for environmental regulation.
+    temperature_range: ""  # Temperature control range: Documents the supported temperature range or setpoint range for live-cell or environmentally controlled imaging.
+    co2_control: false  # CO2 control available: Indicates whether the system supports active CO2 regulation for live-cell imaging.
+    co2_range: ""  # CO2 control range: Documents the supported CO2 range or configured operating range when gas control is available.
+    o2_control: false  # O2 control available: Indicates whether the system supports active oxygen control for hypoxia or specialized environmental studies.
+    o2_range: ""  # O2 control range: Documents the supported O2 range or configured operating range when oxygen control is available.
+    humidity_control: false  # Humidity control available: Indicates whether the system provides humidity control as part of environmental regulation.
+    notes: ""  # Environmental control notes: Free-text notes for environmental chamber configuration, limitations, or operating guidance.
+  stages:  # Stages and focus drives: Present when motorized or specialized stage and focus hardware is documented.
     -
-      # Stage or focus drive type: Classifies the stage or focus-drive hardware that is installed.
-      # Allowed values (canonical IDs): xy_motorized, z_piezo, manual, other
-      type: ""
-      # Stage manufacturer: Helps identify the installed stage or focus-drive hardware.
-      manufacturer: ""
-      # Stage model: Helps identify the installed stage or focus-drive hardware.
-      model: ""
-      # Stage step size (um): Useful capability metadata for motorized stage or focus-drive hardware.
-      step_size_um: ""
+      type: ""  # Stage or focus drive type: Classifies the stage or focus-drive hardware that is installed. | Allowed values (canonical IDs): xy_motorized, z_piezo, manual, other
+      manufacturer: ""  # Stage manufacturer: Helps identify the installed stage or focus-drive hardware.
+      model: ""  # Stage model: Helps identify the installed stage or focus-drive hardware.
+      step_size_um: ""  # Stage step size (um): Useful capability metadata for motorized stage or focus-drive hardware.
   hardware_autofocus:
-    # Hardware autofocus installed: Indicates whether a hardware autofocus system is currently installed.
-    is_installed: false
-    # Hardware autofocus type: Describes the installed hardware autofocus implementation when present.
-    # Allowed values (canonical IDs): infrared_reflection, contrast_based, laser_reflection, capacitance_based, other
-    type: ""
+    is_installed: false  # Hardware autofocus installed: Indicates whether a hardware autofocus system is currently installed.
+    type: ""  # Hardware autofocus type: Describes the installed hardware autofocus implementation when present. | Allowed values (canonical IDs): infrared_reflection, contrast_based, laser_reflection, capacitance_based, other
   triggering:
-    # Triggering primary mode: Indicates whether synchronization is primarily hardware-triggered, software-triggered, or mixed.
-    # Allowed values (canonical IDs): hardware, software, mixed
-    primary_mode: ""
-    # Triggering notes: Free-text notes for synchronization, timing, or external trigger details.
-    notes: ""
+    primary_mode: ""  # Triggering primary mode: Indicates whether synchronization is primarily hardware-triggered, software-triggered, or mixed. | Allowed values (canonical IDs): hardware, software, mixed
+    notes: ""  # Triggering notes: Free-text notes for synchronization, timing, or external trigger details.
