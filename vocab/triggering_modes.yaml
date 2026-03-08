@@ -1,0 +1,13 @@
+terms:
+  - id: hardware
+    label: "Hardware Triggering"
+    description: "Synchronization is driven primarily by hardware timing signals such as TTL triggers."
+    synonyms: ["ttl", "external trigger"]
+  - id: software
+    label: "Software Triggering"
+    description: "Synchronization is driven primarily through software control rather than dedicated timing signals."
+    synonyms: ["computer controlled"]
+  - id: mixed
+    label: "Mixed Triggering"
+    description: "Synchronization uses a combination of hardware triggers and software orchestration."
+    synonyms: ["hybrid"]

@@ -1,0 +1,17 @@
+terms:
+  - id: xy_motorized
+    label: "Motorized XY Stage"
+    description: "Motorized translational stage for automated X/Y movement across the sample plane."
+    synonyms: ["motorized_xy", "xy stage", "xy motorized"]
+  - id: z_piezo
+    label: "Z Piezo Stage"
+    description: "Piezo-driven stage or objective positioner used for rapid, precise axial stepping."
+    synonyms: ["piezo", "piezo stage", "piezo z"]
+  - id: manual
+    label: "Manual Stage"
+    description: "Manual stage or focus drive without motorized control."
+    synonyms: ["manual focus", "manual drive"]
+  - id: other
+    label: "Other"
+    description: "Stage or focus-drive type not covered by the predefined terms."
+    synonyms: ["custom", "misc"]

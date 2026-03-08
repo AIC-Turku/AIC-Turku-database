@@ -347,6 +347,66 @@ document.addEventListener("DOMContentLoaded", async () => {
         return details.length > 0 ? `${label}; ${details.join(", ")}` : label;
     }
 
+    function hasEnvironmentControl(environment) {
+        if (!environment || typeof environment !== "object") return false;
+        return environment.temperature_control === true
+            || environment.co2_control === true
+            || environment.o2_control === true
+            || environment.humidity_control === true;
+    }
+
+    function formatEnvironmentSentence(environment) {
+        if (!hasEnvironmentControl(environment)) return "";
+
+        const clauses = [];
+        if (environment?.temperature_control === true) {
+            clauses.push(environment?.temperature_range ? `${environment.temperature_range}` : "controlled temperature");
+        }
+        if (environment?.co2_control === true) {
+            clauses.push(environment?.co2_range ? `${environment.co2_range} CO2` : "controlled CO2");
+        }
+        if (environment?.o2_control === true) {
+            clauses.push(environment?.o2_range ? `${environment.o2_range} O2` : "controlled O2");
+        }
+        if (environment?.humidity_control === true) {
+            clauses.push("controlled humidity");
+        }
+
+        if (clauses.length === 0) return "";
+        return `Live-cell imaging was performed using an environmental chamber maintaining ${formatHumanList(clauses)}. `;
+    }
+
+    function formatPiezoStageSentence(stages) {
+        if (!Array.isArray(stages)) return "";
+        const piezoStage = stages.find(stage => (stage?.type || "").toString().trim().toLowerCase() === "z_piezo");
+        if (!piezoStage) return "";
+
+        const stageName = [piezoStage?.manufacturer, piezoStage?.model].filter(Boolean).join(" ").trim();
+        if (stageName) {
+            return `Z-stacks were acquired using a ${stageName} piezo stage. `;
+        }
+        return "Z-stacks were acquired using a piezo stage. ";
+    }
+
+    function formatAutofocusSentence(hardwareAutofocus) {
+        if (!hardwareAutofocus || hardwareAutofocus?.is_installed !== true) return "";
+        const autofocusLabel = hardwareAutofocus?.type
+            ? formatVocabLabel(vocabularies.autofocus_types, hardwareAutofocus.type)
+            : "hardware autofocus";
+        return `Focal drift was minimized using a ${autofocusLabel} hardware autofocus system. `;
+    }
+
+    function formatTriggeringSentence(triggering) {
+        if (!triggering || (!triggering?.primary_mode && !triggering?.notes)) return "";
+        const modeLabel = triggering?.primary_mode
+            ? formatVocabLabel(vocabularies.triggering_modes, triggering.primary_mode)
+            : "configured synchronization";
+        if (triggering?.notes) {
+            return `System synchronization used ${modeLabel.toLowerCase()} (${triggering.notes}). `;
+        }
+        return `System synchronization used ${modeLabel.toLowerCase()}. `;
+    }
+
     function formatProcessingMetadata(inst) {
         const softwareByRole = inst?.methods_generation?.software_by_role || {};
         const analysisRole = softwareByRole.analysis || {};
@@ -472,6 +532,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 text += `[PLEASE SPECIFY: Imaging environment setpoints, e.g., temperature (°C), CO2 (%), humidity (%), and stage-top incubation module]. `;
             }
         }
+
+        const environmentData = currentInst?.processed_hardware?.environment || currentInst?.canonical?.hardware?.environment || {};
+        const stagesData = currentInst?.processed_hardware?.stages || currentInst?.canonical?.hardware?.stages || [];
+        const hardwareAutofocusData = currentInst?.processed_hardware?.hardware_autofocus || currentInst?.canonical?.hardware?.hardware_autofocus || {};
+        const triggeringData = currentInst?.processed_hardware?.triggering || currentInst?.canonical?.hardware?.triggering || {};
+
+        text += formatEnvironmentSentence(environmentData);
+        text += formatPiezoStageSentence(stagesData);
+        text += formatAutofocusSentence(hardwareAutofocusData);
+        text += formatTriggeringSentence(triggeringData);
 
         text += `[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)]. `;
 

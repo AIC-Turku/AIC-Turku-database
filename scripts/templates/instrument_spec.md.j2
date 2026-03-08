@@ -10,6 +10,14 @@
 {%- endif -%}
 {%- endmacro %}
 
+{% macro bool_label(value) -%}
+{%- if value is sameas true -%}Yes{%- elif value is sameas false -%}No{%- else -%}—{%- endif -%}
+{%- endmacro %}
+
+{% macro pretty_id(value) -%}
+{%- if value -%}{{ value | replace('_', ' ') | title }}{%- else -%}—{%- endif -%}
+{%- endmacro %}
+
 {% set canonical = instrument.canonical if instrument.canonical else {} %}
 {% set canonical_hardware = canonical.hardware if canonical.hardware else {} %}
 {% set policy = canonical.policy if canonical.policy else {} %}
@@ -19,6 +27,10 @@
 {% set splitters = canonical_hardware.splitters if canonical_hardware else [] %}
 {% set filters = canonical_hardware.filters if canonical_hardware else [] %}
 {% set magnification_changers = canonical_hardware.magnification_changers if canonical_hardware else [] %}
+{% set environment = canonical_hardware.environment if canonical_hardware and canonical_hardware.environment else {} %}
+{% set stages = canonical_hardware.stages if canonical_hardware and canonical_hardware.stages else [] %}
+{% set hardware_autofocus = canonical_hardware.hardware_autofocus if canonical_hardware and canonical_hardware.hardware_autofocus else {} %}
+{% set triggering = canonical_hardware.triggering if canonical_hardware and canonical_hardware.triggering else {} %}
 
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
@@ -323,6 +335,49 @@
 </div>
 {% else %}
 > *No magnification changers recorded.*
+{% endif %}
+
+### 🌡️ Environmental Control
+
+{% set has_environment = environment.temperature_control is not none or environment.temperature_range or environment.co2_control is not none or environment.co2_range or environment.o2_control is not none or environment.o2_range or environment.humidity_control is not none or environment.notes %}
+{% if has_environment %}
+- **Temperature Control:** {{ bool_label(environment.temperature_control) }}
+  {% if environment.temperature_range %}<br>**Temperature Range:** `{{ environment.temperature_range }}`{% endif %}
+  {% if environment.co2_control is not none %}<br>**CO2 Control:** {{ bool_label(environment.co2_control) }}{% endif %}
+  {% if environment.co2_range %}<br>**CO2 Range:** `{{ environment.co2_range }}`{% endif %}
+  {% if environment.o2_control is not none %}<br>**O2 Control:** {{ bool_label(environment.o2_control) }}{% endif %}
+  {% if environment.o2_range %}<br>**O2 Range:** `{{ environment.o2_range }}`{% endif %}
+  {% if environment.humidity_control is not none %}<br>**Humidity Control:** {{ bool_label(environment.humidity_control) }}{% endif %}
+  {% if environment.notes %}<br><small class="aic-muted">{{ environment.notes }}</small>{% endif %}
+{% else %}
+> *No environmental control details recorded.*
+{% endif %}
+
+### 🧭 Stages & Focus Drives
+
+{% if stages %}
+| Type | Manufacturer | Model | Step Size (µm) |
+| --- | --- | --- | --- |
+{% for stage in stages %}
+| {{ pretty_id(stage.type) }} | {{ stage.manufacturer or '—' }} | {{ stage.model or '—' }} | {{ stage.step_size_um if stage.step_size_um is not none else '—' }} |
+{% endfor %}
+{% else %}
+> *No stages or focus drives recorded.*
+{% endif %}
+
+### ⚙️ Advanced Hardware
+
+{% set has_autofocus = hardware_autofocus.is_installed is not none or hardware_autofocus.type %}
+{% set has_triggering = triggering.primary_mode or triggering.notes %}
+{% if has_autofocus or has_triggering %}
+{% if has_autofocus %}
+- **Hardware Autofocus:** {{ bool_label(hardware_autofocus.is_installed) }}{% if hardware_autofocus.type %} — {{ pretty_id(hardware_autofocus.type) }}{% endif %}
+{% endif %}
+{% if has_triggering %}
+- **Triggering:** {% if triggering.primary_mode %}{{ pretty_id(triggering.primary_mode) }}{% else %}—{% endif %}{% if triggering.notes %} — {{ triggering.notes }}{% endif %}
+{% endif %}
+{% else %}
+> *No advanced hardware features recorded.*
 {% endif %}
 
 ---

@@ -275,7 +275,7 @@
         {% set parts = entry.label.split(' ') %}
         {% set prefix = '' %}
         
-        {% if parts | length > 1 and parts[0] in ['Objective', 'Detector', 'Software'] %}
+        {% if parts | length > 1 and parts[0] in ['Objective', 'Detector', 'Software', 'Stage'] %}
           {% if parts[1] in valid_numbers %}
             {% set prefix = parts[0] ~ ' ' ~ parts[1] %}
           {% endif %}
@@ -344,6 +344,10 @@
     {{ render_smart_section('Objectives', audit_data.objectives) }}
     {{ render_smart_section('Light Sources', audit_data.light_sources) }}
     {{ render_smart_section('Detectors', audit_data.detectors) }}
+    {{ render_smart_section('Environmental Control', audit_data.environment) }}
+    {{ render_smart_section('Stages & Focus Drives', audit_data.stages) }}
+    {{ render_smart_section('Hardware Autofocus', audit_data.autofocus) }}
+    {{ render_smart_section('Triggering & Synchronization', audit_data.triggering) }}
 
   </div>
 </body>

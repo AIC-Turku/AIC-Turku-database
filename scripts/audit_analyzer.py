@@ -217,6 +217,54 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                 ]
             )
 
+
+    def _yes_no(value: Any) -> str | None:
+        if value is None:
+            return None
+        return "Yes" if value is True else "No"
+
+    environment = hardware.get("environment") or {}
+    environment_entries = [
+        _entry("Temperature Control", _yes_no(environment.get("temperature_control")), is_optional=True),
+        _entry("Temperature Range", environment.get("temperature_range"), is_optional=True),
+        _entry("CO2 Control", _yes_no(environment.get("co2_control")), is_optional=True),
+        _entry("CO2 Range", environment.get("co2_range"), is_optional=True),
+        _entry("O2 Control", _yes_no(environment.get("o2_control")), is_optional=True),
+        _entry("O2 Range", environment.get("o2_range"), is_optional=True),
+        _entry("Humidity Control", _yes_no(environment.get("humidity_control")), is_optional=True),
+        _entry("Notes", environment.get("notes"), is_optional=True),
+    ]
+
+    stages = hardware.get("stages")
+    stages_entries: list[dict[str, Any]] = []
+    if not isinstance(stages, list) or len(stages) == 0:
+        stages_entries.append(_entry("Stages", stages if stages is not None else [], True, is_optional=True))
+    else:
+        for idx, stage in enumerate(stages, start=1):
+            if not isinstance(stage, dict):
+                stages_entries.append(_entry(f"Stage {idx}", stage, True, is_optional=True))
+                continue
+            stages_entries.extend(
+                [
+                    _entry(f"Stage {idx} Type", stage.get("type"), is_optional=True),
+                    _entry(f"Stage {idx} Manufacturer", stage.get("manufacturer"), is_optional=True),
+                    _entry(f"Stage {idx} Model", stage.get("model"), is_optional=True),
+                    _entry(f"Stage {idx} Step Size (µm)", stage.get("step_size_um"), is_optional=True),
+                ]
+            )
+
+    hardware_autofocus = hardware.get("hardware_autofocus") or {}
+    autofocus_entries = [
+        _entry("Installed", _yes_no(hardware_autofocus.get("is_installed")), is_optional=True),
+        _entry("Type", hardware_autofocus.get("type"), is_optional=True),
+    ]
+
+    triggering = hardware.get("triggering") or {}
+    triggering_entries = [
+        _entry("Primary Mode", triggering.get("primary_mode"), is_optional=True),
+        _entry("Notes", triggering.get("notes"), is_optional=True),
+    ]
+
     return {
         "schema_errors": schema_errors,
         "general": general,
@@ -226,6 +274,10 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
         "objectives": objectives_entries,
         "light_sources": light_source_entries,
         "detectors": detector_entries,
+        "environment": environment_entries,
+        "stages": stages_entries,
+        "autofocus": autofocus_entries,
+        "triggering": triggering_entries,
     }
 
 __all__ = ["load_instruments", "analyze_instrument_completeness"]
