@@ -1,229 +1,273 @@
-# -----------------------------------------------------------------------------
-# MICROSCOPE CONFIGURATION TEMPLATE
-# -----------------------------------------------------------------------------
-# Instructions:
-# 1. Copy this file and rename it (e.g., "Zeiss_LSM980.yaml").
-# 2. Fill in the fields below.
-# 3. Delete the comment blocks listing options after you have made your selection.
-# 4. Use the 'url' field in any section to link to manuals or vendor pages.
-# -----------------------------------------------------------------------------
+# AUTO-GENERATED FILE. Do not edit manually.
+# Source schema: schema/instrument_policy.yaml
 
+# -----------------------------------------------------------------------------
+# INSTRUMENT
+# -----------------------------------------------------------------------------
 instrument:
-  display_name: "Brand Model Nickname"  # e.g. "Zeiss LSM 980 Airyscan"
-  instrument_id: ""                     # REQUIRED stable slug (e.g. scope-zeiss-lsm-980-airyscan)
-  
-  # Options: Zeiss, Leica Microsystems, Nikon, Olympus/Evident, Abberior, Andor, 
-  #          Hamamatsu, Lumencor, Excelitas, Chroma, Semrock, CrestOptics, Other
-  manufacturer: "Zeiss"
-  model: ""                             # e.g. "AxioObserver 7"
-  year_of_purchase: ""                  # e.g. "2023"
-  funding: ""                           # e.g. "Biocenter instrumentation grant"
-  
-  # Options: upright, inverted, stereo, benchtop, other
-  stand_orientation: "inverted"
-  location: ""                          # e.g. "Medisiina C, Room C242"
-  
-  notes: ""                             # e.g. "Located in Room 404. Custodian: Dr. Smith."
-  url: ""                               # Link to booking system or general system overview
+  # Display name: Primary human-readable instrument name shown in reports and methods output.
+  display_name: ""
+  # Instrument ID: Stable machine-readable key used across QC, maintenance, and dashboard routing.
+  instrument_id: ""
+  # Manufacturer: Needed for instrument identification and methods wording.
+  manufacturer: ""
+  # Model: Needed for instrument identification and methods wording.
+  model: ""
+  # Year of purchase: Operational context and lifecycle planning; not essential for methods completeness.
+  year_of_purchase: ""
+  # Funding: Operational and acknowledgement context; not required for methods reporting.
+  funding: ""
+  # Stand orientation: Used directly by methods generator and helps classify the platform.
+  # Allowed values: upright, inverted, stereo, benchtop, other
+  stand_orientation: "upright"
+  # Location: required for operational metadata; not necessary for methods text.
+  location: ""
+  # Notes: Free text is useful for staff but should not replace structured fields.
+  notes: ""
+  # Instrument URL: Helpful for staff lookup and manuals, not essential for methods completeness.
+  url: ""
 
 # -----------------------------------------------------------------------------
 # IMAGING MODALITIES
 # -----------------------------------------------------------------------------
-# Remove lines that do not apply.
+# Imaging modalities: Core reporting category in QUAREP/JCB-style instrumentation metadata.
+# Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging
 modalities:
-  # Use canonical ID from vocab/
-  - "confocal_point"
-  - "widefield_fluorescence"
-  
-  # Available Options:
-  # - widefield_fluorescence
-  # - transmitted_brightfield
-  # - phase_contrast
-  # - dic
-  # - darkfield
-  # - confocal_point          (Standard LSM)
-  # - confocal_spinning_disk  (SDC)
-  # - tirf
-  # - light_sheet
-  # - multiphoton
-  # - optical_sectioning      (ApoTome/Grid-projection)
-  # - sim                     (Structured Illumination)
-  # - sted
-  # - resolft
-  # - smlm                    (PALM/STORM)
-  # - spt
-  # - ism                     (Airyscan)
-  # - flim
-  # - fcs
-  # - frap
-  # - photoactivation
-  # - fret
-  # - spectral_imaging
-  # - afm
-  # - impedance_cytometry
-  # - live_cell_imaging
+  - ""
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
 # -----------------------------------------------------------------------------
+# Installed modules: Only present when installed modules materially change imaging capabilities.
 modules:
-  - name: "hardware_autofocus"  # Use canonical ID from vocab/
-    notes: "e.g., Definite Focus / PFS. Add specific hardware limitations here."
+  -
+    # Module name: Required when a module/path is installed and materially changes imaging capabilities.
+    # Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, workstation, impedance_module, universal_vessel_holder
+    name: ""
+    # Module notes: Useful for operational nuances and limitations.
+    notes: ""
+    # Module URL: Helpful vendor or manual reference.
     url: ""
-  
-  # Available Options for 'name':
-  # - incubation              (Temp/CO2)
-  # - hardware_autofocus      (Definite/PFS/Z-drift)
-  # - frap
-  # - photoactivation
-  # - fcs
-  # - flim
-  # - optogenetics
-  # - adaptive_optics
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
 # -----------------------------------------------------------------------------
 software:
   acquisition:
-    name: "ZEN"               # e.g. ZEN, LAS X, NIS-Elements, MicroManager
-    developer: "Zeiss"        # e.g. Zeiss, Leica Microsystems, Nikon
-    version: "3.4"
-    url: ""                   # Link to software manual or vendor page
+    # Acquisition software name: Required only if the microscope is driven by computer acquisition.
+    name: ""
+    # Acquisition software version: Version materially affects reproducibility and methods text when acquisition software is used.
+    version: ""
+    # Acquisition software developer: Usually inferable from software name/vendor, so not minimal.
+    developer: ""
+    # Acquisition software notes: Useful for describing split workflows or bundled processing.
+    notes: ""
+    # Acquisition software URL: Reference only.
+    url: ""
+  analysis:
+    # Analysis software name: Required when instrument-associated analysis is part of standard output.
+    name: ""
+    # Analysis software version: Version matters when vendor analysis is part of the standard instrument workflow.
+    version: ""
+    # Analysis software URL: Reference only.
+    url: ""
+  deconvolution:
+    # Deconvolution or reconstruction software name: Required when reconstruction is integral to the instrument output.
+    name: ""
+    # Deconvolution or reconstruction software version: Reconstruction version affects reproducibility and interpretation when deconvolution software is used.
+    version: ""
+    # Deconvolution or reconstruction software URL: Reference only.
+    url: ""
+  flim:
+    # FLIM software name: Required when lifetime fitting or FLIM reconstruction is part of standard workflow.
+    name: ""
+    # FLIM software version: Version matters for lifetime fitting and FLIM-derived outputs when FLIM software is used.
+    version: ""
+    # FLIM software URL: Reference only.
+    url: ""
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION
 # -----------------------------------------------------------------------------
 hardware:
-  
-  # --- Scanner ---
   scanner:
-    # Use canonical ID from vocab/
-    # Options: none, galvo, resonant, spinning_disk, polygon, acousto_optic, stage_scanning
-    type: "galvo"
-    line_rate_hz: null         # Optional, e.g. 8000 for resonant scanners
-    pinhole_um: null           # Optional; recommended for point-scanning confocal
+    # Scanner type: Core hardware discriminator for methods completeness.
+    # Allowed values (canonical IDs): none, galvo, resonant, tandem, spinning_disk, polygon, acousto_optic, stage_scanning
+    type: ""
+    # Scanner line rate (Hz): Required where speed mode is intrinsic and relevant to the scan engine.
+    line_rate_hz: ""
+    # Pinhole diameter (um): Required for spinning disk systems where pinhole size is fixed in hardware. Point scanners use tunable pinholes defined per-experiment.
+    pinhole_um: ""
+    # Light Sheet Architecture: Clarifies the specific illumination geometry for light sheet systems.
+    # Allowed values: standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other
+    light_sheet_type: "standard_spim"
+    # Scanner notes: Useful for mode-specific caveats.
     notes: ""
+    # Scanner URL: Reference only.
     url: ""
-
-  # --- Light Sources (Excitation) ---
+  # Light sources: Each instrument needs at least one declared excitation source.
   light_sources:
-    - kind: "laser"           # Use canonical ID from vocab/. Options: laser, white_light_laser, led, arc_lamp, halogen_lamp, supercontinuum
-      manufacturer: "Chroma"
-      model: "Solid State"
-      technology: ""        # Optional laser subtype, e.g. diode, dpss
-      wavelength_nm: "488"    # e.g., "488", or "395/25" for banded LEDs
-      power: "20 mW"
-      notes: "488 in software"
-      url: ""                 # Link to laser/LED spec sheet
-      
-    - kind: "led"            # Use canonical ID from vocab/
-      manufacturer: "CoolLED"
-      model: "pE-300"
+    -
+      # Light source kind: Core excitation-source class.
+      # Allowed values (canonical IDs): laser, white_light_laser, led, arc_lamp, metal_halide, halogen_lamp, multiphoton_laser, supercontinuum
+      kind: ""
+      # Light source manufacturer: Needed for unambiguous hardware identification.
+      manufacturer: ""
+      # Light source model: Needed for unambiguous hardware identification.
+      model: ""
+      # Light source technology subtype: Helpful subtype information for lasers or LED engines.
       technology: ""
+      # Light source wavelength metadata: Required for line-selectable or tunable excitation sources where wavelength metadata is needed for reproducibility.
       wavelength_nm: ""
+      # Light source nominal power: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
       power: ""
+      # Light source notes: Useful for software aliases and caveats.
       notes: ""
+      # Light source URL: Reference only.
       url: ""
-
-  # --- Detectors (Emission) ---
+  # Detectors: At least one detector chain must be declared.
   detectors:
-    - kind: "gaasp_pmt"       # Use canonical ID from vocab/. Options: pmt, gaasp_pmt, hyd, scmos, emccd, ccd, apd
-      manufacturer: "Zeiss"
-      model: "Quasar"
-      pixel_pitch_um: null      # Optional, e.g. 6.5 for camera-based detectors
-      sensor_format_px: ""      # Optional, e.g. "2048x2048"
-      binning: ""               # Optional, e.g. "2x2"
-      bit_depth: null           # Optional, e.g. 16
-      qe_peak_pct: null         # Optional, e.g. 95
-      read_noise_e: null        # Optional, e.g. 1.0
-      notes: "Channel 1"
-      url: ""                 # Link to detector spec sheet
-      
-    - kind: "scmos"          # Use canonical ID from vocab/
-      manufacturer: "Hamamatsu"
-      model: "Flash 4.0"
+    -
+      # Detector kind: Core detector class.
+      # Allowed values (canonical IDs): pmt, gaasp_pmt, hyd, scmos, cmos, emccd, ccd, apd, spad
+      kind: ""
+      # Detector manufacturer: Needed for hardware identification.
+      manufacturer: ""
+      # Detector model: Needed for hardware identification.
+      model: ""
+      # Detector pixel pitch (um): Required for camera-based detectors because reporting completeness depends on it.
+      pixel_pitch_um: ""
+      # Detector pixel size (legacy alias): Backward-compatible alias retained for existing files; normalize to pixel_pitch_um when possible.
+      pixel_size_um: ""
+      # Detector sensor format (px): Useful capability metadata, not minimal.
+      sensor_format_px: ""
+      # Detector binning: Usually acquisition-specific rather than fixed hardware metadata.
+      binning: ""
+      # Detector bit depth: Capability metadata; useful but not minimal.
+      bit_depth: ""
+      # Detector peak quantum efficiency (%): Capability metadata.
+      qe_peak_pct: ""
+      # Detector read noise (e-): Capability metadata.
+      read_noise_e: ""
+      # Detector notes: Useful for channel assignments or operating modes.
       notes: ""
+      # Detector URL: Reference only.
       url: ""
-
-  # --- Splitters (Camera/Emission) ---
-  splitters:
-    - name: "DualCam Splitter"
-      type: "emission_splitter"
-      notes: "Channel 1 to Master, Channel 2 to Slave"
-      url: ""
-
-  # --- Filters / Filter Cubes ---
+  # Installed filters or filter sets: Required only for instrument classes where optical filter sets define the imaging path.
   filters:
-    - name: "Example Quad Band"
-      location: "Turret Position 1"   # e.g., "Emission Wheel Pos 1", "Turret Position 2", "Slider"
-      product_code: "123456"
-      excitation: "405/20; 488/20; 561/20; 640/20"
-      dichroic: "420; 500; 580; 660"
-      emission: "450/50; 525/50; 600/50; 680/50"
-      notes: "Installed in primary turret"
-      url: ""                 # Link to filter transmission curves (e.g., Chroma/Semrock page)
-
-  # --- Objectives ---
-  objectives:
-    - id: ""                        # Short objective slug for QC mapping, e.g. "10x_air", "60x_oil"
-      manufacturer: "Zeiss"
-      model: "Plan-Apochromat 63x/1.4 Oil"
-      product_code: "123-456"
-      magnification: 63.0
-      numerical_aperture: 1.4
-      working_distance: "0.19 mm"
-      
-      # Use canonical ID from vocab/
-      # Options: air, oil, water, glycerol, silicone, multi, dipping
-      immersion: "oil"
-      
-      # Use canonical ID from vocab/
-      # Options: plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
-      correction: "plan_apochromat"
-      
-      afc_compatible: true               # Hardware autofocus compatibility (true/false)
-      is_installed: true                 # Whether objective is currently installed on the stand
-      specialties:
-        - "dic"
-        - "UV compatible"  # e.g., STED, PH1, Correction Ring
+    -
+      # Filter or filter-set name: Required when installed optical filter sets are part of the instrument light path.
+      name: ""
+      # Filter location: Needed if multiple wheels, turrets, or positions exist.
+      location: ""
+      # Filter product code: Helpful for staff verification.
+      product_code: ""
+      # Filter excitation band: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
+      excitation: ""
+      # Filter dichroic: Required when dichroics define the fluorescence path.
+      dichroic: ""
+      # Filter emission band: Required for fluorescence detection paths.
+      emission: ""
+      # Filter notes: Useful for operational nuance.
       notes: ""
-      url: ""                            # Link to objective database/specs
-
-  # --- Magnification Changers / Optovar ---
-  magnification_changers:
-    - manufacturer: "Zeiss"
-      model: "Optovar"
-      magnification: 1.5
-      notes: ""
+      # Filter URL: Reference only.
       url: ""
-
-
-  # TIER 3: Advanced Hardware Features (Optional)
-  # environment:
-  #   temperature_control: true
-  #   temperature_range: "Ambient to 45°C"
-  #   co2_control: true
-  #   co2_range: "0-10%"
-  #   o2_control: false
-  #   o2_range: "1-21%"
-  #   humidity_control: true
-  #   notes: "Stage-top incubation chamber for live-cell imaging"
-
-  # stages:
-  #   - type: xy_motorized
-  #     manufacturer: "ASI"
-  #     model: "MS-2000"
-  #     step_size_um: 0.1
-  #   - type: z_piezo
-  #     manufacturer: "Physik Instrumente"
-  #     model: "P-736"
-  #     step_size_um: 0.02
-
-  # hardware_autofocus:
-  #   is_installed: true
-  #   type: nikon_perfect_focus
-
-  # triggering:
-  #   primary_mode: hardware
-  #   notes: "Camera and illumination synchronized through TTL triggering"
+  # Installed splitters: Present when an emission or camera splitter is installed.
+  splitters:
+    -
+      # Splitter name: Required when an emission or camera splitter is installed.
+      name: ""
+      # Splitter type: Needed to explain the splitter role.
+      type: ""
+      # Splitter notes: Useful operational nuance.
+      notes: ""
+      # Splitter URL: Reference only.
+      url: ""
+  # Objectives: Objective inventory is central to instrument completeness and QC mapping.
+  objectives:
+    -
+      # Objective ID: Stable per-objective key used for QC mapping.
+      id: ""
+      # Objective manufacturer: Needed for objective identification.
+      manufacturer: ""
+      # Objective model: Needed for objective identification.
+      model: ""
+      # Objective product code: Very useful for staff lookup, but not minimal.
+      product_code: ""
+      # Objective magnification: Core reporting field.
+      magnification: ""
+      # Objective numerical aperture: Core reporting field.
+      numerical_aperture: ""
+      # Objective working distance: Helpful reference metadata, not usually minimal for methods.
+      working_distance: ""
+      # Objective immersion: Core reporting field.
+      # Allowed values (canonical IDs): air, oil, water, glycerol, silicone, multi, dipping
+      immersion: ""
+      # Objective correction class: Important to characterize the objective class.
+      # Allowed values (canonical IDs): plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
+      correction: ""
+      # AFC compatible: Operational capability metadata.
+      afc_compatible: false
+      # Is objective installed: Prevents methods generator and dashboard from advertising unavailable optics.
+      is_installed: false
+      # Objective specialties: Useful capability annotations.
+      specialties:
+        - ""
+      # Objective notes: Useful free-text nuance.
+      notes: ""
+      # Objective URL: Reference only.
+      url: ""
+  # Magnification changers: Present only when optovar or additional magnification changers are installed.
+  magnification_changers:
+    -
+      # Magnification changer manufacturer: Required when such a device is installed.
+      manufacturer: ""
+      # Magnification changer model: Required when such a device is installed.
+      model: ""
+      # Magnification changer factor: Required when such a device is installed.
+      magnification: ""
+      # Magnification changer notes: Useful nuance.
+      notes: ""
+      # Magnification changer URL: Reference only.
+      url: ""
+  environment:
+    # Temperature control available: Indicates whether the system supports active temperature control for environmental regulation.
+    temperature_control: false
+    # Temperature control range: Documents the supported temperature range or setpoint range for live-cell or environmentally controlled imaging.
+    temperature_range: ""
+    # CO2 control available: Indicates whether the system supports active CO2 regulation for live-cell imaging.
+    co2_control: false
+    # CO2 control range: Documents the supported CO2 range or configured operating range when gas control is available.
+    co2_range: ""
+    # O2 control available: Indicates whether the system supports active oxygen control for hypoxia or specialized environmental studies.
+    o2_control: false
+    # O2 control range: Documents the supported O2 range or configured operating range when oxygen control is available.
+    o2_range: ""
+    # Humidity control available: Indicates whether the system provides humidity control as part of environmental regulation.
+    humidity_control: false
+    # Environmental control notes: Free-text notes for environmental chamber configuration, limitations, or operating guidance.
+    notes: ""
+  # Stages and focus drives: Present when motorized or specialized stage and focus hardware is documented.
+  stages:
+    -
+      # Stage or focus drive type: Classifies the stage or focus-drive hardware that is installed.
+      # Allowed values (canonical IDs): xy_motorized, z_piezo, manual, other
+      type: ""
+      # Stage manufacturer: Helps identify the installed stage or focus-drive hardware.
+      manufacturer: ""
+      # Stage model: Helps identify the installed stage or focus-drive hardware.
+      model: ""
+      # Stage step size (um): Useful capability metadata for motorized stage or focus-drive hardware.
+      step_size_um: ""
+  hardware_autofocus:
+    # Hardware autofocus installed: Indicates whether a hardware autofocus system is currently installed.
+    is_installed: false
+    # Hardware autofocus type: Describes the installed hardware autofocus implementation when present.
+    # Allowed values (canonical IDs): infrared_reflection, contrast_based, laser_reflection, capacitance_based, other
+    type: ""
+  triggering:
+    # Triggering primary mode: Indicates whether synchronization is primarily hardware-triggered, software-triggered, or mixed.
+    # Allowed values (canonical IDs): hardware, software, mixed
+    primary_mode: ""
+    # Triggering notes: Free-text notes for synchronization, timing, or external trigger details.
+    notes: ""

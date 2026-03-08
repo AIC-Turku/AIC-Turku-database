@@ -34,7 +34,14 @@ python scripts/dashboard_builder.py --strict
   - `validate.py` — Schema and vocabulary validation.
   - `dashboard_builder.py` — Build engine that renders dashboard pages and JSON exports.
 - `scripts/templates/` — Jinja templates used by the dashboard builder.
-- `templates/` — Starter YAML templates for new instrument, QC, and maintenance records.
+- `templates/` — Auto-generated starter YAML templates for new instrument, QC, and maintenance records (generated from `schema/*_policy.yaml`; do not edit manually).
+
+
+Template regeneration command:
+
+```bash
+python scripts/generate_templates.py
+```
 
 ### Key Conventions
 
