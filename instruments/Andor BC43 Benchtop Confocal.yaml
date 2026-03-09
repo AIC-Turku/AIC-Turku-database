@@ -25,12 +25,11 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: Fusion BC43
-    developer: Andor
     version: 2.7.0
+    developer: Andor
     url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
-
 hardware:
   environment:
     temperature_control: true

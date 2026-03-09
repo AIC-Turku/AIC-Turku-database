@@ -34,12 +34,11 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: OMX Acquisition
     version: '3.70'
-    url: ''
     notes: Master Control on Windows. Image processing on CentOS with softWoRx 6.0 or newer for deconvolution/reconstruction.
-
+    url: ''
 hardware:
   environment:
     temperature_control: true

@@ -29,11 +29,10 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: Leica LAS X with FALCON (FLIM)
     version: ''
     url: ''
-
 hardware:
   scanner:
     type: resonant

@@ -28,15 +28,14 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: NimOS microscope control software
     version: ''
     url: ''
-  processing:
+  - role: processing
     name: CODI analysis software
     version: ''
     url: ''
-
 hardware:
   environment:
     temperature_control: true # Flag: Conditionally required due to 'environmental_enclosure' module.

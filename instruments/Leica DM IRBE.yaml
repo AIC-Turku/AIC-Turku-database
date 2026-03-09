@@ -17,6 +17,8 @@ modalities:
 
 modules: []
 
+software: []
+
 hardware:
   scanner:
     type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml (often 'widefield' or 'camera_based' is preferred)

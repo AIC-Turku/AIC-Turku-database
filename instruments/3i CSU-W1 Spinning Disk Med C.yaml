@@ -28,11 +28,10 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: 3i SlideBook
     version: '6'
     url: ''
-
 hardware:
   environment:
     temperature_control: true

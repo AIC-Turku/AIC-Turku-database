@@ -20,15 +20,14 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: M Squared Cubes Acquisition
     version: ''
     url: ''
-  processing:
+  - role: processing
     name: M Squared Cubes Deconvolution
     version: ''
     url: ''
-
 hardware:
   environment:
     temperature_control: true # Flag: Conditionally required due to 'environmental_enclosure' module. Verify if this enclosure regulates temperature.

@@ -68,14 +68,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
     def test_evaluate_required_if_supports_compound_all_of_any_of(self) -> None:
         vocabulary = Vocabulary(vocab_registry={'modalities': {'source': 'inline', 'allowed_values': ['flim', 'sim']}})
         payload = {
-            'software': {'analysis': {'version': '1.0'}},
+            'software': [{'role': 'analysis', 'version': '1.0'}],
             'hardware': {'scanner': {'type': 'resonant'}},
             'modalities': ['sim'],
         }
 
         condition = {
             'all_of': [
-                {'parent_present': 'software.analysis'},
+                {'parent_present': 'software[]'},
                 {
                     'any_of': [
                         {'scanner_type_in': ['resonant']},
@@ -93,7 +93,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
         self.assertFalse(
             _evaluate_required_if(
-                {'parent_present': 'software.analysis', 'scanner_type_in': ['resonant']},
+                {'parent_present': 'software[]', 'scanner_type_in': ['resonant']},
                 payload=payload,
                 item_context=None,
                 vocabulary=vocabulary,
@@ -171,6 +171,23 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             _evaluate_required_if(
                 {'software_roles_none_of': ['acquisition']},
                 payload={'software': [{'role': 'acquisition', 'name': 'ZEN'}]},
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+
+        self.assertTrue(
+            _evaluate_required_if(
+                {'software_roles_any_of': ['analysis']},
+                payload={'software': {'analysis': {'name': 'ImageJ'}}},
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertFalse(
+            _evaluate_required_if(
+                {'software_roles_none_of': ['analysis']},
+                payload={'software': {'analysis': {'name': 'ImageJ'}}},
                 item_context=None,
                 vocabulary=vocabulary,
             )

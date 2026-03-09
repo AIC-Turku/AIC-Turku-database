@@ -116,7 +116,7 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                 continue
             software_entries.extend(
                 [
-                    _entry(f"Software {idx} Component", software_item.get("component")),
+                    _entry(f"Software {idx} Role", software_item.get("role") or software_item.get("component")),
                     _entry(f"Software {idx} Name", software_item.get("name")),
                     _entry(f"Software {idx} Version", software_item.get("version")),
                     _entry(f"Software {idx} Developer", software_item.get("developer"), is_optional=True),
