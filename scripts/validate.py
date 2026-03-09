@@ -752,29 +752,35 @@ def _evaluate_required_if(
                 has_detector_match = bool(detector_kinds & targets)
             conditions.append(has_detector_match)
 
+        def _extract_software_roles() -> set[str]:
+            software_nodes = _resolve_path_nodes(payload, 'software')
+            roles: set[str] = set()
+            for node in software_nodes:
+                software_value = node.value
+                if isinstance(software_value, list):
+                    roles.update(
+                        str(item.get('role')).strip().lower()
+                        for item in software_value
+                        if isinstance(item, dict) and isinstance(item.get('role'), str)
+                    )
+                elif isinstance(software_value, dict):
+                    # Backward-compatible support for legacy role-keyed software mapping.
+                    roles.update(
+                        str(role_key).strip().lower()
+                        for role_key in software_value.keys()
+                        if isinstance(role_key, str)
+                    )
+            return roles
+
         software_roles_any_of = condition_spec.get('software_roles_any_of')
         if isinstance(software_roles_any_of, list):
-            software_nodes = _resolve_path_nodes(payload, 'software')
-            present_roles = {
-                str(item.get('role')).strip().lower()
-                for node in software_nodes
-                if isinstance(node.value, list)
-                for item in node.value
-                if isinstance(item, dict) and isinstance(item.get('role'), str)
-            }
+            present_roles = _extract_software_roles()
             targets = {str(v).strip().lower() for v in software_roles_any_of if isinstance(v, str)}
             conditions.append(bool(present_roles & targets))
 
         software_roles_none_of = condition_spec.get('software_roles_none_of')
         if isinstance(software_roles_none_of, list):
-            software_nodes = _resolve_path_nodes(payload, 'software')
-            present_roles = {
-                str(item.get('role')).strip().lower()
-                for node in software_nodes
-                if isinstance(node.value, list)
-                for item in node.value
-                if isinstance(item, dict) and isinstance(item.get('role'), str)
-            }
+            present_roles = _extract_software_roles()
             blocked = {str(v).strip().lower() for v in software_roles_none_of if isinstance(v, str)}
             conditions.append(present_roles.isdisjoint(blocked))
 

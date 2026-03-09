@@ -27,11 +27,10 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: Unknown # Flag: Recommend replacing with actual software name (e.g., Zeiss ZEN blue)
     version: ''
     url: ''
-
 hardware:
   environment:
     temperature_control: true # Flag: Conditionally required due to 'incubation' module

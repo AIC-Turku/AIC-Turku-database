@@ -28,11 +28,10 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: RTCA eSight Software
     version: ''
     url: https://www.agilent.com/lifesciences/eSight
-
 hardware:
   environment:
     temperature_control: true # Flag: Conditionally required due to 'environmental_enclosure' module.

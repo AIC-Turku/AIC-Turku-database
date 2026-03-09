@@ -16,11 +16,10 @@ modalities:
   - phase_contrast
 
 software:
-  acquisition:
+  - role: acquisition
     name: Olympus Cell^D
     version: ''
     url: ''
-
 hardware:
   scanner:
     type: none

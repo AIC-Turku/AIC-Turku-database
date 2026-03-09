@@ -21,11 +21,10 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: Zeiss ZEN Pro
     version: ''
     url: ''
-
 hardware:
   scanner:
     type: none

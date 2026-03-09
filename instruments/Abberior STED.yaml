@@ -27,11 +27,10 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: Abberior Imspector
     version: ''
     url: ''
-
 hardware:
   scanner:
     type: galvo

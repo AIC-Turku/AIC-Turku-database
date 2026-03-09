@@ -34,25 +34,14 @@ modules:  # Installed modules: Only present when installed modules materially ch
 # -----------------------------------------------------------------------------
 # SOFTWARE
 # -----------------------------------------------------------------------------
-software:
-  acquisition:
-    name: ""  # Acquisition software name: Required only if the microscope is driven by computer acquisition.
-    version: ""  # Acquisition software version: Version materially affects reproducibility and methods text when acquisition software is used.
-    developer: ""  # Acquisition software developer: Usually inferable from software name/vendor, so not minimal.
-    notes: ""  # Acquisition software notes: Useful for describing split workflows or bundled processing.
-    url: ""  # Acquisition software URL: Reference only.
-  analysis:
-    name: ""  # Analysis software name: Required when instrument-associated analysis is part of standard output.
-    version: ""  # Analysis software version: Version matters when vendor analysis is part of the standard instrument workflow.
-    url: ""  # Analysis software URL: Reference only.
-  deconvolution:
-    name: ""  # Deconvolution or reconstruction software name: Required when reconstruction is integral to the instrument output.
-    version: ""  # Deconvolution or reconstruction software version: Reconstruction version affects reproducibility and interpretation when deconvolution software is used.
-    url: ""  # Deconvolution or reconstruction software URL: Reference only.
-  flim:
-    name: ""  # FLIM software name: Required when lifetime fitting or FLIM reconstruction is part of standard workflow.
-    version: ""  # FLIM software version: Version matters for lifetime fitting and FLIM-derived outputs when FLIM software is used.
-    url: ""  # FLIM software URL: Reference only.
+software:  # Software entries: Add one item per software role used by this instrument.
+  -
+    role: ""  # Software role: role tag used by policy/methods text. | Allowed values (canonical IDs): acquisition, processing, analysis, hardware_control, other
+    name: ""  # Software name: Required when a software role entry is present.
+    version: ""  # Software version: Required (empty allowed) for reproducibility-aware metadata.
+    developer: ""  # Software developer: Usually inferable from software name/vendor, so not minimal.
+    notes: ""  # Software notes: Useful for describing split workflows or bundled processing.
+    url: ""  # Software URL: Reference only.
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION

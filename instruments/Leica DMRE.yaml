@@ -16,6 +16,8 @@ modalities:
 
 modules: []
 
+software: []
+
 hardware:
   scanner:
     type: none

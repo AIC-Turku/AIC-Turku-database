@@ -21,12 +21,11 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: On-board EVOS interface
     version: ''
     notes: 'no external software, USB storage'
     url: ''
-
 hardware:
   scanner:
     type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml

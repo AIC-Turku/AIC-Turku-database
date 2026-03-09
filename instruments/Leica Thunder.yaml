@@ -20,11 +20,10 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: LAS X with Navigator
     version: ''
     url: https://www.leica-microsystems.com/products/microscope-software/p/leica-las-x-ls/
-
 hardware:
   scanner:
     type: none
