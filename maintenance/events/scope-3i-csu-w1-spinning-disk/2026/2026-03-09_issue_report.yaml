@@ -1,0 +1,37 @@
+schema_version: 1
+record_type: "maintenance_event"
+maintenance_id: "maint_scope-3i-csu-w1-spinning-disk_20260309_issue-report"
+event_id: ""
+microscope: "scope-3i-csu-w1-spinning-disk"
+service_provider: "internal"
+company: ""
+contact: ""
+reference: ""
+started_utc: "2026-03-09T08:00:00Z"
+ended_utc: ""
+system_down_since_utc: ""
+reason: "issue_reported"
+reason_details: "Increasing delay in laser startup, occasional camera errors, and SlideBook montage definition bug in Y-direction."
+action: "other"
+action_details: "Logged issue report and awaiting diagnostic for the laser stack and camera."
+microscope_status_before: "in_service"
+microscope_status_after: "limited"
+downtime_hours: 0.0
+related_qc: []
+related_maintenance: []
+attachments: []
+tags:
+  - "laser"
+  - "camera"
+  - "software"
+  - "slidebook"
+followup: "Awaiting diagnostic for the laser stack delay and camera errors."
+next_due_date: ""
+notes: >
+  We’ve had an increasing amount of issues with the spinning disk. 
+  
+  1) The most serious issue is the laser stack has an increasing delay after startup before we get the excitation out. It has taken up to 30 minutes. Once they start working, they are fine for the rest of the day. Awaiting diagnostic to determine the failing parts.
+  
+  2) The system is giving occasional camera error messages (at least twice within a week). Previous troubleshooting was performed, but new errors are appearing.
+  
+  3) After a recent SlideBook update, defining the montage by setting the edge does not work in the y-direction (e.g., a 3x3 tiled image results in only a 3x1 being recognized). The software recognizes movement in Y, but does not use the information correctly in the montage. Saving a point list and revisiting points works normally. Defining a montage by setting the extent works normally, but Generate Montage (Legacy) does not. Expected to be a software setting issue.
