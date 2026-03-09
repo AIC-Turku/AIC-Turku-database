@@ -164,11 +164,11 @@ hardware:
       notes: ''
       url: ''
 
-  objectives:
+objectives:
     - id: 10x_air
       manufacturer: Zeiss
-      model: Plan Apochromat 10x
-      product_code: 420641-9910-000
+      model: Plan-Apochromat 10x/0.45 Ph1 M27
+      product_code: 420641-9910
       magnification: 10.0
       numerical_aperture: 0.45
       working_distance: 2.0 mm
@@ -181,7 +181,7 @@ hardware:
       is_installed: true
     - id: 20x_air
       manufacturer: Zeiss
-      model: Plan Apochromat 20x
+      model: Plan-Apochromat 20x/0.8
       product_code: 440640-9903-000
       magnification: 20.0
       numerical_aperture: 0.8
@@ -195,8 +195,8 @@ hardware:
       is_installed: true
     - id: 40x_water
       manufacturer: Zeiss
-      model: LD C-Apochromat 40x
-      product_code: 421867-9970-000
+      model: LD C-Apochromat 40x/1.1 W Corr M27
+      product_code: 421867-9970
       magnification: 40.0
       numerical_aperture: 1.1
       working_distance: 0.62 mm
@@ -210,22 +210,22 @@ hardware:
       is_installed: true
     - id: 63x_air
       manufacturer: Zeiss
-      model: LD Plan-Neofluar 63x
-      product_code: 421381-9971-000
+      model: LD Plan-Neofluar 63x/0.75 Corr Ph2 M27
+      product_code: 421381-9971
       magnification: 63.0
       numerical_aperture: 0.75
       working_distance: 1.7 mm
       immersion: air
-      correction: fluorite # Flag: Make sure 'fluorite' is a valid canonical ID in your vocab/objective_corrections.yaml (often it's 'plan_fluorite')
+      correction: plan_fluorite
       afc_compatible: false
       specialties:
         - cover glass 0.75
       notes: ''
       url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421381-9971-000/Objective-LD-Plan-Neofluar-63x-0.75-Corr-Ph2-M27
       is_installed: true
-    - id: 63x_water
+    - id: 63x_water_ld
       manufacturer: Zeiss
-      model: LD C-Apochromat 63x
+      model: LD C-Apochromat 63x/1.15 W Corr M27
       product_code: 421887-9970-000
       magnification: 63.0
       numerical_aperture: 1.15
@@ -240,8 +240,8 @@ hardware:
       is_installed: true
     - id: 63x_oil
       manufacturer: Zeiss
-      model: Plan Apochromat 63x
-      product_code: 420782-9900-799
+      model: Plan-Apochromat 63x/1.4 Oil DIC M27
+      product_code: 420782-9900
       magnification: 63.0
       numerical_aperture: 1.4
       working_distance: 0.19 mm
@@ -264,6 +264,8 @@ hardware:
       afc_compatible: false
       specialties: []  
       notes: ''
+      url: ''
+      is_installed: true
     - id: 25x_multi
       manufacturer: Zeiss
       model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
@@ -280,7 +282,7 @@ hardware:
       notes: 'Optional objective. Imm Korr (Multi-immersion, correction collar)'
       url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27'
       is_installed: false
-    - id: 63x_water
+    - id: 63x_water_c_apo
       manufacturer: Zeiss
       model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
       product_code: '421787-9970'
@@ -295,5 +297,3 @@ hardware:
       notes: 'Optional objective. W Korr (Water immersion, correction collar)'
       url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27'
       is_installed: false
-      url: ''
-      is_installed: true
