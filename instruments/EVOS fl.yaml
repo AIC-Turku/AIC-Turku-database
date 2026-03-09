@@ -17,16 +17,19 @@ modalities:
   - phase_contrast
 
 modules:
-  - name: universal_vessel_holder # Flag: Verify this matches a canonical ID in vocab/modules.yaml
-    notes: Product code AMEP-VH009
-    url: ''
+  - name: universal_vessel_holder
+    manufacturer: Thermo Fisher
+    model: Universal Vessel Holder
+    product_code: AMEP-VH009
+    notes: ''
+    url: 'https://www.thermofisher.com/order/catalog/product/AMEPVH009'
 
 software:
   - role: acquisition
     name: On-board EVOS interface
     version: ''
     notes: 'no external software, USB storage'
-    url: ''
+    url: 'https://www.thermofisher.com/fi/en/home/life-science/cell-analysis/cellular-imaging/evos-cell-imaging-systems/software.html'
 
 hardware:
   scanner:
