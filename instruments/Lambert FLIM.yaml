@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
   notes: 'Fluorescence lifetime imaging microscopy (FLIM) measures differences in fluorescence decay lifetimes. The Lambert Instruments LIFA frequency-domain FLIM system is attached to an inverted Carl Zeiss AxioImager microscope body and supports fixed-sample imaging in widefield mode. It is suitable for FRET imaging, where donor lifetime decreases upon FRET; CFP-YFP and GFP-DsRed pairs have been used successfully. Lifetime imaging performance is <100 ps resolution over an approximately 0.1 ns to 1 ms range. The system is capable of high-content imaging. Recommended background reading: Bastiaens and Squire, "Fluorescence lifetime imaging microscopy: spatial resolution of biochemical processes in the cell" (Trends Cell Biol. 1999 Feb;9(2):48-52).'
   url: ''

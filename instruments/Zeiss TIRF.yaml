@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2209
   notes: 'TIRF/widefield microscope (inverted). TIRF imaging enables approximately 70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm in common confocal microscopy). Designed for membrane studies such as endocytosis and integrin trafficking, and also suitable for sensitive widefield imaging.'
   url: ''
@@ -77,13 +78,15 @@ hardware:
       manufacturer: Hamamatsu
       model: C9100-13
       pixel_pitch_um: 16.0 # Flag: Required by schema for emccd. Standard specification for this camera.
-      notes: 512x512 pixels
+      sensor_format_px: "512 x 512"
+      notes: ""
       url: ''
     - kind: scmos
       manufacturer: Hamamatsu
       model: ORCA-Flash4.0 CMOS
       pixel_pitch_um: 6.5 # Flag: Required by schema for scmos. Standard specification for this camera.
-      notes: 2048x2048 pixels
+      sensor_format_px: "2048 x 2048"
+      notes: ""
       url: ''
 
   filters:

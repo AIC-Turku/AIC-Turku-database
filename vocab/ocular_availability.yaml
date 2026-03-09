@@ -1,0 +1,17 @@
+terms:
+  - id: camera_only
+    label: "Camera-only"
+    description: "No direct visual eyepiece path; observation is camera-mediated only."
+    synonyms: ["camera only", "digital only", "no eyepieces"]
+  - id: binocular
+    label: "Binocular"
+    description: "Microscope stand provides two-eyepiece direct viewing."
+    synonyms: ["2 eyepiece", "two eyepiece", "biocular"]
+  - id: trinocular
+    label: "Trinocular"
+    description: "Microscope stand provides binocular viewing plus a camera port."
+    synonyms: ["3 port", "trinoc", "trinocular head"]
+  - id: unknown
+    label: "Unknown"
+    description: "Eyepiece availability is not yet documented."
+    synonyms: ["unspecified", "not documented"]

@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: '2019'
   funding: ''
   stand_orientation: other
+  ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
   notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 800 \xB5m FOV (with 15.3x Special Optics), sub-1 \xB5m axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation."
   url: ''
@@ -67,7 +68,8 @@ hardware:
       manufacturer: Hamamatsu
       model: ORCA-Flash4.0 V3 (C11440-22CU)
       pixel_pitch_um: 6.5 # Flag: Required field for scmos detectors. Added standard spec value.
-      notes: 2048x2048. Supplied with water chiller for camera chip cooling.
+      sensor_format_px: "2048 x 2048"
+      notes: Supplied with water chiller for camera chip cooling
       url: ''
 
   filters:

@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: upright
+  ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
   notes: "Upright microscope with camera port in microscope body. Current imaging modes are transmitted brightfield and differential interference contrast (DIC). Fluorescence excitation is currently unavailable but can be attached."
   url: ''

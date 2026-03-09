@@ -125,6 +125,11 @@ vocab_registry:
     path: vocab/service_provider.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  ocular_availability:
+    source: file
+    path: vocab/ocular_availability.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
   # Recommended future additions if you want the policy file to own all possible options:
   # manufacturers:
   #   source: file
@@ -189,6 +194,14 @@ sections:
         allowed_values: [upright, inverted, stereo, benchtop, other]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Used directly by methods generator and helps classify the platform.
+
+      - path: instrument.ocular_availability
+        title: Ocular availability
+        status: required
+        type: string
+        vocab: ocular_availability
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Critical user-experience metadata. Distinguishes traditional stands from box microscopes.
 
       - path: instrument.location
         title: Location

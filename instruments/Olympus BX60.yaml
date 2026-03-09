@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: upright
+  ocular_availability: trinocular
   location: '' # Flag: Required field. Please provide the physical location.
   notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast.'
   url: ''
@@ -47,7 +48,8 @@ hardware:
       manufacturer: Olympus
       model: DP71
       pixel_pitch_um: null # Flag: Required field for ccd. Please add physical pixel size (e.g., 6.45).
-      notes: 4080x3072
+      sensor_format_px: "4080 x 3072"
+      notes: ''
       url: ''
 
   filters:

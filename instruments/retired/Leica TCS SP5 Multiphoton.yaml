@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: upright
+  ocular_availability: trinocular
   location: '' # Flag: Required field. Please provide the physical location.
   notes: 'Multiphoton confocal microscope (upright). Imaging modes: Multiphoton (two-photon) fluorescence, Deep tissue intravital imaging, Resonant scanning (video-rate).'
   url: ''

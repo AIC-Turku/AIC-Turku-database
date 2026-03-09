@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: '2016'
   funding: ''
   stand_orientation: inverted
+  ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
   notes: Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF for evenly illuminated large fields of view.
   url: ''
@@ -114,7 +115,8 @@ hardware:
       manufacturer: PCO
       model: Edge
       pixel_pitch_um: 6.5
-      notes: '3x custom liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation: 512x512 for 3D-SIM, 1024x1024 for Widefield/TIRF. Camera mapping: Cam1 DAPI+Cy5/CFP, Cam2 Alexa 488/YFP, Cam3 Alexa 568.'
+      sensor_format_px: "512 x 512 / 1024 x 1024"
+      notes: '3x custom liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM and Widefield/TIRF. Camera mapping: Cam1 DAPI+Cy5/CFP, Cam2 Alexa 488/YFP, Cam3 Alexa 568.'
       url: ''
 
   splitters: []

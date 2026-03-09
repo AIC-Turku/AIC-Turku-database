@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: upright
+  ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
   notes: 'Widefield microscope (upright) with camera port. Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield.'
   url: ''

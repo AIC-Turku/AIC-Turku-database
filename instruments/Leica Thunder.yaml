@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: '2023'
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: '' # Flag: Required field. Please provide the physical location.
   notes: Widefield microscope with Leica Computational Clearing for real-time out-of-focus blur removal in 3D fluorescence imaging; high sensitivity supports low phototoxicity and photobleaching. LAS X raw data is saved separately; processing can be done during acquisition or by post-processing.
   url: https://www.leica-microsystems.com/products/thunder-imaging-systems/
@@ -97,7 +98,8 @@ hardware:
       manufacturer: Leica
       model: K8
       pixel_pitch_um: 6.5
-      notes: monochrome; 18.8 mm sensor, 2048x2048 px, 6.5 um pixel, QE 95% peak, dark current 1.5 e-/pix/s, read noise (12-bit) 1.0 e- median / 1.1 e- RMS
+      sensor_format_px: "2048 x 2048"
+      notes: monochrome; 18.8 mm sensor, 6.5 um pixel, QE 95% peak, dark current 1.5 e-/pix/s, read noise (12-bit) 1.0 e- median / 1.1 e- RMS
       url: https://www.leica-microsystems.com/products/microscope-cameras/p/k8/
     - kind: cmos
       manufacturer: Leica

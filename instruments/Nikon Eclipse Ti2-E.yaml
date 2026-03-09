@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: '2017'
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: '' # Flag: Required field. Please provide the physical location.
   notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning).'
   url: ''
@@ -58,13 +59,15 @@ hardware:
       manufacturer: Hamamatsu
       model: Orca Flash4.0 V3
       pixel_pitch_um: null # Flag: Required field for scmos. Please add physical pixel size (e.g., 6.5).
-      notes: sCMOS (2048x2044)
+      sensor_format_px: "2048 x 2044"
+      notes: sCMOS
       url: ''
     - kind: cmos # Changed from scmos to cmos based on notes
       manufacturer: Nikon
       model: DS-Fi3
       pixel_pitch_um: null # Flag: Required field for cmos. Please add physical pixel size.
-      notes: Color CMOS (2880x2048)
+      sensor_format_px: "2880 x 2048"
+      notes: Color CMOS
       url: ''
 
   filters:

@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
   notes: "Confocal spinning-disk microscope (inverted) with 50 \xB5m pinholes. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: Confocal (spinning disk), Live-cell time-lapse, FRAP, Photoactivation."
   url: ''
@@ -99,14 +100,16 @@ hardware:
       model: Orca Flash4.0
       pixel_pitch_um: 6.5
       qe_peak_pct: 82 # Flag: Required due to spinning disk modality. Added estimated value, please verify.
-      notes: "2048 x 2048 pixels, 6.5 x 6.5 \xB5m pixel size"
+      sensor_format_px: "2048 x 2048"
+      notes: "6.5 x 6.5 \xB5m pixel size"
       url: ''
     - kind: emccd
       manufacturer: Photometrics
       model: Evolve
       pixel_pitch_um: 16.0
       qe_peak_pct: 95 # Flag: Required due to spinning disk modality. Added estimated value, please verify.
-      notes: "10 MHz back-illuminated EMCCD, 512 x 512 pixels, 16 x 16 \xB5m pixel size"
+      sensor_format_px: "512 x 512"
+      notes: "10 MHz back-illuminated EMCCD, 16 x 16 \xB5m pixel size"
       url: ''
 
   splitters: []
