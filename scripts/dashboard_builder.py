@@ -656,6 +656,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "year_of_purchase": clean_text(inst_section.get("year_of_purchase")),
         "funding": clean_text(inst_section.get("funding")),
         "stand_orientation": clean_text(inst_section.get("stand_orientation")),
+        "ocular_availability": clean_text(inst_section.get("ocular_availability")),
         "location": extract_instrument_location(inst_section.get("location"), notes_raw),
         "notes_raw": notes_raw,
         "notes": notes_parsed,
