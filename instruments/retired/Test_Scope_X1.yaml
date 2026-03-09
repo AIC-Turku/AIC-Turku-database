@@ -27,7 +27,7 @@ modules:
     url: ''
 
 software:
-  acquisition:
+  - role: acquisition
     name: MicroManager
     version: '2.0'
     url: https://micro-manager.org/

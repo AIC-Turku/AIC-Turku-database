@@ -15,7 +15,7 @@ modalities:
   - multiphoton
 
 software:
-  acquisition:
+  - role: acquisition
     name: Leica LAS AF
     version: ''
     url: ''
