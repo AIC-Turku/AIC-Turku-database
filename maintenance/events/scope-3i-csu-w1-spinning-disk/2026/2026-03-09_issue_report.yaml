@@ -27,11 +27,7 @@ tags:
   - "slidebook"
 followup: "Awaiting diagnostic for the laser stack delay and camera errors."
 next_due_date: ""
-notes: >
-  We’ve had an increasing amount of issues with the spinning disk. 
-  
+notes: "We’ve had an increasing amount of issues with the spinning disk.  
   1) The most serious issue is the laser stack has an increasing delay after startup before we get the excitation out. It has taken up to 30 minutes. Once they start working, they are fine for the rest of the day. Awaiting diagnostic to determine the failing parts.
-  
   2) The system is giving occasional camera error messages (at least twice within a week). Previous troubleshooting was performed, but new errors are appearing.
-  
-  3) After a recent SlideBook update, defining the montage by setting the edge does not work in the y-direction (e.g., a 3x3 tiled image results in only a 3x1 being recognized). The software recognizes movement in Y, but does not use the information correctly in the montage. Saving a point list and revisiting points works normally. Defining a montage by setting the extent works normally, but Generate Montage (Legacy) does not. Expected to be a software setting issue.
+  3) After a recent SlideBook update, defining the montage by setting the edge does not work in the y-direction (e.g., a 3x3 tiled image results in only a 3x1 being recognized). The software recognizes movement in Y, but does not use the information correctly in the montage. Saving a point list and revisiting points works normally. Defining a montage by setting the extent works normally, but Generate Montage (Legacy) does not. Expected to be a software setting issue."
