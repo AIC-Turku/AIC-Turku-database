@@ -485,23 +485,29 @@ sections:
 
       - path: hardware.detectors[].kind
         title: Detector kind
-        status: required
+        status: conditional
         type: string
         vocab: detector_kinds
+        required_if:
+          parent_present: "hardware.detectors[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Core detector class.
 
       - path: hardware.detectors[].manufacturer
         title: Detector manufacturer
-        status: required
+        status: conditional
         type: string
+        required_if:
+          parent_present: "hardware.detectors[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Needed for hardware identification.
 
       - path: hardware.detectors[].model
         title: Detector model
-        status: required
+        status: conditional
         type: string
+        required_if:
+          parent_present: "hardware.detectors[]"
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Needed for hardware identification.
 
