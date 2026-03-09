@@ -344,17 +344,6 @@ sections:
         used_by: [audit_pdf, dashboard]
         rationale: Reference link to vendor pages or manuals.
 
-      - path: software[].acquisition_role_marker
-        title: Acquisition software role coverage
-        status: conditional
-        type: string
-        required_if:
-          all_of:
-            - detector_kinds_any_of: [scmos, cmos, ccd, emccd, pmt, gaasp_pmt, hyd, apd, spad]
-            - software_roles_none_of: [acquisition]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: At least one `software[]` item must be tagged with role `acquisition` when digital detectors are present.
-
   - id: scanner
     title: Scanner
     rules:
