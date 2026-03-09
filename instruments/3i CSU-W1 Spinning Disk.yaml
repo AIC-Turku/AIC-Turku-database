@@ -164,7 +164,7 @@ hardware:
       notes: ''
       url: ''
 
-objectives:
+  objectives:
     - id: 10x_air
       manufacturer: Zeiss
       model: Plan-Apochromat 10x/0.45 Ph1 M27
