@@ -68,13 +68,48 @@ hardware:
       notes: Placeholder added to satisfy schema validation.
       url: ''
 
-  objectives:
-    - id: placeholder_objective # Flag: strictly required by policy (min_items: 1).
-      manufacturer: '' # Flag: Required field.
-      model: '' # Flag: Required field.
-      magnification: 10 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
-      numerical_aperture: 0.3 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
-      immersion: '' # Flag: Required. Needs to match vocab/objective_immersion.yaml
-      correction: '' # Flag: Required. Needs to match vocab/objective_corrections.yaml
+objectives:
+    - id: 20x_air_ph2
+      manufacturer: Zeiss
+      model: LD-Plan NEOFLUAR 20x/0.4 Ph2 Korr
+      product_code: '421351-9970'
+      magnification: 20.0
+      numerical_aperture: 0.4
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties:
+        - Phase Contrast (Ph2)
+      notes: 'Korr (correction collar)'
+      url: ''
       is_installed: true
-      notes: Placeholder added to satisfy schema validation.
+    - id: 40x_air_ph2
+      manufacturer: Zeiss
+      model: Plan NEOFLUAR 40x/0.6 Ph2 Korr
+      product_code: '421361-9970'
+      magnification: 40.0
+      numerical_aperture: 0.6
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties:
+        - Phase Contrast (Ph2)
+      notes: 'Korr (correction collar)'
+      url: ''
+      is_installed: true
+    - id: 63x_oil
+      manufacturer: Zeiss
+      model: Plan APOCHROMAT 63x/1.4 Oil
+      product_code: '420780-9900'
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: ''
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
