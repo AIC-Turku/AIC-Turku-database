@@ -27,6 +27,7 @@ software:
     version: ''
     notes: 'no external software, USB storage'
     url: ''
+
 hardware:
   scanner:
     type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml
@@ -58,7 +59,7 @@ hardware:
   filters:
     - name: DAPI
       location: Light Cube Pos 1
-      product_code: ''
+      product_code: 'ZP-EPI-9001'
       excitation: '' # Flag: Conditionally required because widefield_fluorescence is present.
       dichroic: ''   # Flag: Conditionally required because widefield_fluorescence is present.
       emission: ''   # Flag: Conditionally required because widefield_fluorescence is present.
@@ -66,7 +67,7 @@ hardware:
       url: ''
     - name: CFP
       location: Light Cube Pos 2
-      product_code: AMEP-4653
+      product_code: 'ZP-EPI-9012'
       excitation: '' # Flag: Required field.
       dichroic: ''   # Flag: Required field.
       emission: ''   # Flag: Required field.
@@ -74,7 +75,7 @@ hardware:
       url: ''
     - name: GFP/Alexa 488
       location: Light Cube Pos 3
-      product_code: ''
+      product_code: 'ZP-EPI-9002'
       excitation: '' # Flag: Required field.
       dichroic: ''   # Flag: Required field.
       emission: ''   # Flag: Required field.
@@ -82,7 +83,7 @@ hardware:
       url: ''
     - name: RFP/Alexa 555
       location: Light Cube Pos 4
-      product_code: ''
+      product_code: 'ZP-EPI-9003'
       excitation: '' # Flag: Required field.
       dichroic: ''   # Flag: Required field.
       emission: ''   # Flag: Required field.
@@ -90,7 +91,7 @@ hardware:
       url: ''
     - name: Cy5/Alexa 647
       location: Light Cube Pos 5
-      product_code: AMEP-4656
+      product_code: 'ZP-EPI-9016'
       excitation: '' # Flag: Required field.
       dichroic: ''   # Flag: Required field.
       emission: ''   # Flag: Required field.
@@ -100,7 +101,7 @@ hardware:
   objectives:
     - id: 4x_air
       manufacturer: Olympus
-      model: UPlanFLN
+      model: U Plan FL N 4x/0.13 PhP
       product_code: ''
       magnification: 4.0
       numerical_aperture: 0.13
@@ -110,13 +111,13 @@ hardware:
       afc_compatible: false
       specialties:
         - Phase Contrast (PH)
-      notes: ''
+      notes: 'PhP'
       url: ''
       is_installed: true
     - id: 10x_air
       manufacturer: AMG (Thermo Fisher)
-      model: PlanFluor
-      product_code: ''
+      model: Plan Fluor 10x/0.3
+      product_code: 'AMG-AMEP 4623'
       magnification: 10.0
       numerical_aperture: 0.3
       working_distance: 8.3 mm
@@ -129,8 +130,8 @@ hardware:
       is_installed: true
     - id: 20x_air
       manufacturer: AMG (Thermo Fisher)
-      model: PlanFluor
-      product_code: ''
+      model: Plan Fluor 20x/0.45
+      product_code: 'AMG-AMEP 4624'
       magnification: 20.0
       numerical_aperture: 0.45
       working_distance: 7.1 mm
@@ -143,8 +144,8 @@ hardware:
       is_installed: true
     - id: 40x_air
       manufacturer: AMG (Thermo Fisher)
-      model: PlanFluor
-      product_code: ''
+      model: Plan Fluor 40x/0.65
+      product_code: 'AMG-AMEP 4625'
       magnification: 40.0
       numerical_aperture: 0.65
       working_distance: 2.8 mm
