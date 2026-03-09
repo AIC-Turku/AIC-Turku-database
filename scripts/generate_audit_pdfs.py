@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -9,6 +10,36 @@ from weasyprint import CSS, HTML
 
 from audit_analyzer import analyze_instrument_completeness
 from dashboard_builder import load_facility_config, load_instruments
+
+
+SECTION_DEFINITIONS = {
+    "general": "General Identity",
+    "modalities": "Imaging Modalities",
+    "software": "Software Configuration",
+    "scanner": "Scanner",
+    "objectives": "Objectives",
+    "filters": "Filters",
+    "splitters": "Splitters",
+    "magnification_changers": "Magnification Changers",
+    "light_sources": "Light Sources",
+    "detectors": "Detectors",
+    "environment": "Environmental Control",
+    "stages": "Stages & Focus Drives",
+    "autofocus": "Hardware Autofocus",
+    "triggering": "Triggering & Synchronization",
+}
+
+
+def _selected_sections() -> list[dict[str, str]]:
+    """Resolve which report sections to include via AUDIT_PDF_SECTIONS."""
+    raw = os.getenv("AUDIT_PDF_SECTIONS", "objectives")
+    requested = [part.strip() for part in raw.split(",") if part.strip()]
+    keys = requested or ["objectives"]
+    return [
+        {"key": key, "title": SECTION_DEFINITIONS[key]}
+        for key in keys
+        if key in SECTION_DEFINITIONS
+    ]
 
 
 def main() -> None:
@@ -31,12 +62,14 @@ def main() -> None:
     instruments = load_instruments(include_retired=False)
     css_path = repo_root / "assets" / "stylesheets" / "dashboard.css"
     stylesheets = [CSS(filename=css_path)] if css_path.exists() else []
+    sections = _selected_sections()
 
     for instrument in instruments:
         audit_data = analyze_instrument_completeness(instrument)
         rendered_html = template.render(
             instrument=instrument,
             audit_data=audit_data,
+            sections=sections,
             facility_name=facility_name,
             facility_logo_path=logo_path,
         )
