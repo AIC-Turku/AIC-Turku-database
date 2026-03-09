@@ -1159,6 +1159,58 @@ def validate_instrument_ledgers(
                                 )
                             )
 
+
+        detector_nodes = _resolve_path_nodes(payload, 'hardware.detectors')
+        detector_kinds: set[str] = set()
+        if detector_nodes and isinstance(detector_nodes[0].value, list):
+            detector_kinds = {
+                canonical
+                for detector in detector_nodes[0].value
+                for raw_kind in [detector.get('kind') if isinstance(detector, dict) else None]
+                for canonical in [
+                    vocabulary.resolve_canonical('detector_kinds', raw_kind) or raw_kind
+                    if isinstance(raw_kind, str)
+                    else None
+                ]
+                if isinstance(canonical, str)
+            }
+
+        digital_detector_kinds = {'scmos', 'cmos', 'ccd', 'emccd', 'pmt', 'gaasp_pmt', 'hyd', 'apd', 'spad'}
+        has_digital_detector = bool(detector_kinds & digital_detector_kinds)
+
+        software_roles: set[str] = set()
+        software_nodes = _resolve_path_nodes(payload, 'software')
+        for node in software_nodes:
+            software_value = node.value
+            if isinstance(software_value, list):
+                software_roles.update(
+                    str(item.get('role')).strip().lower()
+                    for item in software_value
+                    if isinstance(item, dict) and isinstance(item.get('role'), str)
+                )
+            elif isinstance(software_value, dict):
+                # Backward-compatible support for legacy role-keyed software mapping.
+                software_roles.update(
+                    str(role_key).strip().lower()
+                    for role_key in software_value.keys()
+                    if isinstance(role_key, str)
+                )
+
+        has_acquisition_role = 'acquisition' in software_roles
+        if has_digital_detector and not has_acquisition_role:
+            if not is_retired_instrument:
+                warnings.append(
+                    ValidationIssue(
+                        code='cross_field_rule_failed',
+                        path=instrument_file.as_posix(),
+                        message=(
+                            "Cross-field rule 'detectors_require_acquisition_software_role' failed: "
+                            "at least one software entry with role 'acquisition' is required when "
+                            "digital detector kinds are present."
+                        ),
+                    )
+                )
+
         instrument_section = payload.get('instrument')
         if not isinstance(instrument_section, dict):
             if is_retired_instrument:
