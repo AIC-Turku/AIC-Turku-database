@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: '2019'
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: Medisiina C, 2nd floor, room C242
   notes: Confocal spinning-disk microscope based on a Zeiss Axio Observer 7. Includes MESA Illumination Enhancement.
   url: ''
@@ -92,7 +93,8 @@ hardware:
       model: Prime BSI sCMOS
       pixel_pitch_um: 6.5
       qe_peak_pct: 95
-      notes: "2048x2048 pixels, 6.5 \xB5m pixel size, 95% QE"
+      sensor_format_px: "2048 x 2048"
+      notes: "6.5 \xB5m pixel size, 95% QE"
       url: https://www.teledynevisionsolutions.com/products/prime-bsi/?vertical=tvs-photometrics&segment=tvs
 
   splitters: []

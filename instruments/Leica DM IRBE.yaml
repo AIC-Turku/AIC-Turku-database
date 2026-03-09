@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
   notes: Inverted microscope with camera port. Current imaging modes are widefield fluorescence, transmitted brightfield, and phase contrast. Optional 1.6x auxiliary lens in microscope body.
   url: ''

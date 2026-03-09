@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: stereo
+  ocular_availability: trinocular
   location: BioCity, 5th floor, room Dunkel
   notes: 'Fluorescence stereo zoom microscope with dual-camera detection (color + monochrome). Imaging modes: Brightfield (top/bottom illumination), Fluorescence, Optical sectioning (ApoTome.2 structured illumination SIM). Reservation system: Zeiss AxioZoom.V16. Fluorophore selection guide available for users.'
   url: ''
@@ -59,13 +60,15 @@ hardware:
       manufacturer: Hamamatsu
       model: ORCA-Flash4.0 LT+ sCMOS
       pixel_pitch_um: 6.5 # Flag: Required by schema for scmos. Standard specification for this camera.
-      notes: 2048x2048 mono
+      sensor_format_px: "2048 x 2048"
+      notes: mono
       url: ''
     - kind: cmos
       manufacturer: Zeiss
       model: AxioCam 105 Color
       pixel_pitch_um: null # Flag: Required field for cmos detectors. Please add physical pixel size (usually 2.2).
-      notes: 2560x1920 color
+      sensor_format_px: "2560 x 1920"
+      notes: color
       url: ''
 
   filters:

@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: other
+  ocular_availability: trinocular
   location: BioCity, floor -1 (Basement)
   notes: Confocal laser-scanning microscope with integrated AFM.
   url: ''

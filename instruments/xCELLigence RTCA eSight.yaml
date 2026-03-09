@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: '2024'
   funding: Testament funds from Henna Ruusunen
   stand_orientation: benchtop
+  ocular_availability: camera_only
   location: BioCity, 5th floor
   notes: "Real-time cell analysis system combining label-free impedance monitoring with live-cell imaging.\nDimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg.\nPlaced inside a standard CO2 incubator for operation (Operating range: 20-40°C, 5-98% RH)."
   url: https://www.agilent.com/lifesciences/eSight

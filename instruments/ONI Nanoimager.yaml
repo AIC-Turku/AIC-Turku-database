@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: '2022'
   funding: ''
   stand_orientation: other
+  ocular_availability: camera_only
   location: '' # Flag: Required field. Please provide the physical location.
   notes: "Super-resolution microscope (compact). Imaging modes: Single-molecule localization microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET imaging. Field of view: 50 \u03BCm x 80 \u03BCm per channel. Simultaneous 2-channel imaging (<10 nm mapping accuracy). Equipped with a closed-loop piezo stage (20/20/10 mm XYZ travel, 1 nm resolution) and continuous/one-shot autofocus."
   url: https://oni.bio/nanoimager

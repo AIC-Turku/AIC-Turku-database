@@ -67,6 +67,10 @@
         <div>{{ instrument.stand_orientation or '—' }}</div>
       </div>
       <div class="aic-fact">
+        <div class="aic-muted">Eyepieces</div>
+        <div>{{ pretty_id(instrument.ocular_availability) }}</div>
+      </div>
+      <div class="aic-fact">
         <div class="aic-muted">Location</div>
         <div>{{ instrument.location or '—' }}</div>
       </div>

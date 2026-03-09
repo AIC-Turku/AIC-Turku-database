@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: other
+  ocular_availability: trinocular
   location: BioCity, 5th floor, BioPhysics room 5086
   notes: "Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 \xB5m into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose."
   url: ''
@@ -89,7 +90,8 @@ hardware:
       manufacturer: '' # Flag: Required field.
       model: Monochrome CCD camera
       pixel_pitch_um: null # Flag: Required conditionally for ccd. Please add physical pixel size.
-      notes: 1280x960 pixels
+      sensor_format_px: "1280 x 960"
+      notes: ""
       url: ''
 
   splitters: []

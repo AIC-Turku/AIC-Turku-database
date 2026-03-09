@@ -6,6 +6,7 @@ instrument:
   year_of_purchase: ''
   funding: ''
   stand_orientation: inverted
+  ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
   notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting standard confocal and super-resolution AiryScan imaging. Dedicated for fast and sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
