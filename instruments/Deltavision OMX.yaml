@@ -115,8 +115,22 @@ hardware:
       manufacturer: PCO
       model: Edge
       pixel_pitch_um: 6.5
-      sensor_format_px: "512 x 512 / 1024 x 1024"
-      notes: '3x custom liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM and Widefield/TIRF. Camera mapping: Cam1 DAPI+Cy5/CFP, Cam2 Alexa 488/YFP, Cam3 Alexa 568.'
+      sensor_format_px: "1024 x 1024"
+      notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam1 DAPI+Cy5/CFP.'
+      url: ''
+    - kind: scmos
+      manufacturer: PCO
+      model: Edge
+      pixel_pitch_um: 6.5
+      sensor_format_px: "1024 x 1024"
+      notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam2 Alexa 488/YFP'
+      url: ''
+    - kind: scmos
+      manufacturer: PCO
+      model: Edge
+      pixel_pitch_um: 6.5
+      sensor_format_px: "1024 x 1024"
+      notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam3 Alexa 568.'
       url: ''
 
   splitters: []
