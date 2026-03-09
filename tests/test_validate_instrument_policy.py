@@ -65,6 +65,17 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(nodes[1].path, 'hardware.filters[1].name')
         self.assertEqual(nodes[1].value, 'Filter B')
 
+
+    def test_resolve_rule_nodes_keeps_root_list_as_single_node(self) -> None:
+        payload = {'software': [{'role': 'acquisition', 'name': 'NIS-Elements AR'}]}
+
+        nodes = _resolve_rule_nodes(payload, 'software[]')
+
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0].path, 'software')
+        self.assertIsInstance(nodes[0].value, list)
+        self.assertEqual(len(nodes[0].value), 1)
+
     def test_evaluate_required_if_supports_compound_all_of_any_of(self) -> None:
         vocabulary = Vocabulary(vocab_registry={'modalities': {'source': 'inline', 'allowed_values': ['flim', 'sim']}})
         payload = {

@@ -461,11 +461,17 @@ def _resolve_rule_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
 
     segments = dotted_path.split('.')
     if len(segments) == 1:
+        segment = segments[0]
+        if segment.endswith('[]'):
+            key = segment[:-2]
+            if key in payload:
+                return [ResolvedNode(value=payload.get(key), path=key, context_item=None)]
+            return [ResolvedNode(value=None, path=key, context_item=None)]
+
         nodes = _resolve_path_nodes(payload, dotted_path)
         if nodes:
             return nodes
-        key = segments[0][:-2] if segments[0].endswith('[]') else segments[0]
-        return [ResolvedNode(value=None, path=key, context_item=None)]
+        return [ResolvedNode(value=None, path=segment, context_item=None)]
 
     parent_nodes = _resolve_path_nodes(payload, '.'.join(segments[:-1]))
     if not parent_nodes:
