@@ -341,20 +341,9 @@
     </div>
     {% endif %}
 
-    {{ render_smart_section('General Identity', audit_data.general) }}
-    {{ render_smart_section('Imaging Modalities', audit_data.modalities) }}
-    {{ render_smart_section('Software Configuration', audit_data.software) }}
-    {{ render_smart_section('Scanner', audit_data.scanner) }}
-    {{ render_smart_section('Objectives', audit_data.objectives) }}
-    {{ render_smart_section('Filters', audit_data.filters) }}
-    {{ render_smart_section('Splitters', audit_data.splitters) }}
-    {{ render_smart_section('Magnification Changers', audit_data.magnification_changers) }}
-    {{ render_smart_section('Light Sources', audit_data.light_sources) }}
-    {{ render_smart_section('Detectors', audit_data.detectors) }}
-    {{ render_smart_section('Environmental Control', audit_data.environment) }}
-    {{ render_smart_section('Stages & Focus Drives', audit_data.stages) }}
-    {{ render_smart_section('Hardware Autofocus', audit_data.autofocus) }}
-    {{ render_smart_section('Triggering & Synchronization', audit_data.triggering) }}
+    {% for section in sections %}
+    {{ render_smart_section(section.title, audit_data[section.key]) }}
+    {% endfor %}
 
   </div>
 </body>

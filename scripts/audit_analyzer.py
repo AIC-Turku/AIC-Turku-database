@@ -150,6 +150,7 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                 [
                     _entry(f"Objective {idx} Manufacturer", objective.get("manufacturer")),
                     _entry(f"Objective {idx} Model", objective.get("model")),
+                    _entry(f"Objective {idx} Company Code", objective.get("product_code")),
                     _entry(f"Objective {idx} Magnification", objective.get("magnification")),
                     _entry(
                         f"Objective {idx} Numerical Aperture",
