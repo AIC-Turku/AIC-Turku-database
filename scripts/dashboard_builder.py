@@ -1279,6 +1279,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         lightpath_dto = generate_virtual_microscope_payload({"hardware": light_path_data})
         if not isinstance(lightpath_dto, dict):
             lightpath_dto = {}
+        inst["lightpath_dto"] = lightpath_dto
 
         # Render Overview
         overview_md = tpl_spec.render(

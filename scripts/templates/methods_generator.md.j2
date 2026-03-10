@@ -185,50 +185,44 @@ document.addEventListener("DOMContentLoaded", async () => {
         populateCheckboxes("light-list", canonicalHardware?.light_sources || currentInst?.processed_hardware?.light_sources || [],
             ls => formatLightSourceLabel(ls), "light");
 
-        // 1. Traverse the new Light Path topological graph
-        const lightPath = canonicalHardware?.light_path || currentInst?.processed_hardware?.light_path || {};
+        // 1. Grab the pre-computed DTO
+        const dto = currentInst?.lightpath_dto || {};
         const extractedOpticalComponents = [];
 
-        const stages = [
-            { key: 'excitation_mechanisms', label: 'Ex' },
-            { key: 'dichroic_mechanisms', label: 'Di' },
-            { key: 'emission_mechanisms', label: 'Em' }
-        ];
+        if (dto.stages) {
+            // A. Process Cubes from DTO
+            (dto.stages.cube || []).forEach(mech => {
+                mech.positions.forEach(pos => {
+                    const linked = pos.linked_components || {};
+                    const prefix = `Cube ${pos.label}`;
 
-        stages.forEach(stage => {
-            const mechanisms = lightPath[stage.key];
-            if (Array.isArray(mechanisms)) {
-                mechanisms.forEach(mech => {
-                    if (mech.positions) {
-                        Object.values(mech.positions).forEach(pos => {
-                            if (pos.component_type && pos.component_type !== 'empty') {
-                                extractedOpticalComponents.push({ ...pos, _stageLabel: stage.label });
-                            }
-                        });
+                    if (linked.excitation_filter && linked.excitation_filter.type !== 'empty') {
+                        extractedOpticalComponents.push(`${prefix} Ex: ${linked.excitation_filter.label} (${linked.excitation_filter.details})`);
+                    }
+                    if (linked.dichroic && linked.dichroic.type !== 'empty') {
+                        extractedOpticalComponents.push(`${prefix} Di: ${linked.dichroic.label} (${linked.dichroic.details})`);
+                    }
+                    if (linked.emission_filter && linked.emission_filter.type !== 'empty') {
+                        extractedOpticalComponents.push(`${prefix} Em: ${linked.emission_filter.label} (${linked.emission_filter.details})`);
                     }
                 });
-            }
-        });
+            });
 
-        // 2. Format the optical components for QUAREP-LiMi compliance
-        populateCheckboxes("filter-list", extractedOpticalComponents, f => {
-            let desc = f.component_type;
+            // B. Process Standard Stages from DTO (Excitation, Dichroic, Emission)
+            const stagePrefixes = { 'excitation': 'Ex', 'dichroic': 'Di', 'emission': 'Em' };
+            ['excitation', 'dichroic', 'emission'].forEach(stageKey => {
+                (dto.stages[stageKey] || []).forEach(mech => {
+                    mech.positions.forEach(pos => {
+                        if (pos.type !== 'empty') {
+                             extractedOpticalComponents.push(`${stagePrefixes[stageKey]}: ${pos.label} (${pos.details})`);
+                        }
+                    });
+                });
+            });
+        }
 
-            // Smart formatting based on component type
-            if (['bandpass', 'notch'].includes(f.component_type) && f.center_nm && f.width_nm) {
-                desc = `${f.center_nm}/${f.width_nm} nm`;
-            } else if (f.component_type === 'longpass' && f.cut_on_nm) {
-                desc = `LP ${f.cut_on_nm} nm`;
-            } else if (f.component_type === 'shortpass' && f.cut_off_nm) {
-                desc = `SP ${f.cut_off_nm} nm`;
-            } else if (['dichroic', 'multiband_dichroic', 'polychroic'].includes(f.component_type) && f.cutoffs_nm) {
-                desc = `Dichroic [${f.cutoffs_nm.join(', ')} nm]`;
-            }
-
-            // Add manufacturer data if available (Tier 2 compliance)
-            const mfg = [f.manufacturer, f.product_code].filter(Boolean).join(" ");
-            return `${f._stageLabel}: ${desc}${mfg ? ` (${mfg})` : ''}`;
-        }, "filter");
+        // 2. Populate Checkboxes directly (cleaning up empty parenthesis if no details exist)
+        populateCheckboxes("filter-list", extractedOpticalComponents, f => f.replace(' ()', ''), "filter");
 
         populateCheckboxes("splitter-list", canonicalHardware?.splitters || currentInst?.processed_hardware?.splitters || [],
             s => `${s.name} (${s.type})`, "splitter");
