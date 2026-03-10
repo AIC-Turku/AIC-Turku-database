@@ -729,6 +729,14 @@ sections:
         required_if:
           parent_present: "hardware.light_path.cube_mechanisms[]"
 
+      - path: hardware.light_path.cube_mechanisms[].type
+        title: Cube mechanism type
+        status: conditional
+        type: string
+        vocab: mechanism_types
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[]"
+
       - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands
         title: Cube excitation multiband array
         status: conditional
@@ -761,14 +769,6 @@ sections:
         status: conditional
         type: positive_number
         
-      - path: hardware.light_path.cube_mechanisms[].type
-        title: Cube mechanism type
-        status: conditional
-        type: string
-        vocab: mechanism_types
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[]"
-
       - path: hardware.light_path.cube_mechanisms[].path
         title: Cube mechanism path tag
         status: optional
