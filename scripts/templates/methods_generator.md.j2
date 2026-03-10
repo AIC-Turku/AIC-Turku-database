@@ -185,18 +185,49 @@ document.addEventListener("DOMContentLoaded", async () => {
         populateCheckboxes("light-list", canonicalHardware?.light_sources || currentInst?.processed_hardware?.light_sources || [],
             ls => formatLightSourceLabel(ls), "light");
 
-        populateCheckboxes("filter-list", canonicalHardware?.filters || currentInst?.processed_hardware?.filters || [], f => {
-            let type = [];
-            if (f.excitation) type.push(`Ex: ${f.excitation}`);
-            if (f.dichroic) type.push(`Di: ${f.dichroic}`);
-            if (f.emission) type.push(`Em: ${f.emission}`);
+        // 1. Traverse the new Light Path topological graph
+        const lightPath = canonicalHardware?.light_path || currentInst?.processed_hardware?.light_path || {};
+        const extractedOpticalComponents = [];
 
-            // Label it based on what it actually does (helps users pick the right parts)
-            let label = f.name;
-            if (type.length > 0) {
-                label += ` (${type.join(', ')})`;
+        const stages = [
+            { key: 'excitation_mechanisms', label: 'Ex' },
+            { key: 'dichroic_mechanisms', label: 'Di' },
+            { key: 'emission_mechanisms', label: 'Em' }
+        ];
+
+        stages.forEach(stage => {
+            const mechanisms = lightPath[stage.key];
+            if (Array.isArray(mechanisms)) {
+                mechanisms.forEach(mech => {
+                    if (mech.positions) {
+                        Object.values(mech.positions).forEach(pos => {
+                            if (pos.component_type && pos.component_type !== 'empty') {
+                                extractedOpticalComponents.push({ ...pos, _stageLabel: stage.label });
+                            }
+                        });
+                    }
+                });
             }
-            return label;
+        });
+
+        // 2. Format the optical components for QUAREP-LiMi compliance
+        populateCheckboxes("filter-list", extractedOpticalComponents, f => {
+            let desc = f.component_type;
+
+            // Smart formatting based on component type
+            if (['bandpass', 'notch'].includes(f.component_type) && f.center_nm && f.width_nm) {
+                desc = `${f.center_nm}/${f.width_nm} nm`;
+            } else if (f.component_type === 'longpass' && f.cut_on_nm) {
+                desc = `LP ${f.cut_on_nm} nm`;
+            } else if (f.component_type === 'shortpass' && f.cut_off_nm) {
+                desc = `SP ${f.cut_off_nm} nm`;
+            } else if (['dichroic', 'multiband_dichroic', 'polychroic'].includes(f.component_type) && f.cutoffs_nm) {
+                desc = `Dichroic [${f.cutoffs_nm.join(', ')} nm]`;
+            }
+
+            // Add manufacturer data if available (Tier 2 compliance)
+            const mfg = [f.manufacturer, f.product_code].filter(Boolean).join(" ");
+            return `${f._stageLabel}: ${desc}${mfg ? ` (${mfg})` : ''}`;
         }, "filter");
 
         populateCheckboxes("splitter-list", canonicalHardware?.splitters || currentInst?.processed_hardware?.splitters || [],
