@@ -329,110 +329,49 @@
 {% set dto = lightpath_dto %}
 {% if dto and dto.stages %}
 
-  {# 1. Render Filter Cubes (6-Column Table) #}
-  {% if dto.stages.cube %}
-  #### Filter Cubes (Linked Mechanisms)
-  <div class="md-typeset__scrollwrap">
-    <table class="md-typeset__table">
-      <thead>
-        <tr>
-          <th>Mechanism</th>
-          <th>Slot</th>
-          <th>Cube Name</th>
-          <th>Excitation</th>
-          <th>Dichroic</th>
-          <th>Emission</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for mech in dto.stages.cube %}
-          {% for pos in mech.positions %}
-            <tr>
-              <td>{{ mech.name }}</td>
-              <td>{{ pos.slot }}</td>
-              <td>
-                <strong>{{ pos.label }}</strong>
-                {% if pos.details %}<br><sub style="color: gray;">{{ pos.details }}</sub>{% endif %}
-              </td>
-              <td>{{ pos.linked_components.excitation_filter.label | default('-') }}</td>
-              <td>{{ pos.linked_components.dichroic.label | default('-') }}</td>
-              <td>{{ pos.linked_components.emission_filter.label | default('-') }}</td>
-            </tr>
-          {% endfor %}
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# 1. Render Filter Cubes as nested bullets #}
+{% if dto.stages.cube %}
+#### 🧊 Filter Cubes (Linked Mechanisms)
+{% for mech in dto.stages.cube %}
+**{{ mech.name }}**
+{% for pos in mech.positions %}
+* **Slot {{ pos.slot }}: {{ pos.label }}** {% if pos.details %}— *{{ pos.details }}*{% endif %}
+  {% if pos.linked_components.excitation_filter.type != "empty" or pos.linked_components.dichroic.type != "empty" or pos.linked_components.emission_filter.type != "empty" %}
+    * **Excitation:** `{{ pos.linked_components.excitation_filter.label | default('-') }}`
+    * **Dichroic:** `{{ pos.linked_components.dichroic.label | default('-') }}`
+    * **Emission:** `{{ pos.linked_components.emission_filter.label | default('-') }}`
+  {% else %}
+    * *Pass-through (Empty)*
   {% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
 
-  {# 2. Render Independent Stages (Excitation, Dichroic, Emission) #}
-  {% for stage_key in ['excitation', 'dichroic', 'emission'] %}
-    {% set mechanisms = dto.stages[stage_key] %}
-    {% if mechanisms %}
-    #### {{ stage_key | title }} Stage
-    <div class="md-typeset__scrollwrap">
-      <table class="md-typeset__table">
-        <thead>
-          <tr>
-            <th>Mechanism</th>
-            <th>Slot</th>
-            <th>Component</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for mech in mechanisms %}
-            {% for pos in mech.positions %}
-              <tr>
-                <td>{{ mech.name }}</td>
-                <td>{{ pos.slot }}</td>
-                <td><strong>{{ pos.label }}</strong></td>
-                <td>{{ pos.details }}</td>
-              </tr>
-            {% endfor %}
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
-  {% endfor %}
+{# 2. Render Independent Stages as clean lists #}
+{% for stage_key in ['excitation', 'dichroic', 'emission'] %}
+{% set mechanisms = dto.stages[stage_key] %}
+{% if mechanisms %}
+#### ⭕ {{ stage_key | title }} Stage
+{% for mech in mechanisms %}
+**{{ mech.name }}**
+{% for pos in mech.positions %}
+* **Slot {{ pos.slot }}:** `{{ pos.label }}` {% if pos.details %}— *{{ pos.details }}*{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
 
-  {# 3. Render Splitters (Dual-Cam or Multi-Track) #}
-  {% if dto.splitters %}
-  #### Splitters & Light Routing
-  <div class="md-typeset__scrollwrap">
-    <table class="md-typeset__table">
-      <thead>
-        <tr>
-          <th>Splitter Mechanism</th>
-          <th>Dichroic</th>
-          <th>Path 1 (Transmitted)</th>
-          <th>Path 2 (Reflected)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for splitter in dto.splitters %}
-          <tr>
-            <td><strong>{{ splitter.name }}</strong></td>
-            <td>
-              {{ splitter.dichroic.positions[1].label | default('-') }}
-              {% if splitter.dichroic.positions[1].details %}<br><sub style="color: gray;">{{ splitter.dichroic.positions[1].details }}</sub>{% endif %}
-            </td>
-            <td>
-              {{ splitter.path1.positions[1].label | default('-') }}
-              {% if splitter.path1.positions[1].details %}<br><sub style="color: gray;">{{ splitter.path1.positions[1].details }}</sub>{% endif %}
-            </td>
-            <td>
-              {{ splitter.path2.positions[1].label | default('-') }}
-              {% if splitter.path2.positions[1].details %}<br><sub style="color: gray;">{{ splitter.path2.positions[1].details }}</sub>{% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
+{% endif %}
 
+{# 3. Render Splitters as routing lists #}
+{% if dto and dto.splitters %}
+#### 🔀 Splitters & Light Routing
+{% for splitter in dto.splitters %}
+**{{ splitter.name }}**
+* **Dichroic:** `{{ splitter.dichroic.positions[1].label | default('None') }}` {% if splitter.dichroic.positions[1].details %}(*{{ splitter.dichroic.positions[1].details }}*){% endif %}
+* **Path 1 (Transmitted):** `{{ splitter.path1.positions[1].label | default('None') }}` {% if splitter.path1.positions[1].details %}(*{{ splitter.path1.positions[1].details }}*){% endif %}
+* **Path 2 (Reflected):** `{{ splitter.path2.positions[1].label | default('None') }}` {% if splitter.path2.positions[1].details %}(*{{ splitter.path2.positions[1].details }}*){% endif %}
+{% endfor %}
 {% endif %}
 
 
