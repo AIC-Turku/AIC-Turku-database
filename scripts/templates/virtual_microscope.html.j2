@@ -407,7 +407,7 @@
       calculateEfficiencies();
     }
 
-    function populateMicroscopeSelector() {
+    function populateMicroscopeSelector(preferredInstrumentId = null) {
       microscopeSelector.innerHTML = '';
       const entries = Object.entries(state.allInstruments);
 
@@ -431,8 +431,12 @@
 
       microscopeSelector.disabled = false;
       const [firstId] = entries[0];
-      microscopeSelector.value = firstId;
-      setActiveInstrument(firstId);
+      const selectedId = Object.prototype.hasOwnProperty.call(state.allInstruments, String(preferredInstrumentId || ''))
+        ? String(preferredInstrumentId)
+        : firstId;
+      microscopeSelector.value = selectedId;
+      currentInstrumentId = selectedId;
+      setActiveInstrument(selectedId);
     }
 
     function wavelengthToColorHex(wavelengthNm) {
@@ -1433,9 +1437,14 @@
       const jsonScript = document.getElementById('lightpath-data');
       const parsedPayload = safeJsonParse(jsonScript?.textContent || '{}');
       state.allInstruments = normalizeInstrumentMap(parsedPayload);
+      const params = new URLSearchParams(window.location.search);
+      const requestedScope = params.get('scope');
+      const hasRequestedScope =
+        requestedScope && Object.prototype.hasOwnProperty.call(state.allInstruments, requestedScope);
+      const initialInstrumentId = hasRequestedScope ? requestedScope : null;
 
       initChart();
-      populateMicroscopeSelector();
+      populateMicroscopeSelector(initialInstrumentId);
 
       microscopeSelector.addEventListener('change', (event) => {
         setActiveInstrument(event.target.value);
