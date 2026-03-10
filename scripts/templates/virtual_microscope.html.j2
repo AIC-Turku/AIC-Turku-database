@@ -159,7 +159,8 @@ hide:
       allInstruments: globalData,
       activeInstrument: null,
       loadedProteins: new Map(),
-      preferTwoPhoton: false
+      preferTwoPhoton: false,
+      activeRoute: null
     };
     let currentInstrumentId = null;
     let chartInstance = null;
@@ -220,8 +221,10 @@ hide:
 
     // --- GRAPH FLOW ENGINE ---
     function renderGraphFlow() {
+      const snapshot = snapshotSelections();
       DOM.graph.innerHTML = '';
       const inst = state.activeInstrument;
+      const activeRoute = state.activeRoute;
 
       const addArrow = () => {
         const arrow = document.createElement('div');
@@ -239,13 +242,14 @@ hide:
       // 1. Lasers (Checkboxes)
       if (inst.lightSources.length) {
         const node = createNode('1. Light Source');
-        inst.lightSources.forEach(mech => {
+        mechanismsForRoute(inst.lightSources, activeRoute).forEach(mech => {
           const wrap = document.createElement('div');
           wrap.className = 'checkbox-group'; wrap.dataset.stage = 'lightSources'; wrap.dataset.mechanismName = mech.name;
-          Object.entries(mech.positions || {}).forEach(([slot, comp]) => {
+          Object.entries(positionsForRoute(mech, activeRoute)).forEach(([slot, comp]) => {
             const lbl = document.createElement('label');
             const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = JSON.stringify(comp);
-            cb.addEventListener('change', () => { drawHardware(); calculateEfficiencies(); });
+            cb.dataset.routes = (comp.__routes || mech.__routes || []).join(',');
+            cb.addEventListener('change', onLightSourceChange);
             let text = comp.name || comp.component_type || 'Laser';
             if (comp.wavelength_nm) text += ` (${comp.wavelength_nm}nm)`;
             lbl.appendChild(cb); lbl.appendChild(document.createTextNode(text));
@@ -256,17 +260,28 @@ hide:
         DOM.graph.appendChild(node); addArrow();
       }
 
-      // 2. Excitation
-      if (inst.excitation.length) {
+      const filteredCubes = mechanismsForRoute(inst.cube, activeRoute);
+      const filteredExcitation = mechanismsForRoute(inst.excitation, activeRoute);
+
+      // 2. Cube / Excitation
+      if (filteredCubes.length) {
+        const node = createNode('2. Filter Cube');
+        filteredCubes.forEach((m, i) => node.appendChild(createControl('cube', m, i)));
+        DOM.graph.appendChild(node); addArrow();
+      } else if (state.activeRoute === 'tirf' && filteredExcitation.length) {
         const node = createNode('2. Excitation');
-        inst.excitation.forEach((m, i) => node.appendChild(createControl('excitation', m, i)));
+        node.innerHTML += `<div style="font-size:11px;text-align:center;color:var(--muted)">Bypassed for TIRF route</div>`;
+        DOM.graph.appendChild(node); addArrow();
+      } else if (filteredExcitation.length) {
+        const node = createNode('2. Excitation');
+        filteredExcitation.forEach((m, i) => node.appendChild(createControl('excitation', m, i)));
         DOM.graph.appendChild(node); addArrow();
       }
 
       // 3. Dichroic
-      if (inst.dichroic.length) {
+      if (!filteredCubes.length && mechanismsForRoute(inst.dichroic, activeRoute).length) {
         const node = createNode('3. Dichroic');
-        inst.dichroic.forEach((m, i) => node.appendChild(createControl('dichroic', m, i)));
+        mechanismsForRoute(inst.dichroic, activeRoute).forEach((m, i) => node.appendChild(createControl('dichroic', m, i)));
         DOM.graph.appendChild(node); addArrow();
       }
 
@@ -277,9 +292,9 @@ hide:
       DOM.graph.appendChild(sampleNode); addArrow();
 
       // 5. Emission
-      if (inst.emission.length) {
+      if (!filteredCubes.length && mechanismsForRoute(inst.emission, activeRoute).length) {
         const node = createNode('5. Emission');
-        inst.emission.forEach((m, i) => node.appendChild(createControl('emission', m, i)));
+        mechanismsForRoute(inst.emission, activeRoute).forEach((m, i) => node.appendChild(createControl('emission', m, i)));
         DOM.graph.appendChild(node); addArrow();
       }
 
@@ -298,6 +313,8 @@ hide:
       } else if (DOM.graph.lastChild && DOM.graph.lastChild.className === 'graph-arrow') {
         DOM.graph.removeChild(DOM.graph.lastChild); // Remove trailing arrow
       }
+
+      restoreSelections(snapshot);
     }
 
     function createControl(stageKey, mechanism, index) {
@@ -333,7 +350,7 @@ hide:
         const opt = document.createElement('option'); opt.value = JSON.stringify(pos); opt.textContent = [d,p1,p2].filter(Boolean).join(' | ');
         select.appendChild(opt);
       } else {
-        Object.entries(mechanism.positions || {}).forEach(([slot, comp]) => {
+        Object.entries(positionsForRoute(mechanism, state.activeRoute)).forEach(([slot, comp]) => {
           const opt = document.createElement('option'); opt.value = JSON.stringify(comp);
           let desc = comp.type || comp.component_type || 'Unknown';
           if (desc === 'empty') desc = 'Empty';
@@ -351,6 +368,7 @@ hide:
 
     function selectedPositions() {
       const res = [];
+      const activeRoute = inferActiveRouteFromDom() || state.activeRoute;
       document.querySelectorAll('.graph-node select').forEach(sel => {
         if(!sel.value) return;
         try {
@@ -359,17 +377,72 @@ hide:
             if(v.dichroic?.positions?.[1]) res.push({stage: 'splitterDichroic', name: 'Splitter Di', position: v.dichroic.positions[1]});
             if(v.path1?.positions?.[1]) res.push({stage: 'splitterPath1', name: 'Path 1', position: v.path1.positions[1]});
             if(v.path2?.positions?.[1]) res.push({stage: 'splitterPath2', name: 'Path 2', position: v.path2.positions[1]});
-          } else res.push({stage: sel.dataset.stage, name: sel.dataset.mechanismName, position: v});
+          } else if (!(activeRoute === 'tirf' && sel.dataset.stage === 'excitation')) {
+            if (sel.dataset.stage === 'cube') {
+              res.push({stage: 'cube', name: sel.dataset.mechanismName, position: v});
+              expandCubeSelection(v, sel.dataset.mechanismName).forEach((item) => res.push(item));
+            } else {
+              res.push({stage: sel.dataset.stage, name: sel.dataset.mechanismName, position: v});
+            }
+          }
         } catch(e){}
       });
       document.querySelectorAll('.tunable-control').forEach(tun => {
-        if(tun.dataset.value) res.push({stage: tun.dataset.stage, name: tun.dataset.mechanismName, position: JSON.parse(tun.dataset.value)});
+        if(tun.dataset.value && !(activeRoute === 'tirf' && tun.dataset.stage === 'excitation')) {
+          res.push({stage: tun.dataset.stage, name: tun.dataset.mechanismName, position: JSON.parse(tun.dataset.value)});
+        }
       });
       document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked').forEach(cb => {
         const p = cb.closest('.checkbox-group');
         if(cb.value) res.push({stage: p.dataset.stage, name: p.dataset.mechanismName, position: JSON.parse(cb.value)});
       });
       return res;
+    }
+
+    function expandCubeSelection(cubePos, mechanismName) {
+      const ex = cubePos.excitation_filter || cubePos.excitation || cubePos.ex;
+      const di = cubePos.dichroic_filter || cubePos.dichroic || cubePos.di;
+      const em = cubePos.emission_filter || cubePos.emission || cubePos.em;
+      const out = [];
+      if (ex) out.push({ stage: 'excitation', name: `${mechanismName} (Cube Ex)`, position: ex });
+      if (di) out.push({ stage: 'dichroic', name: `${mechanismName} (Cube Di)`, position: di });
+      if (em) out.push({ stage: 'emission', name: `${mechanismName} (Cube Em)`, position: em });
+      return out;
+    }
+
+    function snapshotSelections() {
+      return {
+        selects: Array.from(document.querySelectorAll('.graph-node select')).map((sel) => ({
+          stage: sel.dataset.stage,
+          mechanismName: sel.dataset.mechanismName,
+          value: sel.value
+        })),
+        checks: Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]')).map((cb) => ({
+          value: cb.value,
+          checked: cb.checked
+        }))
+      };
+    }
+
+    function restoreSelections(snapshot) {
+      if (!snapshot) return;
+      snapshot.selects.forEach((saved) => {
+        const sel = document.querySelector(`.graph-node select[data-stage="${saved.stage}"][data-mechanism-name="${CSS.escape(saved.mechanismName || '')}"]`);
+        if (sel && Array.from(sel.options).some((o) => o.value === saved.value)) sel.value = saved.value;
+      });
+      snapshot.checks.forEach((saved) => {
+        const cb = Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]')).find((item) => item.value === saved.value);
+        if (cb) cb.checked = saved.checked;
+      });
+      state.activeRoute = inferActiveRouteFromDom() || state.activeRoute;
+    }
+
+    function onLightSourceChange() {
+      const nextRoute = inferActiveRouteFromDom();
+      const routeChanged = nextRoute !== state.activeRoute;
+      state.activeRoute = nextRoute;
+      if (routeChanged) renderGraphFlow();
+      drawHardware(); calculateEfficiencies();
     }
 
     // --- CHART ENGINE ---
@@ -682,16 +755,70 @@ hide:
       return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     }
     
-    function normalizeSplitters(r) { return (Array.isArray(r)?r:[]).map((s,i)=>({id:`s_${i}`, name:s.name||'Splitter', type:'splitter', positions:{1:s}})); }
+    function normalizeRouteTags(value) {
+      const arr = Array.isArray(value) ? value : [value];
+      const valid = new Set(['epi', 'tirf', 'confocal', 'multiphoton', 'shared', 'all']);
+      return arr.map((x) => String(x || '').toLowerCase().trim()).filter((x) => valid.has(x));
+    }
+
+    function routesFromObject(obj) {
+      return normalizeRouteTags(obj?.path || obj?.paths || obj?.route || obj?.routes || obj?.tags);
+    }
+
+    function routeMatches(itemRoutes, activeRoute) {
+      if (!activeRoute) return true;
+      if (!itemRoutes || !itemRoutes.length) return true;
+      return itemRoutes.includes(activeRoute) || itemRoutes.includes('shared') || itemRoutes.includes('all');
+    }
+
+    function mechanismsForRoute(mechanisms, activeRoute) {
+      return (Array.isArray(mechanisms) ? mechanisms : []).filter((m) => routeMatches(m.__routes, activeRoute));
+    }
+
+    function positionsForRoute(mechanism, activeRoute) {
+      const entries = Object.entries(mechanism?.positions || {});
+      const filtered = entries.filter(([, comp]) => routeMatches(comp.__routes || mechanism.__routes, activeRoute));
+      return Object.fromEntries(filtered);
+    }
+
+    function normalizeMechanismList(rows, fallbackName) {
+      return (Array.isArray(rows) ? rows : []).map((mech, idx) => {
+        const out = { ...mech, name: mech?.name || `${fallbackName} ${idx + 1}`, __routes: routesFromObject(mech) };
+        const pos = mech?.positions || {};
+        out.positions = Object.fromEntries(Object.entries(pos).map(([slot, comp]) => [slot, { ...comp, __routes: routesFromObject(comp) }]));
+        return out;
+      });
+    }
+
+    function inferActiveRouteFromDom() {
+      const selected = Array.from(document.querySelectorAll('.checkbox-group[data-stage="lightSources"] input[type="checkbox"]:checked'));
+      if (!selected.length) return null;
+      const tags = new Set();
+      selected.forEach((cb) => normalizeRouteTags((cb.dataset.routes || '').split(',')).forEach((r) => tags.add(r)));
+      const ordered = ['tirf', 'multiphoton', 'confocal', 'epi'];
+      for (const candidate of ordered) if (tags.has(candidate)) return candidate;
+      return null;
+    }
+
+    function normalizeSplitters(r) {
+      return (Array.isArray(r) ? r : []).map((s, i) => ({
+        id: `s_${i}`,
+        name: s.name || 'Splitter',
+        type: 'splitter',
+        __routes: routesFromObject(s),
+        positions: { 1: { ...s, __routes: routesFromObject(s) } }
+      }));
+    }
     function normalizeMechanisms(d) {
       const g = (obj, kw) => { for(const [k,v] of Object.entries(obj||{})) if(k.toLowerCase().includes(kw)&&Array.isArray(v)) return v; return []; };
       return {
-        lightSources: Array.isArray(d?.light_sources)?d.light_sources:g(d,'light_source'),
-        excitation: Array.isArray(d?.stages?.excitation)?d.stages.excitation:g(d,'excitation'),
-        dichroic: Array.isArray(d?.stages?.dichroic)?d.stages.dichroic:g(d,'dichroic'),
-        emission: Array.isArray(d?.stages?.emission)?d.stages.emission:g(d,'emission'),
+        lightSources: normalizeMechanismList(Array.isArray(d?.light_sources)?d.light_sources:g(d,'light_source'), 'Light Source'),
+        cube: normalizeMechanismList(Array.isArray(d?.stages?.cube)?d.stages.cube:g(d,'cube'), 'Filter Cube'),
+        excitation: normalizeMechanismList(Array.isArray(d?.stages?.excitation)?d.stages.excitation:g(d,'excitation'), 'Excitation'),
+        dichroic: normalizeMechanismList(Array.isArray(d?.stages?.dichroic)?d.stages.dichroic:g(d,'dichroic'), 'Dichroic'),
+        emission: normalizeMechanismList(Array.isArray(d?.stages?.emission)?d.stages.emission:g(d,'emission'), 'Emission'),
         splitters: normalizeSplitters(d?.splitters),
-        detectors: Array.isArray(d?.detectors)?d.detectors:g(d,'detector'),
+        detectors: normalizeMechanismList(Array.isArray(d?.detectors)?d.detectors:g(d,'detector'), 'Detector'),
       };
     }
     function debounce(f, w) { let t; return function(...a) { clearTimeout(t); t=setTimeout(()=>f.apply(this,a),w); }; }
