@@ -39,13 +39,24 @@ def _validate_optional_path(item: dict[str, Any], errors: list[str], context: st
 
 
 def _validate_spectral_array(mechanism: dict[str, Any], errors: list[str], context: str) -> None:
-    required_numeric_fields = ("min_nm", "max_nm", "bands")
-    for field in required_numeric_fields:
-        if not _is_positive_number(mechanism.get(field)):
-            errors.append(f"{context}: spectral_array requires positive `{field}`.")
-
     min_nm = mechanism.get("min_nm")
+    if not _is_positive_number(min_nm):
+        min_nm = mechanism.get("band_min_nm")
+    if not _is_positive_number(min_nm):
+        errors.append(f"{context}: spectral_array requires positive `min_nm` (or `band_min_nm`).")
+
     max_nm = mechanism.get("max_nm")
+    if not _is_positive_number(max_nm):
+        max_nm = mechanism.get("band_max_nm")
+    if not _is_positive_number(max_nm):
+        errors.append(f"{context}: spectral_array requires positive `max_nm` (or `band_max_nm`).")
+
+    bands = mechanism.get("bands")
+    if not _is_positive_number(bands):
+        bands = mechanism.get("max_bands")
+    if not _is_positive_number(bands):
+        errors.append(f"{context}: spectral_array requires positive `bands` (or `max_bands`).")
+
     if _is_positive_number(min_nm) and _is_positive_number(max_nm) and min_nm >= max_nm:
         errors.append(f"{context}: spectral_array requires `max_nm` to be greater than `min_nm`.")
 
@@ -226,11 +237,26 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
         mechanism_payload["path"] = mechanism["path"]
 
     if mechanism.get("type") == "spectral_array":
-        mechanism_payload["spectral_array"] = {
-            key: mechanism.get(key)
-            for key in ("min_nm", "max_nm", "bands")
-            if isinstance(mechanism.get(key), (int, float)) and not isinstance(mechanism.get(key), bool)
-        }
+        min_nm = mechanism.get("min_nm") if _is_positive_number(mechanism.get("min_nm")) else mechanism.get("band_min_nm")
+        max_nm = mechanism.get("max_nm") if _is_positive_number(mechanism.get("max_nm")) else mechanism.get("band_max_nm")
+        bands = mechanism.get("bands") if _is_positive_number(mechanism.get("bands")) else mechanism.get("max_bands")
+
+        spectral_payload: dict[str, Any] = {}
+        if _is_positive_number(min_nm):
+            spectral_payload["min_nm"] = min_nm
+            mechanism_payload["band_min_nm"] = min_nm
+        if _is_positive_number(max_nm):
+            spectral_payload["max_nm"] = max_nm
+            mechanism_payload["band_max_nm"] = max_nm
+        if _is_positive_number(bands):
+            spectral_payload["bands"] = bands
+            mechanism_payload["max_bands"] = int(bands)
+
+        if _is_positive_number(mechanism.get("default_band_width_nm")):
+            mechanism_payload["default_band_width_nm"] = mechanism.get("default_band_width_nm")
+
+        if spectral_payload:
+            mechanism_payload["spectral_array"] = spectral_payload
 
     return mechanism_payload
 
@@ -307,7 +333,7 @@ def calculate_valid_paths(payload: dict) -> list[dict]:
     if not isinstance(stages, dict):
         return []
 
-    discrete_choices: list[tuple[str, list[dict[str, Any]]]] = []
+    discrete_choices: list[tuple[str, str, list[dict[str, Any]]]] = []
     for stage_name in ("excitation", "dichroic", "emission", "cube"):
         mechanisms = stages.get(stage_name, [])
         if not isinstance(mechanisms, list):
@@ -321,7 +347,7 @@ def calculate_valid_paths(payload: dict) -> list[dict]:
             if isinstance(mechanism_id, str) and isinstance(positions, list) and positions:
                 filtered_positions = [pos for pos in positions if isinstance(pos, dict) and isinstance(pos.get("slot"), int)]
                 if filtered_positions:
-                    discrete_choices.append((mechanism_id, filtered_positions))
+                    discrete_choices.append((stage_name, mechanism_id, filtered_positions))
 
     light_source_groups = payload.get("light_sources", [])
     if isinstance(light_source_groups, list):
@@ -337,18 +363,27 @@ def calculate_valid_paths(payload: dict) -> list[dict]:
                 if isinstance(slot, int) and not isinstance(slot, bool) and isinstance(source, dict):
                     normalized_positions.append({"slot": slot, **source})
             if normalized_positions:
-                discrete_choices.append((source_group_id, normalized_positions))
+                discrete_choices.append(("light_sources", source_group_id, normalized_positions))
 
     if not discrete_choices:
         return []
 
     valid_paths: list[dict[str, int]] = []
-    for combination in product(*(choices for _, choices in discrete_choices)):
+    for combination in product(*(choices for _, _, choices in discrete_choices)):
         if any(str(selection.get("type")) == "block" for selection in combination):
             continue
 
+        light_source_routes: set[str] = set()
+        for (stage_name, _, _), selection in zip(discrete_choices, combination):
+            if stage_name == "light_sources":
+                light_source_routes.update(_route_tags(selection))
+        constrained_sources = {tag for tag in light_source_routes if tag not in {"all", "shared"}}
+        bypass_excitation_for_tirf = constrained_sources == {"tirf"}
+
         combined_routes: set[str] = set()
-        for selection in combination:
+        for (stage_name, _, _), selection in zip(discrete_choices, combination):
+            if bypass_excitation_for_tirf and stage_name == "excitation":
+                continue
             combined_routes.update(_route_tags(selection))
 
         if not _routes_compatible(combined_routes):
@@ -356,7 +391,7 @@ def calculate_valid_paths(payload: dict) -> list[dict]:
 
         valid_paths.append({
             mech_id: int(selection["slot"])
-            for (mech_id, _), selection in zip(discrete_choices, combination)
+            for (_, mech_id, _), selection in zip(discrete_choices, combination)
         })
 
     return valid_paths
