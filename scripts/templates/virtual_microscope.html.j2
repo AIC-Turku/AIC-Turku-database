@@ -1162,32 +1162,52 @@
       searchStatus.textContent = 'Searching FPbase...';
       searchResults.innerHTML = '';
 
-      const url = `https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(trimmed)}&format=json`;
-      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!response.ok) {
-        throw new Error(`FPbase search failed (${response.status})`);
+      const url = `https://www.fpbase.org/api/proteins/?q=${encodeURIComponent(trimmed)}&format=json`;
+
+      try {
+        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!response.ok) {
+          throw new Error(`FPbase search failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        let results = [];
+        if (Array.isArray(data)) {
+          results = data;
+        } else if (data && Array.isArray(data.results)) {
+          results = data.results;
+        } else if (data && data.name) {
+          results = [data];
+        }
+
+        const lowerQuery = trimmed.toLowerCase();
+        results = results.filter((protein) => protein?.name && protein.name.toLowerCase().includes(lowerQuery));
+
+        searchStatus.textContent = results.length ? `Found ${results.length} results.` : 'No matches found.';
+
+        results.slice(0, 15).forEach((protein) => {
+          const row = document.createElement('li');
+          row.className = 'search-item';
+
+          const label = document.createElement('span');
+          const name = protein.name || protein.slug || `Protein ${protein.id}`;
+          const ex = protein.exMax || protein.ex_max;
+          const em = protein.emMax || protein.em_max;
+          label.textContent = ex || em ? `${name} (Ex: ${ex || '?'} / Em: ${em || '?'})` : name;
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = 'Add';
+          btn.addEventListener('click', () => addFluorophore(protein));
+
+          row.appendChild(label);
+          row.appendChild(btn);
+          searchResults.appendChild(row);
+        });
+      } catch (err) {
+        searchStatus.textContent = 'Error connecting to FPbase.';
+        console.error(err);
       }
-
-      const data = await response.json();
-      const results = Array.isArray(data.results) ? data.results : [];
-      searchStatus.textContent = results.length ? `Found ${results.length} results.` : 'No matches found.';
-
-      results.forEach((protein) => {
-        const row = document.createElement('li');
-        row.className = 'search-item';
-
-        const label = document.createElement('span');
-        label.textContent = protein.name || protein.slug || `Protein ${protein.id}`;
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = 'Add';
-        btn.addEventListener('click', () => addFluorophore(protein));
-
-        row.appendChild(label);
-        row.appendChild(btn);
-        searchResults.appendChild(row);
-      });
     }
 
     async function loadProteinDetail(protein) {
