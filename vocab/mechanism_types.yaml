@@ -1,0 +1,24 @@
+terms:
+  - id: filter_wheel
+    label: "Filter Wheel"
+    description: "A motorized or manual wheel with discrete circular slots."
+
+  - id: slider
+    label: "Slider"
+    description: "A linear slider with discrete slots."
+
+  - id: turret
+    label: "Turret"
+    description: "A rotating block turret, typically used for dichroic cubes."
+
+  - id: fixed
+    label: "Fixed"
+    description: "A permanently mounted glass component with no moving parts."
+
+  - id: tunable
+    label: "Tunable"
+    description: "A continuous mechanism, like an AOTF, with no discrete slots."
+
+  - id: spectral_slider
+    label: "Spectral Slider"
+    description: "A continuous physical slit/slider used in spectral detectors."
