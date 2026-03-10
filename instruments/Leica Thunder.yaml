@@ -108,63 +108,235 @@ hardware:
       notes: color CMOS; excellent color reproduction; 12-bit/channel RGB quantifiable images
       url: https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/
 
-  filters:
-    - name: CYR71010
-      location: Filter Turret
-      product_code: '11525416'
-      excitation: 436/28; 506/21; 578/24; 730/40
-      dichroic: 459; 523; 598; 763
-      emission: 473/22; 539/24; 641/78; 810/80
-      notes: Quad-band
-      url: ''
-    - name: DFT51010
-      location: Filter Turret
-      product_code: '11525418'
-      excitation: 391/32; 479/33; 554/24; 638/31
-      dichroic: 415; 500; 572; 660
-      emission: 435/30; 519/25; 594/32; 695/58
-      notes: Quad-band
-      url: ''
-    - name: CY3
-      location: Filter Turret
-      product_code: ''
-      excitation: 546/10
-      dichroic: '556'
-      emission: 572/23
-      notes: 'LED: 555'
-      url: ''
-    - name: A594
-      location: Filter Turret
-      product_code: ''
-      excitation: 592/21
-      dichroic: '610'
-      emission: 630/30
-      notes: 'LED: 575'
-      url: ''
-    - name: EMP_BF
-      location: Filter Turret
-      product_code: '11525000'
-      excitation: '' # Flag: Conditionally required because widefield_fluorescence is present.
-      dichroic: ''   # Flag: Conditionally required because widefield_fluorescence is present.
-      emission: ''   # Flag: Conditionally required because widefield_fluorescence is present.
-      notes: Empty position for TL-methods excluding POL, DIC
-      url: ''
-    - name: EMP+Pol
-      location: Filter Turret
-      product_code: '11525000'
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: ''   # Flag: Required field.
-      notes: Empty position for TL-methods including POL, DIC, requires external Analyser-slider
-      url: ''
-    - name: Standalone Emission Filters
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 460/80; 535/70; 590/50; 642/80
-      notes: External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope turret)
-      url: ''
+hardware:
+  light_sources:
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 395
+        width_nm: 25
+        power: 200 mW
+        notes: "390 in software"
+        url: ''
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 438
+        width_nm: 29
+        power: 200 mW
+        notes: "440 in software"
+        url: ''
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 475
+        width_nm: 28
+        power: 200 mW
+        notes: ''
+        url: ''
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 511
+        width_nm: 16
+        power: 200 mW
+        notes: "510 in software"
+        url: ''
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 555
+        width_nm: 28
+        power: 200 mW
+        notes: ''
+        url: ''
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 575
+        width_nm: 25
+        power: 200 mW
+        notes: ''
+        url: ''
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 635
+        width_nm: 22
+        power: 200 mW
+        notes: ''
+        url: ''
+      - kind: led
+        manufacturer: Leica
+        model: LED 8
+        path: epi
+        wavelength_nm: 730
+        width_nm: 40
+        power: 200 mW
+        notes: "747 in software"
+        url: ''
+      
+    detectors:
+        - kind: scmos
+          manufacturer: Leica
+          model: K8
+          pixel_pitch_um: 6.5
+          sensor_format_px: "2048 x 2048"
+          bit_depth: 12
+          qe_peak_pct: 95
+          read_noise_e: 1.0
+          notes: "monochrome; 18.8 mm sensor, dark current 1.5 e-/pix/s"
+          url: https://www.leica-microsystems.com/products/microscope-cameras/p/k8/
+        - kind: cmos
+          manufacturer: Leica
+          model: K3C
+          pixel_pitch_um: 3.45
+          bit_depth: 12
+          notes: "color CMOS; excellent color reproduction; RGB quantifiable images"
+          url: https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/
+  
+    light_path:
+      # ---------------------------------------------------------
+      # 1. FILTER CUBES (The physically linked Ex, Di, and Em filters)
+      # ---------------------------------------------------------
+      cube_mechanisms:
+        - name: "Filter Turret"
+          type: turret
+          slots: 6
+          path: epi
+          positions:
+            1:
+              name: "CYR71010"
+              product_code: "11525416"
+              notes: "Quad-band"
+              excitation_filter:
+                component_type: multiband_bandpass
+                bands:
+                  - { center_nm: 436, width_nm: 28 }
+                  - { center_nm: 506, width_nm: 21 }
+                  - { center_nm: 578, width_nm: 24 }
+                  - { center_nm: 730, width_nm: 40 }
+              dichroic:
+                component_type: multiband_dichroic
+                cutoffs_nm: [459, 523, 598, 763]
+              emission_filter:
+                component_type: multiband_bandpass
+                bands:
+                  - { center_nm: 473, width_nm: 22 }
+                  - { center_nm: 539, width_nm: 24 }
+                  - { center_nm: 641, width_nm: 78 }
+                  - { center_nm: 810, width_nm: 80 }
+            2:
+              name: "DFT51010"
+              product_code: "11525418"
+              notes: "Quad-band"
+              excitation_filter:
+                component_type: multiband_bandpass
+                bands:
+                  - { center_nm: 391, width_nm: 32 }
+                  - { center_nm: 479, width_nm: 33 }
+                  - { center_nm: 554, width_nm: 24 }
+                  - { center_nm: 638, width_nm: 31 }
+              dichroic:
+                component_type: multiband_dichroic
+                cutoffs_nm: [415, 500, 572, 660]
+              emission_filter:
+                component_type: multiband_bandpass
+                bands:
+                  - { center_nm: 435, width_nm: 30 }
+                  - { center_nm: 519, width_nm: 25 }
+                  - { center_nm: 594, width_nm: 32 }
+                  - { center_nm: 695, width_nm: 58 }
+            3:
+              name: "CY3"
+              notes: "LED: 555"
+              excitation_filter:
+                component_type: bandpass
+                center_nm: 546
+                width_nm: 10
+              dichroic:
+                component_type: dichroic
+                cutoffs_nm: [556]
+              emission_filter:
+                component_type: bandpass
+                center_nm: 572
+                width_nm: 23
+            4:
+              name: "A594"
+              notes: "LED: 575"
+              excitation_filter:
+                component_type: bandpass
+                center_nm: 592
+                width_nm: 21
+              dichroic:
+                component_type: dichroic
+                cutoffs_nm: [610]
+              emission_filter:
+                component_type: bandpass
+                center_nm: 630
+                width_nm: 30
+            5:
+              name: "EMP_BF"
+              product_code: "11525000"
+              notes: "Empty position for TL-methods excluding POL, DIC"
+              excitation_filter:
+                component_type: empty
+              dichroic:
+                component_type: empty
+              emission_filter:
+                component_type: empty
+            6:
+              name: "EMP+Pol"
+              product_code: "11525000"
+              notes: "Empty position for TL-methods including POL, DIC, requires external Analyser-slider"
+              excitation_filter:
+                component_type: empty
+              dichroic:
+                component_type: empty
+              emission_filter:
+                component_type: empty
+
+    # ---------------------------------------------------------
+    # 2. EMISSION (The High-Speed External Wheel)
+    # ---------------------------------------------------------
+    emission_mechanisms:
+      - name: "Standalone Emission Wheel"
+        type: filter_wheel
+        slots: 6 
+        path: epi
+        positions:
+          1:
+            name: "460/80"
+            component_type: bandpass
+            center_nm: 460
+            width_nm: 80
+            notes: "External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope turret)"
+          2:
+            name: "535/70"
+            component_type: bandpass
+            center_nm: 535
+            width_nm: 70
+          3:
+            name: "590/50"
+            component_type: bandpass
+            center_nm: 590
+            width_nm: 50
+          4:
+            name: "642/80"
+            component_type: bandpass
+            center_nm: 642
+            width_nm: 80
+          5:
+            component_type: empty
+          6:
+            component_type: empty
 
   objectives:
     - id: 5x_air
