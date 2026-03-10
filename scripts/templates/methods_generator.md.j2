@@ -35,11 +35,15 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
     <strong>6. Light Sources (Lasers/LEDs):</strong>
     <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
-    <strong>7. Filters / Dichroics:</strong>
-    <div id="filter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div class="md-typeset">
+      <h4>7. Filters / Dichroics:</h4>
+      <div id="filter-list" class="checkbox-group"></div>
+    </div>
 
-    <strong>8. Camera / Emission Splitters:</strong>
-    <div id="splitter-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div class="md-typeset" id="section-splitters">
+      <h4>8. Camera / Emission Splitters:</h4>
+      <div id="splitter-list" class="checkbox-group"></div>
+    </div>
 
     <strong>9. Detectors:</strong>
     <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
@@ -190,42 +194,61 @@ document.addEventListener("DOMContentLoaded", async () => {
         const extractedOpticalComponents = [];
 
         if (dto.stages) {
-            // A. Process Cubes from DTO
+            // A. Process Cubes from DTO (Combine into ONE checkbox)
             (dto.stages.cube || []).forEach(mech => {
                 mech.positions.forEach(pos => {
                     const linked = pos.linked_components || {};
-                    const prefix = `Cube ${pos.label}`;
+                    let parts = [];
 
                     if (linked.excitation_filter && linked.excitation_filter.type !== 'empty') {
-                        extractedOpticalComponents.push(`${prefix} Ex: ${linked.excitation_filter.label} (${linked.excitation_filter.details})`);
+                        parts.push(`Ex: ${linked.excitation_filter.label}`);
                     }
                     if (linked.dichroic && linked.dichroic.type !== 'empty') {
-                        extractedOpticalComponents.push(`${prefix} Di: ${linked.dichroic.label} (${linked.dichroic.details})`);
+                        parts.push(`Di: ${linked.dichroic.label}`);
                     }
                     if (linked.emission_filter && linked.emission_filter.type !== 'empty') {
-                        extractedOpticalComponents.push(`${prefix} Em: ${linked.emission_filter.label} (${linked.emission_filter.details})`);
+                        parts.push(`Em: ${linked.emission_filter.label}`);
+                    }
+
+                    // If the cube isn't empty, push it as a single combined string
+                    if (parts.length > 0) {
+                        extractedOpticalComponents.push(`Cube ${pos.label} (${parts.join(', ')})`);
                     }
                 });
             });
 
-            // B. Process Standard Stages from DTO (Excitation, Dichroic, Emission)
+            // B. Process Standard Stages from DTO (Standalone Wheels/Turrets)
             const stagePrefixes = { 'excitation': 'Ex', 'dichroic': 'Di', 'emission': 'Em' };
             ['excitation', 'dichroic', 'emission'].forEach(stageKey => {
                 (dto.stages[stageKey] || []).forEach(mech => {
                     mech.positions.forEach(pos => {
                         if (pos.type !== 'empty') {
-                             extractedOpticalComponents.push(`${stagePrefixes[stageKey]}: ${pos.label} (${pos.details})`);
+                             extractedOpticalComponents.push(`${stagePrefixes[stageKey]}: ${pos.label}`);
                         }
                     });
                 });
             });
         }
 
-        // 2. Populate Checkboxes directly (cleaning up empty parenthesis if no details exist)
-        populateCheckboxes("filter-list", extractedOpticalComponents, f => f.replace(' ()', ''), "filter");
+        // Populate Filters
+        populateCheckboxes("filter-list", extractedOpticalComponents, f => f, "filter");
 
-        populateCheckboxes("splitter-list", canonicalHardware?.splitters || currentInst?.processed_hardware?.splitters || [],
-            s => `${s.name} (${s.type})`, "splitter");
+        // C. Process Splitters and Dynamically Hide/Show the Section
+        const splitters = dto.splitters || [];
+        const splitterContainer = document.getElementById('section-splitters'); // We will add this ID in step 2
+
+        if (splitters.length > 0) {
+            const extractedSplitters = splitters.map(s => {
+                const di = s.dichroic?.positions?.[1]?.label || 'None';
+                const p1 = s.path1?.positions?.[1]?.label || 'None';
+                const p2 = s.path2?.positions?.[1]?.label || 'None';
+                return `${s.name} — Di: ${di} (Path 1: ${p1}, Path 2: ${p2})`;
+            });
+            populateCheckboxes("splitter-list", extractedSplitters, s => s, "splitter");
+            if (splitterContainer) splitterContainer.style.display = 'block'; // Show it
+        } else {
+            if (splitterContainer) splitterContainer.style.display = 'none'; // Hide it entirely!
+        }
 
         populateCheckboxes("det-list", canonicalHardware?.detectors || currentInst?.processed_hardware?.detectors || [],
             d => formatDetectorLabel(d), "det");
