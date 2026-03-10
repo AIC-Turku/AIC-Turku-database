@@ -813,8 +813,13 @@ hide:
         if(res.length) {
           DOM.fpResults.style.display = 'block';
           res.forEach(p => {
-            const li = document.createElement('li'); li.textContent = `${p.name} (Ex:${p.exMax||'?'} Em:${p.emMax||'?'})`;
-            li.onclick = () => { loadProtein(p); DOM.fpResults.style.display='none'; DOM.fpQuery.value=''; };
+            const li = document.createElement('li'); 
+            li.textContent = `${p.name} (Ex:${p.exMax||'?'} Em:${p.emMax||'?'})`;
+            li.onclick = () => { 
+              loadProtein(p);
+              DOM.fpResults.style.display='none'; 
+              DOM.fpQuery.value=''; 
+            };
             DOM.fpResults.appendChild(li);
           });
         } else {
@@ -850,25 +855,30 @@ hide:
       return hydrateProteinFromSearch(protein);
     }
 
-    async function loadProtein(protein) {
-      const key = String(protein?.uuid || protein?.slug || protein?.id || protein?.name || '').trim();
-      if (!key) {
-        DOM.searchStatus.textContent = 'Unable to load protein: no valid identifier found.';
-        return;
-      }
-      if(state.loadedProteins.has(key)) return;
-      DOM.searchStatus.textContent = `Loading ${protein?.name || key}...`;
+    async function loadProtein(proteinObj) {
+      const id = proteinObj.slug || proteinObj.id;
+      if(state.loadedProteins.has(id)) return;
+
       try {
-        const detail = await fetchProteinDetail(protein);
-        const spectra = extractSpectra(detail, { preferTwoPhoton: state.preferTwoPhoton });
-        if (!spectra.ex.length && !spectra.em.length) {
-          throw new Error(`Loaded ${detail?.name || key}, but no usable excitation/emission spectra were found.`);
-        }
-        state.loadedProteins.set(key, {id: key, detail});
-        DOM.searchStatus.textContent = '';
-        renderActiveDyes(); drawHardware(); calculateEfficiencies();
-      } catch (err) {
-        DOM.searchStatus.textContent = err.message || 'Failed to load selected protein from FPbase.';
+        const resp = await fetch(`https://www.fpbase.org/api/proteins/spectra/?protein=${proteinObj.id}&format=json`, {
+          headers:{'Accept':'application/json'}
+        });
+        const data = await resp.json();
+        const spectraArray = Array.isArray(data) ? data : (data?.results || []);
+
+        const detail = {
+          name: proteinObj.name,
+          emMax: proteinObj.emMax,
+          exMax: proteinObj.exMax,
+          spectra: spectraArray
+        };
+
+        state.loadedProteins.set(id, { id, detail });
+        renderActiveDyes(); 
+        drawHardware(); 
+        calculateEfficiencies();
+      } catch(e) {
+        console.error('Failed to load protein spectra from dedicated endpoint', e);
       }
     }
 
@@ -925,28 +935,22 @@ hide:
       return aliases.some((alias) => token.includes(alias));
     }
 
-    function extractSpectra(detail, options = {}) {
-      const preferTwoPhoton = Boolean(options.preferTwoPhoton);
-      const allSpectra = collectSpectraContainers(detail);
-      const findByAliases = (aliases) => allSpectra.find((s) => matchSpectrumType(normalizeTypeToken(s), aliases));
-
-      const aliases2p = ['2pe', '2p', 'two-photon', 'twophoton', 'two photon'];
-      const aliasesEx = ['excitation', 'ex'];
-      const aliasesEm = ['emission', 'em'];
-
-      const twoPhotonEx = findByAliases(aliases2p);
-      const onePhotonEx = findByAliases(aliasesEx);
-      const emission = findByAliases(aliasesEm);
-
-      const selectedEx = preferTwoPhoton && twoPhotonEx ? twoPhotonEx : onePhotonEx;
-      const exPoints = normalizePoints(selectedEx?.data || selectedEx?.values || selectedEx?.points || selectedEx?.spectrum || []);
-      const emPoints = normalizePoints(emission?.data || emission?.values || emission?.points || emission?.spectrum || []);
-
-      return {
-        ex: exPoints,
-        em: emPoints,
-        exMode: (preferTwoPhoton && twoPhotonEx) ? '2p' : '1p'
+    function extractSpectra(detail) {
+      const s = detail.spectra || [];
+      
+      const getPts = (key) => {
+        const d = s.find(x => String(x.spectrum_type || x.subtype).toLowerCase() === key);
+        if(!d || !d.data) return [];
+        
+        const raw = d.data.map(i => ({ x: Number(i[0]), y: Number(i[1]) })).filter(p => !Number.isNaN(p.x));
+        
+        const max = Math.max(...raw.map(p => p.y)); 
+        const scl = (max > 0 && max <= 1.05) ? 100 : 1;
+        
+        return raw.map(p => ({ x: p.x, y: p.y * scl })).sort((a,b) => a.x - b.x);
       };
+      
+      return { ex: getPts('ex'), em: getPts('em') };
     }
 
     function colorHex(wl) {
