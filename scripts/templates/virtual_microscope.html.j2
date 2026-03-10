@@ -185,6 +185,31 @@
       min-height: 520px;
     }
 
+    .simulator {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-2);
+      padding: 12px;
+    }
+
+    .simulator-list {
+      list-style: none;
+      margin: 8px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .simulator-item {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #334155;
+    }
+
     .path-summary {
       margin: 0 0 10px;
       padding: 10px 12px;
@@ -250,6 +275,12 @@
       <div class="chart-wrap">
         <canvas id="spectraChart"></canvas>
       </div>
+      <div class="simulator" aria-live="polite">
+        <h2 class="section-title" style="margin: 0;">Signal Simulator</h2>
+        <ul id="signalSimulator" class="simulator-list">
+          <li class="simulator-item">Add a fluorophore to compute excitation/collection efficiency.</li>
+        </ul>
+      </div>
     </section>
   </main>
 
@@ -288,6 +319,7 @@
     const searchStatus = document.getElementById('searchStatus');
     const selectedDyes = document.getElementById('selectedDyes');
     const pathSummary = document.getElementById('pathSummary');
+    const signalSimulator = document.getElementById('signalSimulator');
 
     function debounce(fn, waitMs = 300) {
       let timeoutId;
@@ -628,23 +660,142 @@
       };
     }
 
-    // Build a 2nm-wide laser spike (triangle).
+    // Build a strict vertical laser line.
     function createLaserSpikeDataset(label, wavelength, color) {
       const wl = Number(wavelength);
       return {
         label,
         data: [
-          { x: wl - 1, y: 0 },
+          { x: wl, y: 0 },
           { x: wl, y: 100 },
-          { x: wl + 1, y: 0 },
         ],
         parsing: false,
         borderColor: color,
-        backgroundColor: color,
-        borderWidth: 2,
+        borderWidth: 1.2,
         pointRadius: 0,
         fill: false,
       };
+    }
+
+    function getYAtWavelength(points, wavelength) {
+      if (!Array.isArray(points) || !points.length) return 0;
+      const wl = Number(wavelength);
+      if (!Number.isFinite(wl)) return 0;
+
+      if (wl <= points[0].x) return points[0].y;
+      if (wl >= points[points.length - 1].x) return points[points.length - 1].y;
+
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        if (wl < p1.x || wl > p2.x) continue;
+        const dx = p2.x - p1.x;
+        if (!dx) return p1.y;
+        const ratio = (wl - p1.x) / dx;
+        return p1.y + ratio * (p2.y - p1.y);
+      }
+      return 0;
+    }
+
+    function averageYInRange(points, minNm, maxNm) {
+      if (!Array.isArray(points) || !points.length) return 0;
+      const min = Number(minNm);
+      const max = Number(maxNm);
+      if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 0;
+
+      let sum = 0;
+      let samples = 0;
+      for (let wl = Math.ceil(min); wl <= Math.floor(max); wl += 1) {
+        sum += getYAtWavelength(points, wl);
+        samples += 1;
+      }
+      if (!samples) {
+        return getYAtWavelength(points, (min + max) / 2);
+      }
+      return sum / samples;
+    }
+
+    function integralYInRange(points, minNm, maxNm) {
+      if (!Array.isArray(points) || !points.length) return 0;
+      const min = Number(minNm);
+      const max = Number(maxNm);
+      if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 0;
+
+      let total = 0;
+      for (let wl = Math.ceil(min); wl <= Math.floor(max); wl += 1) {
+        total += getYAtWavelength(points, wl);
+      }
+      return total;
+    }
+
+    function findActiveExcitationMode(selected) {
+      const exEntry = selected.find((entry) => String(entry.stage) === 'excitation');
+      const lightEntry = selected.find((entry) => String(entry.stage) === 'lightSources');
+      const exPos = exEntry?.position || {};
+      const lightPos = lightEntry?.position || {};
+
+      const lightWavelength = Number(lightPos.wavelength_nm ?? lightPos.wavelength ?? lightPos.line_nm ?? lightPos.center_nm);
+      const lightType = String(lightPos.type || lightPos.component_type || '').toLowerCase();
+      const lightLooksLaser = lightType.includes('laser') || Number.isFinite(lightWavelength);
+      if (lightLooksLaser && Number.isFinite(lightWavelength)) {
+        return { kind: 'laser', wavelength: lightWavelength };
+      }
+
+      const exCenter = Number(exPos.center_nm);
+      const exWidth = Number(exPos.width_nm);
+      if (Number.isFinite(exCenter) && Number.isFinite(exWidth)) {
+        return { kind: 'bandpass', min: exCenter - exWidth / 2, max: exCenter + exWidth / 2 };
+      }
+
+      return { kind: 'none' };
+    }
+
+    function findActiveEmissionRange(selected) {
+      const emissionEntry = selected.find((entry) => String(entry.stage) === 'emission');
+      const position = emissionEntry?.position || {};
+      const center = Number(position.center_nm);
+      const width = Number(position.width_nm);
+      if (Number.isFinite(center) && Number.isFinite(width)) {
+        return { min: center - width / 2, max: center + width / 2 };
+      }
+      return null;
+    }
+
+    function calculateEfficiencies() {
+      const selected = selectedPositions();
+      const excitationMode = findActiveExcitationMode(selected);
+      const emissionRange = findActiveEmissionRange(selected);
+
+      signalSimulator.innerHTML = '';
+      if (!state.addedDyes.size) {
+        signalSimulator.innerHTML = '<li class="simulator-item">Add a fluorophore to compute excitation/collection efficiency.</li>';
+        return;
+      }
+
+      for (const dye of state.addedDyes.values()) {
+        const exCurve = dye.spectra?.excitation || [];
+        const emCurve = dye.spectra?.emission || [];
+
+        let exPercent = 0;
+        if (excitationMode.kind === 'laser') {
+          exPercent = getYAtWavelength(exCurve, excitationMode.wavelength);
+        } else if (excitationMode.kind === 'bandpass') {
+          exPercent = averageYInRange(exCurve, excitationMode.min, excitationMode.max);
+        }
+
+        let emPercent = 0;
+        if (emissionRange) {
+          const inside = integralYInRange(emCurve, emissionRange.min, emissionRange.max);
+          const total = integralYInRange(emCurve, MIN_WL, MAX_WL);
+          emPercent = total > 0 ? (inside / total) * 100 : 0;
+        }
+
+        const totalPercent = (exPercent / 100) * (emPercent / 100) * 100;
+        const item = document.createElement('li');
+        item.className = 'simulator-item';
+        item.textContent = `${dye.name}: ${exPercent.toFixed(1)}% Ex | ${emPercent.toFixed(1)}% Em | ${totalPercent.toFixed(1)}% Total Collected`;
+        signalSimulator.appendChild(item);
+      }
     }
 
     function createTunableDataset(label) {
@@ -778,6 +929,7 @@
       state.chart.data.datasets = [...state.hardwareDatasets, ...state.dyeDatasets];
       state.chart.update();
       updatePathSummary();
+      calculateEfficiencies();
     }
 
     function initChart() {
@@ -925,6 +1077,7 @@
       upsertSelectedDyeList();
       state.chart.data.datasets = [...state.hardwareDatasets, ...state.dyeDatasets];
       state.chart.update();
+      calculateEfficiencies();
     }
 
     async function addFluorophore(protein) {
@@ -978,10 +1131,17 @@
         });
       }
 
-      state.addedDyes.set(key, { name: dyeName });
+      state.addedDyes.set(key, {
+        name: dyeName,
+        spectra: {
+          excitation: spectra.excitation,
+          emission: spectra.emission,
+        },
+      });
       upsertSelectedDyeList();
       state.chart.data.datasets = [...state.hardwareDatasets, ...state.dyeDatasets];
       state.chart.update();
+      calculateEfficiencies();
       searchStatus.textContent = `${dyeName} added.`;
     }
 
