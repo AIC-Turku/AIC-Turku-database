@@ -448,6 +448,14 @@ sections:
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Helpful subtype information for lasers or LED engines.
 
+      - path: hardware.light_sources[].path
+        title: Light source path tag
+        status: optional
+        type: string
+        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Optional path tag to associate a source with specific illumination routes.
+
       - path: hardware.light_sources[].wavelength_nm
         title: Light source wavelength metadata
         status: conditional
@@ -703,6 +711,90 @@ sections:
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Topological graph model for modern virtual microscope UI and Tier 3 reporting.
 
+      - path: hardware.light_path.cube_mechanisms
+        title: Cube mechanisms
+        status: optional
+        type: list
+        item_type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Optional cube blocks that link excitation, dichroic, and emission components per position.
+
+      - path: hardware.light_path.cube_mechanisms[].name
+        title: Cube mechanism name
+        status: required
+        type: string
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[]"
+
+      - path: hardware.light_path.cube_mechanisms[].type
+        title: Cube mechanism type
+        status: required
+        type: string
+        vocab: mechanism_types
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[]"
+
+      - path: hardware.light_path.cube_mechanisms[].path
+        title: Cube mechanism path tag
+        status: optional
+        type: string
+        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+
+      - path: hardware.light_path.cube_mechanisms[].slots
+        title: Cube mechanism slots
+        status: conditional
+        type: positive_number
+        required_if:
+          all_of:
+            - parent_present: "hardware.light_path.cube_mechanisms[]"
+            - field_equals_any:
+                field: "hardware.light_path.cube_mechanisms[].type"
+                values: [filter_wheel, slider, turret]
+
+      - path: hardware.light_path.cube_mechanisms[].positions
+        title: Cube mechanism positions map
+        status: optional
+        type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.path
+        title: Cube position path tag
+        status: optional
+        type: string
+        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter
+        title: Cube position excitation filter
+        status: required
+        type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.component_type
+        title: Cube excitation filter component type
+        status: required
+        type: string
+        vocab: optical_component_types
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic
+        title: Cube position dichroic
+        status: required
+        type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.component_type
+        title: Cube dichroic component type
+        status: required
+        type: string
+        vocab: optical_component_types
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter
+        title: Cube position emission filter
+        status: required
+        type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.component_type
+        title: Cube emission filter component type
+        status: required
+        type: string
+        vocab: optical_component_types
+
       - path: hardware.light_path.excitation_mechanisms
         title: Excitation mechanisms
         status: optional
@@ -725,6 +817,12 @@ sections:
         vocab: mechanism_types
         required_if:
           parent_present: "hardware.light_path.excitation_mechanisms[]"
+
+      - path: hardware.light_path.excitation_mechanisms[].path
+        title: Excitation mechanism path tag
+        status: optional
+        type: string
+        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
 
       - path: hardware.light_path.excitation_mechanisms[].slots
         title: Excitation mechanism slots
@@ -805,6 +903,12 @@ sections:
         required_if:
           parent_present: "hardware.light_path.dichroic_mechanisms[]"
 
+      - path: hardware.light_path.dichroic_mechanisms[].path
+        title: Dichroic mechanism path tag
+        status: optional
+        type: string
+        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+
       - path: hardware.light_path.dichroic_mechanisms[].slots
         title: Dichroic mechanism slots
         status: conditional
@@ -884,6 +988,12 @@ sections:
         required_if:
           parent_present: "hardware.light_path.emission_mechanisms[]"
 
+      - path: hardware.light_path.emission_mechanisms[].path
+        title: Emission mechanism path tag
+        status: optional
+        type: string
+        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+
       - path: hardware.light_path.emission_mechanisms[].slots
         title: Emission mechanism slots
         status: conditional
@@ -894,6 +1004,50 @@ sections:
             - field_equals_any:
                 field: "hardware.light_path.emission_mechanisms[].type"
                 values: [filter_wheel, slider, turret]
+
+      - path: hardware.light_path.emission_mechanisms[].band_min_nm
+        title: Emission mechanism minimum wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          all_of:
+            - parent_present: "hardware.light_path.emission_mechanisms[]"
+            - field_equals_any:
+                field: "hardware.light_path.emission_mechanisms[].type"
+                values: [spectral_array]
+
+      - path: hardware.light_path.emission_mechanisms[].band_max_nm
+        title: Emission mechanism maximum wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          all_of:
+            - parent_present: "hardware.light_path.emission_mechanisms[]"
+            - field_equals_any:
+                field: "hardware.light_path.emission_mechanisms[].type"
+                values: [spectral_array]
+
+      - path: hardware.light_path.emission_mechanisms[].default_band_width_nm
+        title: Emission mechanism default band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          all_of:
+            - parent_present: "hardware.light_path.emission_mechanisms[]"
+            - field_equals_any:
+                field: "hardware.light_path.emission_mechanisms[].type"
+                values: [spectral_array]
+
+      - path: hardware.light_path.emission_mechanisms[].max_bands
+        title: Emission mechanism maximum simultaneous bands
+        status: conditional
+        type: positive_number
+        required_if:
+          all_of:
+            - parent_present: "hardware.light_path.emission_mechanisms[]"
+            - field_equals_any:
+                field: "hardware.light_path.emission_mechanisms[].type"
+                values: [spectral_array]
 
       - path: hardware.light_path.emission_mechanisms[].positions
         title: Emission mechanism positions map
