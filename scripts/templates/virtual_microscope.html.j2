@@ -274,6 +274,14 @@
   <main class="page">
     <aside class="panel controls">
       <section>
+        <h2 class="section-title">Microscope</h2>
+        <div class="field">
+          <label for="microscopeSelector">Select microscope</label>
+          <select id="microscopeSelector"></select>
+        </div>
+      </section>
+
+      <section>
         <h2 class="section-title">Hardware Configuration</h2>
         <div id="controlContainer"></div>
       </section>
@@ -328,6 +336,7 @@
     const MAX_WL = 900;
 
     const state = {
+      allInstruments: {},
       lightpathData: {},
       chart: null,
       hardwareDatasets: [],
@@ -335,8 +344,10 @@
       controls: [],
       addedDyes: new Map(),
     };
+    let currentInstrumentId = null;
 
     const chartCanvas = document.getElementById('spectraChart');
+    const microscopeSelector = document.getElementById('microscopeSelector');
     const controlContainer = document.getElementById('controlContainer');
     const searchBtn = document.getElementById('searchBtn');
     const searchInput = document.getElementById('fluorophoreQuery');
@@ -360,6 +371,68 @@
       } catch (_err) {
         return {};
       }
+    }
+
+    function looksLikeInstrumentConfig(value) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      return Boolean(value.stages || value.light_sources || value.splitters || value.detectors);
+    }
+
+    function normalizeInstrumentMap(rawPayload) {
+      if (!rawPayload || typeof rawPayload !== 'object' || Array.isArray(rawPayload)) {
+        return {};
+      }
+
+      if (looksLikeInstrumentConfig(rawPayload)) {
+        const fallbackId = String(rawPayload.id || rawPayload.name || 'instrument_1');
+        return { [fallbackId]: rawPayload };
+      }
+
+      const entries = Object.entries(rawPayload).filter(([, instrument]) => looksLikeInstrumentConfig(instrument));
+      if (!entries.length) return {};
+
+      return Object.fromEntries(entries);
+    }
+
+    function setActiveInstrument(instrumentId) {
+      const selectedId = String(instrumentId || '');
+      const hasInstrument = Object.prototype.hasOwnProperty.call(state.allInstruments, selectedId);
+      if (!hasInstrument) return;
+
+      currentInstrumentId = selectedId;
+      state.lightpathData = state.allInstruments[currentInstrumentId] || {};
+
+      renderControls();
+      drawHardware();
+      calculateEfficiencies();
+    }
+
+    function populateMicroscopeSelector() {
+      microscopeSelector.innerHTML = '';
+      const entries = Object.entries(state.allInstruments);
+
+      entries.forEach(([instrumentId, instrumentData]) => {
+        const option = document.createElement('option');
+        option.value = instrumentId;
+        option.textContent = `${instrumentId} — ${instrumentData?.name || instrumentId}`;
+        microscopeSelector.appendChild(option);
+      });
+
+      if (!entries.length) {
+        const fallback = document.createElement('option');
+        fallback.value = '';
+        fallback.textContent = 'No microscopes available';
+        microscopeSelector.appendChild(fallback);
+        microscopeSelector.disabled = true;
+        currentInstrumentId = null;
+        state.lightpathData = {};
+        return;
+      }
+
+      microscopeSelector.disabled = false;
+      const [firstId] = entries[0];
+      microscopeSelector.value = firstId;
+      setActiveInstrument(firstId);
     }
 
     function wavelengthToColorHex(wavelengthNm) {
@@ -1358,11 +1431,15 @@
 
     function bootstrap() {
       const jsonScript = document.getElementById('lightpath-data');
-      state.lightpathData = safeJsonParse(jsonScript?.textContent || '{}');
+      const parsedPayload = safeJsonParse(jsonScript?.textContent || '{}');
+      state.allInstruments = normalizeInstrumentMap(parsedPayload);
 
       initChart();
-      renderControls();
-      drawHardware();
+      populateMicroscopeSelector();
+
+      microscopeSelector.addEventListener('change', (event) => {
+        setActiveInstrument(event.target.value);
+      });
 
       searchBtn.addEventListener('click', handleSearchClick);
       searchInput.addEventListener('input', (event) => {
