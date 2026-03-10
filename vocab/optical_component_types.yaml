@@ -1,0 +1,40 @@
+terms:
+  - id: bandpass
+    label: "Bandpass"
+    description: "Requires center_nm and width_nm."
+
+  - id: longpass
+    label: "Longpass"
+    description: "Requires cut_on_nm."
+
+  - id: shortpass
+    label: "Shortpass"
+    description: "Requires cut_off_nm."
+
+  - id: dichroic
+    label: "Dichroic"
+    description: "Requires cutoffs_nm array."
+
+  - id: multiband_dichroic
+    label: "Multiband Dichroic"
+    description: "Requires cutoffs_nm array."
+
+  - id: polychroic
+    label: "Polychroic"
+    description: "Synonym for multiband."
+
+  - id: notch
+    label: "Notch"
+    description: "Requires center_nm and width_nm."
+
+  - id: empty
+    label: "Empty"
+    description: "An explicitly empty slot."
+
+  - id: mirror
+    label: "Mirror"
+    description: "A 100% reflective surface."
+
+  - id: block
+    label: "Block"
+    description: "A 100% blocking/shutter position."
