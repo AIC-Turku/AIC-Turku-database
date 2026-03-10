@@ -185,6 +185,19 @@
       min-height: 520px;
     }
 
+    .path-summary {
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 13px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+    }
+
     #spectraChart {
       width: 100%;
       height: 100%;
@@ -233,6 +246,7 @@
     </aside>
 
     <section class="panel chart-panel">
+      <div id="pathSummary" class="path-summary" aria-live="polite"></div>
       <div class="chart-wrap">
         <canvas id="spectraChart"></canvas>
       </div>
@@ -273,6 +287,7 @@
     const searchResults = document.getElementById('searchResults');
     const searchStatus = document.getElementById('searchStatus');
     const selectedDyes = document.getElementById('selectedDyes');
+    const pathSummary = document.getElementById('pathSummary');
 
     function debounce(fn, waitMs = 300) {
       let timeoutId;
@@ -399,6 +414,48 @@
       };
     }
 
+    function normalizeSplitters(rawData) {
+      const rawSplitters = [];
+      const directSplitters = rawData?.splitters;
+      if (Array.isArray(directSplitters)) {
+        rawSplitters.push(...directSplitters);
+      } else if (directSplitters && typeof directSplitters === 'object') {
+        rawSplitters.push(directSplitters);
+      }
+
+      const stageSplitters = rawData?.stages?.splitters || rawData?.stages?.splitter;
+      if (Array.isArray(stageSplitters)) {
+        rawSplitters.push(...stageSplitters);
+      }
+
+      return rawSplitters
+        .filter((splitter) => splitter && typeof splitter === 'object')
+        .map((splitter, index) => {
+          const pathContainer = splitter.paths && typeof splitter.paths === 'object' ? splitter.paths : splitter;
+          const dichroicPositions = getMechanismPositions(
+            splitter.dichroic_mechanism || splitter.dichroic || splitter.splitter_dichroic || {}
+          );
+          const path1Positions = getMechanismPositions(pathContainer.path_1 || pathContainer.path1 || {});
+          const path2Positions = getMechanismPositions(pathContainer.path_2 || pathContainer.path2 || {});
+
+          return {
+            name: splitter.name || `Splitter ${index + 1}`,
+            dichroic: {
+              name: `${splitter.name || `Splitter ${index + 1}`} Dichroic`,
+              positions: dichroicPositions,
+            },
+            path1: {
+              name: `${splitter.name || `Splitter ${index + 1}`} Path 1`,
+              positions: path1Positions,
+            },
+            path2: {
+              name: `${splitter.name || `Splitter ${index + 1}`} Path 2`,
+              positions: path2Positions,
+            },
+          };
+        });
+    }
+
     function getMechanismPositions(mechanism) {
       if (!mechanism) return [];
       if (Array.isArray(mechanism.positions)) return mechanism.positions;
@@ -473,11 +530,32 @@
 
         controlContainer.appendChild(wrapper);
       });
+
+      const splitters = normalizeSplitters(state.lightpathData);
+      splitters.forEach((splitter, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mechanism-group';
+
+        const title = document.createElement('h3');
+        title.className = 'section-title';
+        title.style.margin = '0 0 10px';
+        title.textContent = `${splitter.name} Branching`;
+        wrapper.appendChild(title);
+
+        wrapper.appendChild(createSelectControl({ stage: `splitterDichroic:${index}`, mechanism: splitter.dichroic, index: 0 }));
+        wrapper.appendChild(createSelectControl({ stage: `splitterPath1:${index}`, mechanism: splitter.path1, index: 1 }));
+        wrapper.appendChild(createSelectControl({ stage: `splitterPath2:${index}`, mechanism: splitter.path2, index: 2 }));
+
+        controlContainer.appendChild(wrapper);
+      });
     }
 
     function selectedPositions() {
       return state.controls.map(({ stage, mechanism, select }) => {
         const selectedOption = select.options[select.selectedIndex];
+        if (!selectedOption) {
+          return { stage, mechanism, position: {} };
+        }
         let position = null;
         try {
           position = JSON.parse(selectedOption.dataset.position || '{}');
@@ -630,15 +708,71 @@
       return [];
     }
 
+    function styleForSplitterStage(stage, datasets) {
+      if (!Array.isArray(datasets) || !datasets.length) return [];
+      if (stage.startsWith('splitterDichroic')) {
+        return datasets.map((dataset) => ({
+          ...dataset,
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124, 58, 237, 0.09)',
+          borderWidth: 3,
+          borderDash: [10, 4],
+          label: `Splitter ${dataset.label}`,
+        }));
+      }
+      if (stage.startsWith('splitterPath1')) {
+        return datasets.map((dataset) => ({ ...dataset, label: `Path 1 ${dataset.label}` }));
+      }
+      if (stage.startsWith('splitterPath2')) {
+        return datasets.map((dataset) => ({ ...dataset, label: `Path 2 ${dataset.label}` }));
+      }
+      return datasets;
+    }
+
+    function summarizeFilterPosition(position) {
+      const center = Number(position?.center_nm);
+      const width = Number(position?.width_nm);
+      const cutOn = Number(position?.cut_on_nm);
+      const cutOff = Number(position?.cut_off_nm);
+      const label = String(position?.label || position?.name || '').trim();
+
+      let bandText = label;
+      if (Number.isFinite(center) && Number.isFinite(width)) {
+        bandText = `${center}/${width}${label ? ` (${label})` : ''}`;
+      } else if (Number.isFinite(cutOn)) {
+        bandText = `${cutOn} LP${label ? ` (${label})` : ''}`;
+      } else if (Number.isFinite(cutOff)) {
+        bandText = `${cutOff} SP${label ? ` (${label})` : ''}`;
+      }
+      return bandText || '—';
+    }
+
+    function updatePathSummary() {
+      const selected = selectedPositions();
+      const path1 = selected.find((entry) => String(entry.stage).startsWith('splitterPath1'));
+      const path2 = selected.find((entry) => String(entry.stage).startsWith('splitterPath2'));
+
+      if (!path1 && !path2) {
+        pathSummary.textContent = 'No splitter active on this instrument. Displaying primary light path only.';
+        return;
+      }
+
+      const path1Text = summarizeFilterPosition(path1?.position);
+      const path2Text = summarizeFilterPosition(path2?.position);
+      pathSummary.textContent = `Path 1: ${path1Text} | Path 2: ${path2Text}`;
+    }
+
     function drawHardware() {
       const generated = [];
       selectedPositions().forEach(({ stage, mechanism, position }) => {
-        generated.push(...hardwareDatasetFromPosition(stage, mechanism.name || stage, position || {}));
+        const stageDatasets = hardwareDatasetFromPosition(stage, mechanism.name || stage, position || {});
+        generated.push(...styleForSplitterStage(stage, stageDatasets));
       });
 
       state.hardwareDatasets = generated;
       state.chart.data.datasets = [...state.hardwareDatasets, ...state.dyeDatasets];
       state.chart.update();
+      updatePathSummary();
     }
 
     function initChart() {
