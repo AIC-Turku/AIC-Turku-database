@@ -326,43 +326,78 @@
 
 ### 🎛️ Optical Path & Filters
 
-{% set dto_stages = lightpath_dto.stages if lightpath_dto and lightpath_dto.stages else {} %}
-{% set light_path_ns = namespace(has_light_path=false) %}
+{% set dto = lightpath_dto %}
+{% if dto and dto.stages %}
 
-{% for stage_key, mechanisms in dto_stages.items() %}
-{% if mechanisms %}
-{% set light_path_ns.has_light_path = true %}
-#### {{ stage_key | title }} Stage
-
-<table class="md-typeset__table">
-  <thead>
-    <tr>
-      <th>Mechanism</th>
-      <th>Slot</th>
-      <th>Component</th>
-      <th>Details</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for mech in mechanisms %}
-      {% for pos in mech.positions %}
+  {# 1. Render Filter Cubes (6-Column Table) #}
+  {% if dto.stages.cube %}
+  #### Filter Cubes (Linked Mechanisms)
+  <div class="md-typeset__scrollwrap">
+    <table class="md-typeset__table">
+      <thead>
         <tr>
-          <td>{{ mech.name }}</td>
-          <td>{{ pos.slot }}</td>
-          <td><strong>{{ pos.label }}</strong></td>
-          <td>{{ pos.details or '—' }}</td>
+          <th>Mechanism</th>
+          <th>Slot</th>
+          <th>Cube Name</th>
+          <th>Excitation</th>
+          <th>Dichroic</th>
+          <th>Emission</th>
         </tr>
-      {% endfor %}
-    {% endfor %}
-  </tbody>
-</table>
-{% endif %}
-{% endfor %}
+      </thead>
+      <tbody>
+        {% for mech in dto.stages.cube %}
+          {% for pos in mech.positions %}
+            <tr>
+              <td>{{ mech.name }}</td>
+              <td>{{ pos.slot }}</td>
+              <td>
+                <strong>{{ pos.label }}</strong>
+                {% if pos.details %}<br><sub style="color: gray;">{{ pos.details }}</sub>{% endif %}
+              </td>
+              <td>{{ pos.linked_components.excitation_filter.label | default('-') }}</td>
+              <td>{{ pos.linked_components.dichroic.label | default('-') }}</td>
+              <td>{{ pos.linked_components.emission_filter.label | default('-') }}</td>
+            </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
-{% if not light_path_ns.has_light_path %}
-> *No optical path mechanisms recorded.*
-{% endif %}
+  {# 2. Render Independent Stages (Excitation, Dichroic, Emission) #}
+  {% for stage_key in ['excitation', 'dichroic', 'emission'] %}
+    {% set mechanisms = dto.stages[stage_key] %}
+    {% if mechanisms %}
+    #### {{ stage_key | title }} Stage
+    <div class="md-typeset__scrollwrap">
+      <table class="md-typeset__table">
+        <thead>
+          <tr>
+            <th>Mechanism</th>
+            <th>Slot</th>
+            <th>Component</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mech in mechanisms %}
+            {% for pos in mech.positions %}
+              <tr>
+                <td>{{ mech.name }}</td>
+                <td>{{ pos.slot }}</td>
+                <td><strong>{{ pos.label }}</strong></td>
+                <td>{{ pos.details }}</td>
+              </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  {% endfor %}
 
+{% endif %}
 
 
 ### 🔍 Magnification Changers
