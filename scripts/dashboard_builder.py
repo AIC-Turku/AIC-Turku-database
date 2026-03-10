@@ -550,6 +550,7 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
         ]
 
     passthrough_keys = [
+        "light_path",
         "filters",
         "splitters",
         "magnification_changers",

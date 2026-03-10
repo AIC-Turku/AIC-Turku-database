@@ -264,157 +264,157 @@ hardware:
         6:
           component_type: empty
 
-objectives:
-  - id: 5x_air
-    manufacturer: Leica
-    model: N PLAN 5x/0.12 PH 0
-    product_code: '11506303'
-    magnification: 5.0
-    numerical_aperture: 0.12
-    working_distance: 14.0 mm
-    immersion: air
-    correction: plan_achromat
-    afc_compatible: false
-    specialties:
-      - Phase Contrast (PH 0)
-      - DIC Prism B
-      - "UV \u2265365 nm"
-    notes: FN 22
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/
-    is_installed: true
-  - id: 10x_air
-    manufacturer: Leica
-    model: HC PL APO 10x/0.45
-    product_code: '11506410'
-    magnification: 10.0
-    numerical_aperture: 0.45
-    working_distance: 2.8 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-      - DIC Prism A
-      - "UV \u2265340 nm"
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/
-    is_installed: true
-  - id: 20x_air
-    manufacturer: Leica
-    model: HC PL FLUOTAR L 20x/0.40 CORR
-    product_code: '11506242'
-    magnification: 20.0
-    numerical_aperture: 0.4
-    working_distance: 7.5 - 6.2 mm
-    immersion: air
-    correction: fluorite # Flag: Make sure 'fluorite' is the exact ID vs 'plan_fluorite'
-    afc_compatible: true
-    specialties:
-      - Correction Ring
-      - DIC Prism C
-      - "UV \u2265340 nm"
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/
-    is_installed: true
-  - id: 20x_multi
-    manufacturer: Leica
-    model: HC PL APO 20x/0.70 IMM CORR
-    product_code: '11506326'
-    magnification: 20.0
-    numerical_aperture: 0.7
-    working_distance: 0.66 mm
-    immersion: multi
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-      - Multi-immersion
-      - Correction Ring
-      - DIC Prism C
-      - "UV \u2265365 nm"
-    notes: FN 25; W/O/G Immersion
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/
-    is_installed: true
-  - id: 20x_air_2
-    manufacturer: Leica
-    model: HC PL APO 20x/0.80
-    product_code: '11506529'
-    magnification: 20.0
-    numerical_aperture: 0.8
-    working_distance: 0.4 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-      - DIC Prism C
-      - "UV \u2265365 nm"
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/
-    is_installed: true
-  - id: 63x_oil
-    manufacturer: Leica
-    model: HC PL APO 63x/1.40 OIL CS2
-    product_code: '11506350'
-    magnification: 63.0
-    numerical_aperture: 1.4
-    working_distance: 0.14 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-      - DIC Prism E
-      - "UV \u2265340 nm"
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/
-    is_installed: true
-  - id: 16x_multi
-    manufacturer: Leica
-    model: HC FLUOTAR L 16x/0.60 IMM CORR VISIR
-    product_code: '506533'
-    magnification: 16.0
-    numerical_aperture: 0.6
-    working_distance: 2.5 mm
-    immersion: multi
-    correction: fluorite # Flag: Verify 'fluorite' vs 'plan_fluorite'
-    afc_compatible: true
-    specialties:
-      - Multi-immersion (BABB/W/Glyc/Sil-Oil)
-      - IR-compatible to 1300 nm
-      - VISIR
-      - Correction Ring
-      - DIC Prism D
-    notes: FN 20
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/
-    is_installed: false
-  - id: 10x_air_2
-    manufacturer: Leica
-    model: HC PL APO FLUOTAR 10x/0.30 PH 1
-    product_code: '11506507'
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: 11.0 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-      - Phase Contrast (PH 1)
-      - DIC Prism D
-      - "UV \u2265340 nm"
-    notes: FN 25; from SP5?
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/
-    is_installed: false
-  - id: 100x_oil
-    manufacturer: Leica
-    model: HC PL APO 100x/1.40 OIL STED
-    product_code: '11506316'
-    magnification: 100.0
-    numerical_aperture: 1.4
-    working_distance: 0.13 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-      - STED
-      - DIC Prism D
-      - "UV \u2265340 nm"
-    notes: FN 25; from SP5?
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/
-    is_installed: false
+  objectives:
+    - id: 5x_air
+      manufacturer: Leica
+      model: N PLAN 5x/0.12 PH 0
+      product_code: '11506303'
+      magnification: 5.0
+      numerical_aperture: 0.12
+      working_distance: 14.0 mm
+      immersion: air
+      correction: plan_achromat
+      afc_compatible: false
+      specialties:
+        - Phase Contrast (PH 0)
+        - DIC Prism B
+        - "UV \u2265365 nm"
+      notes: FN 22
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/
+      is_installed: true
+    - id: 10x_air
+      manufacturer: Leica
+      model: HC PL APO 10x/0.45
+      product_code: '11506410'
+      magnification: 10.0
+      numerical_aperture: 0.45
+      working_distance: 2.8 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - DIC Prism A
+        - "UV \u2265340 nm"
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/
+      is_installed: true
+    - id: 20x_air
+      manufacturer: Leica
+      model: HC PL FLUOTAR L 20x/0.40 CORR
+      product_code: '11506242'
+      magnification: 20.0
+      numerical_aperture: 0.4
+      working_distance: 7.5 - 6.2 mm
+      immersion: air
+      correction: fluorite # Flag: Make sure 'fluorite' is the exact ID vs 'plan_fluorite'
+      afc_compatible: true
+      specialties:
+        - Correction Ring
+        - DIC Prism C
+        - "UV \u2265340 nm"
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/
+      is_installed: true
+    - id: 20x_multi
+      manufacturer: Leica
+      model: HC PL APO 20x/0.70 IMM CORR
+      product_code: '11506326'
+      magnification: 20.0
+      numerical_aperture: 0.7
+      working_distance: 0.66 mm
+      immersion: multi
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - Multi-immersion
+        - Correction Ring
+        - DIC Prism C
+        - "UV \u2265365 nm"
+      notes: FN 25; W/O/G Immersion
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/
+      is_installed: true
+    - id: 20x_air_2
+      manufacturer: Leica
+      model: HC PL APO 20x/0.80
+      product_code: '11506529'
+      magnification: 20.0
+      numerical_aperture: 0.8
+      working_distance: 0.4 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - DIC Prism C
+        - "UV \u2265365 nm"
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/
+      is_installed: true
+    - id: 63x_oil
+      manufacturer: Leica
+      model: HC PL APO 63x/1.40 OIL CS2
+      product_code: '11506350'
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: 0.14 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - DIC Prism E
+        - "UV \u2265340 nm"
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/
+      is_installed: true
+    - id: 16x_multi
+      manufacturer: Leica
+      model: HC FLUOTAR L 16x/0.60 IMM CORR VISIR
+      product_code: '506533'
+      magnification: 16.0
+      numerical_aperture: 0.6
+      working_distance: 2.5 mm
+      immersion: multi
+      correction: fluorite # Flag: Verify 'fluorite' vs 'plan_fluorite'
+      afc_compatible: true
+      specialties:
+        - Multi-immersion (BABB/W/Glyc/Sil-Oil)
+        - IR-compatible to 1300 nm
+        - VISIR
+        - Correction Ring
+        - DIC Prism D
+      notes: FN 20
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/
+      is_installed: false
+    - id: 10x_air_2
+      manufacturer: Leica
+      model: HC PL APO FLUOTAR 10x/0.30 PH 1
+      product_code: '11506507'
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: 11.0 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - Phase Contrast (PH 1)
+        - DIC Prism D
+        - "UV \u2265340 nm"
+      notes: FN 25; from SP5?
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/
+      is_installed: false
+    - id: 100x_oil
+      manufacturer: Leica
+      model: HC PL APO 100x/1.40 OIL STED
+      product_code: '11506316'
+      magnification: 100.0
+      numerical_aperture: 1.4
+      working_distance: 0.13 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - STED
+        - DIC Prism D
+        - "UV \u2265340 nm"
+      notes: FN 25; from SP5?
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/
+      is_installed: false
