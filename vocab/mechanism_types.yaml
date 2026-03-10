@@ -22,3 +22,7 @@ terms:
   - id: spectral_slider
     label: "Spectral Slider"
     description: "A continuous physical slit/slider used in spectral detectors."
+
+  - id: spectral_array
+    label: "Spectral Array"
+    description: "A multi-band spectral mechanism that can expose several emission bands at once."
