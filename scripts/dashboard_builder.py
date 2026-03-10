@@ -43,6 +43,7 @@ from scripts.validate import (
     validate_event_ledgers,
     validate_instrument_ledgers,
 )
+from scripts.light_path_parser import generate_virtual_microscope_payload
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -1075,6 +1076,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     tpl_event = jinja_env.get_template("event_detail.md.j2")
     tpl_plan = jinja_env.get_template("plan_experiments.md.j2")
     tpl_methods = jinja_env.get_template("methods_generator.md.j2")
+    tpl_vm = jinja_env.get_template("virtual_microscope.html.j2")
 
     qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
     maint_logs_by_instrument = index_instrument_logs("maintenance/events", load_errors=load_errors)
@@ -1277,6 +1279,15 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             metric_names=METRIC_NAMES,
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
+
+        # Render Virtual Microscope
+        light_path_data = inst.get("canonical", {}).get("hardware", {})
+        vm_payload = generate_virtual_microscope_payload({"hardware": light_path_data})
+        vm_html = tpl_vm.render(
+            instrument=inst,
+            lightpath_json=json.dumps(vm_payload),
+        )
+        (instrument_dir / "virtual_microscope.html").write_text(vm_html, encoding="utf-8")
 
 # Format events for the history timeline
         history_events_qc = []
