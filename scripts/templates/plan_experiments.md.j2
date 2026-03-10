@@ -67,11 +67,12 @@ Here is what I want to do:
     const basePromptBottom = `
 
 Recommend the best 1 or 2 microscopes from the attached file for this experiment.
-
 Please:
 - Exclude systems that are offline or have listed issues that make them unsuitable.
 - Explain why each recommended system fits the experiment.
 - Mention the relevant modality, objective(s), and excitation light source(s).
+- **Provide a precise optical configuration:** Using the \`hardware.light_path\` topological data, tell me exactly which slots to select in the \`excitation_mechanisms\`, \`dichroic_mechanisms\`, and \`emission_mechanisms\` to successfully capture my fluorophores.
+- **Handle splitters:** If the recommended system uses \`splitters\` for simultaneous multi-camera imaging, explain which specific signals will be routed to Path 1 vs Path 2.
 - Mention useful supporting features such as incubation, autofocus, detector type, or piezo only when they are explicitly present in the inventory.
 - For every key requirement, label evidence as known vs unknown based on inventory completeness metadata.
 - Clearly state any important tradeoffs or uncertainty, and do not fill gaps with ungrounded assumptions.
