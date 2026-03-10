@@ -656,9 +656,16 @@ hide:
       if (stage==='detectors' || pos.component_type==='detector' || pos.type==='empty') return [];
       const t = String(pos.type || pos.component_type || '').toLowerCase();
       
-      // Draw Laser as a stark vertical line to represent the beam
-      if(['laser','light_source'].includes(t) && pos.wavelength_nm) {
+      // Draw Light Sources (Lasers vs LEDs)
+      if(['laser','light_source', 'led'].includes(t) && pos.wavelength_nm) {
         const wl = Number(pos.wavelength_nm);
+        const w = Number(pos.width_nm);
+        
+        // If it has a bandwidth (LED)
+        if (!Number.isNaN(w) && w > 0) {
+          return [createBand(`${pos.name||'LED'} ${wl}/${w}`, wl - w/2, wl + w/2, '#0ea5e9', 'rgba(14, 165, 233, 0.25)')];
+        }
+        // If it is a pure laser spike
         return [{label: `${pos.name||'Laser'}`, data:[{x:wl,y:0},{x:wl,y:100}], borderColor:'#0f172a', borderWidth:3, fill:false, pointRadius:0}];
       }
       // Draw Tunable blocks
@@ -688,7 +695,21 @@ hide:
         let exScore = 0;
         lights.forEach(l => {
           const wl = Number(l.position.wavelength_nm);
-          if(!Number.isNaN(wl)) { const pt = ex.find(p=>Math.abs(p.x-wl)<=2); if(pt && pt.y>exScore) exScore=pt.y; }
+          const w = Number(l.position.width_nm);
+          
+          if (!Number.isNaN(wl)) {
+            if (!Number.isNaN(w) && w > 0) {
+              // LED Math: Average excitation across the LED's bandwidth
+              const ledArea = integrate(ex, wl - w/2, wl + w/2);
+              const maxPossibleArea = w * 100; // Perfect 100% excitation across the whole band
+              const score = (ledArea / maxPossibleArea) * 100;
+              if (score > exScore) exScore = score;
+            } else {
+              // Laser Math: Nearest neighbor spike
+              const pt = ex.find(p => Math.abs(p.x - wl) <= 2);
+              if (pt && pt.y > exScore) exScore = pt.y;
+            }
+          }
         });
 
         const emBandScores = [];
