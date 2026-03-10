@@ -1445,6 +1445,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
         canonical_hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
         hw = inst.get("processed_hardware", {}) if isinstance(inst.get("processed_hardware"), dict) else {}
+        lightpath_dto = global_vm_payloads.get(inst.get("id"), {}) if isinstance(global_vm_payloads, dict) else {}
+        if not isinstance(lightpath_dto, dict):
+            lightpath_dto = {}
 
         def pick_summary_value(canonical_value: Any, processed_value: Any, fallback: Any) -> Any:
             if canonical_value not in (None, "", []):
@@ -1567,16 +1570,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                     for ls in pick_summary_value(canonical_hardware.get("light_sources"), hw.get("light_sources", []), [])
                     if isinstance(ls, dict)
                 ],
-                "filters": [
-                    {
-                        "name": none_if_empty(f.get("name")) or None,
-                        "excitation": none_if_empty(f.get("excitation")) or None,
-                        "emission": none_if_empty(f.get("emission")) or None,
-                        "dichroic": none_if_empty(f.get("dichroic")) or None,
-                    }
-                    for f in pick_summary_value(canonical_hardware.get("filters"), hw.get("filters", []), [])
-                    if isinstance(f, dict)
-                ],
+                "optical_path": lightpath_dto.get("stages", {}),
+                "splitters": lightpath_dto.get("splitters", []),
                 "detectors": [
                     {
                         "type": norm_id(pick_summary_value(det.get("kind"), det.get("type"), None)),
