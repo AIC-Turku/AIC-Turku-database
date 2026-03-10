@@ -914,7 +914,7 @@ def build_nav(instruments: list[dict[str, Any]], retired_instruments: list[dict[
         {"System Health": "status.md"},
         {"Microscopes": microscopes},
         {"Plan Your Experiments": "plan_experiments.md"},
-        {"Virtual Microscope": "virtual_microscope.html"},
+        {"Virtual Microscope": "virtual_microscope.md"},
         {"Methods Generator": "methods_generator.md"},
         {"Vocabulary Dictionary": "vocabulary_dictionary.md"},
         {"Retired Instruments": [{"Overview": "retired/index.md"}, *retired]},
@@ -1357,7 +1357,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             (event_dir / f"{event_id}.md").write_text(event_md, encoding="utf-8")
 
     vm_html = tpl_vm.render(lightpath_data_json=json.dumps(global_vm_payloads))
-    (docs_root / "virtual_microscope.html").write_text(vm_html, encoding="utf-8")
+    (docs_root / "virtual_microscope.md").write_text(vm_html, encoding="utf-8")
 
     # Fleet + status pages
     index_md = tpl_index.render(instruments=instruments, all_modalities=all_modalities, counts=fleet_counts)
