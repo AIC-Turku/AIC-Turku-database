@@ -942,6 +942,130 @@ sections:
         type: list
         item_type: positive_number
 
+      - path: hardware.light_path.splitters
+        title: Light path splitters
+        status: optional
+        type: list
+        item_type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Defines branched emission paths for multi-camera and split-view configurations.
+
+      - path: hardware.light_path.splitters[].name
+        title: Splitter name
+        status: required
+        type: string
+        required_if:
+          parent_present: "hardware.light_path.splitters[]"
+
+      - path: hardware.light_path.splitters[].type
+        title: Splitter type
+        status: required
+        type: string
+        required_if:
+          parent_present: "hardware.light_path.splitters[]"
+
+      - path: hardware.light_path.splitters[].dichroic
+        title: Splitter dichroic
+        status: required
+        type: object
+        required_if:
+          parent_present: "hardware.light_path.splitters[]"
+
+      - path: hardware.light_path.splitters[].dichroic.component_type
+        title: Splitter dichroic component type
+        status: required
+        type: string
+        vocab: optical_component_types
+        required_if:
+          parent_present: "hardware.light_path.splitters[].dichroic"
+
+      - path: hardware.light_path.splitters[].dichroic.cut_on_nm
+        title: Splitter dichroic cutoff wavelength (nm)
+        status: required
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.splitters[].dichroic"
+
+      - path: hardware.light_path.splitters[].path_1
+        title: Splitter path 1 (transmitted)
+        status: required
+        type: object
+        required_if:
+          parent_present: "hardware.light_path.splitters[]"
+
+      - path: hardware.light_path.splitters[].path_1.emission_filter
+        title: Splitter path 1 emission filter
+        status: optional
+        type: object
+
+      - path: hardware.light_path.splitters[].path_1.emission_filter.component_type
+        title: Splitter path 1 emission filter component type
+        status: required
+        type: string
+        vocab: optical_component_types
+        required_if:
+          parent_present: "hardware.light_path.splitters[].path_1.emission_filter"
+
+      - path: hardware.light_path.splitters[].path_1.emission_filter.center_nm
+        title: Splitter path 1 emission filter center wavelength (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.splitters[].path_1.emission_filter.width_nm
+        title: Splitter path 1 emission filter bandwidth (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.splitters[].path_1.emission_filter.cut_on_nm
+        title: Splitter path 1 emission filter cut-on wavelength (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.splitters[].path_1.emission_filter.cut_off_nm
+        title: Splitter path 1 emission filter cut-off wavelength (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.splitters[].path_2
+        title: Splitter path 2 (reflected)
+        status: required
+        type: object
+        required_if:
+          parent_present: "hardware.light_path.splitters[]"
+
+      - path: hardware.light_path.splitters[].path_2.emission_filter
+        title: Splitter path 2 emission filter
+        status: optional
+        type: object
+
+      - path: hardware.light_path.splitters[].path_2.emission_filter.component_type
+        title: Splitter path 2 emission filter component type
+        status: required
+        type: string
+        vocab: optical_component_types
+        required_if:
+          parent_present: "hardware.light_path.splitters[].path_2.emission_filter"
+
+      - path: hardware.light_path.splitters[].path_2.emission_filter.center_nm
+        title: Splitter path 2 emission filter center wavelength (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.splitters[].path_2.emission_filter.width_nm
+        title: Splitter path 2 emission filter bandwidth (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.splitters[].path_2.emission_filter.cut_on_nm
+        title: Splitter path 2 emission filter cut-on wavelength (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.splitters[].path_2.emission_filter.cut_off_nm
+        title: Splitter path 2 emission filter cut-off wavelength (nm)
+        status: conditional
+        type: positive_number
+
   - id: objectives
     title: Objectives
     rules:
