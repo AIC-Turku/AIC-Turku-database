@@ -216,8 +216,13 @@ def _build_label(component: dict[str, Any]) -> str:
 def _build_details(component: dict[str, Any]) -> str:
     manufacturer = component.get("manufacturer")
     product_code = component.get("product_code")
-    parts = [str(part).strip() for part in (manufacturer, product_code) if isinstance(part, str) and part.strip()]
-    return " ".join(parts)
+    notes = component.get("notes")
+    parts = [
+        str(part).strip()
+        for part in (manufacturer, product_code, notes)
+        if isinstance(part, str) and part.strip()
+    ]
+    return " | ".join(parts)
 
 
 def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any]) -> dict[str, Any]:
