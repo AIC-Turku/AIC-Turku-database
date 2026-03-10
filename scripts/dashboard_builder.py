@@ -31,7 +31,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from validate import (
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     Vocabulary,
     build_instrument_completeness_report,
