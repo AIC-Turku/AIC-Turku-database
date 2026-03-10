@@ -176,7 +176,20 @@ def _format_numeric(value: Any) -> str:
 def _build_label(component: dict[str, Any]) -> str:
     component_type = component.get("component_type", "unknown")
 
-    if component_type in {"bandpass", "notch"}:
+    if component_type in {"bandpass", "notch", "multiband_bandpass"}:
+        bands = component.get("bands")
+        if isinstance(bands, list) and bands:
+            band_strings: list[str] = []
+            for band in bands:
+                if not isinstance(band, dict):
+                    continue
+                center = band.get("center_nm")
+                width = band.get("width_nm")
+                if _is_positive_number(center) and _is_positive_number(width):
+                    band_strings.append(f"{_format_numeric(center)}/{_format_numeric(width)}")
+            if band_strings:
+                return " + ".join(band_strings)
+
         center = component.get("center_nm")
         width = component.get("width_nm")
         if _is_positive_number(center) and _is_positive_number(width):
@@ -276,6 +289,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                 if not isinstance(component, dict):
                     continue
                 component_payload: dict[str, Any] = {
+                    **component,
                     "type": str(component.get("component_type", "unknown")),
                     "label": _build_label(component),
                     "details": _build_details(component),
