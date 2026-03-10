@@ -459,7 +459,7 @@ sections:
       - path: hardware.light_sources[].wavelength_nm
         title: Peak Wavelength (nm)
         status: conditional
-        type: positive_number
+        type: spectral_descriptor
         required_if:
           item_kind_in: [laser, led]
         used_by: [audit_pdf, method_generator, dashboard]
