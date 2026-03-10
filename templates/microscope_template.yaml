@@ -60,7 +60,8 @@ hardware:
       manufacturer: ""  # Light source manufacturer: Needed for unambiguous hardware identification.
       model: ""  # Light source model: Needed for unambiguous hardware identification.
       technology: ""  # Light source technology subtype: Helpful subtype information for lasers or LED engines.
-      wavelength_nm: ""  # Light source wavelength metadata: Required for line-selectable or tunable excitation sources where wavelength metadata is needed for reproducibility.
+      wavelength_nm: ""  # Peak Wavelength (nm): Required if kind is laser or led.
+      width_nm: ""  # Bandwidth / FWHM (nm): Optional for LEDs and broad-spectrum sources.
       power: ""  # Light source nominal power: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
       notes: ""  # Light source notes: Useful for software aliases and caveats.
       url: ""  # Light source URL: Reference only.

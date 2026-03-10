@@ -457,16 +457,20 @@ sections:
         rationale: Optional path tag to associate a source with specific illumination routes.
 
       - path: hardware.light_sources[].wavelength_nm
-        title: Light source wavelength metadata
+        title: Peak Wavelength (nm)
         status: conditional
-        type: spectral_descriptor
+        type: positive_number
         required_if:
-          item_kind_in: [laser, white_light_laser, led, multiphoton_laser, supercontinuum]
-        validation:
-          accepted_examples: ['405', '488', '395/25', '561', '730/40', 'tunable']
+          item_kind_in: [laser, led]
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required for line-selectable or tunable excitation sources where wavelength metadata is needed for reproducibility.
-        notes: Current schema uses one descriptive field; a future schema revision could split this into line_nm, bandpass_center_nm, bandpass_width_nm, tunable_range_nm.
+        rationale: Peak wavelength value for discrete or center-defined excitation sources.
+
+      - path: hardware.light_sources[].width_nm
+        title: Bandwidth / FWHM (nm)
+        status: optional
+        type: positive_number
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Optional spectral width for LEDs and broad-spectrum excitation sources.
 
       - path: hardware.light_sources[].power
         title: Light source nominal power
