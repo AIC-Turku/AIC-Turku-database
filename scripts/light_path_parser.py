@@ -93,6 +93,27 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
 
                 _validate_component(component, errors, pos_ctx)
 
+    for split_idx, splitter in enumerate(light_path.get("splitters", [])):
+        if not isinstance(splitter, dict):
+            continue
+
+        if isinstance(splitter.get("dichroic"), dict):
+            _validate_component(splitter["dichroic"], errors, f"splitters[{split_idx}].dichroic")
+
+        if isinstance(splitter.get("path_1", {}).get("emission_filter"), dict):
+            _validate_component(
+                splitter["path_1"]["emission_filter"],
+                errors,
+                f"splitters[{split_idx}].path_1.emission_filter",
+            )
+
+        if isinstance(splitter.get("path_2", {}).get("emission_filter"), dict):
+            _validate_component(
+                splitter["path_2"]["emission_filter"],
+                errors,
+                f"splitters[{split_idx}].path_2.emission_filter",
+            )
+
     return errors
 
 
@@ -205,8 +226,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
     """Build a frontend-friendly virtual microscope payload from instrument light-path data."""
     light_path = instrument_dict.get("hardware", {}).get("light_path", {})
     if not isinstance(light_path, dict):
-        payload = {"stages": {"excitation": [], "dichroic": [], "emission": []}, "valid_paths": []}
-        return json.loads(json.dumps(payload))
+        return {"stages": {"excitation": [], "dichroic": [], "emission": []}, "splitters": [], "valid_paths": []}
 
     stage_mappings = {
         "excitation": "excitation_mechanisms",
@@ -215,7 +235,11 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
     }
     prefix_mappings = {"excitation": "exc", "dichroic": "dichroic", "emission": "em"}
 
-    payload: dict[str, Any] = {"stages": {"excitation": [], "dichroic": [], "emission": []}, "valid_paths": []}
+    payload: dict[str, Any] = {
+        "stages": {"excitation": [], "dichroic": [], "emission": []},
+        "splitters": [],
+        "valid_paths": [],
+    }
 
     for stage_name, source_key in stage_mappings.items():
         mechanisms = _iter_mechanisms(light_path, source_key)
@@ -223,6 +247,39 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
             _mechanism_payload(prefix_mappings[stage_name], index, mechanism)
             for index, mechanism in enumerate(mechanisms)
         ]
+
+    raw_splitters = light_path.get("splitters", [])
+    if isinstance(raw_splitters, list):
+        for index, splitter in enumerate(raw_splitters):
+            if not isinstance(splitter, dict):
+                continue
+
+            dichroic_component = splitter.get("dichroic", {}).copy() if isinstance(splitter.get("dichroic"), dict) else {}
+            if "cut_on_nm" in dichroic_component and "cutoffs_nm" not in dichroic_component:
+                dichroic_component["cutoffs_nm"] = [dichroic_component["cut_on_nm"]]
+
+            path_1 = splitter.get("path_1") if isinstance(splitter.get("path_1"), dict) else {}
+            path_2 = splitter.get("path_2") if isinstance(splitter.get("path_2"), dict) else {}
+            path_1_filter = path_1.get("emission_filter") if isinstance(path_1.get("emission_filter"), dict) else {}
+            path_2_filter = path_2.get("emission_filter") if isinstance(path_2.get("emission_filter"), dict) else {}
+
+            payload["splitters"].append(
+                {
+                    "name": splitter.get("name", f"Splitter {index + 1}"),
+                    "dichroic": {
+                        "name": "Splitter Dichroic",
+                        "positions": {1: dichroic_component} if dichroic_component else {},
+                    },
+                    "path1": {
+                        "name": "Path 1 (Transmitted)",
+                        "positions": {1: path_1_filter} if path_1_filter else {},
+                    },
+                    "path2": {
+                        "name": "Path 2 (Reflected)",
+                        "positions": {1: path_2_filter} if path_2_filter else {},
+                    },
+                }
+            )
 
     payload["valid_paths"] = calculate_valid_paths(payload)
     return json.loads(json.dumps(payload))
