@@ -109,6 +109,10 @@ hide:
             <button id="searchBtn" class="vm-btn">Search</button>
             <ul id="searchResults" class="fp-dropdown"></ul>
           </div>
+          <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; cursor:pointer;">
+            <input id="use2Photon" type="checkbox" />
+            <span>Use 2-Photon Spectra</span>
+          </label>
           <p id="searchStatus" style="font-size:11px; margin-top:6px; color:var(--muted);"></p>
         </div>
         <div style="flex: 1; min-width: 250px;">
@@ -151,7 +155,12 @@ hide:
       if (raw) globalData = JSON.parse(raw);
     } catch (err) { console.error('Failed to parse payload', err); }
 
-    const state = { allInstruments: globalData, activeInstrument: null, loadedProteins: new Map() };
+    const state = {
+      allInstruments: globalData,
+      activeInstrument: null,
+      loadedProteins: new Map(),
+      preferTwoPhoton: false
+    };
     let currentInstrumentId = null;
     let chartInstance = null;
 
@@ -163,6 +172,7 @@ hide:
       searchBtn: document.getElementById('searchBtn'),
       searchStatus: document.getElementById('searchStatus'),
       fpResults: document.getElementById('searchResults'),
+      use2Photon: document.getElementById('use2Photon'),
       activeDyes: document.getElementById('selectedDyes'),
       summary: document.getElementById('pathSummary'),
       scoreboard: document.getElementById('signalSimulator')
@@ -189,6 +199,11 @@ hide:
       DOM.searchBtn.addEventListener('click', () => searchFPbase(DOM.fpQuery.value));
       DOM.fpQuery.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchFPbase(DOM.fpQuery.value); });
       DOM.fpQuery.addEventListener('input', debounce(() => searchFPbase(DOM.fpQuery.value), 300));
+      DOM.use2Photon.addEventListener('change', (e) => {
+        state.preferTwoPhoton = Boolean(e.target.checked);
+        drawHardware();
+        calculateEfficiencies();
+      });
       
       // Close dropdown when clicking outside
       document.addEventListener('click', (e) => {
@@ -377,8 +392,8 @@ hide:
       
       state.loadedProteins.forEach(item => {
         const c = colorHex(item.detail.emMax || 520);
-        const {ex, em} = extractSpectra(item.detail);
-        if(ex.length) fpDatasets.push({label:`${item.detail.name} Ex`, data:ex, borderColor:c, borderDash:[4,4], borderWidth:2, fill:false, pointRadius:0, tension:0.3});
+        const {ex, em, exMode} = extractSpectra(item.detail, { preferTwoPhoton: state.preferTwoPhoton });
+        if(ex.length) fpDatasets.push({label:`${item.detail.name} ${exMode === '2p' ? '2P Ex' : 'Ex'}`, data:ex, borderColor:c, borderDash:[4,4], borderWidth:2, fill:false, pointRadius:0, tension:0.3});
         if(em.length) fpDatasets.push({label:`${item.detail.name} Em`, data:em, borderColor:c, backgroundColor:c.replace(')',',0.1)').replace('rgb','rgba'), borderWidth:2, fill:true, pointRadius:0, tension:0.3});
       });
 
@@ -417,7 +432,7 @@ hide:
       const ems = active.filter(p => p.stage === 'emission' || String(p.stage).startsWith('splitterPath'));
 
       state.loadedProteins.forEach(item => {
-        const {ex, em} = extractSpectra(item.detail);
+        const {ex, em} = extractSpectra(item.detail, { preferTwoPhoton: state.preferTwoPhoton });
         
         let exScore = 0;
         lights.forEach(l => {
@@ -466,35 +481,119 @@ hide:
     }
     
     // --- FPBASE INTEGRATION ---
+    async function requestJSON(url) {
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error(`FPbase request failed (${resp.status})`);
+      return resp.json();
+    }
+
+    function normalizeResultsShape(data) {
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.results)) return data.results;
+      return [];
+    }
+
+    function deDupeProteins(rows) {
+      const seen = new Set();
+      return rows.filter((p) => {
+        const key = String(p?.uuid || p?.slug || p?.id || p?.name || '').toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function proteinIdentifiers(p) {
+      return [p?.slug, p?.uuid, p?.id].filter(Boolean).map(String);
+    }
+
     async function searchFPbase(query) {
       const q = String(query||'').trim();
       if(q.length<3) { DOM.fpResults.style.display='none'; return; }
       DOM.searchStatus.textContent = 'Searching...';
       try {
-        const resp = await fetch(`https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(q)}&format=json`, {headers:{'Accept':'application/json'}});
-        const data = await resp.json();
-        let res = Array.isArray(data)?data:(data?.results||[]);
-        res = res.filter(p=>p?.name?.toLowerCase().includes(q.toLowerCase())).slice(0,10);
+        const endpoints = [
+          `https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(q)}&format=json`,
+          `https://www.fpbase.org/api/proteins/?q=${encodeURIComponent(q)}&format=json`
+        ];
+        let res = [];
+        for (const endpoint of endpoints) {
+          try {
+            const data = await requestJSON(endpoint);
+            const candidates = normalizeResultsShape(data);
+            if (candidates.length) {
+              res = candidates;
+              break;
+            }
+          } catch (err) {
+            // Try fallback endpoint
+          }
+        }
+        res = deDupeProteins(res)
+          .filter(p => String(p?.name || '').toLowerCase().includes(q.toLowerCase()))
+          .slice(0, 10);
         
         DOM.fpResults.innerHTML = '';
         if(res.length) {
           DOM.fpResults.style.display = 'block';
           res.forEach(p => {
             const li = document.createElement('li'); li.textContent = `${p.name} (Ex:${p.exMax||'?'} Em:${p.emMax||'?'})`;
-            li.onclick = () => { loadProtein(p.slug||p.id); DOM.fpResults.style.display='none'; DOM.fpQuery.value=''; };
+            li.onclick = () => { loadProtein(p); DOM.fpResults.style.display='none'; DOM.fpQuery.value=''; };
             DOM.fpResults.appendChild(li);
           });
-        } else DOM.fpResults.style.display='none';
+        } else {
+          DOM.fpResults.style.display='none';
+          DOM.searchStatus.textContent = `No FPbase proteins found for "${q}".`;
+          return;
+        }
         DOM.searchStatus.textContent = '';
-      } catch(e) { DOM.searchStatus.textContent = 'Error fetching DB.'; }
+      } catch(e) {
+        DOM.fpResults.style.display='none';
+        DOM.searchStatus.textContent = `Error searching FPbase: ${e.message}`;
+      }
     }
 
-    async function loadProtein(id) {
-      if(state.loadedProteins.has(id)) return;
-      const resp = await fetch(`https://www.fpbase.org/api/proteins/${id}/?format=json`,{headers:{'Accept':'application/json'}});
-      const detail = await resp.json();
-      state.loadedProteins.set(id, {id, detail});
-      renderActiveDyes(); drawHardware(); calculateEfficiencies();
+    async function hydrateProteinFromSearch(protein) {
+      const q = encodeURIComponent(protein?.name || protein?.slug || protein?.id || '');
+      if (!q) throw new Error('Protein is missing identifiers for hydration.');
+      const data = await requestJSON(`https://www.fpbase.org/api/proteins/?q=${q}&format=json`);
+      const candidates = normalizeResultsShape(data);
+      if (!candidates.length) throw new Error('Unable to hydrate FPbase protein details from search.');
+      return candidates[0];
+    }
+
+    async function fetchProteinDetail(protein) {
+      const ids = proteinIdentifiers(protein);
+      for (const id of ids) {
+        try {
+          return await requestJSON(`https://www.fpbase.org/api/proteins/${encodeURIComponent(id)}/?format=json`);
+        } catch (err) {
+          // try next identifier
+        }
+      }
+      return hydrateProteinFromSearch(protein);
+    }
+
+    async function loadProtein(protein) {
+      const key = String(protein?.uuid || protein?.slug || protein?.id || protein?.name || '').trim();
+      if (!key) {
+        DOM.searchStatus.textContent = 'Unable to load protein: no valid identifier found.';
+        return;
+      }
+      if(state.loadedProteins.has(key)) return;
+      DOM.searchStatus.textContent = `Loading ${protein?.name || key}...`;
+      try {
+        const detail = await fetchProteinDetail(protein);
+        const spectra = extractSpectra(detail, { preferTwoPhoton: state.preferTwoPhoton });
+        if (!spectra.ex.length && !spectra.em.length) {
+          throw new Error(`Loaded ${detail?.name || key}, but no usable excitation/emission spectra were found.`);
+        }
+        state.loadedProteins.set(key, {id: key, detail});
+        DOM.searchStatus.textContent = '';
+        renderActiveDyes(); drawHardware(); calculateEfficiencies();
+      } catch (err) {
+        DOM.searchStatus.textContent = err.message || 'Failed to load selected protein from FPbase.';
+      }
     }
 
     function renderActiveDyes() {
@@ -509,16 +608,69 @@ hide:
       });
     }
 
-    function extractSpectra(det) {
-      const s = (det?.states?.[0]?.spectra || det?.spectra || []);
-      const getPts = (key) => {
-        const d = s.find(x=>String(x.spectrum_type||x.type||x.subtype).toLowerCase().includes(key));
-        if(!d) return [];
-        const raw = (d.data||d.values||d.points).map(i=>({x:Number(i[0]||i.x||i.wl), y:Number(i[1]||i.y||i.value)})).filter(p=>!Number.isNaN(p.x));
-        const max = Math.max(...raw.map(p=>p.y)); const scl = (max>0&&max<=1.05)?100:1;
-        return raw.map(p=>({x:p.x, y:p.y*scl})).sort((a,b)=>a.x-b.x);
+    function normalizePoints(rawPoints) {
+      if (!Array.isArray(rawPoints)) return [];
+      const points = rawPoints.map((point) => {
+        if (Array.isArray(point)) return { x: Number(point[0]), y: Number(point[1]) };
+        const x = Number(point?.x ?? point?.wl ?? point?.wavelength ?? point?.nm);
+        const y = Number(point?.y ?? point?.value ?? point?.intensity ?? point?.v);
+        return { x, y };
+      }).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+      if (!points.length) return [];
+      const max = Math.max(...points.map((p) => p.y));
+      const scale = (max > 0 && max <= 1.05) ? 100 : 1;
+      return points.map((p) => ({ x: p.x, y: p.y * scale })).sort((a, b) => a.x - b.x);
+    }
+
+    function collectSpectraContainers(detail) {
+      const collected = [];
+      const pushAll = (arr) => { if (Array.isArray(arr)) collected.push(...arr); };
+      pushAll(detail?.spectra);
+      if (Array.isArray(detail?.states)) {
+        const defaultStates = detail.states.filter((s) => s?.is_default || s?.default || s?.name === 'default');
+        defaultStates.forEach((s) => pushAll(s?.spectra));
+        detail.states.forEach((s) => pushAll(s?.spectra));
+      }
+      return collected;
+    }
+
+    function normalizeTypeToken(spectrum) {
+      return String(
+        spectrum?.spectrum_type ||
+        spectrum?.type ||
+        spectrum?.subtype ||
+        spectrum?.category ||
+        spectrum?.name ||
+        ''
+      ).toLowerCase();
+    }
+
+    function matchSpectrumType(token, aliases) {
+      return aliases.some((alias) => token.includes(alias));
+    }
+
+    function extractSpectra(detail, options = {}) {
+      const preferTwoPhoton = Boolean(options.preferTwoPhoton);
+      const allSpectra = collectSpectraContainers(detail);
+      const findByAliases = (aliases) => allSpectra.find((s) => matchSpectrumType(normalizeTypeToken(s), aliases));
+
+      const aliases2p = ['2pe', '2p', 'two-photon', 'twophoton', 'two photon'];
+      const aliasesEx = ['excitation', 'ex'];
+      const aliasesEm = ['emission', 'em'];
+
+      const twoPhotonEx = findByAliases(aliases2p);
+      const onePhotonEx = findByAliases(aliasesEx);
+      const emission = findByAliases(aliasesEm);
+
+      const selectedEx = preferTwoPhoton && twoPhotonEx ? twoPhotonEx : onePhotonEx;
+      const exPoints = normalizePoints(selectedEx?.data || selectedEx?.values || selectedEx?.points || selectedEx?.spectrum || []);
+      const emPoints = normalizePoints(emission?.data || emission?.values || emission?.points || emission?.spectrum || []);
+
+      return {
+        ex: exPoints,
+        em: emPoints,
+        exMode: (preferTwoPhoton && twoPhotonEx) ? '2p' : '1p'
       };
-      return { ex: getPts('ex'), em: getPts('em') };
     }
 
     function colorHex(wl) {
