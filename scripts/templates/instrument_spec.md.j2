@@ -324,38 +324,43 @@
 {% endif %}
 
 
-### 🎛️ Light Path Mechanisms
+### 🎛️ Optical Path & Filters
 
-{% set mechanism_groups = ['excitation_mechanisms', 'dichroic_mechanisms', 'emission_mechanisms'] %}
+{% set dto_stages = lightpath_dto.stages if lightpath_dto and lightpath_dto.stages else {} %}
 {% set light_path_ns = namespace(has_light_path=false) %}
 
-{% for group_name in mechanism_groups %}
-{% set mechanisms = light_path[group_name] if light_path and group_name in light_path and light_path[group_name] else [] %}
+{% for stage_key, mechanisms in dto_stages.items() %}
 {% if mechanisms %}
 {% set light_path_ns.has_light_path = true %}
-#### **{{ group_name | replace('_', ' ') | title }}**
+#### {{ stage_key | title }} Stage
 
-{% for mechanism in mechanisms %}
-- **{{ mechanism.name or 'Unnamed mechanism' }}** — *{{ mechanism.type or 'unknown' }}*
-  {% if mechanism.tunable %}<br>✨ *Continuous/Tunable range mechanism*{% endif %}
-  {% if mechanism.slots and mechanism.slots > 0 %}
-  {% set positions = mechanism.positions if mechanism.positions else {} %}
-  {% for slot in range(1, mechanism.slots + 1) %}
-  {% set slot_component = positions[slot] if slot in positions else (positions[slot | string] if (slot | string) in positions else none) %}
-  {% if slot_component and slot_component.type != 'empty' %}
-  <br>&nbsp;&nbsp;&nbsp;&nbsp;- Slot {{ slot }}: {{ render_optical_component(slot_component) }}
-  {% else %}
-  <br>&nbsp;&nbsp;&nbsp;&nbsp;- <span class="aic-muted"><em>Slot {{ slot }}: Empty</em></span>
-  {% endif %}
-  {% endfor %}
-  {% endif %}
-{% endfor %}
-
+<table class="md-typeset__table">
+  <thead>
+    <tr>
+      <th>Mechanism</th>
+      <th>Slot</th>
+      <th>Component</th>
+      <th>Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for mech in mechanisms %}
+      {% for pos in mech.positions %}
+        <tr>
+          <td>{{ mech.name }}</td>
+          <td>{{ pos.slot }}</td>
+          <td><strong>{{ pos.label }}</strong></td>
+          <td>{{ pos.details or '—' }}</td>
+        </tr>
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
 {% endif %}
 {% endfor %}
 
 {% if not light_path_ns.has_light_path %}
-> *No light path mechanisms recorded.*
+> *No optical path mechanisms recorded.*
 {% endif %}
 
 

@@ -1274,9 +1274,15 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         instrument_dir = docs_root / "instruments" / instrument_id
         instrument_dir.mkdir(parents=True, exist_ok=True)
 
+        light_path_data = inst.get("canonical", {}).get("hardware", {})
+        lightpath_dto = generate_virtual_microscope_payload({"hardware": light_path_data})
+        if not isinstance(lightpath_dto, dict):
+            lightpath_dto = {}
+
         # Render Overview
         overview_md = tpl_spec.render(
             instrument=inst,
+            lightpath_dto=lightpath_dto,
             charts_json=charts_json,
             latest_metrics=latest_metrics,
             metric_names=METRIC_NAMES,
@@ -1284,11 +1290,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
         if not is_retired_instrument:
-            light_path_data = inst.get("canonical", {}).get("hardware", {})
-            vm_payload = generate_virtual_microscope_payload({"hardware": light_path_data})
-            if isinstance(vm_payload, dict):
-                vm_payload["display_name"] = inst.get("display_name")
-                global_vm_payloads[instrument_id] = vm_payload
+            lightpath_dto["display_name"] = inst.get("display_name")
+            global_vm_payloads[instrument_id] = lightpath_dto
 
 # Format events for the history timeline
         history_events_qc = []
