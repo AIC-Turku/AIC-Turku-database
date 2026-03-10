@@ -19,7 +19,7 @@ This includes:
 For AIC Turku deployments, keep `facility.yaml` as the canonical location for names, links, and acknowledgements. If this repository is reused for another facility, update `facility.yaml` and run:
 
 ```bash
-python scripts/dashboard_builder.py --strict
+python -m scripts.dashboard_builder --strict
 ```
 
 ---
@@ -92,7 +92,7 @@ python scripts/generate_templates.py
 pip install pyyaml jinja2 -r requirements-docs.txt
 
 # 2. Validate + build
-python scripts/dashboard_builder.py --strict
+python -m scripts.dashboard_builder --strict
 
 # 3. Serve locally
 mkdocs serve
