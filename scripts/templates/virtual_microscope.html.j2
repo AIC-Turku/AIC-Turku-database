@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ instrument.id if instrument is defined and instrument.id is defined else 'Virtual Microscope' }} - Virtual Microscope &amp; Spectra Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --danger: #dc2626;
+      --shadow: 0 16px 32px -20px rgba(15, 23, 42, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top right, #eef4ff 0%, var(--bg) 35%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(1400px, 96vw);
+      margin: 24px auto;
+      display: grid;
+      grid-template-columns: minmax(300px, 380px) 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .controls {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .mechanism-group {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--surface-2);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    select,
+    input,
+    button {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font: inherit;
+    }
+
+    select:focus,
+    input:focus {
+      outline: none;
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .btn {
+      border: none;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 140ms ease, box-shadow 140ms ease;
+      box-shadow: 0 8px 20px -14px rgba(37, 99, 235, 0.9);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px -16px rgba(37, 99, 235, 0.9);
+    }
+
+    .search-results,
+    .selected-dyes {
+      list-style: none;
+      margin: 8px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .search-item,
+    .dye-chip {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .search-item button,
+    .dye-chip button {
+      width: auto;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .dye-chip button {
+      border-color: #fecaca;
+      color: var(--danger);
+    }
+
+    .status {
+      margin-top: 8px;
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chart-panel {
+      padding: 14px;
+      min-height: calc(100vh - 60px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-wrap {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      min-height: 520px;
+    }
+
+    #spectraChart {
+      width: 100%;
+      height: 100%;
+    }
+
+    @media (max-width: 1024px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+
+      .controls,
+      .chart-panel {
+        max-height: none;
+        min-height: auto;
+      }
+
+      .chart-wrap {
+        min-height: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <aside class="panel controls">
+      <section>
+        <h2 class="section-title">Hardware Configuration</h2>
+        <div id="controlContainer"></div>
+      </section>
+
+      <section>
+        <h2 class="section-title">Fluorophore Search</h2>
+        <div class="field">
+          <label for="fluorophoreQuery">Protein / dye name</label>
+          <input id="fluorophoreQuery" type="text" placeholder="e.g. GFP, mCherry, Alexa" />
+        </div>
+        <button id="searchBtn" class="btn" type="button">Search FPbase</button>
+        <p id="searchStatus" class="status"></p>
+        <ul id="searchResults" class="search-results"></ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">Added Fluorophores</h2>
+        <ul id="selectedDyes" class="selected-dyes"></ul>
+      </section>
+    </aside>
+
+    <section class="panel chart-panel">
+      <div class="chart-wrap">
+        <canvas id="spectraChart"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script id="lightpath-data" type="application/json">
+{% if lightpath_data_json is defined %}
+{{ lightpath_data_json | safe }}
+{% elif lightpath_data is defined %}
+{{ lightpath_data | tojson }}
+{% else %}
+{}
+{% endif %}
+  </script>
+
+  <script>
+    // ------------------------------
+    // State and utility declarations
+    // ------------------------------
+
+    const MIN_WL = 300;
+    const MAX_WL = 900;
+
+    const state = {
+      lightpathData: {},
+      chart: null,
+      hardwareDatasets: [],
+      dyeDatasets: [],
+      controls: [],
+      addedDyes: new Map(),
+    };
+
+    const chartCanvas = document.getElementById('spectraChart');
+    const controlContainer = document.getElementById('controlContainer');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchInput = document.getElementById('fluorophoreQuery');
+    const searchResults = document.getElementById('searchResults');
+    const searchStatus = document.getElementById('searchStatus');
+    const selectedDyes = document.getElementById('selectedDyes');
+
+    function safeJsonParse(rawText) {
+      try {
+        return JSON.parse(rawText || '{}');
+      } catch (_err) {
+        return {};
+      }
+    }
+
+    function wavelengthToColorHex(wavelengthNm) {
+      const wl = Number(wavelengthNm);
+      if (!Number.isFinite(wl)) return '#64748b';
+
+      let r = 0;
+      let g = 0;
+      let b = 0;
+
+      if (wl >= 380 && wl < 440) {
+        r = -(wl - 440) / (440 - 380);
+        b = 1;
+      } else if (wl >= 440 && wl < 490) {
+        g = (wl - 440) / (490 - 440);
+        b = 1;
+      } else if (wl >= 490 && wl < 510) {
+        g = 1;
+        b = -(wl - 510) / (510 - 490);
+      } else if (wl >= 510 && wl < 580) {
+        r = (wl - 510) / (580 - 510);
+        g = 1;
+      } else if (wl >= 580 && wl < 645) {
+        r = 1;
+        g = -(wl - 645) / (645 - 580);
+      } else if (wl >= 645 && wl <= 780) {
+        r = 1;
+      }
+
+      let factor = 1;
+      if (wl > 700) {
+        factor = 0.3 + 0.7 * (780 - wl) / (780 - 700);
+      } else if (wl < 420) {
+        factor = 0.3 + 0.7 * (wl - 380) / (420 - 380);
+      }
+
+      const toHex = (v) => {
+        const value = Math.max(0, Math.min(255, Math.round(v * factor * 255)));
+        return value.toString(16).padStart(2, '0');
+      };
+
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function hexToRgba(hex, alpha) {
+      const normalized = hex.replace('#', '');
+      const int = parseInt(normalized, 16);
+      const r = (int >> 16) & 255;
+      const g = (int >> 8) & 255;
+      const b = int & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function pointsFromSeries(series) {
+      if (!Array.isArray(series)) return [];
+      const points = series
+        .map((item) => {
+          if (!item) return null;
+          if (Array.isArray(item) && item.length >= 2) {
+            return { x: Number(item[0]), y: Number(item[1]) * (Number(item[1]) <= 1 ? 100 : 1) };
+          }
+          if (typeof item === 'object') {
+            const x = Number(item.x ?? item.wavelength ?? item.wl ?? item.lambda);
+            const rawY = Number(item.y ?? item.value ?? item.intensity ?? item.percent);
+            if (!Number.isFinite(x) || !Number.isFinite(rawY)) return null;
+            return { x, y: rawY <= 1 ? rawY * 100 : rawY };
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.x - b.x);
+      return points;
+    }
+
+    function findArrayByKeyword(root, keyword) {
+      if (!root || typeof root !== 'object') return null;
+      const stack = [root];
+      const lowerKeyword = keyword.toLowerCase();
+
+      while (stack.length) {
+        const node = stack.pop();
+        if (!node || typeof node !== 'object') continue;
+
+        for (const [key, value] of Object.entries(node)) {
+          const normalizedKey = String(key).toLowerCase();
+          if (Array.isArray(value) && normalizedKey.includes(lowerKeyword)) {
+            return value;
+          }
+          if (value && typeof value === 'object') {
+            stack.push(value);
+          }
+        }
+      }
+      return null;
+    }
+
+    function normalizeMechanisms(rawData) {
+      const stages = rawData?.stages || {};
+      const excitation = stages.excitation || findArrayByKeyword(rawData, 'excitation') || [];
+      const dichroic = stages.dichroic || findArrayByKeyword(rawData, 'dichroic') || [];
+      const emission = stages.emission || findArrayByKeyword(rawData, 'emission') || [];
+      const lightSources = rawData?.light_sources || findArrayByKeyword(rawData, 'light_source') || [];
+
+      return {
+        lightSources: Array.isArray(lightSources) ? lightSources : [],
+        excitation: Array.isArray(excitation) ? excitation : [],
+        dichroic: Array.isArray(dichroic) ? dichroic : [],
+        emission: Array.isArray(emission) ? emission : [],
+      };
+    }
+
+    function getMechanismPositions(mechanism) {
+      if (!mechanism) return [];
+      if (Array.isArray(mechanism.positions)) return mechanism.positions;
+      if (mechanism.positions && typeof mechanism.positions === 'object') {
+        return Object.entries(mechanism.positions).map(([slot, value]) => ({
+          slot: Number(slot),
+          ...(typeof value === 'object' ? value : { label: String(value || slot) }),
+        }));
+      }
+      return [];
+    }
+
+    function createSelectControl({ stage, mechanism, index }) {
+      const block = document.createElement('div');
+      block.className = 'field';
+
+      const id = `${stage}-select-${index}`;
+      const label = document.createElement('label');
+      label.htmlFor = id;
+      label.textContent = mechanism.name || `${stage} ${index + 1}`;
+
+      const select = document.createElement('select');
+      select.id = id;
+      const positions = getMechanismPositions(mechanism);
+
+      positions.forEach((position, pIdx) => {
+        const option = document.createElement('option');
+        const value = String(position.slot ?? pIdx);
+        option.value = value;
+        option.textContent = position.label || position.name || `${mechanism.name || stage} Slot ${value}`;
+        option.dataset.position = JSON.stringify(position);
+        select.appendChild(option);
+      });
+
+      select.addEventListener('change', () => drawHardware());
+
+      block.appendChild(label);
+      block.appendChild(select);
+
+      state.controls.push({ stage, mechanism, select });
+      return block;
+    }
+
+    function renderControls() {
+      const normalized = normalizeMechanisms(state.lightpathData);
+      controlContainer.innerHTML = '';
+      state.controls = [];
+
+      const groups = [
+        { key: 'lightSources', label: 'Light Sources / Lasers' },
+        { key: 'excitation', label: 'Excitation Mechanisms' },
+        { key: 'dichroic', label: 'Dichroic Mechanisms' },
+        { key: 'emission', label: 'Emission Mechanisms' },
+      ];
+
+      groups.forEach((group) => {
+        const mechanisms = normalized[group.key];
+        if (!mechanisms.length) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mechanism-group';
+
+        const title = document.createElement('h3');
+        title.className = 'section-title';
+        title.style.margin = '0 0 10px';
+        title.textContent = group.label;
+        wrapper.appendChild(title);
+
+        mechanisms.forEach((mechanism, index) => {
+          wrapper.appendChild(createSelectControl({ stage: group.key, mechanism, index }));
+        });
+
+        controlContainer.appendChild(wrapper);
+      });
+    }
+
+    function selectedPositions() {
+      return state.controls.map(({ stage, mechanism, select }) => {
+        const selectedOption = select.options[select.selectedIndex];
+        let position = null;
+        try {
+          position = JSON.parse(selectedOption.dataset.position || '{}');
+        } catch (_err) {
+          position = {};
+        }
+        return { stage, mechanism, position };
+      });
+    }
+
+    // Build square-wave points for bandpass and notch filters.
+    function createBandDataset(label, center, width, color, type = 'bandpass') {
+      const low = center - width / 2;
+      const high = center + width / 2;
+      const points = [
+        { x: MIN_WL, y: 0 },
+        { x: low, y: 0 },
+        { x: low, y: 100 },
+        { x: high, y: 100 },
+        { x: high, y: 0 },
+        { x: MAX_WL, y: 0 },
+      ];
+
+      if (type === 'notch') {
+        points[2].y = 0;
+        points[3].y = 0;
+        points[0].y = 100;
+        points[1].y = 100;
+        points[4].y = 100;
+        points[5].y = 100;
+      }
+
+      return {
+        label,
+        data: points,
+        parsing: false,
+        stepped: true,
+        fill: true,
+        backgroundColor: hexToRgba(color, 0.18),
+        borderColor: color,
+        borderWidth: 1.8,
+        pointRadius: 0,
+        tension: 0,
+      };
+    }
+
+    // Build step-function points for longpass/shortpass/dichroics.
+    function createStepDataset(label, cutoff, mode, color) {
+      const before = mode === 'longpass' ? 0 : 100;
+      const after = mode === 'longpass' ? 100 : 0;
+      return {
+        label,
+        data: [
+          { x: MIN_WL, y: before },
+          { x: cutoff, y: before },
+          { x: cutoff, y: after },
+          { x: MAX_WL, y: after },
+        ],
+        parsing: false,
+        stepped: true,
+        borderDash: [6, 5],
+        borderColor: color,
+        backgroundColor: hexToRgba(color, 0.08),
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+      };
+    }
+
+    // Build a 2nm-wide laser spike (triangle).
+    function createLaserSpikeDataset(label, wavelength, color) {
+      const wl = Number(wavelength);
+      return {
+        label,
+        data: [
+          { x: wl - 1, y: 0 },
+          { x: wl, y: 100 },
+          { x: wl + 1, y: 0 },
+        ],
+        parsing: false,
+        borderColor: color,
+        backgroundColor: color,
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+      };
+    }
+
+    function hardwareDatasetFromPosition(stage, mechanismName, position) {
+      const componentType = String(position.type || position.component_type || '').toLowerCase();
+      const center = Number(position.center_nm);
+      const width = Number(position.width_nm);
+      const cutOn = Number(position.cut_on_nm);
+      const cutOff = Number(position.cut_off_nm);
+      const cutoffs = Array.isArray(position.cutoffs_nm) ? position.cutoffs_nm.map(Number).filter(Number.isFinite) : [];
+      const wavelength = Number(position.wavelength_nm || position.wavelength || position.line_nm || center);
+
+      const name = position.label || position.name || `${mechanismName} (${componentType || 'component'})`;
+      const baseColor = wavelengthToColorHex(
+        Number.isFinite(center) ? center :
+        Number.isFinite(cutOn) ? cutOn :
+        Number.isFinite(cutOff) ? cutOff :
+        Number.isFinite(wavelength) ? wavelength :
+        520
+      );
+
+      if ((componentType === 'bandpass' || componentType === 'notch') && Number.isFinite(center) && Number.isFinite(width)) {
+        return [createBandDataset(name, center, width, baseColor, componentType)];
+      }
+      if (componentType === 'longpass' && Number.isFinite(cutOn)) {
+        return [createStepDataset(name, cutOn, 'longpass', baseColor)];
+      }
+      if (componentType === 'shortpass' && Number.isFinite(cutOff)) {
+        return [createStepDataset(name, cutOff, 'shortpass', baseColor)];
+      }
+      if ((componentType.includes('dichroic') || componentType === 'polychroic') && cutoffs.length) {
+        return cutoffs.map((cutoff, index) => createStepDataset(`${name} • Edge ${index + 1}`, cutoff, 'longpass', baseColor));
+      }
+
+      const stageLooksLikeLaser = stage === 'lightSources' || mechanismName.toLowerCase().includes('laser') || componentType === 'laser';
+      if (stageLooksLikeLaser && Number.isFinite(wavelength)) {
+        return [createLaserSpikeDataset(name, wavelength, baseColor)];
+      }
+
+      return [];
+    }
+
+    function drawHardware() {
+      const generated = [];
+      selectedPositions().forEach(({ stage, mechanism, position }) => {
+        generated.push(...hardwareDatasetFromPosition(stage, mechanism.name || stage, position || {}));
+      });
+
+      state.hardwareDatasets = generated;
+      state.chart.data.datasets = [...state.hardwareDatasets, ...state.dyeDatasets];
+      state.chart.update();
+    }
+
+    function initChart() {
+      state.chart = new Chart(chartCanvas, {
+        type: 'line',
+        data: { datasets: [] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 260 },
+          interaction: { mode: 'nearest', intersect: false },
+          plugins: {
+            legend: {
+              labels: {
+                usePointStyle: true,
+                boxWidth: 10,
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  const x = context.parsed.x?.toFixed?.(1) ?? context.parsed.x;
+                  const y = context.parsed.y?.toFixed?.(1) ?? context.parsed.y;
+                  return `${context.dataset.label}: ${x} nm, ${y}%`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              title: { display: true, text: 'Wavelength (nm)' },
+              min: MIN_WL,
+              max: MAX_WL,
+              ticks: { stepSize: 50 },
+              grid: { color: 'rgba(100, 116, 139, 0.18)' },
+            },
+            y: {
+              title: { display: true, text: 'Transmission / Intensity (%)' },
+              min: 0,
+              max: 100,
+              ticks: { stepSize: 10 },
+              grid: { color: 'rgba(100, 116, 139, 0.18)' },
+            },
+          },
+        },
+      });
+    }
+
+    async function searchFPbase(query) {
+      const trimmed = String(query || '').trim();
+      if (!trimmed) {
+        searchStatus.textContent = 'Type a fluorophore name first.';
+        return;
+      }
+
+      searchStatus.textContent = 'Searching FPbase...';
+      searchResults.innerHTML = '';
+
+      const url = `https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(trimmed)}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`FPbase search failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      const results = Array.isArray(data.results) ? data.results : [];
+      searchStatus.textContent = results.length ? `Found ${results.length} results.` : 'No matches found.';
+
+      results.forEach((protein) => {
+        const row = document.createElement('li');
+        row.className = 'search-item';
+
+        const label = document.createElement('span');
+        label.textContent = protein.name || protein.slug || `Protein ${protein.id}`;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = 'Add';
+        btn.addEventListener('click', () => addFluorophore(protein));
+
+        row.appendChild(label);
+        row.appendChild(btn);
+        searchResults.appendChild(row);
+      });
+    }
+
+    async function loadProteinDetail(protein) {
+      const slugOrId = protein.slug || protein.id;
+      const detailUrl = `https://www.fpbase.org/api/proteins/${encodeURIComponent(slugOrId)}/`;
+      const detailResp = await fetch(detailUrl);
+      if (!detailResp.ok) {
+        throw new Error(`FPbase detail failed (${detailResp.status})`);
+      }
+      return detailResp.json();
+    }
+
+    function extractSpectra(proteinDetail) {
+      const spectraContainer =
+        proteinDetail?.spectra ||
+        proteinDetail?.default_state?.spectra ||
+        proteinDetail?.states?.[0]?.spectra ||
+        [];
+
+      const spectra = Array.isArray(spectraContainer) ? spectraContainer : [];
+      const excitation = spectra.find((s) => String(s.category || s.subtype || '').toLowerCase().includes('exc'));
+      const emission = spectra.find((s) => String(s.category || s.subtype || '').toLowerCase().includes('em'));
+
+      const pickSeries = (entry) => entry?.data || entry?.values || entry?.points || [];
+      return {
+        excitation: pointsFromSeries(pickSeries(excitation)),
+        emission: pointsFromSeries(pickSeries(emission)),
+      };
+    }
+
+    function upsertSelectedDyeList() {
+      selectedDyes.innerHTML = '';
+      for (const [key, dye] of state.addedDyes.entries()) {
+        const item = document.createElement('li');
+        item.className = 'dye-chip';
+
+        const text = document.createElement('span');
+        text.textContent = dye.name;
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', `Remove ${dye.name}`);
+        remove.addEventListener('click', () => removeDye(key));
+
+        item.appendChild(text);
+        item.appendChild(remove);
+        selectedDyes.appendChild(item);
+      }
+    }
+
+    function removeDye(key) {
+      state.addedDyes.delete(key);
+      state.dyeDatasets = state.dyeDatasets.filter((dataset) => dataset.dyeKey !== key);
+      upsertSelectedDyeList();
+      state.chart.data.datasets = [...state.hardwareDatasets, ...state.dyeDatasets];
+      state.chart.update();
+    }
+
+    async function addFluorophore(protein) {
+      const key = String(protein.slug || protein.id);
+      if (state.addedDyes.has(key)) {
+        searchStatus.textContent = `${protein.name} is already added.`;
+        return;
+      }
+
+      searchStatus.textContent = `Loading spectra for ${protein.name}...`;
+      const detail = await loadProteinDetail(protein);
+      const spectra = extractSpectra(detail);
+
+      if (!spectra.excitation.length && !spectra.emission.length) {
+        searchStatus.textContent = `No spectra found for ${protein.name}.`;
+        return;
+      }
+
+      const peakEmission =
+        spectra.emission.reduce((best, point) => (point.y > best.y ? point : best), { x: 520, y: -Infinity }).x;
+      const dyeColor = wavelengthToColorHex(peakEmission);
+      const dyeName = protein.name || protein.slug || `Protein ${protein.id}`;
+
+      if (spectra.excitation.length) {
+        state.dyeDatasets.push({
+          label: `${dyeName} Excitation`,
+          data: spectra.excitation,
+          parsing: false,
+          borderColor: dyeColor,
+          borderWidth: 2,
+          borderDash: [7, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.2,
+          dyeKey: key,
+        });
+      }
+
+      if (spectra.emission.length) {
+        state.dyeDatasets.push({
+          label: `${dyeName} Emission`,
+          data: spectra.emission,
+          parsing: false,
+          borderColor: dyeColor,
+          backgroundColor: hexToRgba(dyeColor, 0.22),
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.2,
+          dyeKey: key,
+        });
+      }
+
+      state.addedDyes.set(key, { name: dyeName });
+      upsertSelectedDyeList();
+      state.chart.data.datasets = [...state.hardwareDatasets, ...state.dyeDatasets];
+      state.chart.update();
+      searchStatus.textContent = `${dyeName} added.`;
+    }
+
+    async function handleSearchClick() {
+      try {
+        await searchFPbase(searchInput.value);
+      } catch (err) {
+        searchStatus.textContent = err instanceof Error ? err.message : 'FPbase search failed.';
+      }
+    }
+
+    function bootstrap() {
+      const jsonScript = document.getElementById('lightpath-data');
+      state.lightpathData = safeJsonParse(jsonScript?.textContent || '{}');
+
+      initChart();
+      renderControls();
+      drawHardware();
+
+      searchBtn.addEventListener('click', handleSearchClick);
+      searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          handleSearchClick();
+        }
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
