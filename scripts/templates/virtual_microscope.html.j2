@@ -274,6 +274,14 @@
     const searchStatus = document.getElementById('searchStatus');
     const selectedDyes = document.getElementById('selectedDyes');
 
+    function debounce(fn, waitMs = 300) {
+      let timeoutId;
+      return (...args) => {
+        window.clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => fn(...args), waitMs);
+      };
+    }
+
     function safeJsonParse(rawText) {
       try {
         return JSON.parse(rawText || '{}');
@@ -558,6 +566,26 @@
       };
     }
 
+    function createTunableDataset(label) {
+      return {
+        label,
+        data: [
+          { x: 400, y: 0 },
+          { x: 400, y: 100 },
+          { x: 800, y: 100 },
+          { x: 800, y: 0 },
+        ],
+        parsing: false,
+        stepped: true,
+        fill: true,
+        backgroundColor: 'rgba(226, 232, 240, 0.4)',
+        borderColor: 'rgba(148, 163, 184, 0.8)',
+        borderWidth: 1.6,
+        pointRadius: 0,
+        tension: 0,
+      };
+    }
+
     function hardwareDatasetFromPosition(stage, mechanismName, position) {
       const componentType = String(position.type || position.component_type || '').toLowerCase();
       const center = Number(position.center_nm);
@@ -565,7 +593,8 @@
       const cutOn = Number(position.cut_on_nm);
       const cutOff = Number(position.cut_off_nm);
       const cutoffs = Array.isArray(position.cutoffs_nm) ? position.cutoffs_nm.map(Number).filter(Number.isFinite) : [];
-      const wavelength = Number(position.wavelength_nm || position.wavelength || position.line_nm || center);
+      const rawWavelength = position.wavelength_nm ?? position.wavelength ?? position.line_nm ?? center;
+      const wavelength = Number(rawWavelength);
 
       const name = position.label || position.name || `${mechanismName} (${componentType || 'component'})`;
       const baseColor = wavelengthToColorHex(
@@ -590,6 +619,10 @@
       }
 
       const stageLooksLikeLaser = stage === 'lightSources' || mechanismName.toLowerCase().includes('laser') || componentType === 'laser';
+      const tunableLaser = String(rawWavelength || '').toLowerCase().includes('tunable') || Number.isNaN(wavelength);
+      if (stageLooksLikeLaser && tunableLaser) {
+        return [createTunableDataset(`${name} (Tunable)`)];
+      }
       if (stageLooksLikeLaser && Number.isFinite(wavelength)) {
         return [createLaserSpikeDataset(name, wavelength, baseColor)];
       }
@@ -659,6 +692,11 @@
       const trimmed = String(query || '').trim();
       if (!trimmed) {
         searchStatus.textContent = 'Type a fluorophore name first.';
+        return;
+      }
+      if (trimmed.length < 3) {
+        searchStatus.textContent = 'Type at least 3 characters to search.';
+        searchResults.innerHTML = '';
         return;
       }
 
@@ -816,6 +854,21 @@
       }
     }
 
+    const debouncedSearchInput = debounce(async (query) => {
+      const trimmed = String(query || '').trim();
+      if (trimmed.length < 3) {
+        searchStatus.textContent = trimmed.length ? 'Type at least 3 characters to search.' : '';
+        searchResults.innerHTML = '';
+        return;
+      }
+
+      try {
+        await searchFPbase(trimmed);
+      } catch (err) {
+        searchStatus.textContent = err instanceof Error ? err.message : 'FPbase search failed.';
+      }
+    }, 300);
+
     function bootstrap() {
       const jsonScript = document.getElementById('lightpath-data');
       state.lightpathData = safeJsonParse(jsonScript?.textContent || '{}');
@@ -825,6 +878,9 @@
       drawHardware();
 
       searchBtn.addEventListener('click', handleSearchClick);
+      searchInput.addEventListener('input', (event) => {
+        debouncedSearchInput(event.target.value);
+      });
       searchInput.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
