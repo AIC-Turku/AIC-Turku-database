@@ -16,10 +16,9 @@ hide:
     --danger: #dc2626;
 
     width: 100%;
-    display: grid;
-    grid-template-columns: 240px 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
-    align-items: start;
     margin-top: 16px;
   }
   .vm-panel {
@@ -83,20 +82,18 @@ hide:
   .fp-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); z-index: 100; max-height: 200px; overflow-y: auto; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none;}
   .fp-dropdown li { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
   .fp-dropdown li:hover { background: var(--md-code-bg-color); }
-
-  @media (max-width: 1024px) { .vm-page { grid-template-columns: 1fr; } }
 </style>
 
 <div class="vm-page">
-  <aside class="vm-sidebar">
-    <div class="vm-panel">
-      <h2 class="vm-section-title">Microscope</h2>
-      <div class="vm-field">
-        <select id="microscopeSelector"></select>
-      </div>
-      <p style="font-size:12px; color:var(--muted); margin-top:8px;">Select a system to load its physical light path configuration.</p>
+  <header class="vm-panel" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+    <div>
+      <h2 class="vm-section-title" style="margin:0;">Microscope System</h2>
+      <p style="font-size:12px; color:var(--muted); margin:4px 0 0 0;">Select a system to load its physical light path configuration.</p>
     </div>
-  </aside>
+    <div class="vm-field" style="margin:0; flex-grow:1; max-width:400px;">
+      <select id="microscopeSelector" style="font-size:14px; padding:10px; font-weight:bold;"></select>
+    </div>
+  </header>
 
   <main class="vm-main">
     
@@ -293,7 +290,7 @@ hide:
       DOM.graph.appendChild(sampleNode); addArrow();
 
       // 5. Emission
-      if (!filteredCubes.length && mechanismsForRoute(inst.emission, activeRoute).length) {
+      if (mechanismsForRoute(inst.emission, activeRoute).length) {
         const node = createNode('5. Emission');
         mechanismsForRoute(inst.emission, activeRoute).forEach((m, i) => node.appendChild(createControl('emission', m, i)));
         DOM.graph.appendChild(node); addArrow();
