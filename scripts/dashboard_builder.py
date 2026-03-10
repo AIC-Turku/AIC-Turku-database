@@ -914,6 +914,7 @@ def build_nav(instruments: list[dict[str, Any]], retired_instruments: list[dict[
         {"System Health": "status.md"},
         {"Microscopes": microscopes},
         {"Plan Your Experiments": "plan_experiments.md"},
+        {"Virtual Microscope": "virtual_microscope.html"},
         {"Methods Generator": "methods_generator.md"},
         {"Vocabulary Dictionary": "vocabulary_dictionary.md"},
         {"Retired Instruments": [{"Overview": "retired/index.md"}, *retired]},
@@ -971,6 +972,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     load_errors: list[YamlLoadError] = []
     instruments = load_instruments("instruments", load_errors=load_errors)
     retired_instruments = load_instruments("instruments", load_errors=load_errors, include_retired=True)
+
+    global_vm_payloads: dict[str, dict[str, Any]] = {}
 
     for inst in [*instruments, *retired_instruments]:
         inst["modalities_display"] = [
@@ -1280,14 +1283,12 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
-        # Render Virtual Microscope
-        light_path_data = inst.get("canonical", {}).get("hardware", {})
-        vm_payload = generate_virtual_microscope_payload({"hardware": light_path_data})
-        vm_html = tpl_vm.render(
-            instrument=inst,
-            lightpath_data_json=json.dumps(vm_payload),
-        )
-        (instrument_dir / "virtual_microscope.html").write_text(vm_html, encoding="utf-8")
+        if not is_retired_instrument:
+            light_path_data = inst.get("canonical", {}).get("hardware", {})
+            vm_payload = generate_virtual_microscope_payload({"hardware": light_path_data})
+            if isinstance(vm_payload, dict):
+                vm_payload["display_name"] = inst.get("display_name")
+                global_vm_payloads[instrument_id] = vm_payload
 
 # Format events for the history timeline
         history_events_qc = []
@@ -1354,6 +1355,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             event_dir = docs_root / "events" / event_instrument
             event_dir.mkdir(parents=True, exist_ok=True)
             (event_dir / f"{event_id}.md").write_text(event_md, encoding="utf-8")
+
+    vm_html = tpl_vm.render(lightpath_data_json=json.dumps(global_vm_payloads))
+    (docs_root / "virtual_microscope.html").write_text(vm_html, encoding="utf-8")
 
     # Fleet + status pages
     index_md = tpl_index.render(instruments=instruments, all_modalities=all_modalities, counts=fleet_counts)
