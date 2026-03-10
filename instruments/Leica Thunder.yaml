@@ -39,80 +39,6 @@ hardware:
     - kind: led
       manufacturer: Leica
       model: LED 8
-      wavelength_nm: 395/25
-      power: 200 mW
-      notes: 390 in software
-      url: ''
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
-      wavelength_nm: 438/29
-      power: 200 mW
-      notes: 440 in software
-      url: ''
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
-      wavelength_nm: 475/28
-      power: 200 mW
-      notes: ''
-      url: ''
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
-      wavelength_nm: 511/16
-      power: 200 mW
-      notes: 510 in software
-      url: ''
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
-      wavelength_nm: 555/28
-      power: 200 mW
-      notes: ''
-      url: ''
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
-      wavelength_nm: 575/25
-      power: 200 mW
-      notes: ''
-      url: ''
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
-      wavelength_nm: 635/22
-      power: 200 mW
-      notes: ''
-      url: ''
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
-      wavelength_nm: 730/40
-      power: 200 mW
-      notes: 747 in software
-      url: ''
-
-  detectors:
-    - kind: scmos
-      manufacturer: Leica
-      model: K8
-      pixel_pitch_um: 6.5
-      sensor_format_px: "2048 x 2048"
-      notes: monochrome; 18.8 mm sensor, 6.5 um pixel, QE 95% peak, dark current 1.5 e-/pix/s, read noise (12-bit) 1.0 e- median / 1.1 e- RMS
-      url: https://www.leica-microsystems.com/products/microscope-cameras/p/k8/
-    - kind: cmos
-      manufacturer: Leica
-      model: K3C
-      pixel_pitch_um: null # Flag: Required field for CMOS detectors. Please provide physical pixel size.
-      notes: color CMOS; excellent color reproduction; 12-bit/channel RGB quantifiable images
-      url: https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/
-
-hardware:
-  light_sources:
-    - kind: led
-      manufacturer: Leica
-      model: LED 8
       path: epi
       wavelength_nm: 395
       width_nm: 25
@@ -182,6 +108,7 @@ hardware:
       power: 200 mW
       notes: "747 in software"
       url: ''
+  
   detectors:
     - kind: scmos
       manufacturer: Leica
