@@ -11,6 +11,7 @@ DISCRETE_MECHANISM_TYPES = {"filter_wheel", "slider", "turret"}
 CONTINUOUS_MECHANISM_TYPES = {"tunable", "fixed", "spectral_slider"}
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
 NO_WAVELENGTH_TYPES = {"empty", "mirror", "block"}
+CUBE_LINK_KEYS = ("excitation_filter", "dichroic", "emission_filter")
 
 
 def _is_positive_number(value: Any) -> bool:
@@ -29,6 +30,24 @@ def _iter_mechanisms(light_path: dict[str, Any], stage_key: str) -> list[dict[st
 def _require_positive_number(component: dict[str, Any], field: str, errors: list[str], context: str) -> None:
     if not _is_positive_number(component.get(field)):
         errors.append(f"{context}: component_type requires positive `{field}`.")
+
+
+def _validate_optional_path(item: dict[str, Any], errors: list[str], context: str) -> None:
+    path = item.get("path")
+    if path is not None and (not isinstance(path, str) or not path.strip()):
+        errors.append(f"{context}: `path` must be a non-empty string when provided.")
+
+
+def _validate_spectral_array(mechanism: dict[str, Any], errors: list[str], context: str) -> None:
+    required_numeric_fields = ("min_nm", "max_nm", "bands")
+    for field in required_numeric_fields:
+        if not _is_positive_number(mechanism.get(field)):
+            errors.append(f"{context}: spectral_array requires positive `{field}`.")
+
+    min_nm = mechanism.get("min_nm")
+    max_nm = mechanism.get("max_nm")
+    if _is_positive_number(min_nm) and _is_positive_number(max_nm) and min_nm >= max_nm:
+        errors.append(f"{context}: spectral_array requires `max_nm` to be greater than `min_nm`.")
 
 
 def _validate_component(component: dict[str, Any], errors: list[str], context: str) -> None:
@@ -59,10 +78,18 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
     if not isinstance(light_path, dict):
         return ["hardware.light_path must be a mapping/object."]
 
-    for stage in ("excitation_mechanisms", "dichroic_mechanisms", "emission_mechanisms"):
+    for src_index, source in enumerate(instrument_dict.get("hardware", {}).get("light_sources", [])):
+        if isinstance(source, dict):
+            _validate_optional_path(source, errors, f"hardware.light_sources[{src_index}]")
+
+    for stage in ("excitation_mechanisms", "dichroic_mechanisms", "emission_mechanisms", "cube_mechanisms"):
         for mech_index, mechanism in enumerate(_iter_mechanisms(light_path, stage)):
             mech_type = mechanism.get("type")
             mech_ctx = f"{stage}[{mech_index}]"
+            _validate_optional_path(mechanism, errors, mech_ctx)
+
+            if mech_type == "spectral_array":
+                _validate_spectral_array(mechanism, errors, mech_ctx)
 
             if mech_type in DISCRETE_MECHANISM_TYPES:
                 slots = mechanism.get("slots")
@@ -91,7 +118,19 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                     errors.append(f"{pos_ctx}: position value must be a mapping/object.")
                     continue
 
-                _validate_component(component, errors, pos_ctx)
+                _validate_optional_path(component, errors, pos_ctx)
+
+                if stage == "cube_mechanisms":
+                    for link_key in CUBE_LINK_KEYS:
+                        linked_component = component.get(link_key)
+                        link_ctx = f"{pos_ctx}.{link_key}"
+                        if not isinstance(linked_component, dict):
+                            errors.append(f"{link_ctx}: missing or invalid linked component mapping/object.")
+                            continue
+                        _validate_optional_path(linked_component, errors, link_ctx)
+                        _validate_component(linked_component, errors, link_ctx)
+                else:
+                    _validate_component(component, errors, pos_ctx)
 
     for split_idx, splitter in enumerate(light_path.get("splitters", [])):
         if not isinstance(splitter, dict):
@@ -173,15 +212,93 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
                     "type": component_type,
                     "label": _build_label(component),
                     "details": _build_details(component),
+                    **({"path": component.get("path")} if isinstance(component.get("path"), str) else {}),
                 }
             )
 
-    return {
+    mechanism_payload = {
         "id": f"{stage_prefix}_mech_{index}",
         "name": mechanism.get("name") or f"{stage_prefix.replace('_', ' ').title()} {index + 1}",
         "type": mechanism.get("type", "unknown"),
         "positions": positions,
     }
+    if isinstance(mechanism.get("path"), str):
+        mechanism_payload["path"] = mechanism["path"]
+
+    if mechanism.get("type") == "spectral_array":
+        mechanism_payload["spectral_array"] = {
+            key: mechanism.get(key)
+            for key in ("min_nm", "max_nm", "bands")
+            if isinstance(mechanism.get(key), (int, float)) and not isinstance(mechanism.get(key), bool)
+        }
+
+    return mechanism_payload
+
+
+def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, Any]:
+    raw_positions = mechanism.get("positions", {})
+    positions: list[dict[str, Any]] = []
+    if isinstance(raw_positions, dict):
+        for slot in sorted(raw_positions):
+            cube_position = raw_positions.get(slot)
+            if not isinstance(slot, int) or isinstance(slot, bool) or not isinstance(cube_position, dict):
+                continue
+
+            linked_components: dict[str, dict[str, Any]] = {}
+            for link_key in CUBE_LINK_KEYS:
+                component = cube_position.get(link_key)
+                if not isinstance(component, dict):
+                    continue
+                component_payload: dict[str, Any] = {
+                    "type": str(component.get("component_type", "unknown")),
+                    "label": _build_label(component),
+                    "details": _build_details(component),
+                }
+                if isinstance(component.get("path"), str):
+                    component_payload["path"] = component["path"]
+                linked_components[link_key] = component_payload
+
+            position_payload: dict[str, Any] = {
+                "slot": slot,
+                "type": "cube",
+                "label": cube_position.get("name") or f"Cube {slot}",
+                "details": _build_details(cube_position),
+                "linked_components": linked_components,
+            }
+            if isinstance(cube_position.get("path"), str):
+                position_payload["path"] = cube_position["path"]
+            positions.append(position_payload)
+
+    mechanism_payload: dict[str, Any] = {
+        "id": f"cube_mech_{index}",
+        "name": mechanism.get("name") or f"Cube {index + 1}",
+        "type": mechanism.get("type", "unknown"),
+        "positions": positions,
+    }
+    if isinstance(mechanism.get("path"), str):
+        mechanism_payload["path"] = mechanism["path"]
+    return mechanism_payload
+
+
+def _route_tags(selection: dict[str, Any]) -> set[str]:
+    tags: set[str] = set()
+    path = selection.get("path")
+    if isinstance(path, str) and path.strip():
+        tags.add(path.strip().lower())
+
+    linked_components = selection.get("linked_components")
+    if isinstance(linked_components, dict):
+        for linked in linked_components.values():
+            if isinstance(linked, dict):
+                linked_path = linked.get("path")
+                if isinstance(linked_path, str) and linked_path.strip():
+                    tags.add(linked_path.strip().lower())
+    return tags
+
+
+def _routes_compatible(route_tags: set[str]) -> bool:
+    constrained = {tag for tag in route_tags if tag not in {"all", "shared"}}
+    return len(constrained) <= 1
 
 
 def calculate_valid_paths(payload: dict) -> list[dict]:
@@ -191,7 +308,7 @@ def calculate_valid_paths(payload: dict) -> list[dict]:
         return []
 
     discrete_choices: list[tuple[str, list[dict[str, Any]]]] = []
-    for stage_name in ("excitation", "dichroic", "emission"):
+    for stage_name in ("excitation", "dichroic", "emission", "cube"):
         mechanisms = stages.get(stage_name, [])
         if not isinstance(mechanisms, list):
             continue
@@ -206,12 +323,35 @@ def calculate_valid_paths(payload: dict) -> list[dict]:
                 if filtered_positions:
                     discrete_choices.append((mechanism_id, filtered_positions))
 
+    light_source_groups = payload.get("light_sources", [])
+    if isinstance(light_source_groups, list):
+        for source_group in light_source_groups:
+            if not isinstance(source_group, dict):
+                continue
+            source_group_id = source_group.get("id")
+            source_positions = source_group.get("positions")
+            if not isinstance(source_group_id, str) or not isinstance(source_positions, dict):
+                continue
+            normalized_positions = []
+            for slot, source in source_positions.items():
+                if isinstance(slot, int) and not isinstance(slot, bool) and isinstance(source, dict):
+                    normalized_positions.append({"slot": slot, **source})
+            if normalized_positions:
+                discrete_choices.append((source_group_id, normalized_positions))
+
     if not discrete_choices:
         return []
 
     valid_paths: list[dict[str, int]] = []
     for combination in product(*(choices for _, choices in discrete_choices)):
         if any(str(selection.get("type")) == "block" for selection in combination):
+            continue
+
+        combined_routes: set[str] = set()
+        for selection in combination:
+            combined_routes.update(_route_tags(selection))
+
+        if not _routes_compatible(combined_routes):
             continue
 
         valid_paths.append({
@@ -233,13 +373,14 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
         "excitation": "excitation_mechanisms",
         "dichroic": "dichroic_mechanisms",
         "emission": "emission_mechanisms",
+        "cube": "cube_mechanisms",
     }
-    prefix_mappings = {"excitation": "exc", "dichroic": "dichroic", "emission": "em"}
+    prefix_mappings = {"excitation": "exc", "dichroic": "dichroic", "emission": "em", "cube": "cube"}
 
     payload: dict[str, Any] = {
         "light_sources": [],
         "detectors": [],
-        "stages": {"excitation": [], "dichroic": [], "emission": []},
+        "stages": {"excitation": [], "dichroic": [], "emission": [], "cube": []},
         "splitters": [],
         "valid_paths": [],
     }
@@ -258,6 +399,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
                 "wavelength_nm": wl,
                 "manufacturer": src.get("manufacturer"),
                 "product_code": src.get("model"),
+                **({"path": src.get("path")} if isinstance(src.get("path"), str) else {}),
             }
         if positions:
             payload["light_sources"].append(
@@ -293,10 +435,13 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
 
     for stage_name, source_key in stage_mappings.items():
         mechanisms = _iter_mechanisms(light_path, source_key)
-        payload["stages"][stage_name] = [
-            _mechanism_payload(prefix_mappings[stage_name], index, mechanism)
-            for index, mechanism in enumerate(mechanisms)
-        ]
+        if stage_name == "cube":
+            payload["stages"][stage_name] = [_cube_mechanism_payload(index, mechanism) for index, mechanism in enumerate(mechanisms)]
+        else:
+            payload["stages"][stage_name] = [
+                _mechanism_payload(prefix_mappings[stage_name], index, mechanism)
+                for index, mechanism in enumerate(mechanisms)
+            ]
 
     raw_splitters = light_path.get("splitters", [])
     if isinstance(raw_splitters, list):
