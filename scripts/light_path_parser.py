@@ -512,20 +512,37 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
             path_1_filter = path_1.get("emission_filter") if isinstance(path_1.get("emission_filter"), dict) else {}
             path_2_filter = path_2.get("emission_filter") if isinstance(path_2.get("emission_filter"), dict) else {}
 
+            # Format the components with our smart label builder
+            dichroic_pos = {
+                "label": _build_label(dichroic_component),
+                "details": _build_details(dichroic_component),
+                **dichroic_component,
+            } if dichroic_component else {}
+            path1_pos = {
+                "label": _build_label(path_1_filter),
+                "details": _build_details(path_1_filter),
+                **path_1_filter,
+            } if path_1_filter else {}
+            path2_pos = {
+                "label": _build_label(path_2_filter),
+                "details": _build_details(path_2_filter),
+                **path_2_filter,
+            } if path_2_filter else {}
+
             payload["splitters"].append(
                 {
                     "name": splitter.get("name", f"Splitter {index + 1}"),
                     "dichroic": {
                         "name": "Splitter Dichroic",
-                        "positions": {1: dichroic_component} if dichroic_component else {},
+                        "positions": {1: dichroic_pos} if dichroic_pos else {},
                     },
                     "path1": {
                         "name": "Path 1 (Transmitted)",
-                        "positions": {1: path_1_filter} if path_1_filter else {},
+                        "positions": {1: path1_pos} if path1_pos else {},
                     },
                     "path2": {
                         "name": "Path 2 (Reflected)",
-                        "positions": {1: path_2_filter} if path_2_filter else {},
+                        "positions": {1: path2_pos} if path2_pos else {},
                     },
                 }
             )

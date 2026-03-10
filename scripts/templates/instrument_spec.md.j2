@@ -397,6 +397,42 @@
     {% endif %}
   {% endfor %}
 
+  {# 3. Render Splitters (Dual-Cam or Multi-Track) #}
+  {% if dto.splitters %}
+  #### Splitters & Light Routing
+  <div class="md-typeset__scrollwrap">
+    <table class="md-typeset__table">
+      <thead>
+        <tr>
+          <th>Splitter Mechanism</th>
+          <th>Dichroic</th>
+          <th>Path 1 (Transmitted)</th>
+          <th>Path 2 (Reflected)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for splitter in dto.splitters %}
+          <tr>
+            <td><strong>{{ splitter.name }}</strong></td>
+            <td>
+              {{ splitter.dichroic.positions[1].label | default('-') }}
+              {% if splitter.dichroic.positions[1].details %}<br><sub style="color: gray;">{{ splitter.dichroic.positions[1].details }}</sub>{% endif %}
+            </td>
+            <td>
+              {{ splitter.path1.positions[1].label | default('-') }}
+              {% if splitter.path1.positions[1].details %}<br><sub style="color: gray;">{{ splitter.path1.positions[1].details }}</sub>{% endif %}
+            </td>
+            <td>
+              {{ splitter.path2.positions[1].label | default('-') }}
+              {% if splitter.path2.positions[1].details %}<br><sub style="color: gray;">{{ splitter.path2.positions[1].details }}</sub>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
 {% endif %}
 
 
