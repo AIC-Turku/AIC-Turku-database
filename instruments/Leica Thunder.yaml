@@ -237,13 +237,13 @@ hardware:
         type: filter_wheel
         slots: 6 
         path: epi
+        notes: "External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope turret)"
         positions:
           1:
             name: "460/80"
             component_type: bandpass
             center_nm: 460
-            width_nm: 80
-            notes: "External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope turret)"
+            width_nm: 80            
           2:
             name: "535/70"
             component_type: bandpass
