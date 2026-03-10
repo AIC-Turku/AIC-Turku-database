@@ -84,6 +84,31 @@
       margin-bottom: 0;
     }
 
+    .tunable-control {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      display: grid;
+      gap: 10px;
+    }
+
+    .tunable-range-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .slider-row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .slider-row input[type="range"] {
+      padding: 0;
+      accent-color: var(--primary);
+    }
+
     label {
       font-size: 13px;
       font-weight: 600;
@@ -533,6 +558,115 @@
       return block;
     }
 
+    function isTunableMechanism(mechanism) {
+      const type = String(mechanism?.type || mechanism?.component_type || '').toLowerCase();
+      return type === 'tunable' || type === 'spectral_slider';
+    }
+
+    function createTunableBandDataset(label, startNm, endNm, color = '#8b5cf6') {
+      const start = Number(startNm);
+      const end = Number(endNm);
+      return {
+        label,
+        data: [
+          { x: MIN_WL, y: 0 },
+          { x: start, y: 0 },
+          { x: start, y: 100 },
+          { x: end, y: 100 },
+          { x: end, y: 0 },
+          { x: MAX_WL, y: 0 },
+        ],
+        parsing: false,
+        stepped: true,
+        fill: true,
+        backgroundColor: hexToRgba(color, 0.2),
+        borderColor: color,
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0,
+      };
+    }
+
+    function createTunableControl({ stage, mechanism, index }) {
+      const block = document.createElement('div');
+      block.className = 'field';
+
+      const baseId = `${stage}-tunable-${index}`;
+      const label = document.createElement('label');
+      label.textContent = mechanism.name || `${stage} ${index + 1}`;
+      block.appendChild(label);
+
+      const panel = document.createElement('div');
+      panel.className = 'tunable-control';
+
+      const valueLabel = document.createElement('div');
+      valueLabel.className = 'tunable-range-label';
+      panel.appendChild(valueLabel);
+
+      const startRow = document.createElement('div');
+      startRow.className = 'slider-row';
+      const startLabel = document.createElement('label');
+      startLabel.htmlFor = `${baseId}-start`;
+      startLabel.textContent = 'Band Start (nm)';
+      const startInput = document.createElement('input');
+      startInput.type = 'range';
+      startInput.min = '400';
+      startInput.max = '800';
+      startInput.step = '1';
+      startInput.value = '500';
+      startInput.id = `${baseId}-start`;
+      startRow.appendChild(startLabel);
+      startRow.appendChild(startInput);
+      panel.appendChild(startRow);
+
+      const endRow = document.createElement('div');
+      endRow.className = 'slider-row';
+      const endLabel = document.createElement('label');
+      endLabel.htmlFor = `${baseId}-end`;
+      endLabel.textContent = 'Band End (nm)';
+      const endInput = document.createElement('input');
+      endInput.type = 'range';
+      endInput.min = '400';
+      endInput.max = '800';
+      endInput.step = '1';
+      endInput.value = '550';
+      endInput.id = `${baseId}-end`;
+      endRow.appendChild(endLabel);
+      endRow.appendChild(endInput);
+      panel.appendChild(endRow);
+
+      const syncAndUpdate = (source) => {
+        let start = Number(startInput.value);
+        let end = Number(endInput.value);
+        if (start > end) {
+          if (source === 'start') {
+            end = start;
+            endInput.value = String(end);
+          } else {
+            start = end;
+            startInput.value = String(start);
+          }
+        }
+        valueLabel.textContent = `${start} nm - ${end} nm`;
+        drawHardware();
+      };
+
+      startInput.addEventListener('input', () => syncAndUpdate('start'));
+      endInput.addEventListener('input', () => syncAndUpdate('end'));
+      syncAndUpdate('start');
+
+      block.appendChild(panel);
+
+      state.controls.push({
+        stage,
+        mechanism,
+        controlType: 'tunable',
+        startInput,
+        endInput,
+      });
+      return block;
+    }
+
     function renderControls() {
       const normalized = normalizeMechanisms(state.lightpathData);
       controlContainer.innerHTML = '';
@@ -560,6 +694,10 @@
         wrapper.appendChild(title);
 
         mechanisms.forEach((mechanism, index) => {
+          if (group.key === 'emission' && isTunableMechanism(mechanism)) {
+            wrapper.appendChild(createTunableControl({ stage: group.key, mechanism, index }));
+            return;
+          }
           wrapper.appendChild(createSelectControl({ stage: group.key, mechanism, index }));
         });
 
@@ -586,7 +724,25 @@
     }
 
     function selectedPositions() {
-      return state.controls.map(({ stage, mechanism, select }) => {
+      return state.controls.map((control) => {
+        const { stage, mechanism, select, controlType, startInput, endInput } = control;
+        if (controlType === 'tunable') {
+          const start = Number(startInput.value);
+          const end = Number(endInput.value);
+          return {
+            stage,
+            mechanism,
+            position: {
+              label: mechanism.name || 'Tunable emission band',
+              type: 'spectral_slider',
+              band_start_nm: start,
+              band_end_nm: end,
+              center_nm: (start + end) / 2,
+              width_nm: Math.max(0, end - start),
+            },
+          };
+        }
+
         const selectedOption = select.options[select.selectedIndex];
         if (!selectedOption) {
           return { stage, mechanism, position: {} };
@@ -753,6 +909,11 @@
     function findActiveEmissionRange(selected) {
       const emissionEntry = selected.find((entry) => String(entry.stage) === 'emission');
       const position = emissionEntry?.position || {};
+      const bandStart = Number(position.band_start_nm);
+      const bandEnd = Number(position.band_end_nm);
+      if (Number.isFinite(bandStart) && Number.isFinite(bandEnd) && bandEnd >= bandStart) {
+        return { min: bandStart, max: bandEnd };
+      }
       const center = Number(position.center_nm);
       const width = Number(position.width_nm);
       if (Number.isFinite(center) && Number.isFinite(width)) {
@@ -822,6 +983,8 @@
       if (stage === 'detectors' || position.component_type === 'detector') return [];
 
       const componentType = String(position.type || position.component_type || '').toLowerCase();
+      const bandStart = Number(position.band_start_nm);
+      const bandEnd = Number(position.band_end_nm);
       const center = Number(position.center_nm);
       const width = Number(position.width_nm);
       const cutOn = Number(position.cut_on_nm);
@@ -832,12 +995,17 @@
 
       const name = position.label || position.name || `${mechanismName} (${componentType || 'component'})`;
       const baseColor = wavelengthToColorHex(
+        Number.isFinite(bandStart) && Number.isFinite(bandEnd) ? (bandStart + bandEnd) / 2 :
         Number.isFinite(center) ? center :
         Number.isFinite(cutOn) ? cutOn :
         Number.isFinite(cutOff) ? cutOff :
         Number.isFinite(wavelength) ? wavelength :
         520
       );
+
+      if ((componentType === 'tunable' || componentType === 'spectral_slider') && Number.isFinite(bandStart) && Number.isFinite(bandEnd)) {
+        return [createTunableBandDataset(name, bandStart, bandEnd, baseColor)];
+      }
 
       if ((componentType === 'bandpass' || componentType === 'notch') && Number.isFinite(center) && Number.isFinite(width)) {
         return [createBandDataset(name, center, width, baseColor, componentType)];
