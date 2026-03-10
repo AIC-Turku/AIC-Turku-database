@@ -1285,7 +1285,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         vm_payload = generate_virtual_microscope_payload({"hardware": light_path_data})
         vm_html = tpl_vm.render(
             instrument=inst,
-            lightpath_json=json.dumps(vm_payload),
+            lightpath_data_json=json.dumps(vm_payload),
         )
         (instrument_dir / "virtual_microscope.html").write_text(vm_html, encoding="utf-8")
 

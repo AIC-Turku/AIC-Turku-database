@@ -224,9 +224,10 @@ def calculate_valid_paths(payload: dict) -> list[dict]:
 
 def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
     """Build a frontend-friendly virtual microscope payload from instrument light-path data."""
-    light_path = instrument_dict.get("hardware", {}).get("light_path", {})
+    hardware = instrument_dict.get("hardware", {})
+    light_path = hardware.get("light_path", {})
     if not isinstance(light_path, dict):
-        return {"stages": {"excitation": [], "dichroic": [], "emission": []}, "splitters": [], "valid_paths": []}
+        light_path = {}
 
     stage_mappings = {
         "excitation": "excitation_mechanisms",
@@ -236,10 +237,59 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
     prefix_mappings = {"excitation": "exc", "dichroic": "dichroic", "emission": "em"}
 
     payload: dict[str, Any] = {
+        "light_sources": [],
+        "detectors": [],
         "stages": {"excitation": [], "dichroic": [], "emission": []},
         "splitters": [],
         "valid_paths": [],
     }
+
+    raw_sources = hardware.get("light_sources", [])
+    if isinstance(raw_sources, list) and raw_sources:
+        positions = {}
+        for idx, src in enumerate(raw_sources):
+            if not isinstance(src, dict):
+                continue
+            wl = src.get("wavelength_nm")
+            kind = src.get("kind", "light_source")
+            positions[idx + 1] = {
+                "component_type": "laser" if kind in ["laser", "white_light_laser"] else "light_source",
+                "name": f"{src.get('manufacturer', '')} {src.get('model', '')} {wl or ''}".strip(),
+                "wavelength_nm": wl,
+                "manufacturer": src.get("manufacturer"),
+                "product_code": src.get("model"),
+            }
+        if positions:
+            payload["light_sources"].append(
+                {
+                    "id": "light_sources_0",
+                    "name": "Light Sources / Lasers",
+                    "type": "light_source_group",
+                    "positions": positions,
+                }
+            )
+
+    raw_detectors = hardware.get("detectors", [])
+    if isinstance(raw_detectors, list) and raw_detectors:
+        positions = {}
+        for idx, det in enumerate(raw_detectors):
+            if not isinstance(det, dict):
+                continue
+            positions[idx + 1] = {
+                "component_type": "detector",
+                "name": f"{det.get('manufacturer', '')} {det.get('model', '')}".strip(),
+                "manufacturer": det.get("manufacturer"),
+                "product_code": det.get("model"),
+            }
+        if positions:
+            payload["detectors"].append(
+                {
+                    "id": "detectors_0",
+                    "name": "Detectors / Cameras",
+                    "type": "detector_group",
+                    "positions": positions,
+                }
+            )
 
     for stage_name, source_key in stage_mappings.items():
         mechanisms = _iter_mechanisms(light_path, source_key)

@@ -405,12 +405,14 @@
       const dichroic = stages.dichroic || findArrayByKeyword(rawData, 'dichroic') || [];
       const emission = stages.emission || findArrayByKeyword(rawData, 'emission') || [];
       const lightSources = rawData?.light_sources || findArrayByKeyword(rawData, 'light_source') || [];
+      const detectors = rawData?.detectors || findArrayByKeyword(rawData, 'detector') || [];
 
       return {
         lightSources: Array.isArray(lightSources) ? lightSources : [],
         excitation: Array.isArray(excitation) ? excitation : [],
         dichroic: Array.isArray(dichroic) ? dichroic : [],
         emission: Array.isArray(emission) ? emission : [],
+        detectors: Array.isArray(detectors) ? detectors : [],
       };
     }
 
@@ -509,6 +511,7 @@
         { key: 'excitation', label: 'Excitation Mechanisms' },
         { key: 'dichroic', label: 'Dichroic Mechanisms' },
         { key: 'emission', label: 'Emission Mechanisms' },
+        { key: 'detectors', label: 'Detectors' },
       ];
 
       groups.forEach((group) => {
@@ -665,6 +668,8 @@
     }
 
     function hardwareDatasetFromPosition(stage, mechanismName, position) {
+      if (stage === 'detectors' || position.component_type === 'detector') return [];
+
       const componentType = String(position.type || position.component_type || '').toLowerCase();
       const center = Number(position.center_nm);
       const width = Number(position.width_nm);
@@ -837,8 +842,8 @@
       searchStatus.textContent = 'Searching FPbase...';
       searchResults.innerHTML = '';
 
-      const url = `https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(trimmed)}`;
-      const response = await fetch(url);
+      const url = `https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(trimmed)}&format=json`;
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
       if (!response.ok) {
         throw new Error(`FPbase search failed (${response.status})`);
       }
@@ -867,8 +872,8 @@
 
     async function loadProteinDetail(protein) {
       const slugOrId = protein.slug || protein.id;
-      const detailUrl = `https://www.fpbase.org/api/proteins/${encodeURIComponent(slugOrId)}/`;
-      const detailResp = await fetch(detailUrl);
+      const detailUrl = `https://www.fpbase.org/api/proteins/${encodeURIComponent(slugOrId)}/?format=json`;
+      const detailResp = await fetch(detailUrl, { headers: { 'Accept': 'application/json' } });
       if (!detailResp.ok) {
         throw new Error(`FPbase detail failed (${detailResp.status})`);
       }
