@@ -391,10 +391,26 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
     sensor_format = clean_text(det.get("sensor_format_px"))
     binning = clean_text(det.get("binning"))
     bit_depth = _fmt_num(det.get("bit_depth"))
+    supports_time_gating = normalize_optional_bool(det.get("supports_time_gating"))
+    gating_delay_ns = _fmt_num(det.get("default_gating_delay_ns"))
+    gate_width_ns = _fmt_num(det.get("default_gate_width_ns"))
     display_label = " ".join(part for part in [manufacturer, model] if part).strip() or kind_label or "Detector"
-    method_sentence = f"Detection was performed using {display_label}{f' ({kind_label})' if kind_label else ''}."
+    if supports_time_gating is True:
+        gating_phrase = ""
+        if gating_delay_ns and gate_width_ns:
+            gating_phrase = f" using default gating delay {gating_delay_ns} ns and gate width {gate_width_ns} ns"
+        elif gating_delay_ns:
+            gating_phrase = f" using default gating delay {gating_delay_ns} ns"
+        elif gate_width_ns:
+            gating_phrase = f" using default gate width {gate_width_ns} ns"
+        method_sentence = f"Detection was performed using {display_label}{f' ({kind_label})' if kind_label else ''}, configured for time-gated acquisition{gating_phrase}."
+    else:
+        method_sentence = f"Detection was performed using {display_label}{f' ({kind_label})' if kind_label else ''}."
     spec_lines = _spec_lines(
         ("Type", kind_label),
+        ("Supports time gating", _bool_display(supports_time_gating) if supports_time_gating is not None else None),
+        ("Default gating delay", f"`{gating_delay_ns} ns`" if gating_delay_ns else None),
+        ("Default gate width", f"`{gate_width_ns} ns`" if gate_width_ns else None),
         ("Pixel pitch", f"`{pixel_pitch} µm`" if pixel_pitch else None),
         ("Sensor format", f"`{sensor_format}`" if sensor_format else None),
         ("Binning", f"`{binning}`" if binning else None),
@@ -416,13 +432,32 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     manufacturer = clean_text(src.get("manufacturer"))
     model = clean_text(src.get("model") or src.get("name"))
     kind_label = _vocab_display(vocabulary, "light_source_kinds", src.get("kind") or src.get("type"))
-    wavelength = clean_text(src.get("wavelength_nm") or src.get("wavelength"))
+    role_label = _vocab_display(vocabulary, "light_source_roles", src.get("role"))
+    timing_mode_label = _vocab_display(vocabulary, "light_source_timing_modes", src.get("timing_mode"))
+    pulse_width_ps = _fmt_num(src.get("pulse_width_ps"))
+    repetition_rate_mhz = _fmt_num(src.get("repetition_rate_mhz"))
+    depletion_targets_nm = [_fmt_num(item) for item in (src.get("depletion_targets_nm") or []) if _fmt_num(item)] if isinstance(src.get("depletion_targets_nm"), list) else []
+    wavelength = _fmt_num(src.get("wavelength_nm") or src.get("wavelength"))
     technology = clean_text(src.get("technology"))
     power = clean_text(src.get("power"))
-    display_label = " ".join(part for part in [f"{wavelength} nm" if wavelength.isdigit() else wavelength, kind_label, manufacturer, model] if part).strip() or model or kind_label or "Light source"
-    method_sentence = f"Excitation was provided by {display_label}."
+    display_label = " ".join(part for part in [f"{wavelength} nm" if wavelength else "", kind_label, manufacturer, model] if part).strip() or model or kind_label or "Light source"
+    if clean_text(src.get("role")) == "depletion" and clean_text(src.get("timing_mode")) == "pulsed":
+        pulse_details = []
+        if pulse_width_ps:
+            pulse_details.append(f"{pulse_width_ps} ps pulse width")
+        if repetition_rate_mhz:
+            pulse_details.append(f"{repetition_rate_mhz} MHz repetition rate")
+        targets_clause = f" targeting {_human_list([f'{item} nm' for item in depletion_targets_nm])}" if depletion_targets_nm else ""
+        method_sentence = f"STED depletion was delivered by a pulsed depletion laser ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a pulsed depletion laser{targets_clause}."
+    else:
+        method_sentence = f"Excitation was provided by {display_label}."
     spec_lines = _spec_lines(
         ("Type", kind_label),
+        ("Role", role_label),
+        ("Timing mode", timing_mode_label),
+        ("Pulse width", f"`{pulse_width_ps} ps`" if pulse_width_ps else None),
+        ("Repetition rate", f"`{repetition_rate_mhz} MHz`" if repetition_rate_mhz else None),
+        ("Depletion targets", ", ".join(f"`{item} nm`" for item in depletion_targets_nm) if depletion_targets_nm else None),
         ("Technology", technology),
         ("Wavelength", f"`{wavelength} nm`" if wavelength else None),
         ("Power", f"`{power}`" if power else None),
@@ -433,6 +468,50 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         "display_label": display_label,
         "display_subtitle": manufacturer,
         "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
+def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any]) -> dict[str, Any]:
+    modulator_type = clean_text(modulator.get("type"))
+    type_label = _vocab_display(vocabulary, "optical_modulator_types", modulator_type)
+    supported_masks = [
+        _vocab_display(vocabulary, "phase_mask_types", item) or clean_text(item)
+        for item in (modulator.get("supported_phase_masks") or [])
+        if clean_text(item)
+    ] if isinstance(modulator.get("supported_phase_masks"), list) else []
+    display_label = type_label or "Optical Modulator"
+    method_sentence = f"Beam shaping used {display_label} optics{f' with {_human_list(supported_masks)} phase mask support' if supported_masks else ''}."
+    if modulator_type in {"slm", "phase_plate", "vortex_plate"}:
+        method_sentence = f"STED beam shaping was configured with a {display_label}{f' using {_human_list(supported_masks)} phase mask profiles' if supported_masks else ''}."
+    return {
+        **copy.deepcopy(modulator),
+        "display_label": display_label,
+        "display_subtitle": clean_text(modulator.get("manufacturer")),
+        "spec_lines": _spec_lines(
+            ("Type", type_label),
+            ("Supported phase masks", ", ".join(f"`{item}`" for item in supported_masks) if supported_masks else None),
+            ("Notes", clean_text(modulator.get("notes"))),
+        ),
+        "method_sentence": method_sentence,
+    }
+
+
+def build_illumination_logic_dto(vocabulary: Vocabulary, logic: dict[str, Any]) -> dict[str, Any]:
+    method_id = clean_text(logic.get("method"))
+    method_label = _vocab_display(vocabulary, "adaptive_illumination_methods", method_id)
+    default_enabled = normalize_optional_bool(logic.get("default_enabled"))
+    display_label = method_label or "Illumination Logic"
+    method_sentence = f"Adaptive illumination used {display_label} logic{', enabled by default' if default_enabled is True else ''}."
+    return {
+        **copy.deepcopy(logic),
+        "display_label": display_label,
+        "display_subtitle": "Adaptive illumination" if method_label else "",
+        "spec_lines": _spec_lines(
+            ("Method", method_label),
+            ("Default enabled", _bool_display(default_enabled) if default_enabled is not None else None),
+            ("Notes", clean_text(logic.get("notes"))),
+        ),
         "method_sentence": method_sentence,
     }
 
@@ -716,6 +795,8 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
         "light_sources": [build_light_source_dto(vocabulary, src) for src in canonical_hardware.get("light_sources", []) if isinstance(src, dict)],
         "scanner": build_scanner_dto(vocabulary, scanner),
         "detectors": [build_detector_dto(vocabulary, det) for det in canonical_hardware.get("detectors", []) if isinstance(det, dict)],
+        "optical_modulators": [build_optical_modulator_dto(vocabulary, mod) for mod in canonical_hardware.get("optical_modulators", []) if isinstance(mod, dict)],
+        "illumination_logic": [build_illumination_logic_dto(vocabulary, logic) for logic in canonical_hardware.get("illumination_logic", []) if isinstance(logic, dict)],
         "objectives": [build_objective_dto(vocabulary, obj) for obj in canonical_hardware.get("objectives", []) if isinstance(obj, dict)],
         "magnification_changers": [
             build_magnification_changer_dto(item)
@@ -1026,6 +1107,11 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
                 "technology": get_val(light_source, "technology"),
                 "wavelength_nm": get_val(light_source, "wavelength_nm", "wavelength"),
                 "power": get_val(light_source, "power"),
+                "role": get_val(light_source, "role"),
+                "timing_mode": get_val(light_source, "timing_mode"),
+                "pulse_width_ps": get_val(light_source, "pulse_width_ps"),
+                "repetition_rate_mhz": get_val(light_source, "repetition_rate_mhz"),
+                "depletion_targets_nm": get_val(light_source, "depletion_targets_nm"),
                 "notes": get_val(light_source, "notes"),
                 "url": get_val(light_source, "url"),
             }
@@ -1046,6 +1132,9 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
                 "bit_depth": get_val(detector, "bit_depth"),
                 "qe_peak_pct": get_val(detector, "qe_peak_pct"),
                 "read_noise_e": get_val(detector, "read_noise_e"),
+                "supports_time_gating": get_val(detector, "supports_time_gating"),
+                "default_gating_delay_ns": get_val(detector, "default_gating_delay_ns"),
+                "default_gate_width_ns": get_val(detector, "default_gate_width_ns"),
                 "notes": get_val(detector, "notes"),
                 "url": get_val(detector, "url"),
             }
@@ -1085,6 +1174,8 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
         "stages",
         "hardware_autofocus",
         "triggering",
+        "optical_modulators",
+        "illumination_logic",
     ]
     for key in passthrough_keys:
         if key in raw:
