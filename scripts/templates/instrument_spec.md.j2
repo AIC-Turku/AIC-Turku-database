@@ -9,7 +9,6 @@
 {% set identity = dto.identity if dto.identity else {} %}
 {% set canonical = instrument.canonical if instrument.canonical else {} %}
 {% set policy = canonical.policy if canonical.policy else {} %}
-{% set magnification_changers = hw.magnification_changers if hw else [] %}
 
 # {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
@@ -93,23 +92,23 @@
 <div class="aic-section" style="margin-top: 20px;">
   <div class="aic-section__title">Modalities</div>
   <div class="aic-chiprow">
-    {% for mod in instrument.modalities_display %}
-      <span class="aic-chip">{{ mod }}</span>
+    {% for mod in dto.modalities %}
+      <span class="aic-chip">{{ mod.display_label }}</span>
     {% else %}
       <span class="aic-muted">—</span>
     {% endfor %}
   </div>
 </div>
 
-{% if instrument.modules %}
+{% if dto.modules %}
 <div class="aic-section">
   <div class="aic-section__title">Modules</div>
   <div class="aic-chiprow">
-    {% for m in instrument.modules %}
+    {% for m in dto.modules %}
       {% if m.url %}
-        <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }} ↗</a>
+        <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.display_subtitle }}">{{ m.display_label }} ↗</a>
       {% else %}
-        <span class="aic-chip aic-chip--muted" title="{{ m.notes }}">{{ m.display_name or m.name }}</span>
+        <span class="aic-chip aic-chip--muted" title="{{ m.display_subtitle }}">{{ m.display_label }}</span>
       {% endif %}
     {% endfor %}
   </div>
@@ -185,24 +184,11 @@
 
 ### 🔍 Magnification Changers
 
-{% if magnification_changers %}
+{% if hw.magnification_changers %}
 <div class="grid cards" markdown>
-
-{% for mag in magnification_changers %}
-{% set mag_title = mag.model or mag.name %}
-{% set has_mag_details = mag.manufacturer or mag.magnification is not none or mag.notes %}
-{% if mag_title or has_mag_details %}
--   {% if mag_title %}**{% if mag.url %}[{{ mag_title }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag_title }}{% endif %}**{% endif %}
-
-    {% if has_mag_details %}---{% endif %}
-
-    {% if mag.manufacturer %}**Manufacturer:** {{ mag.manufacturer }}{% endif %}
-    {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
-    {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
-{% endif %}
-
+{% for item in hw.magnification_changers %}
+{{ render_spec_card(item) }}
 {% endfor %}
-
 </div>
 {% else %}
 > *No magnification changers recorded.*
@@ -230,52 +216,24 @@
 
 ### 🎛️ Optical Path & Filters
 
-{% set dto = lightpath_dto %}
-{% if dto and dto.stages %}
-
-{# 1. Render Filter Cubes as nested bullets #}
-{% if dto.stages.cube %}
-#### 🧊 Filter Cubes (Linked Mechanisms)
-{% for mech in dto.stages.cube %}
-**{{ mech.name }}**
-{% for pos in mech.positions %}
-* **Slot {{ pos.slot }}: {{ pos.label }}** {% if pos.details %}— *{{ pos.details }}*{% endif %}
-  {% if pos.linked_components.excitation_filter.type != "empty" or pos.linked_components.dichroic.type != "empty" or pos.linked_components.emission_filter.type != "empty" %}
-    * **Excitation:** `{{ pos.linked_components.excitation_filter.label | default('-') }}`
-    * **Dichroic:** `{{ pos.linked_components.dichroic.label | default('-') }}`
-    * **Emission:** `{{ pos.linked_components.emission_filter.label | default('-') }}`
-  {% else %}
-    * *Pass-through (Empty)*
-  {% endif %}
+{% if hw.optical_path.sections %}
+{% for section in hw.optical_path.sections %}
+#### {{ section.display_label }}
+<div class="grid cards" markdown>
+{% for item in section.items %}
+{{ render_spec_card(item) }}
 {% endfor %}
+</div>
 {% endfor %}
 {% endif %}
 
-{# 2. Render Independent Stages as clean lists #}
-{% for stage_key in ['excitation', 'dichroic', 'emission'] %}
-{% set mechanisms = dto.stages[stage_key] %}
-{% if mechanisms %}
-#### ⭕ {{ stage_key | title }} Stage
-{% for mech in mechanisms %}
-**{{ mech.name }}**
-{% for pos in mech.positions %}
-* **Slot {{ pos.slot }}:** `{{ pos.label }}` {% if pos.details %}— *{{ pos.details }}*{% endif %}
-{% endfor %}
-{% endfor %}
-{% endif %}
-{% endfor %}
-
-{% endif %}
-
-{# 3. Render Splitters as routing lists #}
-{% if dto and dto.splitters %}
+{% if hw.optical_path.splitters %}
 #### 🔀 Splitters & Light Routing
-{% for splitter in dto.splitters %}
-**{{ splitter.name }}**
-* **Dichroic:** `{{ splitter.dichroic.positions[1].label | default('None') }}` {% if splitter.dichroic.positions[1].details %}(*{{ splitter.dichroic.positions[1].details }}*){% endif %}
-* **Path 1 (Transmitted):** `{{ splitter.path1.positions[1].label | default('None') }}` {% if splitter.path1.positions[1].details %}(*{{ splitter.path1.positions[1].details }}*){% endif %}
-* **Path 2 (Reflected):** `{{ splitter.path2.positions[1].label | default('None') }}` {% if splitter.path2.positions[1].details %}(*{{ splitter.path2.positions[1].details }}*){% endif %}
+<div class="grid cards" markdown>
+{% for item in hw.optical_path.splitters %}
+{{ render_spec_card(item) }}
 {% endfor %}
+</div>
 {% endif %}
 
 
