@@ -1,0 +1,16 @@
+terms:
+  - id: upright
+    label: "Upright"
+    description: "Conventional upright microscope stand."
+  - id: inverted
+    label: "Inverted"
+    description: "Inverted microscope stand."
+  - id: stereo
+    label: "Stereo"
+    description: "Stereo / dissecting microscope stand."
+  - id: benchtop
+    label: "Benchtop"
+    description: "Compact benchtop imaging instrument."
+  - id: other
+    label: "Other"
+    description: "Stand orientation not covered by the predefined terms."

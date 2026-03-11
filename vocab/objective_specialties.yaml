@@ -1,0 +1,28 @@
+terms:
+  - id: long_working_distance
+    label: "Long Working Distance"
+    description: "Objective designed for increased working distance."
+  - id: coverslip_correction
+    label: "Coverslip Correction"
+    description: "Objective supports adjustable coverslip correction."
+  - id: water_dipping
+    label: "Water Dipping"
+    description: "Objective designed for direct immersion into sample medium."
+  - id: phase
+    label: "Phase"
+    description: "Objective supports phase-contrast use."
+  - id: dic
+    label: "DIC"
+    description: "Objective supports differential interference contrast."
+  - id: uv_transmission
+    label: "UV Transmission"
+    description: "Objective optimized for UV transmission."
+  - id: ir_transmission
+    label: "IR Transmission"
+    description: "Objective optimized for IR / multiphoton transmission."
+  - id: correction_collar
+    label: "Correction Collar"
+    description: "Objective includes correction collar."
+  - id: other
+    label: "Other"
+    description: "Specialty not covered by the predefined terms."
