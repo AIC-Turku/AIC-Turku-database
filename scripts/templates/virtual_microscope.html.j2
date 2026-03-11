@@ -184,7 +184,7 @@ hide:
 
       entries.forEach(([id, data]) => {
         const opt = document.createElement('option');
-        opt.value = id; opt.textContent = data?.display_name || data?.name || id;
+        opt.value = id; opt.textContent = data?.display_name || id;
         DOM.scopeSel.appendChild(opt);
       });
 
@@ -315,7 +315,7 @@ hide:
     }
 
     function createControl(stageKey, mechanism, index) {
-      const controlKind = mechanism.control_kind || 'dropdown';
+      const controlKind = mechanism.control_kind;
       if (controlKind === 'spectral_array') {
         return createSpectralArrayControl(stageKey, mechanism, index);
       }
@@ -332,7 +332,7 @@ hide:
         const update = () => {
           if (Number(minIn.value) > Number(maxIn.value)) minIn.value = maxIn.value;
           lbl.textContent = `${minIn.value} nm — ${maxIn.value} nm`;
-          block.dataset.value = JSON.stringify({ component_type: 'tunable', band_start_nm: minIn.value, band_end_nm: maxIn.value });
+          block.dataset.value = JSON.stringify({ render_kind: 'tunable', band_start_nm: minIn.value, band_end_nm: maxIn.value });
           drawHardware(); calculateEfficiencies();
         };
         minIn.addEventListener('input', update); maxIn.addEventListener('input', update);
@@ -341,7 +341,7 @@ hide:
       }
 
       const block = document.createElement('div'); block.className = 'vm-field';
-      const label = document.createElement('label'); label.textContent = mechanism.control_label || mechanism.display_label;
+      const label = document.createElement('label'); label.textContent = mechanism.control_label;
       const select = document.createElement('select'); select.dataset.stage = stageKey; select.dataset.mechanismName = mechanism.name;
 
       const options = Array.isArray(mechanism.options)
@@ -371,9 +371,9 @@ hide:
 
     function defaultSpectralBand(mechanism, idx = 0) {
       const bounds = spectralArrayBounds(mechanism);
-      const width = Number(mechanism?.default_band_width_nm ?? 20);
+      const width = Number(mechanism.default_band_width_nm);
       const safeWidth = Number.isFinite(width) ? Math.max(5, width) : 20;
-      const start = Math.min(Math.max(Number(mechanism?.band_min_nm ?? bounds.min) + (idx * 5), bounds.min), bounds.max - 1);
+      const start = Math.min(Math.max(Number(mechanism.band_min_nm) + (idx * 5), bounds.min), bounds.max - 1);
       const end = Math.min(Math.max(start + safeWidth, start + 1), bounds.max);
       return { min_nm: Math.round(start), max_nm: Math.round(end), label: `Band ${idx + 1}` };
     }
@@ -400,7 +400,7 @@ hide:
 
       const title = document.createElement('div');
       title.className = 'tunable-range-label';
-      title.textContent = `${mechanism.name || `Mech ${index + 1}`} Spectral Bands`;
+      title.textContent = `${mechanism.name} Spectral Bands`;
       block.appendChild(title);
 
       const bandWrap = document.createElement('div');
@@ -422,12 +422,12 @@ hide:
 
         const labelIn = document.createElement('input');
         labelIn.type = 'text';
-        labelIn.value = band.label || `Band ${bandIndex + 1}`;
+        labelIn.value = band.label;
         labelIn.placeholder = `Band ${bandIndex + 1}`;
         labelIn.style.flex = '1';
         labelIn.style.fontSize = '12px';
         labelIn.addEventListener('input', () => {
-          stateRef.bands[bandIndex].label = labelIn.value || `Band ${bandIndex + 1}`;
+          stateRef.bands[bandIndex].label = labelIn.value;
           drawHardware();
           calculateEfficiencies();
         });
@@ -541,13 +541,13 @@ hide:
           bands.forEach((band, idx) => {
             res.push({
               stage: tun.dataset.stage,
-              name: `${tun.dataset.mechanismName} (${band.label || `Band ${idx + 1}`})`,
+              name: `${tun.dataset.mechanismName} (${band.label})`,
               position: {
-                component_type: 'tunable',
+                render_kind: 'tunable',
                 type: 'tunable',
                 band_start_nm: band.min_nm,
                 band_end_nm: band.max_nm,
-                band_label: band.label || `Band ${idx + 1}`,
+                band_label: band.label,
                 source_type: 'spectral_array'
               }
             });
@@ -639,11 +639,11 @@ hide:
     }
 
     function hwDataset(stage, name, pos) {
-      if (stage==='detectors' || pos.component_type==='detector' || pos.type==='empty') return [];
-      const t = String(pos.type || pos.component_type || '').toLowerCase();
+      if (stage==='detectors' || pos.render_kind==='detector' || pos.render_kind==='empty') return [];
+      const t = String(pos.render_kind || '').toLowerCase();
       
       // Draw Light Sources (Lasers vs LEDs)
-      if(['laser','light_source', 'led'].includes(t) && pos.wavelength_nm) {
+      if(t==='source' && pos.wavelength_nm) {
         const wl = Number(pos.wavelength_nm);
         const w = Number(pos.width_nm);
         
@@ -657,7 +657,7 @@ hide:
       // Draw Tunable blocks
       if(t==='tunable' && pos.band_start_nm) return [createBand(name, Number(pos.band_start_nm), Number(pos.band_end_nm), '#3b82f6', 'rgba(59,130,246,0.15)')];
       // Draw Bandpasses
-      if(['bandpass','notch'].includes(t) && pos.center_nm) {
+      if(t==='band' && pos.center_nm) {
         const c=Number(pos.center_nm), w=Number(pos.width_nm);
         const isEm = stage.toLowerCase().includes('em') || stage.toLowerCase().includes('path');
         return [createBand(`${name} ${c}/${w}`, c-w/2, c+w/2, isEm?'#16a34a':'#8b5cf6', isEm?'rgba(22,163,74,0.15)':'rgba(139,92,246,0.15)')];
@@ -700,10 +700,10 @@ hide:
 
         const emBandScores = [];
         ems.forEach(e => {
-          const t = String(e.position.type || e.position.component_type || '').toLowerCase();
+          const t = String(e.position.render_kind || '').toLowerCase();
           let s=0, en=0;
           if(t==='tunable') { s=Number(e.position.band_start_nm); en=Number(e.position.band_end_nm); }
-          else if(['bandpass','notch'].includes(t)) { s=Number(e.position.center_nm)-Number(e.position.width_nm)/2; en=Number(e.position.center_nm)+Number(e.position.width_nm)/2; }
+          else if(t==='band') { s=Number(e.position.center_nm)-Number(e.position.width_nm)/2; en=Number(e.position.center_nm)+Number(e.position.width_nm)/2; }
           else if(t==='longpass') { s=Number(e.position.cut_on_nm); en=1000; }
           
           if(s>0 || en>0) {
@@ -974,9 +974,9 @@ hide:
       return Object.fromEntries(filtered);
     }
 
-    function normalizeMechanismList(rows, fallbackName) {
-      return (Array.isArray(rows) ? rows : []).map((mech, idx) => {
-        const out = { ...mech, name: mech?.name || `${fallbackName} ${idx + 1}`, __routes: routesFromObject(mech) };
+    function normalizeMechanismList(rows) {
+      return (Array.isArray(rows) ? rows : []).map((mech) => {
+        const out = { ...mech, __routes: routesFromObject(mech) };
         const pos = mech?.positions || {};
         out.positions = Object.fromEntries(Object.entries(pos).map(([slot, comp]) => [slot, { ...comp, __routes: routesFromObject(comp) }]));
         return out;
@@ -994,30 +994,17 @@ hide:
     }
 
     function normalizeSplitters(r) {
-      return (Array.isArray(r) ? r : []).map((s, i) => ({
-        id: `s_${i}`,
-        name: s.name || 'Splitter',
-        display_label: s.display_label || s.name || 'Splitter',
-        type: 'splitter',
-        control_kind: s.control_kind || 'dropdown',
-        control_label: s.control_label || s.name || 'Splitter',
-        options: Array.isArray(s.options)
-          ? s.options
-          : [{ slot: 1, display_label: s.display_label || s.name || 'Splitter', value: s }],
-        __routes: routesFromObject(s),
-        positions: { 1: { ...s, __routes: routesFromObject(s) } }
-      }));
+      return Array.isArray(r) ? r : [];
     }
     function normalizeMechanisms(d) {
-      const g = (obj, kw) => { for(const [k,v] of Object.entries(obj||{})) if(k.toLowerCase().includes(kw)&&Array.isArray(v)) return v; return []; };
       return {
-        lightSources: normalizeMechanismList(Array.isArray(d?.light_sources)?d.light_sources:g(d,'light_source'), 'Light Source'),
-        cube: normalizeMechanismList(Array.isArray(d?.stages?.cube)?d.stages.cube:g(d,'cube'), 'Filter Cube'),
-        excitation: normalizeMechanismList(Array.isArray(d?.stages?.excitation)?d.stages.excitation:g(d,'excitation'), 'Excitation'),
-        dichroic: normalizeMechanismList(Array.isArray(d?.stages?.dichroic)?d.stages.dichroic:g(d,'dichroic'), 'Dichroic'),
-        emission: normalizeMechanismList(Array.isArray(d?.stages?.emission)?d.stages.emission:g(d,'emission'), 'Emission'),
+        lightSources: normalizeMechanismList(d?.light_sources),
+        cube: normalizeMechanismList(d?.stages?.cube),
+        excitation: normalizeMechanismList(d?.stages?.excitation),
+        dichroic: normalizeMechanismList(d?.stages?.dichroic),
+        emission: normalizeMechanismList(d?.stages?.emission),
         splitters: normalizeSplitters(d?.splitters),
-        detectors: normalizeMechanismList(Array.isArray(d?.detectors)?d.detectors:g(d,'detector'), 'Detector'),
+        detectors: normalizeMechanismList(d?.detectors),
       };
     }
     function debounce(f, w) { let t; return function(...a) { clearTimeout(t); t=setTimeout(()=>f.apply(this,a),w); }; }

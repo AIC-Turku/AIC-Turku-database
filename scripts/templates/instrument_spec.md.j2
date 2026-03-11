@@ -7,14 +7,12 @@
 {% set dto = instrument.dto %}
 {% set hw = dto.hardware %}
 {% set identity = dto.identity if dto.identity else {} %}
-{% set canonical = instrument.canonical if instrument.canonical else {} %}
-{% set policy = canonical.policy if canonical.policy else {} %}
 
 # {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
-{% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
-!!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
-    {{ instrument.status.reason }}
+{% set status_class = 'success' if dto.status.color == 'green' else 'warning' if dto.status.color == 'yellow' else 'danger' %}
+!!! {{ status_class }} "Current Status: {{ dto.status.badge }}"
+    {{ dto.status.reason }}
     
     [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
     [🔬 Open Virtual Microscope](../../virtual_microscope.md?scope={{ identity.id }}){ .md-button }
@@ -59,35 +57,7 @@
   </div>
 </div>
 
-{% if instrument.notes %}
-## Capabilities
 
-{% if instrument.notes.type %}
-- **Type:** {{ instrument.notes.type }}
-{% endif %}
-
-{% if instrument.notes.imaging_modes %}
-- **Imaging modes:** {{ instrument.notes.imaging_modes | join(', ') }}
-{% endif %}
-
-{% if instrument.notes.filters %}
-- **Filters:**
-{% for f in instrument.notes.filters %}
-  - {{ f }}
-{% endfor %}
-{% endif %}
-
-{% if instrument.notes.additional_hardware %}
-- **Additional hardware:**
-{% for h in instrument.notes.additional_hardware %}
-  - {{ h }}
-{% endfor %}
-{% endif %}
-
-{% if instrument.notes.raw %}
-- **Notes:** {{ instrument.notes.raw }} <small class="aic-muted">(legacy notes fallback)</small>
-{% endif %}
-{% endif %}
 
 <div class="aic-section" style="margin-top: 20px;">
   <div class="aic-section__title">Modalities</div>
