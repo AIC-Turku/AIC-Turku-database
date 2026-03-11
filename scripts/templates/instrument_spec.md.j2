@@ -1,58 +1,14 @@
-{% macro objective_label(obj) -%}
-{%- set mag = obj.magnification -%}
-{%- set immersion = (obj.immersion | capitalize) if obj.immersion else '' -%}
-{%- if mag is number -%}
-{{ mag | int }}x{% if immersion %} {{ immersion }}{% endif %}
-{%- elif mag is string and mag | trim -%}
-{{ mag | trim }}x{% if immersion %} {{ immersion }}{% endif %}
-{%- else -%}
-—x{% if immersion %} {{ immersion }}{% endif %}
-{%- endif -%}
+{% macro render_spec_card(item) -%}
+- **{% if item.url %}[{{ item.display_label }}]({{ item.url }}){:target="_blank"}{% else %}{{ item.display_label }}{% endif %}**
+  {% if item.display_subtitle %}<br><small class="aic-muted">{{ item.display_subtitle }}</small>{% endif %}
+  {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
 {%- endmacro %}
 
-{% macro bool_label(value) -%}
-{%- if value is sameas true -%}Yes{%- elif value is sameas false -%}No{%- else -%}—{%- endif -%}
-{%- endmacro %}
-
-{% macro pretty_id(value) -%}
-{%- if value -%}{{ value | replace('_', ' ') | title }}{%- else -%}—{%- endif -%}
-{%- endmacro %}
-
-{% macro render_optical_component(component) -%}
-{%- if component and component.type and component.type != 'empty' -%}
-{%- set ctype = component.type | lower -%}
-**{{ component.name or pretty_id(component.type) }}**
-{%- if ctype in ['bandpass', 'notch'] and component.center_nm is not none and component.width_nm is not none -%}
-<br><small>Center: {{ component.center_nm }}nm, Width: {{ component.width_nm }}nm</small>
-{%- elif ctype == 'longpass' and component.cut_on_nm is not none -%}
-<br><small>Cut-on: {{ component.cut_on_nm }}nm</small>
-{%- elif ctype == 'shortpass' and component.cut_off_nm is not none -%}
-<br><small>Cut-off: {{ component.cut_off_nm }}nm</small>
-{%- elif ctype in ['dichroic', 'multiband'] and component.cutoffs_nm -%}
-<br><small>Cutoffs: {{ component.cutoffs_nm | join(', ') }} nm</small>
-{%- endif -%}
-{%- if component.manufacturer or component.product_code -%}
-<br><small class="aic-muted">Ref: {{ component.manufacturer or '' }} {{ component.product_code or '' }}</small>
-{%- endif -%}
-{%- else -%}
-<span class="aic-muted"><em>Empty</em></span>
-{%- endif -%}
-{%- endmacro %}
-
+{% set dto = instrument.dto %}
+{% set hw = dto.hardware %}
 {% set canonical = instrument.canonical if instrument.canonical else {} %}
-{% set canonical_hardware = canonical.hardware if canonical.hardware else {} %}
 {% set policy = canonical.policy if canonical.policy else {} %}
-{% set light_sources = canonical_hardware.light_sources if canonical_hardware else [] %}
-{% set detectors = canonical_hardware.detectors if canonical_hardware else [] %}
-{% set objectives = canonical_hardware.objectives if canonical_hardware else [] %}
-{% set light_path = instrument.hardware.light_path if instrument.hardware and instrument.hardware.light_path else {} %}
-{% set magnification_changers = canonical_hardware.magnification_changers if canonical_hardware else [] %}
-{% set environment = canonical_hardware.environment if canonical_hardware and canonical_hardware.environment else {} %}
-{% set stages = canonical_hardware.stages if canonical_hardware and canonical_hardware.stages else [] %}
-{% set hardware_autofocus = canonical_hardware.hardware_autofocus if canonical_hardware and canonical_hardware.hardware_autofocus else {} %}
-{% set triggering = canonical_hardware.triggering if canonical_hardware and canonical_hardware.triggering else {} %}
-{% set scanner = canonical_hardware.scanner if canonical_hardware and canonical_hardware.scanner else {} %}
-{% set module_names = instrument.modules | map(attribute='name') | list if instrument.modules else [] %}
+{% set magnification_changers = hw.magnification_changers if hw else [] %}
 
 # {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
 
@@ -89,7 +45,7 @@
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Eyepieces</div>
-        <div>{{ pretty_id(instrument.ocular_availability) }}</div>
+        <div>{{ instrument.ocular_availability | replace('_', ' ') | title if instrument.ocular_availability else '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Location</div>
@@ -168,22 +124,11 @@
 
 ## Software Environment
 
-{% if instrument.software %}
+{% if dto.software %}
 <div class="grid cards" markdown>
-
-{% for sw in instrument.software %}
-{% set has_sw_content = sw.name or sw.role or sw.developer or sw.version or sw.notes %}
-{% if has_sw_content %}
--   {% if sw.name %}**{% if sw.url %}[{{ sw.name }}]({{ sw.url }}){:target="_blank"}{% else %}{{ sw.name }}{% endif %}**{% endif %}
-
-    {% if sw.role or sw.developer or sw.version or sw.notes %}---{% endif %}
-
-    {% if sw.role %}<span class="aic-muted">Role:</span> {{ sw.role | replace("_", " ") | title }}<br>{% endif %}
-    {% if sw.developer %}<span class="aic-muted">Developer:</span> {{ sw.developer }}{% endif %}{% if sw.version %}{% if sw.developer or sw.role %}<br>{% endif %}<span class="aic-muted">Version:</span> `{{ sw.version }}`{% endif %}{% if sw.notes %}{% if sw.developer or sw.version or sw.role %}<br>{% endif %}<small class="aic-muted">{{ sw.notes }}</small>{% endif %}
-{% endif %}
-
+{% for sw in dto.software %}
+{{ render_spec_card(sw) }}
 {% endfor %}
-
 </div>
 {% else %}
 > *No software configurations recorded.*
@@ -195,134 +140,96 @@
 
 ### 🌡️ Environmental Control
 
-{% set show_temperature = environment.temperature_control is sameas true or environment.temperature_range %}
-{% set show_co2 = environment.co2_control is sameas true or environment.co2_range %}
-{% set show_o2 = environment.o2_control is sameas true or environment.o2_range %}
-{% set show_humidity = environment.humidity_control is sameas true %}
-{% set has_environment = show_temperature or show_co2 or show_o2 or show_humidity or environment.notes %}
-{% if has_environment %}
-{% if show_temperature %}
-- **Temperature Control:** {{ bool_label(environment.temperature_control) }}
-  {% if environment.temperature_range %}<br>**Temperature Range:** `{{ environment.temperature_range }}`{% endif %}
-{% endif %}
-{% if show_co2 %}
-- **CO2 Control:** {{ bool_label(environment.co2_control) }}
-  {% if environment.co2_range %}<br>**CO2 Range:** `{{ environment.co2_range }}`{% endif %}
-{% endif %}
-{% if show_o2 %}
-- **O2 Control:** {{ bool_label(environment.o2_control) }}
-  {% if environment.o2_range %}<br>**O2 Range:** `{{ environment.o2_range }}`{% endif %}
-{% endif %}
-{% if show_humidity %}
-- **Humidity Control:** {{ bool_label(environment.humidity_control) }}
-{% endif %}
-{% if environment.notes %}
-- **Notes:** {{ environment.notes }}
-{% endif %}
+{% if hw.environment.present %}
+{{ render_spec_card(hw.environment) }}
 {% else %}
 > *No environmental control details recorded.*
 {% endif %}
 
 ### 💡 Light Sources
-
-{% if light_sources %}
+{% if hw.light_sources %}
 <div class="grid cards" markdown>
-
-{% for src in light_sources %}
-{% set src_title = src.model or src.manufacturer or src.kind %}
-{% set has_src_details = src.kind or src.technology or src.wavelength_nm or src.power or src.notes %}
-{% if src_title or has_src_details %}
--   {% if src_title %}**{% if src.url %}[{{ src_title }}]({{ src.url }}){:target="_blank"}{% else %}{{ src_title }}{% endif %}**{% endif %}
-
-    {% if has_src_details %}---{% endif %}
-
-    {% if src.kind %}**Type:** {{ src.kind }}{% endif %}
-    {% if src.technology %}<br>**Technology:** `{{ src.technology }}`{% endif %}
-    {% if src.wavelength_nm %}<br>**Wavelength:** `{{ src.wavelength_nm }} nm`{% endif %}
-    {% if src.power %}<br>**Power:** `{{ src.power }}`{% endif %}
-    {% if src.notes %}<br><small class="aic-muted">{{ src.notes }}</small>{% endif %}
-{% endif %}
-
+{% for item in hw.light_sources %}
+{{ render_spec_card(item) }}
 {% endfor %}
-
 </div>
 {% else %}
 > *No light sources recorded.*
 {% endif %}
 
 ### 🧭 Scanner
-
-{% if scanner and scanner.type and scanner.type != 'none' %}
-- **Type:** {{ scanner.type }}
-  {% if scanner.light_sheet_type %}<br>**Light-sheet type:** {{ scanner.light_sheet_type }}{% endif %}
-  {% if scanner.line_rate_hz %}<br>**Line rate:** `{{ scanner.line_rate_hz }} Hz`{% endif %}
-  {% if scanner.pinhole_um %}<br>**Pinhole:** `{{ scanner.pinhole_um }} µm`{% endif %}
-  {% if scanner.url %}<br>**Reference:** [{{ scanner.url }}]({{ scanner.url }}){:target="_blank"}{% endif %}
-  {% if scanner.notes %}<br><small class="aic-muted">{{ scanner.notes }}</small>{% endif %}
+{% if hw.scanner.present %}
+{{ render_spec_card(hw.scanner) }}
 {% else %}
 > *No scanner details recorded.*
 {% endif %}
 
 ### 📷 Detectors
-
-{% if detectors and detectors | length > 0 %}
+{% if hw.detectors %}
 <div class="grid cards" markdown>
-
-{% for det in detectors %}
-{% set det_title = ([det.manufacturer, det.model] | select | join(' ')) or det.kind %}
-{% set has_det_details = det.kind or det.pixel_pitch_um or det.sensor_format_px or det.binning or det.bit_depth or det.qe_peak_pct or det.read_noise_e or det.notes %}
-{% if det_title or has_det_details %}
--   {% if det_title %}**{% if det.url %}[{{ det_title }}]({{ det.url }}){:target="_blank"}{% else %}{{ det_title }}{% endif %}**{% endif %}
-
-    {% if has_det_details %}---{% endif %}
-
-    {% if det.kind %}**Type:** {{ det.kind }}{% endif %}
-    {% if det.pixel_pitch_um %}<br>**Pixel Pitch:** `{{ det.pixel_pitch_um }} µm`{% endif %}
-    {% if det.sensor_format_px %}<br>**Sensor Format:** `{{ det.sensor_format_px }}`{% endif %}
-    {% if det.binning %}<br>**Binning:** `{{ det.binning }}`{% endif %}
-    {% if det.bit_depth %}<br>**Bit Depth:** `{{ det.bit_depth }}`{% endif %}
-    {% if det.qe_peak_pct %}<br>**QE (peak):** `{{ det.qe_peak_pct }}%`{% endif %}
-    {% if det.read_noise_e %}<br>**Read Noise:** `{{ det.read_noise_e }} e-`{% endif %}
-    {% if det.notes %}<br><small class="aic-muted">{{ det.notes }}</small>{% endif %}
-{% endif %}
-
+{% for item in hw.detectors %}
+{{ render_spec_card(item) }}
 {% endfor %}
-
 </div>
-{% elif 'camera_port' in module_names %}
-> *No integrated digital detectors. An external camera port is available for third-party imaging devices.*
 {% else %}
-> *Manual observation only (no digital detectors).*
+> *No detectors recorded.*
 {% endif %}
 
 ### 🔬 Objectives
-
-{% if objectives %}
+{% if hw.objectives %}
 <div class="grid cards" markdown>
-
-{% for obj in objectives %}
-{% set obj_title = obj.model %}
-{% if obj_title %}-   **{% if obj.url %}[{{ obj_title }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj_title }}{% endif %}**{% endif %}{% if obj.is_installed is sameas false %} <span class="aic-badge aic-badge--red">Ask staff</span>{% endif %}
-    {% if obj.id %}<br><span class="aic-muted"><code>{{ obj.id }}</code></span>{% endif %}
-
-    ---
-
-    <span {% if obj.is_installed is sameas false %}style="opacity: 0.6; display: inline-block;"{% endif %}>**Mag:** `{{ obj.magnification if obj.magnification is not none else '—' }}x` | **NA:** `{{ obj.numerical_aperture if obj.numerical_aperture is not none else '—' }}`
-    {% if obj.immersion %}<br>**Immersion:** {{ obj.immersion }}{% endif %}
-    {% if obj.working_distance %}<br>**WD:** {{ obj.working_distance }}{% endif %}
-    {% if obj.correction %}<br>**Correction:** {{ obj.correction }}{% endif %}
-    {% if obj.product_code %}<br>**Product code:** `{{ obj.product_code }}`{% endif %}
-    {% if obj.afc_compatible is not none %}<br>**AFC compatible:** {{ bool_label(obj.afc_compatible) }}{% endif %}
-    {% if obj.specialties %}<br>**Capabilities:** {% if obj.specialties is string %}`{{ obj.specialties }}`{% elif obj.specialties is iterable %}{% for spec in obj.specialties %}`{{ spec }}`{% if not loop.last %} {% endif %}{% endfor %}{% else %}-{% endif %}{% endif %}
-    {% if obj.notes %}<br><small class="aic-muted">{{ obj.notes }}</small>{% endif %}</span>
-
+{% for item in hw.objectives %}
+{{ render_spec_card(item) }}
 {% endfor %}
-
 </div>
 {% else %}
 > *No objectives recorded.*
 {% endif %}
 
+### 🔍 Magnification Changers
+
+{% if magnification_changers %}
+<div class="grid cards" markdown>
+
+{% for mag in magnification_changers %}
+{% set mag_title = mag.model or mag.name %}
+{% set has_mag_details = mag.manufacturer or mag.magnification is not none or mag.notes %}
+{% if mag_title or has_mag_details %}
+-   {% if mag_title %}**{% if mag.url %}[{{ mag_title }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag_title }}{% endif %}**{% endif %}
+
+    {% if has_mag_details %}---{% endif %}
+
+    {% if mag.manufacturer %}**Manufacturer:** {{ mag.manufacturer }}{% endif %}
+    {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
+    {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
+{% endif %}
+
+{% endfor %}
+
+</div>
+{% else %}
+> *No magnification changers recorded.*
+{% endif %}
+
+### 🧭 Stages & Focus Drives
+{% if hw.stages %}
+{% for item in hw.stages %}
+- {{ item.display_label }}
+  {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
+{% endfor %}
+{% else %}
+> *No stages or focus drives recorded.*
+{% endif %}
+
+### ⚙️ Advanced Hardware
+{% if hw.hardware_autofocus.present %}
+- {{ hw.hardware_autofocus.display_label }}
+  {% for line in hw.hardware_autofocus.spec_lines %}<br>{{ line }}{% endfor %}
+{% endif %}
+{% if hw.triggering.present %}
+- {{ hw.triggering.display_label }}
+  {% for line in hw.triggering.spec_lines %}<br>{{ line }}{% endfor %}
+{% endif %}
 
 ### 🎛️ Optical Path & Filters
 
@@ -375,58 +282,6 @@
 {% endif %}
 
 
-### 🔍 Magnification Changers
-
-{% if magnification_changers %}
-<div class="grid cards" markdown>
-
-{% for mag in magnification_changers %}
-{% set mag_title = mag.model or mag.name %}
-{% set has_mag_details = mag.manufacturer or mag.magnification is not none or mag.notes %}
-{% if mag_title or has_mag_details %}
--   {% if mag_title %}**{% if mag.url %}[{{ mag_title }}]({{ mag.url }}){:target="_blank"}{% else %}{{ mag_title }}{% endif %}**{% endif %}
-
-    {% if has_mag_details %}---{% endif %}
-
-    {% if mag.manufacturer %}**Manufacturer:** {{ mag.manufacturer }}{% endif %}
-    {% if mag.magnification is not none %}<br>**Magnification:** `{{ mag.magnification }}x`{% endif %}
-    {% if mag.notes %}<br><small class="aic-muted">{{ mag.notes }}</small>{% endif %}
-{% endif %}
-
-{% endfor %}
-
-</div>
-{% else %}
-> *No magnification changers recorded.*
-{% endif %}
-
-### 🧭 Stages & Focus Drives
-
-{% if stages %}
-{% for stage in stages %}
-- **{{ pretty_id(stage.type) }}** — {{ stage.manufacturer or '—' }} {{ stage.model or '—' }} 
-  <br><small class="aic-muted">Step size: `{{ stage.step_size_um if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) else '—' }}{% if stage.step_size_um is number or (stage.step_size_um is string and stage.step_size_um|trim) %} µm{% endif %}`</small>
-{% endfor %}
-{% else %}
-> *No stages or focus drives recorded.*
-{% endif %}
-
-### ⚙️ Advanced Hardware
-
-{% set autofocus_type = hardware_autofocus.type | trim if hardware_autofocus.type is string else hardware_autofocus.type %}
-{% set has_autofocus = hardware_autofocus.is_installed is not none or autofocus_type %}
-{% set has_triggering = triggering.primary_mode or triggering.notes %}
-{% if has_autofocus or has_triggering %}
-{% if has_autofocus %}
-- **Hardware Autofocus:** {{ bool_label(hardware_autofocus.is_installed) }}{% if autofocus_type and hardware_autofocus.is_installed is not sameas false %} — {{ pretty_id(autofocus_type) }}{% endif %}
-{% endif %}
-{% if has_triggering %}
-- **Triggering:** {% if triggering.primary_mode %}{{ pretty_id(triggering.primary_mode) }}{% else %}—{% endif %}{% if triggering.notes %} — {{ triggering.notes }}{% endif %}
-{% endif %}
-{% else %}
-> *No advanced hardware features recorded.*
-{% endif %}
-
 ---
 
 ## QC Metrics: Latest Measurements
@@ -463,12 +318,12 @@
 
 ### 🔬 Optical Resolution (PSF & Alignment)
 
-{% if objectives %}
+{% if hw.objectives %}
   {% set obj_with_data = [] %}
   {% set obj_without_data = [] %}
 
   {# 1. Sort objectives into "has data" and "no data" buckets #}
-  {% for obj in objectives %}
+  {% for obj in hw.objectives %}
     {% if obj.id %}
       {% set obj_metrics = {} %}
       {% for k, v in latest_metrics.items() %}
@@ -489,7 +344,7 @@
   {% if obj_with_data %}
     {% for obj, obj_metrics in obj_with_data %}
 
-#### **{{ objective_label(obj) }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
+#### **{{ obj.display_label }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
 
 <div class="grid cards" markdown>
 
@@ -514,7 +369,7 @@
   {% if obj_without_data %}
 ??? info "Objectives without recent data"
     {% for obj in obj_without_data %}
-    - **{{ objective_label(obj) }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
+    - **{{ obj.display_label }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
     {% endfor %}
   {% endif %}
 
