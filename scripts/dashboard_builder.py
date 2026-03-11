@@ -1628,18 +1628,6 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     # Export active + retired instruments to JSON for the Methods Generator
     json_path = docs_root / "assets" / "instruments_data.json"
     json_path.parent.mkdir(parents=True, exist_ok=True) 
-    vocabularies_payload = {
-        vocab_name: [
-            {
-                "id": term.id,
-                "label": term.label,
-                "description": term.description,
-                "synonyms": term.synonyms,
-            }
-            for term in sorted(terms.values(), key=lambda t: t.id)
-        ]
-        for vocab_name, terms in sorted(vocabulary.terms_by_vocab.items())
-    }
     json_payload = {
         "instruments": [inst["dto"] for inst in sorted([*instruments, *retired_instruments], key=lambda item: item.get("id", ""))],
     }
@@ -1658,15 +1646,8 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "When required details are missing, ask follow-up questions or clearly state uncertainty.",
             ],
         },
-        "vocabulary_definitions": vocabularies_payload,
         "active_microscopes": [],
     }
-
-    def none_if_empty(value: Any) -> Any:
-        if isinstance(value, str):
-            trimmed = value.strip()
-            return trimmed if trimmed else None
-        return value
 
     def collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str], list[str]]:
         known_fields: list[str] = []
@@ -1699,170 +1680,16 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         return known_fields, missing_fields
 
     for inst in instruments:
-        status = inst.get("status", {})
-        canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
-        canonical_hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
-        hw = (inst.get("dto") or {}).get("hardware", {}) if isinstance((inst.get("dto") or {}).get("hardware", {}), dict) else {}
-        lightpath_dto = global_vm_payloads.get(inst.get("id"), {}) if isinstance(global_vm_payloads, dict) else {}
-        if not isinstance(lightpath_dto, dict):
-            lightpath_dto = {}
-
-        def pick_summary_value(canonical_value: Any, processed_value: Any, fallback: Any) -> Any:
-            if canonical_value not in (None, "", []):
-                return canonical_value
-            if processed_value not in (None, "", []):
-                return processed_value
-            return fallback
-
-        # 1. Parse Operational Status
-        raw_badge = status.get("badge", "Unknown").lower()
-        if "online" in raw_badge:
-            overall_status = "online"
-        elif "warning" in raw_badge:
-            overall_status = "warning"
-        elif "offline" in raw_badge or "out of service" in raw_badge:
-            overall_status = "offline"
-        else:
-            overall_status = "unknown"
-
-        raw_reason = none_if_empty(status.get("reason"))
-        issues = []
-        if overall_status in ["warning", "offline"] and raw_reason and "operational" not in raw_reason.lower():
-            issues.append({"severity": overall_status, "description": raw_reason})
-
-        # 2. Parse Environment & Incubation
-        live_cell_modules = {
-            "incubation",
-            "environmental_enclosure",
-            "environmental_tolerance",
-            "temperature_control",
-        }
-        is_live_cell = False
-        temp_ctrl, co2_ctrl, hum_ctrl = False, False, False
-
-        for m in inst.get("modules", []):
-            m_name = m.get("name", "").lower()
-            if m_name in live_cell_modules:
-                is_live_cell = True
-            notes = m.get("notes", "").lower()
-            if "temp" in notes or "t/" in notes or "37c" in notes or "37 c" in notes or m_name == "temperature_control":
-                temp_ctrl = True
-            if "co2" in notes or "c/" in notes:
-                co2_ctrl = True
-            if "humidity" in notes or "h/" in notes:
-                hum_ctrl = True
-
-        env_control = {
-            "temperature_control": temp_ctrl,
-            "co2_control": co2_ctrl,
-            "humidity_control": hum_ctrl,
-        } if is_live_cell else None
-
-        # 3. Guidance keeps only direct readiness/control metadata (no derived best/avoid tags)
-        # Normalize Helper
-        def norm_id(val):
-            return str(val).lower().replace(" ", "_").replace("(", "").replace(")", "") if val else None
-
-        def norm_str(val):
-            return str(val).lower().replace(" ", "_").replace("(", "").replace(")", "") if val else None
-
-        microscope_payload = {
-            "id": inst.get("id"),
-            "canonical": {
-                "software": copy.deepcopy(canonical.get("software") if isinstance(canonical.get("software"), list) else []),
-                "hardware": copy.deepcopy(canonical_hardware),
-                "policy": copy.deepcopy(canonical.get("policy") if isinstance(canonical.get("policy"), dict) else {
-                    "missing_required": [],
-                    "missing_conditional": [],
-                    "alias_fallbacks": [],
-                }),
-            },
-            "identity": {
-                "display_name": none_if_empty(inst.get("display_name")),
-                "manufacturer": none_if_empty(inst.get("manufacturer")),
-                "model": none_if_empty(inst.get("model")),
-                "stand_orientation": none_if_empty(inst.get("stand_orientation")),
-            },
-            "operational_status": {
-                "overall_status": overall_status,
-                "issues": issues,
-                "status_note": raw_reason if overall_status == "online" and raw_reason and "operational" not in raw_reason.lower() else None,
-                "last_qc_date": none_if_empty(status.get("last_qc_date", None)) or None,
-                "last_maintenance_date": none_if_empty(status.get("last_maint_date", None)) or None,
-            },
-            "capabilities": {
-                "modalities": pick_summary_value(canonical_hardware.get("modalities"), inst.get("modalities", []), []),
-                "scanner": {
-                    "type": none_if_empty(pick_summary_value(canonical_hardware.get("scanner", {}).get("type"), hw.get("scanner", {}).get("type", None), None)) or None,
-                    "line_rate_hz": pick_summary_value(canonical_hardware.get("scanner", {}).get("line_rate_hz"), hw.get("scanner", {}).get("line_rate_hz"), None),
-                    "pinhole_um": pick_summary_value(canonical_hardware.get("scanner", {}).get("pinhole_um"), hw.get("scanner", {}).get("pinhole_um"), None),
-                    "notes": none_if_empty(pick_summary_value(canonical_hardware.get("scanner", {}).get("notes"), hw.get("scanner", {}).get("notes", None), None)) or None,
-                },
-                "modules": [
-                    {"name": none_if_empty(m.get("name")), "notes": none_if_empty(m.get("notes")) or None}
-                    for m in pick_summary_value(canonical_hardware.get("modules"), inst.get("modules", []), [])
-                    if isinstance(m, dict)
-                ],
-                "objectives": [
-                    {
-                        "magnification": obj.get("magnification"),
-                        "numerical_aperture": pick_summary_value(obj.get("numerical_aperture"), obj.get("na"), None),
-                        "immersion": norm_id(obj.get("immersion")),
-                        "correction_class": norm_id(pick_summary_value(obj.get("correction_class"), obj.get("correction"), None)),
-                        "working_distance": none_if_empty(pick_summary_value(obj.get("working_distance"), obj.get("wd"), None)) or None,
-                        "specialties": obj.get("specialties", []),
-                        "notes": none_if_empty(obj.get("notes")) or None,
-                    }
-                    for obj in pick_summary_value(canonical_hardware.get("objectives"), hw.get("objectives", []), [])
-                    if isinstance(obj, dict)
-                ],
-                "light_sources": [
-                    {
-                        "type": norm_str(pick_summary_value(ls.get("type"), ls.get("kind"), None)),
-                        "manufacturer": none_if_empty(ls.get("manufacturer")) or None,
-                        "wavelength": none_if_empty(pick_summary_value(ls.get("wavelength_nm"), ls.get("wavelength"), None)) or None,
-                        "technology": none_if_empty(ls.get("technology")) or None,
-                        "model": none_if_empty(pick_summary_value(ls.get("model"), ls.get("name"), None)) or None,
-                        "notes": none_if_empty(ls.get("notes")) or None,
-                    }
-                    for ls in pick_summary_value(canonical_hardware.get("light_sources"), hw.get("light_sources", []), [])
-                    if isinstance(ls, dict)
-                ],
-                "optical_path": lightpath_dto.get("stages", {}),
-                "splitters": lightpath_dto.get("splitters", []),
-                "detectors": [
-                    {
-                        "type": norm_id(pick_summary_value(det.get("kind"), det.get("type"), None)),
-                        "model": none_if_empty(det.get("model")) or None,
-                        "pixel_pitch_um": pick_summary_value(det.get("pixel_pitch_um"), det.get("pixel_size_um"), None),
-                        "sensor_format_px": none_if_empty(det.get("sensor_format_px")) or None,
-                        "binning": none_if_empty(det.get("binning")) or None,
-                        "bit_depth": det.get("bit_depth"),
-                        "qe_peak_pct": det.get("qe_peak_pct"),
-                        "read_noise_e": det.get("read_noise_e"),
-                        "notes": none_if_empty(det.get("notes")) or None,
-                    }
-                    for det in pick_summary_value(canonical_hardware.get("detectors"), hw.get("detectors", []), [])
-                    if isinstance(det, dict)
-                ],
-            },
-            "experiment_guidance": {
-                "live_cell_ready": is_live_cell,
-                "environment_control": env_control,
-                "general_notes_and_recommendations": none_if_empty(inst.get("notes_raw", None)) or None,
-            },
-        }
-
-        known_fields, missing_fields = collect_known_missing_paths(microscope_payload)
-        microscope_payload["inventory_completeness"] = {
+        dto = copy.deepcopy(inst["dto"])
+        known_fields, missing_fields = collect_known_missing_paths(dto)
+        dto["inventory_completeness"] = {
             "known_fields": sorted(known_fields),
             "missing_fields": sorted(missing_fields),
             "known_field_count": len(known_fields),
             "missing_field_count": len(missing_fields),
             "uncertainty_note": "Missing fields are unknown and must not be assumed.",
         }
-
-        llm_payload["active_microscopes"].append(microscope_payload)
+        llm_payload["active_microscopes"].append(dto)
 
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
