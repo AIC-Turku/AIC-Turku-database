@@ -1,0 +1,22 @@
+terms:
+  - id: standard_spim
+    label: "Standard SPIM"
+    description: "Conventional selective-plane illumination geometry."
+  - id: lattice
+    label: "Lattice Light Sheet"
+    description: "Structured lattice light-sheet implementation."
+  - id: single_objective
+    label: "Single-Objective Light Sheet"
+    description: "Single-objective light-sheet architecture."
+  - id: di_spim
+    label: "diSPIM"
+    description: "Dual-view inverted selective-plane illumination microscopy."
+  - id: scape
+    label: "SCAPE"
+    description: "Swept confocally aligned planar excitation."
+  - id: airy_beam
+    label: "Airy Beam Light Sheet"
+    description: "Airy-beam light sheet implementation."
+  - id: other
+    label: "Other"
+    description: "Light-sheet architecture not covered by the predefined terms."

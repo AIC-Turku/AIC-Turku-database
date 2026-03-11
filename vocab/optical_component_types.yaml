@@ -3,6 +3,10 @@ terms:
     label: "Bandpass"
     description: "Requires center_nm and width_nm."
 
+  - id: multiband_bandpass
+    label: "Multiband Bandpass"
+    description: "Bandpass component containing multiple pass bands."
+
   - id: longpass
     label: "Longpass"
     description: "Requires cut_on_nm."

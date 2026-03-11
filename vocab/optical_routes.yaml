@@ -1,0 +1,19 @@
+terms:
+  - id: epi
+    label: "Epi"
+    description: "Epifluorescence / epi illumination route."
+  - id: tirf
+    label: "TIRF"
+    description: "TIRF excitation route."
+  - id: confocal
+    label: "Confocal"
+    description: "Point- or disk-confocal route."
+  - id: multiphoton
+    label: "Multiphoton"
+    description: "Multiphoton excitation route."
+  - id: shared
+    label: "Shared"
+    description: "Shared across multiple routes."
+  - id: all
+    label: "All"
+    description: "Applies to all routes."

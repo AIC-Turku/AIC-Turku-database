@@ -1,0 +1,13 @@
+terms:
+  - id: image_splitter
+    label: "Image Splitter"
+    description: "Beam/image splitting device routing emission to multiple detectors."
+  - id: dual_view
+    label: "Dual-View Splitter"
+    description: "Two-path emission splitter."
+  - id: quad_view
+    label: "Quad-View Splitter"
+    description: "Four-path emission splitter."
+  - id: other
+    label: "Other"
+    description: "Splitter topology not covered by the predefined terms."

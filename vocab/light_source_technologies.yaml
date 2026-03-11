@@ -1,0 +1,19 @@
+terms:
+  - id: diode
+    label: "Diode"
+    description: "Diode laser or diode-driven light source."
+  - id: dpss
+    label: "DPSS"
+    description: "Diode-pumped solid-state laser."
+  - id: led_array
+    label: "LED Array"
+    description: "Multi-channel LED engine or array."
+  - id: supercontinuum
+    label: "Supercontinuum"
+    description: "Supercontinuum broadband source."
+  - id: ti_sapphire
+    label: "Ti:Sapphire"
+    description: "Tunable femtosecond Ti:Sapphire source."
+  - id: other
+    label: "Other"
+    description: "Technology subtype not covered by the predefined terms."
