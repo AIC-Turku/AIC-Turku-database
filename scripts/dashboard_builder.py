@@ -292,6 +292,380 @@ def clean_string_list(value: Any) -> list[str]:
     return []
 
 
+def _fmt_num(value: Any) -> str:
+    if value in (None, ""):
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _bool_display(value: Any) -> str:
+    if value is True:
+        return "Yes"
+    if value is False:
+        return "No"
+    return "—"
+
+
+def _human_list(items: list[str]) -> str:
+    cleaned = [clean_text(item) for item in items if clean_text(item)]
+    if not cleaned:
+        return ""
+    if len(cleaned) == 1:
+        return cleaned[0]
+    if len(cleaned) == 2:
+        return f"{cleaned[0]} and {cleaned[1]}"
+    return f"{', '.join(cleaned[:-1])}, and {cleaned[-1]}"
+
+
+def _spec_lines(*pairs: tuple[str, Any]) -> list[str]:
+    lines: list[str] = []
+    for label, raw_value in pairs:
+        if raw_value in (None, "", [], {}):
+            continue
+        lines.append(f"**{label}:** {raw_value}")
+    return lines
+
+
+def _vocab_display(vocabulary: Vocabulary, vocab_name: str, value: Any) -> str:
+    raw = clean_text(value)
+    if not raw:
+        return ""
+    return vocab_label(vocabulary, vocab_name, raw)
+
+
+def _objective_display_label(vocabulary: Vocabulary, obj: dict[str, Any]) -> str:
+    model = clean_text(obj.get("model") or obj.get("name"))
+    mag = _fmt_num(obj.get("magnification") or obj.get("mag"))
+    na = _fmt_num(obj.get("numerical_aperture") or obj.get("na"))
+    immersion = _vocab_display(vocabulary, "objective_immersion", obj.get("immersion"))
+    parts = [model, f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion.upper() if immersion else ""]
+    return " ".join(part for part in parts if part).strip() or model or "Objective"
+
+
+def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str, Any]:
+    manufacturer = clean_text(obj.get("manufacturer"))
+    model = clean_text(obj.get("model") or obj.get("name"))
+    product_code = clean_text(obj.get("product_code"))
+    immersion = _vocab_display(vocabulary, "objective_immersion", obj.get("immersion"))
+    correction = _vocab_display(vocabulary, "objective_corrections", obj.get("correction") or obj.get("correction_class"))
+    mag = _fmt_num(obj.get("magnification") or obj.get("mag"))
+    na = _fmt_num(obj.get("numerical_aperture") or obj.get("na"))
+    wd = clean_text(obj.get("working_distance") or obj.get("wd"))
+    display_label = _objective_display_label(vocabulary, obj)
+    method_core = " ".join(part for part in [f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion, "objective"] if part).strip()
+    method_meta = ", ".join(part for part in [manufacturer, product_code] if part)
+    method_sentence = (
+        f"Images were acquired using a {method_core} ({method_meta})."
+        if method_core and method_meta
+        else f"Images were acquired using a {method_core}." if method_core
+        else ""
+    )
+    spec_lines = _spec_lines(
+        ("Model", model),
+        ("Magnification / NA", f"`{mag}x/{na}`" if mag and na else None),
+        ("Immersion", immersion),
+        ("Correction", correction),
+        ("Working distance", f"`{wd}`" if wd else None),
+        ("Product code", f"`{product_code}`" if product_code else None),
+        ("AFC compatible", _bool_display(obj.get("afc_compatible") if "afc_compatible" in obj else obj.get("afc")) if (obj.get("afc_compatible") is not None or obj.get("afc") is not None) else None),
+        ("Installed", _bool_display(obj.get("is_installed")) if obj.get("is_installed") is not None else None),
+        ("Specialties", ", ".join(clean_string_list(obj.get("specialties"))) or None),
+        ("Notes", clean_text(obj.get("notes"))),
+    )
+    return {
+        **copy.deepcopy(obj),
+        "display_label": display_label,
+        "display_subtitle": manufacturer,
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
+def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str, Any]:
+    manufacturer = clean_text(det.get("manufacturer") or det.get("name"))
+    model = clean_text(det.get("model"))
+    kind_label = _vocab_display(vocabulary, "detector_kinds", det.get("kind") or det.get("type"))
+    pixel_pitch = _fmt_num(det.get("pixel_pitch_um") or det.get("pixel_size_um"))
+    sensor_format = clean_text(det.get("sensor_format_px"))
+    binning = clean_text(det.get("binning"))
+    bit_depth = _fmt_num(det.get("bit_depth"))
+    display_label = " ".join(part for part in [manufacturer, model] if part).strip() or kind_label or "Detector"
+    method_sentence = f"Detection was performed using {display_label}{f' ({kind_label})' if kind_label else ''}."
+    spec_lines = _spec_lines(
+        ("Type", kind_label),
+        ("Pixel pitch", f"`{pixel_pitch} µm`" if pixel_pitch else None),
+        ("Sensor format", f"`{sensor_format}`" if sensor_format else None),
+        ("Binning", f"`{binning}`" if binning else None),
+        ("Bit depth", f"`{bit_depth}`" if bit_depth else None),
+        ("QE peak", f"`{_fmt_num(det.get('qe_peak_pct'))}%`" if det.get("qe_peak_pct") not in (None, "") else None),
+        ("Read noise", f"`{_fmt_num(det.get('read_noise_e'))} e-`" if det.get("read_noise_e") not in (None, "") else None),
+        ("Notes", clean_text(det.get("notes"))),
+    )
+    return {
+        **copy.deepcopy(det),
+        "display_label": display_label,
+        "display_subtitle": kind_label,
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
+def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[str, Any]:
+    manufacturer = clean_text(src.get("manufacturer"))
+    model = clean_text(src.get("model") or src.get("name"))
+    kind_label = _vocab_display(vocabulary, "light_source_kinds", src.get("kind") or src.get("type"))
+    wavelength = clean_text(src.get("wavelength_nm") or src.get("wavelength"))
+    technology = clean_text(src.get("technology"))
+    power = clean_text(src.get("power"))
+    display_label = " ".join(part for part in [f"{wavelength} nm" if wavelength.isdigit() else wavelength, kind_label, manufacturer, model] if part).strip() or model or kind_label or "Light source"
+    method_sentence = f"Excitation was provided by {display_label}."
+    spec_lines = _spec_lines(
+        ("Type", kind_label),
+        ("Technology", technology),
+        ("Wavelength", f"`{wavelength} nm`" if wavelength else None),
+        ("Power", f"`{power}`" if power else None),
+        ("Notes", clean_text(src.get("notes"))),
+    )
+    return {
+        **copy.deepcopy(src),
+        "display_label": display_label,
+        "display_subtitle": manufacturer,
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
+def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[str, Any]:
+    scanner_type = _vocab_display(vocabulary, "scanner_types", scanner.get("type"))
+    light_sheet_type = clean_text(scanner.get("light_sheet_type"))
+    line_rate = _fmt_num(scanner.get("line_rate_hz"))
+    pinhole = _fmt_num(scanner.get("pinhole_um"))
+    spec_lines = _spec_lines(
+        ("Type", scanner_type),
+        ("Light-sheet type", light_sheet_type),
+        ("Line rate", f"`{line_rate} Hz`" if line_rate else None),
+        ("Pinhole", f"`{pinhole} µm`" if pinhole else None),
+        ("Notes", clean_text(scanner.get("notes"))),
+    )
+    detail_bits = [f"line rate {line_rate} Hz" if line_rate else "", f"pinhole {pinhole} µm" if pinhole else ""]
+    detail_text = ", ".join(bit for bit in detail_bits if bit)
+    method_sentence = (
+        f"The microscope used a {scanner_type} scanner ({detail_text})."
+        if scanner_type and detail_text
+        else f"The microscope used a {scanner_type} scanner." if scanner_type and scanner_type != "No Scanner"
+        else ""
+    )
+    return {
+        **copy.deepcopy(scanner),
+        "display_label": scanner_type or "No Scanner",
+        "display_subtitle": clean_text(scanner.get("notes")),
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+        "present": bool(scanner_type and scanner_type != "No Scanner"),
+    }
+
+
+def build_environment_dto(environment: dict[str, Any]) -> dict[str, Any]:
+    clauses: list[str] = []
+    spec_lines = _spec_lines(
+        ("Temperature control", _bool_display(environment.get("temperature_control")) if environment.get("temperature_control") is not None else None),
+        ("Temperature range", f"`{clean_text(environment.get('temperature_range'))}`" if clean_text(environment.get("temperature_range")) else None),
+        ("CO2 control", _bool_display(environment.get("co2_control")) if environment.get("co2_control") is not None else None),
+        ("CO2 range", f"`{clean_text(environment.get('co2_range'))}`" if clean_text(environment.get("co2_range")) else None),
+        ("O2 control", _bool_display(environment.get("o2_control")) if environment.get("o2_control") is not None else None),
+        ("O2 range", f"`{clean_text(environment.get('o2_range'))}`" if clean_text(environment.get("o2_range")) else None),
+        ("Humidity control", _bool_display(environment.get("humidity_control")) if environment.get("humidity_control") is not None else None),
+        ("Notes", clean_text(environment.get("notes"))),
+    )
+    if environment.get("temperature_control") is True:
+        clauses.append(clean_text(environment.get("temperature_range")) or "controlled temperature")
+    if environment.get("co2_control") is True:
+        clauses.append(f"{clean_text(environment.get('co2_range'))} CO2" if clean_text(environment.get("co2_range")) else "controlled CO2")
+    if environment.get("o2_control") is True:
+        clauses.append(f"{clean_text(environment.get('o2_range'))} O2" if clean_text(environment.get("o2_range")) else "controlled O2")
+    if environment.get("humidity_control") is True:
+        clauses.append("controlled humidity")
+    method_sentence = f"Live-cell imaging was performed using an environmental chamber maintaining {_human_list(clauses)}." if clauses else ""
+    return {
+        **copy.deepcopy(environment),
+        "display_label": "Environmental Control",
+        "display_subtitle": ", ".join(clauses),
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+        "present": bool(spec_lines),
+    }
+
+
+def build_stage_dto(vocabulary: Vocabulary, stage: dict[str, Any]) -> dict[str, Any]:
+    stage_type = _vocab_display(vocabulary, "stage_types", stage.get("type"))
+    manufacturer = clean_text(stage.get("manufacturer"))
+    model = clean_text(stage.get("model"))
+    step = _fmt_num(stage.get("step_size_um"))
+    display_label = " — ".join(part for part in [stage_type, " ".join(part for part in [manufacturer, model] if part).strip()] if part).strip(" —")
+    method_sentence = ""
+    if clean_text(stage.get("type")).lower() == "z_piezo":
+        stage_name = " ".join(part for part in [manufacturer, model] if part).strip()
+        method_sentence = f"Z-stacks were acquired using a {stage_name} piezo stage." if stage_name else "Z-stacks were acquired using a piezo stage."
+    spec_lines = _spec_lines(
+        ("Type", stage_type),
+        ("Step size", f"`{step} µm`" if step else None),
+    )
+    return {
+        **copy.deepcopy(stage),
+        "display_label": display_label or stage_type or "Stage",
+        "display_subtitle": manufacturer,
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
+def build_software_dto(vocabulary: Vocabulary, software: dict[str, Any]) -> dict[str, Any]:
+    role_label = _vocab_display(vocabulary, "software_roles", software.get("role"))
+    name = clean_text(software.get("name"))
+    version = clean_text(software.get("version"))
+    developer = clean_text(software.get("developer"))
+    display_label = f"{name} (v{version})" if name and version else name or role_label or "Software"
+    method_sentence = ""
+    role_id = clean_text(software.get("role")).lower()
+    if role_id == "acquisition" and display_label:
+        method_sentence = f"Instrument control and image acquisition were performed using {display_label}."
+    elif role_id in {"processing", "analysis"} and display_label:
+        method_sentence = f"Post-acquisition processing and analysis were performed using {display_label}."
+    spec_lines = _spec_lines(
+        ("Role", role_label),
+        ("Developer", developer),
+        ("Version", f"`{version}`" if version else None),
+        ("Notes", clean_text(software.get("notes"))),
+    )
+    return {
+        **copy.deepcopy(software),
+        "display_label": display_label,
+        "display_subtitle": role_label,
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
+def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_dto: dict[str, Any]) -> dict[str, Any]:
+    canonical_hardware = ((inst.get("canonical") or {}).get("hardware") or {})
+    scanner = canonical_hardware.get("scanner") or {}
+    environment = canonical_hardware.get("environment") or {}
+    hardware_autofocus = canonical_hardware.get("hardware_autofocus") or {}
+    triggering = canonical_hardware.get("triggering") or {}
+
+    autofocus_label = _vocab_display(vocabulary, "autofocus_types", hardware_autofocus.get("type"))
+    triggering_label = _vocab_display(vocabulary, "triggering_modes", triggering.get("primary_mode"))
+
+    autofocus_sentence = ""
+    if hardware_autofocus.get("is_installed") is True:
+        autofocus_sentence = f"Focal drift was minimized using a {autofocus_label or 'hardware autofocus'} system."
+
+    triggering_sentence = ""
+    if triggering_label and clean_text(triggering.get("notes")):
+        triggering_sentence = f"Acquisition used {triggering_label.lower()} triggering ({clean_text(triggering.get('notes'))})."
+    elif triggering_label:
+        triggering_sentence = f"Acquisition used {triggering_label.lower()} triggering."
+
+    return {
+        "light_sources": [build_light_source_dto(vocabulary, src) for src in canonical_hardware.get("light_sources", []) if isinstance(src, dict)],
+        "scanner": build_scanner_dto(vocabulary, scanner),
+        "detectors": [build_detector_dto(vocabulary, det) for det in canonical_hardware.get("detectors", []) if isinstance(det, dict)],
+        "objectives": [build_objective_dto(vocabulary, obj) for obj in canonical_hardware.get("objectives", []) if isinstance(obj, dict)],
+        "environment": build_environment_dto(environment),
+        "stages": [build_stage_dto(vocabulary, stage) for stage in canonical_hardware.get("stages", []) if isinstance(stage, dict)],
+        "hardware_autofocus": {
+            **copy.deepcopy(hardware_autofocus),
+            "display_label": autofocus_label or "Hardware Autofocus",
+            "spec_lines": _spec_lines(
+                ("Installed", _bool_display(hardware_autofocus.get("is_installed")) if hardware_autofocus.get("is_installed") is not None else None),
+                ("Type", autofocus_label),
+            ),
+            "method_sentence": autofocus_sentence,
+            "present": bool(hardware_autofocus),
+        },
+        "triggering": {
+            **copy.deepcopy(triggering),
+            "display_label": triggering_label or "Triggering",
+            "spec_lines": _spec_lines(
+                ("Primary mode", triggering_label),
+                ("Notes", clean_text(triggering.get("notes"))),
+            ),
+            "method_sentence": triggering_sentence,
+            "present": bool(triggering_label or clean_text(triggering.get("notes"))),
+        },
+        "optical_path": copy.deepcopy(lightpath_dto),
+    }
+
+
+def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_dto: dict[str, Any]) -> dict[str, Any]:
+    software_rows = [build_software_dto(vocabulary, sw) for sw in inst.get("software", []) if isinstance(sw, dict)]
+    hardware_dto = build_hardware_dto(vocabulary, inst, lightpath_dto)
+    modalities = [
+        {
+            "id": modality_id,
+            "display_label": _vocab_display(vocabulary, "modalities", modality_id),
+            "method_sentence": f"{_vocab_display(vocabulary, 'modalities', modality_id)} imaging was performed." if _vocab_display(vocabulary, 'modalities', modality_id) else "",
+        }
+        for modality_id in inst.get("modalities", [])
+    ]
+    modules = [
+        {
+            **copy.deepcopy(module),
+            "display_label": clean_text(module.get("display_name") or module.get("name")),
+            "display_subtitle": clean_text(module.get("notes")),
+            "method_sentence": f"The {clean_text(module.get('display_name') or module.get('name'))} module was used." if clean_text(module.get("display_name") or module.get("name")) else "",
+        }
+        for module in inst.get("modules", []) if isinstance(module, dict)
+    ]
+
+    acquisition_software = next((row["display_label"] for row in software_rows if clean_text(row.get("role")).lower() == "acquisition" and clean_text(row.get("display_label"))), "[MISSING ACQUISITION SOFTWARE NAME AND VERSION]")
+    microscope_identity = " ".join(part for part in [clean_text(inst.get("manufacturer")), clean_text(inst.get("model"))] if part).strip()
+    stand = clean_text(inst.get("stand_orientation"))
+    stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
+    base_sentence = f"Images were acquired using the {microscope_identity} {stand_label.lower()} microscope, controlled by {acquisition_software}." if microscope_identity and stand_label else f"Images were acquired using the {microscope_identity} microscope, controlled by {acquisition_software}."
+
+    dto = {
+        "retired": bool(inst.get("retired")),
+        "id": inst.get("id"),
+        "display_name": inst.get("display_name"),
+        "image_filename": inst.get("image_filename"),
+        "url": inst.get("url"),
+        "status": copy.deepcopy(inst.get("status") or {}),
+        "identity": {
+            "manufacturer": clean_text(inst.get("manufacturer")),
+            "model": clean_text(inst.get("model")),
+            "stand_orientation": {
+                "id": stand,
+                "display_label": stand_label,
+            },
+            "ocular_availability": {
+                "id": clean_text(inst.get("ocular_availability")),
+                "display_label": _vocab_display(vocabulary, "ocular_availability", inst.get("ocular_availability")),
+            },
+            "year_of_purchase": clean_text(inst.get("year_of_purchase")),
+            "funding": clean_text(inst.get("funding")),
+            "location": clean_text(inst.get("location")),
+        },
+        "modalities": modalities,
+        "modules": modules,
+        "software": software_rows,
+        "hardware": hardware_dto,
+        "methods": {
+            "base_sentence": base_sentence,
+            "environment_sentence": hardware_dto["environment"].get("method_sentence", ""),
+            "autofocus_sentence": hardware_dto["hardware_autofocus"].get("method_sentence", ""),
+            "triggering_sentence": hardware_dto["triggering"].get("method_sentence", ""),
+            "stage_sentences": [stage["method_sentence"] for stage in hardware_dto["stages"] if clean_text(stage.get("method_sentence"))],
+            "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
+        },
+        "canonical": copy.deepcopy(inst.get("canonical") or {}),
+        "methods_generation": copy.deepcopy(inst.get("methods_generation") or {}),
+    }
+    return dto
+
+
 def slugify(value: str) -> str:
     s = value.lower().strip()
     s = re.sub(r"\s+", "-", s)
@@ -1154,132 +1528,15 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 session_metrics = _metric_lookup(payload.get("metrics_computed"))
                 latest_metrics.update(session_metrics)
         
-        canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
-        canonical_hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
-
-        light_sources = canonical_hardware.get("light_sources", [])
-        detectors = canonical_hardware.get("detectors", [])
-        objectives = canonical_hardware.get("objectives", [])
-        splitters = canonical_hardware.get("splitters", [])
-        filters = canonical_hardware.get("filters", [])
-        magnification_changers = canonical_hardware.get("magnification_changers", [])
-        environment = canonical_hardware.get("environment") if isinstance(canonical_hardware.get("environment"), dict) else {}
-        stages = canonical_hardware.get("stages", [])
-        hardware_autofocus = canonical_hardware.get("hardware_autofocus") if isinstance(canonical_hardware.get("hardware_autofocus"), dict) else {}
-        triggering = canonical_hardware.get("triggering") if isinstance(canonical_hardware.get("triggering"), dict) else {}
-        scanner = canonical_hardware.get("scanner") if isinstance(canonical_hardware.get("scanner"), dict) else {}
-
-        inst["processed_hardware"] = {
-            "modalities": [clean_text(m) for m in inst.get("modalities", []) if clean_text(m)],
-            "modules": [
-                {
-                    "name": clean_text(module.get("name")),
-                    "notes": clean_text(module.get("notes")),
-                    "url": clean_text(module.get("url")),
-                }
-                for module in inst.get("modules", [])
-                if isinstance(module, dict) and clean_text(module.get("name"))
-            ],
-            "scanner": {
-                "type": clean_text(scanner.get("type")),
-                "line_rate_hz": scanner.get("line_rate_hz"),
-                "pinhole_um": scanner.get("pinhole_um"),
-                "light_sheet_type": clean_text(scanner.get("light_sheet_type")),
-                "notes": clean_text(scanner.get("notes")),
-                "url": clean_text(scanner.get("url")),
-            },
-            "light_sources": [
-                {
-                    "name": clean_text(src.get("model")),
-                    "type": clean_text(src.get("kind")),
-                    "wavelength": src.get("wavelength_nm"),
-                    "power": clean_text(src.get("power")),
-                    "manufacturer": clean_text(src.get("manufacturer")),
-                    "technology": clean_text(src.get("technology")),
-                    "notes": clean_text(src.get("notes")),
-                    "url": clean_text(src.get("url")),
-                }
-                for src in light_sources
-                if isinstance(src, dict)
-            ],
-            "detectors": [
-                {
-                    "name": clean_text(det.get("manufacturer")),
-                    "model": clean_text(det.get("model")),
-                    "type": clean_text(det.get("kind")),
-                    "pixel_pitch_um": det.get("pixel_pitch_um") or det.get("pixel_size_um"),
-                    "sensor_format_px": clean_text(det.get("sensor_format_px")),
-                    "binning": clean_text(det.get("binning")),
-                    "bit_depth": det.get("bit_depth"),
-                    "qe_peak_pct": det.get("qe_peak_pct"),
-                    "read_noise_e": det.get("read_noise_e"),
-                    "notes": clean_text(det.get("notes")),
-                    "url": clean_text(det.get("url")),
-                }
-                for det in detectors
-                if isinstance(det, dict)
-            ],
-            "objectives": [
-                {
-                    "id": clean_text(obj.get("id")),
-                    "name": clean_text(obj.get("model")),
-                    "manufacturer": clean_text(obj.get("manufacturer")),
-                    "product_code": clean_text(obj.get("product_code")),
-                    "magnification": obj.get("magnification"),
-                    "na": obj.get("numerical_aperture"),
-                    "wd": clean_text(obj.get("working_distance")),
-                    "immersion": clean_text(obj.get("immersion")),
-                    "correction": clean_text(obj.get("correction")),
-                    "afc": obj.get("afc_compatible"),
-                    "is_installed": obj.get("is_installed"),
-                    "specialties": clean_string_list(obj.get("specialties")),
-                    "notes": clean_text(obj.get("notes")),
-                    "url": clean_text(obj.get("url")),
-                }
-                for obj in objectives
-                if isinstance(obj, dict)
-            ],
-            "splitters": splitters,
-            "filters": filters,
-            "magnification_changers": magnification_changers,
-            "environment": {
-                "temperature_control": normalize_optional_bool(environment.get("temperature_control")),
-                "temperature_range": clean_text(environment.get("temperature_range")),
-                "co2_control": normalize_optional_bool(environment.get("co2_control")),
-                "co2_range": clean_text(environment.get("co2_range")),
-                "o2_control": normalize_optional_bool(environment.get("o2_control")),
-                "o2_range": clean_text(environment.get("o2_range")),
-                "humidity_control": normalize_optional_bool(environment.get("humidity_control")),
-                "notes": clean_text(environment.get("notes")),
-            },
-            "stages": [
-                {
-                    "type": clean_text(stage.get("type")),
-                    "manufacturer": clean_text(stage.get("manufacturer")),
-                    "model": clean_text(stage.get("model")),
-                    "step_size_um": stage.get("step_size_um"),
-                }
-                for stage in stages
-                if isinstance(stage, dict)
-            ],
-            "hardware_autofocus": {
-                "is_installed": normalize_optional_bool(hardware_autofocus.get("is_installed")),
-                "type": clean_text(hardware_autofocus.get("type")),
-            },
-            "triggering": {
-                "primary_mode": clean_text(triggering.get("primary_mode")),
-                "notes": clean_text(triggering.get("notes")),
-            },
-        }
-
-        instrument_dir = docs_root / "instruments" / instrument_id
-        instrument_dir.mkdir(parents=True, exist_ok=True)
-
         light_path_data = inst.get("canonical", {}).get("hardware", {})
         lightpath_dto = generate_virtual_microscope_payload({"hardware": light_path_data})
         if not isinstance(lightpath_dto, dict):
             lightpath_dto = {}
         inst["lightpath_dto"] = lightpath_dto
+        inst["dto"] = build_instrument_mega_dto(vocabulary, inst, lightpath_dto)
+
+        instrument_dir = docs_root / "instruments" / instrument_id
+        instrument_dir.mkdir(parents=True, exist_ok=True)
 
         # Render Overview
         overview_md = tpl_spec.render(
@@ -1384,8 +1641,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         for vocab_name, terms in sorted(vocabulary.terms_by_vocab.items())
     }
     json_payload = {
-        "instruments": sorted([*instruments, *retired_instruments], key=lambda inst: inst.get("id", "")),
-        "vocabularies": vocabularies_payload,
+        "instruments": [inst["dto"] for inst in sorted([*instruments, *retired_instruments], key=lambda item: item.get("id", ""))],
     }
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
 
@@ -1446,7 +1702,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         status = inst.get("status", {})
         canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
         canonical_hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
-        hw = inst.get("processed_hardware", {}) if isinstance(inst.get("processed_hardware"), dict) else {}
+        hw = (inst.get("dto") or {}).get("hardware", {}) if isinstance((inst.get("dto") or {}).get("hardware", {}), dict) else {}
         lightpath_dto = global_vm_payloads.get(inst.get("id"), {}) if isinstance(global_vm_payloads, dict) else {}
         if not isinstance(lightpath_dto, dict):
             lightpath_dto = {}
@@ -1484,7 +1740,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         is_live_cell = False
         temp_ctrl, co2_ctrl, hum_ctrl = False, False, False
 
-        for m in hw.get("modules", []):
+        for m in inst.get("modules", []):
             m_name = m.get("name", "").lower()
             if m_name in live_cell_modules:
                 is_live_cell = True
@@ -1535,7 +1791,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 "last_maintenance_date": none_if_empty(status.get("last_maint_date", None)) or None,
             },
             "capabilities": {
-                "modalities": pick_summary_value(canonical_hardware.get("modalities"), hw.get("modalities", []), []),
+                "modalities": pick_summary_value(canonical_hardware.get("modalities"), inst.get("modalities", []), []),
                 "scanner": {
                     "type": none_if_empty(pick_summary_value(canonical_hardware.get("scanner", {}).get("type"), hw.get("scanner", {}).get("type", None), None)) or None,
                     "line_rate_hz": pick_summary_value(canonical_hardware.get("scanner", {}).get("line_rate_hz"), hw.get("scanner", {}).get("line_rate_hz"), None),
@@ -1544,7 +1800,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 },
                 "modules": [
                     {"name": none_if_empty(m.get("name")), "notes": none_if_empty(m.get("notes")) or None}
-                    for m in pick_summary_value(canonical_hardware.get("modules"), hw.get("modules", []), [])
+                    for m in pick_summary_value(canonical_hardware.get("modules"), inst.get("modules", []), [])
                     if isinstance(m, dict)
                 ],
                 "objectives": [
