@@ -112,16 +112,16 @@
 > *No environmental control details recorded.*
 {% endif %}
 
-???+ note "💡 Light Sources"
-    {% if hw.light_sources %}
-    <div class="grid cards" markdown>
-    {% for item in hw.light_sources %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
-    {% else %}
-    > *No light sources recorded.*
-    {% endif %}
+### 💡 Light Sources
+{% if hw.light_sources %}
+<div class="grid cards" markdown>
+{% for item in hw.light_sources %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% else %}
+> *No light sources recorded.*
+{% endif %}
 
 ### 🧭 Scanner
 {% if hw.scanner.present %}
@@ -130,63 +130,80 @@
 > *No scanner details recorded.*
 {% endif %}
 
-???+ note "📷 Detectors"
-    {% if hw.detectors %}
-    <div class="grid cards" markdown>
-    {% for item in hw.detectors %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
-    {% else %}
-    > *No detectors recorded.*
-    {% endif %}
+### 📷 Detectors
+{% if hw.detectors %}
+<div class="grid cards" markdown>
+{% for item in hw.detectors %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% else %}
+> *No detectors recorded.*
+{% endif %}
 
-???+ note "🔬 Objectives"
-    {% if hw.objectives %}
-    <div class="grid cards" markdown>
-    {% for item in hw.objectives %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
-    {% else %}
-    > *No objectives recorded.*
-    {% endif %}
+### 🔬 Objectives
+{% if hw.objectives %}
+<div class="grid cards" markdown>
+{% for obj in hw.objectives %}
+{% if obj.is_installed == false %}
+<div style="opacity: 0.6; filter: grayscale(100%);" markdown>
+- **{% if obj.url %}[{{ obj.display_label }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.display_label }}{% endif %}<a href="#" class="md-button" style="background-color: #dc2626; color: white; padding: 2px 8px; font-size: 11px; border-radius: 4px; border: none; margin-left: 8px;">Ask Staff to Install</a>**
+  {% if obj.display_subtitle %}<br><small class="aic-muted">{{ obj.display_subtitle }}</small>{% endif %}
+  {% for line in obj.spec_lines %}<br>{{ line }}{% endfor %}
+</div>
+{% else %}
+{{ render_spec_card(obj) }}
+{% endif %}
+{% endfor %}
+</div>
+{% else %}
+> *No objectives recorded.*
+{% endif %}
 
+### 🔍 Magnification Changers
 {% if hw.magnification_changers %}
-??? note "🔍 Magnification Changers"
-    <div class="grid cards" markdown>
-    {% for item in hw.magnification_changers %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
+<div class="grid cards" markdown>
+{% for item in hw.magnification_changers %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% else %}
+> *No magnification changers recorded.*
 {% endif %}
 
+### 🌀 Optical Modulators
 {% if hw.optical_modulators %}
-??? note "🌀 Optical Modulators"
-    <div class="grid cards" markdown>
-    {% for item in hw.optical_modulators %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
+<div class="grid cards" markdown>
+{% for item in hw.optical_modulators %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% else %}
+> *No optical modulators recorded.*
 {% endif %}
 
+### 🧠 Adaptive Illumination Logic
 {% if hw.illumination_logic %}
-??? note "🧠 Adaptive Illumination Logic"
-    <div class="grid cards" markdown>
-    {% for item in hw.illumination_logic %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
+<div class="grid cards" markdown>
+{% for item in hw.illumination_logic %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% else %}
+> *No adaptive illumination logic recorded.*
 {% endif %}
 
+### 🧭 Stages & Focus Drives
 {% if hw.stages %}
-??? note "🧭 Stages & Focus Drives"
-    {% for item in hw.stages %}
-    - {{ item.display_label }}
-      {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
-    {% endfor %}
+{% for item in hw.stages %}
+- {{ item.display_label }}
+  {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
+{% endfor %}
+{% else %}
+> *No stages or focus drives recorded.*
 {% endif %}
 
+{% if hw.hardware_autofocus.present or hw.triggering.present %}
 ### ⚙️ Advanced Hardware
 {% if hw.hardware_autofocus.present %}
 - {{ hw.hardware_autofocus.display_label }}
@@ -196,27 +213,31 @@
 - {{ hw.triggering.display_label }}
   {% for line in hw.triggering.spec_lines %}<br>{{ line }}{% endfor %}
 {% endif %}
+{% endif %}
 
-??? note "🎛️ Optical Path & Filters"
-    {% if hw.optical_path.sections %}
-    {% for section in hw.optical_path.sections %}
-    #### {{ section.display_label }}
-    <div class="grid cards" markdown>
-    {% for item in section["items"] %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
-    {% endfor %}
-    {% endif %}
+{% if hw.optical_path.sections or hw.optical_path.splitters %}
+### 🎛️ Optical Path & Filters
 
-    {% if hw.optical_path.splitters %}
-    #### 🔀 Splitters & Light Routing
-    <div class="grid cards" markdown>
-    {% for item in hw.optical_path.splitters %}
-    {{ render_spec_card(item) | indent(4, true) }}
-    {% endfor %}
-    </div>
-    {% endif %}
+{% if hw.optical_path.sections %}
+{% for section in hw.optical_path.sections %}
+#### {{ section.display_label }}
+<div class="grid cards" markdown>
+{% for item in section["items"] %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if hw.optical_path.splitters %}
+#### 🔀 Splitters & Light Routing
+<div class="grid cards" markdown>
+{% for item in hw.optical_path.splitters %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% endif %}
+{% endif %}
 
 
 ---
