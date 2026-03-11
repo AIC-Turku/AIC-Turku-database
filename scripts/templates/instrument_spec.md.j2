@@ -29,36 +29,32 @@
   <div class="aic-hero__facts">
     <div class="aic-facts">
       <div class="aic-fact">
-        <div class="aic-muted">Instrument ID</div>
-        <div><code>{{ identity.id }}</code></div>
-      </div>
-      <div class="aic-fact">
         <div class="aic-muted">Manufacturer</div>
-        <div>{{ identity.manufacturer or '—' }}</div>
+        <div>{{ dto.identity.manufacturer or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Model</div>
-        <div>{{ identity.model or '—' }}</div>
+        <div>{{ dto.identity.model or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Stand</div>
-        <div>{{ identity.stand_orientation.display_label or '—' }}</div>
+        <div>{{ dto.identity.stand_orientation.display_label or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Eyepieces</div>
-        <div>{{ identity.ocular_availability.display_label or '—' }}</div>
+        <div>{{ dto.identity.ocular_availability.display_label or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Location</div>
-        <div>{{ identity.location or '—' }}</div>
+        <div>{{ dto.identity.location or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Purchased</div>
-        <div>{{ identity.year_of_purchase or '—' }}</div>
+        <div>{{ dto.identity.year_of_purchase or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Funding</div>
-        <div>{{ identity.funding or '—' }}</div>
+        <div>{{ dto.identity.funding or '—' }}</div>
       </div>
     </div>
   </div>
