@@ -1,0 +1,16 @@
+terms:
+  - id: vortex
+    label: "Vortex"
+    description: "Azimuthal vortex phase mask for donut-shaped depletion beam."
+  - id: top_hat
+    label: "Top-Hat"
+    description: "Top-hat phase profile for beam shaping."
+  - id: bottle
+    label: "Bottle"
+    description: "Bottle-beam phase mask for axial confinement."
+  - id: z_sted
+    label: "Z-STED"
+    description: "Phase mask optimized for axial STED depletion."
+  - id: 3d_sted
+    label: "3D-STED"
+    description: "Combined mask strategy for three-dimensional STED depletion."

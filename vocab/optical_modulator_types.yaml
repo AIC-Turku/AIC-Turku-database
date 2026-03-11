@@ -1,0 +1,22 @@
+terms:
+  - id: slm
+    label: "Spatial Light Modulator"
+    description: "Programmable spatial light modulator used for phase shaping."
+  - id: phase_plate
+    label: "Phase Plate"
+    description: "Static phase plate for beam shaping."
+  - id: vortex_plate
+    label: "Vortex Plate"
+    description: "Vortex phase element used for donut beam generation."
+  - id: deformable_mirror
+    label: "Deformable Mirror"
+    description: "Adaptive mirror with controllable surface profile."
+  - id: aod
+    label: "Acousto-Optic Deflector"
+    description: "AOD-based beam steering or modulation device."
+  - id: eom
+    label: "Electro-Optic Modulator"
+    description: "Electro-optic phase or amplitude modulator."
+  - id: other
+    label: "Other"
+    description: "Other optical modulator type not covered above."

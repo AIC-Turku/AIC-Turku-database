@@ -22,11 +22,13 @@ yaml_stub.safe_load = _safe_load
 yaml_stub.YAMLError = _YamlError
 sys.modules.setdefault('yaml', yaml_stub)
 
+
 from scripts.validate import (
     _evaluate_required_if,
     _resolve_rule_nodes,
     Vocabulary,
     build_instrument_completeness_report,
+    validate_instrument_ledgers,
 )
 
 
@@ -243,6 +245,160 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(rule_entry['used_by'], ['dashboard', 'audit_pdf'])
         self.assertTrue(rule_entry['missing'])
 
+
+
+    def test_vocabulary_loading_from_registry_files(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'light_source_roles': {'source': 'file', 'path': 'vocab/light_source_roles.yaml'}
+                },
+                'sections': [],
+            },
+        )
+        self._write_json_yaml(
+            'vocab/light_source_roles.yaml',
+            {
+                'terms': [
+                    {'id': 'excitation', 'label': 'Excitation', 'description': '', 'synonyms': ['exc']},
+                    {'id': 'depletion', 'label': 'Depletion', 'description': '', 'synonyms': ['sted']},
+                ]
+            },
+        )
+
+        vocabulary = Vocabulary(vocab_registry={'light_source_roles': {'source': 'file', 'path': 'vocab/light_source_roles.yaml'}})
+        self.assertEqual(vocabulary.resolve_canonical('light_source_roles', 'sted'), 'depletion')
+        self.assertTrue(vocabulary.check('light_source_roles', 'excitation')[0])
+
+    def test_evaluate_required_if_supports_item_field_in(self) -> None:
+        vocabulary = Vocabulary(vocab_registry={})
+        condition = {'item_field_in': {'timing_mode': ['pulsed'], 'role': ['depletion']}}
+
+        self.assertTrue(
+            _evaluate_required_if(
+                condition,
+                payload={},
+                item_context={'timing_mode': 'pulsed', 'role': 'depletion'},
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertTrue(
+            _evaluate_required_if(
+                {'item_field_in': {'supports_time_gating': [True]}},
+                payload={},
+                item_context={'supports_time_gating': True},
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertFalse(
+            _evaluate_required_if(
+                condition,
+                payload={},
+                item_context={'timing_mode': 'cw', 'role': 'depletion'},
+                vocabulary=vocabulary,
+            )
+        )
+
+    def test_valid_sted_instrument_example(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'modalities': {'source': 'inline', 'allowed_values': ['sted']},
+                    'light_source_roles': {'source': 'inline', 'allowed_values': ['excitation', 'depletion']},
+                    'light_source_timing_modes': {'source': 'inline', 'allowed_values': ['cw', 'pulsed']},
+                    'detector_kinds': {'source': 'inline', 'allowed_values': ['pmt']},
+                    'optical_modulator_types': {'source': 'inline', 'allowed_values': ['slm']},
+                    'phase_mask_types': {'source': 'inline', 'allowed_values': ['vortex']},
+                    'adaptive_illumination_methods': {'source': 'inline', 'allowed_values': ['rescue_sted']},
+                },
+                'sections': [
+                    {'id': 'm', 'title': 'M', 'rules': [{'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'}]},
+                    {'id': 'ls', 'title': 'LS', 'rules': [
+                        {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                        {'path': 'hardware.light_sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
+                        {'path': 'hardware.light_sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
+                        {'path': 'hardware.light_sources[].pulse_width_ps', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
+                        {'path': 'hardware.light_sources[].repetition_rate_mhz', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
+                        {'path': 'hardware.light_sources[].depletion_targets_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'role': ['depletion']}}},
+                    ]},
+                    {'id': 'd', 'title': 'D', 'rules': [
+                        {'path': 'hardware.detectors', 'status': 'optional', 'type': 'list'},
+                        {'path': 'hardware.detectors[].kind', 'status': 'conditional', 'type': 'string', 'vocab': 'detector_kinds', 'required_if': {'parent_present': 'hardware.detectors[]'}},
+                        {'path': 'hardware.detectors[].supports_time_gating', 'status': 'optional', 'type': 'boolean'},
+                        {'path': 'hardware.detectors[].default_gating_delay_ns', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'supports_time_gating': [True]}}},
+                        {'path': 'hardware.detectors[].default_gate_width_ns', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'supports_time_gating': [True]}}},
+                    ]},
+                    {'id': 'om', 'title': 'OM', 'rules': [
+                        {'path': 'hardware.optical_modulators', 'status': 'optional', 'type': 'list', 'min_items': 1},
+                        {'path': 'hardware.optical_modulators[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'optical_modulator_types', 'required_if': {'parent_present': 'hardware.optical_modulators[]'}},
+                        {'path': 'hardware.optical_modulators[].supported_phase_masks', 'status': 'optional', 'type': 'list', 'vocab': 'phase_mask_types'},
+                    ]},
+                    {'id': 'il', 'title': 'IL', 'rules': [
+                        {'path': 'hardware.illumination_logic', 'status': 'optional', 'type': 'list', 'min_items': 1},
+                        {'path': 'hardware.illumination_logic[].method', 'status': 'conditional', 'type': 'string', 'vocab': 'adaptive_illumination_methods', 'required_if': {'parent_present': 'hardware.illumination_logic[]'}},
+                        {'path': 'hardware.illumination_logic[].default_enabled', 'status': 'conditional', 'type': 'boolean', 'required_if': {'parent_present': 'hardware.illumination_logic[]'}},
+                    ]},
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/sted-valid.yaml',
+            {
+                'instrument': {'instrument_id': 'sted-test'},
+                'modalities': ['sted'],
+                'software': [{'role': 'acquisition', 'name': 'Control SW'}],
+                'hardware': {
+                    'light_sources': [
+                        {'role': 'excitation', 'timing_mode': 'cw'},
+                        {'role': 'depletion', 'timing_mode': 'pulsed', 'pulse_width_ps': 600, 'repetition_rate_mhz': 80, 'depletion_targets_nm': [775]},
+                    ],
+                    'detectors': [{'kind': 'pmt', 'supports_time_gating': True, 'default_gating_delay_ns': 0.2, 'default_gate_width_ns': 5.0}],
+                    'optical_modulators': [{'type': 'slm', 'supported_phase_masks': ['vortex']}],
+                    'illumination_logic': [{'method': 'rescue_sted', 'default_enabled': True}],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        self.assertEqual(warnings, [])
+
+    def test_invalid_sted_instrument_example(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'modalities': {'source': 'inline', 'allowed_values': ['sted']},
+                    'light_source_roles': {'source': 'inline', 'allowed_values': ['excitation', 'depletion']},
+                    'light_source_timing_modes': {'source': 'inline', 'allowed_values': ['cw', 'pulsed']},
+                },
+                'sections': [
+                    {'id': 'm', 'title': 'M', 'rules': [{'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'}]},
+                    {'id': 'ls', 'title': 'LS', 'rules': [
+                        {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                        {'path': 'hardware.light_sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
+                        {'path': 'hardware.light_sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
+                        {'path': 'hardware.light_sources[].pulse_width_ps', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
+                        {'path': 'hardware.light_sources[].depletion_targets_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'role': ['depletion']}}},
+                    ]},
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/sted-invalid.yaml',
+            {
+                'instrument': {'instrument_id': 'sted-test-invalid'},
+                'modalities': ['sted'],
+                'hardware': {'light_sources': [{'role': 'depletion', 'timing_mode': 'pulsed'}]},
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        warning_codes = {w.code for w in warnings}
+        self.assertIn('missing_conditional_field', warning_codes)
 
 if __name__ == '__main__':
     unittest.main()
