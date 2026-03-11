@@ -8,7 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, BioPhysics room 5086
-  notes: "Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 \xB5m into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose."
+  notes: "Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose."
   url: ''
 
 modalities:
@@ -19,23 +19,33 @@ modalities:
 modules:
   - name: easy3d_sted
     manufacturer: Abberior
+    model: easy3D STED
     notes: Programmable SLM-based module for 2D/3D STED phase pattern generation.
+    url: ''
+
   - name: adaptive_optics
     manufacturer: Abberior
-    notes: "Supports deep imaging up to 75 \xB5m into cleared tissue with 100x oil objective."
+    model: Adaptive Optics
+    notes: Supports deep imaging up to 75 µm into cleared tissue with a 100x oil objective.
+    url: ''
+
   - name: rescue_sted
     manufacturer: Abberior
+    model: RESCue STED
     notes: Reduction of state transition cycles mode for super-resolution live imaging with lower light dose.
+    url: ''
 
 software:
   - role: acquisition
     name: Abberior Imspector
     version: ''
+    url: ''
 
 hardware:
   scanner:
     type: galvo
     notes: STED point scanning configuration.
+    url: ''
 
   light_sources:
     - kind: laser
@@ -46,7 +56,9 @@ hardware:
       wavelength_nm: 488
       pulse_width_ps: 80
       repetition_rate_mhz: 40
-      notes: pulsed excitation
+      notes: Pulsed excitation source for the 488 nm channel.
+      url: ''
+
     - kind: laser
       manufacturer: PicoQuant
       model: PDL-T 561
@@ -55,7 +67,9 @@ hardware:
       wavelength_nm: 561
       pulse_width_ps: 80
       repetition_rate_mhz: 40
-      notes: pulsed excitation
+      notes: Pulsed excitation source for the 561 nm channel.
+      url: ''
+
     - kind: laser
       manufacturer: PicoQuant
       model: LDH-D-C-640
@@ -64,16 +78,20 @@ hardware:
       wavelength_nm: 640
       pulse_width_ps: 80
       repetition_rate_mhz: 40
-      notes: pulsed excitation
+      notes: Pulsed excitation source for the 640 nm channel.
+      url: ''
+
     - kind: laser
       manufacturer: MPB Communications
       model: VFL-P-1000-580
       role: depletion
-      timing_mode: continuous
+      timing_mode: cw
       wavelength_nm: 580
       depletion_targets_nm:
         - 488
-      notes: STED depletion (continuous, for 488 nm)
+      notes: Continuous-wave STED depletion source for the 488 nm excitation channel.
+      url: ''
+
     - kind: laser
       manufacturer: OneFive / NKT Photonics
       model: Katana HP 775
@@ -85,56 +103,48 @@ hardware:
       depletion_targets_nm:
         - 561
         - 640
-      notes: STED depletion (pulsed, for 561 & 640 nm)
+      notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation channels.
+      url: ''
 
   detectors:
     - kind: pmt
       manufacturer: Hamamatsu Photonics
       model: Photomultiplier Tube
-      notes: ''
+      notes: General confocal detection channel.
+      url: ''
+
     - kind: apd
       manufacturer: Excelitas Technologies
       model: SPCM-AQRH-14-TR
       supports_time_gating: true
       default_gating_delay_ns: 1.0
       default_gate_width_ns: 7.0
-      notes: 2 detectors; timing resolution optimized for time-gated CW-STED.
+      notes: Two APD detectors; timing resolution optimized for time-gated CW-STED.
+      url: ''
+
     - kind: ccd
       manufacturer: Generic
       model: Monochrome CCD camera
       pixel_pitch_um: 4.65
       sensor_format_px: "1280 x 960"
-      notes: "1/2-inch format"
-
-  filters:
-    - name: GFP
-      location: emission
-      product_code: Semrock FF01-525/25
-      emission: 525/25
-    - name: CY3
-      location: emission
-      product_code: Semrock BrightLine 615/10
-      emission: 615/10
-    - name: CY5
-      location: emission
-      product_code: Chroma ET685/35
-      emission: 685/35
+      notes: 1/2-inch format camera.
+      url: ''
 
   objectives:
     - id: 20x_air
       manufacturer: Olympus
-      model: LMPlanFL N
+      model: LMPlanFL N 20x/0.40
       product_code: 1-U2N345
       magnification: 20.0
       numerical_aperture: 0.4
-      working_distance: 1.2 mm
+      working_distance: 12.0 mm
       immersion: air
       correction: plan_fluorite
       is_installed: true
     - id: 60x_water
       manufacturer: Olympus
-      model: UPlanSApo
-      product_code: 1-U2B832
+      model: UPlanSApo 60x/1.2 W
+      product_code: N6432600
       magnification: 60.0
       numerical_aperture: 1.2
       working_distance: 0.28 mm
@@ -143,8 +153,8 @@ hardware:
       is_installed: true
     - id: 100x_oil
       manufacturer: Olympus
-      model: UPlanSApo
-      product_code: 1-U2B833
+      model: UPlanSApo 100x/1.40 Oil
+      product_code: 1-U2B836
       magnification: 100.0
       numerical_aperture: 1.4
       working_distance: 0.13 mm
@@ -153,15 +163,43 @@ hardware:
       is_installed: true
 
   optical_modulators:
-    - type: spatial_light_modulator
+    - type: slm
       manufacturer: Abberior
       model: easy3D SLM
       supported_phase_masks:
-        - 2D_helical_vortex
-        - 3D_annular_z_bottle
-      notes: Used for STED phase mask generation and adaptive optics.
+        - vortex
+        - bottle
+        - 3d_sted
+      notes: Used for Easy3D STED phase-pattern generation and adaptive optics workflows.
 
   illumination_logic:
-    - method: RESCue
+    - method: rescue_sted
       default_enabled: false
-      notes: Real-time decision algorithm to reduce photobleaching.
+      notes: Real-time adaptive STED decision logic used to reduce photobleaching and light dose during live-cell super-resolution imaging.
+
+  light_path:
+    emission_mechanisms:
+      - name: Emission Filter Wheel
+        type: filter_wheel
+        slots: 3
+        positions:
+          1:
+            component_type: bandpass
+            manufacturer: Semrock
+            product_code: FF01-525/25
+            center_nm: 525
+            width_nm: 25
+
+          2:
+            component_type: bandpass
+            manufacturer: Semrock
+            product_code: BrightLine 615/10
+            center_nm: 615
+            width_nm: 10
+
+          3:
+            component_type: bandpass
+            manufacturer: Chroma
+            product_code: ET685/35
+            center_nm: 685
+            width_nm: 35
