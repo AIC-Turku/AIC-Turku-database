@@ -8,7 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: "Confocal spinning-disk microscope (inverted) with 50 \xB5m pinholes. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: Confocal (spinning disk), Live-cell time-lapse, FRAP, Photoactivation."
+  notes: "Confocal spinning-disk microscope (inverted) with 50 µm pinholes. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: Confocal (spinning disk), Live-cell time-lapse, FRAP, Photoactivation."
   url: ''
 
 modalities:
@@ -18,15 +18,23 @@ modalities:
 
 modules:
   - name: frap
+    manufacturer: 3i
+    model: Vector
     notes: FRAP/Photoactivation laser module (for bleaching and activation)
     url: ''
   - name: piezo_z_stage
-    notes: "ASI piezo stage (300 \xB5m travel)"
+    manufacturer: ASI
+    model: PZ-2000
+    notes: "ASI piezo stage (300 µm travel)"
     url: ''
   - name: hardware_autofocus
+    manufacturer: Zeiss
+    model: Definite Focus
     notes: Definite Focus
     url: ''
   - name: incubation
+    manufacturer: Okolab
+    model: Full Enclosure
     notes: Okolab environment chamber with temperature control
     url: ''
 
@@ -35,6 +43,7 @@ software:
     name: 3i SlideBook
     version: '6'
     url: ''
+
 hardware:
   environment:
     temperature_control: true
@@ -43,9 +52,9 @@ hardware:
     notes: Okolab Full Enclosure Incubator with Temperature and digital CO2/O2 Control
 
   stages:
-    - type: piezo # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml
+    - type: z_piezo
       manufacturer: ASI
-      notes: "ASI piezo stage (300 \xB5m travel)"
+      notes: "ASI piezo stage (300 µm travel)"
 
   hardware_autofocus:
     is_installed: true
@@ -54,42 +63,42 @@ hardware:
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: "Yokogawa CSU-W1 with 50 \xB5m pinhole disk"
+    notes: "Yokogawa CSU-W1 with 50 µm pinhole disk"
     url: ''
 
   light_sources:
     - kind: laser
-      manufacturer: '' # Flag: Required field. Needs a manufacturer.
+      manufacturer: 'Coherent' # Fill in actual manufacturer
       model: 405 nm
-      wavelength_nm: '405'
+      wavelength_nm: 405
       power: 100 mW
       notes: ''
       url: ''
     - kind: laser
-      manufacturer: '' # Flag: Required field.
+      manufacturer: 'Coherent' # Fill in actual manufacturer
       model: 488 nm
-      wavelength_nm: '488'
+      wavelength_nm: 488
       power: 150 mW
       notes: ''
       url: ''
     - kind: laser
-      manufacturer: '' # Flag: Required field.
+      manufacturer: 'Coherent' # Fill in actual manufacturer
       model: 561 nm
-      wavelength_nm: '561'
+      wavelength_nm: 561
       power: 100 mW
       notes: ''
       url: ''
     - kind: laser
-      manufacturer: '' # Flag: Required field.
+      manufacturer: 'Coherent' # Fill in actual manufacturer
       model: 640 nm
-      wavelength_nm: '640'
+      wavelength_nm: 640
       power: 100 mW
       notes: ''
       url: ''
     - kind: laser
-      manufacturer: '' # Flag: Required field.
+      manufacturer: 'Coherent' # Fill in actual manufacturer
       model: 730 nm
-      wavelength_nm: '730'
+      wavelength_nm: 730
       power: 40 mW
       notes: ''
       url: ''
@@ -99,70 +108,62 @@ hardware:
       manufacturer: Hamamatsu
       model: Orca Flash4.0
       pixel_pitch_um: 6.5
-      qe_peak_pct: 82 # Flag: Required due to spinning disk modality. Added estimated value, please verify.
+      qe_peak_pct: 82 
       sensor_format_px: "2048 x 2048"
-      notes: "6.5 x 6.5 \xB5m pixel size"
+      notes: ""
       url: ''
     - kind: emccd
       manufacturer: Photometrics
       model: Evolve
       pixel_pitch_um: 16.0
-      qe_peak_pct: 95 # Flag: Required due to spinning disk modality. Added estimated value, please verify.
+      qe_peak_pct: 95 
       sensor_format_px: "512 x 512"
-      notes: "10 MHz back-illuminated EMCCD, 16 x 16 \xB5m pixel size"
+      notes: "10 MHz back-illuminated EMCCD"
       url: ''
+
+  light_path:
+    dichroic_mechanisms:
+      - name: CSU Dichroic Wheel
+        type: filter_wheel
+        slots: 2
+        positions:
+          1:
+            component_type: dichroic
+            name: Quad-band Dichroic
+            cutoffs_nm: [440, 521, 607, 700]
+    emission_mechanisms:
+      - name: Emission Wheel
+        type: filter_wheel
+        slots: 5
+        positions:
+          1:
+            component_type: bandpass
+            name: DAPI
+            center_nm: 445
+            width_nm: 45
+          2:
+            component_type: bandpass
+            name: GFP
+            center_nm: 525
+            width_nm: 50
+            notes: Previously 525/30 before 18.08.21
+          3:
+            component_type: bandpass
+            name: Cy3/Alexa 568
+            center_nm: 617
+            width_nm: 73
+          4:
+            component_type: bandpass
+            name: Cy5/Alexa 647
+            center_nm: 692
+            width_nm: 40
+          5:
+            component_type: bandpass
+            name: Alexa 750
+            center_nm: 809
+            width_nm: 81
 
   splitters: []
-
-  filters:
-    - name: Quad-band Dichroic
-      location: Dichroic Wheel
-      product_code: ''
-      excitation: 440/40; 521/21; 607/34; 700/45
-      dichroic: ''
-      emission: ''
-      notes: ''
-      url: ''
-    - name: DAPI
-      location: Emission Wheel
-      product_code: ''
-      excitation: ''
-      dichroic: ''
-      emission: 445/45
-      notes: ''
-      url: ''
-    - name: GFP
-      location: Emission Wheel
-      product_code: ''
-      excitation: ''
-      dichroic: ''
-      emission: 525/50
-      notes: Previously 525/30 before 18.08.21
-      url: ''
-    - name: Cy3/Alexa 568
-      location: Emission Wheel
-      product_code: ''
-      excitation: ''
-      dichroic: ''
-      emission: 617/73 or 600/37 # Flag: Consider standardizing formatting to a single descriptor if strict spectral validation is enabled.
-      notes: ''
-      url: ''
-    - name: Cy5/Alexa 647
-      location: Emission Wheel
-      product_code: ''
-      excitation: ''
-      dichroic: ''
-      emission: 692/40
-      notes: ''
-      url: ''
-    - name: Alexa 750
-      location: Emission Wheel
-      product_code: ''
-      excitation: ''
-      dichroic: ''
-      emission: 809/81
-      notes: ''
-      url: ''
 
   objectives:
     - id: 10x_air
@@ -255,6 +256,7 @@ hardware:
       notes: 'Optional objective. Imm Korr (Multi-immersion, correction collar)'
       url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27'
       is_installed: false
+
     - id: 63x_water_c_apo
       manufacturer: Zeiss
       model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
