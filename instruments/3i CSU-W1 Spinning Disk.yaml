@@ -195,7 +195,7 @@ hardware:
       is_installed: true
     - id: 40x_water
       manufacturer: Zeiss
-      model: LD C-Apochromat 40x/1.1 W Corr M27
+      model: LD C-APOCHROMAT 40x/1.1 W M27
       product_code: 421867-9970
       magnification: 40.0
       numerical_aperture: 1.1
@@ -208,36 +208,7 @@ hardware:
       notes: ''
       url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27
       is_installed: true
-    - id: 63x_air
-      manufacturer: Zeiss
-      model: LD Plan-Neofluar 63x/0.75 Corr Ph2 M27
-      product_code: 421381-9971
-      magnification: 63.0
-      numerical_aperture: 0.75
-      working_distance: 1.7 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - cover glass 0.75
-      notes: ''
-      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421381-9971-000/Objective-LD-Plan-Neofluar-63x-0.75-Corr-Ph2-M27
-      is_installed: true
-    - id: 63x_water_ld
-      manufacturer: Zeiss
-      model: LD C-Apochromat 63x/1.15 W Corr M27
-      product_code: 421887-9970-000
-      magnification: 63.0
-      numerical_aperture: 1.15
-      working_distance: 0.60 mm
-      immersion: water
-      correction: apochromat
-      afc_compatible: false
-      specialties:
-        - cover glass 0.17
-      notes: ''
-      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421887-9970-000/Objective-LD-C-Apochromat-63x-1.15-W-Corr-M27
-      is_installed: true
+
     - id: 63x_oil
       manufacturer: Zeiss
       model: Plan-Apochromat 63x/1.4 Oil DIC M27
@@ -252,10 +223,11 @@ hardware:
       notes: ''
       url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27
       is_installed: true
+      
     - id: 100x_oil
       manufacturer: Zeiss
-      model: Plan Apochromat 100x
-      product_code: ''
+      model: Plan-Apochromat 100x/1.4 Oil DIC M27
+      product_code: '420792-9901'
       magnification: 100.0
       numerical_aperture: 1.4
       working_distance: 0.17 mm
@@ -264,8 +236,9 @@ hardware:
       afc_compatible: false
       specialties: []  
       notes: ''
-      url: ''
+      url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9901-000/Objective-Plan-Apochromat-100x-1.4-Oil-DIC-M27'
       is_installed: true
+      
     - id: 25x_multi
       manufacturer: Zeiss
       model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
