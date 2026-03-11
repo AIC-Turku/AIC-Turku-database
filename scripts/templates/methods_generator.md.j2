@@ -158,107 +158,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         hwOptions.style.display = "block";
         renderMethodsMetadataWarning(currentInst);
 
-        const modalityItems = currentInst.processed_hardware?.modalities || currentInst.modalities || [];
-        populateCheckboxes("modality-list", modalityItems,
-            modality => getLabel("modalities", modality), "modality",
-            modality => getDescription("modalities", modality));
+        const dto = currentInst?.dto || currentInst;
 
-        const moduleItems = currentInst.processed_hardware?.modules || currentInst.modules || [];
-        populateCheckboxes("module-list", moduleItems,
-            module => {
-                const moduleId = module?.id || module?.name || module;
-                const moduleLabel = formatVocabLabel(vocabularies.modules, moduleId);
-                const moduleNotes = (module?.notes || "").toString().trim();
-                return moduleNotes ? `${moduleLabel} (${moduleNotes})` : moduleLabel;
-            }, "module");
+        bindCheckboxes("modality-list", dto.modalities || [], "modality");
+        bindCheckboxes("module-list", dto.modules || [], "module");
+        bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner");
+        bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj");
+        bindCheckboxes("light-list", dto.hardware?.light_sources || [], "light");
+        bindCheckboxes("det-list", dto.hardware?.detectors || [], "det");
 
-        const canonicalHardware = currentInst?.canonical?.hardware || currentInst?.hardware || {};
-        const scanner = canonicalHardware?.scanner || currentInst?.processed_hardware?.scanner || null;
-        const scannerItems = scanner ? [scanner] : [];
-        populateCheckboxes("scanner-list", scannerItems,
-            scannerItem => {
-                const scannerTypeRaw = scannerItem?.type || scannerItem?.id || "";
-                const scannerLabel = formatVocabLabel(vocabularies.scanner_types, scannerTypeRaw);
-                const scannerNotes = (scannerItem?.notes || "").toString().trim();
-                return scannerNotes ? `${scannerLabel} (${scannerNotes})` : scannerLabel;
-            }, "scanner");
-
-        // Formatting to match JCB/QUAREP-LiMi guidelines
-        populateCheckboxes("obj-list", canonicalHardware?.objectives || currentInst?.processed_hardware?.objectives || [],
-            obj => formatObjectiveLabel(obj), "obj");
-
-        populateCheckboxes("light-list", canonicalHardware?.light_sources || currentInst?.processed_hardware?.light_sources || [],
-            ls => formatLightSourceLabel(ls), "light");
-
-        // 1. Grab the pre-computed DTO
-        const dto = currentInst?.lightpath_dto || {};
-        const extractedOpticalComponents = [];
-
-        if (dto.stages) {
-            // A. Process Cubes from DTO (Combine into ONE checkbox)
-            (dto.stages.cube || []).forEach(mech => {
-                mech.positions.forEach(pos => {
-                    const linked = pos.linked_components || {};
-                    let parts = [];
-
-                    if (linked.excitation_filter && linked.excitation_filter.type !== 'empty') {
-                        parts.push(`Ex: ${linked.excitation_filter.label}`);
-                    }
-                    if (linked.dichroic && linked.dichroic.type !== 'empty') {
-                        parts.push(`Di: ${linked.dichroic.label}`);
-                    }
-                    if (linked.emission_filter && linked.emission_filter.type !== 'empty') {
-                        parts.push(`Em: ${linked.emission_filter.label}`);
-                    }
-
-                    // If the cube isn't empty, push it as a single combined string
-                    if (parts.length > 0) {
-                        extractedOpticalComponents.push(`Cube ${pos.label} (${parts.join(', ')})`);
-                    }
-                });
-            });
-
-            // B. Process Standard Stages from DTO (Standalone Wheels/Turrets)
-            const stagePrefixes = { 'excitation': 'Ex', 'dichroic': 'Di', 'emission': 'Em' };
-            ['excitation', 'dichroic', 'emission'].forEach(stageKey => {
-                (dto.stages[stageKey] || []).forEach(mech => {
-                    mech.positions.forEach(pos => {
-                        if (pos.type !== 'empty') {
-                             extractedOpticalComponents.push(`${stagePrefixes[stageKey]}: ${pos.label}`);
-                        }
-                    });
-                });
-            });
-        }
-
-        // Populate Filters
-        populateCheckboxes("filter-list", extractedOpticalComponents, f => f, "filter");
-
-        // C. Process Splitters and Dynamically Hide/Show the Section
-        const splitters = dto.splitters || [];
-        const splitterContainer = document.getElementById('section-splitters'); // We will add this ID in step 2
-
-        if (splitters.length > 0) {
-            const extractedSplitters = splitters.map(s => {
-                const di = s.dichroic?.positions?.[1]?.label || 'None';
-                const p1 = s.path1?.positions?.[1]?.label || 'None';
-                const p2 = s.path2?.positions?.[1]?.label || 'None';
-                return `${s.name} — Di: ${di} (Path 1: ${p1}, Path 2: ${p2})`;
-            });
-            populateCheckboxes("splitter-list", extractedSplitters, s => s, "splitter");
-            if (splitterContainer) splitterContainer.style.display = 'block'; // Show it
-        } else {
-            if (splitterContainer) splitterContainer.style.display = 'none'; // Hide it entirely!
-        }
-
-        populateCheckboxes("det-list", canonicalHardware?.detectors || currentInst?.processed_hardware?.detectors || [],
-            d => formatDetectorLabel(d), "det");
+        const opticalPath = dto.hardware?.optical_path || {};
+        bindCheckboxes("filter-list", opticalPath.filters || [], "filter");
+        bindCheckboxes("splitter-list", opticalPath.splitters || [], "splitter");
     });
 
-    function populateCheckboxes(containerId, items, labelFormatter, prefix, subtextFormatter) {
+    function bindCheckboxes(containerId, items, prefix) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
-        if (!items || items.length === 0) {
+
+        if (!Array.isArray(items) || items.length === 0) {
             container.innerHTML = "<span style='color: gray; font-size: 0.9em;'>No data available.</span>";
             return;
         }
@@ -270,362 +188,74 @@ document.addEventListener("DOMContentLoaded", async () => {
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.id = `${prefix}-${index}`;
-            checkbox.value = labelFormatter(item).replace(/\s+/g, ' ').trim();
+            checkbox.value = item.id || `${prefix}-${index}`;
+            checkbox.dataset.displayLabel = item.display_label || "";
+            checkbox.dataset.methodSentence = item.method_sentence || "";
 
             const label = document.createElement("label");
-            label.htmlFor = `${prefix}-${index}`;
-            label.textContent = " " + checkbox.value;
+            label.htmlFor = checkbox.id;
+            label.textContent = " " + (item.display_label || "Unnamed item");
 
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
 
-            const subtext = subtextFormatter ? subtextFormatter(item) : "";
-            if (subtext) {
-                const subtextEl = document.createElement("div");
-                subtextEl.textContent = subtext;
-                subtextEl.style.fontSize = "0.8em";
-                subtextEl.style.fontStyle = "italic";
-                subtextEl.style.color = "gray";
-                subtextEl.style.marginLeft = "24px";
-                wrapper.appendChild(subtextEl);
+            if (item.display_subtitle) {
+                const sub = document.createElement("div");
+                sub.textContent = item.display_subtitle;
+                sub.style.fontSize = "0.8em";
+                sub.style.fontStyle = "italic";
+                sub.style.color = "gray";
+                sub.style.marginLeft = "24px";
+                wrapper.appendChild(sub);
             }
 
             container.appendChild(wrapper);
         });
     }
 
-    function getLabel(vocabName, id) {
-        if (vocabularies[vocabName] && vocabularies[vocabName][id]) {
-            return vocabularies[vocabName][id].label;
-        }
-        return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    function getDescription(vocabName, id) {
-        if (vocabularies[vocabName] && vocabularies[vocabName][id]) {
-            return vocabularies[vocabName][id].description;
-        }
-        return "";
-    }
-
-    function getCheckedValues(prefix) {
-        const checkboxes = document.querySelectorAll(`input[id^="${prefix}-"]:checked`);
-        return Array.from(checkboxes).map(cb => cb.value);
-    }
-
-    function formatVocabLabel(vocabSection, value) {
-        const id = (value?.id || value?.name || value || "").toString().trim();
-        if (!id) return "";
-
-        if (vocabSection) {
-            if (Array.isArray(vocabSection)) {
-                const match = vocabSection.find(item => item?.id === id);
-                if (match?.label) return match.label;
-            } else if (typeof vocabSection === "object") {
-                const mapped = vocabSection[id];
-                if (mapped?.label) return mapped.label;
-                if (typeof mapped === "string") return mapped;
-            }
-        }
-
-        return toTitleCase(id);
-    }
-
-    function toTitleCase(value) {
-        return (value || "")
-            .toString()
-            .replace(/_/g, " ")
-            .trim()
-            .split(/\s+/)
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(" ");
-    }
-
-    function formatHumanList(items) {
-        if (!items || items.length === 0) return "";
-        if (items.length === 1) return items[0];
-        if (items.length === 2) return `${items[0]} and ${items[1]}`;
-        return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
-    }
-
-    function formatWavelength(rawWavelength) {
-        const wavelength = (rawWavelength || "").toString().trim();
-        if (!wavelength) return "";
-
-        // Add "nm" only for plain numeric wavelengths (e.g., 405, 488, 561.5).
-        if (/^\d+(\.\d+)?$/.test(wavelength)) {
-            return `${wavelength} nm`;
-        }
-
-        // Keep bandpass-style values (e.g., 395/25) and descriptive entries unchanged.
-        return wavelength;
-    }
-
-    function formatLightSourceLabel(lightSource) {
-        const wavelength = formatWavelength(lightSource?.wavelength_nm);
-        const type = (lightSource?.kind || "light source").toString().trim();
-
-        const sourceParts = [
-            (lightSource?.power || "").toString().trim(),
-            [lightSource?.manufacturer, lightSource?.model]
-                .map(part => (part || "").toString().trim())
-                .filter(Boolean)
-                .join(" ")
-        ].filter(Boolean);
-
-        const detailText = sourceParts.length > 0 ? ` (${sourceParts.join(", ")})` : "";
-        const leadText = wavelength ? `${wavelength} ${type}` : type;
-        return `${leadText}${detailText}`.replace(/\s+/g, " ").trim();
-    }
-
-
-    function formatScannerDetails(scannerData) {
-        if (!scannerData || !scannerData.type || scannerData.type.toLowerCase() === "none") return "";
-        const details = [];
-        if (scannerData?.line_rate_hz) details.push(`line rate ${scannerData.line_rate_hz} Hz`);
-        if (scannerData?.pinhole_um) details.push(`pinhole ${scannerData.pinhole_um} µm`);
-        return details.length > 0 ? ` (${details.join(", ")})` : "";
-    }
-
-    function formatDetectorLabel(detector) {
-        const manufacturer = (detector?.manufacturer || detector?.name || "").toString().trim();
-        const model = (detector?.model || "").toString().trim();
-        const kind = (detector?.kind || detector?.type || "").toString().trim();
-        const label = [manufacturer, model].filter(Boolean).join(" ") + (kind ? ` (${kind})` : "");
-        const details = [];
-        if (detector?.pixel_pitch_um) details.push(`${detector.pixel_pitch_um} µm pixel pitch`);
-        if (detector?.sensor_format_px) details.push(`sensor ${detector.sensor_format_px} px`);
-        if (detector?.binning) details.push(`binning ${detector.binning}`);
-        if (detector?.bit_depth) details.push(`${detector.bit_depth}-bit`);
-        return details.length > 0 ? `${label}; ${details.join(", ")}` : label;
-    }
-
-    function hasEnvironmentControl(environment) {
-        if (!environment || typeof environment !== "object") return false;
-        return environment.temperature_control === true
-            || environment.co2_control === true
-            || environment.o2_control === true
-            || environment.humidity_control === true;
-    }
-
-    function formatEnvironmentSentence(environment) {
-        if (!hasEnvironmentControl(environment)) return "";
-
-        const clauses = [];
-        if (environment?.temperature_control === true) {
-            clauses.push(environment?.temperature_range ? `${environment.temperature_range}` : "controlled temperature");
-        }
-        if (environment?.co2_control === true) {
-            clauses.push(environment?.co2_range ? `${environment.co2_range} CO2` : "controlled CO2");
-        }
-        if (environment?.o2_control === true) {
-            clauses.push(environment?.o2_range ? `${environment.o2_range} O2` : "controlled O2");
-        }
-        if (environment?.humidity_control === true) {
-            clauses.push("controlled humidity");
-        }
-
-        if (clauses.length === 0) return "";
-        return `Live-cell imaging was performed using an environmental chamber maintaining ${formatHumanList(clauses)}. `;
-    }
-
-    function formatPiezoStageSentence(stages) {
-        if (!Array.isArray(stages)) return "";
-        const piezoStage = stages.find(stage => (stage?.type || "").toString().trim().toLowerCase() === "z_piezo");
-        if (!piezoStage) return "";
-
-        const stageName = [piezoStage?.manufacturer, piezoStage?.model].filter(Boolean).join(" ").trim();
-        if (stageName) {
-            return `Z-stacks were acquired using a ${stageName} piezo stage. `;
-        }
-        return "Z-stacks were acquired using a piezo stage. ";
-    }
-
-    function formatAutofocusSentence(hardwareAutofocus) {
-        if (!hardwareAutofocus || hardwareAutofocus?.is_installed !== true) return "";
-        const autofocusLabel = hardwareAutofocus?.type
-            ? formatVocabLabel(vocabularies.autofocus_types, hardwareAutofocus.type)
-            : "hardware autofocus";
-        return `Focal drift was minimized using a ${autofocusLabel} hardware autofocus system. `;
-    }
-
-    function formatTriggeringSentence(triggering) {
-        if (!triggering || (!triggering?.primary_mode && !triggering?.notes)) return "";
-        const modeLabel = triggering?.primary_mode
-            ? formatVocabLabel(vocabularies.triggering_modes, triggering.primary_mode)
-            : "configured synchronization";
-        if (triggering?.notes) {
-            return `System synchronization used ${modeLabel.toLowerCase()} (${triggering.notes}). `;
-        }
-        return `System synchronization used ${modeLabel.toLowerCase()}. `;
-    }
-
-    function formatProcessingMetadata(inst) {
-        const software = Array.isArray(inst?.software) ? inst.software : [];
-        const processingSoftware = software
-            .filter(s => {
-                const role = (s?.role || "").toString().trim().toLowerCase();
-                return role === "processing" || role === "analysis";
-            })
-            .map(s => {
-                const softwareName = (s?.name || "").toString().trim();
-                if (!softwareName) return "";
-                const softwareVersion = (s?.version || "").toString().trim();
-                return softwareVersion ? `${softwareName} (v${softwareVersion})` : softwareName;
-            })
+    function getCheckedMethodSentences(prefix) {
+        return Array.from(document.querySelectorAll(`input[id^="${prefix}-"]:checked`))
+            .map(cb => cb.dataset.methodSentence)
             .filter(Boolean);
-
-        if (processingSoftware.length === 0) {
-            return "[PLEASE SPECIFY: Post-acquisition processing/analysis pipeline, including software name and version]. ";
-        }
-
-        return `Post-acquisition processing and analysis were performed using ${formatHumanList(processingSoftware)}. `;
-    }
-    function formatObjectiveLabel(obj) {
-        const metadata = [];
-        if (obj?.manufacturer) metadata.push(obj.manufacturer);
-        if (obj?.product_code) metadata.push(`product code: ${obj.product_code}`);
-
-        const objectiveModel = (obj?.model || obj?.name || "").replace(/\s+/g, " ").trim();
-
-        if (objectiveModel) {
-            return metadata.length > 0
-                ? `${objectiveModel} objective (${metadata.join(", ")})`
-                : `${objectiveModel} objective`;
-        }
-
-        const fallbackParts = [];
-        const magnification = obj?.magnification ? `${obj.magnification}x` : "";
-        const na = obj?.numerical_aperture ? `/${obj.numerical_aperture}` : "";
-        const magnificationPart = `${magnification}${na}`;
-        if (magnificationPart) fallbackParts.push(magnificationPart);
-        if (obj?.immersion) fallbackParts.push(obj.immersion);
-        fallbackParts.push("objective");
-
-        return metadata.length > 0
-            ? `${fallbackParts.join(" ")} (${metadata.join(", ")})`
-            : fallbackParts.join(" ");
     }
 
     addBtn.addEventListener("click", () => {
         if (!currentInst) return;
 
-        const objs = getCheckedValues("obj");
-        const modalities = getCheckedValues("modality");
-        const modules = getCheckedValues("module");
-        const scanners = getCheckedValues("scanner");
-        const lights = getCheckedValues("light");
-        const filters = getCheckedValues("filter");
-        const splitters = getCheckedValues("splitter");
-        const dets = getCheckedValues("det");
-
+        const dto = currentInst?.dto || currentInst;
         const methodsMetadataStatus = getMethodsMetadataStatus(currentInst);
         if (methodsMetadataStatus.isBlocked) {
             renderMethodsMetadataWarning(currentInst);
-            const blockedFields = methodsMetadataStatus.blockers.map(formatBlockerLabel);
-            const blockerSummary = blockedFields.length > 0
-                ? formatHumanList(blockedFields)
-                : "policy-critical instrument metadata";
-            const blockedMessage = `Methods text for ${currentInst.display_name} cannot be generated yet because required instrument metadata is missing: ${blockerSummary}. Please complete the instrument metadata policy fields before generating authoritative methods text.`;
-
-            accumulatedMethods.push(blockedMessage);
+            const blockerSummary = methodsMetadataStatus.blockers
+                .map(blocker => blocker.title || blocker.path || "Missing field")
+                .join(", ");
+            accumulatedMethods.push(`Methods text for ${dto.display_name} cannot be generated yet because required instrument metadata is missing: ${blockerSummary}.`);
             updateOutputText();
             return;
         }
 
-        const software = Array.isArray(currentInst?.software) ? currentInst.software : [];
-        const acquisitionSoftware = software.find(s => ((s?.role || "").toString().trim().toLowerCase() === "acquisition")) || {};
+        const textParts = [
+            dto.methods?.base_sentence,
+            ...getCheckedMethodSentences("modality"),
+            ...getCheckedMethodSentences("module"),
+            ...getCheckedMethodSentences("scanner"),
+            dto.methods?.environment_sentence,
+            ...(dto.methods?.stage_sentences || []),
+            dto.methods?.autofocus_sentence,
+            dto.methods?.triggering_sentence,
+            ...getCheckedMethodSentences("obj"),
+            ...getCheckedMethodSentences("det"),
+            ...getCheckedMethodSentences("light"),
+            ...getCheckedMethodSentences("filter"),
+            ...getCheckedMethodSentences("splitter"),
+            ...(dto.methods?.processing_sentences || []),
+            "[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)].",
+            "[PLEASE SPECIFY: Exposure time(s), excitation power(s), camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable].",
+            "Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile.",
+            "[DATA AVAILABILITY]: The raw microscopy image files (.nd2/.czi/.lif) generated in this study should be deposited in BioImage Archive or Zenodo to support Open Science and reproducibility; include the accession number or DOI in the final manuscript.",
+        ].filter(Boolean);
 
-        let softName = "[MISSING ACQUISITION SOFTWARE NAME AND VERSION]";
-        if (acquisitionSoftware?.name && acquisitionSoftware?.version) {
-            softName = `${acquisitionSoftware.name} (v${acquisitionSoftware.version})`;
-        }
-
-        const stand = currentInst.stand_orientation && currentInst.stand_orientation !== 'other'
-            ? currentInst.stand_orientation + " "
-            : "";
-
-        const fallbackModalities = (currentInst.processed_hardware?.modalities || currentInst.modalities || [])
-            .map(m => formatVocabLabel(vocabularies.modalities, m));
-        const selectedModalities = modalities.length > 0 ? modalities : fallbackModalities;
-        const modalitiesText = selectedModalities.length > 0 ? formatHumanList(selectedModalities) : "Light microscopy";
-
-        const canonicalHardware = currentInst?.canonical?.hardware || currentInst?.hardware || {};
-        const scannerData = canonicalHardware?.scanner || currentInst?.processed_hardware?.scanner || {};
-        const scannerFallbackId = (scannerData?.type || scannerData?.id || "").toString().trim();
-        const scannerFallbackLabel = scannerFallbackId
-            ? formatVocabLabel(vocabularies.scanner_types, scannerFallbackId)
-            : "";
-        const selectedScanners = scanners.length > 0
-            ? scanners
-            : (scannerFallbackLabel && scannerFallbackLabel.toLowerCase() !== "none" ? [scannerFallbackLabel] : []);
-
-        const scannerClause = selectedScanners.length > 0
-            ? ` equipped with a ${formatHumanList(selectedScanners)} scanner${formatScannerDetails(scannerData)}`
-            : "";
-
-        // Base microscope description
-        const microscopeIdentity = [currentInst?.manufacturer, currentInst?.model]
-            .map(part => (part || "").toString().trim())
-            .filter(Boolean)
-            .join(" ");
-        const microscopeDescriptor = microscopeIdentity
-            ? `the ${microscopeIdentity} ${stand}microscope`
-            : `a ${stand}microscope system`;
-
-        let text = `${modalitiesText} images were acquired using ${microscopeDescriptor}${scannerClause}, controlled by ${softName}. `;
-
-        if (modules.length > 0) {
-            text += `The following hardware modules were utilized: ${formatHumanList(modules)}. `;
-            const hasIncubation = modules.some(module => /incubation|incubator|environment|temperature|co2|humidity/i.test(module));
-            if (hasIncubation) {
-                text += `[PLEASE SPECIFY: Imaging environment setpoints, e.g., temperature (°C), CO2 (%), humidity (%), and stage-top incubation module]. `;
-            }
-        }
-
-        const environmentData = currentInst?.processed_hardware?.environment || currentInst?.canonical?.hardware?.environment || {};
-        const stagesData = currentInst?.processed_hardware?.stages || currentInst?.canonical?.hardware?.stages || [];
-        const hardwareAutofocusData = currentInst?.processed_hardware?.hardware_autofocus || currentInst?.canonical?.hardware?.hardware_autofocus || {};
-        const triggeringData = currentInst?.processed_hardware?.triggering || currentInst?.canonical?.hardware?.triggering || {};
-
-        text += formatEnvironmentSentence(environmentData);
-        text += formatPiezoStageSentence(stagesData);
-        text += formatAutofocusSentence(hardwareAutofocusData);
-        text += formatTriggeringSentence(triggeringData);
-
-        text += `[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)]. `;
-
-        if (objs.length > 0) text += `The system was equipped with the following objective(s): ${objs.join(", ")}. `;
-        if (dets.length > 0) text += `Images were captured using: ${dets.join(", ")}. `;
-        if (splitters.length > 0) text += `Emission splitting to multiple cameras was performed using: ${splitters.join(", ")}. `;
-
-        const diFilters = filters.filter(f => f.includes('Di:'));
-        const emFilters = filters.filter(f => f.includes('Em:'));
-
-        text += `Acquisition used ${lights.length > 0 ? formatHumanList(lights) : '[selected excitation lines]'} with ${diFilters.length > 0 ? formatHumanList(diFilters) : '[main dichroic(s)]'} and ${emFilters.length > 0 ? formatHumanList(emFilters) : '[emission filter(s)]'}. `;
-        text += `[PLEASE SPECIFY: Exposure time(s), excitation power(s), camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable]. `;
-        text += `Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile. `;
-
-        const modalityNeeds = [];
-        if (selectedModalities.some(m => /confocal/i.test(m))) modalityNeeds.push('confocal pinhole size and scanner mode (resonant vs galvo)');
-        if (selectedModalities.some(m => /sim|structured illumination/i.test(m))) modalityNeeds.push('SIM reconstruction settings and software version');
-        if (selectedModalities.some(m => /sted/i.test(m))) modalityNeeds.push('depletion wavelength, power, and depletion timing mode (CW/pulsed)');
-        if (selectedModalities.some(m => /flim/i.test(m))) modalityNeeds.push('lifetime fitting model, IRF handling, and photon count thresholds');
-        if (selectedModalities.some(m => /tirf/i.test(m))) modalityNeeds.push('incident angle/penetration depth and alignment procedure');
-        if (modalityNeeds.length > 0) {
-            text += `[PLEASE SPECIFY modality-specific metadata: ${formatHumanList(modalityNeeds)}]. `;
-        }
-
-        text += formatProcessingMetadata(currentInst);
-
-        text += `\n\n[DATA AVAILABILITY]: The raw microscopy image files (.nd2/.czi/.lif) generated in this study should be deposited in BioImage Archive or Zenodo to support Open Science and reproducibility; include the accession number or DOI in the final manuscript.`;
-
-        accumulatedMethods.push(text);
-        usedInstrumentNames.add(currentInst.display_name.toLowerCase());
-
-        // Uncheck boxes after adding
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-
+        accumulatedMethods.push(textParts.join(" "));
         updateOutputText();
     });
 
