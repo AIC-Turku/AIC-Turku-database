@@ -248,8 +248,7 @@ hide:
             const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = JSON.stringify(comp);
             cb.dataset.routes = (comp.__routes || mech.__routes || []).join(',');
             cb.addEventListener('change', onLightSourceChange);
-            let text = comp.name || comp.component_type || 'Laser';
-            if (comp.wavelength_nm) text += ` (${comp.wavelength_nm}nm)`;
+            const text = comp.display_label || comp.label || comp.name || 'Light Source';
             lbl.appendChild(cb); lbl.appendChild(document.createTextNode(text));
             wrap.appendChild(lbl);
           });
@@ -346,22 +345,12 @@ hide:
 
       if (stageKey === 'splitters') {
         const pos = mechanism.positions?.[1] || {};
-        const d = pos.dichroic?.positions?.[1]?.cutoffs_nm ? `Di: ${pos.dichroic.positions[1].cutoffs_nm.join(',')}` : 'Empty';
-        const p1 = pos.path1?.positions?.[1]?.center_nm ? `P1: ${pos.path1.positions[1].center_nm}` : '';
-        const p2 = pos.path2?.positions?.[1]?.center_nm ? `P2: ${pos.path2.positions[1].center_nm}` : '';
-        const opt = document.createElement('option'); opt.value = JSON.stringify(pos); opt.textContent = [d,p1,p2].filter(Boolean).join(' | ');
+        const opt = document.createElement('option'); opt.value = JSON.stringify(pos); opt.textContent = mechanism.display_label || 'Splitter';
         select.appendChild(opt);
       } else {
         Object.entries(positionsForRoute(mechanism, state.activeRoute)).forEach(([slot, comp]) => {
           const opt = document.createElement('option'); opt.value = JSON.stringify(comp);
-          let desc = comp.type || comp.component_type || 'Unknown';
-          if (desc === 'empty') desc = 'Empty';
-          else if (['bandpass', 'notch'].includes(desc) && comp.center_nm) desc = `${comp.center_nm}/${comp.width_nm}`;
-          else if (desc === 'longpass') desc = `LP ${comp.cut_on_nm}`;
-          else if (desc === 'shortpass') desc = `SP ${comp.cut_off_nm}`;
-          else if (['dichroic', 'multiband_dichroic'].includes(desc)) desc = `Di [${comp.cutoffs_nm?.join(',')}]`;
-          else if (desc === 'detector') desc = comp.name || 'Camera';
-          opt.textContent = `Slot ${slot}: ${desc}`; select.appendChild(opt);
+          opt.textContent = comp.display_label || comp.label || `Slot ${slot}`; select.appendChild(opt);
         });
       }
       select.addEventListener('change', () => { drawHardware(); calculateEfficiencies(); });
