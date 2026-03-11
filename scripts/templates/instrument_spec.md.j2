@@ -164,6 +164,28 @@
 > *No magnification changers recorded.*
 {% endif %}
 
+### 🌀 Optical Modulators
+{% if hw.optical_modulators %}
+<div class="grid cards" markdown>
+{% for item in hw.optical_modulators %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% else %}
+> *No optical modulators recorded.*
+{% endif %}
+
+### 🧠 Adaptive Illumination Logic
+{% if hw.illumination_logic %}
+<div class="grid cards" markdown>
+{% for item in hw.illumination_logic %}
+{{ render_spec_card(item) }}
+{% endfor %}
+</div>
+{% else %}
+> *No adaptive illumination logic recorded.*
+{% endif %}
+
 ### 🧭 Stages & Focus Drives
 {% if hw.stages %}
 {% for item in hw.stages %}
