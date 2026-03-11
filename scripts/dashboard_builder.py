@@ -521,6 +521,32 @@ def build_stage_dto(vocabulary: Vocabulary, stage: dict[str, Any]) -> dict[str, 
     }
 
 
+def build_magnification_changer_dto(changer: dict[str, Any]) -> dict[str, Any]:
+    manufacturer = clean_text(changer.get("manufacturer"))
+    model = clean_text(changer.get("model") or changer.get("name"))
+    magnification = _fmt_num(changer.get("magnification"))
+    display_label = model or "Magnification Changer"
+    spec_lines = _spec_lines(
+        ("Manufacturer", manufacturer),
+        ("Magnification", f"`{magnification}x`" if magnification else None),
+        ("Notes", clean_text(changer.get("notes"))),
+    )
+    method_sentence = (
+        f"An intermediate magnification changer ({display_label}, {magnification}x) was used."
+        if display_label and magnification
+        else f"An intermediate magnification changer ({display_label}) was used."
+        if display_label
+        else ""
+    )
+    return {
+        **copy.deepcopy(changer),
+        "display_label": display_label,
+        "display_subtitle": manufacturer,
+        "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
 def build_software_dto(vocabulary: Vocabulary, software: dict[str, Any]) -> dict[str, Any]:
     role_label = _vocab_display(vocabulary, "software_roles", software.get("role"))
     name = clean_text(software.get("name"))
@@ -573,6 +599,11 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
         "scanner": build_scanner_dto(vocabulary, scanner),
         "detectors": [build_detector_dto(vocabulary, det) for det in canonical_hardware.get("detectors", []) if isinstance(det, dict)],
         "objectives": [build_objective_dto(vocabulary, obj) for obj in canonical_hardware.get("objectives", []) if isinstance(obj, dict)],
+        "magnification_changers": [
+            build_magnification_changer_dto(item)
+            for item in canonical_hardware.get("magnification_changers", [])
+            if isinstance(item, dict)
+        ],
         "environment": build_environment_dto(environment),
         "stages": [build_stage_dto(vocabulary, stage) for stage in canonical_hardware.get("stages", []) if isinstance(stage, dict)],
         "hardware_autofocus": {
