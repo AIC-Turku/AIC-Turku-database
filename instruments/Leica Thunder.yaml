@@ -26,6 +26,11 @@ software:
     version: ''
     url: https://www.leica-microsystems.com/products/microscope-software/p/leica-las-x-ls/
 hardware:
+  environment:
+    temperature_control: true
+    co2_control: true
+    humidity_control: true
+    
   scanner:
     type: none
     notes: ''
@@ -33,7 +38,7 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection 
 
   light_sources:
     - kind: led
