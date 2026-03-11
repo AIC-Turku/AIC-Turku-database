@@ -2,9 +2,6 @@ terms:
   - id: rescue_sted
     label: "RESCue STED"
     description: "Adaptive STED strategy suppressing depletion in low-signal regions."
-  - id: easy3d_sted
-    label: "easy3D STED"
-    description: "Adaptive STED control approach for 3D imaging."
   - id: confocal_sted_switching
     label: "Confocal/STED switching"
     description: "Instrument logic for alternating confocal and STED illumination modes."
