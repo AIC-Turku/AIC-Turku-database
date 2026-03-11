@@ -2,27 +2,102 @@ terms:
   - id: long_working_distance
     label: "Long Working Distance"
     description: "Objective designed for increased working distance."
+    synonyms:
+      - LWD
+      - ELWD
+      - ELWD ADM
   - id: coverslip_correction
     label: "Coverslip Correction"
     description: "Objective supports adjustable coverslip correction."
+    synonyms:
+      - cover glass 0.17
+      - cover glass 0.75
+      - correction collar for 0-1.5mm glass
+      - correction ring for 0.17 mm cover glass
   - id: water_dipping
     label: "Water Dipping"
     description: "Objective designed for direct immersion into sample medium."
   - id: phase
     label: "Phase"
     description: "Objective supports phase-contrast use."
+    synonyms:
+      - Ph1
+      - phase contrast (ph)
+      - phase contrast (ph 0)
+      - phase contrast (ph 1)
+      - phase contrast (ph1 dl)
+      - phase contrast (ph2)
+      - phase contrast (ph2)
+      - phase contrast (ext ph4)
+      - phase contrast (ph1)
+      - phase compatible
   - id: dic
     label: "DIC"
     description: "Objective supports differential interference contrast."
+    synonyms:
+      - DIC
+      - DIC (Suitable)
+      - DIC (Recommended)
+      - dic compatible
+      - DIC N1
+      - DIC N1 (Suitable)
+      - DIC N2
+      - DIC N2 (Suitable)
+      - DIC N2 (Recommended)
+      - DIC Prism A
+      - DIC Prism B
+      - DIC Prism C
+      - DIC Prism D
+      - DIC Prism E
   - id: uv_transmission
     label: "UV Transmission"
     description: "Objective optimized for UV transmission."
+    synonyms:
+      - UV ≥340 nm
+      - UV ≥365 nm
   - id: ir_transmission
     label: "IR Transmission"
     description: "Objective optimized for IR / multiphoton transmission."
+    synonyms:
+      - UV-VIS-IR
+      - (UV)VIS-IR
+      - VISIR
+      - IR-compatible to 1300 nm
   - id: correction_collar
     label: "Correction Collar"
     description: "Objective includes correction collar."
+    synonyms:
+      - Correction Ring
+      - Correction Ring (CORR)
+      - correction collar
+      - Multi-immersion
+      - Multi-immersion (BABB/W/Glyc/Sil-Oil)
+  - id: tirf
+    label: "TIRF"
+    description: "Objective optimized for total internal reflection fluorescence imaging."
+    synonyms:
+      - TIRF
+  - id: sim
+    label: "SIM"
+    description: "Objective suitable for structured illumination microscopy workflows."
+    synonyms:
+      - SIM
+  - id: sted
+    label: "STED"
+    description: "Objective suitable for stimulated emission depletion microscopy workflows."
+    synonyms:
+      - STED
+  - id: polarization
+    label: "Polarization"
+    description: "Objective supports polarization imaging workflows."
+    synonyms:
+      - Polarization (Possible)
+      - Polarization (Suitable)
+  - id: cleared_tissue_imaging
+    label: "Cleared Tissue Imaging"
+    description: "Objective suitable for imaging optically cleared tissue samples."
+    synonyms:
+      - Cleared Tissue Imaging (CLARITY and TDE)
   - id: other
     label: "Other"
     description: "Specialty not covered by the predefined terms."

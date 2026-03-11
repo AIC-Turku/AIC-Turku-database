@@ -134,9 +134,8 @@ hardware:
       immersion: air
       correction: plan_apochromat
       afc_compatible: true
-      specialties:
-        - Lambda D
-      notes: Included in base BC43 CF
+      specialties: []
+      notes: Included in base BC43 CF. Optical family: Lambda D.
       url: ''
       is_installed: true
     - id: 20x_air
@@ -149,9 +148,8 @@ hardware:
       immersion: air
       correction: plan_apochromat
       afc_compatible: true
-      specialties:
-        - Lambda D
-      notes: ''
+      specialties: []
+      notes: 'Optical family: Lambda D.'
       url: ''
       is_installed: true
     - id: 40x_air
@@ -164,9 +162,8 @@ hardware:
       immersion: air
       correction: plan_apochromat
       afc_compatible: true
-      specialties:
-        - Lambda D
-      notes: ''
+      specialties: []
+      notes: 'Optical family: Lambda D.'
       url: ''
       is_installed: true
     - id: 40x_silicone
@@ -179,9 +176,8 @@ hardware:
       immersion: silicone # Flag: verify 'silicone' vs 'silicone_oil' in vocab/objective_immersion.yaml
       correction: plan_apochromat
       afc_compatible: true
-      specialties:
-        - Lambda S
-      notes: ''
+      specialties: []
+      notes: 'Optical family: Lambda S.'
       url: ''
       is_installed: true
     - id: 60x_oil
@@ -194,9 +190,8 @@ hardware:
       immersion: oil
       correction: plan_apochromat
       afc_compatible: true
-      specialties:
-        - Lambda D
-      notes: ''
+      specialties: []
+      notes: 'Optical family: Lambda D.'
       url: ''
       is_installed: true
     - id: 100x_oil
@@ -209,8 +204,7 @@ hardware:
       immersion: oil
       correction: plan_apochromat
       afc_compatible: true
-      specialties:
-        - Lambda D
-      notes: ''
+      specialties: []
+      notes: 'Optical family: Lambda D.'
       url: ''
       is_installed: true

@@ -180,10 +180,8 @@ hardware:
       correction: plan_achromat
       afc_compatible: false
       specialties:
-        - BF (Recommended)
-        - FLUO (VIS) (Possible)
-        - Polarization (Possible)
-      notes: ''
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) possible; polarization possible.'
       url: ''
       is_installed: true
     - id: 4x_air
@@ -197,11 +195,8 @@ hardware:
       correction: plan_fluorite
       afc_compatible: false
       specialties:
-        - BF (Recommended)
-        - FLUO (VIS) (Recommended)
-        - FLUO (UV) (Recommended)
-        - Polarization (Possible)
-      notes: ''
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
       url: ''
       is_installed: true
     - id: 4x_air_2
@@ -214,12 +209,8 @@ hardware:
       immersion: air
       correction: plan_apochromat
       afc_compatible: false
-      specialties:
-        - Lambda D
-        - BF (Recommended)
-        - FLUO (VIS) (Recommended)
-        - FLUO (NIR) (Recommended)
-      notes: ''
+      specialties: []
+      notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended.'
       url: ''
       is_installed: true
     - id: 10x_air
@@ -233,11 +224,8 @@ hardware:
       correction: plan_fluorite
       afc_compatible: true
       specialties:
-        - Phase Contrast (PH1 DL)
-        - BF (Suitable)
-        - FLUO (VIS) (Suitable)
-        - FLUO (UV) (Suitable)
-      notes: OFN 25
+        - phase
+      notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
       url: ''
       is_installed: true
     - id: 20x_air
@@ -251,13 +239,10 @@ hardware:
       correction: plan_fluorite
       afc_compatible: true
       specialties:
-        - ELWD ADM
-        - DIC N1 (Suitable)
-        - BF (Recommended)
-        - FLUO (VIS) (Recommended)
-        - FLUO (UV) (Recommended)
-        - Polarization (Suitable)
-      notes: ''
+        - long_working_distance
+        - dic
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
       url: ''
       is_installed: true
     - id: 20x_air_2
@@ -271,13 +256,9 @@ hardware:
       correction: plan_apochromat
       afc_compatible: true
       specialties:
-        - Lambda
-        - DIC N2 (Suitable)
-        - BF (Recommended)
-        - FLUO (VIS) (Recommended)
-        - FLUO (UV) (Recommended)
-        - Polarization (Possible)
-      notes: OFN 25
+        - dic
+        - polarization
+      notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
       url: ''
       is_installed: true
     - id: 40x_air
@@ -291,12 +272,9 @@ hardware:
       correction: plan_fluorite
       afc_compatible: true
       specialties:
-        - ELWD
-        - Phase Contrast (PH2)
-        - BF (Suitable)
-        - FLUO (VIS) (Suitable)
-        - FLUO (UV) (Suitable)
-      notes: OFN 22
+        - long_working_distance
+        - phase
+      notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
       url: ''
       is_installed: true
     - id: 60x_oil
@@ -310,13 +288,9 @@ hardware:
       correction: plan_apochromat
       afc_compatible: true
       specialties:
-        - Lambda
-        - DIC N2 (Recommended)
-        - BF (Recommended)
-        - FLUO (VIS) (Recommended)
-        - FLUO (NIR) (Recommended)
-        - Polarization (Suitable)
-      notes: OFN 25
+        - dic
+        - polarization
+      notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
       url: ''
       is_installed: true
     - id: 100x_oil
@@ -330,13 +304,10 @@ hardware:
       correction: apochromat
       afc_compatible: true
       specialties:
-        - TIRF
-        - Phase Contrast (EXT PH4)
-        - DIC (Suitable)
-        - BF (Recommended)
-        - FLUO (VIS) (Recommended)
-        - FLUO (UV) (Possible)
-        - Polarization (Suitable)
-      notes: ''
+        - tirf
+        - phase
+        - dic
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
       url: ''
       is_installed: true
