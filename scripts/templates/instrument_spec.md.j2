@@ -212,7 +212,7 @@
 {% for section in hw.optical_path.sections %}
 #### {{ section.display_label }}
 <div class="grid cards" markdown>
-{% for item in section.items %}
+{% for item in section["items"] %}
 {{ render_spec_card(item) }}
 {% endfor %}
 </div>

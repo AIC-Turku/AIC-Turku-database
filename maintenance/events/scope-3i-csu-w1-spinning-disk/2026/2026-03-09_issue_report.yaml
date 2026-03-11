@@ -1,7 +1,6 @@
 schema_version: 1
 record_type: "maintenance_event"
 maintenance_id: "maint_scope-3i-csu-w1-spinning-disk_20260309_issue-report"
-event_id: ""
 microscope: "scope-3i-csu-w1-spinning-disk"
 service_provider: "internal"
 company: ""
