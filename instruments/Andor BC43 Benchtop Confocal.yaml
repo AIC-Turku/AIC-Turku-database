@@ -135,7 +135,7 @@ hardware:
       correction: plan_apochromat
       afc_compatible: true
       specialties: []
-      notes: Included in base BC43 CF. Optical family: Lambda D.
+      notes: 'Included in base BC43 CF. Optical family: Lambda D.'
       url: ''
       is_installed: true
     - id: 20x_air
