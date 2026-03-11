@@ -846,25 +846,14 @@ hide:
       if(state.loadedProteins.has(id)) return;
 
       try {
-        const resp = await fetch(`https://www.fpbase.org/api/proteins/spectra/?protein=${proteinObj.id}&format=json`, {
-          headers:{'Accept':'application/json'}
-        });
-        const data = await resp.json();
-        const spectraArray = Array.isArray(data) ? data : (data?.results || []);
-
-        const detail = {
-          name: proteinObj.name,
-          emMax: proteinObj.emMax,
-          exMax: proteinObj.exMax,
-          spectra: spectraArray
-        };
+        const detail = await fetchProteinDetail(proteinObj);
 
         state.loadedProteins.set(id, { id, detail });
         renderActiveDyes(); 
         drawHardware(); 
         calculateEfficiencies();
       } catch(e) {
-        console.error('Failed to load protein spectra from dedicated endpoint', e);
+        console.error('Failed to load protein spectra', e);
       }
     }
 
@@ -921,22 +910,31 @@ hide:
       return aliases.some((alias) => token.includes(alias));
     }
 
-    function extractSpectra(detail) {
-      const s = detail.spectra || [];
-      
-      const getPts = (key) => {
-        const d = s.find(x => String(x.spectrum_type || x.subtype).toLowerCase() === key);
-        if(!d || !d.data) return [];
-        
-        const raw = d.data.map(i => ({ x: Number(i[0]), y: Number(i[1]) })).filter(p => !Number.isNaN(p.x));
-        
-        const max = Math.max(...raw.map(p => p.y)); 
-        const scl = (max > 0 && max <= 1.05) ? 100 : 1;
-        
-        return raw.map(p => ({ x: p.x, y: p.y * scl })).sort((a,b) => a.x - b.x);
+    function extractSpectra(detail, options = {}) {
+      const s = collectSpectraContainers(detail);
+
+      const getPts = (aliases) => {
+        const d = s.find((x) => matchSpectrumType(normalizeTypeToken(x), aliases));
+        if (!d || !d.data) return [];
+        return normalizePoints(d.data);
       };
-      
-      return { ex: getPts('ex'), em: getPts('em') };
+
+      let ex = [];
+      let exMode = '1p';
+
+      if (options.preferTwoPhoton) {
+        ex = getPts(['2p', 'two-photon', 'two photon']);
+        if (ex.length) exMode = '2p';
+      }
+
+      if (!ex.length) {
+        ex = getPts(['ex', 'excitation', '1p']);
+        exMode = '1p';
+      }
+
+      const em = getPts(['em', 'emission']);
+
+      return { ex, em, exMode };
     }
 
     function colorHex(wl) {
