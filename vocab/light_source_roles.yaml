@@ -1,0 +1,15 @@
+terms:
+  - id: excitation
+    label: "Excitation"
+    description: "Primary fluorophore excitation source."
+    synonyms: ["excitation_laser"]
+  - id: depletion
+    label: "Depletion"
+    description: "STED depletion source used for stimulated emission depletion."
+    synonyms: ["sted_depletion", "sted"]
+  - id: activation
+    label: "Activation"
+    description: "Photoactivation or photoswitching source."
+  - id: alignment
+    label: "Alignment"
+    description: "Alignment or service beam not used as primary excitation/depletion."

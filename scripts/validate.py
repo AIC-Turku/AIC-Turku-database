@@ -726,6 +726,37 @@ def _evaluate_required_if(
                 and kind in {str(v).strip() for v in item_kind_in if isinstance(v, str)}
             )
 
+        item_field_in = condition_spec.get('item_field_in')
+        if isinstance(item_field_in, dict):
+            item_matches = True
+            if not isinstance(item_context, dict):
+                item_matches = False
+            else:
+                for field_name, allowed_values in item_field_in.items():
+                    if not isinstance(field_name, str) or not isinstance(allowed_values, list):
+                        item_matches = False
+                        break
+                    raw_value = item_context.get(field_name)
+                    normalized_allowed = {
+                        str(v).strip().casefold() if isinstance(v, bool) else str(v).strip().casefold()
+                        for v in allowed_values
+                        if isinstance(v, (str, int, float, bool))
+                    }
+                    if not normalized_allowed:
+                        item_matches = False
+                        break
+                    if isinstance(raw_value, bool):
+                        normalized_value = str(raw_value).strip().casefold()
+                    elif isinstance(raw_value, (str, int, float)):
+                        normalized_value = str(raw_value).strip().casefold()
+                    else:
+                        item_matches = False
+                        break
+                    if normalized_value not in normalized_allowed:
+                        item_matches = False
+                        break
+            conditions.append(item_matches)
+
         modules_any_of = condition_spec.get('modules_any_of')
         if isinstance(modules_any_of, list):
             module_nodes = _resolve_path_nodes(payload, 'modules')
@@ -828,6 +859,7 @@ def _evaluate_required_if(
             'detector_kinds_any_of',
             'software_roles_any_of',
             'software_roles_none_of',
+            'item_field_in',
         )
     )
 

@@ -160,6 +160,16 @@ vocab_registry:
     path: vocab/light_source_technologies.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  light_source_roles:
+    source: file
+    path: vocab/light_source_roles.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  light_source_timing_modes:
+    source: file
+    path: vocab/light_source_timing_modes.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
   splitter_types:
     source: file
     path: vocab/splitter_types.yaml
@@ -168,6 +178,21 @@ vocab_registry:
   objective_specialties:
     source: file
     path: vocab/objective_specialties.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  optical_modulator_types:
+    source: file
+    path: vocab/optical_modulator_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  phase_mask_types:
+    source: file
+    path: vocab/phase_mask_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  adaptive_illumination_methods:
+    source: file
+    path: vocab/adaptive_illumination_methods.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
 
@@ -480,6 +505,22 @@ sections:
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Optional path tag to associate a source with specific illumination routes.
 
+      - path: hardware.light_sources[].role
+        title: Light source role
+        status: optional
+        type: string
+        vocab: light_source_roles
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Structured role assignment separates excitation and STED depletion lasers without relying on free-text notes.
+
+      - path: hardware.light_sources[].timing_mode
+        title: Light source timing mode
+        status: optional
+        type: string
+        vocab: light_source_timing_modes
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Declares whether the source is operated in continuous-wave or pulsed timing mode.
+
       - path: hardware.light_sources[].wavelength_nm
         title: Peak Wavelength (nm)
         status: conditional
@@ -502,6 +543,36 @@ sections:
         type: string
         used_by: [audit_pdf, dashboard]
         rationale: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
+
+      - path: hardware.light_sources[].pulse_width_ps
+        title: Light source pulse width (ps)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            timing_mode: [pulsed]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Pulse width is required for pulsed sources to capture STED-relevant timing characteristics.
+
+      - path: hardware.light_sources[].repetition_rate_mhz
+        title: Light source repetition rate (MHz)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            timing_mode: [pulsed]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Repetition rate is required for pulsed sources to support timing-aware method reporting.
+
+      - path: hardware.light_sources[].depletion_targets_nm
+        title: Depletion target wavelengths (nm)
+        status: conditional
+        type: list
+        required_if:
+          item_field_in:
+            role: [depletion]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Structured STED depletion target wavelengths for depletion-designated sources.
 
       - path: hardware.light_sources[].notes
         title: Light source notes
@@ -619,12 +690,132 @@ sections:
         used_by: [audit_pdf, dashboard]
         rationale: Useful for channel assignments or operating modes.
 
+      - path: hardware.detectors[].supports_time_gating
+        title: Detector supports time gating
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Instrument-level capability flag indicating whether detector time-gating is available.
+
+      - path: hardware.detectors[].default_gating_delay_ns
+        title: Detector default gating delay (ns)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            supports_time_gating: [true]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Facility default detector gating delay setting used for instrument characterization, not experiment truth.
+
+      - path: hardware.detectors[].default_gate_width_ns
+        title: Detector default gate width (ns)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            supports_time_gating: [true]
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Facility default detector gate width setting used for instrument characterization, not experiment truth.
+
       - path: hardware.detectors[].url
         title: Detector URL
         status: optional
         type: url
         used_by: [audit_pdf, dashboard]
         rationale: Reference only.
+
+  - id: optical_modulators
+    title: Optical modulators
+    rules:
+      - path: hardware.optical_modulators
+        title: Optical modulators
+        status: optional
+        type: list
+        item_type: object
+        min_items: 1
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Optional inventory of phase and beam-shaping devices used by STED or adaptive illumination workflows.
+
+      - path: hardware.optical_modulators[].type
+        title: Optical modulator type
+        status: conditional
+        type: string
+        vocab: optical_modulator_types
+        required_if:
+          parent_present: "hardware.optical_modulators[]"
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Structured classification of installed optical modulator hardware.
+
+      - path: hardware.optical_modulators[].manufacturer
+        title: Optical modulator manufacturer
+        status: conditional
+        type: string
+        required_if:
+          parent_present: "hardware.optical_modulators[]"
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required for reproducible hardware provenance when an optical modulator is listed.
+
+      - path: hardware.optical_modulators[].model
+        title: Optical modulator model
+        status: conditional
+        type: string
+        required_if:
+          parent_present: "hardware.optical_modulators[]"
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Required for reproducible hardware provenance when an optical modulator is listed.
+
+      - path: hardware.optical_modulators[].supported_phase_masks
+        title: Supported phase masks
+        status: optional
+        type: list
+        vocab: phase_mask_types
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Declares supported phase mask classes for depletion beam shaping.
+
+      - path: hardware.optical_modulators[].notes
+        title: Optical modulator notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Additional implementation notes for modulator integration.
+
+  - id: illumination_logic
+    title: Illumination logic
+    rules:
+      - path: hardware.illumination_logic
+        title: Illumination logic entries
+        status: optional
+        type: list
+        item_type: object
+        min_items: 1
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Optional list of structured adaptive or conditional illumination logic supported by the instrument.
+
+      - path: hardware.illumination_logic[].method
+        title: Illumination logic method
+        status: conditional
+        type: string
+        vocab: adaptive_illumination_methods
+        required_if:
+          parent_present: "hardware.illumination_logic[]"
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Structured adaptive illumination method identifier.
+
+      - path: hardware.illumination_logic[].default_enabled
+        title: Illumination logic default enabled
+        status: conditional
+        type: boolean
+        required_if:
+          parent_present: "hardware.illumination_logic[]"
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Facility default state for each illumination logic entry.
+
+      - path: hardware.illumination_logic[].notes
+        title: Illumination logic notes
+        status: optional
+        type: text
+        used_by: [audit_pdf, dashboard]
+        rationale: Additional context for adaptive illumination behavior and constraints.
 
   - id: filters_and_splitters
     title: Filters and splitters (deprecated)

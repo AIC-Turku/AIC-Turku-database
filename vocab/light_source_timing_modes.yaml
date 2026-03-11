@@ -1,0 +1,9 @@
+terms:
+  - id: cw
+    label: "Continuous Wave"
+    description: "Continuous-wave operation without pulse train timing metadata."
+    synonyms: ["continuous", "continuous_wave"]
+  - id: pulsed
+    label: "Pulsed"
+    description: "Pulsed operation with pulse width and repetition rate metadata."
+    synonyms: ["pulse", "pulse_train"]
