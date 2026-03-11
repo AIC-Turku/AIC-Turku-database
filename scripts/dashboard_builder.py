@@ -777,6 +777,10 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         "url": inst.get("url"),
         "status": copy.deepcopy(inst.get("status") or {}),
         "identity": {
+            "id": clean_text(inst.get("id")),
+            "display_name": clean_text(inst.get("display_name")),
+            "url": clean_text(inst.get("url")),
+            "image_filename": clean_text(inst.get("image_filename")),
             "manufacturer": clean_text(inst.get("manufacturer")),
             "model": clean_text(inst.get("model")),
             "stand_orientation": {

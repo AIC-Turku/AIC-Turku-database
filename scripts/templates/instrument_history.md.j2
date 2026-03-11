@@ -1,4 +1,7 @@
-# 📊 {{ instrument.display_name }} · History
+{% set dto = instrument.dto %}
+{% set identity = dto.identity if dto.identity else {} %}
+
+# 📊 {{ identity.display_name }} · History
 
 <div class="aic-topactions" markdown="span">
   [🔙 Back to Overview](index.md){ .md-button }

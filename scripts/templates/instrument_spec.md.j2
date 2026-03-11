@@ -6,22 +6,23 @@
 
 {% set dto = instrument.dto %}
 {% set hw = dto.hardware %}
+{% set identity = dto.identity if dto.identity else {} %}
 {% set canonical = instrument.canonical if instrument.canonical else {} %}
 {% set policy = canonical.policy if canonical.policy else {} %}
 {% set magnification_changers = hw.magnification_changers if hw else [] %}
 
-# {% if instrument.url %}[{{ instrument.display_name }}]({{ instrument.url }}){:target="_blank"}{% else %}{{ instrument.display_name }}{% endif %}
+# {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
 {% set status_class = 'success' if instrument.status.color == 'green' else 'warning' if instrument.status.color == 'yellow' else 'danger' %}
 !!! {{ status_class }} "Current Status: {{ instrument.status.badge }}"
     {{ instrument.status.reason }}
     
     [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
-    [🔬 Open Virtual Microscope](../../virtual_microscope.md?scope={{ instrument.id }}){ .md-button }
+    [🔬 Open Virtual Microscope](../../virtual_microscope.md?scope={{ identity.id }}){ .md-button }
 
 <div class="aic-hero">
   <div class="aic-hero__media">
-    <img src="../../assets/images/{{ instrument.image_filename }}" alt="{{ instrument.display_name }}"
+    <img src="../../assets/images/{{ identity.image_filename }}" alt="{{ identity.display_name }}"
          onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
   </div>
 
@@ -29,35 +30,35 @@
     <div class="aic-facts">
       <div class="aic-fact">
         <div class="aic-muted">Instrument ID</div>
-        <div><code>{{ instrument.id }}</code></div>
+        <div><code>{{ identity.id }}</code></div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Manufacturer</div>
-        <div>{{ instrument.manufacturer or '—' }}</div>
+        <div>{{ identity.manufacturer or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Model</div>
-        <div>{{ instrument.model or '—' }}</div>
+        <div>{{ identity.model or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Stand</div>
-        <div>{{ instrument.stand_orientation or '—' }}</div>
+        <div>{{ identity.stand_orientation.display_label or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Eyepieces</div>
-        <div>{{ instrument.ocular_availability | replace('_', ' ') | title if instrument.ocular_availability else '—' }}</div>
+        <div>{{ identity.ocular_availability.display_label or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Location</div>
-        <div>{{ instrument.location or '—' }}</div>
+        <div>{{ identity.location or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Purchased</div>
-        <div>{{ instrument.year_of_purchase or '—' }}</div>
+        <div>{{ identity.year_of_purchase or '—' }}</div>
       </div>
       <div class="aic-fact">
         <div class="aic-muted">Funding</div>
-        <div>{{ instrument.funding or '—' }}</div>
+        <div>{{ identity.funding or '—' }}</div>
       </div>
     </div>
   </div>
