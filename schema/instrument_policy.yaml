@@ -800,6 +800,11 @@ sections:
         type: string
         vocab: optical_routes
 
+      - path: hardware.light_path.cube_mechanisms[].notes
+        title: Cube mechanism notes
+        status: optional
+        type: text
+
       - path: hardware.light_path.cube_mechanisms[].slots
         title: Cube mechanism slots
         status: conditional
@@ -935,6 +940,11 @@ sections:
         type: string
         vocab: optical_routes
 
+      - path: hardware.light_path.excitation_mechanisms[].notes
+        title: Excitation mechanism notes
+        status: optional
+        type: text
+
       - path: hardware.light_path.excitation_mechanisms[].slots
         title: Excitation mechanism slots
         status: conditional
@@ -1022,6 +1032,11 @@ sections:
         type: string
         vocab: optical_routes
 
+      - path: hardware.light_path.dichroic_mechanisms[].notes
+        title: Dichroic mechanism notes
+        status: optional
+        type: text
+
       - path: hardware.light_path.dichroic_mechanisms[].slots
         title: Dichroic mechanism slots
         status: conditional
@@ -1108,6 +1123,11 @@ sections:
         status: optional
         type: string
         vocab: optical_routes
+
+      - path: hardware.light_path.emission_mechanisms[].notes
+        title: Emission mechanism notes
+        status: optional
+        type: text
 
       - path: hardware.light_path.emission_mechanisms[].slots
         title: Emission mechanism slots

@@ -11,7 +11,8 @@ instrument:
   model: ""  # Model: Needed for instrument identification and methods wording.
   year_of_purchase: ""  # Year of purchase: Operational context and lifecycle planning; not essential for methods completeness.
   funding: ""  # Funding: Operational and acknowledgement context; not required for methods reporting.
-  stand_orientation: "upright"  # Stand orientation: Used directly by methods generator and helps classify the platform. | Allowed values: upright, inverted, stereo, benchtop, other
+  stand_orientation: ""  # Stand orientation: Used directly by methods generator and helps classify the platform. | Allowed values (canonical IDs): upright, inverted, stereo, benchtop, other
+  ocular_availability: ""  # Ocular availability: Critical user-experience metadata. Distinguishes traditional stands from box microscopes. | Allowed values (canonical IDs): camera_only, binocular, trinocular, unknown
   location: ""  # Location: required for operational metadata; not necessary for methods text.
   notes: ""  # Notes: Free text is useful for staff but should not replace structured fields.
   url: ""  # Instrument URL: Helpful for staff lookup and manuals, not essential for methods completeness.
@@ -27,21 +28,23 @@ modalities:  # Imaging modalities: Core reporting category in QUAREP/JCB-style i
 # -----------------------------------------------------------------------------
 modules:  # Installed modules: Only present when installed modules materially change imaging capabilities.
   -
-    name: ""  # Module name: Required when a module/path is installed and materially changes imaging capabilities. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, workstation, impedance_module, universal_vessel_holder
+    name: ""  # Module name: Required when a module/path is installed and materially changes imaging capabilities. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, workstation, impedance_module, universal_vessel_holder, camera_port
     notes: ""  # Module notes: Useful for operational nuances and limitations.
     url: ""  # Module URL: Helpful vendor or manual reference.
+    manufacturer: ""  # Module manufacturer: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
+    model: ""  # Module model: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
 # -----------------------------------------------------------------------------
-software:  # Software entries: Add one item per software role used by this instrument.
+software:  # Software entries: Software is represented as extensible role-tagged entries.
   -
-    role: ""  # Software role: role tag used by policy/methods text. | Allowed values (canonical IDs): acquisition, processing, analysis, hardware_control, other
-    name: ""  # Software name: Required when a software role entry is present.
-    version: ""  # Software version: Required (empty allowed) for reproducibility-aware metadata.
-    developer: ""  # Software developer: Usually inferable from software name/vendor, so not minimal.
-    notes: ""  # Software notes: Useful for describing split workflows or bundled processing.
-    url: ""  # Software URL: Reference only.
+    role: ""  # Software role: Role tags define how software entries are interpreted in methods text and audits. | Allowed values (canonical IDs): acquisition, processing, analysis, hardware_control, other
+    name: ""  # Software name: Required for each declared software entry.
+    version: ""  # Software version: Version is required (empty allowed) for reproducibility-aware software metadata.
+    developer: ""  # Software developer: Helpful provenance metadata for software vendors/developers.
+    notes: ""  # Software notes: Useful for workflow caveats and role-specific implementation notes.
+    url: ""  # Software URL: Reference link to vendor pages or manuals.
 
 # -----------------------------------------------------------------------------
 # HARDWARE CONFIGURATION
@@ -51,7 +54,7 @@ hardware:
     type: ""  # Scanner type: Core hardware discriminator for methods completeness. | Allowed values (canonical IDs): none, galvo, resonant, tandem, spinning_disk, polygon, acousto_optic, stage_scanning
     line_rate_hz: ""  # Scanner line rate (Hz): Required where speed mode is intrinsic and relevant to the scan engine.
     pinhole_um: ""  # Pinhole diameter (um): Required for spinning disk systems where pinhole size is fixed in hardware. Point scanners use tunable pinholes defined per-experiment.
-    light_sheet_type: "standard_spim"  # Light Sheet Architecture: Clarifies the specific illumination geometry for light sheet systems. | Allowed values: standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other
+    light_sheet_type: ""  # Light Sheet Architecture: Clarifies the specific illumination geometry for light sheet systems. | Allowed values (canonical IDs): standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other
     notes: ""  # Scanner notes: Useful for mode-specific caveats.
     url: ""  # Scanner URL: Reference only.
   light_sources:  # Light sources: Each instrument needs at least one declared excitation source.
@@ -59,13 +62,14 @@ hardware:
       kind: ""  # Light source kind: Core excitation-source class. | Allowed values (canonical IDs): laser, white_light_laser, led, arc_lamp, metal_halide, halogen_lamp, multiphoton_laser, supercontinuum
       manufacturer: ""  # Light source manufacturer: Needed for unambiguous hardware identification.
       model: ""  # Light source model: Needed for unambiguous hardware identification.
-      technology: ""  # Light source technology subtype: Helpful subtype information for lasers or LED engines.
-      wavelength_nm: ""  # Peak Wavelength (nm): Required if kind is laser or led.
-      width_nm: ""  # Bandwidth / FWHM (nm): Optional for LEDs and broad-spectrum sources.
+      technology: ""  # Light source technology subtype: Helpful subtype information for lasers or LED engines. | Allowed values (canonical IDs): diode, dpss, led_array, supercontinuum, ti_sapphire, other
+      path: ""  # Light source path tag: Optional path tag to associate a source with specific illumination routes. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, all
+      wavelength_nm: ""  # Peak Wavelength (nm): Peak wavelength value for discrete or center-defined excitation sources.
+      width_nm: ""  # Bandwidth / FWHM (nm): Optional spectral width for LEDs and broad-spectrum excitation sources.
       power: ""  # Light source nominal power: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
       notes: ""  # Light source notes: Useful for software aliases and caveats.
       url: ""  # Light source URL: Reference only.
-  detectors:  # Detectors: At least one detector chain must be declared.
+  detectors:  # Detectors: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
     -
       kind: ""  # Detector kind: Core detector class. | Allowed values (canonical IDs): pmt, gaasp_pmt, hyd, scmos, cmos, emccd, ccd, apd, spad
       manufacturer: ""  # Detector manufacturer: Needed for hardware identification.
@@ -79,22 +83,123 @@ hardware:
       read_noise_e: ""  # Detector read noise (e-): Capability metadata.
       notes: ""  # Detector notes: Useful for channel assignments or operating modes.
       url: ""  # Detector URL: Reference only.
-  filters:  # Installed filters or filter sets: Required only for instrument classes where optical filter sets define the imaging path.
+  filters:  # Installed filters or filter sets: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
     -
-      name: ""  # Filter or filter-set name: Required when installed optical filter sets are part of the instrument light path.
-      location: ""  # Filter location: Needed if multiple wheels, turrets, or positions exist.
+      name: ""  # Filter or filter-set name: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
+      location: ""  # Filter location: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
       product_code: ""  # Filter product code: Helpful for staff verification.
-      excitation: ""  # Filter excitation band: Required for widefield or filter-set based fluorescence paths, or any source/filter-defined excitation band.
-      dichroic: ""  # Filter dichroic: Required when dichroics define the fluorescence path.
-      emission: ""  # Filter emission band: Required for fluorescence detection paths.
+      excitation: ""  # Filter excitation band: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
+      dichroic: ""  # Filter dichroic: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
+      emission: ""  # Filter emission band: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
       notes: ""  # Filter notes: Useful for operational nuance.
       url: ""  # Filter URL: Reference only.
-  splitters:  # Installed splitters: Present when an emission or camera splitter is installed.
+  splitters:  # Installed splitters: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
     -
-      name: ""  # Splitter name: Required when an emission or camera splitter is installed.
-      type: ""  # Splitter type: Needed to explain the splitter role.
+      name: ""  # Splitter name: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
+      type: ""  # Splitter type: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model. | Allowed values (canonical IDs): emission_splitter, image_splitter, dual_view, quad_view, other
       notes: ""  # Splitter notes: Useful operational nuance.
       url: ""  # Splitter URL: Reference only.
+  light_path:  # Light path topology: Topological graph model for modern virtual microscope UI and Tier 3 reporting.
+    cube_mechanisms:  # Cube mechanisms
+      -
+        name: ""  # Cube mechanism name
+        type: ""  # Cube mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
+        positions{}:
+          excitation_filter:  # Cube position excitation filter
+            bands:  # Cube excitation multiband array
+              -
+                center_nm: ""  # Excitation band center (nm)
+                width_nm: ""  # Excitation band width (nm)
+            component_type: ""  # Cube excitation filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+            center_nm: ""  # Cube excitation center (nm)
+            width_nm: ""  # Cube excitation width (nm)
+          emission_filter:  # Cube position emission filter
+            bands:  # Cube emission multiband array
+              -
+                center_nm: ""  # Emission band center (nm)
+                width_nm: ""  # Emission band width (nm)
+            center_nm: ""  # Cube emission center (nm)
+            width_nm: ""  # Cube emission width (nm)
+            component_type: ""  # Cube emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+          path: ""  # Cube position path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, all
+          name: ""  # Cube name
+          product_code: ""  # Cube product code
+          notes: ""  # Cube notes
+          dichroic:  # Cube position dichroic
+            cutoffs_nm:  # Cube dichroic cutoffs (nm)
+              - ""
+            component_type: ""  # Cube dichroic component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+        path: ""  # Cube mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, all
+        notes: ""  # Cube mechanism notes
+        slots: ""  # Cube mechanism slots
+        positions: "{}"  # Cube mechanism positions map
+    excitation_mechanisms:  # Excitation mechanisms
+      -
+        name: ""  # Excitation mechanism name
+        type: ""  # Excitation mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
+        path: ""  # Excitation mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, all
+        notes: ""  # Excitation mechanism notes
+        slots: ""  # Excitation mechanism slots
+        positions: "{}"  # Excitation mechanism positions map
+        positions{}:
+          component_type: ""  # Excitation position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+          manufacturer: ""  # Excitation position component manufacturer
+          product_code: ""  # Excitation position component product code
+          center_nm: ""  # Excitation position center wavelength (nm)
+          width_nm: ""  # Excitation position bandwidth (nm)
+          cut_on_nm: ""  # Excitation position cut-on wavelength (nm)
+          cut_off_nm: ""  # Excitation position cut-off wavelength (nm)
+          cutoffs_nm:  # Excitation position multi-cutoff wavelengths (nm)
+            - ""
+    dichroic_mechanisms:  # Dichroic mechanisms
+      -
+        name: ""  # Dichroic mechanism name
+        type: ""  # Dichroic mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
+        path: ""  # Dichroic mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, all
+        notes: ""  # Dichroic mechanism notes
+        slots: ""  # Dichroic mechanism slots
+        positions: "{}"  # Dichroic mechanism positions map
+        positions{}:
+          component_type: ""  # Dichroic position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+          manufacturer: ""  # Dichroic position component manufacturer
+          product_code: ""  # Dichroic position component product code
+          center_nm: ""  # Dichroic position center wavelength (nm)
+          width_nm: ""  # Dichroic position bandwidth (nm)
+          cut_on_nm: ""  # Dichroic position cut-on wavelength (nm)
+          cut_off_nm: ""  # Dichroic position cut-off wavelength (nm)
+          cutoffs_nm:  # Dichroic position multi-cutoff wavelengths (nm)
+            - ""
+    emission_mechanisms:  # Emission mechanisms
+      -
+        name: ""  # Emission mechanism name
+        type: ""  # Emission mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
+        path: ""  # Emission mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, all
+        notes: ""  # Emission mechanism notes
+        slots: ""  # Emission mechanism slots
+        positions: "{}"  # Emission mechanism positions map
+        positions{}:
+          component_type: ""  # Emission position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+          manufacturer: ""  # Emission position component manufacturer
+          product_code: ""  # Emission position component product code
+          center_nm: ""  # Emission position center wavelength (nm)
+          width_nm: ""  # Emission position bandwidth (nm)
+          cut_on_nm: ""  # Emission position cut-on wavelength (nm)
+          cut_off_nm: ""  # Emission position cut-off wavelength (nm)
+          cutoffs_nm:  # Emission position multi-cutoff wavelengths (nm)
+            - ""
+    splitters:  # Light path splitters
+      -
+        name: ""  # Splitter name
+        type: ""  # Splitter type | Allowed values (canonical IDs): emission_splitter, image_splitter, dual_view, quad_view, other
+        dichroic:  # Splitter dichroic
+          component_type: ""  # Splitter dichroic component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+          cut_on_nm: ""  # Splitter dichroic cutoff wavelength (nm)
+        path_1:  # Splitter path 1 (transmitted)
+          emission_filter:
+            component_type: ""  # Splitter path 1 emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
+        path_2:  # Splitter path 2 (reflected)
+          emission_filter:
+            component_type: ""  # Splitter path 2 emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block
   objectives:  # Objectives: Objective inventory is central to instrument completeness and QC mapping.
     -
       id: ""  # Objective ID: Stable per-objective key used for QC mapping.
@@ -108,7 +213,7 @@ hardware:
       correction: ""  # Objective correction class: Important to characterize the objective class. | Allowed values (canonical IDs): plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
       afc_compatible: false  # AFC compatible: Operational capability metadata.
       is_installed: false  # Is objective installed: Prevents methods generator and dashboard from advertising unavailable optics.
-      specialties:  # Objective specialties: Useful capability annotations.
+      specialties:  # Objective specialties: Useful capability annotations. | Allowed values (canonical IDs): long_working_distance, coverslip_correction, water_dipping, phase, dic, uv_transmission, ir_transmission, correction_collar, tirf, sim, sted, polarization, cleared_tissue_imaging, other
         - ""
       notes: ""  # Objective notes: Useful free-text nuance.
       url: ""  # Objective URL: Reference only.

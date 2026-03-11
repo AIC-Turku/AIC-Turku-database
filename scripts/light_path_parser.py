@@ -254,6 +254,8 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
     }
     if isinstance(mechanism.get("path"), str):
         mechanism_payload["path"] = mechanism["path"]
+    if isinstance(mechanism.get("notes"), str) and mechanism["notes"].strip():
+        mechanism_payload["notes"] = mechanism["notes"].strip()
 
     if mechanism.get("type") == "spectral_array":
         min_nm = mechanism.get("min_nm") if _is_positive_number(mechanism.get("min_nm")) else mechanism.get("band_min_nm")
@@ -323,6 +325,8 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
     }
     if isinstance(mechanism.get("path"), str):
         mechanism_payload["path"] = mechanism["path"]
+    if isinstance(mechanism.get("notes"), str) and mechanism["notes"].strip():
+        mechanism_payload["notes"] = mechanism["notes"].strip()
     return mechanism_payload
 
 
