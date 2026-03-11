@@ -1837,6 +1837,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             charts_json=charts_json,
             latest_metrics=latest_metrics,
             metric_names=METRIC_NAMES,
+            policy=inst.get("canonical", {}).get("policy", {}),
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
