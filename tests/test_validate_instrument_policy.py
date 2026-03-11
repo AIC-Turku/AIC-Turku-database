@@ -301,6 +301,33 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
 
 
+
+    def test_evaluate_required_if_item_field_in_resolves_vocab_synonyms(self) -> None:
+        self._write_json_yaml(
+            'vocab/light_source_timing_modes.yaml',
+            {
+                'terms': [
+                    {'id': 'cw', 'label': 'CW', 'description': '', 'synonyms': []},
+                    {'id': 'pulsed', 'label': 'Pulsed', 'description': '', 'synonyms': ['pulse']},
+                ]
+            },
+        )
+        vocabulary = Vocabulary(
+            vocab_registry={
+                'light_source_timing_modes': {'source': 'file', 'path': 'vocab/light_source_timing_modes.yaml'}
+            }
+        )
+
+        self.assertTrue(
+            _evaluate_required_if(
+                {'item_field_in': {'timing_mode': ['pulsed']}},
+                payload={},
+                item_context={'timing_mode': 'pulse'},
+                vocabulary=vocabulary,
+                item_field_vocabs={'timing_mode': 'light_source_timing_modes'},
+            )
+        )
+
     def test_evaluate_required_if_supports_any_item_conditions(self) -> None:
         vocabulary = Vocabulary(vocab_registry={})
         payload = {

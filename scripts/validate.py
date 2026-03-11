@@ -532,6 +532,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
         )
 
     vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
+    item_field_vocab_index = _build_item_field_vocab_index(policy.rules)
     sections: dict[tuple[str | None, str | None], list[dict[str, Any]]] = {}
     missing_required: list[dict[str, str]] = []
     missing_conditional: list[dict[str, str]] = []
@@ -564,6 +565,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
                 payload=payload,
                 item_context=None,
                 vocabulary=vocabulary,
+                item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
             )
             if condition_triggered and not present:
                 missing = True
@@ -574,6 +576,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
                         payload=payload,
                         item_context=node.context_item,
                         vocabulary=vocabulary,
+                        item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                     ):
                         missing = True
                         break
@@ -681,13 +684,42 @@ def _parent_path_from_list_path(path: str) -> str:
     return path.replace('[]', '')
 
 
+def _list_context_path(path: str) -> str | None:
+    parts = [part for part in path.split('.') if part]
+    for idx in range(len(parts) - 1, -1, -1):
+        if parts[idx].endswith('[]'):
+            return '.'.join(parts[: idx + 1])
+    return None
+
+
+def _build_item_field_vocab_index(rules: list[PolicyRule]) -> dict[str, dict[str, str]]:
+    index: dict[str, dict[str, str]] = {}
+    for rule in rules:
+        if not isinstance(rule.vocab, str):
+            continue
+        list_context = _list_context_path(rule.path)
+        if list_context is None:
+            continue
+        suffix = rule.path[len(list_context):].lstrip('.')
+        if not suffix or '[]' in suffix or '.' in suffix:
+            continue
+        index.setdefault(list_context, {})[suffix] = rule.vocab
+    return index
+
+
 def _evaluate_required_if(
     required_if: dict[str, Any],
     *,
     payload: dict[str, Any],
     item_context: dict[str, Any] | None,
     vocabulary: Vocabulary,
+    item_field_vocabs: dict[str, str] | None = None,
 ) -> bool:
+    def _normalize_scalar(value: Any) -> str | None:
+        if isinstance(value, (str, int, float, bool)):
+            return str(value).strip().casefold()
+        return None
+
     def _evaluate_simple_conditions(condition_spec: dict[str, Any]) -> bool:
         conditions: list[bool] = []
 
@@ -739,19 +771,27 @@ def _evaluate_required_if(
                         item_matches = False
                         break
                     raw_value = item_context.get(field_name)
-                    normalized_allowed = {
-                        str(v).strip().casefold() if isinstance(v, bool) else str(v).strip().casefold()
-                        for v in allowed_values
-                        if isinstance(v, (str, int, float, bool))
-                    }
+                    field_vocab = item_field_vocabs.get(field_name) if isinstance(item_field_vocabs, dict) else None
+
+                    normalized_allowed: set[str] = set()
+                    for allowed_value in allowed_values:
+                        candidate_value = allowed_value
+                        if isinstance(candidate_value, str) and isinstance(field_vocab, str):
+                            candidate_value = vocabulary.resolve_canonical(field_vocab, candidate_value) or candidate_value
+                        normalized_candidate = _normalize_scalar(candidate_value)
+                        if normalized_candidate is not None:
+                            normalized_allowed.add(normalized_candidate)
+
                     if not normalized_allowed:
                         item_matches = False
                         break
-                    if isinstance(raw_value, bool):
-                        normalized_value = str(raw_value).strip().casefold()
-                    elif isinstance(raw_value, (str, int, float)):
-                        normalized_value = str(raw_value).strip().casefold()
-                    else:
+
+                    resolved_raw_value = raw_value
+                    if isinstance(resolved_raw_value, str) and isinstance(field_vocab, str):
+                        resolved_raw_value = vocabulary.resolve_canonical(field_vocab, resolved_raw_value) or resolved_raw_value
+
+                    normalized_value = _normalize_scalar(resolved_raw_value)
+                    if normalized_value is None:
                         item_matches = False
                         break
                     if normalized_value not in normalized_allowed:
@@ -1094,6 +1134,7 @@ def validate_instrument_ledgers(
         return instrument_ids, issues, warnings
 
     vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
+    item_field_vocab_index = _build_item_field_vocab_index(policy.rules)
 
     for instrument_file in _iter_yaml_files(instruments_dir):
         is_retired_instrument = 'retired' in instrument_file.parts
@@ -1137,6 +1178,7 @@ def validate_instrument_ledgers(
                     payload=payload,
                     item_context=None,
                     vocabulary=vocabulary,
+                    item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                 )
 
             if is_required and not resolved:
@@ -1164,6 +1206,7 @@ def validate_instrument_ledgers(
                         payload=payload,
                         item_context=node.context_item,
                         vocabulary=vocabulary,
+                        item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                     )
                     if required_for_item and value in (None, ''):
                         warnings.append(
