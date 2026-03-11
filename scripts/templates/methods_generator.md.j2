@@ -72,7 +72,6 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
 </div>
 
 <script>
-let vocabularies = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
     const instrumentsResponse = await fetch("../assets/instruments_data.json");
@@ -80,7 +79,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const instruments = Array.isArray(instrumentsPayload)
         ? instrumentsPayload
         : (instrumentsPayload?.instruments || []);
-    vocabularies = instrumentsPayload?.vocabularies || {};
 
     const systemSelect = document.getElementById("system-select");
     const hwOptions = document.getElementById("hardware-options");
@@ -106,10 +104,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
     function formatBlockerLabel(blocker) {
-        const title = (blocker?.title || blocker?.path || "Missing field").toString().trim();
-        const role = (blocker?.role || "").toString().trim();
-        if (role) return `${title} (${toTitleCase(role)} software)`;
-        return title;
+        return (blocker?.title || blocker?.path || "Missing field").toString().trim();
     }
 
     function getMethodsMetadataStatus(inst) {
@@ -158,7 +153,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         hwOptions.style.display = "block";
         renderMethodsMetadataWarning(currentInst);
 
-        const dto = currentInst?.dto || currentInst;
+        const dto = currentInst;
 
         bindCheckboxes("modality-list", dto.modalities || [], "modality");
         bindCheckboxes("module-list", dto.modules || [], "module");
@@ -222,7 +217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     addBtn.addEventListener("click", () => {
         if (!currentInst) return;
 
-        const dto = currentInst?.dto || currentInst;
+        const dto = currentInst;
         const methodsMetadataStatus = getMethodsMetadataStatus(currentInst);
         if (methodsMetadataStatus.isBlocked) {
             renderMethodsMetadataWarning(currentInst);
