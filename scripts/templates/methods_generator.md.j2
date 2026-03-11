@@ -49,6 +49,15 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
     <strong>9. Detectors:</strong>
     <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
 
+    <strong>10. Magnification Changers:</strong>
+    <div id="magnification-changer-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>11. Optical Modulators:</strong>
+    <div id="optical-modulator-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
+    <strong>12. Adaptive Illumination Logic:</strong>
+    <div id="illumination-logic-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+
     <button id="add-btn" class="md-button md-button--primary" style="margin-top: 10px;">+ Add to Methods</button>
   </div>
 </div>
@@ -161,6 +170,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj");
         bindCheckboxes("light-list", dto.hardware?.light_sources || [], "light");
         bindCheckboxes("det-list", dto.hardware?.detectors || [], "det");
+        bindCheckboxes("magnification-changer-list", dto.hardware?.magnification_changers || [], "magnification-changer");
+        bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator");
+        bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic");
 
         const opticalPath = dto.hardware?.optical_path || {};
         bindCheckboxes("filter-list", opticalPath.filters || [], "filter");
@@ -241,6 +253,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             ...getCheckedMethodSentences("obj"),
             ...getCheckedMethodSentences("det"),
             ...getCheckedMethodSentences("light"),
+            ...getCheckedMethodSentences("magnification-changer"),
+            ...getCheckedMethodSentences("optical-modulator"),
+            ...getCheckedMethodSentences("illumination-logic"),
             ...getCheckedMethodSentences("filter"),
             ...getCheckedMethodSentences("splitter"),
             ...(dto.methods?.processing_sentences || []),
