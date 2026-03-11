@@ -504,6 +504,127 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         self.assertIn('invalid_list_item_type', {issue.code for issue in issues})
 
+    def test_conditional_depletion_targets_enforce_numeric_item_type(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'light_source_roles': {'source': 'file', 'path': 'vocab/light_source_roles.yaml'},
+                },
+                'sections': [
+                    {
+                        'id': 'ls',
+                        'title': 'LS',
+                        'rules': [
+                            {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {
+                                'path': 'hardware.light_sources[].role',
+                                'status': 'optional',
+                                'type': 'string',
+                                'vocab': 'light_source_roles',
+                            },
+                            {
+                                'path': 'hardware.light_sources[].depletion_targets_nm',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'item_type': 'positive_number',
+                                'required_if': {'item_field_in': {'role': ['depletion']}},
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'vocab/light_source_roles.yaml',
+            {
+                'terms': [
+                    {'id': 'depletion', 'label': 'Depletion', 'description': '', 'synonyms': ['sted_depletion']},
+                ]
+            },
+        )
+        self._write_json_yaml(
+            'instruments/sted-conditional-list-items.yaml',
+            {
+                'instrument': {'instrument_id': 'sted-conditional-list-items'},
+                'hardware': {
+                    'light_sources': [
+                        {'role': 'depletion', 'depletion_targets_nm': [775, 'foo']},
+                    ]
+                },
+            },
+        )
+
+        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertIn('invalid_list_item_type', {issue.code for issue in issues})
+
+    def test_item_field_in_conditions_apply_for_vocab_synonyms_in_validator(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'light_source_roles': {'source': 'file', 'path': 'vocab/light_source_roles.yaml'},
+                    'light_source_timing_modes': {'source': 'file', 'path': 'vocab/light_source_timing_modes.yaml'},
+                },
+                'sections': [
+                    {
+                        'id': 'ls',
+                        'title': 'LS',
+                        'rules': [
+                            {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.light_sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
+                            {'path': 'hardware.light_sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
+                            {
+                                'path': 'hardware.light_sources[].pulse_width_ps',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'item_field_in': {'timing_mode': ['pulsed']}},
+                            },
+                            {
+                                'path': 'hardware.light_sources[].depletion_targets_nm',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'item_type': 'positive_number',
+                                'required_if': {'item_field_in': {'role': ['depletion']}},
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'vocab/light_source_roles.yaml',
+            {
+                'terms': [
+                    {'id': 'depletion', 'label': 'Depletion', 'description': '', 'synonyms': ['sted_depletion']},
+                ]
+            },
+        )
+        self._write_json_yaml(
+            'vocab/light_source_timing_modes.yaml',
+            {
+                'terms': [
+                    {'id': 'pulsed', 'label': 'Pulsed', 'description': '', 'synonyms': ['pulse']},
+                ]
+            },
+        )
+        self._write_json_yaml(
+            'instruments/sted-synonym-conditions.yaml',
+            {
+                'instrument': {'instrument_id': 'sted-synonym-conditions'},
+                'hardware': {
+                    'light_sources': [
+                        {'role': 'sted_depletion', 'timing_mode': 'pulse'},
+                    ]
+                },
+            },
+        )
+
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        missing_conditional_messages = [w.message for w in warnings if w.code == 'missing_conditional_field']
+        self.assertTrue(any('hardware.light_sources[].pulse_width_ps' in msg for msg in missing_conditional_messages))
+        self.assertTrue(any('hardware.light_sources[].depletion_targets_nm' in msg for msg in missing_conditional_messages))
+
     def test_sted_completeness_audit_warns_for_missing_depletion_and_time_gating(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
