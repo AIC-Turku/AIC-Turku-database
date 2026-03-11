@@ -159,6 +159,27 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(light["timing_mode"], "pulsed")
         self.assertIn("STED depletion was delivered", light["method_sentence"])
 
+    def test_wavelength_model_placeholder_is_deduplicated_in_label(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "laser",
+                            "manufacturer": "Placeholder",
+                            "model": "488 nm",
+                            "wavelength_nm": 488,
+                        }
+                    ]
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+
+        light = hardware["light_sources"][0]
+        self.assertEqual(light["display_label"], "488 nm laser Placeholder")
+
     def test_mega_dto_methods_include_all_hardware_sentence_groups(self) -> None:
         inst = {
             "id": "scope-123",

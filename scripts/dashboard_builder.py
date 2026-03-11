@@ -455,7 +455,25 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     wavelength = _fmt_num(src.get("wavelength_nm") or src.get("wavelength"))
     technology = clean_text(src.get("technology"))
     power = clean_text(src.get("power"))
-    display_label = " ".join(part for part in [f"{wavelength} nm" if wavelength else "", kind_label, manufacturer, model] if part).strip() or model or kind_label or "Light source"
+
+    normalized_model = model.lower()
+    normalized_wavelength_markers = {
+        marker.lower()
+        for marker in [f"{wavelength}", f"{wavelength}nm", f"{wavelength} nm"]
+        if wavelength
+    }
+    deduplicated_model = model if normalized_model not in normalized_wavelength_markers else ""
+
+    display_label = " ".join(
+        part
+        for part in [
+            f"{wavelength} nm" if wavelength else "",
+            kind_label,
+            manufacturer,
+            deduplicated_model,
+        ]
+        if part
+    ).strip() or model or kind_label or "Light source"
     if normalized_role == "depletion":
         pulse_details = []
         if pulse_width_ps:
