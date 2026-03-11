@@ -35,7 +35,7 @@ jinja2_stub.Environment = _DummyEnvironment
 jinja2_stub.FileSystemLoader = _DummyLoader
 sys.modules.setdefault("jinja2", jinja2_stub)
 
-from scripts.dashboard_builder import build_hardware_dto
+from scripts.dashboard_builder import build_hardware_dto, build_instrument_mega_dto
 from scripts.validate import Vocabulary
 
 
@@ -132,6 +132,62 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         logic = hardware["illumination_logic"][0]
         self.assertIn("Adaptive illumination", logic["method_sentence"])
         self.assertIn("Default enabled", "\n".join(logic["spec_lines"]))
+
+
+
+    def test_legacy_notes_can_infer_depletion_role_and_timing(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "laser",
+                            "manufacturer": "Legacy",
+                            "model": "Laser",
+                            "wavelength_nm": 775,
+                            "notes": "STED depletion (pulsed, for 640 nm)",
+                        }
+                    ]
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+
+        light = hardware["light_sources"][0]
+        self.assertEqual(light["role"], "depletion")
+        self.assertEqual(light["timing_mode"], "pulsed")
+        self.assertIn("STED depletion was delivered", light["method_sentence"])
+
+    def test_mega_dto_methods_include_all_hardware_sentence_groups(self) -> None:
+        inst = {
+            "id": "scope-123",
+            "display_name": "Test Scope",
+            "manufacturer": "Acme",
+            "model": "S1",
+            "stand_orientation": "inverted",
+            "software": [{"role": "acquisition", "name": "ScopeSoft", "version": "1.0"}],
+            "modalities": [],
+            "modules": [],
+            "canonical": {
+                "hardware": {
+                    "light_sources": [],
+                    "detectors": [],
+                    "magnification_changers": [{"type": "optovar", "positions": [{"label": "1.5x"}]}],
+                    "optical_modulators": [{"type": "slm", "supported_phase_masks": ["vortex"]}],
+                    "illumination_logic": [{"method": "rescue_sted", "default_enabled": True}],
+                    "stages": [],
+                }
+            },
+        }
+
+        dto = build_instrument_mega_dto(self.vocabulary, inst, EMPTY_LIGHTPATH)
+
+        self.assertIn("magnification_changer_sentences", dto["methods"])
+        self.assertIn("optical_modulator_sentences", dto["methods"])
+        self.assertIn("illumination_logic_sentences", dto["methods"])
+        self.assertNotIn("canonical", dto)
+        self.assertNotIn("methods_generation", dto)
 
     def test_each_new_renderable_contains_required_dto_fields(self) -> None:
         inst = {

@@ -429,11 +429,26 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
 
 
 def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[str, Any]:
+    notes_text = clean_text(src.get("notes")).lower()
+    raw_role = clean_text(src.get("role")).lower()
+    raw_timing_mode = clean_text(src.get("timing_mode")).lower()
+
+    normalized_role = raw_role
+    if not normalized_role and ("sted depletion" in notes_text or "depletion" in notes_text):
+        normalized_role = "depletion"
+
+    normalized_timing_mode = raw_timing_mode
+    if not normalized_timing_mode:
+        if "pulsed" in notes_text:
+            normalized_timing_mode = "pulsed"
+        elif "continuous" in notes_text or "cw" in notes_text:
+            normalized_timing_mode = "cw"
+
     manufacturer = clean_text(src.get("manufacturer"))
     model = clean_text(src.get("model") or src.get("name"))
     kind_label = _vocab_display(vocabulary, "light_source_kinds", src.get("kind") or src.get("type"))
-    role_label = _vocab_display(vocabulary, "light_source_roles", src.get("role"))
-    timing_mode_label = _vocab_display(vocabulary, "light_source_timing_modes", src.get("timing_mode"))
+    role_label = _vocab_display(vocabulary, "light_source_roles", normalized_role)
+    timing_mode_label = _vocab_display(vocabulary, "light_source_timing_modes", normalized_timing_mode)
     pulse_width_ps = _fmt_num(src.get("pulse_width_ps"))
     repetition_rate_mhz = _fmt_num(src.get("repetition_rate_mhz"))
     depletion_targets_nm = [_fmt_num(item) for item in (src.get("depletion_targets_nm") or []) if _fmt_num(item)] if isinstance(src.get("depletion_targets_nm"), list) else []
@@ -441,14 +456,15 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     technology = clean_text(src.get("technology"))
     power = clean_text(src.get("power"))
     display_label = " ".join(part for part in [f"{wavelength} nm" if wavelength else "", kind_label, manufacturer, model] if part).strip() or model or kind_label or "Light source"
-    if clean_text(src.get("role")) == "depletion" and clean_text(src.get("timing_mode")) == "pulsed":
+    if normalized_role == "depletion":
         pulse_details = []
         if pulse_width_ps:
             pulse_details.append(f"{pulse_width_ps} ps pulse width")
         if repetition_rate_mhz:
             pulse_details.append(f"{repetition_rate_mhz} MHz repetition rate")
         targets_clause = f" targeting {_human_list([f'{item} nm' for item in depletion_targets_nm])}" if depletion_targets_nm else ""
-        method_sentence = f"STED depletion was delivered by a pulsed depletion laser ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a pulsed depletion laser{targets_clause}."
+        depletion_descriptor = "pulsed depletion laser" if normalized_timing_mode == "pulsed" else "depletion laser"
+        method_sentence = f"STED depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a {depletion_descriptor}{targets_clause}."
     else:
         method_sentence = f"Excitation was provided by {display_label}."
     spec_lines = _spec_lines(
@@ -469,6 +485,8 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         "display_subtitle": manufacturer,
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "role": normalized_role,
+        "timing_mode": normalized_timing_mode,
     }
 
 
@@ -892,10 +910,23 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             "autofocus_sentence": hardware_dto["hardware_autofocus"].get("method_sentence", ""),
             "triggering_sentence": hardware_dto["triggering"].get("method_sentence", ""),
             "stage_sentences": [stage["method_sentence"] for stage in hardware_dto["stages"] if clean_text(stage.get("method_sentence"))],
+            "magnification_changer_sentences": [
+                row["method_sentence"]
+                for row in hardware_dto["magnification_changers"]
+                if clean_text(row.get("method_sentence"))
+            ],
+            "optical_modulator_sentences": [
+                row["method_sentence"]
+                for row in hardware_dto["optical_modulators"]
+                if clean_text(row.get("method_sentence"))
+            ],
+            "illumination_logic_sentences": [
+                row["method_sentence"]
+                for row in hardware_dto["illumination_logic"]
+                if clean_text(row.get("method_sentence"))
+            ],
             "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
         },
-        "canonical": copy.deepcopy(inst.get("canonical") or {}),
-        "methods_generation": copy.deepcopy(inst.get("methods_generation") or {}),
     }
     return dto
 
