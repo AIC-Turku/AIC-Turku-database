@@ -568,6 +568,7 @@ sections:
         title: Depletion target wavelengths (nm)
         status: conditional
         type: list
+        item_type: positive_number
         required_if:
           item_field_in:
             role: [depletion]
