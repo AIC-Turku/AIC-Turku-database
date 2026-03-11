@@ -240,6 +240,7 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
                     "slot": slot,
                     "type": component_type,
                     "label": _build_label(component),
+                    "display_label": f"Slot {slot}: {_build_label(component)}",
                     "details": _build_details(component),
                     **({"path": component.get("path")} if isinstance(component.get("path"), str) else {}),
                 }
@@ -532,6 +533,15 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
             payload["splitters"].append(
                 {
                     "name": splitter.get("name", f"Splitter {index + 1}"),
+                    "display_label": " | ".join(
+                        part
+                        for part in [
+                            f"Di: {dichroic_pos.get('label')}" if dichroic_pos else "",
+                            f"P1: {path1_pos.get('label')}" if path1_pos else "",
+                            f"P2: {path2_pos.get('label')}" if path2_pos else "",
+                        ]
+                        if part
+                    ),
                     "dichroic": {
                         "name": "Splitter Dichroic",
                         "positions": {1: dichroic_pos} if dichroic_pos else {},
