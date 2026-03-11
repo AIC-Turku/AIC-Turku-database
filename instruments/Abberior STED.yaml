@@ -53,7 +53,7 @@ hardware:
       model: LDH-D-C-485
       role: excitation
       timing_mode: pulsed
-      wavelength_nm: 488
+      wavelength_nm: 485
       pulse_width_ps: 80
       repetition_rate_mhz: 40
       notes: Pulsed excitation source for the 488 nm channel.
