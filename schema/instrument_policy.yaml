@@ -140,13 +140,36 @@ vocab_registry:
     path: vocab/optical_component_types.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
-  # Recommended future additions if you want the policy file to own all possible options:
-  # manufacturers:
-  #   source: file
-  #   path: vocab/manufacturers.yaml
-  # stand_orientations:
-  #   source: file
-  #   path: vocab/stand_orientations.yaml
+  stand_orientations:
+    source: file
+    path: vocab/stand_orientations.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  light_sheet_types:
+    source: file
+    path: vocab/light_sheet_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  optical_routes:
+    source: file
+    path: vocab/optical_routes.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  light_source_technologies:
+    source: file
+    path: vocab/light_source_technologies.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  splitter_types:
+    source: file
+    path: vocab/splitter_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  objective_specialties:
+    source: file
+    path: vocab/objective_specialties.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
 
 sections:
   - id: general_identity
@@ -201,7 +224,7 @@ sections:
         title: Stand orientation
         status: required
         type: string
-        allowed_values: [upright, inverted, stereo, benchtop, other]
+        vocab: stand_orientations
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Used directly by methods generator and helps classify the platform.
 
@@ -387,7 +410,7 @@ sections:
         title: Light Sheet Architecture
         status: conditional
         type: string
-        allowed_values: [standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other]
+        vocab: light_sheet_types
         required_if:
           modalities_any_of: [light_sheet]
         used_by: [audit_pdf, method_generator, dashboard]
@@ -445,6 +468,7 @@ sections:
         title: Light source technology subtype
         status: optional
         type: string
+        vocab: light_source_technologies
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Helpful subtype information for lasers or LED engines.
 
@@ -452,7 +476,7 @@ sections:
         title: Light source path tag
         status: optional
         type: string
-        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+        vocab: optical_routes
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Optional path tag to associate a source with specific illumination routes.
 
@@ -688,6 +712,7 @@ sections:
         title: Splitter type
         status: optional
         type: string
+        vocab: splitter_types
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
 
@@ -773,7 +798,7 @@ sections:
         title: Cube mechanism path tag
         status: optional
         type: string
-        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+        vocab: optical_routes
 
       - path: hardware.light_path.cube_mechanisms[].slots
         title: Cube mechanism slots
@@ -795,7 +820,7 @@ sections:
         title: Cube position path tag
         status: optional
         type: string
-        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+        vocab: optical_routes
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.name
         title: Cube name
@@ -908,7 +933,7 @@ sections:
         title: Excitation mechanism path tag
         status: optional
         type: string
-        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+        vocab: optical_routes
 
       - path: hardware.light_path.excitation_mechanisms[].slots
         title: Excitation mechanism slots
@@ -995,7 +1020,7 @@ sections:
         title: Dichroic mechanism path tag
         status: optional
         type: string
-        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+        vocab: optical_routes
 
       - path: hardware.light_path.dichroic_mechanisms[].slots
         title: Dichroic mechanism slots
@@ -1082,7 +1107,7 @@ sections:
         title: Emission mechanism path tag
         status: optional
         type: string
-        allowed_values: [epi, tirf, confocal, multiphoton, shared, all]
+        vocab: optical_routes
 
       - path: hardware.light_path.emission_mechanisms[].slots
         title: Emission mechanism slots
@@ -1162,6 +1187,7 @@ sections:
         title: Splitter type
         status: conditional
         type: string
+        vocab: splitter_types
         required_if:
           parent_present: "hardware.light_path.splitters[]"
 
@@ -1318,6 +1344,7 @@ sections:
         status: optional
         type: list
         item_type: string
+        vocab: objective_specialties
         used_by: [audit_pdf, dashboard]
         rationale: Useful capability annotations.
 
