@@ -248,7 +248,7 @@ hide:
             const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = JSON.stringify(comp);
             cb.dataset.routes = (comp.__routes || mech.__routes || []).join(',');
             cb.addEventListener('change', onLightSourceChange);
-            const text = comp.display_label || comp.label || comp.name || 'Light Source';
+            const text = comp.display_label;
             lbl.appendChild(cb); lbl.appendChild(document.createTextNode(text));
             wrap.appendChild(lbl);
           });
@@ -315,18 +315,19 @@ hide:
     }
 
     function createControl(stageKey, mechanism, index) {
-      if (stageKey === 'emission' && String(mechanism.type || '').toLowerCase() === 'spectral_array') {
+      const controlKind = mechanism.control_kind || 'dropdown';
+      if (controlKind === 'spectral_array') {
         return createSpectralArrayControl(stageKey, mechanism, index);
       }
 
-      if (['tunable', 'spectral_slider'].includes(String(mechanism.type || '').toLowerCase())) {
+      if (controlKind === 'tunable_slider') {
         const block = document.createElement('div');
         block.className = 'tunable-control'; block.dataset.stage = stageKey; block.dataset.mechanismName = mechanism.name;
         
         const lbl = document.createElement('div'); lbl.className = 'tunable-range-label';
         const row = document.createElement('div'); row.className = 'slider-row';
-        const minIn = document.createElement('input'); minIn.type = 'range'; minIn.min=400; minIn.max=800; minIn.value=500;
-        const maxIn = document.createElement('input'); maxIn.type = 'range'; maxIn.min=400; maxIn.max=800; maxIn.value=550;
+        const minIn = document.createElement('input'); minIn.type = 'range'; minIn.min=mechanism.min_nm ?? 400; minIn.max=mechanism.max_nm ?? 800; minIn.value=mechanism.default_min_nm ?? 500;
+        const maxIn = document.createElement('input'); maxIn.type = 'range'; maxIn.min=mechanism.min_nm ?? 400; maxIn.max=mechanism.max_nm ?? 800; maxIn.value=mechanism.default_max_nm ?? 550;
         
         const update = () => {
           if (Number(minIn.value) > Number(maxIn.value)) minIn.value = maxIn.value;
@@ -340,19 +341,18 @@ hide:
       }
 
       const block = document.createElement('div'); block.className = 'vm-field';
-      const label = document.createElement('label'); label.textContent = mechanism.name || `Mech ${index+1}`;
+      const label = document.createElement('label'); label.textContent = mechanism.control_label || mechanism.display_label;
       const select = document.createElement('select'); select.dataset.stage = stageKey; select.dataset.mechanismName = mechanism.name;
 
-      if (stageKey === 'splitters') {
-        const pos = mechanism.positions?.[1] || {};
-        const opt = document.createElement('option'); opt.value = JSON.stringify(pos); opt.textContent = mechanism.display_label || 'Splitter';
+      const options = Array.isArray(mechanism.options)
+        ? mechanism.options
+        : Object.entries(positionsForRoute(mechanism, state.activeRoute)).map(([slot, comp]) => ({ slot, display_label: comp.display_label, value: comp }));
+      options.forEach((option) => {
+        const opt = document.createElement('option');
+        opt.value = JSON.stringify(option.value);
+        opt.textContent = option.display_label;
         select.appendChild(opt);
-      } else {
-        Object.entries(positionsForRoute(mechanism, state.activeRoute)).forEach(([slot, comp]) => {
-          const opt = document.createElement('option'); opt.value = JSON.stringify(comp);
-          opt.textContent = comp.display_label || comp.label || `Slot ${slot}`; select.appendChild(opt);
-        });
-      }
+      });
       select.addEventListener('change', () => { drawHardware(); calculateEfficiencies(); });
       block.appendChild(label); block.appendChild(select); return block;
     }
@@ -997,7 +997,13 @@ hide:
       return (Array.isArray(r) ? r : []).map((s, i) => ({
         id: `s_${i}`,
         name: s.name || 'Splitter',
+        display_label: s.display_label || s.name || 'Splitter',
         type: 'splitter',
+        control_kind: s.control_kind || 'dropdown',
+        control_label: s.control_label || s.name || 'Splitter',
+        options: Array.isArray(s.options)
+          ? s.options
+          : [{ slot: 1, display_label: s.display_label || s.name || 'Splitter', value: s }],
         __routes: routesFromObject(s),
         positions: { 1: { ...s, __routes: routesFromObject(s) } }
       }));

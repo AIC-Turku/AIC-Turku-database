@@ -249,15 +249,35 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
     mechanism_payload = {
         "id": f"{stage_prefix}_mech_{index}",
         "name": mechanism.get("name") or f"{stage_prefix.replace('_', ' ').title()} {index + 1}",
+        "display_label": mechanism.get("name") or f"{stage_prefix.replace('_', ' ').title()} {index + 1}",
         "type": mechanism.get("type", "unknown"),
         "positions": positions,
     }
+
+    mechanism_type = str(mechanism.get("type", "")).lower()
+    mechanism_payload["control_kind"] = "dropdown"
+    mechanism_payload["control_label"] = mechanism_payload["display_label"]
+    if mechanism_type in {"tunable", "spectral_slider"}:
+        mechanism_payload["control_kind"] = "tunable_slider"
+        mechanism_payload["min_nm"] = mechanism.get("min_nm", 400)
+        mechanism_payload["max_nm"] = mechanism.get("max_nm", 800)
+        mechanism_payload["default_min_nm"] = mechanism.get("default_min_nm", 500)
+        mechanism_payload["default_max_nm"] = mechanism.get("default_max_nm", 550)
+    mechanism_payload["options"] = [
+        {
+            "slot": position.get("slot"),
+            "display_label": position.get("display_label"),
+            "value": position,
+        }
+        for position in positions
+    ]
     if isinstance(mechanism.get("path"), str):
         mechanism_payload["path"] = mechanism["path"]
     if isinstance(mechanism.get("notes"), str) and mechanism["notes"].strip():
         mechanism_payload["notes"] = mechanism["notes"].strip()
 
     if mechanism.get("type") == "spectral_array":
+        mechanism_payload["control_kind"] = "spectral_array"
         min_nm = mechanism.get("min_nm") if _is_positive_number(mechanism.get("min_nm")) else mechanism.get("band_min_nm")
         max_nm = mechanism.get("max_nm") if _is_positive_number(mechanism.get("max_nm")) else mechanism.get("band_max_nm")
         bands = mechanism.get("bands") if _is_positive_number(mechanism.get("bands")) else mechanism.get("max_bands")
@@ -320,8 +340,19 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
     mechanism_payload: dict[str, Any] = {
         "id": f"cube_mech_{index}",
         "name": mechanism.get("name") or f"Cube {index + 1}",
+        "display_label": mechanism.get("name") or f"Cube {index + 1}",
         "type": mechanism.get("type", "unknown"),
         "positions": positions,
+        "control_kind": "dropdown",
+        "control_label": mechanism.get("name") or f"Cube {index + 1}",
+        "options": [
+            {
+                "slot": position.get("slot"),
+                "display_label": position.get("label") or f"Cube {position.get('slot')}",
+                "value": position,
+            }
+            for position in positions
+        ],
     }
     if isinstance(mechanism.get("path"), str):
         mechanism_payload["path"] = mechanism["path"]
@@ -558,6 +589,45 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
                         "name": "Path 2 (Reflected)",
                         "positions": {1: path2_pos} if path2_pos else {},
                     },
+                    "control_kind": "dropdown",
+                    "control_label": splitter.get("name", f"Splitter {index + 1}"),
+                    "options": [
+                        {
+                            "slot": 1,
+                            "display_label": " | ".join(
+                                part
+                                for part in [
+                                    f"Di: {dichroic_pos.get('label')}" if dichroic_pos else "",
+                                    f"P1: {path1_pos.get('label')}" if path1_pos else "",
+                                    f"P2: {path2_pos.get('label')}" if path2_pos else "",
+                                ]
+                                if part
+                            ),
+                            "value": {
+                                "label": " | ".join(
+                                    part
+                                    for part in [
+                                        f"Di: {dichroic_pos.get('label')}" if dichroic_pos else "",
+                                        f"P1: {path1_pos.get('label')}" if path1_pos else "",
+                                        f"P2: {path2_pos.get('label')}" if path2_pos else "",
+                                    ]
+                                    if part
+                                ),
+                                "dichroic": {
+                                    "name": "Splitter Dichroic",
+                                    "positions": {1: dichroic_pos} if dichroic_pos else {},
+                                },
+                                "path1": {
+                                    "name": "Path 1 (Transmitted)",
+                                    "positions": {1: path1_pos} if path1_pos else {},
+                                },
+                                "path2": {
+                                    "name": "Path 2 (Reflected)",
+                                    "positions": {1: path2_pos} if path2_pos else {},
+                                },
+                            },
+                        }
+                    ],
                 }
             )
 
