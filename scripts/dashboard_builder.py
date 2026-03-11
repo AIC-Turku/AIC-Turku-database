@@ -574,6 +574,118 @@ def build_software_dto(vocabulary: Vocabulary, software: dict[str, Any]) -> dict
     }
 
 
+def build_optical_path_dto(lightpath_dto: dict[str, Any]) -> dict[str, Any]:
+    stages = lightpath_dto.get("stages") if isinstance(lightpath_dto, dict) else {}
+    splitters_raw = lightpath_dto.get("splitters") if isinstance(lightpath_dto, dict) else []
+
+    filters: list[dict[str, Any]] = []
+    splitters: list[dict[str, Any]] = []
+    sections: list[dict[str, Any]] = []
+
+    for stage_key, stage_title in [
+        ("cube", "Filter Cubes"),
+        ("excitation", "Excitation Filters"),
+        ("dichroic", "Dichroics"),
+        ("emission", "Emission Filters"),
+    ]:
+        mechanisms = stages.get(stage_key, []) if isinstance(stages, dict) else []
+        section_items: list[dict[str, Any]] = []
+
+        for mechanism in mechanisms:
+            mech_name = clean_text(mechanism.get("name"))
+            for pos in mechanism.get("positions", []):
+                if not isinstance(pos, dict):
+                    continue
+
+                if stage_key == "cube":
+                    linked = pos.get("linked_components") or {}
+                    ex_label = clean_text(((linked.get("excitation_filter") or {}).get("label")))
+                    di_label = clean_text(((linked.get("dichroic") or {}).get("label")))
+                    em_label = clean_text(((linked.get("emission_filter") or {}).get("label")))
+                    display_label = clean_text(pos.get("label")) or f"{mech_name} slot {pos.get('slot')}"
+                    spec_lines = _spec_lines(
+                        ("Mechanism", mech_name),
+                        ("Slot", pos.get("slot")),
+                        ("Excitation", ex_label),
+                        ("Dichroic", di_label),
+                        ("Emission", em_label),
+                        ("Details", clean_text(pos.get("details"))),
+                    )
+                    method_sentence = (
+                        f"The optical path used the {display_label} filter cube "
+                        f"(excitation {ex_label}, dichroic {di_label}, emission {em_label})."
+                        if display_label and (ex_label or di_label or em_label)
+                        else ""
+                    )
+                else:
+                    display_label = clean_text(pos.get("display_label") or pos.get("label"))
+                    spec_lines = _spec_lines(
+                        ("Mechanism", mech_name),
+                        ("Slot", pos.get("slot")),
+                        ("Details", clean_text(pos.get("details"))),
+                    )
+                    method_sentence = (
+                        f"The {stage_key} stage used {clean_text(pos.get('label'))}."
+                        if clean_text(pos.get("label")) else ""
+                    )
+
+                item = {
+                    "id": f"{stage_key}_{mechanism.get('id')}_{pos.get('slot')}",
+                    "display_label": display_label,
+                    "display_subtitle": mech_name,
+                    "spec_lines": spec_lines,
+                    "method_sentence": method_sentence,
+                }
+                filters.append(item)
+                section_items.append(item)
+
+        if section_items:
+            sections.append({
+                "id": stage_key,
+                "display_label": stage_title,
+                "items": section_items,
+            })
+
+    for idx, splitter in enumerate(splitters_raw):
+        if not isinstance(splitter, dict):
+            continue
+
+        positions = ((splitter.get("dichroic") or {}).get("positions") or {})
+        dichroic_position = positions.get(1) if isinstance(positions, dict) else {}
+        di_label = clean_text((dichroic_position or {}).get("label"))
+
+        path1_positions = ((splitter.get("path1") or {}).get("positions") or {})
+        path1_position = path1_positions.get(1) if isinstance(path1_positions, dict) else {}
+        p1_label = clean_text((path1_position or {}).get("label"))
+
+        path2_positions = ((splitter.get("path2") or {}).get("positions") or {})
+        path2_position = path2_positions.get(1) if isinstance(path2_positions, dict) else {}
+        p2_label = clean_text((path2_position or {}).get("label"))
+
+        name = clean_text(splitter.get("name")) or f"Splitter {idx + 1}"
+        splitters.append({
+            "id": f"splitter_{idx}",
+            "display_label": clean_text(splitter.get("display_label")) or name,
+            "display_subtitle": name,
+            "spec_lines": _spec_lines(
+                ("Dichroic", di_label),
+                ("Path 1", p1_label),
+                ("Path 2", p2_label),
+            ),
+            "method_sentence": (
+                f"Emission was routed through {name} (dichroic {di_label}, path 1 {p1_label}, path 2 {p2_label})."
+                if (di_label or p1_label or p2_label) else ""
+            ),
+        })
+
+    return {
+        **copy.deepcopy(lightpath_dto),
+        "filters": filters,
+        "splitters": splitters,
+        "sections": sections,
+    }
+
+
 def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_dto: dict[str, Any]) -> dict[str, Any]:
     canonical_hardware = ((inst.get("canonical") or {}).get("hardware") or {})
     scanner = canonical_hardware.get("scanner") or {}
@@ -626,7 +738,7 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
             "method_sentence": triggering_sentence,
             "present": bool(triggering_label or clean_text(triggering.get("notes"))),
         },
-        "optical_path": copy.deepcopy(lightpath_dto),
+        "optical_path": build_optical_path_dto(lightpath_dto),
     }
 
 
