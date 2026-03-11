@@ -300,6 +300,43 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
+
+    def test_evaluate_required_if_supports_any_item_conditions(self) -> None:
+        vocabulary = Vocabulary(vocab_registry={})
+        payload = {
+            'hardware': {
+                'light_sources': [
+                    {'role': 'excitation', 'timing_mode': 'pulsed'},
+                    {'role': 'depletion', 'timing_mode': 'continuous'},
+                ]
+            }
+        }
+
+        self.assertTrue(
+            _evaluate_required_if(
+                {'any_item_field_in': {'path': 'hardware.light_sources[]', 'field': 'role', 'values': ['depletion']}},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertTrue(
+            _evaluate_required_if(
+                {'any_item_matches': {'path': 'hardware.light_sources[]', 'field_in': {'role': ['depletion'], 'timing_mode': ['continuous']}}},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+        self.assertFalse(
+            _evaluate_required_if(
+                {'any_item_matches': {'path': 'hardware.light_sources[]', 'field_in': {'role': ['depletion'], 'timing_mode': ['pulsed']}}},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+
     def test_valid_sted_instrument_example(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
@@ -399,6 +436,79 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(issues, [])
         warning_codes = {w.code for w in warnings}
         self.assertIn('missing_conditional_field', warning_codes)
+
+
+    def test_list_item_type_validation_for_depletion_targets(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {'modalities': {'source': 'inline', 'allowed_values': ['sted']}},
+                'sections': [
+                    {
+                        'id': 'ls',
+                        'title': 'LS',
+                        'rules': [
+                            {'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'},
+                            {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {
+                                'path': 'hardware.light_sources[].depletion_targets_nm',
+                                'status': 'optional',
+                                'type': 'list',
+                                'item_type': 'positive_number',
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/sted-list-items.yaml',
+            {
+                'instrument': {'instrument_id': 'sted-list-items'},
+                'modalities': ['sted'],
+                'hardware': {
+                    'light_sources': [
+                        {'depletion_targets_nm': [561, 'foo']},
+                    ]
+                },
+            },
+        )
+
+        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertIn('invalid_list_item_type', {issue.code for issue in issues})
+
+    def test_sted_completeness_audit_warns_for_missing_depletion_and_time_gating(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'modalities': {'source': 'inline', 'allowed_values': ['sted']},
+                    'detector_kinds': {'source': 'inline', 'allowed_values': ['pmt']},
+                },
+                'sections': [
+                    {'id': 'm', 'title': 'M', 'rules': [{'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'}]},
+                    {'id': 'ls', 'title': 'LS', 'rules': [{'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1}]},
+                    {'id': 'd', 'title': 'D', 'rules': [{'path': 'hardware.detectors', 'status': 'optional', 'type': 'list'}, {'path': 'hardware.detectors[].kind', 'status': 'optional', 'type': 'string', 'vocab': 'detector_kinds'}]},
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/sted-gap.yaml',
+            {
+                'instrument': {'instrument_id': 'sted-gap'},
+                'modalities': ['sted'],
+                'software': [{'role': 'acquisition', 'name': 'Control SW'}],
+                'hardware': {
+                    'light_sources': [{'kind': 'laser', 'role': 'excitation'}],
+                    'detectors': [{'kind': 'pmt'}],
+                },
+            },
+        )
+
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        gap_messages = [w.message for w in warnings if w.code == 'sted_completeness_gap']
+        self.assertTrue(any("role='depletion'" in msg for msg in gap_messages))
+        self.assertTrue(any('supports_time_gating=true' in msg for msg in gap_messages))
 
 if __name__ == '__main__':
     unittest.main()

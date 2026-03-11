@@ -271,6 +271,7 @@ class PolicyRule:
     aliases: list[str] | None = None
     superseded_by: str | None = None
     min_items: int | None = None
+    item_type: str | None = None
     used_by: list[str] | None = None
 
 
@@ -412,6 +413,7 @@ def _load_instrument_policy(
                     aliases=raw_rule.get('aliases') if isinstance(raw_rule.get('aliases'), list) else None,
                     superseded_by=raw_rule.get('superseded_by') if isinstance(raw_rule.get('superseded_by'), str) else None,
                     min_items=raw_rule.get('min_items') if isinstance(raw_rule.get('min_items'), int) else None,
+                    item_type=raw_rule.get('item_type') if isinstance(raw_rule.get('item_type'), str) else None,
                     used_by=[str(v).strip() for v in raw_rule.get('used_by') if isinstance(v, str)]
                     if isinstance(raw_rule.get('used_by'), list)
                     else None,
@@ -757,6 +759,64 @@ def _evaluate_required_if(
                         break
             conditions.append(item_matches)
 
+        any_item_field_in = condition_spec.get('any_item_field_in')
+        if isinstance(any_item_field_in, dict):
+            list_path = any_item_field_in.get('path')
+            field_name = any_item_field_in.get('field')
+            allowed_values = any_item_field_in.get('values')
+            if not isinstance(list_path, str) or not isinstance(field_name, str) or not isinstance(allowed_values, list):
+                matches = False
+            else:
+                nodes = _resolve_path_nodes(payload, list_path)
+                normalized_allowed = {
+                    str(v).strip().casefold()
+                    for v in allowed_values
+                    if isinstance(v, (str, int, float, bool))
+                }
+                matches = False
+                for node in nodes:
+                    if not isinstance(node.value, dict):
+                        continue
+                    raw_value = node.value.get(field_name)
+                    if isinstance(raw_value, (str, int, float, bool)) and str(raw_value).strip().casefold() in normalized_allowed:
+                        matches = True
+                        break
+            conditions.append(matches)
+
+        any_item_matches = condition_spec.get('any_item_matches')
+        if isinstance(any_item_matches, dict):
+            list_path = any_item_matches.get('path')
+            field_in = any_item_matches.get('field_in')
+            if not isinstance(list_path, str) or not isinstance(field_in, dict):
+                matches = False
+            else:
+                nodes = _resolve_path_nodes(payload, list_path)
+                matches = False
+                for node in nodes:
+                    if not isinstance(node.value, dict):
+                        continue
+                    item_ok = True
+                    for field_name, allowed_values in field_in.items():
+                        if not isinstance(field_name, str) or not isinstance(allowed_values, list):
+                            item_ok = False
+                            break
+                        normalized_allowed = {
+                            str(v).strip().casefold()
+                            for v in allowed_values
+                            if isinstance(v, (str, int, float, bool))
+                        }
+                        raw_value = node.value.get(field_name)
+                        if not isinstance(raw_value, (str, int, float, bool)):
+                            item_ok = False
+                            break
+                        if str(raw_value).strip().casefold() not in normalized_allowed:
+                            item_ok = False
+                            break
+                    if item_ok:
+                        matches = True
+                        break
+            conditions.append(matches)
+
         modules_any_of = condition_spec.get('modules_any_of')
         if isinstance(modules_any_of, list):
             module_nodes = _resolve_path_nodes(payload, 'modules')
@@ -860,6 +920,8 @@ def _evaluate_required_if(
             'software_roles_any_of',
             'software_roles_none_of',
             'item_field_in',
+            'any_item_field_in',
+            'any_item_matches',
         )
     )
 
@@ -1142,6 +1204,21 @@ def validate_instrument_ledgers(
                             )
                         )
 
+                if rule.field_type == 'list' and isinstance(value, list) and isinstance(rule.item_type, str):
+                    for index, item in enumerate(value):
+                        if _check_type(item, rule.item_type):
+                            continue
+                        issues.append(
+                            ValidationIssue(
+                                code='invalid_list_item_type',
+                                path=f"{full_path}[{index}]",
+                                message=(
+                                    f"Invalid list item type/content for '{rule.path}'. "
+                                    f"Expected item_type {rule.item_type}."
+                                ),
+                            )
+                        )
+
                 validation_error = _check_rule_validation(value, rule)
                 if validation_error is not None:
                     warnings.append(
@@ -1240,6 +1317,56 @@ def validate_instrument_ledgers(
                             "at least one software entry with role 'acquisition' is required when "
                             "digital detector kinds are present."
                         ),
+                    )
+                )
+
+        modality_nodes = _resolve_path_nodes(payload, 'modalities')
+        canonical_modalities: set[str] = set()
+        if modality_nodes and isinstance(modality_nodes[0].value, list):
+            canonical_modalities = {
+                canonical
+                for value in modality_nodes[0].value
+                for canonical in [
+                    vocabulary.resolve_canonical('modalities', value) or value
+                    if isinstance(value, str)
+                    else None
+                ]
+                if isinstance(canonical, str)
+            }
+
+        if 'sted' in canonical_modalities and not is_retired_instrument:
+            light_sources_nodes = _resolve_path_nodes(payload, 'hardware.light_sources[]')
+            depletion_sources = [
+                node.value
+                for node in light_sources_nodes
+                if isinstance(node.value, dict)
+                and str(node.value.get('role', '')).strip().casefold() == 'depletion'
+            ]
+            if not depletion_sources:
+                warnings.append(
+                    ValidationIssue(
+                        code='sted_completeness_gap',
+                        path=instrument_file.as_posix(),
+                        message="STED completeness check: expected at least one light source with role='depletion'.",
+                    )
+                )
+            if depletion_sources and not any(_is_non_empty_string(source.get('timing_mode')) for source in depletion_sources):
+                warnings.append(
+                    ValidationIssue(
+                        code='sted_completeness_gap',
+                        path=instrument_file.as_posix(),
+                        message="STED completeness check: expected depletion source timing_mode metadata.",
+                    )
+                )
+            if not any(
+                isinstance(detector, dict) and detector.get('supports_time_gating') is True
+                for detector in (detector_nodes[0].value if detector_nodes and isinstance(detector_nodes[0].value, list) else [])
+            ):
+                warnings.append(
+                    ValidationIssue(
+                        code='sted_completeness_gap',
+                        path=instrument_file.as_posix(),
+                        message="STED completeness check: expected at least one detector with supports_time_gating=true.",
                     )
                 )
 
