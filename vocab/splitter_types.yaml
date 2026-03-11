@@ -1,4 +1,9 @@
 terms:
+  - id: emission_splitter
+    label: "Emission Splitter"
+    description: "Splitter routing emission light into multiple paths."
+    synonyms:
+      - emission splitter
   - id: image_splitter
     label: "Image Splitter"
     description: "Beam/image splitting device routing emission to multiple detectors."

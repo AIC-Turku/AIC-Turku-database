@@ -121,7 +121,6 @@ hardware:
       correction: plan_apochromat
       is_installed: false
       afc_compatible: true
-      specialties:
-        - High-NA test
-      notes: ''
+      specialties: []
+      notes: High-NA test
       url: ''
