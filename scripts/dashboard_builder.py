@@ -678,11 +678,17 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any]) -> dict[str, Any]:
             ),
         })
 
+    renderables = [
+        *filters,
+        *splitters,
+    ]
+
     return {
         **copy.deepcopy(lightpath_dto),
         "filters": filters,
         "splitters": splitters,
         "sections": sections,
+        "renderables": renderables,
     }
 
 
@@ -1688,7 +1694,6 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         # Render Overview
         overview_md = tpl_spec.render(
             instrument=inst,
-            lightpath_dto=lightpath_dto,
             charts_json=charts_json,
             latest_metrics=latest_metrics,
             metric_names=METRIC_NAMES,
@@ -1696,8 +1701,9 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
         if not is_retired_instrument:
-            lightpath_dto["display_name"] = inst.get("display_name")
-            global_vm_payloads[instrument_id] = lightpath_dto
+            vm_payload = copy.deepcopy(inst["dto"].get("hardware", {}).get("optical_path", {}))
+            vm_payload["display_name"] = inst.get("dto", {}).get("display_name")
+            global_vm_payloads[instrument_id] = vm_payload
 
 # Format events for the history timeline
         history_events_qc = []

@@ -213,6 +213,23 @@ def _build_label(component: dict[str, Any]) -> str:
     return str(component_type).replace("_", " ").title()
 
 
+
+def _render_kind(component: dict[str, Any]) -> str:
+    component_type = str(component.get("component_type", "unknown")).lower()
+    if component_type in {"laser", "light_source", "led"}:
+        return "source"
+    if component_type in {"detector"}:
+        return "detector"
+    if component_type in {"bandpass", "notch", "multiband_bandpass"}:
+        return "band"
+    if component_type in {"longpass"}:
+        return "longpass"
+    if component_type in {"tunable"}:
+        return "tunable"
+    if component_type in {"empty", "mirror", "block"}:
+        return "empty"
+    return "other"
+
 def _build_details(component: dict[str, Any]) -> str:
     manufacturer = component.get("manufacturer")
     product_code = component.get("product_code")
@@ -242,6 +259,7 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
                     "label": _build_label(component),
                     "display_label": f"Slot {slot}: {_build_label(component)}",
                     "details": _build_details(component),
+                    "render_kind": _render_kind(component),
                     **({"path": component.get("path")} if isinstance(component.get("path"), str) else {}),
                 }
             )
@@ -321,6 +339,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                     "type": str(component.get("component_type", "unknown")),
                     "label": _build_label(component),
                     "details": _build_details(component),
+                    "render_kind": _render_kind(component),
                 }
                 if isinstance(component.get("path"), str):
                     component_payload["path"] = component["path"]
@@ -512,6 +531,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
                 "name": f"{det.get('manufacturer', '')} {det.get('model', '')}".strip(),
                 "manufacturer": det.get("manufacturer"),
                 "product_code": det.get("model"),
+                "render_kind": "detector",
             }
         if positions:
             payload["detectors"].append(
@@ -552,16 +572,19 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
             dichroic_pos = {
                 "label": _build_label(dichroic_component),
                 "details": _build_details(dichroic_component),
+                "render_kind": _render_kind(dichroic_component),
                 **dichroic_component,
             } if dichroic_component else {}
             path1_pos = {
                 "label": _build_label(path_1_filter),
                 "details": _build_details(path_1_filter),
+                "render_kind": _render_kind(path_1_filter),
                 **path_1_filter,
             } if path_1_filter else {}
             path2_pos = {
                 "label": _build_label(path_2_filter),
                 "details": _build_details(path_2_filter),
+                "render_kind": _render_kind(path_2_filter),
                 **path_2_filter,
             } if path_2_filter else {}
 
