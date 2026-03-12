@@ -14,6 +14,13 @@ terms:
   - id: shared
     label: "Shared"
     description: "Shared across multiple routes."
+  - id: transmitted
+    label: "Transmitted"
+    description: "Transmitted light route used for brightfield, darkfield, phase contrast, and DIC."
+    synonyms:
+      - diascopic
+      - dia
+      - trans
   - id: all
     label: "All"
     description: "Applies to all routes."
