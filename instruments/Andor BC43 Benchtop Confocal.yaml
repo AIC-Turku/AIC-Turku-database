@@ -3,7 +3,7 @@ instrument:
   instrument_id: scope-andor-bc43
   manufacturer: Andor
   model: BC43
-  year_of_purchase: 2026
+  year_of_purchase: '2026'
   funding: Research Council of Finland FIRI funding
   stand_orientation: benchtop
   ocular_availability: camera_only
@@ -88,7 +88,7 @@ hardware:
       manufacturer: Andor
       model: Transmitted Light Illuminator
       wavelength_nm: broadband
-      path: transmitted
+      path: shared
       notes: Used for Brightfield and Differential Phase Contrast (DPC).
       url: ''
 
