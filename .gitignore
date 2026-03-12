@@ -1,3 +1,23 @@
 dashboard_docs/
 mkdocs.yml
 site/
+
+# Python cache and virtual environment artifacts
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+.venv/
+venv/
+env/
+
+# Common AI assistant/tooling artifacts
+.aider*
+.cursor/
+.copilot/
+.llm/
