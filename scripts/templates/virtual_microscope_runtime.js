@@ -803,12 +803,67 @@
     return grid.map(() => 1);
   }
 
+  function sourceCenters(source) {
+    const chosen = numberOrNull(source && source.selected_wavelength_nm);
+    if (chosen !== null) return [chosen];
+
+    const explicitCenter = numberOrNull(source && source.wavelength_nm);
+    if (explicitCenter !== null) return [explicitCenter];
+
+    const values = [];
+    const pushCandidate = (value) => {
+      const numeric = numberOrNull(value);
+      if (numeric !== null && numeric >= 300 && numeric <= 2000) {
+        values.push(Number(numeric));
+      }
+    };
+
+    [source && source.wavelengths_nm, source && source.lines_nm, source && source.lines].forEach((candidate) => {
+      if (Array.isArray(candidate)) candidate.forEach(pushCandidate);
+    });
+
+    [
+      source && source.wavelength_nm,
+      source && source.display_label,
+      source && source.name,
+      source && source.model,
+      source && source.product_code,
+      source && source.notes,
+    ].forEach((candidate) => {
+      if (typeof candidate !== 'string') return;
+      candidate
+        .split(/[;,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .forEach((token) => {
+          const slashLead = token.match(/(\d+(?:\.\d+)?)\s*\//);
+          if (slashLead) {
+            pushCandidate(slashLead[1]);
+            return;
+          }
+          const nmLead = token.match(/(\d+(?:\.\d+)?)\s*nm/i);
+          if (nmLead) {
+            pushCandidate(nmLead[1]);
+            return;
+          }
+          const bare = token.match(/^(\d+(?:\.\d+)?)(?:|$)/);
+          if (bare) pushCandidate(bare[1]);
+        });
+    });
+
+    return Array.from(new Set(values));
+  }
+
   function sourceSpectrum(source, grid) {
-    const center = numberOrNull(source && (source.selected_wavelength_nm ?? source.wavelength_nm));
+    const centers = sourceCenters(source);
+    const center = centers.length ? centers[0] : null;
     const width = numberOrNull(source && source.width_nm);
     const tunableMin = numberOrNull(source && source.tunable_min_nm);
     const tunableMax = numberOrNull(source && source.tunable_max_nm);
     const mode = cleanString(source && source.spectral_mode).toLowerCase();
+    if (centers.length > 1 && (mode === 'line' || mode === 'tunable_line' || !mode)) {
+      return centers.reduce((sum, item) => addArrays(sum, gaussianSpectrum(grid, item, width || 2)), grid.map(() => 0));
+    }
     if ((mode === 'line' || mode === 'tunable_line') && center !== null) {
       return gaussianSpectrum(grid, center, width || 2);
     }
@@ -1195,6 +1250,7 @@
     normalizePoints,
     wavelengthGrid,
     componentMask,
+    sourceCenters,
     sourceSpectrum,
     detectorResponse,
     detectorCollectionMask,

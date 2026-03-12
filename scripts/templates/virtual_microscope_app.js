@@ -592,7 +592,7 @@
       }
       select.appendChild(opt);
     });
-    select.addEventListener('change', () => refreshOutputs());
+    select.addEventListener('change', () => { select.dataset.userSet = 'true'; refreshOutputs(); });
     block.appendChild(label);
     block.appendChild(select);
     return block;
@@ -1234,6 +1234,172 @@
     propagationChart.update();
   }
 
+
+  function averageSpectrumCurves(curves, grid) {
+    if (!Array.isArray(curves) || !curves.length) return grid.map(() => 0);
+    const sum = grid.map(() => 0);
+    curves.forEach((curve) => {
+      curve.forEach((value, index) => {
+        sum[index] += value || 0;
+      });
+    });
+    return sum.map((value) => value / curves.length);
+  }
+
+  function currentSourceSpectrum(grid) {
+    const spectra = [];
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, state.activeRoute).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        if (!setting.enabled) return;
+        spectra.push(VM.sourceSpectrum({
+          ...source,
+          selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+        }, grid));
+      });
+    });
+    return sumSpectra(spectra.map((values) => ({ values })), 'values', grid);
+  }
+
+  function meanFluorophoreCurve(grid, type) {
+    const curves = mapToArray(state.loadedProteins).map((fluorophore) => {
+      const spectra = VM.fluorophoreSpectra(fluorophore, { preferTwoPhoton: state.preferTwoPhoton });
+      const points = type === 'emission' ? spectra.em : spectra.ex;
+      return VM.normalizePoints(points).length ? grid.map((wavelength) => 0) : null;
+    }).filter(Boolean);
+    const normalized = mapToArray(state.loadedProteins).map((fluorophore) => {
+      const spectra = VM.fluorophoreSpectra(fluorophore, { preferTwoPhoton: state.preferTwoPhoton });
+      const points = type === 'emission' ? spectra.em : spectra.ex;
+      const max = Math.max(1, ...VM.normalizePoints(points).map((point) => point.y || 0));
+      return grid.map((wavelength) => {
+        const pts = VM.normalizePoints(points);
+        if (!pts.length) return 0;
+        let value = pts[0].y;
+        if (wavelength <= pts[0].x) value = pts[0].y;
+        else if (wavelength >= pts[pts.length - 1].x) value = pts[pts.length - 1].y;
+        else {
+          for (let index = 0; index < pts.length - 1; index += 1) {
+            const left = pts[index];
+            const right = pts[index + 1];
+            if (wavelength < left.x || wavelength > right.x) continue;
+            const ratio = (wavelength - left.x) / Math.max(1e-9, right.x - left.x);
+            value = left.y + ((right.y - left.y) * ratio);
+            break;
+          }
+        }
+        return value / max;
+      });
+    }).filter(Boolean);
+    return averageSpectrumCurves(normalized, grid);
+  }
+
+  function integrated(values, grid) {
+    if (!Array.isArray(values) || values.length !== grid.length || values.length < 2) return 0;
+    let area = 0;
+    for (let index = 0; index < values.length - 1; index += 1) {
+      area += ((values[index] || 0) + (values[index + 1] || 0)) * (grid[index + 1] - grid[index]) / 2;
+    }
+    return area;
+  }
+
+  function multiply(left, right) {
+    return left.map((value, index) => value * (right[index] || 0));
+  }
+
+  function optionComponentsForStage(stage, optionValue, mechanismName) {
+    if (!optionValue || typeof optionValue !== 'object') return [];
+    if (stage === 'cube') {
+      return expandCubeSelection(optionValue, mechanismName).map((entry) => ({ ...entry.component, __stage: entry.stage }));
+    }
+    return [{ ...optionValue, __stage: stage }];
+  }
+
+  function applyComponentsToSpectrum(spectrum, components, grid, mode) {
+    let values = spectrum.slice();
+    (Array.isArray(components) ? components : []).forEach((component) => {
+      values = values.map((value, index) => value * ((VM.componentMask(component, grid, { mode })[index]) || 0));
+    });
+    return values;
+  }
+
+  function scoreStageOption(stage, mechanismName, optionValue, excitationSpectrum, emissionSpectrum, grid) {
+    const components = optionComponentsForStage(stage, optionValue, mechanismName);
+    if (!components.length) return -1;
+    let excitationScore = 0;
+    let emissionScore = 0;
+    const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
+    const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
+    if (excitationSpectrum) {
+      const output = applyComponentsToSpectrum(excitationSpectrum, exComponents, grid, 'excitation');
+      excitationScore = integrated(output, grid);
+    }
+    if (emissionSpectrum) {
+      const output = applyComponentsToSpectrum(emissionSpectrum, emComponents, grid, 'emission');
+      emissionScore = integrated(output, grid);
+    }
+    if (stage === 'excitation' || stage === 'cube' || stage === 'dichroic') {
+      return (excitationScore * 3) + emissionScore;
+    }
+    return emissionScore + (excitationScore * 0.25);
+  }
+
+  function autoRepairBlockedPath(selection, simulation) {
+    if (!state.activeInstrument || !state.loadedProteins.size || !selection.sources.length) return false;
+    const noExcitation = !Array.isArray(simulation && simulation.excitationAtSample) || !simulation.excitationAtSample.some((value) => value > 1e-6);
+    const noDetection = !Array.isArray(simulation && simulation.results) || !simulation.results.some((result) => Number(result.detectorWeightedIntensity || 0) > 1e-6);
+    if (!noExcitation && !noDetection) return false;
+
+    const grid = Array.isArray(simulation && simulation.grid) && simulation.grid.length
+      ? simulation.grid
+      : VM.wavelengthGrid(state.activeInstrument.metadata && state.activeInstrument.metadata.wavelength_grid);
+    const sourceSpectrum = currentSourceSpectrum(grid);
+    if (!sourceSpectrum.some((value) => value > 0)) return false;
+    const exCurve = meanFluorophoreCurve(grid, 'excitation');
+    const emCurve = meanFluorophoreCurve(grid, 'emission');
+    let excitationProbe = multiply(sourceSpectrum, exCurve);
+    let emissionProbe = emCurve.slice();
+    let changed = false;
+
+    Array.from(DOM.graph.querySelectorAll('select[data-stage]')).forEach((select) => {
+      if (select.dataset.userSet === 'true' || !select.options.length) return;
+      const stage = select.dataset.stage;
+      if (stage === 'detectors' || stage === 'splitters') return;
+      const mechanismName = select.dataset.mechanismName || stage;
+      let bestValue = select.value;
+      let bestScore = -Infinity;
+      Array.from(select.options).forEach((option) => {
+        let parsed;
+        try {
+          parsed = JSON.parse(option.value);
+        } catch (error) {
+          return;
+        }
+        const score = scoreStageOption(stage, mechanismName, parsed, excitationProbe, emissionProbe, grid);
+        if (score > bestScore) {
+          bestScore = score;
+          bestValue = option.value;
+        }
+      });
+      if (bestValue && select.value !== bestValue) {
+        select.value = bestValue;
+        changed = true;
+      }
+      let parsedCurrent = null;
+      try {
+        parsedCurrent = JSON.parse(select.value);
+      } catch (error) {
+        parsedCurrent = null;
+      }
+      const components = optionComponentsForStage(stage, mechanismName, parsedCurrent);
+      const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
+      const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
+      if (exComponents.length) excitationProbe = applyComponentsToSpectrum(excitationProbe, exComponents, grid, 'excitation');
+      if (emComponents.length) emissionProbe = applyComponentsToSpectrum(emissionProbe, emComponents, grid, 'emission');
+    });
+
+    return changed;
+  }
+
   function renderSummary(selection, simulation) {
     const fluorText = mapToArray(state.loadedProteins).map((fluorophore) => {
       const stateSuffix = fluorophore.activeStateName && fluorophore.states && fluorophore.states.length > 1
@@ -1336,9 +1502,24 @@
     enforceValidStageOptions();
     const selection = collectRuntimeSelection();
     const fluorophores = mapToArray(state.loadedProteins);
-    const simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
+    let simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
       preferTwoPhoton: state.preferTwoPhoton,
     });
+    if (autoRepairBlockedPath(selection, simulation)) {
+      enforceValidStageOptions();
+      const repairedSelection = collectRuntimeSelection();
+      simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {
+        preferTwoPhoton: state.preferTwoPhoton,
+      });
+      state.lastSelection = repairedSelection;
+      state.lastSimulation = simulation;
+      renderReferenceSpectra(repairedSelection);
+      renderPropagationPanel(repairedSelection, simulation);
+      renderSummary(repairedSelection, simulation);
+      renderDetectionChart(simulation);
+      renderScoreboard(simulation);
+      return;
+    }
     state.lastSelection = selection;
     state.lastSimulation = simulation;
     renderReferenceSpectra(selection);
