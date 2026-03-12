@@ -130,5 +130,139 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(splitter["options"][0]["slot"], 1)
 
 
+    def test_light_source_metadata_is_preserved_for_runtime_simulation(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "white_light_laser",
+                            "role": "depletion",
+                            "manufacturer": "Leica",
+                            "model": "WLL-STED",
+                            "tunable_min_nm": 440,
+                            "tunable_max_nm": 790,
+                            "width_nm": 2,
+                            "path": "confocal",
+                            "power": "20 mW",
+                            "timing_mode": "pulsed",
+                            "pulse_width_ps": 600,
+                            "repetition_rate_mhz": 80,
+                            "depletion_targets_nm": [640],
+                        }
+                    ],
+                    "light_path": {},
+                }
+            }
+        )
+
+        source = payload["light_sources"][0]["options"][0]["value"]
+        self.assertEqual(source["kind"], "white_light_laser")
+        self.assertEqual(source["role"], "depletion")
+        self.assertEqual(source["spectral_mode"], "tunable_line")
+        self.assertEqual(source["tunable_min_nm"], 440.0)
+        self.assertEqual(source["tunable_max_nm"], 790.0)
+        self.assertEqual(source["width_nm"], 2.0)
+        self.assertEqual(source["path"], "confocal")
+        self.assertEqual(source["timing_mode"], "pulsed")
+        self.assertEqual(source["pulse_width_ps"], 600.0)
+        self.assertEqual(source["repetition_rate_mhz"], 80.0)
+        self.assertEqual(source["depletion_targets_nm"], [640])
+        self.assertEqual(source["power_weight"], 20.0)
+
+    def test_detector_metadata_is_preserved_for_runtime_simulation(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "detectors": [
+                        {
+                            "kind": "hyd",
+                            "manufacturer": "Leica",
+                            "model": "HyD S",
+                            "channel_name": "HyD1",
+                            "path": "confocal",
+                            "qe_peak_pct": 45,
+                            "supports_time_gating": True,
+                            "default_gating_delay_ns": 0.5,
+                            "default_gate_width_ns": 6,
+                        }
+                    ],
+                    "light_path": {},
+                }
+            }
+        )
+
+        detector = payload["detectors"][0]["options"][0]["value"]
+        self.assertEqual(detector["kind"], "hyd")
+        self.assertEqual(detector["detector_class"], "hybrid")
+        self.assertEqual(detector["channel_name"], "HyD1")
+        self.assertEqual(detector["path"], "confocal")
+        self.assertEqual(detector["qe_peak_pct"], 45.0)
+        self.assertTrue(detector["supports_time_gating"])
+        self.assertEqual(detector["default_gating_delay_ns"], 0.5)
+        self.assertEqual(detector["default_gate_width_ns"], 6.0)
+        self.assertEqual(detector["default_gain"], 1.0)
+
+    def test_top_level_splitters_are_ingested_with_branch_metadata(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "splitters": [
+                        {
+                            "name": "Top-level Splitter",
+                            "path": "confocal",
+                            "dichroic": {"component_type": "dichroic", "cutoffs_nm": [560]},
+                            "path_1": {
+                                "name": "Red Path",
+                                "emission_filter": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75},
+                            },
+                            "path_2": {
+                                "name": "Green Path",
+                                "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                            },
+                        }
+                    ],
+                    "light_path": {},
+                }
+            }
+        )
+
+        splitter = payload["splitters"][0]
+        self.assertEqual(splitter["name"], "Top-level Splitter")
+        self.assertEqual(splitter["path"], "confocal")
+        self.assertEqual(len(splitter["branches"]), 2)
+        self.assertEqual(splitter["branches"][0]["mode"], "transmitted")
+        self.assertEqual(splitter["branches"][1]["mode"], "reflected")
+        self.assertEqual(splitter["branches"][0]["component"]["center_nm"], 700.0)
+        self.assertEqual(splitter["branches"][1]["component"]["center_nm"], 525.0)
+
+    def test_cube_payload_exposes_direct_component_aliases(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "cube_mechanisms": [
+                            {
+                                "positions": {
+                                    1: {
+                                        "name": "TRITC Cube",
+                                        "excitation_filter": {"component_type": "bandpass", "center_nm": 550, "width_nm": 25},
+                                        "dichroic": {"component_type": "dichroic", "cutoffs_nm": [570]},
+                                        "emission_filter": {"component_type": "bandpass", "center_nm": 605, "width_nm": 70},
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+
+        cube = payload["stages"]["cube"][0]["options"][0]["value"]
+        self.assertEqual(cube["excitation_filter"]["center_nm"], 550.0)
+        self.assertEqual(cube["dichroic"]["cutoffs_nm"], [570.0])
+        self.assertEqual(cube["emission_filter"]["center_nm"], 605.0)
+
+
 if __name__ == "__main__":
     unittest.main()

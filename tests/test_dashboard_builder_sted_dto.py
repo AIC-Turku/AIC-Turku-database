@@ -35,7 +35,7 @@ jinja2_stub.Environment = _DummyEnvironment
 jinja2_stub.FileSystemLoader = _DummyLoader
 sys.modules.setdefault("jinja2", jinja2_stub)
 
-from scripts.dashboard_builder import build_hardware_dto, build_instrument_mega_dto
+from scripts.dashboard_builder import build_hardware_dto, build_instrument_mega_dto, build_optical_path_dto, normalize_hardware
 from scripts.validate import Vocabulary
 
 
@@ -229,6 +229,74 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             self.assertIn("spec_lines", row)
             self.assertIn("method_sentence", row)
             self.assertIn("display_subtitle", row)
+
+
+    def test_normalize_hardware_preserves_tunable_source_and_detector_path_metadata(self) -> None:
+        hardware = normalize_hardware(
+            {
+                "light_sources": [
+                    {
+                        "kind": "white_light_laser",
+                        "manufacturer": "Leica",
+                        "model": "WLL",
+                        "tunable_min_nm": 440,
+                        "tunable_max_nm": 790,
+                        "width_nm": 2,
+                        "path": "confocal",
+                        "role": "excitation",
+                        "simultaneous_lines_max": 8,
+                    }
+                ],
+                "detectors": [
+                    {
+                        "kind": "hyd",
+                        "manufacturer": "Leica",
+                        "model": "HyD S",
+                        "channel_name": "HyD1",
+                        "path": "confocal",
+                        "qe_peak_pct": 45,
+                    }
+                ],
+            }
+        )
+
+        light = hardware["light_sources"][0]
+        self.assertEqual(light["tunable_min_nm"], 440)
+        self.assertEqual(light["tunable_max_nm"], 790)
+        self.assertEqual(light["width_nm"], 2)
+        self.assertEqual(light["path"], "confocal")
+        self.assertEqual(light["simultaneous_lines_max"], 8)
+
+        detector = hardware["detectors"][0]
+        self.assertEqual(detector["channel_name"], "HyD1")
+        self.assertEqual(detector["path"], "confocal")
+        self.assertEqual(detector["qe_peak_pct"], 45)
+
+    def test_optical_path_dto_preserves_runtime_splitters_for_virtual_microscope(self) -> None:
+        lightpath_dto = {
+            "stages": {},
+            "splitters": [
+                {
+                    "name": "Camera Splitter",
+                    "display_label": "Di: 560 LP | P1: 700/75 | P2: 525/50",
+                    "dichroic": {"positions": {1: {"label": "560 LP", "component_type": "dichroic", "cutoffs_nm": [560]}}},
+                    "path1": {"positions": {1: {"label": "700/75", "component_type": "bandpass", "center_nm": 700, "width_nm": 75}}},
+                    "path2": {"positions": {1: {"label": "525/50", "component_type": "bandpass", "center_nm": 525, "width_nm": 50}}},
+                    "branches": [
+                        {"id": "red", "label": "Red path", "mode": "transmitted", "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75}},
+                        {"id": "green", "label": "Green path", "mode": "reflected", "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50}},
+                    ],
+                }
+            ],
+        }
+
+        dto = build_optical_path_dto(lightpath_dto)
+
+        self.assertIn("runtime_splitters", dto)
+        self.assertEqual(len(dto["runtime_splitters"]), 1)
+        self.assertEqual(dto["runtime_splitters"][0]["branches"][0]["mode"], "transmitted")
+        self.assertEqual(dto["runtime_splitters"][0]["branches"][1]["component"]["center_nm"], 525)
+        self.assertEqual(dto["splitters"][0]["display_label"], "Di: 560 LP | P1: 700/75 | P2: 525/50")
 
 
 if __name__ == "__main__":
