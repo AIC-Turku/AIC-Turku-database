@@ -162,22 +162,22 @@ hardware:
         path: epi
         slots: 4
         positions:
-          Pos_1:
+          1:
             component_type: bandpass
             product_code: FF01-387/11-25
             center_nm: 387
             width_nm: 11
-          Pos_2:
+          2:
             component_type: bandpass
             product_code: FF02-485/20-25
             center_nm: 485
             width_nm: 20
-          Pos_3:
+          3:
             component_type: bandpass
             product_code: FF01-560/25-25
             center_nm: 560
             width_nm: 25
-          Pos_4:
+          4:
             component_type: bandpass
             product_code: FF01-650/13-25
             center_nm: 650
@@ -189,7 +189,7 @@ hardware:
         path: confocal
         slots: 3
         positions:
-          Pos_1:
+          1:
             component_type: multiband_dichroic
             name: Quad-band Dichroic
             product_code: Di01-T405/488/568/647
@@ -197,7 +197,7 @@ hardware:
             notes: >
               Standard multiband spinning-disk dichroic for 405/488/561/640-class excitation.
               Vendor product naming uses 568 even though the installed yellow-green laser line is 561 nm.
-          Pos_2:
+          2:
             component_type: empty
             name: NIR dichroic position
             notes: >
@@ -207,7 +207,7 @@ hardware:
         type: fixed
         path: epi
         positions:
-          Pos_1:
+          1:
             component_type: multiband_dichroic
             product_code: FF410/504/582/669-Di01-25x36
             cutoffs_nm: [410, 504, 582, 669]
@@ -219,37 +219,37 @@ hardware:
         slots: 10
         # CONFLICT: Positions reordered to match the provided PDF documentation.
         positions:
-          Pos_1:
+          1:
             component_type: multiband_bandpass
             name: Quad-band emitter
             product_code: FF01-440/521/607/700-25
             cutoffs_nm: [440, 521, 607, 700]
             notes: Quad-band emitter for multicolor spinning-disk imaging
-          Pos_2:
+          2:
             component_type: bandpass
             name: DAPI
             product_code: FF01-445/45-25
             center_nm: 445
             width_nm: 45
-          Pos_3:
+          3:
             component_type: bandpass
             name: GFP
             center_nm: 525
             width_nm: 50
             notes: Previously 525/30 (FF01-525/30-25 in the old PDF) before 2021-08-18.
-          Pos_4:
+          4:
             component_type: bandpass
             name: Cy3 / Alexa 568
             product_code: FF01-617/73-25
             center_nm: 617
             width_nm: 73
-          Pos_5:
+          5:
             component_type: bandpass
             name: Cy5 / Alexa 647
             product_code: FF01-692/40-25
             center_nm: 692
             width_nm: 40
-          Pos_6:
+          6:
             component_type: bandpass
             name: Alexa 750
             product_code: FF02-809/81-25
@@ -259,7 +259,7 @@ hardware:
         type: fixed
         path: epi
         positions:
-          Pos_1:
+          1:
             component_type: multiband_bandpass
             product_code: FF01-440/521/607/700-25
             cutoffs_nm: [440, 521, 607, 700]
