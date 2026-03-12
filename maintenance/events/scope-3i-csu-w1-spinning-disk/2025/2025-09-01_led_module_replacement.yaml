@@ -1,0 +1,22 @@
+record_type: maintenance_event
+microscope: scope-3i-csu-w1-spinning-disk
+maintenance_id: maint-2025-09-01-led-replacement
+
+started_utc: '2025-09-01T10:00:00Z'
+completed_utc: '2025-09-01T11:00:00Z'
+status: completed
+
+reason: repair
+action: part_replacement
+action_details: >
+  Replacement of the 375-400nm UVX LED Module for the X-Cite XLED1 illuminator. 
+  The replacement part was ordered from 3i / Intelligent Imaging Innovations and 
+  installed onsite.
+
+service_provider: internal
+company: 3i (Intelligent Imaging Innovations)
+performed_by: Facility Staff
+
+notes: >
+  Quote Number: Q-11682. 
+  University PO / Order Number: CCC-009032.
