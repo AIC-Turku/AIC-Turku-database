@@ -1,0 +1,41 @@
+record_type: qc_session
+microscope: scope-3i-csu-w1-spinning-disk
+qc_id: qc-2021-08-18-laser
+started_utc: '2021-08-18T12:00:00Z'
+performed_by: 3i Field Service Engineer
+
+performed:
+  - qc_type: laser_power
+
+laser_inputs_human:
+  single_point_measurements:
+    - wavelength_nm: 405
+      measured_power_mw: 20.0
+      location: fiber_output_sdc
+    - wavelength_nm: 405
+      measured_power_mw: 60.0
+      location: fiber_output_vector
+    - wavelength_nm: 488
+      measured_power_mw: 37.0
+      location: fiber_output_sdc
+    - wavelength_nm: 488
+      measured_power_mw: 78.0
+      location: fiber_output_vector
+    - wavelength_nm: 561
+      measured_power_mw: 37.0
+      location: fiber_output_sdc
+    - wavelength_nm: 561
+      measured_power_mw: 24.0
+      location: fiber_output_vector
+    - wavelength_nm: 640
+      measured_power_mw: 19.0
+      location: fiber_output_sdc
+    - wavelength_nm: 640
+      measured_power_mw: 5.0
+      location: fiber_output_vector
+    - wavelength_nm: 730
+      measured_power_mw: 21.0
+      location: fiber_output_sdc
+
+notes: >
+  Measurements recorded after SMA alignment. Report also includes measurements recorded at the back aperture.
