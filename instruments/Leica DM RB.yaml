@@ -21,58 +21,86 @@ modules: []
 software: []
 
 hardware:
-  scanner:
-    type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml (often 'widefield' or 'camera_based' is preferred)
+  scanner:    
+    type: none
     notes: ''
     url: ''
 
   light_sources:
     - kind: halogen_lamp
-      manufacturer: '' # Flag: Required field. Needs a manufacturer.
+      manufacturer: Leica 
       model: 12V 100W halogen bulb
-      wavelength_nm: ''
+      wavelength_nm: broadband
       power: 100 W
-      notes: Transmitted light source
+      path: transmitted
+      notes: Transmitted light source for Brightfield and Darkfield
       url: ''
     - kind: arc_lamp
-      manufacturer: '' # Flag: Required field. Needs a manufacturer.
+      manufacturer: Osram 
       model: 50W HBO short arc bulb
-      wavelength_nm: ''
+      wavelength_nm: broadband
       power: 50 W
+      path: epi
       notes: Fluorescence excitation source
       url: ''
+  
+  light_path:
+    cube_mechanisms:
+      - name: Fluorescence Turret
+        type: turret
+        path: epi
+        slots: 3
+        positions:
+          Pos_1:
+            name: Filter Cube A (DAPI/Hoechst)
+            # Calculated from text: ex 340-380 nm -> center 360, width 40
+            excitation_filter:
+              component_type: bandpass
+              center_nm: 360
+              width_nm: 40
+            dichroic:
+              component_type: dichroic
+              cutoffs_nm: [400]
+            # Calculated from text: em >425 nm -> longpass cut-on 425
+            emission_filter:
+              component_type: longpass
+              cut_on_nm: 425
+          Pos_2:
+            name: Filter Cube EGFP
+            # Calculated from text: ex 450-490 nm -> center 470, width 40
+            excitation_filter:
+              component_type: bandpass
+              center_nm: 470
+              width_nm: 40
+            dichroic:
+              component_type: dichroic
+              cutoffs_nm: [495]
+            # Calculated from text: em 500-550 nm -> center 525, width 50
+            emission_filter:
+              component_type: bandpass
+              center_nm: 525
+              width_nm: 50
+          Pos_3:
+            name: Filter Cube CY3 (TRITC/RFP)
+            # Calculated from text: ex 533-558 nm -> center 545.5, width 25
+            excitation_filter:
+              component_type: bandpass
+              center_nm: 545.5
+              width_nm: 25
+            dichroic:
+              component_type: dichroic
+              cutoffs_nm: [565]
+            # Calculated from text: em 570-640 nm -> center 605, width 70
+            emission_filter:
+              component_type: bandpass
+              center_nm: 605
+              width_nm: 70
 
-  splitters:
-    - name: Camera Port
-      type: emission_splitter # Flag: Verify exact terminology in your splitters vocabulary
-      notes: Camera port for optional Nikon detector.
-      url: ''
-
-  filters:
-    - name: DAPI/Hoechst
-      location: Fluorescence Turret
-      product_code: ''
-      excitation: '' # Flag: Required because widefield_fluorescence is present.
-      dichroic: ''   # Flag: Required because widefield_fluorescence is present.
-      emission: ''   # Flag: Required because widefield_fluorescence is present.
-      notes: ''
-      url: ''
-    - name: GFP/Alexa 488
-      location: Fluorescence Turret
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: ''   # Flag: Required field.
-      notes: ''
-      url: ''
-    - name: TRITC/RFP
-      location: Fluorescence Turret
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: ''   # Flag: Required field.
-      notes: ''
-      url: ''
+    splitters:
+      - name: Camera Port
+        type: emission_splitter
+        path: transmitted
+        notes: Camera port for optional detector.
 
   objectives:
     - id: 10x_air
@@ -83,7 +111,8 @@ hardware:
       numerical_aperture: 0.3
       working_distance: ''
       immersion: air
-      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      # VOCAB FIXED: 'PL FLUOTAR' maps to 'plan_fluorite'
+      correction: plan_fluorite
       afc_compatible: false
       specialties: []
       notes: ''
@@ -111,10 +140,11 @@ hardware:
       numerical_aperture: 1.0
       working_distance: ''
       immersion: oil
-      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      # VOCAB FIXED: 'PL FLUOTAR' maps to 'plan_fluorite'
+      correction: plan_fluorite
       afc_compatible: false
       specialties: []
-      notes: NA range 1.00-0.50
+      notes: NA range 1.00-0.50. Note that this has an adjustable iris diaphragm.
       url: ''
       is_installed: true
     - id: 63x_oil
@@ -128,7 +158,7 @@ hardware:
       correction: plan_apochromat
       afc_compatible: false
       specialties: []
-      notes: NA range 1.32-0.6
+      notes: NA range 1.32-0.6. Has an adjustable iris diaphragm for darkfield.
       url: ''
       is_installed: true
     - id: 100x_oil
@@ -142,6 +172,6 @@ hardware:
       correction: plan_apochromat
       afc_compatible: false
       specialties: []
-      notes: NA range 1.40-0.7
+      notes: NA range 1.40-0.7. Has an adjustable iris diaphragm for darkfield.
       url: ''
       is_installed: true
