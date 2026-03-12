@@ -1,0 +1,32 @@
+record_type: qc_session
+microscope: scope-3i-csu-w1-spinning-disk
+qc_id: qc-2019-03-12-laser
+started_utc: '2019-03-12T12:00:00Z'
+performed_by: 3i Field Service Engineer
+
+performed:
+  - qc_type: laser_power
+
+laser_inputs_human:
+  single_point_measurements:
+    - wavelength_nm: 405
+      measured_power_mw: 28.0
+      location: fiber_output_sdc
+    - wavelength_nm: 405
+      measured_power_mw: 81.0
+      location: fiber_output_vector
+    - wavelength_nm: 488
+      measured_power_mw: 30.0
+      location: fiber_output_sdc
+    - wavelength_nm: 488
+      measured_power_mw: 60.0
+      location: fiber_output_vector
+    - wavelength_nm: 561
+      measured_power_mw: 32.0
+      location: fiber_output_sdc
+    - wavelength_nm: 561
+      measured_power_mw: 60.0
+      location: fiber_output_vector
+
+notes: >
+  Laser output values recorded after SMA adjustments.
