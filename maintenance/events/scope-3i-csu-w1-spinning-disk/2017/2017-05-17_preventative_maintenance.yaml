@@ -1,0 +1,20 @@
+record_type: maintenance_event
+microscope: scope-3i-csu-w1-spinning-disk
+maintenance_id: maint-2017-05-17-pm
+
+started_utc: '2017-05-17T09:00:00Z'
+completed_utc: '2017-05-17T17:00:00Z'
+status: completed
+
+reason: preventative_maintenance
+action: part_replacement
+action_details: >
+  Preventative Maintenance Visit. Addressed MPU-AC issue where the main switch was broken. The main switch at the MPU was replaced and functionality restored. 
+  The Evolve camera was found misaligned and was realigned/calibrated using RapidCal. 
+  Software SlideBook was upgraded to 6.0.12 and NIDAQ critical updates were applied. 
+  Kohler, Vector, and FRAP light paths were realigned. System surfaces and filters were cleaned.
+
+service_provider: vendor
+company: 3i (Intelligent Imaging Innovations)
+performed_by: 3i Field Service Engineer
+
