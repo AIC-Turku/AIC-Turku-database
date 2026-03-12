@@ -1,0 +1,24 @@
+record_type: maintenance_event
+microscope: scope-3i-csu-w1-spinning-disk
+maintenance_id: maint-2021-08-18-pm
+
+started_utc: '2021-08-18T09:00:00Z'
+completed_utc: '2021-08-19T17:00:00Z'
+status: completed
+
+reason: preventative_maintenance
+action: calibration_and_alignment
+action_details: >
+  Preventative Maintenance Visit to address chromatic aberration and low laser power. 
+  Swapped all emission filters to correct chromatic aberration. Replaced the previous 525/30 filter with a new 525/50 filter from the vendor demo set. 
+  Orca camera was noted to show very bright individual pixels. 
+  Laser power was checked and adjusted.
+
+service_provider: vendor
+company: 3i (Intelligent Imaging Innovations)
+performed_by: 3i Field Service Engineer
+
+artifacts:
+  - artifact_id: report_2021_08_18
+    type: service_report
+    path: Report-2021_Saari-Turku_18-Aug.pdf
