@@ -255,6 +255,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                         "channel_name": "HyD1",
                         "path": "confocal",
                         "qe_peak_pct": 45,
+                        "collection_min_nm": 650,
+                        "collection_max_nm": 700,
+                        "channel_center_nm": 675,
+                        "bandwidth_nm": 50,
                     }
                 ],
             }
@@ -271,6 +275,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(detector["channel_name"], "HyD1")
         self.assertEqual(detector["path"], "confocal")
         self.assertEqual(detector["qe_peak_pct"], 45)
+        self.assertEqual(detector["collection_min_nm"], 650)
+        self.assertEqual(detector["collection_max_nm"], 700)
+        self.assertEqual(detector["channel_center_nm"], 675)
+        self.assertEqual(detector["bandwidth_nm"], 50)
 
     def test_optical_path_dto_preserves_runtime_splitters_for_virtual_microscope(self) -> None:
         lightpath_dto = {

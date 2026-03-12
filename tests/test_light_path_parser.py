@@ -185,6 +185,10 @@ class LightPathParserTests(unittest.TestCase):
                             "supports_time_gating": True,
                             "default_gating_delay_ns": 0.5,
                             "default_gate_width_ns": 6,
+                            "collection_min_nm": 650,
+                            "collection_max_nm": 700,
+                            "channel_center_nm": 675,
+                            "bandwidth_nm": 50,
                         }
                     ],
                     "light_path": {},
@@ -201,7 +205,11 @@ class LightPathParserTests(unittest.TestCase):
         self.assertTrue(detector["supports_time_gating"])
         self.assertEqual(detector["default_gating_delay_ns"], 0.5)
         self.assertEqual(detector["default_gate_width_ns"], 6.0)
-        self.assertEqual(detector["default_gain"], 1.0)
+        self.assertEqual(detector["collection_min_nm"], 650.0)
+        self.assertEqual(detector["collection_max_nm"], 700.0)
+        self.assertEqual(detector["channel_center_nm"], 675.0)
+        self.assertEqual(detector["bandwidth_nm"], 50.0)
+        self.assertNotIn("default_gain", detector)
 
     def test_top_level_splitters_are_ingested_with_branch_metadata(self) -> None:
         payload = generate_virtual_microscope_payload(

@@ -101,6 +101,12 @@
     return Array.from(map.values());
   }
 
+  function uniqueTexts(values) {
+    return Array.from(new Set((Array.isArray(values) ? values : [])
+      .map((value) => cleanString(value))
+      .filter(Boolean)));
+  }
+
   function sourceSettingKey(source) {
     return `${source.slot || 0}::${source.display_label || source.name || source.model || 'source'}`;
   }
@@ -164,7 +170,6 @@
       const defaults = defaultDetectorCollection(detector);
       state.detectorSettings.set(key, {
         enabled: true,
-        user_gain: numberOrNull(detector.default_gain) ?? 1,
         collection_enabled: detectorClass !== 'camera',
         collection_min_nm: defaults.min,
         collection_max_nm: defaults.max,
@@ -756,7 +761,6 @@
     const setting = ensureDetectorSetting(mechanism, detector);
     const labelText = mechanism.display_label || detector.display_label || detector.name || 'Detector';
     const detectorClass = detector.detector_class || VM.detectorClass(detector.kind);
-    const gainLabel = detectorClass === 'camera' ? 'Sensitivity' : 'Gain';
 
     const block = document.createElement('div');
     block.className = 'tunable-control';
@@ -787,23 +791,6 @@
     meta.textContent = `${detectorClass}${detector.supports_time_gating ? ' • time-gated' : ''}`;
     block.appendChild(meta);
 
-    const gainReadout = document.createElement('div');
-    gainReadout.className = 'tunable-range-label';
-    const gainSlider = document.createElement('input');
-    gainSlider.type = 'range';
-    gainSlider.min = '0';
-    gainSlider.max = '10';
-    gainSlider.step = '0.1';
-    gainSlider.value = String(setting.user_gain ?? 1);
-    gainSlider.addEventListener('input', () => {
-      setting.user_gain = Number(gainSlider.value);
-      gainReadout.textContent = `${gainLabel}: ${Number(gainSlider.value).toFixed(1)}×`;
-      refreshOutputs();
-    });
-    gainReadout.textContent = `${gainLabel}: ${Number(gainSlider.value).toFixed(1)}×`;
-    block.appendChild(gainReadout);
-    block.appendChild(gainSlider);
-
     if (detectorClass !== 'camera') {
       const collectionToggle = document.createElement('label');
       collectionToggle.className = 'vm-mini';
@@ -819,7 +806,7 @@
         refreshOutputs();
       });
       collectionToggle.appendChild(toggleInput);
-      collectionToggle.appendChild(document.createTextNode('Apply PMT/APD collection window'));
+      collectionToggle.appendChild(document.createTextNode('Apply detector collection window'));
       block.appendChild(collectionToggle);
 
       const minReadout = document.createElement('div');
@@ -1031,7 +1018,6 @@
         if (!setting.enabled) return;
         selection.detectors.push({
           ...detector,
-          user_gain: numberOrNull(setting.user_gain) ?? 1,
           collection_enabled: Boolean(setting.collection_enabled),
           collection_min_nm: numberOrNull(setting.collection_min_nm),
           collection_max_nm: numberOrNull(setting.collection_max_nm),
@@ -1143,9 +1129,13 @@
     }, grid.map(() => 0));
   }
 
-  function aggregateSpectraByLabel(entries, field, grid) {
+  function aggregateSpectraByLabel(entries, field, grid, dedupeKeyField = null) {
     const grouped = new Map();
+    const seenKeys = new Set();
     (Array.isArray(entries) ? entries : []).forEach((entry) => {
+      const dedupeKey = dedupeKeyField ? cleanString(entry && entry[dedupeKeyField]) : '';
+      if (dedupeKeyField && dedupeKey && seenKeys.has(dedupeKey)) return;
+      if (dedupeKeyField && dedupeKey) seenKeys.add(dedupeKey);
       const key = entry.pathLabel || entry.label || entry.detectorLabel || 'Path';
       if (!grouped.has(key)) {
         grouped.set(key, { label: key, values: grid.map(() => 0), entry });
@@ -1232,10 +1222,12 @@
     const pathEntries = Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [];
     const totalEmission = sumSpectra(emissionEntries, 'postOpticsSpectrum', grid);
     const aggregatedPaths = aggregateSpectraByLabel(pathEntries, 'spectrum', grid);
+    const aggregatedLeakage = aggregateSpectraByLabel(pathEntries, 'excitationLeakageSpectrum', grid, 'pathKey');
     const scale = spectrumScale([
       Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : [],
       totalEmission,
       ...aggregatedPaths.map((entry) => entry.values),
+      ...aggregatedLeakage.map((entry) => entry.values),
     ]);
 
     const datasets = [];
@@ -1254,9 +1246,11 @@
         backgroundColor: rgbaFromHex(color, 0.05),
       }));
     });
+    const palette = ['#0f766e', '#7c3aed', '#ea580c', '#2563eb', '#be123c'];
+    const pathColorByLabel = new Map();
     aggregatedPaths.forEach((entry, index) => {
-      const palette = ['#0f766e', '#7c3aed', '#ea580c', '#2563eb', '#be123c'];
       const color = palette[index % palette.length];
+      pathColorByLabel.set(entry.label, color);
       datasets.push(chartDatasetFromGrid(entry.label, grid, asPercentArray(entry.values, scale), {
         borderColor: color,
         backgroundColor: rgbaFromHex(color, 0.08),
@@ -1270,6 +1264,15 @@
           borderWidth: 1.5,
         }));
       }
+    });
+    aggregatedLeakage.forEach((entry) => {
+      if (!entry.values.some((value) => value > 1e-6)) return;
+      const color = pathColorByLabel.get(entry.label) || '#dc2626';
+      datasets.push(chartDatasetFromGrid(`${entry.label} excitation leak`, grid, asPercentArray(entry.values, scale), {
+        borderColor: color,
+        borderDash: [6, 3],
+        borderWidth: 1.75,
+      }));
     });
 
     propagationChart.data.datasets = datasets;
@@ -1433,7 +1436,7 @@
       } catch (error) {
         parsedCurrent = null;
       }
-      const components = optionComponentsForStage(stage, mechanismName, parsedCurrent);
+      const components = optionComponentsForStage(stage, parsedCurrent, mechanismName);
       const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
       const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
       if (exComponents.length) excitationProbe = applyComponentsToSpectrum(excitationProbe, exComponents, grid, 'excitation');
@@ -1457,16 +1460,29 @@
       return `${source.display_label || source.name || 'Source'}${lambdaText}`;
     }).join(', ') || 'None';
     const detectorText = selection.detectors.map((detector) => {
-      const gain = (numberOrNull(detector.user_gain) ?? 1).toFixed(1);
       const minNm = numberOrNull(detector.collection_min_nm);
       const maxNm = numberOrNull(detector.collection_max_nm);
       const window = detector.collection_enabled && minNm !== null && maxNm !== null
         ? ` • ${Math.round(minNm)}-${Math.round(maxNm)} nm`
         : '';
-      return `${detector.display_label || detector.name || 'Detector'} ×${gain}${window}`;
+      return `${detector.display_label || detector.name || 'Detector'}${window}`;
     }).join(', ') || 'None';
     const opticalStages = selection.debugSelections.map((entry) => entry.name).join(' → ') || 'No stage optics selected';
-    const stedText = uniqueTexts((simulation && simulation.results || []).filter((result) => result.sted && result.sted.applied).map((result) => `${result.fluorophoreName}: ${result.sted.label} via ${result.sted.sourceLabel}`)).join('; ') || 'No depletion source selected';
+    const results = Array.isArray(simulation && simulation.results) ? simulation.results : [];
+    const stedText = uniqueTexts(results
+      .filter((result) => result.sted && result.sted.applied)
+      .map((result) => `${result.fluorophoreName}: ${result.sted.label} via ${result.sted.sourceLabel}`))
+      .join('; ') || 'No depletion source selected';
+    const recommendationsText = uniqueTexts(results
+      .slice()
+      .sort((left, right) => (right.planningScore || 0) - (left.planningScore || 0))
+      .filter((result, index, rows) => rows.findIndex((candidate) => candidate.fluorophoreKey === result.fluorophoreKey) === index)
+      .map((result) => `${result.fluorophoreName}: ${result.pathLabel} (${result.qualityLabel})`))
+      .join('; ') || 'Load a fluorophore to rank detector paths';
+    const leakageWarnings = uniqueTexts(results
+      .filter((result) => result.excitationLeakageWarningLevel === 'high' || result.excitationLeakageWarningLevel === 'moderate')
+      .map((result) => `${result.pathLabel}: ${result.laserLeakageNote}`))
+      .join(' ');
     const validity = simulation && simulation.validSelection === false
       ? '<span style="color:var(--danger);font-weight:700;">Invalid mechanical path</span>'
       : '<span style="color:var(--primary);font-weight:700;">Valid path</span>';
@@ -1478,7 +1494,9 @@
       `<div><strong>Detectors:</strong> ${detectorText}</div>`,
       `<div><strong>Optical path:</strong> ${opticalStages}</div>`,
       `<div><strong>STED pairing:</strong> ${stedText}</div>`,
-    ].join('');
+      `<div><strong>Recommended paths:</strong> ${recommendationsText}</div>`,
+      leakageWarnings ? `<div><strong>Leakage warning:</strong> <span style="color:var(--danger);font-weight:600;">${leakageWarnings}</span></div>` : '',
+    ].filter(Boolean).join('');
   }
 
   function renderDetectionChart(simulation) {
@@ -1514,13 +1532,17 @@
       return;
     }
 
+    const qualityColors = { good: 'var(--primary)', usable: '#ca8a04', poor: 'var(--danger)', blocked: 'var(--muted)' };
     simulation.results
       .slice()
-      .sort((left, right) => right.detectorWeightedIntensity - left.detectorWeightedIntensity)
+      .sort((left, right) => (right.planningScore || 0) - (left.planningScore || 0))
       .forEach((result) => {
         const dyeColor = colorHex(mapToArray(state.loadedProteins).find((item) => item.key === result.fluorophoreKey)?.emMax || 520);
         const stedText = result.sted && result.sted.applied
           ? ` • STED ${result.sted.label} (${Math.round((result.sted.score || 0) * 100)}%)`
+          : '';
+        const leakageText = result.excitationLeakageWarningLevel !== 'none'
+          ? ` • leak ${result.excitationLeakageWarningLevel}`
           : '';
         const item = document.createElement('li');
         item.className = 'vm-list-item';
@@ -1530,9 +1552,15 @@
           <div style="min-width:0;">
             <div style="font-weight:700; color:${dyeColor};">${result.fluorophoreName}</div>
             <div style="font-size:11px; color:var(--muted);">${result.fluorophoreState} • ${result.pathLabel}</div>
-            <div style="font-size:11px; color:var(--muted);">Detector: ${result.detectorLabel} (${result.detectorClass})${stedText}</div>
+            <div style="font-size:11px; color:var(--muted);">Detector: ${result.detectorLabel} (${result.detectorClass})${stedText}${leakageText}</div>
+            ${result.laserLeakageNote ? `<div style="font-size:11px; color:var(--danger);">${result.laserLeakageNote}</div>` : ''}
           </div>
-          <div class="vm-metric">Ex ${((result.excitationStrength || 0) * 100).toFixed(1)}% | Em ${((result.emissionPathThroughput || 0) * 100).toFixed(1)}% | Det ${Number(result.detectorWeightedIntensity || 0).toFixed(3)} | XT ${Number(result.crosstalkPct || 0).toFixed(1)}%</div>
+          <div class="vm-metric">
+            <div style="font-weight:700; color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${result.qualityLabel}</div>
+            <div>Ex ${((result.excitationStrength || 0) * 100).toFixed(1)}% | Em ${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</div>
+            <div>Det ${Number(result.detectorWeightedIntensity || 0).toFixed(3)} | XT ${Number(result.crosstalkPct || 0).toFixed(1)}%</div>
+            <div>Leak ${((result.excitationLeakageThroughput || 0) * 100).toFixed(2)}% | Score ${Number(result.planningScore || 0).toFixed(3)}</div>
+          </div>
         `;
         DOM.scoreboard.appendChild(item);
       });

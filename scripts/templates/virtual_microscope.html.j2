@@ -132,7 +132,7 @@ hide:
 
     <div class="vm-panel">
       <h2 class="vm-section-title">2. Propagated Light Through the Optical Path</h2>
-      <p class="vm-panel-copy">Configure the light path below. The middle spectrum panel shows excitation at the sample, fluorescence after the selected optics, and detector-path light after any PMT/APD collection window.</p>
+      <p class="vm-panel-copy">Configure the light path below. The middle spectrum panel shows excitation at the sample, fluorescence after the selected optics, detector-path fluorescence after any detector collection window, and any excitation light that still leaks into that path.</p>
       <div id="lightPathGraph" class="light-path-graph"></div>
       <div id="pathSummary" style="font-size:13px; margin:12px 0; padding:10px; border-radius:6px; background:var(--md-code-bg-color); border:1px dashed var(--border);"></div>
       <div class="vm-chart-wrap">
@@ -142,7 +142,7 @@ hide:
 
     <div class="vm-panel">
       <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>
-      <p class="vm-panel-copy">The bottom panel integrates detector-weighted signal by fluorophore and path. Use it to compare crosstalk, collection efficiency, and the effect of STED/depletion choices.</p>
+      <p class="vm-panel-copy">The bottom panel integrates detector-weighted fluorescence by fluorophore and path. Use it to compare crosstalk, collection efficiency, STED/depletion choices, and path-specific excitation-leakage warnings.</p>
       <div class="vm-chart-wrap" style="height:280px; margin-bottom:12px;">
         <canvas id="detectionChart"></canvas>
       </div>

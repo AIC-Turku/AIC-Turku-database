@@ -366,7 +366,7 @@ def _legacy_tunable_range(*texts: Any) -> tuple[float | None, float | None]:
 
 
 def _normalize_component_numeric_fields(component_payload: dict[str, Any], source: dict[str, Any]) -> None:
-    for key in ("center_nm", "width_nm", "cut_on_nm", "cut_off_nm", "wavelength_nm", "tunable_min_nm", "tunable_max_nm", "pulse_width_ps", "repetition_rate_mhz", "qe_peak_pct", "read_noise_e", "default_gating_delay_ns", "default_gate_width_ns", "power_weight"):
+    for key in ("center_nm", "width_nm", "cut_on_nm", "cut_off_nm", "wavelength_nm", "tunable_min_nm", "tunable_max_nm", "pulse_width_ps", "repetition_rate_mhz", "qe_peak_pct", "read_noise_e", "default_gating_delay_ns", "default_gate_width_ns", "power_weight", "collection_min_nm", "collection_max_nm", "collection_center_nm", "collection_width_nm", "channel_center_nm", "bandwidth_nm", "min_nm", "max_nm"):
         if key in source:
             numeric = _coerce_number(source.get(key))
             if numeric is not None:
@@ -557,9 +557,16 @@ def _detector_position(slot: int, detector: dict[str, Any]) -> dict[str, Any]:
         "supports_time_gating": detector.get("supports_time_gating"),
         "default_gating_delay_ns": detector.get("default_gating_delay_ns"),
         "default_gate_width_ns": detector.get("default_gate_width_ns"),
+        "collection_min_nm": detector.get("collection_min_nm") or detector.get("min_nm"),
+        "collection_max_nm": detector.get("collection_max_nm") or detector.get("max_nm"),
+        "collection_center_nm": detector.get("collection_center_nm") or detector.get("channel_center_nm"),
+        "collection_width_nm": detector.get("collection_width_nm") or detector.get("bandwidth_nm"),
+        "channel_center_nm": detector.get("channel_center_nm"),
+        "bandwidth_nm": detector.get("bandwidth_nm"),
+        "min_nm": detector.get("min_nm"),
+        "max_nm": detector.get("max_nm"),
         "notes": detector.get("notes"),
         "details": _build_details(detector),
-        "default_gain": 1.0,
     }
     routes = _normalize_routes(detector.get("path") or detector.get("paths") or detector.get("route") or detector.get("routes"))
     if routes:

@@ -182,6 +182,110 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(matched["cam"]["detectorWeightedIntensity"], off_band["cam"]["detectorWeightedIntensity"])
         self.assertGreater(matched["cam"]["excitationStrength"], 0)
 
+
+    def test_detector_user_gain_no_longer_changes_output(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                ex2p: [],
+                em: [[480, 0], [500, 50], [520, 100], [545, 60], [570, 10], [600, 0]]
+              },
+              exMax: 488,
+              emMax: 520
+            };
+            const instrument = { metadata: { wavelength_grid: { min_nm: 450, max_nm: 650, step_nm: 2 } } };
+            function simulate(userGain) {
+              return rt.simulateInstrument(
+                instrument,
+                {
+                  sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                  excitation: [{ component_type: 'passthrough' }],
+                  dichroic: [],
+                  emission: [{ component_type: 'bandpass', center_nm: 525, width_nm: 50 }],
+                  splitters: [],
+                  detectors: [{ id: 'pmt', display_label: 'PMT', kind: 'pmt', qe_peak_pct: 30, user_gain: userGain }],
+                  selectionMap: {}
+                },
+                [fluor],
+                {}
+              ).results[0];
+            }
+            const low = simulate(1);
+            const high = simulate(25);
+            return { low, high };
+            """
+        )
+
+        self.assertAlmostEqual(result["low"]["detectorWeightedIntensity"], result["high"]["detectorWeightedIntensity"], places=9)
+        self.assertAlmostEqual(result["low"]["planningScore"], result["high"]["planningScore"], places=9)
+
+    def test_excitation_leakage_warning_tracks_detection_path_rejection(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                ex2p: [],
+                em: [[480, 0], [500, 50], [520, 100], [545, 60], [570, 10], [600, 0]]
+              },
+              exMax: 488,
+              emMax: 520
+            };
+            const instrument = { metadata: { wavelength_grid: { min_nm: 450, max_nm: 650, step_nm: 2 } } };
+            function simulate(center, width) {
+              return rt.simulateInstrument(
+                instrument,
+                {
+                  sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                  excitation: [{ component_type: 'passthrough' }],
+                  dichroic: [],
+                  emission: [{ component_type: 'bandpass', center_nm: center, width_nm: width }],
+                  splitters: [],
+                  detectors: [{
+                    id: 'pmt',
+                    display_label: 'PMT',
+                    kind: 'pmt',
+                    qe_peak_pct: 35,
+                    collection_enabled: true,
+                    collection_center_nm: center,
+                    collection_width_nm: width
+                  }],
+                  selectionMap: {}
+                },
+                [fluor],
+                {}
+              );
+            }
+            const leaking = simulate(488, 20);
+            const blocked = simulate(525, 40);
+            return {
+              leaking: leaking.results[0],
+              blocked: blocked.results[0],
+              leakingPath: leaking.pathSpectra[0],
+              blockedPath: blocked.pathSpectra[0]
+            };
+            """
+        )
+
+        self.assertGreater(result["leaking"]["excitationLeakageWeightedIntensity"], result["blocked"]["excitationLeakageWeightedIntensity"])
+        self.assertGreater(result["leaking"]["excitationLeakageThroughput"], result["blocked"]["excitationLeakageThroughput"])
+        self.assertIn(result["leaking"]["excitationLeakageWarningLevel"], {"moderate", "high"})
+        self.assertEqual(result["blocked"]["excitationLeakageWarningLevel"], "none")
+        self.assertTrue(result["leaking"]["laserLeakageLikely"])
+        self.assertFalse(result["blocked"]["laserLeakageLikely"])
+        self.assertIn("488 laser", result["leaking"]["laserLeakageNote"])
+        self.assertGreater(sum(result["leakingPath"]["excitationLeakageSpectrum"]), 0)
+        self.assertLess(sum(result["blockedPath"]["excitationLeakageSpectrum"]), 1e-12)
+        self.assertLess(result["leaking"]["planningScore"], result["blocked"]["planningScore"])
+
     def test_splitter_branching_and_sted_quality_are_modeled(self) -> None:
         result = self.run_node_json(
             """

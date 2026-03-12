@@ -1013,10 +1013,19 @@
     }, grid, { mode: 'emission' });
   }
 
-  function detectorGainFactor(detector) {
+  function leakageWarningLevel(leakageThroughput) {
+    if (leakageThroughput >= 0.1) return 'high';
+    if (leakageThroughput >= 0.03) return 'moderate';
+    if (leakageThroughput >= 0.005) return 'low';
+    return 'none';
+  }
 
-    const gain = numberOrNull(detector && detector.user_gain);
-    return gain === null ? 1 : clamp(gain, 0, 20);
+  function leakagePenalty(leakageThroughput) {
+    const level = leakageWarningLevel(leakageThroughput);
+    if (level === 'high') return 0.2;
+    if (level === 'moderate') return 0.45;
+    if (level === 'low') return 0.7;
+    return 1;
   }
 
   function detectorGatingFactor(detector) {
@@ -1178,6 +1187,23 @@
       grid.map(() => 0)
     );
     const excitationAtSample = combinedExcitation;
+    const totalExcitationAtSampleArea = propagatedExcitationSources.reduce(
+      (sum, entry) => sum + integrateSpectrum(entry.atSample, grid),
+      0
+    );
+    const excitationLeakageBySource = propagatedExcitationSources.map((entry) => {
+      const afterDichroic = applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' });
+      const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
+      const branches = selectedSplitters.length
+        ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid)
+        : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters }];
+      return {
+        sourceLabel: entry.source.display_label || entry.source.name || 'Source',
+        sourceCenters: sourceCenters(entry.source),
+        sourceArea: integrateSpectrum(entry.atSample, grid),
+        branches: new Map(branches.map((branch) => [branch.id, branch])),
+      };
+    });
 
     const results = [];
     const emittedSpectra = [];
@@ -1213,6 +1239,7 @@
         fluorophoreName: fluorophore.name,
         generatedSpectrum: generatedEmission,
         postOpticsSpectrum: afterEmissionFilters,
+        excitationOverlapPower,
         sted,
       });
 
@@ -1222,18 +1249,48 @@
         name: 'Virtual Detector',
         kind: 'detector',
         detector_class: 'detector',
-        user_gain: 1,
       }];
 
       detectorTargets.forEach((detector) => {
         const response = detectorResponse(detector, grid);
         const collectionMask = detectorCollectionMask(detector, grid);
-        const gainFactor = detectorGainFactor(detector);
         const gatingFactor = detectorGatingFactor(detector);
         branches.forEach((branch) => {
           const collectedSpectrum = applyMask(branch.spectrum, collectionMask);
           const emissionPathThroughput = safeRatio(integrateSpectrum(collectedSpectrum, grid), emissionArea);
-          const detectorWeightedIntensity = integrateSpectrum(multiplyArrays(collectedSpectrum, response), grid) * gainFactor * gatingFactor;
+          const detectorWeightedIntensity = integrateSpectrum(multiplyArrays(collectedSpectrum, response), grid) * gatingFactor;
+
+          const leakageContributions = excitationLeakageBySource.map((entry) => {
+            const branchLeakage = entry.branches.get(branch.id);
+            const preDetectorSpectrum = branchLeakage && Array.isArray(branchLeakage.spectrum)
+              ? branchLeakage.spectrum
+              : grid.map(() => 0);
+            const collectedLeakageSpectrum = applyMask(preDetectorSpectrum, collectionMask);
+            return {
+              sourceLabel: entry.sourceLabel,
+              sourceCenters: entry.sourceCenters,
+              spectrum: collectedLeakageSpectrum,
+              weightedIntensity: integrateSpectrum(multiplyArrays(collectedLeakageSpectrum, response), grid) * gatingFactor,
+              throughput: safeRatio(integrateSpectrum(collectedLeakageSpectrum, grid), entry.sourceArea),
+            };
+          });
+          const excitationLeakageSpectrum = leakageContributions.reduce(
+            (sum, entry) => addArrays(sum, entry.spectrum),
+            grid.map(() => 0)
+          );
+          const excitationLeakageWeightedIntensity = leakageContributions.reduce(
+            (sum, entry) => sum + entry.weightedIntensity,
+            0
+          );
+          const excitationLeakageThroughput = safeRatio(
+            integrateSpectrum(excitationLeakageSpectrum, grid),
+            totalExcitationAtSampleArea
+          );
+          const excitationLeakageWarningLevel = leakageWarningLevel(excitationLeakageThroughput);
+          const excitationLeakageSourceLabels = leakageContributions
+            .filter((entry) => entry.throughput >= 0.005)
+            .map((entry) => entry.sourceLabel);
+
           pathSpectra.push({
             fluorophoreKey: fluorophore.key,
             fluorophoreName: fluorophore.name,
@@ -1248,6 +1305,11 @@
             detectorResponse: response,
             collectionMinNm: detectorCollectionBounds(detector).min,
             collectionMaxNm: detectorCollectionBounds(detector).max,
+            excitationLeakageSpectrum,
+            excitationLeakageWeightedIntensity,
+            excitationLeakageThroughput,
+            excitationLeakageWarningLevel,
+            excitationLeakageSourceLabels,
           });
           results.push({
             fluorophoreKey: fluorophore.key,
@@ -1261,9 +1323,12 @@
             excitationStrength,
             emissionPathThroughput,
             detectorWeightedIntensity,
-            gainFactor,
             gatingFactor,
             sted,
+            excitationLeakageWeightedIntensity,
+            excitationLeakageThroughput,
+            excitationLeakageWarningLevel,
+            excitationLeakageSourceLabels,
           });
         });
       });
@@ -1278,6 +1343,40 @@
       const bleed = Math.max(0, total - result.detectorWeightedIntensity);
       result.bleedThrough = bleed;
       result.crosstalkPct = total > 0 ? (bleed / total) * 100 : 0;
+    });
+
+    const bestPlanningScoreByFluor = new Map();
+    results.forEach((result) => {
+      const crosstalkPenalty = clamp(1 - ((result.crosstalkPct || 0) / 100), 0.1, 1);
+      result.planningScore = result.detectorWeightedIntensity * crosstalkPenalty * leakagePenalty(result.excitationLeakageThroughput || 0);
+      const currentBest = bestPlanningScoreByFluor.get(result.fluorophoreKey) || 0;
+      if (result.planningScore > currentBest) {
+        bestPlanningScoreByFluor.set(result.fluorophoreKey, result.planningScore);
+      }
+    });
+    results.forEach((result) => {
+      const relativePlanningScore = safeRatio(result.planningScore, bestPlanningScoreByFluor.get(result.fluorophoreKey) || 0);
+      result.relativePlanningScore = relativePlanningScore;
+      if (result.detectorWeightedIntensity <= 1e-6 || result.excitationStrength <= 0.02) {
+        result.qualityLabel = 'blocked';
+      } else if (relativePlanningScore >= 0.75 && result.excitationLeakageWarningLevel !== 'high' && (result.crosstalkPct || 0) < 30) {
+        result.qualityLabel = 'good';
+      } else if (relativePlanningScore >= 0.35 && result.excitationLeakageWarningLevel !== 'high') {
+        result.qualityLabel = 'usable';
+      } else {
+        result.qualityLabel = 'poor';
+      }
+      result.laserLeakageLikely = result.excitationLeakageWarningLevel !== 'none';
+      const leakingSources = (result.excitationLeakageSourceLabels || []).join(', ');
+      if (result.excitationLeakageWarningLevel === 'high') {
+        result.laserLeakageNote = `Selected excitation light is poorly rejected by this detection path${leakingSources ? ` (${leakingSources})` : ''}.`;
+      } else if (result.excitationLeakageWarningLevel === 'moderate') {
+        result.laserLeakageNote = `Some selected excitation light can leak into this detection path${leakingSources ? ` (${leakingSources})` : ''}.`;
+      } else if (result.excitationLeakageWarningLevel === 'low') {
+        result.laserLeakageNote = `Minor excitation-path leakage is possible${leakingSources ? ` (${leakingSources})` : ''}.`;
+      } else {
+        result.laserLeakageNote = '';
+      }
     });
 
     return {
