@@ -1,0 +1,19 @@
+record_type: maintenance_event
+microscope: scope-3i-csu-w1-spinning-disk
+maintenance_id: maint-2018-02-05-pm
+
+started_utc: '2018-02-05T09:00:00Z'
+completed_utc: '2018-02-06T17:00:00Z'
+status: completed
+
+reason: preventative_maintenance
+action: part_replacement
+action_details: >
+  Preventative Maintenance Visit. Addressed EMCCD connectivity issues by replacing the fire-wire board and cable, and re-installing the PVCAM 3.7.1 driver. 
+  Kohler alignment was fully off and was corrected. The incubator housing clamp was noted as slightly broken. 
+  Surfaces, monitor, and optics were cleaned. Vector, FRAP, and SDC paths were realigned.
+
+service_provider: vendor
+company: 3i (Intelligent Imaging Innovations)
+performed_by: 3i Field Service Engineer
+
