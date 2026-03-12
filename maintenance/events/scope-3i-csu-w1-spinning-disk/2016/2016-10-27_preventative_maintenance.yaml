@@ -1,0 +1,20 @@
+record_type: maintenance_event
+microscope: scope-3i-csu-w1-spinning-disk
+maintenance_id: maint-2016-10-27-pm
+
+started_utc: '2016-10-27T09:00:00Z'
+completed_utc: '2016-10-27T17:00:00Z'
+status: completed
+
+reason: preventative_maintenance
+action: calibration_and_alignment
+action_details: >
+  Preventative Maintenance Visit. 
+  Found dust on the system and CSU-W disks. The CSU was slightly misaligned and the 40x W objective was stuck in the turret due to corrosion. 
+  Software SlideBook was upgraded to version 6.0.11. Two extra EM filters (600/37-25) were installed. 
+  System surfaces, optics, and incubator were cleaned. Kohler, Vector, and confocal light paths were aligned. Cameras were calibrated using RapidCal.
+
+service_provider: vendor
+company: 3i (Intelligent Imaging Innovations)
+performed_by: 3i Field Service Engineer
+
