@@ -31,14 +31,17 @@ hardware:
       model: 12V 100W halogen bulb
       wavelength_nm: broadband
       power: 100 W
-      notes: Transmitted light source
+      path: transmitted
+      notes: Transmitted light source for TL and DIC
       url: ''
-
-  splitters:
-    - name: Camera Port
-      type: emission_splitter # Flag: Verify exact terminology in your splitters vocabulary if you have one
-      notes: Camera port in microscope body.
-      url: ''
+  
+  light_path:
+    splitters:
+      - name: Camera Port
+        # VOCAB VERIFIED: 'emission_splitter' is canonical
+        type: emission_splitter
+        path: transmitted
+        notes: Camera port in microscope body.
 
   objectives:
     - id: 10x_air
@@ -51,8 +54,8 @@ hardware:
       immersion: air
       correction: plan_fluorite
       afc_compatible: false
-      specialties:
-        - dic compatible
+      specialties:       
+        - dic
       notes: ''
       url: ''
       is_installed: true
@@ -66,9 +69,9 @@ hardware:
       immersion: air
       correction: plan_fluorite
       afc_compatible: false
-      specialties:
-        - phase compatible
-        - dic compatible
+      specialties:        
+        - phase
+        - dic
       notes: ''
       url: ''
       is_installed: true
@@ -83,8 +86,8 @@ hardware:
       correction: plan_fluorite
       afc_compatible: false
       specialties:
-        - phase compatible
-        - dic compatible
+        - phase
+        - dic
       notes: ''
       url: ''
       is_installed: true
@@ -99,8 +102,8 @@ hardware:
       correction: plan_apochromat
       afc_compatible: false
       specialties:
-        - phase compatible
-        - dic compatible
+        - phase
+        - dic
       notes: ''
       url: ''
       is_installed: true
@@ -115,8 +118,8 @@ hardware:
       correction: plan_fluorite
       afc_compatible: false
       specialties:
-        - phase compatible
-        - dic compatible
+        - phase
+        - dic
       notes: ''
       url: ''
       is_installed: true
