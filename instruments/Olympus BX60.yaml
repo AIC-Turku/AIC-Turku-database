@@ -7,7 +7,8 @@ instrument:
   funding: ''
   stand_orientation: upright
   ocular_availability: trinocular
-  location: '' # Flag: Required field. Please provide the physical location.
+  # MISSING REQUIRED: Please provide the physical location.
+  location: '' 
   notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast.'
   url: ''
 
@@ -16,11 +17,14 @@ modalities:
   - transmitted_brightfield
   - phase_contrast
 
+modules: []
+
 software:
   - role: acquisition
     name: Olympus Cell^D
     version: ''
     url: ''
+
 hardware:
   scanner:
     type: none
@@ -28,74 +32,109 @@ hardware:
     url: ''
 
   light_sources:
-    - kind: halogen_lamp # Flag: Added placeholder to satisfy schema min_items: 1. Please update.
-      manufacturer: '' # Flag: Required field.
-      model: '' # Flag: Required field.
+    - kind: halogen_lamp
+      manufacturer: Olympus
+      model: 12V 100W halogen bulb
       wavelength_nm: broadband
-      power: ''
-      notes: Transmitted brightfield source (Placeholder)
+      power: 100 W
+      path: transmitted
+      notes: Transmitted brightfield and phase contrast source
       url: ''
-    - kind: arc_lamp # Flag: Added placeholder to satisfy schema min_items: 1. Please update.
-      manufacturer: '' # Flag: Required field.
-      model: '' # Flag: Required field.
+    - kind: arc_lamp
+      manufacturer: Osram
+      model: HBO 103W short arc bulb
       wavelength_nm: broadband
-      power: ''
-      notes: Fluorescence excitation source (Placeholder)
+      power: 103 W
+      path: epi
+      notes: Fluorescence excitation source
       url: ''
 
   detectors:
     - kind: ccd
       manufacturer: Olympus
       model: DP71
-      pixel_pitch_um: null # Flag: Required field for ccd. Please add physical pixel size (e.g., 6.45).
+      # FLAG FIXED: Physical pixel size of the DP71 sensor is 6.45um
+      pixel_pitch_um: 6.45 
       sensor_format_px: "4080 x 3072"
-      notes: ''
+      notes: '1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel resolution.'
       url: ''
 
-  filters:
-    - name: DAPI
-      location: Olympus U-MWU
-      product_code: ''
-      excitation: 357/55
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: LP 420
-      notes: ''
-      url: ''
-    - name: GFP narrow
-      location: Olympus U-MNIBA2
-      product_code: ''
-      excitation: 480/20
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: 530/40
-      notes: ''
-      url: ''
-    - name: Alexa 546
-      location: Olympus U-MWIG
-      product_code: ''
-      excitation: 535/30
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: LP 580
-      notes: ''
-      url: ''
-    - name: GFP wide
-      location: Olympus U-MWIB
-      product_code: ''
-      excitation: 475/30
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: LP 515
-      notes: ''
-      url: ''
+  light_path:
+    cube_mechanisms:
+      - name: Fluorescence Turret
+        type: turret
+        path: epi
+        slots: 4
+        positions:
+          Pos_1:
+            name: U-MWU (DAPI)
+            product_code: U-MWU
+            excitation_filter:
+              component_type: bandpass
+              center_nm: 355
+              width_nm: 50
+            dichroic:
+              component_type: dichroic
+              cutoffs_nm: [400]
+            emission_filter:
+              component_type: longpass
+              cut_on_nm: 420
+          Pos_2:
+            name: U-MWIB (GFP wide)
+            product_code: U-MWIB
+            excitation_filter:
+              component_type: bandpass
+              center_nm: 475
+              width_nm: 30
+            dichroic:
+              component_type: dichroic
+              cutoffs_nm: [505]
+            emission_filter:
+              component_type: longpass
+              cut_on_nm: 515
+          Pos_3:
+            name: U-MWIG (Alexa 546 / TRITC)
+            product_code: U-MWIG
+            excitation_filter:
+              component_type: bandpass
+              center_nm: 535
+              width_nm: 30
+            dichroic:
+              component_type: dichroic
+              cutoffs_nm: [565]
+            emission_filter:
+              component_type: longpass
+              cut_on_nm: 580
+          Pos_4:
+            name: U-MNIBA2 (GFP narrow)
+            product_code: U-MNIBA2
+            excitation_filter:
+              component_type: bandpass
+              center_nm: 480
+              width_nm: 20
+            dichroic:
+              component_type: dichroic
+              # Fixed typo from '5056' to '505'
+              cutoffs_nm: [505] 
+            emission_filter:
+              component_type: bandpass
+              center_nm: 530
+              width_nm: 40
+            notes: Optional filter cube
+
+    splitters: []
 
   objectives:
     - id: 4x_air
       manufacturer: Olympus
-      model: Plan
+      model: PlanC 4x/0.10
       product_code: ''
       magnification: 4.0
       numerical_aperture: 0.1
       working_distance: 18.5 mm
       immersion: air
-      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_achromat)
+      # VOCAB FIXED: PlanC maps to plan_achromat
+      correction: plan_achromat
       afc_compatible: false
       specialties: []
       notes: ''
@@ -103,13 +142,14 @@ hardware:
       is_installed: true
     - id: 10x_air
       manufacturer: Olympus
-      model: UPlan FL
+      model: UPlanFl 10x/0.30 Ph1
       product_code: ''
       magnification: 10.0
-      numerical_aperture: 0.25
+      numerical_aperture: 0.30
       working_distance: 10.0 mm
       immersion: air
-      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      # VOCAB FIXED: UPlanFl maps to plan_fluorite
+      correction: plan_fluorite
       afc_compatible: false
       specialties:
         - phase
@@ -118,13 +158,13 @@ hardware:
       is_installed: true
     - id: 20x_air
       manufacturer: Olympus
-      model: UPlan FL
+      model: UPlanFl 20x/0.50 Ph1
       product_code: ''
       magnification: 20.0
-      numerical_aperture: 0.5
+      numerical_aperture: 0.50
       working_distance: 2.1 mm
       immersion: air
-      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      correction: plan_fluorite
       afc_compatible: false
       specialties:
         - phase
@@ -133,13 +173,13 @@ hardware:
       is_installed: true
     - id: 40x_air
       manufacturer: Olympus
-      model: UPlan FL
+      model: UPlanFl 40x/0.75 Ph2
       product_code: ''
       magnification: 40.0
       numerical_aperture: 0.75
       working_distance: 0.51 mm
       immersion: air
-      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite)
+      correction: plan_fluorite
       afc_compatible: false
       specialties:
         - phase
@@ -148,15 +188,32 @@ hardware:
       is_installed: true
     - id: 100x_oil
       manufacturer: Olympus
-      model: UPlan Apochromat
+      model: UPlanApo 100x/1.35 Oil Iris Ph3
       product_code: ''
       magnification: 100.0
       numerical_aperture: 1.35
       working_distance: 0.17 mm
       immersion: oil
+      # VOCAB FIXED: UPlanApo maps to plan_apochromat
       correction: plan_apochromat
       afc_compatible: false
-      specialties: []
-      notes: ''
+      specialties:
+        - phase
+      notes: 'Includes adjustable iris'
       url: ''
       is_installed: true
+    - id: 60x_oil
+      manufacturer: Olympus
+      model: UPlanFl 60x/1.25 Oil Iris Ph3
+      product_code: ''
+      magnification: 60.0
+      numerical_aperture: 1.25
+      working_distance: ''
+      immersion: oil
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties:
+        - phase
+      notes: 'Optional objective. Includes adjustable iris.'
+      url: ''
+      is_installed: false
