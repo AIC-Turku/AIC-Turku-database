@@ -1,19 +1,20 @@
 instrument:
-  display_name: Leica DM RB
-  instrument_id: scope-leica-dm-rb
+  display_name: Leica DM IRBE
+  instrument_id: scope-leica-dm-irbe
   manufacturer: Leica Microsystems
-  model: Leica DM RB
+  model: Leica DM IRBE
   year_of_purchase: ''
   funding: ''
-  stand_orientation: upright
+  stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: 'Widefield microscope (upright) with camera port. Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield.'
+  notes: Inverted microscope with camera port. Current imaging modes are widefield fluorescence, transmitted brightfield, darkfield, and phase contrast. Optional 1.6x auxiliary lens in microscope body.
   url: ''
 
 modalities:
   - widefield_fluorescence
   - transmitted_brightfield
+  - phase_contrast
   - darkfield
 
 modules: []
@@ -21,28 +22,30 @@ modules: []
 software: []
 
 hardware:
-  scanner:    
+  scanner:
+    
     type: none
     notes: ''
     url: ''
 
   light_sources:
     - kind: halogen_lamp
-      manufacturer: Leica 
+      manufacturer: Leica
       model: 12V 100W halogen bulb
       wavelength_nm: broadband
       power: 100 W
       path: transmitted
-      notes: Transmitted light source for Brightfield and Darkfield
+      notes: Transmitted light source for BF, DF, and PH
       url: ''
     - kind: arc_lamp
-      manufacturer: Osram 
+      manufacturer: Leica
       model: 50W HBO short arc bulb
       wavelength_nm: broadband
       power: 50 W
       path: epi
       notes: Fluorescence excitation source
       url: ''
+
   
   light_path:
     cube_mechanisms:
@@ -53,7 +56,6 @@ hardware:
         positions:
           Pos_1:
             name: Filter Cube A (DAPI/Hoechst)
-            # Calculated from text: ex 340-380 nm -> center 360, width 40
             excitation_filter:
               component_type: bandpass
               center_nm: 360
@@ -61,13 +63,11 @@ hardware:
             dichroic:
               component_type: dichroic
               cutoffs_nm: [400]
-            # Calculated from text: em >425 nm -> longpass cut-on 425
             emission_filter:
               component_type: longpass
               cut_on_nm: 425
           Pos_2:
             name: Filter Cube EGFP
-            # Calculated from text: ex 450-490 nm -> center 470, width 40
             excitation_filter:
               component_type: bandpass
               center_nm: 470
@@ -75,14 +75,12 @@ hardware:
             dichroic:
               component_type: dichroic
               cutoffs_nm: [495]
-            # Calculated from text: em 500-550 nm -> center 525, width 50
             emission_filter:
               component_type: bandpass
               center_nm: 525
               width_nm: 50
           Pos_3:
             name: Filter Cube CY3 (TRITC/RFP)
-            # Calculated from text: ex 533-558 nm -> center 545.5, width 25
             excitation_filter:
               component_type: bandpass
               center_nm: 545.5
@@ -90,7 +88,6 @@ hardware:
             dichroic:
               component_type: dichroic
               cutoffs_nm: [565]
-            # Calculated from text: em 570-640 nm -> center 605, width 70
             emission_filter:
               component_type: bandpass
               center_nm: 605
@@ -99,79 +96,75 @@ hardware:
     splitters:
       - name: Camera Port
         type: emission_splitter
-        path: transmitted
-        notes: Camera port for optional detector.
+        path: shared
+        notes: Port for standalone camera system (no computer required); image storage via USB memory device.
 
   objectives:
     - id: 10x_air
       manufacturer: Leica
-      model: PL FLUOTAR 10x/0.30
-      product_code: '506000'
+      model: PL FLUOTAR 10x/0.30 PH1
+      product_code: '506010'
       magnification: 10.0
       numerical_aperture: 0.3
       working_distance: ''
       immersion: air
-      # VOCAB FIXED: 'PL FLUOTAR' maps to 'plan_fluorite'
       correction: plan_fluorite
       afc_compatible: false
-      specialties: []
+      specialties:        
+        - phase
       notes: ''
       url: ''
       is_installed: true
     - id: 20x_air
       manufacturer: Leica
-      model: HC PL APO 20x/0.70 CS
-      product_code: '506513'
+      model: PL FLUOTAR 20x/0.50 PH2
+      product_code: '506013'
       magnification: 20.0
-      numerical_aperture: 0.7
+      numerical_aperture: 0.5
       working_distance: ''
       immersion: air
-      correction: plan_apochromat
+      correction: plan_fluorite
       afc_compatible: false
-      specialties: []
+      specialties:        
+        - phase
       notes: ''
       url: ''
       is_installed: true
-    - id: 40x_oil
+    - id: 40x_air
       manufacturer: Leica
-      model: PL FLUOTAR 40x/1.00-0.50 OIL
-      product_code: '506007'
+      model: PL FLUOTAR 40x/0.70 PH2
+      product_code: '506014'
       magnification: 40.0
-      numerical_aperture: 1.0
+      numerical_aperture: 0.7
       working_distance: ''
-      immersion: oil
-      # VOCAB FIXED: 'PL FLUOTAR' maps to 'plan_fluorite'
+      immersion: air
       correction: plan_fluorite
       afc_compatible: false
-      specialties: []
-      notes: NA range 1.00-0.50. Note that this has an adjustable iris diaphragm.
+      specialties:        
+        - phase
+      notes: ''
       url: ''
       is_installed: true
-    - id: 63x_oil
+    - id: 63x_air
       manufacturer: Leica
-      model: HCX PL APO 63x/1.32-0.6 OIL
-      product_code: '506180'
+      model: PL FLUOTAR 63x/0.70 CORR PH2
+      product_code: '506062'
       magnification: 63.0
-      numerical_aperture: 1.32
+      numerical_aperture: 0.7
       working_distance: ''
-      immersion: oil
-      correction: plan_apochromat
+      immersion: air
+      correction: plan_fluorite
       afc_compatible: false
-      specialties: []
-      notes: NA range 1.32-0.6. Has an adjustable iris diaphragm for darkfield.
+      specialties:        
+        - phase
+        - correction_collar
+      notes: ''
       url: ''
       is_installed: true
-    - id: 100x_oil
-      manufacturer: Leica
-      model: PL APO 100x/1.40-0.7 OIL
-      product_code: '506038'
-      magnification: 100.0
-      numerical_aperture: 1.4
-      working_distance: ''
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties: []
-      notes: NA range 1.40-0.7. Has an adjustable iris diaphragm for darkfield.
+
+  magnification_changers:
+    - manufacturer: Leica
+      model: 1.6x Auxiliary Lens
+      magnification: 1.6
+      notes: Optional 1.6x auxiliary lens in microscope body.
       url: ''
-      is_installed: true
