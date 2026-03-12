@@ -105,6 +105,31 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(len(result["spectra"]["ex1p"]), 0)
         self.assertGreater(len(result["spectra"]["em"]), 0)
 
+    def test_source_spectrum_parses_multi_line_descriptors(self) -> None:
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 380, max_nm: 760, step_nm: 2 });
+            const spectrum = rt.sourceSpectrum({
+              display_label: '395/25; 440/20; 475/28; 555/15; 640/30',
+              spectral_mode: 'line'
+            }, grid);
+            function localPeak(target) {
+              return Math.max(...grid.map((wavelength, index) => Math.abs(wavelength - target) <= 2 ? (spectrum[index] || 0) : 0));
+            }
+            return {
+              peaks: [395, 440, 475, 555, 640].map((target) => ({
+                target,
+                value: localPeak(target),
+              })),
+              centers: rt.sourceCenters({ display_label: '395/25; 440/20; 475/28; 555/15; 640/30' })
+            };
+            """
+        )
+
+        self.assertEqual(result["centers"], [395, 440, 475, 555, 640])
+        bright_peaks = [entry for entry in result["peaks"] if entry["value"] >= 0.49]
+        self.assertEqual(len(bright_peaks), 5)
+
     def test_stage_propagation_and_detector_models_change_outputs(self) -> None:
         result = self.run_node_json(
             """
