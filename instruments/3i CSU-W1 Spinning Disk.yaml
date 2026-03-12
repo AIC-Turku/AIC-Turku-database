@@ -3,7 +3,7 @@ instrument:
   instrument_id: scope-3i-csu-w1-spinning-disk
   manufacturer: 3i / Zeiss
   model: Marianas CSU-W1 Spinning Disk Confocal
-  year_of_purchase: ''
+  year_of_purchase: '2015'
   funding: ''
   stand_orientation: inverted
   ocular_availability: trinocular
@@ -53,8 +53,8 @@ hardware:
   environment:
     temperature_control: true
     co2_control: true
-    o2_control: true
-    notes: Okolab Full Enclosure Incubator with temperature and digital CO2/O2 control
+    o2_control: false
+    notes: Okolab Full Enclosure Incubator with temperature and digital CO2 control
 
   stages:
     - type: z_piezo
@@ -117,14 +117,23 @@ hardware:
 
     - kind: laser
       manufacturer: 3i
-      model: LaserStack v4
+      model: SingleLine 730nm Laser Launch
       wavelength_nm: 730
-      power: 40 mW
+      power: 30 mW
       role: excitation
       path: confocal
       notes: >
-        Near-IR excitation line. If this line is routinely used with the 809/81 emission channel,
-        the installed NIR dichroic position should be recorded explicitly below.
+        Near-IR excitation line delivered via the CSU-W1 near-IR illumination port.
+        Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter
+        to be documented explicitly in the light path.
+      url: ''
+      
+    - kind: led
+      manufacturer: Excelitas
+      model: X-Cite XLED1
+      wavelength_nm: broadband
+      path: epi
+      notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class widefield fluorescence
       url: ''
 
   detectors:
@@ -205,6 +214,13 @@ hardware:
             name: Alexa 750
             center_nm: 809
             width_nm: 81
+
+          Pos_6:
+            component_type: multiband_bandpass
+            name: Quad-band emitter
+            product_code: FF01-440/521/607/700-25
+            cutoffs_nm: [440, 521, 607, 700]
+            notes: Quad-band emitter for multicolor spinning-disk imaging
 
     splitters: []
 
