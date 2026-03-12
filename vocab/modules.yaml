@@ -111,6 +111,10 @@ terms:
     synonyms: ["AiryScan"]
     tags:
       provides_modality: ["ism"]
+  - id: hardware_triggering
+    label: "Hardware Triggering"
+    description: "Hardware-level synchronization module for deterministic timing between cameras, scanners, lasers, shutters, and other devices during fast or complex acquisitions."
+    synonyms: ["triggering kit", "device synchronization", "ttl triggering"]
   - id: workstation
     label: "High-Performance Workstation"
     description: "Dedicated compute workstation for acquisition control, rapid image processing, and handling large microscopy datasets."

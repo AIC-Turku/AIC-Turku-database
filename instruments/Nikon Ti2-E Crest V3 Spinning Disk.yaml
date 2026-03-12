@@ -3,7 +3,7 @@ instrument:
   instrument_id: scope-nikon-crest-v3
   manufacturer: Nikon / CrestOptics
   model: Eclipse Ti2-E with X-Light V3 HTDS
-  year_of_purchase: 2025
+  year_of_purchase: '2025'
   funding: ''
   stand_orientation: inverted
   ocular_availability: trinocular
@@ -127,7 +127,7 @@ hardware:
       model: T12-D-LHLED LED Lamp House
       wavelength_nm: white
       power: ''
-      path: transmitted
+      path: shared
       notes: For DIA transmitted illumination
       url: ''
 
@@ -299,12 +299,12 @@ hardware:
         path: transmitted
         notes: Neutral filter for assigning the light path to single camera
       - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
-        type: dichroic_splitter
+        type: emission_splitter
         path: confocal
         cutoffs_nm: [485, 560, 645]
         notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
       - name: MXR00545 V3 DualCam-CFP/YFP 2 Bands Celesta Set
-        type: dichroic_splitter
+        type: emission_splitter
         path: confocal
         notes: 'Additional DualCam Splitter option for CFP/YFP imaging.'
 
