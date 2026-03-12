@@ -128,28 +128,33 @@
 
   function parseCollectionWindow(textValue) {
     const text = cleanString(textValue);
-    if (!text) return { center: null, width: null };
+    if (!text) return { min: null, max: null };
     const bandMatch = text.match(/(\d{3,4})\s*[-–]\s*(\d{3,4})/);
     if (bandMatch) {
       const low = Number(bandMatch[1]);
       const high = Number(bandMatch[2]);
-      return { center: (low + high) / 2, width: Math.max(4, high - low) };
+      return { min: low, max: high };
     }
     const singleMatch = text.match(/(\d{3,4})\s*nm/i);
     if (singleMatch) {
-      return { center: Number(singleMatch[1]), width: 40 };
+      return { min: Number(singleMatch[1]) - 20, max: Number(singleMatch[1]) + 20 };
     }
-    return { center: null, width: null };
+    return { min: null, max: null };
   }
 
   function defaultDetectorCollection(detector) {
     const parsed = [detector && detector.channel_name, detector && detector.display_label, detector && detector.name]
       .map(parseCollectionWindow)
-      .find((entry) => entry.center !== null) || { center: null, width: null };
-    return {
-      center: numberOrNull(detector && (detector.collection_center_nm ?? detector.channel_center_nm ?? detector.wavelength_nm)) ?? parsed.center ?? 550,
-      width: numberOrNull(detector && (detector.collection_width_nm ?? detector.bandwidth_nm ?? detector.width_nm)) ?? parsed.width ?? 40,
-    };
+      .find((entry) => entry.min !== null && entry.max !== null) || { min: null, max: null };
+    const explicitMin = numberOrNull(detector && (detector.collection_min_nm ?? detector.min_nm));
+    const explicitMax = numberOrNull(detector && (detector.collection_max_nm ?? detector.max_nm));
+    if (explicitMin !== null && explicitMax !== null) {
+      return { min: Math.min(explicitMin, explicitMax), max: Math.max(explicitMin, explicitMax) };
+    }
+    const center = numberOrNull(detector && (detector.collection_center_nm ?? detector.channel_center_nm ?? detector.wavelength_nm)) ?? ((parsed.min !== null && parsed.max !== null) ? ((parsed.min + parsed.max) / 2) : 550);
+    const width = numberOrNull(detector && (detector.collection_width_nm ?? detector.bandwidth_nm ?? detector.width_nm)) ?? ((parsed.min !== null && parsed.max !== null) ? (parsed.max - parsed.min) : 40);
+    const halfWidth = Math.max(2, width / 2);
+    return { min: center - halfWidth, max: center + halfWidth };
   }
 
   function ensureDetectorSetting(mechanism, detector) {
@@ -161,8 +166,8 @@
         enabled: true,
         user_gain: numberOrNull(detector.default_gain) ?? 1,
         collection_enabled: detectorClass !== 'camera',
-        collection_center_nm: defaults.center,
-        collection_width_nm: defaults.width,
+        collection_min_nm: defaults.min,
+        collection_max_nm: defaults.max,
       });
     }
     return state.detectorSettings.get(key);
@@ -467,6 +472,28 @@
         fixed.textContent = `λ = ${source.wavelength_nm} nm`;
         card.appendChild(fixed);
       }
+
+      const powerReadout = document.createElement('div');
+      powerReadout.className = 'tunable-range-label';
+      const powerSlider = document.createElement('input');
+      powerSlider.type = 'range';
+      powerSlider.min = '0';
+      powerSlider.max = '1';
+      powerSlider.step = '0.01';
+      powerSlider.value = String(numberOrNull(setting.user_weight) ?? 1);
+      powerSlider.disabled = !setting.enabled;
+      powerSlider.addEventListener('input', () => {
+        setting.user_weight = Number(powerSlider.value);
+        powerReadout.textContent = `Relative source power: ${Math.round(Number(powerSlider.value) * 100)}%`;
+        refreshOutputs();
+      });
+      const syncPowerDisabled = () => {
+        powerSlider.disabled = !setting.enabled;
+      };
+      checkbox.addEventListener('change', syncPowerDisabled);
+      powerReadout.textContent = `Relative source power: ${Math.round(Number(powerSlider.value) * 100)}%`;
+      card.appendChild(powerReadout);
+      card.appendChild(powerSlider);
 
       const simultaneousLines = numberOrNull(source.simultaneous_lines_max);
       if (simultaneousLines !== null) {
@@ -795,39 +822,55 @@
       collectionToggle.appendChild(document.createTextNode('Apply PMT/APD collection window'));
       block.appendChild(collectionToggle);
 
-      const centerReadout = document.createElement('div');
-      centerReadout.className = 'vm-mini';
-      const centerSlider = document.createElement('input');
-      centerSlider.type = 'range';
-      centerSlider.min = '350';
-      centerSlider.max = '850';
-      centerSlider.step = '1';
-      centerSlider.value = String(numberOrNull(setting.collection_center_nm) ?? 550);
-      centerSlider.addEventListener('input', () => {
-        setting.collection_center_nm = Number(centerSlider.value);
-        centerReadout.textContent = `Collection center: ${Math.round(Number(centerSlider.value))} nm`;
+      const minReadout = document.createElement('div');
+      minReadout.className = 'vm-mini';
+      const minSlider = document.createElement('input');
+      minSlider.type = 'range';
+      minSlider.min = '350';
+      minSlider.max = '850';
+      minSlider.step = '1';
+      minSlider.value = String(Math.round(numberOrNull(setting.collection_min_nm) ?? 500));
+      minSlider.addEventListener('input', () => {
+        const proposedMin = Number(minSlider.value);
+        const currentMax = numberOrNull(setting.collection_max_nm) ?? 700;
+        setting.collection_min_nm = Math.min(proposedMin, currentMax - 1);
+        minSlider.value = String(Math.round(setting.collection_min_nm));
+        if (numberOrNull(setting.collection_max_nm) !== null && Number(setting.collection_max_nm) <= setting.collection_min_nm) {
+          setting.collection_max_nm = setting.collection_min_nm + 1;
+          maxSlider.value = String(Math.round(setting.collection_max_nm));
+        }
+        minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
+        maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
         refreshOutputs();
       });
-      centerReadout.textContent = `Collection center: ${Math.round(Number(centerSlider.value))} nm`;
-      block.appendChild(centerReadout);
-      block.appendChild(centerSlider);
+      minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
+      block.appendChild(minReadout);
+      block.appendChild(minSlider);
 
-      const widthReadout = document.createElement('div');
-      widthReadout.className = 'vm-mini';
-      const widthSlider = document.createElement('input');
-      widthSlider.type = 'range';
-      widthSlider.min = '4';
-      widthSlider.max = '250';
-      widthSlider.step = '1';
-      widthSlider.value = String(numberOrNull(setting.collection_width_nm) ?? 40);
-      widthSlider.addEventListener('input', () => {
-        setting.collection_width_nm = Number(widthSlider.value);
-        widthReadout.textContent = `Collection width: ${Math.round(Number(widthSlider.value))} nm`;
+      const maxReadout = document.createElement('div');
+      maxReadout.className = 'vm-mini';
+      const maxSlider = document.createElement('input');
+      maxSlider.type = 'range';
+      maxSlider.min = '351';
+      maxSlider.max = '900';
+      maxSlider.step = '1';
+      maxSlider.value = String(Math.round(numberOrNull(setting.collection_max_nm) ?? 540));
+      maxSlider.addEventListener('input', () => {
+        const proposedMax = Number(maxSlider.value);
+        const currentMin = numberOrNull(setting.collection_min_nm) ?? 350;
+        setting.collection_max_nm = Math.max(proposedMax, currentMin + 1);
+        maxSlider.value = String(Math.round(setting.collection_max_nm));
+        if (numberOrNull(setting.collection_min_nm) !== null && Number(setting.collection_min_nm) >= setting.collection_max_nm) {
+          setting.collection_min_nm = setting.collection_max_nm - 1;
+          minSlider.value = String(Math.round(setting.collection_min_nm));
+        }
+        minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
+        maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
         refreshOutputs();
       });
-      widthReadout.textContent = `Collection width: ${Math.round(Number(widthSlider.value))} nm`;
-      block.appendChild(widthReadout);
-      block.appendChild(widthSlider);
+      maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
+      block.appendChild(maxReadout);
+      block.appendChild(maxSlider);
     }
 
     if (detector.supports_time_gating) {
@@ -990,8 +1033,8 @@
           ...detector,
           user_gain: numberOrNull(setting.user_gain) ?? 1,
           collection_enabled: Boolean(setting.collection_enabled),
-          collection_center_nm: numberOrNull(setting.collection_center_nm),
-          collection_width_nm: numberOrNull(setting.collection_width_nm),
+          collection_min_nm: numberOrNull(setting.collection_min_nm),
+          collection_max_nm: numberOrNull(setting.collection_max_nm),
         });
       });
     });
@@ -1415,10 +1458,10 @@
     }).join(', ') || 'None';
     const detectorText = selection.detectors.map((detector) => {
       const gain = (numberOrNull(detector.user_gain) ?? 1).toFixed(1);
-      const center = numberOrNull(detector.collection_center_nm);
-      const width = numberOrNull(detector.collection_width_nm);
-      const window = detector.collection_enabled && center !== null && width !== null
-        ? ` • ${Math.round(center)}±${Math.round(width / 2)} nm`
+      const minNm = numberOrNull(detector.collection_min_nm);
+      const maxNm = numberOrNull(detector.collection_max_nm);
+      const window = detector.collection_enabled && minNm !== null && maxNm !== null
+        ? ` • ${Math.round(minNm)}-${Math.round(maxNm)} nm`
         : '';
       return `${detector.display_label || detector.name || 'Detector'} ×${gain}${window}`;
     }).join(', ') || 'None';

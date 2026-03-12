@@ -943,10 +943,20 @@
     return gaussian.map((value) => clamp((floor + ((1 - floor) * value)) * peak, 0, 1.25));
   }
 
-  function detectorCollectionMask(detector, grid) {
-    const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && detector.kind);
-    if (className === 'camera') return grid.map(() => 1);
-    if (detector && detector.collection_enabled === false) return grid.map(() => 1);
+  function detectorCollectionBounds(detector) {
+    const explicitMin = firstDefinedNumber(
+      detector && detector.collection_min_nm,
+      detector && detector.min_nm,
+    );
+    const explicitMax = firstDefinedNumber(
+      detector && detector.collection_max_nm,
+      detector && detector.max_nm,
+    );
+    if (explicitMin !== null && explicitMax !== null) {
+      const low = Math.min(explicitMin, explicitMax);
+      const high = Math.max(explicitMin, explicitMax);
+      return { min: low, max: high };
+    }
     const center = firstDefinedNumber(
       detector && detector.collection_center_nm,
       detector && detector.channel_center_nm,
@@ -957,8 +967,22 @@
       detector && detector.bandwidth_nm,
       detector && detector.width_nm,
     );
-    if (center === null || width === null) return grid.map(() => 1);
-    return componentMask({ component_type: 'bandpass', center_nm: center, width_nm: Math.max(4, width) }, grid, { mode: 'emission' });
+    if (center === null || width === null) return { min: null, max: null };
+    const halfWidth = Math.max(2, width / 2);
+    return { min: center - halfWidth, max: center + halfWidth };
+  }
+
+  function detectorCollectionMask(detector, grid) {
+    const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && detector.kind);
+    if (className === 'camera') return grid.map(() => 1);
+    if (detector && detector.collection_enabled === false) return grid.map(() => 1);
+    const bounds = detectorCollectionBounds(detector);
+    if (bounds.min === null || bounds.max === null) return grid.map(() => 1);
+    return componentMask({
+      component_type: 'bandpass',
+      center_nm: (bounds.min + bounds.max) / 2,
+      width_nm: Math.max(4, bounds.max - bounds.min),
+    }, grid, { mode: 'emission' });
   }
 
   function detectorGainFactor(detector) {
@@ -1130,11 +1154,15 @@
       const { ex, em } = fluorophoreSpectra(fluorophore, { preferTwoPhoton: Boolean(options && options.preferTwoPhoton) });
       const excitationCurve = normalizeSpectrumForGrid(ex, grid);
       const emissionCurve = normalizeSpectrumForGrid(em, grid);
+      const excitationInputPower = integrateSpectrum(excitationAtSample, grid);
+      const excitationOverlapPower = integrateSpectrum(multiplyArrays(excitationAtSample, excitationCurve), grid);
+      // Engineering model: selected sources are treated as operating at full relative power by
+      // default, so excitation is normalized to the propagated source power rather than the total
+      // area of the fluorophore excitation curve. A line that lands on the fluorophore excitation
+      // peak should therefore produce a strong excitationStrength close to 1 instead of being
+      // artificially diluted by the full width of the dye spectrum.
       const excitationStrength = clamp(
-        safeRatio(
-          integrateSpectrum(multiplyArrays(excitationAtSample, excitationCurve), grid),
-          integrateSpectrum(excitationCurve, grid)
-        ),
+        safeRatio(excitationOverlapPower, excitationInputPower),
         0,
         1.5
       );
@@ -1185,8 +1213,8 @@
             preDetectorSpectrum: branch.spectrum.slice(),
             collectionMask,
             detectorResponse: response,
-            collectionCenterNm: firstDefinedNumber(detector.collection_center_nm, detector.channel_center_nm),
-            collectionWidthNm: firstDefinedNumber(detector.collection_width_nm, detector.bandwidth_nm),
+            collectionMinNm: detectorCollectionBounds(detector).min,
+            collectionMaxNm: detectorCollectionBounds(detector).max,
           });
           results.push({
             fluorophoreKey: fluorophore.key,
@@ -1253,6 +1281,7 @@
     sourceCenters,
     sourceSpectrum,
     detectorResponse,
+    detectorCollectionBounds,
     detectorCollectionMask,
     selectionIsValid,
     simulateInstrument,
