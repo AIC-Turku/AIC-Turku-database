@@ -11,6 +11,52 @@
   const APD_KINDS = new Set(['apd', 'spad']);
   const POINT_KINDS = new Set(['pmt', 'gaasp_pmt', 'hyd', 'apd', 'spad']);
 
+
+  const FPBASE_FALLBACK_LIBRARY = [
+    {
+      uuid: 'ZERB6',
+      name: 'mCherry',
+      slug: 'mcherry',
+      states: [
+        {
+          slug: 'mcherry_default',
+          name: 'default',
+          is_default: true,
+          ex_max: 587,
+          em_max: 610,
+          ext_coeff: 72000,
+          qy: 0.22,
+          brightness: 15.84,
+          spectra: [
+            { spectrum_type: 'excitation', data: [[460, 0], [500, 8], [540, 35], [560, 62], [575, 90], [587, 100], [600, 78], [620, 28], [650, 0]] },
+            { spectrum_type: 'emission', data: [[560, 0], [580, 18], [595, 55], [610, 100], [625, 82], [645, 34], [675, 7], [710, 0]] }
+          ]
+        }
+      ],
+    },
+    {
+      uuid: 'ZRKRV',
+      name: 'mNeonGreen',
+      slug: 'mneongreen',
+      states: [
+        {
+          slug: 'mneongreen_default',
+          name: 'default',
+          is_default: true,
+          ex_max: 506,
+          em_max: 517,
+          ext_coeff: 116000,
+          qy: 0.8,
+          brightness: 92.8,
+          spectra: [
+            { spectrum_type: 'excitation', data: [[420, 0], [455, 18], [480, 62], [495, 90], [506, 100], [520, 74], [545, 12], [575, 0]] },
+            { spectrum_type: 'emission', data: [[485, 0], [500, 26], [517, 100], [535, 68], [560, 10], [590, 0]] }
+          ]
+        }
+      ],
+    },
+  ];
+
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
@@ -204,17 +250,74 @@
     return [];
   }
 
+
+  function defaultStateRecord(record) {
+    const states = Array.isArray(record && record.states) ? record.states : [];
+    return states.find((state) => Boolean(state && (state.is_default || state.default))) || states[0] || null;
+  }
+
+  function firstDefinedNumber(...values) {
+    for (const value of values) {
+      const numeric = numberOrNull(value);
+      if (numeric !== null) return numeric;
+    }
+    return null;
+  }
+
   function findMaxima(record, fallback) {
-    const exMax = numberOrNull(
-      record && (record.exMax ?? record.ex_max ?? record.exc_max ?? record.excitation_max ?? (record.default_state && record.default_state.ex_max))
+    const state = defaultStateRecord(record);
+    const exMax = firstDefinedNumber(
+      record && (record.exMax ?? record.ex_max ?? record.exc_max ?? record.excitation_max),
+      state && (state.exMax ?? state.ex_max ?? state.exc_max ?? state.excitation_max),
+      record && record.default_state && (record.default_state.exMax ?? record.default_state.ex_max),
     );
-    const emMax = numberOrNull(
-      record && (record.emMax ?? record.em_max ?? record.emission_max ?? (record.default_state && record.default_state.em_max))
+    const emMax = firstDefinedNumber(
+      record && (record.emMax ?? record.em_max ?? record.emission_max),
+      state && (state.emMax ?? state.em_max ?? state.emission_max),
+      record && record.default_state && (record.default_state.emMax ?? record.default_state.em_max),
     );
     return {
       exMax: exMax ?? (fallback && fallback.exMax) ?? null,
       emMax: emMax ?? (fallback && fallback.emMax) ?? null,
     };
+  }
+
+  function gaussianPointSeries(center, width, minNm, maxNm, stepNm) {
+    if (center === null || center === undefined) return [];
+    const sigma = Math.max(8, numberOrNull(width) ?? 35);
+    const start = Math.max(300, Math.round((numberOrNull(minNm) ?? (center - (sigma * 4))) / 5) * 5);
+    const stop = Math.min(1800, Math.round((numberOrNull(maxNm) ?? (center + (sigma * 4))) / 5) * 5);
+    const step = Math.max(2, numberOrNull(stepNm) ?? 5);
+    const points = [];
+    for (let wavelength = start; wavelength <= stop + 1e-9; wavelength += step) {
+      const exponent = -0.5 * (((wavelength - center) / sigma) ** 2);
+      points.push({ x: Number(wavelength.toFixed(3)), y: Number((Math.exp(exponent) * 100).toFixed(6)) });
+    }
+    return points;
+  }
+
+  function synthesizeSpectrumFromMaxima(kind, maximum) {
+    const maxNm = numberOrNull(maximum);
+    if (maxNm === null) return [];
+    if (kind === 'ex2p') {
+      return gaussianPointSeries(maxNm * 2, 80, maxNm * 2 - 260, maxNm * 2 + 260, 10);
+    }
+    if (kind === 'em') {
+      return gaussianPointSeries(maxNm, 42, maxNm - 110, maxNm + 150, 5);
+    }
+    return gaussianPointSeries(maxNm, 34, maxNm - 130, maxNm + 110, 5);
+  }
+
+  function stateScalar(record, keys, fallback = null) {
+    const state = defaultStateRecord(record);
+    const candidates = [];
+    (Array.isArray(keys) ? keys : [keys]).forEach((key) => {
+      candidates.push(record && record[key]);
+      candidates.push(state && state[key]);
+      candidates.push(record && record.default_state && record.default_state[key]);
+    });
+    const numeric = firstDefinedNumber(...candidates);
+    return numeric ?? fallback;
   }
 
   function normalizeFPbaseSearchResults(data) {
@@ -223,15 +326,16 @@
       const key = cleanString(protein && (protein.uuid || protein.slug || protein.id || protein.name)) || `protein_${index + 1}`;
       return {
         key,
+        canonicalKey: key,
         id: protein && protein.id != null ? String(protein.id) : '',
         uuid: cleanString(protein && protein.uuid),
         slug: cleanString(protein && protein.slug),
         name: cleanString(protein && protein.name) || key,
         exMax: maxima.exMax,
         emMax: maxima.emMax,
-        brightness: numberOrNull(protein && (protein.brightness ?? protein.spectral_brightness ?? (protein.default_state && protein.default_state.brightness))),
-        ec: numberOrNull(protein && (protein.ec ?? protein.extinction_coefficient ?? (protein.default_state && protein.default_state.ec))),
-        qy: numberOrNull(protein && (protein.qy ?? protein.quantum_yield ?? (protein.default_state && protein.default_state.qy))),
+        brightness: stateScalar(protein, ['brightness', 'spectral_brightness']),
+        ec: stateScalar(protein, ['ec', 'ext_coeff', 'extinction_coefficient']),
+        qy: stateScalar(protein, ['qy', 'quantum_yield']),
         raw: protein,
       };
     });
@@ -264,7 +368,84 @@
     const matched = (Array.isArray(spectra) ? spectra : []).find((spectrum) =>
       matchSpectrumType(normalizeTypeToken(spectrum), aliases)
     );
-    return matched ? normalizePoints(matched.data) : [];
+    return matched ? normalizePoints(matched.data || matched.points || matched.values) : [];
+  }
+
+  function spectrumRowCandidates(row) {
+    const protein = row && (row.protein || row.fp || row.fluorophore || {});
+    const state = row && (row.state || row.fp_state || {});
+    const proteinKeys = [
+      cleanString(row && row.protein_uuid),
+      cleanString(row && row.protein_slug),
+      cleanString(row && row.protein_name),
+      cleanString(protein && (protein.uuid || protein.slug || protein.name || protein.id)),
+    ].filter(Boolean);
+    const stateKeys = [
+      cleanString(row && row.state_uuid),
+      cleanString(row && row.state_slug),
+      cleanString(row && row.state_name),
+      cleanString(state && (state.uuid || state.slug || state.name || state.id)),
+    ].filter(Boolean);
+    return { proteinKeys, stateKeys };
+  }
+
+  function normalizeFPbaseSpectraResponse(data) {
+    const rows = [];
+    const enqueue = (row) => {
+      if (!row || typeof row !== 'object') return;
+      const points = normalizePoints(row.data || row.points || row.values || row.spectrum);
+      if (!points.length && Array.isArray(row.spectra)) {
+        row.spectra.forEach(enqueue);
+        return;
+      }
+      if (!points.length) return;
+      const token = normalizeTypeToken(row);
+      const type = matchSpectrumType(token, ['2p', 'two-photon', 'two photon'])
+        ? 'ex2p'
+        : matchSpectrumType(token, ['emission', ' em'])
+          ? 'em'
+          : 'ex1p';
+      const { proteinKeys, stateKeys } = spectrumRowCandidates(row);
+      rows.push({
+        type,
+        points,
+        proteinKeys,
+        stateKeys,
+      });
+    };
+
+    if (Array.isArray(data)) data.forEach(enqueue);
+    if (data && typeof data === 'object') {
+      [data.results, data.spectra, data.data, data.rows].forEach((collection) => {
+        if (Array.isArray(collection)) collection.forEach(enqueue);
+      });
+      if (Array.isArray(data.states)) {
+        data.states.forEach((state) => {
+          if (Array.isArray(state && state.spectra)) {
+            state.spectra.forEach((spectrum) => enqueue({ ...spectrum, state_slug: state.slug, state_name: state.name }));
+          }
+        });
+      }
+      if (Array.isArray(data.proteins)) {
+        data.proteins.forEach((protein) => {
+          if (Array.isArray(protein && protein.states)) {
+            protein.states.forEach((state) => {
+              if (Array.isArray(state && state.spectra)) {
+                state.spectra.forEach((spectrum) => enqueue({
+                  ...spectrum,
+                  protein_uuid: protein.uuid,
+                  protein_slug: protein.slug,
+                  protein_name: protein.name,
+                  state_slug: state.slug,
+                  state_name: state.name,
+                }));
+              }
+            });
+          }
+        });
+      }
+    }
+    return rows;
   }
 
   function stateRecordFromRaw(state, index, detail, fallbackSummary) {
@@ -272,20 +453,24 @@
     if (Array.isArray(state && state.spectra)) spectra.push(...state.spectra);
     if (!spectra.length) spectra.push(...collectTopLevelSpectra(detail));
     const maxima = findMaxima(state, findMaxima(detail, fallbackSummary));
-    const ec = numberOrNull(state && (state.ec ?? state.extinction_coefficient))
-      ?? numberOrNull(detail && (detail.ec ?? detail.extinction_coefficient))
-      ?? (fallbackSummary && fallbackSummary.ec)
-      ?? null;
-    const qy = numberOrNull(state && (state.qy ?? state.quantum_yield))
-      ?? numberOrNull(detail && (detail.qy ?? detail.quantum_yield))
-      ?? (fallbackSummary && fallbackSummary.qy)
-      ?? null;
-    const brightness = numberOrNull(state && (state.brightness ?? state.spectral_brightness))
-      ?? numberOrNull(detail && (detail.brightness ?? detail.spectral_brightness))
-      ?? (fallbackSummary && fallbackSummary.brightness)
-      ?? null;
+    const ec = firstDefinedNumber(
+      state && (state.ec ?? state.ext_coeff ?? state.extinction_coefficient),
+      detail && (detail.ec ?? detail.ext_coeff ?? detail.extinction_coefficient),
+      fallbackSummary && fallbackSummary.ec,
+    );
+    const qy = firstDefinedNumber(
+      state && (state.qy ?? state.quantum_yield),
+      detail && (detail.qy ?? detail.quantum_yield),
+      fallbackSummary && fallbackSummary.qy,
+    );
+    const brightness = firstDefinedNumber(
+      state && (state.brightness ?? state.spectral_brightness),
+      detail && (detail.brightness ?? detail.spectral_brightness),
+      fallbackSummary && fallbackSummary.brightness,
+    );
     return {
       key: cleanString(state && (state.uuid || state.slug || state.id || state.name)) || `state_${index + 1}`,
+      slug: cleanString(state && state.slug),
       name: cleanString(state && (state.name || state.label)) || (index === 0 ? 'Default state' : `State ${index + 1}`),
       isDefault: Boolean(state && (state.is_default || state.default || index === 0)),
       ex1p: spectrumFromAliases(spectra, ['excitation', 'absorption', '1p', ' ex']),
@@ -296,6 +481,7 @@
       ec,
       qy,
       brightness,
+      spectraSource: 'detail',
     };
   }
 
@@ -307,6 +493,7 @@
     if (!states.length) {
       states.push({
         key: 'default',
+        slug: 'default',
         name: 'Default state',
         isDefault: true,
         ex1p: [],
@@ -317,16 +504,53 @@
         ec: summary && summary.ec,
         qy: summary && summary.qy,
         brightness: summary && summary.brightness,
+        spectraSource: 'none',
       });
     }
     return states;
   }
 
-  function normalizeFluorophoreDetail(detail, summarySeed) {
+  function matchStateRecord(states, row) {
+    const aliases = new Set((row.stateKeys || []).map((item) => cleanString(item).toLowerCase()).filter(Boolean));
+    let matched = null;
+    if (aliases.size) {
+      matched = states.find((state) => aliases.has(cleanString(state.key).toLowerCase()) || aliases.has(cleanString(state.slug).toLowerCase()) || aliases.has(cleanString(state.name).toLowerCase()));
+    }
+    return matched || states.find((state) => state.isDefault) || states[0] || null;
+  }
+
+  function injectExternalSpectra(states, spectraSeed) {
+    const rows = normalizeFPbaseSpectraResponse(spectraSeed);
+    rows.forEach((row) => {
+      const target = matchStateRecord(states, row);
+      if (!target) return;
+      if (row.type === 'ex2p' && row.points.length) target.ex2p = row.points;
+      if (row.type === 'ex1p' && row.points.length) target.ex1p = row.points;
+      if (row.type === 'em' && row.points.length) target.em = row.points;
+      target.spectraSource = 'api';
+    });
+  }
+
+  function ensureUsableStateSpectra(states) {
+    (Array.isArray(states) ? states : []).forEach((state) => {
+      if (!Array.isArray(state.ex1p) || !state.ex1p.length) {
+        state.ex1p = synthesizeSpectrumFromMaxima('ex1p', state.exMax);
+        if (state.ex1p.length) state.spectraSource = state.spectraSource === 'api' ? 'api+synthetic' : 'synthetic';
+      }
+      if (!Array.isArray(state.em) || !state.em.length) {
+        state.em = synthesizeSpectrumFromMaxima('em', state.emMax);
+        if (state.em.length) state.spectraSource = state.spectraSource === 'api' ? 'api+synthetic' : 'synthetic';
+      }
+    });
+  }
+
+  function normalizeFluorophoreDetail(detail, summarySeed, spectraSeed) {
     const summary = summarySeed && typeof summarySeed === 'object'
       ? summarySeed
       : (normalizeFPbaseSearchResults([detail])[0] || {});
     const states = ensureStateList(detail || {}, summary);
+    if (spectraSeed) injectExternalSpectra(states, spectraSeed);
+    ensureUsableStateSpectra(states);
     const activeState = states.find((state) => state.isDefault) || states[0];
     const key = summary.key || cleanString(detail && (detail.uuid || detail.slug || detail.id || detail.name)) || 'fluorophore';
     return {
@@ -349,11 +573,24 @@
       brightness: activeState.brightness ?? summary.brightness ?? null,
       ec: activeState.ec ?? summary.ec ?? null,
       qy: activeState.qy ?? summary.qy ?? null,
+      spectraSource: activeState.spectraSource || 'detail',
       raw: {
         summary: summarySeed || {},
         detailId: cleanString(detail && (detail.id || detail.slug || detail.uuid || detail.name)),
       },
     };
+  }
+
+  function fallbackFluorophoreRecords() {
+    return FPBASE_FALLBACK_LIBRARY.map((entry) => normalizeFluorophoreDetail(entry, normalizeFPbaseSearchResults([entry])[0] || {}, entry));
+  }
+
+  function searchFallbackFluorophores(query) {
+    const q = cleanString(query).toLowerCase();
+    if (!q) return fallbackFluorophoreRecords();
+    return fallbackFluorophoreRecords().filter((record) => {
+      return [record.name, record.slug, record.uuid].some((value) => cleanString(value).toLowerCase().includes(q));
+    });
   }
 
   function setFluorophoreState(fluorophore, stateKey) {
@@ -374,10 +611,12 @@
       brightness: nextState.brightness ?? fluorophore.brightness ?? null,
       ec: nextState.ec ?? fluorophore.ec ?? null,
       qy: nextState.qy ?? fluorophore.qy ?? null,
+      spectraSource: nextState.spectraSource ?? fluorophore.spectraSource ?? 'detail',
     };
   }
 
   function fluorophoreSpectra(fluorophore, options) {
+
     const preferTwoPhoton = Boolean(options && options.preferTwoPhoton);
     const ex2p = Array.isArray(fluorophore && fluorophore.spectra && fluorophore.spectra.ex2p) ? fluorophore.spectra.ex2p : [];
     const ex1p = Array.isArray(fluorophore && fluorophore.spectra && fluorophore.spectra.ex1p) ? fluorophore.spectra.ex1p : [];
@@ -612,6 +851,7 @@
     return wavelength;
   }
 
+
   function detectorResponse(detector, grid) {
     const kind = cleanString(detector && detector.kind).toLowerCase();
     const className = detectorClass(kind);
@@ -648,7 +888,26 @@
     return gaussian.map((value) => clamp((floor + ((1 - floor) * value)) * peak, 0, 1.25));
   }
 
+  function detectorCollectionMask(detector, grid) {
+    const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && detector.kind);
+    if (className === 'camera') return grid.map(() => 1);
+    if (detector && detector.collection_enabled === false) return grid.map(() => 1);
+    const center = firstDefinedNumber(
+      detector && detector.collection_center_nm,
+      detector && detector.channel_center_nm,
+      detector && detector.wavelength_nm,
+    );
+    const width = firstDefinedNumber(
+      detector && detector.collection_width_nm,
+      detector && detector.bandwidth_nm,
+      detector && detector.width_nm,
+    );
+    if (center === null || width === null) return grid.map(() => 1);
+    return componentMask({ component_type: 'bandpass', center_nm: center, width_nm: Math.max(4, width) }, grid, { mode: 'emission' });
+  }
+
   function detectorGainFactor(detector) {
+
     const gain = numberOrNull(detector && detector.user_gain);
     return gain === null ? 1 : clamp(gain, 0, 20);
   }
@@ -782,6 +1041,7 @@
     return validPaths.some((path) => requiredEntries.every(([key, value]) => path[key] === undefined || path[key] === value));
   }
 
+
   function simulateInstrument(instrument, selection, fluorophores, options) {
     const normalizedInstrument = normalizeInstrumentPayload(instrument);
     const grid = wavelengthGrid(normalizedInstrument.metadata && normalizedInstrument.metadata.wavelength_grid);
@@ -809,6 +1069,8 @@
     );
 
     const results = [];
+    const emittedSpectra = [];
+    const pathSpectra = [];
     fluorList.forEach((fluorophore) => {
       const { ex, em } = fluorophoreSpectra(fluorophore, { preferTwoPhoton: Boolean(options && options.preferTwoPhoton) });
       const excitationCurve = normalizeSpectrumForGrid(ex, grid);
@@ -830,6 +1092,14 @@
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters }];
       const emissionArea = integrateSpectrum(generatedEmission, grid);
 
+      emittedSpectra.push({
+        fluorophoreKey: fluorophore.key,
+        fluorophoreName: fluorophore.name,
+        generatedSpectrum: generatedEmission,
+        postOpticsSpectrum: afterEmissionFilters,
+        sted,
+      });
+
       const detectorTargets = selectedDetectors.length ? selectedDetectors : [{
         id: 'virtual_detector',
         display_label: 'Virtual Detector',
@@ -841,11 +1111,28 @@
 
       detectorTargets.forEach((detector) => {
         const response = detectorResponse(detector, grid);
+        const collectionMask = detectorCollectionMask(detector, grid);
         const gainFactor = detectorGainFactor(detector);
         const gatingFactor = detectorGatingFactor(detector);
         branches.forEach((branch) => {
-          const emissionPathThroughput = safeRatio(integrateSpectrum(branch.spectrum, grid), emissionArea);
-          const detectorWeightedIntensity = integrateSpectrum(multiplyArrays(branch.spectrum, response), grid) * gainFactor * gatingFactor;
+          const collectedSpectrum = applyMask(branch.spectrum, collectionMask);
+          const emissionPathThroughput = safeRatio(integrateSpectrum(collectedSpectrum, grid), emissionArea);
+          const detectorWeightedIntensity = integrateSpectrum(multiplyArrays(collectedSpectrum, response), grid) * gainFactor * gatingFactor;
+          pathSpectra.push({
+            fluorophoreKey: fluorophore.key,
+            fluorophoreName: fluorophore.name,
+            detectorKey: detector.id || detector.display_label || detector.name,
+            detectorLabel: detector.display_label || detector.name || 'Detector',
+            detectorClass: detector.detector_class || detectorClass(detector.kind),
+            pathKey: `${branch.id}::${detector.id || detector.display_label || detector.name || 'detector'}`,
+            pathLabel: `${branch.label} -> ${detector.display_label || detector.name || 'Detector'}`,
+            spectrum: collectedSpectrum,
+            preDetectorSpectrum: branch.spectrum.slice(),
+            collectionMask,
+            detectorResponse: response,
+            collectionCenterNm: firstDefinedNumber(detector.collection_center_nm, detector.channel_center_nm),
+            collectionWidthNm: firstDefinedNumber(detector.collection_width_nm, detector.bandwidth_nm),
+          });
           results.push({
             fluorophoreKey: fluorophore.key,
             fluorophoreName: fluorophore.name,
@@ -880,6 +1167,8 @@
     return {
       grid,
       excitationAtSample,
+      emittedSpectra,
+      pathSpectra,
       selectedSources: selectedSources.map((source) => source.display_label || source.name || 'Source'),
       selectedDetectors: selectedDetectors.map((detector) => detector.display_label || detector.name || 'Detector'),
       validSelection: selectionIsValid(normalizedInstrument.validPaths, selected.selectionMap || {}),
@@ -889,6 +1178,7 @@
 
   return {
     normalizeRouteTags,
+
     routesFromObject,
     routeMatches,
     detectorClass,
@@ -897,7 +1187,9 @@
     normalizeInstrumentPayload,
     normalizeResultsShape,
     normalizeFPbaseSearchResults,
+    normalizeFPbaseSpectraResponse,
     normalizeFluorophoreDetail,
+    searchFallbackFluorophores,
     setFluorophoreState,
     fluorophoreSpectra,
     normalizePoints,
@@ -905,6 +1197,7 @@
     componentMask,
     sourceSpectrum,
     detectorResponse,
+    detectorCollectionMask,
     selectionIsValid,
     simulateInstrument,
   };

@@ -28,10 +28,14 @@
   };
 
   let currentInstrumentId = null;
-  let chartInstance = null;
+  let referenceChart = null;
+  let propagationChart = null;
+  let detectionChart = null;
 
   const DOM = {
-    chart: document.getElementById('spectraChart'),
+    referenceChart: document.getElementById('referenceSpectraChart'),
+    propagationChart: document.getElementById('propagationSpectraChart'),
+    detectionChart: document.getElementById('detectionChart'),
     scopeSel: document.getElementById('microscopeSelector'),
     graph: document.getElementById('lightPathGraph'),
     fpQuery: document.getElementById('fluorophoreQuery'),
@@ -121,12 +125,44 @@
     return state.sourceSettings.get(key);
   }
 
+
+  function parseCollectionWindow(textValue) {
+    const text = cleanString(textValue);
+    if (!text) return { center: null, width: null };
+    const bandMatch = text.match(/(\d{3,4})\s*[-–]\s*(\d{3,4})/);
+    if (bandMatch) {
+      const low = Number(bandMatch[1]);
+      const high = Number(bandMatch[2]);
+      return { center: (low + high) / 2, width: Math.max(4, high - low) };
+    }
+    const singleMatch = text.match(/(\d{3,4})\s*nm/i);
+    if (singleMatch) {
+      return { center: Number(singleMatch[1]), width: 40 };
+    }
+    return { center: null, width: null };
+  }
+
+  function defaultDetectorCollection(detector) {
+    const parsed = [detector && detector.channel_name, detector && detector.display_label, detector && detector.name]
+      .map(parseCollectionWindow)
+      .find((entry) => entry.center !== null) || { center: null, width: null };
+    return {
+      center: numberOrNull(detector && (detector.collection_center_nm ?? detector.channel_center_nm ?? detector.wavelength_nm)) ?? parsed.center ?? 550,
+      width: numberOrNull(detector && (detector.collection_width_nm ?? detector.bandwidth_nm ?? detector.width_nm)) ?? parsed.width ?? 40,
+    };
+  }
+
   function ensureDetectorSetting(mechanism, detector) {
     const key = detectorSettingKey(mechanism, detector);
     if (!state.detectorSettings.has(key)) {
+      const detectorClass = detector.detector_class || VM.detectorClass(detector.kind);
+      const defaults = defaultDetectorCollection(detector);
       state.detectorSettings.set(key, {
         enabled: true,
         user_gain: numberOrNull(detector.default_gain) ?? 1,
+        collection_enabled: detectorClass !== 'camera',
+        collection_center_nm: defaults.center,
+        collection_width_nm: defaults.width,
       });
     }
     return state.detectorSettings.get(key);
@@ -178,7 +214,7 @@
   }
 
   function init() {
-    initChart();
+    initCharts();
     const entries = Object.entries(state.allInstruments || {});
     if (!entries.length) return;
 
@@ -686,6 +722,7 @@
     return block;
   }
 
+
   function createDetectorControl(mechanism) {
     const detector = Object.values(positionsForRoute(mechanism, state.activeRoute))[0];
     if (!detector) return document.createElement('div');
@@ -723,22 +760,75 @@
     meta.textContent = `${detectorClass}${detector.supports_time_gating ? ' • time-gated' : ''}`;
     block.appendChild(meta);
 
-    const readout = document.createElement('div');
-    readout.className = 'tunable-range-label';
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = '0';
-    slider.max = '10';
-    slider.step = '0.1';
-    slider.value = String(setting.user_gain ?? 1);
-    slider.addEventListener('input', () => {
-      setting.user_gain = Number(slider.value);
-      readout.textContent = `${gainLabel}: ${Number(slider.value).toFixed(1)}×`;
+    const gainReadout = document.createElement('div');
+    gainReadout.className = 'tunable-range-label';
+    const gainSlider = document.createElement('input');
+    gainSlider.type = 'range';
+    gainSlider.min = '0';
+    gainSlider.max = '10';
+    gainSlider.step = '0.1';
+    gainSlider.value = String(setting.user_gain ?? 1);
+    gainSlider.addEventListener('input', () => {
+      setting.user_gain = Number(gainSlider.value);
+      gainReadout.textContent = `${gainLabel}: ${Number(gainSlider.value).toFixed(1)}×`;
       refreshOutputs();
     });
-    readout.textContent = `${gainLabel}: ${Number(slider.value).toFixed(1)}×`;
-    block.appendChild(readout);
-    block.appendChild(slider);
+    gainReadout.textContent = `${gainLabel}: ${Number(gainSlider.value).toFixed(1)}×`;
+    block.appendChild(gainReadout);
+    block.appendChild(gainSlider);
+
+    if (detectorClass !== 'camera') {
+      const collectionToggle = document.createElement('label');
+      collectionToggle.className = 'vm-mini';
+      collectionToggle.style.display = 'flex';
+      collectionToggle.style.alignItems = 'center';
+      collectionToggle.style.gap = '6px';
+      collectionToggle.style.marginTop = '4px';
+      const toggleInput = document.createElement('input');
+      toggleInput.type = 'checkbox';
+      toggleInput.checked = Boolean(setting.collection_enabled);
+      toggleInput.addEventListener('change', () => {
+        setting.collection_enabled = toggleInput.checked;
+        refreshOutputs();
+      });
+      collectionToggle.appendChild(toggleInput);
+      collectionToggle.appendChild(document.createTextNode('Apply PMT/APD collection window'));
+      block.appendChild(collectionToggle);
+
+      const centerReadout = document.createElement('div');
+      centerReadout.className = 'vm-mini';
+      const centerSlider = document.createElement('input');
+      centerSlider.type = 'range';
+      centerSlider.min = '350';
+      centerSlider.max = '850';
+      centerSlider.step = '1';
+      centerSlider.value = String(numberOrNull(setting.collection_center_nm) ?? 550);
+      centerSlider.addEventListener('input', () => {
+        setting.collection_center_nm = Number(centerSlider.value);
+        centerReadout.textContent = `Collection center: ${Math.round(Number(centerSlider.value))} nm`;
+        refreshOutputs();
+      });
+      centerReadout.textContent = `Collection center: ${Math.round(Number(centerSlider.value))} nm`;
+      block.appendChild(centerReadout);
+      block.appendChild(centerSlider);
+
+      const widthReadout = document.createElement('div');
+      widthReadout.className = 'vm-mini';
+      const widthSlider = document.createElement('input');
+      widthSlider.type = 'range';
+      widthSlider.min = '4';
+      widthSlider.max = '250';
+      widthSlider.step = '1';
+      widthSlider.value = String(numberOrNull(setting.collection_width_nm) ?? 40);
+      widthSlider.addEventListener('input', () => {
+        setting.collection_width_nm = Number(widthSlider.value);
+        widthReadout.textContent = `Collection width: ${Math.round(Number(widthSlider.value))} nm`;
+        refreshOutputs();
+      });
+      widthReadout.textContent = `Collection width: ${Math.round(Number(widthSlider.value))} nm`;
+      block.appendChild(widthReadout);
+      block.appendChild(widthSlider);
+    }
 
     if (detector.supports_time_gating) {
       const gate = document.createElement('div');
@@ -899,6 +989,9 @@
         selection.detectors.push({
           ...detector,
           user_gain: numberOrNull(setting.user_gain) ?? 1,
+          collection_enabled: Boolean(setting.collection_enabled),
+          collection_center_nm: numberOrNull(setting.collection_center_nm),
+          collection_width_nm: numberOrNull(setting.collection_width_nm),
         });
       });
     });
@@ -906,8 +999,9 @@
     return selection;
   }
 
-  function initChart() {
-    chartInstance = new Chart(DOM.chart, {
+
+  function initLineChart(canvas, yTitle) {
+    return new Chart(canvas, {
       type: 'line',
       data: { datasets: [] },
       options: {
@@ -920,16 +1014,41 @@
         },
         scales: {
           x: { type: 'linear', min: 350, max: 800, title: { display: true, text: 'Wavelength (nm)' } },
-          y: { min: 0, max: 105, title: { display: true, text: 'Relative transmission / intensity (%)' } },
+          y: { min: 0, max: 105, title: { display: true, text: yTitle } },
         },
       },
     });
   }
 
+  function initBarChart(canvas) {
+    return new Chart(canvas, {
+      type: 'bar',
+      data: { labels: [], datasets: [] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { enabled: true },
+        },
+        scales: {
+          x: { ticks: { autoSkip: false } },
+          y: { beginAtZero: true, title: { display: true, text: 'Detected intensity (a.u.)' } },
+        },
+      },
+    });
+  }
+
+  function initCharts() {
+    referenceChart = initLineChart(DOM.referenceChart, 'Relative fluorophore signal (%)');
+    propagationChart = initLineChart(DOM.propagationChart, 'Relative propagated light (%)');
+    detectionChart = initBarChart(DOM.detectionChart);
+  }
+
   function chartDatasetFromGrid(label, grid, values, style) {
     return {
       label,
-      data: grid.map((wavelength, index) => ({ x: wavelength, y: Math.min(105, Math.max(0, (values[index] || 0) * 100)) })),
+      data: grid.map((wavelength, index) => ({ x: wavelength, y: Math.min(105, Math.max(0, values[index] || 0)) })),
       fill: false,
       pointRadius: 0,
       tension: 0.15,
@@ -964,62 +1083,71 @@
     return Math.min(1700, Math.max(800, Math.ceil(maxWavelength / 50) * 50));
   }
 
-  function hardwareDatasetsForComponent(stage, name, component, chartMax) {
-    if (!component || typeof component !== 'object') return [];
-    const grid = VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
-    const type = cleanString(component.component_type || component.type || component.render_kind).toLowerCase();
-    if (component.render_kind === 'source') {
-      const sourceColor = component.role === 'depletion' ? '#dc2626' : '#0f172a';
-      return [chartDatasetFromGrid(
-        component.display_label || component.name || name,
-        grid,
-        VM.sourceSpectrum(component, grid),
-        { borderColor: sourceColor, backgroundColor: rgbaFromHex(sourceColor, 0.1) }
-      )];
-    }
-    if (!type || type === 'detector' || type === 'empty') return [];
-    const context = { mode: stage === 'excitation' ? 'excitation' : 'emission' };
-    let color = '#8b5cf6';
-    if (stage === 'emission') color = '#16a34a';
-    if (type.includes('dichroic')) color = '#f59e0b';
-    if (type === 'notch') color = '#ef4444';
-    const label = component.display_label || component.label || name;
-    return [chartDatasetFromGrid(label, grid, VM.componentMask(component, grid, context), {
-      borderColor: color,
-      backgroundColor: rgbaFromHex(color, 0.1),
-      borderDash: type.includes('dichroic') ? [6, 4] : undefined,
-    })];
+  function spectrumScale(curves) {
+    const globalMax = Math.max(0.001, ...curves.flatMap((values) => Array.isArray(values) ? values : []));
+    return globalMax;
   }
 
-  function drawHardware(selection, simulation) {
-    if (!chartInstance) return;
-    const chartMax = determineChartMax(selection);
-    const datasets = [];
+  function asPercentArray(values, scale) {
+    const denominator = Math.max(0.001, scale || 1);
+    return (Array.isArray(values) ? values : []).map((value) => (Number(value || 0) / denominator) * 100);
+  }
 
-    selection.sources.forEach((source) => {
-      datasets.push(...hardwareDatasetsForComponent('source', source.display_label || source.name || 'Source', source, chartMax));
-    });
-    selection.excitation.forEach((component) => {
-      datasets.push(...hardwareDatasetsForComponent('excitation', component.display_label || component.label || 'Excitation', component, chartMax));
-    });
-    selection.dichroic.forEach((component) => {
-      datasets.push(...hardwareDatasetsForComponent('dichroic', component.display_label || component.label || 'Dichroic', component, chartMax));
-    });
-    selection.emission.forEach((component) => {
-      datasets.push(...hardwareDatasetsForComponent('emission', component.display_label || component.label || 'Emission', component, chartMax));
-    });
-    selection.splitters.forEach((splitter) => {
-      const splitterDichroic = splitter.dichroic && splitter.dichroic.positions ? splitter.dichroic.positions[1] || splitter.dichroic.positions['1'] : null;
-      if (splitterDichroic) {
-        datasets.push(...hardwareDatasetsForComponent('dichroic', 'Splitter dichroic', splitterDichroic, chartMax));
+  function sumSpectra(entries, field, grid) {
+    return (Array.isArray(entries) ? entries : []).reduce((accumulator, entry) => {
+      const values = Array.isArray(entry && entry[field]) ? entry[field] : [];
+      return accumulator.map((current, index) => current + (values[index] || 0));
+    }, grid.map(() => 0));
+  }
+
+  function aggregateSpectraByLabel(entries, field, grid) {
+    const grouped = new Map();
+    (Array.isArray(entries) ? entries : []).forEach((entry) => {
+      const key = entry.pathLabel || entry.label || entry.detectorLabel || 'Path';
+      if (!grouped.has(key)) {
+        grouped.set(key, { label: key, values: grid.map(() => 0), entry });
       }
-      (Array.isArray(splitter.branches) ? splitter.branches : []).forEach((branch) => {
-        if (branch.component) {
-          datasets.push(...hardwareDatasetsForComponent('emission', branch.label || branch.id || 'Splitter branch', branch.component, chartMax));
-        }
-      });
+      const target = grouped.get(key);
+      const values = Array.isArray(entry && entry[field]) ? entry[field] : [];
+      target.values = target.values.map((current, index) => current + (values[index] || 0));
     });
+    return Array.from(grouped.values());
+  }
 
+  function sourceReferenceDatasets(selection) {
+    const datasets = [];
+    selection.sources.forEach((source) => {
+      const wavelength = numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm);
+      const isLine = ['line', 'tunable_line'].includes(cleanString(source.spectral_mode).toLowerCase()) || cleanString(source.kind).toLowerCase() === 'laser';
+      const color = source.role === 'depletion' ? '#dc2626' : colorHex(wavelength || 520);
+      if (isLine && wavelength !== null) {
+        datasets.push({
+          label: `${source.display_label || source.name || 'Source'} line`,
+          data: [{ x: wavelength, y: 0 }, { x: wavelength, y: 100 }],
+          borderColor: color,
+          borderWidth: 2,
+          borderDash: source.role === 'depletion' ? [6, 4] : [2, 2],
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+        });
+      } else {
+        const grid = VM.wavelengthGrid({ min_nm: 350, max_nm: determineChartMax(selection), step_nm: 2 });
+        const sourceSpectrum = VM.sourceSpectrum(source, grid);
+        const scale = spectrumScale([sourceSpectrum]);
+        datasets.push(chartDatasetFromGrid(source.display_label || source.name || 'Source', grid, asPercentArray(sourceSpectrum, scale), {
+          borderColor: color,
+          backgroundColor: rgbaFromHex(color, 0.08),
+        }));
+      }
+    });
+    return datasets;
+  }
+
+  function renderReferenceSpectra(selection) {
+    if (!referenceChart) return;
+    const chartMax = determineChartMax(selection);
+    const datasets = [...sourceReferenceDatasets(selection)];
     mapToArray(state.loadedProteins).forEach((fluorophore) => {
       const color = colorHex(fluorophore.emMax || 520);
       const spectra = VM.fluorophoreSpectra(fluorophore, { preferTwoPhoton: state.preferTwoPhoton });
@@ -1048,21 +1176,62 @@
         });
       }
     });
+    referenceChart.data.datasets = datasets;
+    referenceChart.options.scales.x.max = chartMax;
+    referenceChart.update();
+  }
 
-    if (simulation && Array.isArray(simulation.grid) && Array.isArray(simulation.excitationAtSample) && simulation.excitationAtSample.some((value) => value > 0)) {
-      datasets.push(chartDatasetFromGrid('Excitation at sample', simulation.grid, simulation.excitationAtSample, {
-        borderColor: '#475569',
+  function renderPropagationPanel(selection, simulation) {
+    if (!propagationChart) return;
+    const chartMax = determineChartMax(selection);
+    const grid = Array.isArray(simulation && simulation.grid) ? simulation.grid : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
+    const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
+    const pathEntries = Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [];
+    const totalEmission = sumSpectra(emissionEntries, 'postOpticsSpectrum', grid);
+    const aggregatedPaths = aggregateSpectraByLabel(pathEntries, 'spectrum', grid);
+    const scale = spectrumScale([
+      Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : [],
+      totalEmission,
+      ...aggregatedPaths.map((entry) => entry.values),
+    ]);
+
+    const datasets = [];
+    if (Array.isArray(simulation && simulation.excitationAtSample) && simulation.excitationAtSample.some((value) => value > 0)) {
+      datasets.push(chartDatasetFromGrid('Excitation at sample', grid, asPercentArray(simulation.excitationAtSample, scale), {
+        borderColor: '#334155',
         borderWidth: 2,
       }));
     }
+    emissionEntries.forEach((entry) => {
+      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
+      const color = colorHex((fluor && fluor.emMax) || 520);
+      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} after optics`, grid, asPercentArray(entry.postOpticsSpectrum, scale), {
+        borderColor: color,
+        borderDash: [5, 3],
+        backgroundColor: rgbaFromHex(color, 0.05),
+      }));
+    });
+    aggregatedPaths.forEach((entry, index) => {
+      const palette = ['#0f766e', '#7c3aed', '#ea580c', '#2563eb', '#be123c'];
+      const color = palette[index % palette.length];
+      datasets.push(chartDatasetFromGrid(entry.label, grid, asPercentArray(entry.values, scale), {
+        borderColor: color,
+        backgroundColor: rgbaFromHex(color, 0.08),
+        borderWidth: 3,
+      }));
+      const mask = entry.entry && Array.isArray(entry.entry.collectionMask) ? entry.entry.collectionMask : [];
+      if (mask.some((value) => value < 0.999)) {
+        datasets.push(chartDatasetFromGrid(`${entry.label} window`, grid, asPercentArray(mask, 1), {
+          borderColor: color,
+          borderDash: [2, 4],
+          borderWidth: 1.5,
+        }));
+      }
+    });
 
-    chartInstance.data.datasets = datasets;
-    chartInstance.options.scales.x.max = chartMax;
-    chartInstance.update();
-  }
-
-  function uniqueTexts(values) {
-    return Array.from(new Set((Array.isArray(values) ? values : []).filter(Boolean)));
+    propagationChart.data.datasets = datasets;
+    propagationChart.options.scales.x.max = chartMax;
+    propagationChart.update();
   }
 
   function renderSummary(selection, simulation) {
@@ -1070,14 +1239,23 @@
       const stateSuffix = fluorophore.activeStateName && fluorophore.states && fluorophore.states.length > 1
         ? ` (${fluorophore.activeStateName})`
         : '';
-      return `${fluorophore.name}${stateSuffix}`;
+      const spectraSuffix = fluorophore.spectraSource ? ` • spectra ${fluorophore.spectraSource}` : '';
+      return `${fluorophore.name}${stateSuffix}${spectraSuffix}`;
     }).join(', ') || 'None';
     const sourceText = selection.sources.map((source) => {
       const wavelength = numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm);
       const lambdaText = wavelength !== null ? ` @ ${Math.round(wavelength)} nm` : '';
       return `${source.display_label || source.name || 'Source'}${lambdaText}`;
     }).join(', ') || 'None';
-    const detectorText = selection.detectors.map((detector) => `${detector.display_label || detector.name || 'Detector'} ×${(numberOrNull(detector.user_gain) ?? 1).toFixed(1)}`).join(', ') || 'None';
+    const detectorText = selection.detectors.map((detector) => {
+      const gain = (numberOrNull(detector.user_gain) ?? 1).toFixed(1);
+      const center = numberOrNull(detector.collection_center_nm);
+      const width = numberOrNull(detector.collection_width_nm);
+      const window = detector.collection_enabled && center !== null && width !== null
+        ? ` • ${Math.round(center)}±${Math.round(width / 2)} nm`
+        : '';
+      return `${detector.display_label || detector.name || 'Detector'} ×${gain}${window}`;
+    }).join(', ') || 'None';
     const opticalStages = selection.debugSelections.map((entry) => entry.name).join(' → ') || 'No stage optics selected';
     const stedText = uniqueTexts((simulation && simulation.results || []).filter((result) => result.sted && result.sted.applied).map((result) => `${result.fluorophoreName}: ${result.sted.label} via ${result.sted.sourceLabel}`)).join('; ') || 'No depletion source selected';
     const validity = simulation && simulation.validSelection === false
@@ -1092,6 +1270,28 @@
       `<div><strong>Optical path:</strong> ${opticalStages}</div>`,
       `<div><strong>STED pairing:</strong> ${stedText}</div>`,
     ].join('');
+  }
+
+  function renderDetectionChart(simulation) {
+    if (!detectionChart) return;
+    const results = Array.isArray(simulation && simulation.results) ? simulation.results : [];
+    if (!results.length) {
+      detectionChart.data.labels = [];
+      detectionChart.data.datasets = [];
+      detectionChart.update();
+      return;
+    }
+    const fluorLabels = Array.from(new Set(results.map((row) => row.fluorophoreName)));
+    const pathLabels = Array.from(new Set(results.map((row) => row.pathLabel)));
+    const palette = ['rgba(37, 99, 235, 0.75)', 'rgba(124, 58, 237, 0.75)', 'rgba(234, 88, 12, 0.75)', 'rgba(15, 118, 110, 0.75)', 'rgba(190, 24, 93, 0.75)'];
+    detectionChart.data.labels = fluorLabels;
+    detectionChart.data.datasets = pathLabels.map((pathLabel, index) => ({
+      label: pathLabel,
+      data: fluorLabels.map((fluorName) => results.filter((row) => row.fluorophoreName === fluorName && row.pathLabel === pathLabel).reduce((sum, row) => sum + Number(row.detectorWeightedIntensity || 0), 0)),
+      backgroundColor: palette[index % palette.length],
+      borderWidth: 0,
+    }));
+    detectionChart.update();
   }
 
   function renderScoreboard(simulation) {
@@ -1130,6 +1330,7 @@
   }
 
   function refreshOutputs() {
+
     if (!state.activeInstrumentRaw || !state.activeInstrument) return;
     state.activeRoute = inferRouteFromSourceSettings();
     enforceValidStageOptions();
@@ -1140,15 +1341,30 @@
     });
     state.lastSelection = selection;
     state.lastSimulation = simulation;
-    drawHardware(selection, simulation);
+    renderReferenceSpectra(selection);
+    renderPropagationPanel(selection, simulation);
     renderSummary(selection, simulation);
+    renderDetectionChart(simulation);
     renderScoreboard(simulation);
   }
+
 
   async function requestJSON(url) {
     const response = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error(`FPbase request failed (${response.status})`);
     return response.json();
+  }
+
+  async function requestJSONFirst(urls) {
+    let lastError = null;
+    for (const url of (Array.isArray(urls) ? urls : [])) {
+      try {
+        return await requestJSON(url);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error('No FPbase endpoint could be reached.');
   }
 
   function dedupeFluorophoreResults(rows) {
@@ -1160,91 +1376,155 @@
     return Array.from(byKey.values());
   }
 
-  async function searchFPbase(query) {
-    const q = cleanString(query);
-    if (q.length < 3) {
-      DOM.fpResults.style.display = 'none';
-      DOM.searchStatus.textContent = '';
-      return;
-    }
-    DOM.searchStatus.textContent = 'Searching FPbase…';
-    try {
-      const endpoints = [
-        `https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(q)}&format=json`,
-        `https://www.fpbase.org/api/proteins/?q=${encodeURIComponent(q)}&format=json`,
-      ];
-      const normalized = [];
-      for (const endpoint of endpoints) {
-        try {
-          const data = await requestJSON(endpoint);
-          normalized.push(...VM.normalizeFPbaseSearchResults(data));
-        } catch (error) {
-          // try next endpoint
-        }
-      }
-
-      const results = dedupeFluorophoreResults(normalized)
-        .filter((protein) => cleanString(protein.name).toLowerCase().includes(q.toLowerCase()))
-        .slice(0, 10);
-
-      DOM.fpResults.innerHTML = '';
-      if (!results.length) {
-        DOM.fpResults.style.display = 'none';
-        DOM.searchStatus.textContent = `No FPbase proteins found for “${q}”.`;
-        return;
-      }
-
-      results.forEach((protein) => {
-        const item = document.createElement('li');
-        item.textContent = `${protein.name} (Ex:${protein.exMax || '?'} Em:${protein.emMax || '?'})`;
-        item.addEventListener('click', () => {
-          loadProtein(protein);
-          DOM.fpResults.style.display = 'none';
-          DOM.fpQuery.value = '';
-        });
-        DOM.fpResults.appendChild(item);
-      });
-      DOM.fpResults.style.display = 'block';
-      DOM.searchStatus.textContent = `${results.length} candidate fluorophore${results.length === 1 ? '' : 's'} loaded.`;
-    } catch (error) {
-      DOM.fpResults.style.display = 'none';
-      DOM.searchStatus.textContent = `Error searching FPbase: ${error.message}`;
-    }
+  function fpbaseSearchUrls(query) {
+    const q = encodeURIComponent(query);
+    return [
+      `https://www.fpbase.org/api/proteins/?name__iexact=${q}&format=json`,
+      `https://www.fpbase.org/api/proteins/?name__istartswith=${q}&format=json`,
+      `https://www.fpbase.org/api/proteins/?name__icontains=${q}&format=json`,
+    ];
   }
 
   function proteinIdentifiers(protein) {
     return uniqueTexts([protein.slug, protein.uuid, protein.id, protein.name]);
   }
 
-  async function hydrateProteinFromSearch(protein) {
-    const query = encodeURIComponent(protein.name || protein.slug || protein.id || protein.key || '');
-    if (!query) throw new Error('Protein search result is missing identifiers.');
-    const data = await requestJSON(`https://www.fpbase.org/api/proteins/?q=${query}&format=json`);
-    const candidates = VM.normalizeResultsShape(data);
-    if (!candidates.length) throw new Error('Unable to hydrate FPbase fluorophore detail.');
-    return candidates[0];
+  function fpbaseDetailUrls(protein) {
+    const urls = [];
+    proteinIdentifiers(protein).forEach((identifier) => {
+      urls.push(`https://www.fpbase.org/api/proteins/${encodeURIComponent(identifier)}/?format=json`);
+    });
+    if (protein.name) {
+      urls.push(`https://www.fpbase.org/api/proteins/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(protein.name)}&format=json`);
+    }
+    return uniqueTexts(urls);
   }
 
-  async function fetchProteinDetail(protein) {
-    for (const identifier of proteinIdentifiers(protein)) {
-      try {
-        return await requestJSON(`https://www.fpbase.org/api/proteins/${encodeURIComponent(identifier)}/?format=json`);
-      } catch (error) {
-        // try next identifier
-      }
+  function fpbaseSpectraUrls(protein) {
+    const urls = [];
+    if (protein.name) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
     }
-    return hydrateProteinFromSearch(protein);
+    if (protein.slug) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__slug__iexact=${encodeURIComponent(protein.slug)}&format=json`);
+    }
+    if (protein.uuid) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__uuid=${encodeURIComponent(protein.uuid)}&format=json`);
+    }
+    return uniqueTexts(urls);
+  }
+
+  function normalizeSearchFallback(query) {
+    return VM.searchFallbackFluorophores(query).map((record) => ({
+      key: record.key,
+      canonicalKey: record.canonicalKey,
+      id: record.id,
+      uuid: record.uuid,
+      slug: record.slug,
+      name: record.name,
+      exMax: record.exMax,
+      emMax: record.emMax,
+      brightness: record.brightness,
+      ec: record.ec,
+      qy: record.qy,
+      fallbackRecord: record,
+    }));
+  }
+
+  async function searchFPbase(query) {
+    const q = cleanString(query);
+    if (q.length < 2) {
+      DOM.fpResults.style.display = 'none';
+      DOM.searchStatus.textContent = '';
+      return;
+    }
+    DOM.searchStatus.textContent = 'Searching FPbase…';
+    let results = [];
+    let usedFallback = false;
+    try {
+      const normalized = [];
+      for (const endpoint of fpbaseSearchUrls(q)) {
+        try {
+          const data = await requestJSON(endpoint);
+          normalized.push(...VM.normalizeFPbaseSearchResults(data));
+        } catch (error) {
+          // continue to next documented lookup
+        }
+      }
+      results = dedupeFluorophoreResults(normalized)
+        .filter((protein) => [protein.name, protein.slug, protein.uuid].some((value) => cleanString(value).toLowerCase().includes(q.toLowerCase())))
+        .slice(0, 10);
+      if (!results.length) {
+        usedFallback = true;
+        results = normalizeSearchFallback(q).slice(0, 10);
+      }
+    } catch (error) {
+      usedFallback = true;
+      results = normalizeSearchFallback(q).slice(0, 10);
+    }
+
+    DOM.fpResults.innerHTML = '';
+    if (!results.length) {
+      DOM.fpResults.style.display = 'none';
+      DOM.searchStatus.textContent = `No FPbase proteins found for “${q}”.`;
+      return;
+    }
+
+    results.forEach((protein) => {
+      const item = document.createElement('li');
+      const sourceTag = protein.fallbackRecord ? 'cached' : 'live';
+      item.textContent = `${protein.name} (Ex:${protein.exMax || '?'} Em:${protein.emMax || '?'}) • ${sourceTag}`;
+      item.addEventListener('click', () => {
+        loadProtein(protein);
+        DOM.fpResults.style.display = 'none';
+        DOM.fpQuery.value = '';
+      });
+      DOM.fpResults.appendChild(item);
+    });
+    DOM.fpResults.style.display = 'block';
+    DOM.searchStatus.textContent = usedFallback
+      ? `${results.length} fluorophore candidate${results.length === 1 ? '' : 's'} loaded from the bundled FP cache.`
+      : `${results.length} candidate fluorophore${results.length === 1 ? '' : 's'} loaded from FPbase.`;
+  }
+
+  async function fetchProteinBundle(protein) {
+    if (protein.fallbackRecord) {
+      return { detail: protein.fallbackRecord.raw && protein.fallbackRecord.raw.summary ? protein.fallbackRecord.raw.summary : protein.fallbackRecord, spectra: protein.fallbackRecord };
+    }
+    let detail = null;
+    let spectra = null;
+    try {
+      const detailResponse = await requestJSONFirst(fpbaseDetailUrls(protein));
+      const detailRows = VM.normalizeResultsShape(detailResponse);
+      detail = Array.isArray(detailRows) && detailRows.length ? detailRows[0] : detailResponse;
+    } catch (error) {
+      detail = protein.raw || protein;
+    }
+    try {
+      spectra = await requestJSONFirst(fpbaseSpectraUrls(protein));
+    } catch (error) {
+      spectra = null;
+    }
+    return { detail, spectra };
   }
 
   async function loadProtein(summary) {
     const cacheKey = summary.key || summary.slug || summary.id || summary.name;
     if (state.loadedProteins.has(cacheKey)) return;
+    if (summary.states && summary.spectra) {
+      state.loadedProteins.set(cacheKey, summary);
+      renderActiveDyes();
+      refreshOutputs();
+      return;
+    }
     DOM.searchStatus.textContent = `Loading ${summary.name}…`;
     try {
-      const detail = await fetchProteinDetail(summary);
-      const fluorophore = VM.normalizeFluorophoreDetail(detail, summary);
+      const bundle = await fetchProteinBundle(summary);
+      const fluorophore = VM.normalizeFluorophoreDetail(bundle.detail, summary, bundle.spectra);
       state.loadedProteins.set(cacheKey, fluorophore);
-      DOM.searchStatus.textContent = `${fluorophore.name} loaded.`;
+      DOM.searchStatus.textContent = `${fluorophore.name} loaded (${fluorophore.spectraSource || 'detail'} spectra).`;
       renderActiveDyes();
       refreshOutputs();
     } catch (error) {
@@ -1254,6 +1534,7 @@
   }
 
   function renderActiveDyes() {
+
     DOM.activeDyes.innerHTML = '';
     if (!state.loadedProteins.size) {
       DOM.activeDyes.innerHTML = '<li style="font-size:12px;color:var(--muted)">No dyes loaded.</li>';
@@ -1294,7 +1575,7 @@
       } else if (fluorophore.activeStateName) {
         const subtitle = document.createElement('span');
         subtitle.className = 'vm-mini';
-        subtitle.textContent = fluorophore.activeStateName;
+        subtitle.textContent = `${fluorophore.activeStateName}${fluorophore.spectraSource ? ` • ${fluorophore.spectraSource}` : ''}`;
         left.appendChild(subtitle);
       }
 

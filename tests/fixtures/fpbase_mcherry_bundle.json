@@ -1,0 +1,65 @@
+{
+  "search": [
+    {
+      "uuid": "ZERB6",
+      "name": "mCherry",
+      "slug": "mcherry",
+      "agg": "m",
+      "switch_type": "b",
+      "states": [
+        {
+          "slug": "mcherry_default",
+          "name": "default",
+          "ex_max": 587,
+          "em_max": 610,
+          "ext_coeff": 72000,
+          "qy": 0.22,
+          "brightness": 15.84,
+          "pka": 4.5,
+          "maturation": 15.0,
+          "lifetime": 1.4
+        }
+      ],
+      "transitions": []
+    }
+  ],
+  "detail": {
+    "uuid": "ZERB6",
+    "name": "mCherry",
+    "slug": "mcherry",
+    "states": [
+      {
+        "slug": "mcherry_default",
+        "name": "default",
+        "is_default": true,
+        "ex_max": 587,
+        "em_max": 610,
+        "ext_coeff": 72000,
+        "qy": 0.22,
+        "brightness": 15.84
+      }
+    ]
+  },
+  "spectra": {
+    "results": [
+      {
+        "protein_uuid": "ZERB6",
+        "protein_slug": "mcherry",
+        "protein_name": "mCherry",
+        "state_slug": "mcherry_default",
+        "state_name": "default",
+        "spectrum_type": "excitation",
+        "data": [[460, 0], [500, 8], [540, 35], [560, 62], [575, 90], [587, 100], [600, 78], [620, 28], [650, 0]]
+      },
+      {
+        "protein_uuid": "ZERB6",
+        "protein_slug": "mcherry",
+        "protein_name": "mCherry",
+        "state_slug": "mcherry_default",
+        "state_name": "default",
+        "spectrum_type": "emission",
+        "data": [[560, 0], [580, 18], [595, 55], [610, 100], [625, 82], [645, 34], [675, 7], [710, 0]]
+      }
+    ]
+  }
+}

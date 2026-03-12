@@ -77,7 +77,9 @@ hide:
   .tunable-range-label { font-size: 11px; text-align: center; font-weight: bold;}
   .slider-row input[type="range"] { width: 100%; margin: 2px 0; accent-color: var(--primary); }
 
-  .vm-chart-wrap { background: #fff; border-radius: 12px; padding: 10px; border: 1px solid var(--border); height: 350px; }
+  .vm-chart-wrap { background: #fff; border-radius: 12px; padding: 10px; border: 1px solid var(--border); height: 320px; }
+  .vm-panel-copy { font-size: 12px; color: var(--muted); margin: 4px 0 12px; }
+  .vm-grid-two { display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
   .fp-search-wrap { position: relative; display: flex; gap: 8px; }
   .fp-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); z-index: 100; max-height: 200px; overflow-y: auto; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none;}
   .fp-dropdown li { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
@@ -101,41 +103,49 @@ hide:
   <main class="vm-main">
     
     <div class="vm-panel">
-      <div style="display:flex; gap:20px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 250px;">
-          <h2 class="vm-section-title">1. Choose Fluorophores</h2>
+      <h2 class="vm-section-title">1. Fluorophore Reference Spectra</h2>
+      <p class="vm-panel-copy">Load fluorescent proteins from FPbase, choose active states, and compare excitation and emission spectra against the selected laser lines.</p>
+      <div class="vm-grid-two">
+        <div>
           <div class="fp-search-wrap">
-            <input id="fluorophoreQuery" type="text" placeholder="e.g. GFP, mCherry, DAPI" style="flex:1; border-radius:6px; border:1px solid var(--border); padding:8px;"/>
+            <input id="fluorophoreQuery" type="text" placeholder="e.g. GFP, mCherry, mNeonGreen" style="flex:1; border-radius:6px; border:1px solid var(--border); padding:8px;"/>
             <button id="searchBtn" class="vm-btn">Search</button>
             <ul id="searchResults" class="fp-dropdown"></ul>
           </div>
           <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; cursor:pointer;">
             <input id="use2Photon" type="checkbox" />
-            <span>Use 2-Photon Spectra</span>
+            <span>Use 2-Photon Spectra when available</span>
           </label>
           <p id="searchStatus" style="font-size:11px; margin-top:6px; color:var(--muted);"></p>
         </div>
-        <div style="flex: 1; min-width: 250px;">
-          <h2 class="vm-section-title">Active Dyes</h2>
+        <div>
+          <h3 class="vm-section-title" style="margin-top:0;">Loaded fluorophores</h3>
           <ul id="selectedDyes" style="display:flex; flex-wrap:wrap; gap:8px; padding:0; margin:0;">
             <li style="font-size:12px; color:var(--muted);">No dyes loaded.</li>
           </ul>
         </div>
       </div>
       <div class="vm-chart-wrap" style="margin-top: 16px;">
-        <canvas id="spectraChart"></canvas>
+        <canvas id="referenceSpectraChart"></canvas>
       </div>
     </div>
 
     <div class="vm-panel">
-      <h2 class="vm-section-title">2. Configure Light Path Flow</h2>
-      <div id="lightPathGraph" class="light-path-graph">
-        </div>
+      <h2 class="vm-section-title">2. Propagated Light Through the Optical Path</h2>
+      <p class="vm-panel-copy">Configure the light path below. The middle spectrum panel shows excitation at the sample, fluorescence after the selected optics, and detector-path light after any PMT/APD collection window.</p>
+      <div id="lightPathGraph" class="light-path-graph"></div>
+      <div id="pathSummary" style="font-size:13px; margin:12px 0; padding:10px; border-radius:6px; background:var(--md-code-bg-color); border:1px dashed var(--border);"></div>
+      <div class="vm-chart-wrap">
+        <canvas id="propagationSpectraChart"></canvas>
+      </div>
     </div>
 
     <div class="vm-panel">
-      <h2 class="vm-section-title">3. Detection Scoreboard</h2>
-      <div id="pathSummary" style="font-size:13px; margin-bottom:12px; padding:10px; border-radius:6px; background:var(--md-code-bg-color); border:1px dashed var(--border);"></div>
+      <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>
+      <p class="vm-panel-copy">The bottom panel integrates detector-weighted signal by fluorophore and path. Use it to compare crosstalk, collection efficiency, and the effect of STED/depletion choices.</p>
+      <div class="vm-chart-wrap" style="height:280px; margin-bottom:12px;">
+        <canvas id="detectionChart"></canvas>
+      </div>
       <ul id="signalSimulator" class="vm-list">
         <li style="font-size:13px; color:var(--muted)">Setup light sources and detectors to compute efficiency.</li>
       </ul>

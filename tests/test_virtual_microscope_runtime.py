@@ -3,11 +3,14 @@ import shutil
 import subprocess
 import textwrap
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_runtime.js"
+FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures"
 
 
 class VirtualMicroscopeRuntimeTests(unittest.TestCase):
@@ -44,24 +47,23 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             """
             return rt.normalizeFPbaseSearchResults({
               results: [{
-                id: 123,
-                slug: 'egfp',
-                uuid: 'uuid-egfp',
-                name: 'EGFP',
-                default_state: { ex_max: 488, em_max: 509, brightness: 0.60, ec: 56000, qy: 0.60 }
+                uuid: 'ZERB6',
+                slug: 'mcherry',
+                name: 'mCherry',
+                states: [{ ex_max: 587, em_max: 610, brightness: 15.84, ext_coeff: 72000, qy: 0.22 }]
               }]
             });
             """
         )
 
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["key"], "uuid-egfp")
-        self.assertEqual(result[0]["name"], "EGFP")
-        self.assertEqual(result[0]["exMax"], 488)
-        self.assertEqual(result[0]["emMax"], 509)
-        self.assertEqual(result[0]["brightness"], 0.6)
-        self.assertEqual(result[0]["ec"], 56000)
-        self.assertEqual(result[0]["qy"], 0.6)
+        self.assertEqual(result[0]["key"], "ZERB6")
+        self.assertEqual(result[0]["name"], "mCherry")
+        self.assertEqual(result[0]["exMax"], 587)
+        self.assertEqual(result[0]["emMax"], 610)
+        self.assertEqual(result[0]["brightness"], 15.84)
+        self.assertEqual(result[0]["ec"], 72000)
+        self.assertEqual(result[0]["qy"], 0.22)
 
     def test_fluorophore_detail_normalization_preserves_states_and_spectra(self) -> None:
         result = self.run_node_json(
@@ -270,6 +272,122 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["stedPoor"]["sted"]["label"], "poor")
         self.assertGreater(result["stedGood"]["sted"]["score"], result["stedPoor"]["sted"]["score"])
         self.assertLess(result["stedGood"]["detectorWeightedIntensity"], result["stedPoor"]["detectorWeightedIntensity"])
+
+
+    def test_mcherry_recorded_fpbase_bundle_normalizes_to_usable_spectra(self) -> None:
+        fixture = json.loads((FIXTURE_DIR / "fpbase_mcherry_bundle.json").read_text())
+        result = self.run_node_json(
+            f"""
+            const fixture = {json.dumps(json.loads((FIXTURE_DIR / 'fpbase_mcherry_bundle.json').read_text()))};
+            const summary = rt.normalizeFPbaseSearchResults(fixture.search)[0];
+            const fluor = rt.normalizeFluorophoreDetail(fixture.detail, summary, fixture.spectra);
+            return {{
+              name: fluor.name,
+              exMax: fluor.exMax,
+              emMax: fluor.emMax,
+              spectraSource: fluor.spectraSource,
+              exPoints: fluor.spectra.ex1p.length,
+              emPoints: fluor.spectra.em.length,
+              exPeak: Math.max(...fluor.spectra.ex1p.map((point) => point.y)),
+              emPeak: Math.max(...fluor.spectra.em.map((point) => point.y))
+            }};
+            """
+        )
+
+        self.assertEqual(result["name"], "mCherry")
+        self.assertEqual(result["exMax"], 587)
+        self.assertEqual(result["emMax"], 610)
+        self.assertIn(result["spectraSource"], {"api", "detail", "api+synthetic"})
+        self.assertGreater(result["exPoints"], 5)
+        self.assertGreater(result["emPoints"], 5)
+        self.assertGreater(result["exPeak"], 90)
+        self.assertGreater(result["emPeak"], 90)
+
+    def test_missing_fpbase_spectra_are_synthesized_from_maxima(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = rt.normalizeFluorophoreDetail(
+              { name: 'SyntheticOnly', states: [{ name: 'default', is_default: true, ex_max: 500, em_max: 525 }] },
+              { key: 'synthetic', name: 'SyntheticOnly', exMax: 500, emMax: 525 },
+              null
+            );
+            return {
+              spectraSource: fluor.spectraSource,
+              exPoints: fluor.spectra.ex1p.length,
+              emPoints: fluor.spectra.em.length,
+              exPeak: Math.max(...fluor.spectra.ex1p.map((point) => point.y)),
+              emPeak: Math.max(...fluor.spectra.em.map((point) => point.y))
+            };
+            """
+        )
+
+        self.assertEqual(result["spectraSource"], "synthetic")
+        self.assertGreater(result["exPoints"], 10)
+        self.assertGreater(result["emPoints"], 10)
+        self.assertGreater(result["exPeak"], 90)
+        self.assertGreater(result["emPeak"], 90)
+
+    def test_point_detector_collection_window_changes_output(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'red',
+              name: 'Red',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[560, 0], [600, 20], [640, 100], [670, 35], [700, 0]],
+                ex2p: [],
+                em: [[600, 0], [630, 25], [670, 100], [710, 60], [760, 0]]
+              },
+              exMax: 640,
+              emMax: 670
+            };
+            const instrument = { metadata: { wavelength_grid: { min_nm: 550, max_nm: 800, step_nm: 2 } } };
+            function simulate(center) {
+              return rt.simulateInstrument(
+                instrument,
+                {
+                  sources: [{ display_label: '640 laser', kind: 'laser', role: 'excitation', wavelength_nm: 640, spectral_mode: 'line' }],
+                  excitation: [{ component_type: 'passthrough' }],
+                  dichroic: [],
+                  emission: [{ component_type: 'bandpass', center_nm: 690, width_nm: 140 }],
+                  splitters: [],
+                  detectors: [{ id: 'pmt', display_label: 'PMT', kind: 'pmt', user_gain: 1, collection_enabled: true, collection_center_nm: center, collection_width_nm: 30 }],
+                  selectionMap: {}
+                },
+                [fluor],
+                {}
+              );
+            }
+            const onTarget = simulate(670);
+            const offTarget = simulate(760);
+            return {
+              onTarget: onTarget.results[0].detectorWeightedIntensity,
+              offTarget: offTarget.results[0].detectorWeightedIntensity,
+              pathSpectra: onTarget.pathSpectra.length,
+              maskDip: Math.min(...onTarget.pathSpectra[0].collectionMask)
+            };
+            """
+        )
+
+        self.assertGreater(result["onTarget"], result["offTarget"])
+        self.assertGreater(result["pathSpectra"], 0)
+        self.assertEqual(result["maskDip"], 0)
+
+    def test_live_fpbase_mcherry_search_smoke(self) -> None:
+        url = "https://www.fpbase.org/api/proteins/?name__iexact=mCherry&format=json"
+        try:
+            with urllib.request.urlopen(url, timeout=15) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            self.skipTest(f"Live FPbase API unavailable in this environment: {exc}")
+
+        rows = payload if isinstance(payload, list) else payload.get("results", [])
+        match = next((row for row in rows if row.get("name") == "mCherry"), None)
+        self.assertIsNotNone(match)
+        state = (match.get("states") or [{}])[0]
+        self.assertEqual(state.get("ex_max"), 587)
+        self.assertEqual(state.get("em_max"), 610)
 
 
 if __name__ == "__main__":
