@@ -699,6 +699,10 @@
     return denominator > 0 ? numerator / denominator : 0;
   }
 
+  function arrayMax(values) {
+    return Array.isArray(values) && values.length ? Math.max(...values) : 0;
+  }
+
   function smoothStep(value, edge, width) {
     const safeWidth = Math.max(1, width || 1);
     if (value <= edge - safeWidth) return 0;
@@ -892,6 +896,30 @@
     const localWeight = numberOrNull(source && source.power_weight);
     if (localWeight === null || !allWeights.length) return 1;
     return clamp(localWeight / Math.max(...allWeights), 0.1, 2);
+  }
+
+  function fluorophoreBrightnessFactor(fluorophore) {
+    const referenceBrightness = 55000 * 0.6;
+    const explicitEc = numberOrNull(fluorophore && fluorophore.ec);
+    const explicitQy = numberOrNull(fluorophore && fluorophore.qy);
+    const explicitBrightness = numberOrNull(fluorophore && fluorophore.brightness);
+    if (explicitEc !== null || explicitQy !== null) {
+      const ec = explicitEc !== null ? explicitEc : 50000;
+      const qy = explicitQy !== null ? explicitQy : 0.5;
+      return clamp((ec * qy) / referenceBrightness, 0.05, 4);
+    }
+    if (explicitBrightness !== null) {
+      return clamp(explicitBrightness / referenceBrightness, 0.05, 4);
+    }
+    return 1;
+  }
+
+  function sourceExcitationContribution(sourceSpectrumAtSample, excitationCurve, grid) {
+    const overlapPower = integrateSpectrum(multiplyArrays(sourceSpectrumAtSample, excitationCurve), grid);
+    const lineArea = integrateSpectrum(sourceSpectrumAtSample, grid);
+    const peakAbsorption = clamp(arrayMax(excitationCurve), 0.05, 1);
+    const referenceMatchedLineArea = Math.max(2.25 * peakAbsorption, 0.25);
+    return clamp(safeRatio(overlapPower, Math.max(lineArea, referenceMatchedLineArea)), 0, 1.5);
   }
 
   function dominantWavelength(spectrum, grid) {
@@ -1135,17 +1163,21 @@
     const selectedDetectors = Array.isArray(selected.detectors) ? selected.detectors : [];
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
 
-    let combinedExcitation = grid.map(() => 0);
-    excitationSources.forEach((source) => {
+    const propagatedExcitationSources = excitationSources.map((source) => {
       const weightedSpectrum = scaleArray(sourceSpectrum(source, grid), sourceWeight(source, excitationSources));
-      combinedExcitation = addArrays(combinedExcitation, weightedSpectrum);
+      const atSample = applyComponentSeries(
+        applyComponentSeries(weightedSpectrum, excitationComponents, grid, { mode: 'excitation' }),
+        dichroicComponents,
+        grid,
+        { mode: 'excitation' }
+      );
+      return { source, weightedSpectrum, atSample };
     });
-    const excitationAtSample = applyComponentSeries(
-      applyComponentSeries(combinedExcitation, excitationComponents, grid, { mode: 'excitation' }),
-      dichroicComponents,
-      grid,
-      { mode: 'excitation' }
+    const combinedExcitation = propagatedExcitationSources.reduce(
+      (sum, entry) => addArrays(sum, entry.atSample),
+      grid.map(() => 0)
     );
+    const excitationAtSample = combinedExcitation;
 
     const results = [];
     const emittedSpectra = [];
@@ -1154,20 +1186,21 @@
       const { ex, em } = fluorophoreSpectra(fluorophore, { preferTwoPhoton: Boolean(options && options.preferTwoPhoton) });
       const excitationCurve = normalizeSpectrumForGrid(ex, grid);
       const emissionCurve = normalizeSpectrumForGrid(em, grid);
-      const excitationInputPower = integrateSpectrum(excitationAtSample, grid);
       const excitationOverlapPower = integrateSpectrum(multiplyArrays(excitationAtSample, excitationCurve), grid);
-      // Engineering model: selected sources are treated as operating at full relative power by
-      // default, so excitation is normalized to the propagated source power rather than the total
-      // area of the fluorophore excitation curve. A line that lands on the fluorophore excitation
-      // peak should therefore produce a strong excitationStrength close to 1 instead of being
-      // artificially diluted by the full width of the dye spectrum.
+      // Excitation is additive per source. Each propagated source contributes based on how much of
+      // its own spectrum lands where the fluorophore can absorb; unrelated active lasers should not
+      // dilute one another by appearing in a shared denominator.
       const excitationStrength = clamp(
-        safeRatio(excitationOverlapPower, excitationInputPower),
+        propagatedExcitationSources.reduce(
+          (sum, entry) => sum + sourceExcitationContribution(entry.atSample, excitationCurve, grid),
+          0
+        ),
         0,
         1.5
       );
       const sted = evaluateStedPair(fluorophore, excitationSources, depletionSources, grid);
-      const generatedEmission = scaleArray(emissionCurve, excitationStrength * sted.suppressionFactor);
+      const brightnessFactor = fluorophoreBrightnessFactor(fluorophore);
+      const generatedEmission = scaleArray(emissionCurve, excitationStrength * sted.suppressionFactor * brightnessFactor);
       const afterDichroic = applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' });
       const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
