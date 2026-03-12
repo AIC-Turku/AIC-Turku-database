@@ -3,12 +3,12 @@ instrument:
   instrument_id: scope-andor-bc43
   manufacturer: Andor
   model: BC43
-  year_of_purchase: '2026'
+  year_of_purchase: 2026
   funding: Research Council of Finland FIRI funding
   stand_orientation: benchtop
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution.
+  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage drive.
   url: https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope
 
 modalities:
@@ -28,9 +28,16 @@ modules:
 software:
   - role: acquisition
     name: Fusion BC43
-    version: 2.7.0
+    version: '2.7.0'
     developer: Andor
     url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
+  - role: analysis
+    name: Imaris Quant
+    version: ''
+    developer: Oxford Instruments / Andor
+    notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
+    url: ''
+
 hardware:
   environment:
     temperature_control: true
@@ -40,42 +47,49 @@ hardware:
 
   hardware_autofocus:
     is_installed: true
-    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
+    type: infrared_reflection
 
   scanner:
     type: spinning_disk
-    pinhole_um: null # Flag: strictly required by policy for spinning_disk. Please provide size (e.g., 40, 50).
-    notes: Microlens-spinning disk multipoint confocal
+    pinhole_um: 50
+    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with optimized spacing for deep tissue imaging.
     url: ''
 
   light_sources:
     - kind: laser
       manufacturer: Andor
       model: Borealis Illumination
-      wavelength_nm: '405'
+      wavelength_nm: 405
       power: ''
       notes: Part of BC43 excitation lines
       url: ''
     - kind: laser
       manufacturer: Andor
       model: Borealis Illumination
-      wavelength_nm: '488'
+      wavelength_nm: 488
       power: ''
       notes: Part of BC43 excitation lines
       url: ''
     - kind: laser
       manufacturer: Andor
       model: Borealis Illumination
-      wavelength_nm: '561'
+      wavelength_nm: 561
       power: ''
       notes: Part of BC43 excitation lines
       url: ''
     - kind: laser
       manufacturer: Andor
       model: Borealis Illumination
-      wavelength_nm: '638'
+      wavelength_nm: 638
       power: ''
       notes: Part of BC43 excitation lines
+      url: ''
+    - kind: led
+      manufacturer: Andor
+      model: Transmitted Light Illuminator
+      wavelength_nm: broadband
+      path: transmitted
+      notes: Used for Brightfield and Differential Phase Contrast (DPC).
       url: ''
 
   detectors:
@@ -87,41 +101,43 @@ hardware:
       notes: "16-bit. 18.4 mm field of view."
       url: ''
 
-  splitters: []
+  light_path:
+    dichroic_mechanisms:
+      - name: BC43 Internal Dichroic
+        type: fixed
+        positions:
+          Pos_1:
+            component_type: multiband_dichroic
+            cutoffs_nm: [405, 488, 561, 638]
+            notes: Built-in multiband dichroic for standard 4-line excitation.
 
-  filters:
-    - name: DAPI
-      location: Internal Emission Filter
-      product_code: ''
-      excitation: '' # Flag: Required because widefield_fluorescence is present.
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: '' # Flag: Required because widefield_fluorescence is present.
-      notes: Standard emission filter for DAPI included in BC43
-      url: ''
-    - name: GFP
-      location: Internal Emission Filter
-      product_code: ''
-      excitation: '' # Flag: Required because widefield_fluorescence is present.
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: '' # Flag: Required because widefield_fluorescence is present.
-      notes: Standard emission filter for GFP included in BC43
-      url: ''
-    - name: mCherry
-      location: Internal Emission Filter
-      product_code: ''
-      excitation: '' # Flag: Required because widefield_fluorescence is present.
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: '' # Flag: Required because widefield_fluorescence is present.
-      notes: Standard emission filter for mCherry included in BC43
-      url: ''
-    - name: CY5
-      location: Internal Emission Filter
-      product_code: ''
-      excitation: '' # Flag: Required because widefield_fluorescence is present.
-      dichroic: '' # Flag: Required because widefield_fluorescence is present.
-      emission: '' # Flag: Required because widefield_fluorescence is present.
-      notes: Standard emission filter for CY5 included in BC43
-      url: ''
+    emission_mechanisms:
+      - name: BC43 Internal Emission Filters
+        type: filter_wheel
+        slots: 4
+        positions:
+          Pos_1:
+            name: DAPI
+            component_type: bandpass
+            center_nm: 450
+            width_nm: 50
+          Pos_2:
+            name: GFP
+            component_type: bandpass
+            center_nm: 525
+            width_nm: 50
+          Pos_3:
+            name: mCherry
+            component_type: bandpass
+            center_nm: 600
+            width_nm: 50
+          Pos_4:
+            name: CY5
+            component_type: bandpass
+            center_nm: 685
+            width_nm: 50
+
+    splitters: []
 
   objectives:
     - id: 10x_air
@@ -173,7 +189,7 @@ hardware:
       magnification: 40.0
       numerical_aperture: 1.25
       working_distance: 0.3 mm
-      immersion: silicone # Flag: verify 'silicone' vs 'silicone_oil' in vocab/objective_immersion.yaml
+      immersion: silicone
       correction: plan_apochromat
       afc_compatible: true
       specialties: []
