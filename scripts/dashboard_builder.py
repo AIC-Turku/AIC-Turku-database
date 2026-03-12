@@ -146,6 +146,93 @@ def normalize_optional_bool(value: Any) -> bool | None:
     return None
 
 
+
+
+def _coerce_float(value: Any) -> float | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+    return None
+
+
+def _infer_tunable_range(*values: Any) -> tuple[float | None, float | None]:
+    pattern = re.compile(r"(\d+(?:\.\d+)?)\s*(?:-|to|–)\s*(\d+(?:\.\d+)?)\s*nm", re.IGNORECASE)
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        match = pattern.search(value)
+        if match is None:
+            continue
+        low = _coerce_float(match.group(1))
+        high = _coerce_float(match.group(2))
+        if low is None or high is None:
+            continue
+        return (min(low, high), max(low, high))
+    return (None, None)
+
+
+def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any) -> dict[str, Any]:
+    tunable_min = get_val(light_source, "tunable_min_nm")
+    tunable_max = get_val(light_source, "tunable_max_nm")
+    if tunable_min in (None, "") or tunable_max in (None, ""):
+        inferred_min, inferred_max = _infer_tunable_range(
+            get_val(light_source, "notes"),
+            get_val(light_source, "model", "name"),
+        )
+        if tunable_min in (None, ""):
+            tunable_min = inferred_min
+        if tunable_max in (None, ""):
+            tunable_max = inferred_max
+
+    return {
+        "kind": get_val(light_source, "kind", "type"),
+        "manufacturer": get_val(light_source, "manufacturer"),
+        "model": get_val(light_source, "model", "name"),
+        "technology": get_val(light_source, "technology"),
+        "wavelength_nm": get_val(light_source, "wavelength_nm", "wavelength"),
+        "width_nm": get_val(light_source, "width_nm", "bandwidth_nm"),
+        "tunable_min_nm": tunable_min,
+        "tunable_max_nm": tunable_max,
+        "simultaneous_lines_max": get_val(light_source, "simultaneous_lines_max"),
+        "power": get_val(light_source, "power"),
+        "path": get_val(light_source, "path"),
+        "role": get_val(light_source, "role"),
+        "timing_mode": get_val(light_source, "timing_mode"),
+        "pulse_width_ps": get_val(light_source, "pulse_width_ps"),
+        "repetition_rate_mhz": get_val(light_source, "repetition_rate_mhz"),
+        "depletion_targets_nm": get_val(light_source, "depletion_targets_nm"),
+        "notes": get_val(light_source, "notes"),
+        "url": get_val(light_source, "url"),
+    }
+
+
+def _normalized_detector_payload(detector: dict[str, Any], get_val: Any) -> dict[str, Any]:
+    return {
+        "kind": get_val(detector, "kind", "type"),
+        "manufacturer": get_val(detector, "manufacturer", "name"),
+        "model": get_val(detector, "model"),
+        "channel_name": get_val(detector, "channel_name", "channel", "name"),
+        "path": get_val(detector, "path"),
+        "pixel_pitch_um": get_val(detector, "pixel_pitch_um", "pixel_size_um"),
+        "sensor_format_px": get_val(detector, "sensor_format_px"),
+        "binning": get_val(detector, "binning"),
+        "bit_depth": get_val(detector, "bit_depth"),
+        "qe_peak_pct": get_val(detector, "qe_peak_pct"),
+        "read_noise_e": get_val(detector, "read_noise_e"),
+        "supports_time_gating": get_val(detector, "supports_time_gating"),
+        "default_gating_delay_ns": get_val(detector, "default_gating_delay_ns"),
+        "default_gate_width_ns": get_val(detector, "default_gate_width_ns"),
+        "notes": get_val(detector, "notes"),
+        "url": get_val(detector, "url"),
+    }
+
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
     if not base_dir.exists() or not base_dir.is_dir():
         return []
@@ -798,8 +885,11 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any]) -> dict[str, Any]:
         *splitters,
     ]
 
+    runtime_splitters = copy.deepcopy(lightpath_dto.get("splitters", [])) if isinstance(lightpath_dto, dict) else []
+
     return {
         **copy.deepcopy(lightpath_dto),
+        "runtime_splitters": runtime_splitters,
         "filters": filters,
         "splitters": splitters,
         "sections": sections,
@@ -1149,21 +1239,7 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
     light_sources_raw = raw.get("light_sources")
     if isinstance(light_sources_raw, list):
         hw["light_sources"] = [
-            {
-                "kind": get_val(light_source, "kind", "type"),
-                "manufacturer": get_val(light_source, "manufacturer"),
-                "model": get_val(light_source, "model", "name"),
-                "technology": get_val(light_source, "technology"),
-                "wavelength_nm": get_val(light_source, "wavelength_nm", "wavelength"),
-                "power": get_val(light_source, "power"),
-                "role": get_val(light_source, "role"),
-                "timing_mode": get_val(light_source, "timing_mode"),
-                "pulse_width_ps": get_val(light_source, "pulse_width_ps"),
-                "repetition_rate_mhz": get_val(light_source, "repetition_rate_mhz"),
-                "depletion_targets_nm": get_val(light_source, "depletion_targets_nm"),
-                "notes": get_val(light_source, "notes"),
-                "url": get_val(light_source, "url"),
-            }
+            _normalized_light_source_payload(light_source, get_val)
             for light_source in light_sources_raw
             if isinstance(light_source, dict)
         ]
@@ -1171,22 +1247,7 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
     detectors_raw = raw.get("detectors")
     if isinstance(detectors_raw, list):
         hw["detectors"] = [
-            {
-                "kind": get_val(detector, "kind", "type"),
-                "manufacturer": get_val(detector, "manufacturer", "name"),
-                "model": get_val(detector, "model"),
-                "pixel_pitch_um": get_val(detector, "pixel_pitch_um", "pixel_size_um"),
-                "sensor_format_px": get_val(detector, "sensor_format_px"),
-                "binning": get_val(detector, "binning"),
-                "bit_depth": get_val(detector, "bit_depth"),
-                "qe_peak_pct": get_val(detector, "qe_peak_pct"),
-                "read_noise_e": get_val(detector, "read_noise_e"),
-                "supports_time_gating": get_val(detector, "supports_time_gating"),
-                "default_gating_delay_ns": get_val(detector, "default_gating_delay_ns"),
-                "default_gate_width_ns": get_val(detector, "default_gate_width_ns"),
-                "notes": get_val(detector, "notes"),
-                "url": get_val(detector, "url"),
-            }
+            _normalized_detector_payload(detector, get_val)
             for detector in detectors_raw
             if isinstance(detector, dict)
         ]
