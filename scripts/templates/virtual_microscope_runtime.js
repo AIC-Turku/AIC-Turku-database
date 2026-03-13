@@ -20,50 +20,6 @@
   const POINT_KINDS = new Set(['pmt', 'gaasp_pmt', 'hyd', 'apd', 'spad']);
 
 
-  const FPBASE_FALLBACK_LIBRARY = [
-    {
-      uuid: 'ZERB6',
-      name: 'mCherry',
-      slug: 'mcherry',
-      states: [
-        {
-          slug: 'mcherry_default',
-          name: 'default',
-          is_default: true,
-          ex_max: 587,
-          em_max: 610,
-          ext_coeff: 72000,
-          qy: 0.22,
-          brightness: 15.84,
-          spectra: [
-            { spectrum_type: 'excitation', data: [[460, 0], [500, 8], [540, 35], [560, 62], [575, 90], [587, 100], [600, 78], [620, 28], [650, 0]] },
-            { spectrum_type: 'emission', data: [[560, 0], [580, 18], [595, 55], [610, 100], [625, 82], [645, 34], [675, 7], [710, 0]] }
-          ]
-        }
-      ],
-    },
-    {
-      uuid: 'ZRKRV',
-      name: 'mNeonGreen',
-      slug: 'mneongreen',
-      states: [
-        {
-          slug: 'mneongreen_default',
-          name: 'default',
-          is_default: true,
-          ex_max: 506,
-          em_max: 517,
-          ext_coeff: 116000,
-          qy: 0.8,
-          brightness: 92.8,
-          spectra: [
-            { spectrum_type: 'excitation', data: [[420, 0], [455, 18], [480, 62], [495, 90], [506, 100], [520, 74], [545, 12], [575, 0]] },
-            { spectrum_type: 'emission', data: [[485, 0], [500, 26], [517, 100], [535, 68], [560, 10], [590, 0]] }
-          ]
-        }
-      ],
-    },
-  ];
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -743,21 +699,6 @@
         detailId: cleanString(detail && (detail.id || detail.slug || detail.uuid || detail.name)),
       },
     };
-  }
-
-  function fallbackFluorophoreRecords() {
-    return FPBASE_FALLBACK_LIBRARY.map((entry) => normalizeFluorophoreDetail(entry, {
-      ...(normalizeFPbaseSearchResults([entry])[0] || {}),
-      sourceOrigin: 'bundled_cache',
-    }, entry));
-  }
-
-  function searchFallbackFluorophores(query) {
-    const q = cleanString(query).toLowerCase();
-    if (!q) return fallbackFluorophoreRecords();
-    return fallbackFluorophoreRecords().filter((record) => {
-      return [record.name, record.slug, record.uuid].some((value) => cleanString(value).toLowerCase().includes(q));
-    });
   }
 
   function setFluorophoreState(fluorophore, stateKey) {
@@ -1919,7 +1860,6 @@
     extractSpectra,
     normalizeFPbaseSpectraResponse,
     normalizeFluorophoreDetail,
-    searchFallbackFluorophores,
     setFluorophoreState,
     fluorophoreSpectra,
     normalizePoints,
