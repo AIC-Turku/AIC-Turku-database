@@ -30,19 +30,7 @@ ROUTE_SORT_ORDER = ("confocal", "epi", "tirf", "multiphoton", "transmitted")
 CUBE_LINK_KEYS = ("excitation_filter", "dichroic", "emission_filter")
 CAMERA_DETECTOR_KINDS = {"camera", "scmos", "cmos", "ccd", "emccd"}
 POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}
-TUNABLE_RANGE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:-|to|–)\s*(\d+(?:\.\d+)?)\s*nm", re.IGNORECASE)
 POWER_VALUE_RE = re.compile(r"(\d+(?:\.\d+)?)")
-TRANSMITTED_ROLE_HINTS = (
-    'transmitted',
-    'brightfield',
-    'darkfield',
-    'phase contrast',
-    'phase-contrast',
-    'dic',
-    'diascopic',
-    'dia',
-)
-
 
 def _is_positive_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0

@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
 import re
 
-from dashboard_builder import load_instruments
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.dashboard_builder import load_instruments
 
 
 _WAVELENGTH_BAND_PATTERN = re.compile(r"^\d+(?:\.\d+)?/\d+(?:\.\d+)?$")
