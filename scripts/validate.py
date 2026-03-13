@@ -247,6 +247,26 @@ def _nodes_have_present_value(nodes: list[ResolvedNode]) -> bool:
     return any(node.value not in (None, '') for node in nodes)
 
 
+def _get_software_roles(payload: dict[str, Any]) -> set[str]:
+    software_nodes = _resolve_path_nodes(payload, 'software')
+    roles: set[str] = set()
+    for node in software_nodes:
+        software_value = node.value
+        if isinstance(software_value, list):
+            roles.update(
+                str(item.get('role')).strip().lower()
+                for item in software_value
+                if isinstance(item, dict) and isinstance(item.get('role'), str)
+            )
+        elif isinstance(software_value, dict):
+            roles.update(
+                str(role_key).strip().lower()
+                for role_key in software_value.keys()
+                if isinstance(role_key, str)
+            )
+    return roles
+
+
 def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
     started_utc = payload.get("started_utc")
     if isinstance(started_utc, str):
@@ -321,16 +341,9 @@ class InstrumentCompletenessReport:
 def load_policy(policy_path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
         raw_text = policy_path.read_text(encoding='utf-8')
-    except OSError as exc:
-        return None, f"Failed loading policy '{policy_path.as_posix()}': {exc}"
-
-    try:
         payload = yaml.safe_load(raw_text)
-    except yaml.YAMLError:
-        try:
-            payload = yaml.safe_load(_sanitize_policy_yaml(raw_text))
-        except yaml.YAMLError as exc:
-            return None, f"Failed loading policy '{policy_path.as_posix()}': {exc}"
+    except (OSError, yaml.YAMLError) as exc:
+        return None, f"Failed loading policy '{policy_path.as_posix()}': {exc}"
 
     if payload is None:
         return None, f"Failed loading policy '{policy_path.as_posix()}': YAML document is empty."
@@ -340,19 +353,6 @@ def load_policy(policy_path: Path) -> tuple[dict[str, Any] | None, str | None]:
             f"found {type(payload).__name__}."
         )
     return payload, None
-
-
-def _sanitize_policy_yaml(raw_text: str) -> str:
-    """Normalize known non-YAML inline path list syntax used in policy drafts."""
-
-    sanitized = raw_text
-    sanitized = re.sub(
-        r"^(\s*aliases:\s*)\[([A-Za-z0-9_.\[\]-]+)\]\s*$",
-        lambda m: f"{m.group(1)}['{m.group(2)}']",
-        sanitized,
-        flags=re.MULTILINE,
-    )
-    return sanitized
 
 
 def _load_instrument_policy(
@@ -906,35 +906,15 @@ def _evaluate_required_if(
                 has_detector_match = bool(detector_kinds & targets)
             conditions.append(has_detector_match)
 
-        def _extract_software_roles() -> set[str]:
-            software_nodes = _resolve_path_nodes(payload, 'software')
-            roles: set[str] = set()
-            for node in software_nodes:
-                software_value = node.value
-                if isinstance(software_value, list):
-                    roles.update(
-                        str(item.get('role')).strip().lower()
-                        for item in software_value
-                        if isinstance(item, dict) and isinstance(item.get('role'), str)
-                    )
-                elif isinstance(software_value, dict):
-                    # Backward-compatible support for legacy role-keyed software mapping.
-                    roles.update(
-                        str(role_key).strip().lower()
-                        for role_key in software_value.keys()
-                        if isinstance(role_key, str)
-                    )
-            return roles
-
         software_roles_any_of = condition_spec.get('software_roles_any_of')
         if isinstance(software_roles_any_of, list):
-            present_roles = _extract_software_roles()
+            present_roles = _get_software_roles(payload)
             targets = {str(v).strip().lower() for v in software_roles_any_of if isinstance(v, str)}
             conditions.append(bool(present_roles & targets))
 
         software_roles_none_of = condition_spec.get('software_roles_none_of')
         if isinstance(software_roles_none_of, list):
-            present_roles = _extract_software_roles()
+            present_roles = _get_software_roles(payload)
             blocked = {str(v).strip().lower() for v in software_roles_none_of if isinstance(v, str)}
             conditions.append(present_roles.isdisjoint(blocked))
 
@@ -1348,23 +1328,7 @@ def validate_instrument_ledgers(
         digital_detector_kinds = {'scmos', 'cmos', 'ccd', 'emccd', 'pmt', 'gaasp_pmt', 'hyd', 'apd', 'spad'}
         has_digital_detector = bool(detector_kinds & digital_detector_kinds)
 
-        software_roles: set[str] = set()
-        software_nodes = _resolve_path_nodes(payload, 'software')
-        for node in software_nodes:
-            software_value = node.value
-            if isinstance(software_value, list):
-                software_roles.update(
-                    str(item.get('role')).strip().lower()
-                    for item in software_value
-                    if isinstance(item, dict) and isinstance(item.get('role'), str)
-                )
-            elif isinstance(software_value, dict):
-                # Backward-compatible support for legacy role-keyed software mapping.
-                software_roles.update(
-                    str(role_key).strip().lower()
-                    for role_key in software_value.keys()
-                    if isinstance(role_key, str)
-                )
+        software_roles = _get_software_roles(payload)
 
         has_acquisition_role = 'acquisition' in software_roles
         if has_digital_detector and not has_acquisition_role:
@@ -1428,6 +1392,32 @@ def validate_instrument_ledgers(
                         code='sted_completeness_gap',
                         path=instrument_file.as_posix(),
                         message="STED completeness check: expected at least one detector with supports_time_gating=true.",
+                    )
+                )
+
+        light_sources_nodes = _resolve_path_nodes(payload, 'hardware.light_sources[]')
+        for source_node in light_sources_nodes:
+            source_value = source_node.value
+            if not isinstance(source_value, dict):
+                continue
+            note_value = source_value.get('note')
+            if not isinstance(note_value, str):
+                continue
+            lowered_note = note_value.strip().lower()
+            if not lowered_note:
+                continue
+            implies_tunable = any(keyword in lowered_note for keyword in ('tunable', 'range', 'sweep', 'nm-'))
+            if not implies_tunable:
+                continue
+            if source_value.get('tunable_min_nm') in (None, '') or source_value.get('tunable_max_nm') in (None, ''):
+                warnings.append(
+                    ValidationIssue(
+                        code='cross_field_rule_warning',
+                        path=f"{instrument_file.as_posix()}:{source_node.path}",
+                        message=(
+                            "If a light source note implies a tunable range, tunable_min_nm and "
+                            "tunable_max_nm should be explicitly declared in the YAML."
+                        ),
                     )
                 )
 
