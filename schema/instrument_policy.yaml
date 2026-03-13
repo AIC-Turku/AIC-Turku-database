@@ -507,9 +507,15 @@ sections:
 
       - path: hardware.light_sources[].role
         title: Light source role
-        status: optional
+        status: conditional
         type: string
         vocab: light_source_roles
+        required_if:
+          any_of:
+            - item_field_in:
+                kind: [laser]
+            - item_field_in:
+                type: [laser]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Structured role assignment separates excitation and STED depletion lasers without relying on free-text notes.
 
