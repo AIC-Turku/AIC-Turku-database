@@ -1,0 +1,112 @@
+{
+  "af405": {
+    "id": "af405",
+    "slug": "af405",
+    "name": "AF405",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/af405.json",
+    "aliases": [],
+    "exMax": 401,
+    "emMax": 421
+  },
+  "af488": {
+    "id": "af488",
+    "slug": "af488",
+    "name": "AF488",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/af488.json",
+    "aliases": [],
+    "exMax": 490,
+    "emMax": 525
+  },
+  "af594": {
+    "id": "af594",
+    "slug": "af594",
+    "name": "AF594",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/af594.json",
+    "aliases": [],
+    "exMax": 590,
+    "emMax": 617
+  },
+  "af700": {
+    "id": "af700",
+    "slug": "af700",
+    "name": "AF700",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/af700.json",
+    "aliases": [],
+    "exMax": 702,
+    "emMax": 723
+  },
+  "af790": {
+    "id": "af790",
+    "slug": "af790",
+    "name": "AF790",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/af790.json",
+    "aliases": [],
+    "exMax": 784,
+    "emMax": 814
+  },
+  "atto542": {
+    "id": "atto542",
+    "slug": "atto542",
+    "name": "ATTO542",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/atto542.json",
+    "aliases": [],
+    "exMax": 542,
+    "emMax": 562
+  },
+  "atto647n": {
+    "id": "atto647n",
+    "slug": "atto647n",
+    "name": "ATTO647N",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/atto647n.json",
+    "aliases": [],
+    "exMax": 647,
+    "emMax": 661
+  },
+  "cy3": {
+    "id": "cy3",
+    "slug": "cy3",
+    "name": "CY3",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/cy3.json",
+    "aliases": [],
+    "exMax": 554,
+    "emMax": 568
+  },
+  "cy5": {
+    "id": "cy5",
+    "slug": "cy5",
+    "name": "CY5",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/cy5.json",
+    "aliases": [],
+    "exMax": 649,
+    "emMax": 666
+  },
+  "ir800": {
+    "id": "ir800",
+    "slug": "ir800",
+    "name": "IR800",
+    "source": "local",
+    "source_library": "SpectraScope",
+    "asset_path": "assets/data/spectra/fluorophores/ir800.json",
+    "aliases": [],
+    "exMax": 776,
+    "emMax": 792
+  }
+}
