@@ -1239,7 +1239,7 @@
       ? simulation.grid
       : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
     const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
-    const datasets = [];
+    const datasets = [...sourceReferenceDatasets(selection)];
 
     emissionEntries.forEach((entry) => {
       const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
