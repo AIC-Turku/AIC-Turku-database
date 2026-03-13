@@ -848,6 +848,7 @@
     block.appendChild(meta);
 
     if (detectorClass !== 'camera') {
+      setting.collection_enabled = true;
       const collectionToggle = document.createElement('label');
       collectionToggle.className = 'vm-mini';
       collectionToggle.style.display = 'flex';
@@ -856,13 +857,11 @@
       collectionToggle.style.marginTop = '4px';
       const toggleInput = document.createElement('input');
       toggleInput.type = 'checkbox';
-      toggleInput.checked = Boolean(setting.collection_enabled);
-      toggleInput.addEventListener('change', () => {
-        setting.collection_enabled = toggleInput.checked;
-        refreshOutputs();
-      });
+      toggleInput.checked = true;
+      toggleInput.disabled = true;
+      setting.collection_enabled = true;
       collectionToggle.appendChild(toggleInput);
-      collectionToggle.appendChild(document.createTextNode('Apply detector collection window'));
+      collectionToggle.appendChild(document.createTextNode('Detector collection window (always applied)'));
       block.appendChild(collectionToggle);
 
       const minReadout = document.createElement('div');
@@ -1125,8 +1124,8 @@
   }
 
   function initCharts() {
-    referenceChart = initLineChart(DOM.referenceChart, 'Relative fluorophore signal (%)');
-    propagationChart = initLineChart(DOM.propagationChart, 'Relative propagated light (%)');
+    referenceChart = initLineChart(DOM.referenceChart, 'Normalized absorption / emission (%)');
+    propagationChart = initLineChart(DOM.propagationChart, 'Propagated light (%)');
     detectionChart = initBarChart(DOM.detectionChart);
   }
 
@@ -1233,38 +1232,41 @@
     return datasets;
   }
 
-  function renderReferenceSpectra(selection) {
+  function renderReferenceSpectra(selection, simulation) {
     if (!referenceChart) return;
     const chartMax = determineChartMax(selection);
-    const datasets = [...sourceReferenceDatasets(selection)];
-    mapToArray(state.loadedProteins).forEach((fluorophore) => {
-      const color = colorHex(fluorophore.emMax || 520);
-      const spectra = VM.fluorophoreSpectra(fluorophore, { preferTwoPhoton: state.preferTwoPhoton });
-      if (spectra.ex.length) {
-        datasets.push({
-          label: `${fluorophore.name} ${spectra.exMode === '2p' ? '2P Ex' : 'Ex'}`,
-          data: spectra.ex,
+    const grid = Array.isArray(simulation && simulation.grid)
+      ? simulation.grid
+      : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
+    const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
+    const datasets = [];
+
+    emissionEntries.forEach((entry) => {
+      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
+      const color = colorHex((fluor && fluor.emMax) || 520);
+      const absorptionSpectrum = Array.isArray(entry.absorptionSpectrum) ? entry.absorptionSpectrum : [];
+      if (absorptionSpectrum.some((value) => value > 1e-6)) {
+        datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} absorption`, grid, asPercentArray(absorptionSpectrum, 1), {
           borderColor: color,
-          borderDash: [4, 4],
+          borderDash: [5, 4],
           borderWidth: 2,
-          fill: false,
-          pointRadius: 0,
-          tension: 0.2,
-        });
+          backgroundColor: rgbaFromHex(color, 0.02),
+        }));
       }
-      if (spectra.em.length) {
-        datasets.push({
-          label: `${fluorophore.name} Em`,
-          data: spectra.em,
+
+      const generatedSpectrum = Array.isArray(entry.generatedSpectrum) ? entry.generatedSpectrum : [];
+      if (generatedSpectrum.some((value) => value > 1e-6)) {
+        const exPct = Math.round((Number(entry.excitationEfficiency || 0)) * 100);
+        const depPct = Math.round((Number(entry.depletionOverlap || 0)) * 100);
+        datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} emission (Ex ${exPct}%, Dep ${depPct}%)`, grid, asPercentArray(generatedSpectrum, 1), {
           borderColor: color,
-          backgroundColor: rgbaFromHex(color, 0.08),
+          backgroundColor: rgbaFromHex(color, 0.14),
           borderWidth: 2,
           fill: true,
-          pointRadius: 0,
-          tension: 0.2,
-        });
+        }));
       }
     });
+
     referenceChart.data.datasets = datasets;
     referenceChart.options.scales.x.max = chartMax;
     referenceChart.update();
@@ -1591,11 +1593,11 @@
     const qualityColors = { good: 'var(--primary)', usable: '#ca8a04', poor: 'var(--danger)', blocked: 'var(--muted)' };
     simulation.results
       .slice()
-      .sort((left, right) => (right.planningScore || 0) - (left.planningScore || 0))
+      .sort((left, right) => (right.correctnessScore || 0) - (left.correctnessScore || 0))
       .forEach((result) => {
         const dyeColor = colorHex(mapToArray(state.loadedProteins).find((item) => item.key === result.fluorophoreKey)?.emMax || 520);
-        const stedText = result.sted && result.sted.applied
-          ? ` • STED ${result.sted.label} (${Math.round((result.sted.score || 0) * 100)}%)`
+        const depletionText = Number(result.depletionOverlap || 0) > 0
+          ? ` • depletion ${Math.round((result.depletionOverlap || 0) * 100)}%`
           : '';
         const leakageText = result.excitationLeakageWarningLevel !== 'none'
           ? ` • leak ${result.excitationLeakageWarningLevel}`
@@ -1608,14 +1610,15 @@
           <div style="min-width:0;">
             <div style="font-weight:700; color:${dyeColor};">${result.fluorophoreName}</div>
             <div style="font-size:11px; color:var(--muted);">${result.fluorophoreState} • ${result.pathLabel}</div>
-            <div style="font-size:11px; color:var(--muted);">Detector: ${result.detectorLabel} (${result.detectorClass})${stedText}${leakageText}</div>
-            ${result.laserLeakageNote ? `<div style="font-size:11px; color:var(--danger);">${result.laserLeakageNote}</div>` : ''}
+            <div style="font-size:11px; color:var(--muted);">Detector: ${result.detectorLabel} (${result.detectorClass})${depletionText}${leakageText}</div>
+            ${result.laserLeakageNote ? `<div style="font-size:11px; color:var(--danger); font-weight:700;">${result.laserLeakageNote}</div>` : ''}
           </div>
           <div class="vm-metric">
             <div style="font-weight:700; color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${result.qualityLabel}</div>
-            <div>Ex ${((result.excitationStrength || 0) * 100).toFixed(1)}% | Em ${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</div>
-            <div>Det ${Number(result.detectorWeightedIntensity || 0).toFixed(3)} | XT ${Number(result.crosstalkPct || 0).toFixed(1)}%</div>
-            <div>Leak ${((result.excitationLeakageThroughput || 0) * 100).toFixed(2)}% | Score ${Number(result.planningScore || 0).toFixed(3)}</div>
+            <div>Recorded ${Number(result.recordedIntensity || 0).toFixed(3)}</div>
+            <div>Generated→detector ${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</div>
+            <div>Crosstalk ${Number(result.crosstalkPct || 0).toFixed(1)}% | Leak ${((result.excitationLeakageFraction || 0) * 100).toFixed(1)}%</div>
+            <div>Ex ${((result.excitationEfficiency || 0) * 100).toFixed(1)}% | Score ${Number(result.correctnessScore || 0).toFixed(1)}</div>
           </div>
         `;
         DOM.scoreboard.appendChild(item);
@@ -1644,7 +1647,7 @@
       });
       state.lastSelection = repairedSelection;
       state.lastSimulation = simulation;
-      renderReferenceSpectra(repairedSelection);
+      renderReferenceSpectra(repairedSelection, simulation);
       renderPropagationPanel(repairedSelection, simulation);
       renderSummary(repairedSelection, simulation);
       renderDetectionChart(simulation);
@@ -1653,7 +1656,7 @@
     }
     state.lastSelection = selection;
     state.lastSimulation = simulation;
-    renderReferenceSpectra(selection);
+    renderReferenceSpectra(selection, simulation);
     renderPropagationPanel(selection, simulation);
     renderSummary(selection, simulation);
     renderDetectionChart(simulation);
