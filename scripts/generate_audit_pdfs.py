@@ -8,8 +8,8 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import CSS, HTML
 
-from audit_analyzer import analyze_instrument_completeness
-from dashboard_builder import load_facility_config, load_instruments
+from scripts.audit_analyzer import analyze_instrument_completeness
+from scripts.dashboard_builder import load_facility_config, load_instruments
 
 
 SECTION_DEFINITIONS = {
