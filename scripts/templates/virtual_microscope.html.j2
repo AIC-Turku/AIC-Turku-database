@@ -403,25 +403,6 @@ hide:
           </div>
         </div>
       </section>
-
-      <section class="vm-panel">
-        <div class="vm-path-head">
-          <div>
-            <h2 class="vm-section-title">2. Controlling the Optical Path</h2>
-            <p class="vm-panel-copy">Choose the microscope route, then tune the optics and light sources below. The pipe colors visualize how the spectrum evolves along the path.</p>
-          </div>
-          <div id="opticalRouteChooserWrap" class="vm-field vm-route-field" style="display:none;">
-            <label for="opticalRouteSelector">Optical route</label>
-            <select id="opticalRouteSelector"></select>
-          </div>
-        </div>
-        <div class="vm-utility-row">
-          <button id="vm-btn-autoconfig" class="vm-btn vm-btn-primary">✨ Auto-Configure optimal path</button>
-          <p id="vm-autoconfig-status" class="vm-autoconfig-status"></p>
-        </div>
-        <div id="lightPathGraph" class="light-path-graph"></div>
-        <div id="pathSummary" class="vm-summary-grid"></div>
-      </section>
     </div>
 
     <aside class="vm-main-right">
@@ -440,6 +421,25 @@ hide:
       </section>
     </aside>
   </main>
+
+  <section class="vm-panel" style="margin-top:14px;">
+    <div class="vm-path-head">
+      <div>
+        <h2 class="vm-section-title">2. Controlling the Optical Path</h2>
+        <p class="vm-panel-copy">Choose the microscope route, then tune the optics and light sources below. The pipe colors visualize how the spectrum evolves along the path.</p>
+      </div>
+      <div id="opticalRouteChooserWrap" class="vm-field vm-route-field" style="display:none;">
+        <label for="opticalRouteSelector">Optical route</label>
+        <select id="opticalRouteSelector"></select>
+      </div>
+    </div>
+    <div class="vm-utility-row">
+      <button id="vm-btn-autoconfig" class="vm-btn vm-btn-primary">✨ Auto-Configure optimal path</button>
+      <p id="vm-autoconfig-status" class="vm-autoconfig-status"></p>
+    </div>
+    <div id="lightPathGraph" class="light-path-graph"></div>
+    <div id="pathSummary" class="vm-summary-grid"></div>
+  </section>
 </div>
 
 <script id="lightpath-data" type="application/json">
