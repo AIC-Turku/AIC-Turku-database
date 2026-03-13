@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import CSS, HTML
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.audit_analyzer import analyze_instrument_completeness
 from scripts.dashboard_builder import load_facility_config, load_instruments
