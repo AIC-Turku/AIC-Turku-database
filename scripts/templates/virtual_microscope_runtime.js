@@ -1361,9 +1361,12 @@
       emittedSpectra.push({
         fluorophoreKey: fluorophore.key,
         fluorophoreName: fluorophore.name,
+        absorptionSpectrum: excitationCurve,
         generatedSpectrum: generatedEmission,
         postOpticsSpectrum: afterEmissionFilters,
         excitationOverlapPower,
+        excitationEfficiency: excitationStrength,
+        depletionOverlap: sted.applied ? sted.emissionOverlap : 0,
         sted,
       });
 
