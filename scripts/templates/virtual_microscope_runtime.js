@@ -880,7 +880,9 @@
 
   function wavelengthToRGB(wavelength) {
     const wl = numberOrNull(wavelength);
-    if (wl === null || wl < 380 || wl > 780) return [0, 0, 0];
+    if (wl === null) return [0, 0, 0];
+    if (wl < 380) return [90, 0, 150];
+    if (wl > 780) return [120, 0, 0];
     let red = 0;
     let green = 0;
     let blue = 0;
@@ -1856,6 +1858,8 @@
     results.forEach((result) => {
       const crosstalkPenalty = clamp(1 - ((result.crosstalkPct || 0) / 100), 0.1, 1);
       result.planningScore = result.detectorWeightedIntensity * crosstalkPenalty * leakagePenalty(result.excitationLeakageThroughput || 0);
+      result.recordedIntensity = result.detectorWeightedIntensity;
+      result.correctnessScore = result.planningScore;
       const currentBest = bestPlanningScoreByFluor.get(result.fluorophoreKey) || 0;
       if (result.planningScore > currentBest) {
         bestPlanningScoreByFluor.set(result.fluorophoreKey, result.planningScore);
@@ -1930,5 +1934,6 @@
     detectorCollectionMask,
     selectionIsValid,
     simulateInstrument,
+    optimizeLightPath,
   };
 });
