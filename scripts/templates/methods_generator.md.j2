@@ -250,8 +250,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
+
+            const mainText = document.createElement("span");
+            mainText.textContent = " " + (item.display_label || "Unnamed item");
+            label.appendChild(mainText);
+
             const inlineDetail = cleanText(item.display_subtitle);
-            label.textContent = " " + (item.display_label || "Unnamed item") + (inlineDetail ? ` — ${inlineDetail}` : "");
+            if (inlineDetail) {
+                const noteSpan = document.createElement("span");
+                noteSpan.textContent = ` — ${inlineDetail}`;
+                noteSpan.style.fontSize = "0.85em";
+                noteSpan.style.color = "var(--md-default-fg-color--light)";
+                label.appendChild(noteSpan);
+            }
 
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
