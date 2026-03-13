@@ -350,14 +350,20 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-1';
             systemSelect.listeners.change({ target: systemSelect });
-            const label = document.getElementById('obj-list').children[0].children[1].textContent;
-            return { label };
+            const labelNode = document.getElementById('obj-list').children[0].children[1];
+            const mainText = labelNode.children[0]?.textContent || '';
+            const noteText = labelNode.children[1]?.textContent || '';
+            const noteFontSize = labelNode.children[1]?.style?.fontSize || '';
+            const noteColor = labelNode.children[1]?.style?.color || '';
+            return { mainText, noteText, noteFontSize, noteColor };
             """,
         )
 
-        self.assertIn('HC PL APO 63x Oil', result['label'])
-        self.assertIn('NA 1.40', result['label'])
-        self.assertIn('—', result['label'])
+        self.assertIn('HC PL APO 63x Oil', result['mainText'])
+        self.assertIn('NA 1.40', result['noteText'])
+        self.assertIn('—', result['noteText'])
+        self.assertEqual('0.85em', result['noteFontSize'])
+        self.assertEqual('var(--md-default-fg-color--light)', result['noteColor'])
 
 
 if __name__ == "__main__":
