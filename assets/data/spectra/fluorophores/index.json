@@ -3,110 +3,110 @@
     "id": "af405",
     "slug": "af405",
     "name": "AF405",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/af405.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 401,
-    "emMax": 421
+    "emMax": 421,
+    "source": "local"
   },
   {
     "id": "af488",
     "slug": "af488",
     "name": "AF488",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/af488.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 490,
-    "emMax": 525
+    "emMax": 525,
+    "source": "local"
   },
   {
     "id": "af594",
     "slug": "af594",
     "name": "AF594",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/af594.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 590,
-    "emMax": 617
+    "emMax": 617,
+    "source": "local"
   },
   {
     "id": "af700",
     "slug": "af700",
     "name": "AF700",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/af700.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 702,
-    "emMax": 723
+    "emMax": 723,
+    "source": "local"
   },
   {
     "id": "af790",
     "slug": "af790",
     "name": "AF790",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/af790.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 784,
-    "emMax": 814
+    "emMax": 814,
+    "source": "local"
   },
   {
     "id": "atto542",
     "slug": "atto542",
     "name": "ATTO542",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/atto542.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 542,
-    "emMax": 562
+    "emMax": 562,
+    "source": "local"
   },
   {
     "id": "atto647n",
     "slug": "atto647n",
     "name": "ATTO647N",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/atto647n.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 647,
-    "emMax": 661
+    "emMax": 661,
+    "source": "local"
   },
   {
     "id": "cy3",
     "slug": "cy3",
     "name": "CY3",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/cy3.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 554,
-    "emMax": 568
+    "emMax": 568,
+    "source": "local"
   },
   {
     "id": "cy5",
     "slug": "cy5",
     "name": "CY5",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/cy5.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 649,
-    "emMax": 666
+    "emMax": 666,
+    "source": "local"
   },
   {
     "id": "ir800",
     "slug": "ir800",
     "name": "IR800",
-    "source": "local",
-    "source_library": "SpectraScope",
-    "asset_path": "assets/data/spectra/fluorophores/ir800.json",
     "aliases": [],
+    "category": "fluorophore",
+    "source_library": "SpectraScope",
     "exMax": 776,
-    "emMax": 792
+    "emMax": 792,
+    "source": "local"
   }
 ]
