@@ -831,6 +831,61 @@
     return clamp((value - (edge - safeWidth)) / (2 * safeWidth), 0, 1);
   }
 
+
+  function wavelengthToRGB(wavelength) {
+    const wl = numberOrNull(wavelength);
+    if (wl === null || wl < 380 || wl > 780) return [0, 0, 0];
+    let red = 0;
+    let green = 0;
+    let blue = 0;
+    if (wl >= 380 && wl < 440) {
+      red = -(wl - 440) / 60;
+      blue = 1;
+    } else if (wl < 490) {
+      green = (wl - 440) / 50;
+      blue = 1;
+    } else if (wl < 510) {
+      green = 1;
+      blue = -(wl - 510) / 20;
+    } else if (wl < 580) {
+      red = (wl - 510) / 70;
+      green = 1;
+    } else if (wl < 645) {
+      red = 1;
+      green = -(wl - 645) / 65;
+    } else {
+      red = 1;
+    }
+    let factor = 1;
+    if (wl < 420) factor = 0.3 + ((0.7 * (wl - 380)) / 40);
+    else if (wl > 700) factor = 0.3 + ((0.7 * (780 - wl)) / 80);
+    const gamma = 0.8;
+    const channel = (value) => Math.round(255 * Math.pow(clamp(value * factor, 0, 1), gamma));
+    return [channel(red), channel(green), channel(blue)];
+  }
+
+  function spectrumToCSSColor(spectrumArray, grid) {
+    if (!Array.isArray(spectrumArray) || !Array.isArray(grid) || !spectrumArray.length || !grid.length) {
+      return 'rgba(0,0,0,0)';
+    }
+    const count = Math.min(spectrumArray.length, grid.length);
+    let total = 0;
+    let red = 0;
+    let green = 0;
+    let blue = 0;
+    for (let index = 0; index < count; index += 1) {
+      const intensity = Math.max(0, Number(spectrumArray[index] || 0));
+      if (intensity <= 0) continue;
+      const [r, g, b] = wavelengthToRGB(grid[index]);
+      red += r * intensity;
+      green += g * intensity;
+      blue += b * intensity;
+      total += intensity;
+    }
+    if (total <= 1e-9) return 'rgba(0,0,0,0)';
+    return `rgb(${Math.round(red / total)}, ${Math.round(green / total)}, ${Math.round(blue / total)})`;
+  }
+
   function bandMask(grid, start, end, edgeWidth) {
     const low = Math.min(start, end);
     const high = Math.max(start, end);
@@ -1271,6 +1326,285 @@
     return positions[String(slot)] || positions[slot] || null;
   }
 
+  function mechanismOptionsForRoute(mechanism, route) {
+    if (!mechanism || typeof mechanism !== 'object') return [];
+    const options = Array.isArray(mechanism.options) && mechanism.options.length
+      ? mechanism.options
+      : Object.values(mechanism.positions || {}).map((entry) => ({
+          slot: entry.slot,
+          display_label: entry.display_label || entry.label || `Slot ${entry.slot}`,
+          value: entry,
+        }));
+    return options.filter((option) => routeMatches((option.value && option.value.__routes) || mechanism.__routes, route));
+  }
+
+  function expandCubeSelectionForOptimization(component) {
+    const expanded = [];
+    const excitation = component && (component.excitation_filter || component.excitation || component.ex);
+    const dichroic = component && (component.dichroic_filter || component.dichroic || component.di);
+    const emission = component && (component.emission_filter || component.emission || component.em);
+    if (excitation) expanded.push({ stage: 'excitation', component: excitation });
+    if (dichroic) expanded.push({ stage: 'dichroic', component: dichroic });
+    if (emission) expanded.push({ stage: 'emission', component: emission });
+    return expanded;
+  }
+
+  function routeMechanismsForOptimization(rows, route) {
+    return (Array.isArray(rows) ? rows : []).filter((mechanism) => routeMatches(mechanism.__routes, route));
+  }
+
+  function pointMaskScore(component, wavelengths, mode) {
+    if (!component || !Array.isArray(wavelengths) || !wavelengths.length) return 0;
+    const min = Math.floor(Math.min(...wavelengths) - 20);
+    const max = Math.ceil(Math.max(...wavelengths) + 20);
+    const grid = wavelengthGrid({ min_nm: min, max_nm: max, step_nm: 2 });
+    const mask = componentMask(component, grid, { mode });
+    const sampleAt = (target) => {
+      const idx = grid.reduce((best, wavelength, index) => Math.abs(wavelength - target) < Math.abs(grid[best] - target) ? index : best, 0);
+      return mask[idx] || 0;
+    };
+    return wavelengths.reduce((sum, target) => sum + sampleAt(target), 0) / wavelengths.length;
+  }
+
+  function nearestSourceDistance(source, target) {
+    const targetNm = numberOrNull(target);
+    if (targetNm === null) return Infinity;
+    const centers = sourceCenters(source);
+    if (centers.length) return Math.min(...centers.map((center) => Math.abs(center - targetNm)));
+    const min = numberOrNull(source && source.tunable_min_nm);
+    const max = numberOrNull(source && source.tunable_max_nm);
+    if (min !== null && max !== null) {
+      if (targetNm >= min && targetNm <= max) return 0;
+      return Math.min(Math.abs(targetNm - min), Math.abs(targetNm - max));
+    }
+    return Infinity;
+  }
+
+  function tunedSourceForTarget(source, target) {
+    const clone = { ...(source || {}) };
+    const targetNm = numberOrNull(target);
+    const min = numberOrNull(source && source.tunable_min_nm);
+    const max = numberOrNull(source && source.tunable_max_nm);
+    if (targetNm !== null && min !== null && max !== null) {
+      clone.selected_wavelength_nm = clamp(targetNm, Math.min(min, max), Math.max(min, max));
+    } else if (targetNm !== null && numberOrNull(source && source.wavelength_nm) === null && sourceCenters(source).length) {
+      const centers = sourceCenters(source);
+      clone.selected_wavelength_nm = centers.reduce((best, center) => Math.abs(center - targetNm) < Math.abs(best - targetNm) ? center : best, centers[0]);
+    }
+    return clone;
+  }
+
+  function uniqueByKey(entries, keyFn) {
+    const seen = new Set();
+    return (Array.isArray(entries) ? entries : []).filter((entry) => {
+      const key = keyFn(entry);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function sourceCandidateSetsForRoute(normalizedInstrument, fluorophores, route) {
+    const candidates = [];
+    const mechanisms = routeMechanismsForOptimization(normalizedInstrument.lightSources, route);
+    const targets = (Array.isArray(fluorophores) ? fluorophores : []).map((fluor) => numberOrNull(fluor && fluor.exMax)).filter((value) => value !== null);
+    mechanisms.forEach((mechanism) => {
+      Object.values(mechanism.positions || {}).forEach((source) => {
+        const role = cleanString(source && source.role).toLowerCase();
+        if (role === 'depletion' || role === 'transmitted_illumination') return;
+        targets.forEach((target) => {
+          const distance = nearestSourceDistance(source, target);
+          if (!Number.isFinite(distance)) return;
+          candidates.push({
+            mechanismId: mechanism.id,
+            slot: source.slot,
+            score: Math.max(0, 160 - distance),
+            source: tunedSourceForTarget(source, target),
+          });
+        });
+      });
+    });
+    const narrowed = uniqueByKey(candidates.sort((a, b) => b.score - a.score).slice(0, 10), (entry) => `${entry.mechanismId}::${entry.slot}`);
+    const sourceRefs = narrowed.slice(0, Math.min(4, Math.max(1, targets.length || 1)));
+    const sets = [];
+    const total = 2 ** sourceRefs.length;
+    for (let mask = 1; mask < total; mask += 1) {
+      const chosen = sourceRefs.filter((_, index) => mask & (1 << index));
+      const coversAll = targets.every((target) => chosen.some((entry) => nearestSourceDistance(entry.source, target) <= 35));
+      if (!coversAll) continue;
+      sets.push(chosen);
+    }
+    if (!sets.length && sourceRefs.length) sets.push(sourceRefs);
+    return sets.slice(0, 16);
+  }
+
+  function topMechanismOptions(mechanisms, route, scorer, limit = 3) {
+    return routeMechanismsForOptimization(mechanisms, route).map((mechanism) => {
+      const scored = mechanismOptionsForRoute(mechanism, route)
+        .map((option) => ({ ...option, score: scorer(option.value, mechanism) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
+      return { mechanism, options: scored.length ? scored : mechanismOptionsForRoute(mechanism, route).slice(0, 1) };
+    });
+  }
+
+  function combineMechanismSelections(groups) {
+    const rows = Array.isArray(groups) ? groups : [];
+    if (!rows.length) return [[]];
+    const [head, ...tail] = rows;
+    const tailCombos = combineMechanismSelections(tail);
+    const out = [];
+    (head.options || []).forEach((option) => {
+      tailCombos.forEach((combo) => {
+        out.push([{ mechanism: head.mechanism, option }, ...combo]);
+      });
+    });
+    return out;
+  }
+
+  function detectorCandidatesForRoute(normalizedInstrument, fluorophores, route) {
+    const emTargets = (Array.isArray(fluorophores) ? fluorophores : []).map((fluor) => numberOrNull(fluor && fluor.emMax)).filter((value) => value !== null);
+    const scored = [];
+    routeMechanismsForOptimization(normalizedInstrument.detectors, route).forEach((mechanism) => {
+      Object.values(mechanism.positions || {}).forEach((detector) => {
+        const bounds = detectorCollectionBounds(detector);
+        const coverage = emTargets.reduce((sum, emMax) => sum + ((emMax >= bounds.min && emMax <= bounds.max) ? 1 : 0), 0);
+        const response = pointMaskScore({ component_type: 'bandpass', center_nm: (bounds.min + bounds.max) / 2, width_nm: Math.max(4, bounds.max - bounds.min) }, emTargets, 'emission');
+        scored.push({ mechanismId: mechanism.id, slot: detector.slot, detector: { ...detector }, score: (coverage * 10) + response });
+      });
+    });
+    const narrowed = scored.sort((a, b) => b.score - a.score).slice(0, 3);
+    if (!narrowed.length) return [[]];
+    const sets = narrowed.map((entry) => [entry]);
+    if (narrowed.length > 1) sets.push(narrowed.slice(0, 2));
+    return sets;
+  }
+
+  function evaluateConfigurationScore(simulation, fluorophores, tolerance) {
+    if (!simulation || simulation.validSelection === false || !Array.isArray(simulation.results) || !simulation.results.length) {
+      return null;
+    }
+    const leakFree = simulation.results.filter((row) => (row.excitationLeakageWeightedIntensity || 0) <= tolerance && (row.excitationLeakageThroughput || 0) <= tolerance);
+    const byFluor = new Map();
+    leakFree.forEach((row) => {
+      const current = byFluor.get(row.fluorophoreKey);
+      if (!current || (row.detectorWeightedIntensity || 0) > (current.detectorWeightedIntensity || 0)) {
+        byFluor.set(row.fluorophoreKey, row);
+      }
+    });
+    const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
+    const strict = fluorList.every((fluor) => byFluor.has(fluor.key));
+    const score = Array.from(byFluor.values()).reduce((sum, row) => sum + (row.detectorWeightedIntensity || 0), 0);
+    const maxLeak = Math.max(...simulation.results.map((row) => Math.max(row.excitationLeakageWeightedIntensity || 0, row.excitationLeakageThroughput || 0)), 0);
+    return { strict, score, maxLeak };
+  }
+
+  function optimizeLightPath(fluorophores, instrument, options) {
+    const normalizedInstrument = normalizeInstrumentPayload(instrument);
+    const fluorList = Array.isArray(fluorophores) ? fluorophores.filter(Boolean) : [];
+    if (!fluorList.length) return null;
+    const exTargets = fluorList.map((fluor) => numberOrNull(fluor.exMax)).filter((value) => value !== null);
+    const emTargets = fluorList.map((fluor) => numberOrNull(fluor.emMax)).filter((value) => value !== null);
+    const routes = Array.from(new Set([
+      cleanString(options && options.currentRoute).toLowerCase() || null,
+      normalizedInstrument.defaultRoute,
+      ...((normalizedInstrument.routeOptions || []).map((entry) => entry.id)),
+      null,
+    ].filter((value) => value !== '')));
+    const tolerance = 1e-9;
+    let bestStrict = null;
+    let bestFallback = null;
+
+    routes.forEach((route) => {
+      const sourceSets = sourceCandidateSetsForRoute(normalizedInstrument, fluorList, route);
+      const cubeGroups = topMechanismOptions(normalizedInstrument.cube, route, (value) => {
+        const expanded = expandCubeSelectionForOptimization(value);
+        const ex = expanded.filter((entry) => entry.stage === 'excitation').map((entry) => entry.component);
+        const di = expanded.filter((entry) => entry.stage === 'dichroic').map((entry) => entry.component);
+        const em = expanded.filter((entry) => entry.stage === 'emission').map((entry) => entry.component);
+        return (ex.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 3)
+          + (di.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 2)
+          + (di.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 3)
+          + (em.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 4);
+      }, 3);
+      const excitationGroups = cubeGroups.length ? [] : topMechanismOptions(normalizedInstrument.excitation, route, (value) => pointMaskScore(value, exTargets, 'excitation') * 5, 3);
+      const dichroicGroups = cubeGroups.length ? [] : topMechanismOptions(normalizedInstrument.dichroic, route, (value) => (pointMaskScore(value, exTargets, 'excitation') * 3) + (pointMaskScore(value, emTargets, 'emission') * 4), 3);
+      const emissionGroups = topMechanismOptions(normalizedInstrument.emission, route, (value) => (pointMaskScore(value, emTargets, 'emission') * 5) + ((1 - pointMaskScore(value, exTargets, 'emission')) * 2), 3);
+      const detectorSets = detectorCandidatesForRoute(normalizedInstrument, fluorList, route);
+
+      const cubeCombos = combineMechanismSelections(cubeGroups);
+      const excitationCombos = cubeGroups.length ? [[]] : combineMechanismSelections(excitationGroups);
+      const dichroicCombos = cubeGroups.length ? [[]] : combineMechanismSelections(dichroicGroups);
+      const emissionCombos = combineMechanismSelections(emissionGroups);
+
+      sourceSets.forEach((sourceSet) => {
+        cubeCombos.forEach((cubeCombo) => {
+          excitationCombos.forEach((exCombo) => {
+            dichroicCombos.forEach((diCombo) => {
+              emissionCombos.forEach((emCombo) => {
+                detectorSets.forEach((detectorSet) => {
+                  const selectionMap = {};
+                  const selection = {
+                    sources: sourceSet.map((entry) => ({ ...entry.source })),
+                    excitation: [],
+                    dichroic: [],
+                    emission: [],
+                    splitters: [],
+                    detectors: detectorSet.map((entry) => ({ ...entry.detector })),
+                    selectionMap,
+                  };
+                  cubeCombo.forEach(({ mechanism, option }) => {
+                    selectionMap[mechanism.id] = Number(option.slot || (option.value && option.value.slot));
+                    expandCubeSelectionForOptimization(option.value).forEach((entry) => {
+                      if (entry.stage === 'excitation') selection.excitation.push({ ...entry.component });
+                      if (entry.stage === 'dichroic') selection.dichroic.push({ ...entry.component });
+                      if (entry.stage === 'emission') selection.emission.push({ ...entry.component });
+                    });
+                  });
+                  exCombo.forEach(({ mechanism, option }) => {
+                    selectionMap[mechanism.id] = Number(option.slot || (option.value && option.value.slot));
+                    selection.excitation.push({ ...(option.value || {}) });
+                  });
+                  diCombo.forEach(({ mechanism, option }) => {
+                    selectionMap[mechanism.id] = Number(option.slot || (option.value && option.value.slot));
+                    selection.dichroic.push({ ...(option.value || {}) });
+                  });
+                  emCombo.forEach(({ mechanism, option }) => {
+                    selectionMap[mechanism.id] = Number(option.slot || (option.value && option.value.slot));
+                    selection.emission.push({ ...(option.value || {}) });
+                  });
+                  if (!selectionIsValid(normalizedInstrument.validPaths, selectionMap)) return;
+                  const simulation = simulateInstrument(instrument, selection, fluorList, options || {});
+                  const evaluated = evaluateConfigurationScore(simulation, fluorList, tolerance);
+                  if (!evaluated) return;
+                  const descriptor = {
+                    route,
+                    selectionMap,
+                    sources: sourceSet.map((entry) => ({ mechanismId: entry.mechanismId, slot: entry.slot, selected_wavelength_nm: entry.source.selected_wavelength_nm || entry.source.wavelength_nm || null })),
+                    detectors: detectorSet.map((entry) => {
+                      const bounds = detectorCollectionBounds(entry.detector);
+                      return { mechanismId: entry.mechanismId, slot: entry.slot, collection_min_nm: bounds.min, collection_max_nm: bounds.max };
+                    }),
+                    score: evaluated.score,
+                    strictLeakageSatisfied: evaluated.strict,
+                    maxLeakage: evaluated.maxLeak,
+                  };
+                  if (evaluated.strict) {
+                    if (!bestStrict || descriptor.score > bestStrict.score) bestStrict = descriptor;
+                  } else if (!bestFallback || descriptor.maxLeakage < bestFallback.maxLeakage || (descriptor.maxLeakage === bestFallback.maxLeakage && descriptor.score > bestFallback.score)) {
+                    bestFallback = descriptor;
+                  }
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+
+    return bestStrict || bestFallback;
+  }
+
   function selectionIsValid(validPaths, selectionMap) {
     if (!Array.isArray(validPaths) || !validPaths.length) return true;
     const requiredEntries = Object.entries(selectionMap || {}).filter(([, value]) => Number.isFinite(value));
@@ -1537,6 +1871,8 @@
     fluorophoreSpectra,
     normalizePoints,
     wavelengthGrid,
+    wavelengthToRGB,
+    spectrumToCSSColor,
     componentMask,
     sourceCenters,
     sourceSpectrum,

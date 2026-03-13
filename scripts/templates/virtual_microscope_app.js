@@ -25,6 +25,7 @@
     sourceSettings: new Map(),
     lastSelection: null,
     lastSimulation: null,
+    activeInspectorStage: null,
   };
 
   let currentInstrumentId = null;
@@ -48,6 +49,8 @@
     activeDyes: document.getElementById('selectedDyes'),
     summary: document.getElementById('pathSummary'),
     scoreboard: document.getElementById('signalSimulator'),
+    autoConfigBtn: document.getElementById('vm-btn-autoconfig'),
+    autoConfigStatus: document.getElementById('vm-autoconfig-status'),
   };
 
   function cleanString(value) {
@@ -97,6 +100,266 @@
     }
     const toHex = (value) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
+
+  function stagePipeKey(leftStage, rightStage) {
+    return `${leftStage}->${rightStage}`;
+  }
+
+  function setStatusMessage(message, tone = 'info') {
+    if (!DOM.autoConfigStatus) return;
+    DOM.autoConfigStatus.textContent = cleanString(message);
+    DOM.autoConfigStatus.dataset.tone = tone;
+  }
+
+  function formatNumericNm(value) {
+    const numeric = numberOrNull(value);
+    return numeric === null ? null : `${Math.round(numeric)} nm`;
+  }
+
+  function formatComponentMetadata(component, context = {}) {
+    if (!component || typeof component !== 'object') return [];
+    const type = cleanString(component.component_type || component.type || context.stage || '').replace(/_/g, ' ');
+    const rows = [];
+    if (type) rows.push(`Type: ${type}`);
+    if (numberOrNull(component.center_nm) !== null) rows.push(`Center: ${formatNumericNm(component.center_nm)}`);
+    if (numberOrNull(component.width_nm) !== null) rows.push(`Bandwidth: ${Math.round(numberOrNull(component.width_nm))} nm`);
+    if (numberOrNull(component.cut_on_nm) !== null) rows.push(`Cut-on: ${formatNumericNm(component.cut_on_nm)}`);
+    if (numberOrNull(component.cut_off_nm) !== null) rows.push(`Cut-off: ${formatNumericNm(component.cut_off_nm)}`);
+    if (Array.isArray(component.cutoffs_nm) && component.cutoffs_nm.length) {
+      rows.push(`Cutoffs: ${component.cutoffs_nm.map((value) => formatNumericNm(value)).filter(Boolean).join(', ')}`);
+    }
+    if (Array.isArray(component.bands) && component.bands.length) {
+      rows.push(`Bands: ${component.bands.map((band) => {
+        const center = numberOrNull(band && band.center_nm);
+        const width = numberOrNull(band && band.width_nm);
+        if (center === null || width === null) return cleanString(band && band.label) || 'band';
+        const low = Math.round(center - (width / 2));
+        const high = Math.round(center + (width / 2));
+        return `${cleanString(band && band.label) || 'Band'} ${low}-${high} nm`;
+      }).join(' • ')}`);
+    }
+    if (numberOrNull(component.wavelength_nm) !== null) rows.push(`Wavelength: ${formatNumericNm(component.wavelength_nm)}`);
+    if (numberOrNull(component.selected_wavelength_nm) !== null) rows.push(`Selected λ: ${formatNumericNm(component.selected_wavelength_nm)}`);
+    if (numberOrNull(component.tunable_min_nm) !== null && numberOrNull(component.tunable_max_nm) !== null) {
+      rows.push(`Tunable range: ${Math.round(numberOrNull(component.tunable_min_nm))}-${Math.round(numberOrNull(component.tunable_max_nm))} nm`);
+    }
+    if (component.role) rows.push(`Role: ${component.role}`);
+    if (component.kind) rows.push(`Kind: ${component.kind}`);
+    if (component.detector_class) rows.push(`Detector: ${component.detector_class}`);
+    if (numberOrNull(component.collection_min_nm) !== null && numberOrNull(component.collection_max_nm) !== null) {
+      rows.push(`Collection: ${Math.round(numberOrNull(component.collection_min_nm))}-${Math.round(numberOrNull(component.collection_max_nm))} nm`);
+    }
+    return rows;
+  }
+
+  function createMetadataBlock() {
+    const meta = document.createElement('div');
+    meta.className = 'vm-component-meta';
+    return meta;
+  }
+
+  function updateMetadataBlock(metaNode, component, context = {}) {
+    if (!metaNode) return;
+    const rows = formatComponentMetadata(component, context);
+    metaNode.innerHTML = rows.length
+      ? rows.map((row) => `<div>${row}</div>`).join('')
+      : '<span>No component metadata available.</span>';
+  }
+
+  function parseJsonValue(value) {
+    try {
+      return value ? JSON.parse(value) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function createLinkedStageNote(titleText, message, component) {
+    const wrap = document.createElement('div');
+    wrap.className = 'vm-linked-note';
+    const title = document.createElement('div');
+    title.className = 'vm-linked-note-title';
+    title.textContent = titleText;
+    wrap.appendChild(title);
+    const text = document.createElement('div');
+    text.className = 'vm-mini';
+    text.textContent = message;
+    wrap.appendChild(text);
+    if (component) {
+      const meta = createMetadataBlock();
+      updateMetadataBlock(meta, component, {});
+      wrap.appendChild(meta);
+    }
+    return wrap;
+  }
+
+  function createPipelineBadge(stageId, label) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'vm-stage-tab';
+    button.dataset.stageId = stageId;
+    button.textContent = label;
+    button.addEventListener('click', () => setInspectorStage(stageId));
+    return button;
+  }
+
+  function createPipeSegment(pipeKey) {
+    const pipe = document.createElement('div');
+    pipe.className = 'optical-pipe';
+    pipe.dataset.pipeKey = pipeKey;
+    const light = document.createElement('div');
+    light.className = 'flowing-light';
+    light.dataset.pipeKey = pipeKey;
+    pipe.appendChild(light);
+    return pipe;
+  }
+
+  function createInspectorPanel(stageId, label, subtitle = '') {
+    const panel = document.createElement('div');
+    panel.className = 'vm-stage-panel';
+    panel.dataset.stageId = stageId;
+    const title = document.createElement('div');
+    title.className = 'vm-stage-panel-title';
+    title.textContent = label;
+    panel.appendChild(title);
+    if (subtitle) {
+      const copy = document.createElement('div');
+      copy.className = 'vm-mini';
+      copy.textContent = subtitle;
+      panel.appendChild(copy);
+    }
+    return panel;
+  }
+
+  function setInspectorStage(stageId) {
+    state.activeInspectorStage = stageId;
+    Array.from(DOM.graph.querySelectorAll('.vm-stage-tab')).forEach((button) => {
+      button.classList.toggle('active', button.dataset.stageId === stageId);
+    });
+    Array.from(DOM.graph.querySelectorAll('.vm-stage-panel')).forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.stageId === stageId);
+    });
+  }
+
+  function setPipeSpectrumColor(pipeKey, spectrum, grid) {
+    const light = DOM.graph.querySelector(`.flowing-light[data-pipe-key="${CSS.escape(pipeKey)}"]`);
+    if (!light) return;
+    const color = VM.spectrumToCSSColor(spectrum, grid);
+    light.style.setProperty('--beam-color', color);
+    light.dataset.empty = color === 'rgba(0,0,0,0)' ? 'true' : 'false';
+  }
+
+  function updatePipelineBeamColors(selection, simulation) {
+    const grid = Array.isArray(simulation && simulation.grid)
+      ? simulation.grid
+      : VM.wavelengthGrid({ min_nm: 350, max_nm: determineChartMax(selection), step_nm: 2 });
+    const sourceMixed = currentSourceSpectrum(grid);
+    const excitationFiltered = applyComponentsToSpectrum(sourceMixed, selection.excitation, grid, 'excitation');
+    const excitationAtSample = Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : excitationFiltered;
+    const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
+    const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
+    const detected = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'spectrum', grid);
+
+    setPipeSpectrumColor(stagePipeKey('sources', 'excitation'), sourceMixed, grid);
+    setPipeSpectrumColor(stagePipeKey('excitation', 'dichroic'), excitationFiltered, grid);
+    setPipeSpectrumColor(stagePipeKey('dichroic', 'sample'), excitationAtSample, grid);
+    setPipeSpectrumColor(stagePipeKey('sample', 'emission'), generatedEmission, grid);
+    setPipeSpectrumColor(stagePipeKey('emission', 'splitters'), postEmission, grid);
+    setPipeSpectrumColor(stagePipeKey('splitters', 'detectors'), detected, grid);
+  }
+
+  function activeFilterMaskDatasets(selection, grid) {
+    const datasets = [];
+    const addMaskSet = (components, stage, color, alpha) => {
+      (Array.isArray(components) ? components : []).forEach((component, index) => {
+        const label = component.display_label || component.label || `${stage} ${index + 1}`;
+        const mode = stage === 'excitation' ? 'excitation' : 'emission';
+        const values = VM.componentMask(component, grid, { mode });
+        if (!Array.isArray(values) || !values.some((value) => value > 1e-6)) return;
+        datasets.push(chartDatasetFromGrid(`${label} mask`, grid, asPercentArray(values, 1), {
+          borderColor: color,
+          backgroundColor: alpha,
+          borderDash: [6, 4],
+          borderWidth: 1.4,
+          fill: true,
+          tension: 0,
+          pointRadius: 0,
+          order: -20,
+        }));
+      });
+    };
+    addMaskSet(selection.excitation, 'excitation', 'rgba(37, 99, 235, 0.75)', 'rgba(37, 99, 235, 0.08)');
+    addMaskSet(selection.dichroic, 'dichroic', 'rgba(168, 85, 247, 0.75)', 'rgba(168, 85, 247, 0.07)');
+    addMaskSet(selection.emission, 'emission', 'rgba(5, 150, 105, 0.75)', 'rgba(5, 150, 105, 0.08)');
+    return datasets;
+  }
+
+  function applyOptimizedConfiguration(config) {
+    if (!config || !state.activeInstrument) return false;
+    const instrument = state.activeInstrument;
+    const route = cleanString(config.route).toLowerCase() || state.activeRoute || instrument.defaultRoute || null;
+    state.activeRoute = route;
+    if (DOM.routeSel) DOM.routeSel.value = route || '';
+
+    const enabledSourceRefs = new Map((Array.isArray(config.sources) ? config.sources : []).map((entry) => [`${entry.mechanismId}::${entry.slot}`, entry]));
+    mechanismsForRoute(instrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        const ref = enabledSourceRefs.get(`${mechanism.id}::${source.slot}`);
+        setting.enabled = Boolean(ref);
+        if (ref && numberOrNull(ref.selected_wavelength_nm) !== null) {
+          setting.selected_wavelength_nm = numberOrNull(ref.selected_wavelength_nm);
+        }
+      });
+    });
+
+    const enabledDetectorRefs = new Map((Array.isArray(config.detectors) ? config.detectors : []).map((entry) => [`${entry.mechanismId}::${entry.slot}`, entry]));
+    mechanismsForRoute(instrument.detectors, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((detector) => {
+        const setting = ensureDetectorSetting(mechanism, detector);
+        const ref = enabledDetectorRefs.get(`${mechanism.id}::${detector.slot}`);
+        setting.enabled = Boolean(ref);
+        if (ref && numberOrNull(ref.collection_min_nm) !== null) setting.collection_min_nm = numberOrNull(ref.collection_min_nm);
+        if (ref && numberOrNull(ref.collection_max_nm) !== null) setting.collection_max_nm = numberOrNull(ref.collection_max_nm);
+      });
+    });
+
+    renderGraphFlow();
+    const selectionMap = config.selectionMap && typeof config.selectionMap === 'object' ? config.selectionMap : {};
+    Array.from(DOM.graph.querySelectorAll('select[data-stage][data-mechanism-id]')).forEach((select) => {
+      const mechanismId = select.dataset.mechanismId;
+      const desiredSlot = selectionMap[mechanismId];
+      if (!Number.isFinite(Number(desiredSlot))) return;
+      const match = Array.from(select.options).find((option) => Number(option.dataset.slot) === Number(desiredSlot));
+      if (match) {
+        select.value = match.value;
+        select.dataset.userSet = 'true';
+      }
+    });
+    refreshOutputs();
+    return true;
+  }
+
+  function runAutoConfigure() {
+    if (!state.activeInstrumentRaw || !state.loadedProteins.size) {
+      setStatusMessage('Load at least one fluorophore before auto-configuring.', 'warning');
+      return;
+    }
+    const result = VM.optimizeLightPath(mapToArray(state.loadedProteins), state.activeInstrumentRaw, {
+      preferTwoPhoton: state.preferTwoPhoton,
+      currentRoute: state.activeRoute,
+    });
+    if (!result) {
+      setStatusMessage('No compatible zero-leakage configuration was found for the current fluorophores.', 'warning');
+      return;
+    }
+    applyOptimizedConfiguration(result);
+    setStatusMessage(
+      result.strictLeakageSatisfied === false ? 'Optimized the best near-zero-leakage configuration.' : 'Configuration Optimized!',
+      result.strictLeakageSatisfied === false ? 'warning' : 'success'
+    );
   }
 
   function mapToArray(map) {
@@ -280,6 +543,9 @@
       state.preferTwoPhoton = Boolean(event.target.checked);
       refreshOutputs();
     });
+    if (DOM.autoConfigBtn) {
+      DOM.autoConfigBtn.addEventListener('click', runAutoConfigure);
+    }
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.fp-search-wrap')) {
         DOM.fpResults.style.display = 'none';
@@ -326,19 +592,6 @@
     DOM.routeWrap.style.display = 'flex';
   }
 
-  function createNode(title) {
-    const node = document.createElement('div');
-    node.className = 'graph-node';
-    node.innerHTML = `<div class="node-title">${title}</div>`;
-    return node;
-  }
-
-  function addArrow() {
-    const arrow = document.createElement('div');
-    arrow.className = 'graph-arrow';
-    arrow.innerHTML = '➔';
-    DOM.graph.appendChild(arrow);
-  }
 
   function snapshotStageSelections() {
     return Array.from(DOM.graph.querySelectorAll('select[data-stage]')).map((select) => ({
@@ -360,6 +613,7 @@
   }
 
   function normalizeSourceRoutes(source) {
+
     return VM.normalizeRouteTags(source.routes || source.path || source.__routes || []);
   }
 
@@ -385,78 +639,145 @@
 
     const inst = state.activeInstrument;
     const route = state.activeRoute;
-
     const lightSourceMechanisms = mechanismsForRoute(inst.lightSources, route);
-    if (lightSourceMechanisms.length) {
-      const node = createNode('1. Light Sources');
-      lightSourceMechanisms.forEach((mechanism) => node.appendChild(createLightSourceControl(mechanism)));
-      DOM.graph.appendChild(node);
-      addArrow();
-    }
-
     const cubeMechanisms = mechanismsForRoute(inst.cube, route);
     const excitationMechanisms = mechanismsForRoute(inst.excitation, route);
-    if (cubeMechanisms.length) {
-      const node = createNode('2. Filter Cube');
-      cubeMechanisms.forEach((mechanism, index) => node.appendChild(createMechanismControl('cube', mechanism, index)));
-      DOM.graph.appendChild(node);
-      addArrow();
-    } else if (route === 'tirf' && excitationMechanisms.length) {
-      const node = createNode('2. Excitation');
-      node.innerHTML += '<div style="font-size:11px;text-align:center;color:var(--muted)">Bypassed for TIRF route</div>';
-      DOM.graph.appendChild(node);
-      addArrow();
-    } else if (excitationMechanisms.length) {
-      const node = createNode('2. Excitation');
-      excitationMechanisms.forEach((mechanism, index) => node.appendChild(createMechanismControl('excitation', mechanism, index)));
-      DOM.graph.appendChild(node);
-      addArrow();
-    }
-
     const dichroicMechanisms = mechanismsForRoute(inst.dichroic, route);
-    if (!cubeMechanisms.length && dichroicMechanisms.length) {
-      const node = createNode('3. Dichroic');
-      dichroicMechanisms.forEach((mechanism, index) => node.appendChild(createMechanismControl('dichroic', mechanism, index)));
-      DOM.graph.appendChild(node);
-      addArrow();
-    }
-
-    const sampleNode = createNode('4. Sample');
-    sampleNode.classList.add('sample-node');
-    sampleNode.innerHTML += '<div style="font-size:11px;text-align:center;color:var(--muted)">Excitation drives fluorophore emission here</div>';
-    DOM.graph.appendChild(sampleNode);
-    addArrow();
-
     const emissionMechanisms = mechanismsForRoute(inst.emission, route);
-    if (emissionMechanisms.length) {
-      const node = createNode('5. Emission');
-      emissionMechanisms.forEach((mechanism, index) => node.appendChild(createMechanismControl('emission', mechanism, index)));
-      DOM.graph.appendChild(node);
-      addArrow();
-    }
-
     const splitterMechanisms = mechanismsForRoute(inst.splitters, route);
-    if (splitterMechanisms.length) {
-      const node = createNode('6. Splitters');
-      splitterMechanisms.forEach((mechanism, index) => node.appendChild(createMechanismControl('splitters', mechanism, index)));
-      DOM.graph.appendChild(node);
-      addArrow();
+    const detectorMechanisms = mechanismsForRoute(inst.detectors, route);
+
+    const shell = document.createElement('div');
+    shell.className = 'vm-pipeline-shell';
+    const pipeline = document.createElement('div');
+    pipeline.className = 'vm-pipeline';
+    const inspector = document.createElement('div');
+    inspector.className = 'vm-inspector';
+    shell.appendChild(pipeline);
+    shell.appendChild(inspector);
+    DOM.graph.appendChild(shell);
+
+    const stages = [];
+
+    if (lightSourceMechanisms.length) {
+      stages.push({
+        id: 'sources',
+        label: 'Sources',
+        subtitle: 'Enable sources, tune wavelengths, and set relative power.',
+        build(panel) {
+          lightSourceMechanisms.forEach((mechanism) => panel.appendChild(createLightSourceControl(mechanism)));
+        },
+      });
     }
 
-    const detectorMechanisms = mechanismsForRoute(inst.detectors, route);
-    if (detectorMechanisms.length) {
-      const node = createNode('7. Detectors');
-      detectorMechanisms.forEach((mechanism) => node.appendChild(createDetectorControl(mechanism)));
-      DOM.graph.appendChild(node);
-    } else if (DOM.graph.lastChild && DOM.graph.lastChild.classList.contains('graph-arrow')) {
-      DOM.graph.removeChild(DOM.graph.lastChild);
+    if (cubeMechanisms.length || excitationMechanisms.length) {
+      stages.push({
+        id: 'excitation',
+        label: 'Excitation',
+        subtitle: cubeMechanisms.length
+          ? 'Filter-cube selections drive the excitation, dichroic, and emission path together.'
+          : 'Choose the excitation filter path that reaches the sample.',
+        build(panel) {
+          if (cubeMechanisms.length) {
+            cubeMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('cube', mechanism, index)));
+          } else {
+            excitationMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('excitation', mechanism, index)));
+          }
+        },
+      });
     }
+
+    if (cubeMechanisms.length || dichroicMechanisms.length) {
+      stages.push({
+        id: 'dichroic',
+        label: 'Dichroic',
+        subtitle: cubeMechanisms.length
+          ? 'The dichroic is integrated inside the selected cube.'
+          : 'Choose the dichroic that reflects excitation and transmits emission.',
+        build(panel) {
+          if (cubeMechanisms.length) {
+            const cubeSelect = DOM.graph.querySelector('select[data-stage="cube"]');
+            const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
+            const linked = cubeValue && (cubeValue.dichroic_filter || cubeValue.dichroic || cubeValue.di);
+            panel.appendChild(createLinkedStageNote('Integrated cube dichroic', 'This route uses the cube selector from the Excitation tab.', linked));
+          } else {
+            dichroicMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('dichroic', mechanism, index)));
+          }
+        },
+      });
+    }
+
+    stages.push({
+      id: 'sample',
+      label: 'Sample',
+      subtitle: 'The selected excitation drives fluorophore emission at the specimen plane.',
+      build(panel) {
+        panel.appendChild(createLinkedStageNote('Emission generation', 'Loaded fluorophores absorb the excitation spectrum here and emit according to their reference spectra.'));
+      },
+    });
+
+    if (emissionMechanisms.length || cubeMechanisms.length) {
+      stages.push({
+        id: 'emission',
+        label: 'Emission',
+        subtitle: cubeMechanisms.length
+          ? 'Emission filtering may be partly integrated inside the selected cube.'
+          : 'Choose the emission filters that clean up the fluorescence before detection.',
+        build(panel) {
+          if (cubeMechanisms.length) {
+            const cubeSelect = DOM.graph.querySelector('select[data-stage="cube"]');
+            const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
+            const linked = cubeValue && (cubeValue.emission_filter || cubeValue.emission || cubeValue.em);
+            if (linked) {
+              panel.appendChild(createLinkedStageNote('Integrated cube emission filter', 'This emission window is currently set by the cube selection.', linked));
+            }
+          }
+          emissionMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('emission', mechanism, index)));
+        },
+      });
+    }
+
+    if (splitterMechanisms.length) {
+      stages.push({
+        id: 'splitters',
+        label: 'Splitters',
+        subtitle: 'Route post-emission light into one or more detection branches.',
+        build(panel) {
+          splitterMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('splitters', mechanism, index)));
+        },
+      });
+    }
+
+    if (detectorMechanisms.length) {
+      stages.push({
+        id: 'detectors',
+        label: 'Detectors',
+        subtitle: 'Enable detectors and adjust their collection windows.',
+        build(panel) {
+          detectorMechanisms.forEach((mechanism) => panel.appendChild(createDetectorControl(mechanism)));
+        },
+      });
+    }
+
+    if (!stages.length) return;
+
+    stages.forEach((stage, index) => {
+      if (index > 0) pipeline.appendChild(createPipeSegment(stagePipeKey(stages[index - 1].id, stage.id)));
+      pipeline.appendChild(createPipelineBadge(stage.id, stage.label));
+      const panel = createInspectorPanel(stage.id, stage.label, stage.subtitle);
+      stage.build(panel);
+      inspector.appendChild(panel);
+    });
 
     restoreStageSelections(snapshot);
     enforceValidStageOptions();
+    const availableStageIds = stages.map((stage) => stage.id);
+    const preferredStage = availableStageIds.includes(state.activeInspectorStage) ? state.activeInspectorStage : availableStageIds[0];
+    setInspectorStage(preferredStage);
   }
 
   function createLightSourceControl(mechanism) {
+
     const block = document.createElement('div');
     block.className = 'vm-stack vm-source-grid';
     block.dataset.stage = 'lightSources';
@@ -680,9 +1001,17 @@
       }
       select.appendChild(opt);
     });
-    select.addEventListener('change', () => { select.dataset.userSet = 'true'; refreshOutputs(); });
+    const metadata = createMetadataBlock();
+    const syncMetadata = () => updateMetadataBlock(metadata, parseJsonValue(select.value), { stage: stageKey });
+    select.addEventListener('change', () => {
+      select.dataset.userSet = 'true';
+      syncMetadata();
+      refreshOutputs();
+    });
     block.appendChild(label);
     block.appendChild(select);
+    block.appendChild(metadata);
+    syncMetadata();
     return block;
   }
 
@@ -836,6 +1165,7 @@
     checkbox.checked = Boolean(setting.enabled);
     checkbox.addEventListener('change', () => {
       setting.enabled = checkbox.checked;
+      syncDetectorMetadata();
       refreshOutputs();
     });
     label.appendChild(checkbox);
@@ -846,6 +1176,14 @@
     meta.className = 'vm-mini';
     meta.textContent = `${detectorClass}${detector.supports_time_gating ? ' • time-gated' : ''}`;
     block.appendChild(meta);
+    const metadata = createMetadataBlock();
+    const syncDetectorMetadata = () => updateMetadataBlock(metadata, {
+      ...detector,
+      detector_class: detectorClass,
+      collection_min_nm: setting.collection_min_nm,
+      collection_max_nm: setting.collection_max_nm,
+    }, { stage: 'detector' });
+    block.appendChild(metadata);
 
     if (detectorClass !== 'camera') {
       setting.collection_enabled = true;
@@ -883,6 +1221,7 @@
         }
         minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
         maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
+        syncDetectorMetadata();
         refreshOutputs();
       });
       minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
@@ -908,12 +1247,15 @@
         }
         minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
         maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
+        syncDetectorMetadata();
         refreshOutputs();
       });
       maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
       block.appendChild(maxReadout);
       block.appendChild(maxSlider);
     }
+
+    syncDetectorMetadata();
 
     if (detector.supports_time_gating) {
       const gate = document.createElement('div');
@@ -1239,7 +1581,7 @@
       ? simulation.grid
       : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
     const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
-    const datasets = [...sourceReferenceDatasets(selection)];
+    const datasets = [...activeFilterMaskDatasets(selection, grid), ...sourceReferenceDatasets(selection)];
 
     emissionEntries.forEach((entry) => {
       const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
@@ -1285,7 +1627,7 @@
     pathEntries.forEach((entry) => scaleToFit.push(entry.spectrum));
     const scale = spectrumScale(scaleToFit);
 
-    const datasets = [];
+    const datasets = [...activeFilterMaskDatasets(selection, grid)];
 
     if (Array.isArray(simulation && simulation.excitationAtSample) && simulation.excitationAtSample.some((value) => value > 0)) {
       datasets.push(chartDatasetFromGrid('Excitation at sample', grid, asPercentArray(simulation.excitationAtSample, scale), {
@@ -1656,6 +1998,7 @@
       state.lastSimulation = simulation;
       renderReferenceSpectra(repairedSelection, simulation);
       renderPropagationPanel(repairedSelection, simulation);
+      updatePipelineBeamColors(repairedSelection, simulation);
       renderSummary(repairedSelection, simulation);
       renderDetectionChart(simulation);
       renderScoreboard(simulation);
@@ -1665,6 +2008,7 @@
     state.lastSimulation = simulation;
     renderReferenceSpectra(selection, simulation);
     renderPropagationPanel(selection, simulation);
+    updatePipelineBeamColors(selection, simulation);
     renderSummary(selection, simulation);
     renderDetectionChart(simulation);
     renderScoreboard(simulation);

@@ -53,22 +53,69 @@ hide:
   }
   .dye-chip { border-color: #fecaca; color: var(--danger); width: max-content; }
   .dye-chip button { background: none; border: none; color: inherit; cursor: pointer; font-weight: bold; margin-left: 8px;}
-  
+  .vm-btn-primary { background: linear-gradient(135deg, var(--primary), #7c3aed); }
+  .vm-autoconfig-status { min-height: 18px; margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+  .vm-autoconfig-status[data-tone="success"] { color: #059669; font-weight: 700; }
+  .vm-autoconfig-status[data-tone="warning"] { color: #b45309; font-weight: 700; }
+
   /* The Flow Graph */
   .light-path-graph {
     display: flex; flex-direction: column; align-items: stretch;
-    gap: 10px; padding: 12px; background: var(--md-code-bg-color);
+    gap: 14px; padding: 14px; background: var(--md-code-bg-color);
     border-radius: 12px; border: 1px solid var(--border);
   }
-  .graph-node {
-    width: 100%; min-width: 0; padding: 12px; background: var(--surface);
-    border: 2px solid var(--border); border-radius: 8px;
-    display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
+  .vm-pipeline-shell { display: grid; gap: 14px; }
+  .vm-pipeline {
+    display: flex; align-items: center; gap: 10px; overflow-x: auto;
+    padding-bottom: 4px;
   }
-  .graph-node.sample-node { border-color: var(--primary); background: rgba(var(--md-primary-fg-color--rgb), 0.05); }
-  .graph-arrow { color: var(--primary); font-size: 18px; align-self: center; transform: rotate(90deg); line-height: 1; }
-  .node-title { font-size: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 4px;}
-  
+  .vm-stage-tab {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 999px; padding: 8px 14px; white-space: nowrap; font-weight: 700;
+    font-size: 12px; cursor: pointer; box-shadow: var(--md-shadow-z1);
+  }
+  .vm-stage-tab.active { border-color: var(--primary); color: var(--primary); }
+  .optical-pipe {
+    flex: 1 1 56px; min-width: 56px; height: 10px; border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.32); background: rgba(148, 163, 184, 0.14);
+    overflow: hidden; position: relative;
+  }
+  .flowing-light {
+    --beam-color: transparent;
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg,
+      color-mix(in srgb, var(--beam-color) 20%, transparent) 0px,
+      var(--beam-color) 12px,
+      color-mix(in srgb, var(--beam-color) 75%, white) 24px,
+      var(--beam-color) 36px,
+      color-mix(in srgb, var(--beam-color) 20%, transparent) 48px);
+    background-size: 180px 100%;
+    animation: vm-flow-light 1.8s linear infinite;
+    opacity: 0.95;
+  }
+  .flowing-light[data-empty="true"] { opacity: 0.15; }
+  @keyframes vm-flow-light {
+    from { background-position: 0 0; }
+    to { background-position: 180px 0; }
+  }
+  .vm-inspector {
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+    padding: 14px;
+  }
+  .vm-stage-panel { display: none; gap: 10px; }
+  .vm-stage-panel.active { display: grid; }
+  .vm-stage-panel-title { font-size: 13px; font-weight: 800; color: var(--primary); text-transform: uppercase; }
+  .vm-component-meta {
+    display: grid; gap: 4px; margin-top: 6px; padding: 8px 10px; border-radius: 8px;
+    border: 1px dashed var(--border); background: rgba(148, 163, 184, 0.08); font-size: 11px;
+    color: var(--muted);
+  }
+  .vm-linked-note {
+    display: grid; gap: 6px; padding: 10px; border-radius: 10px;
+    background: rgba(var(--md-primary-fg-color--rgb), 0.05); border: 1px solid var(--border);
+  }
+  .vm-linked-note-title { font-weight: 700; font-size: 12px; color: var(--primary); }
+
   /* Checkboxes for Lasers */
   .checkbox-group { display: flex; flex-direction: column; gap: 6px; }
   .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; font-weight: normal;}
@@ -115,8 +162,10 @@ hide:
             <div class="fp-search-wrap">
               <input id="fluorophoreQuery" type="text" placeholder="e.g. GFP, mCherry, mNeonGreen" style="flex:1; border-radius:6px; border:1px solid var(--border); padding:8px;"/>
               <button id="searchBtn" class="vm-btn">Search</button>
+              <button id="vm-btn-autoconfig" class="vm-btn vm-btn-primary">✨ Auto-Configure</button>
               <ul id="searchResults" class="fp-dropdown"></ul>
             </div>
+            <p id="vm-autoconfig-status" class="vm-autoconfig-status"></p>
             <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; cursor:pointer;">
               <input id="use2Photon" type="checkbox" />
               <span>Use 2-Photon Spectra when available</span>
