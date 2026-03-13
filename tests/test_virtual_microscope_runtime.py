@@ -426,7 +426,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["name"], "mCherry")
         self.assertEqual(result["exMax"], 587)
         self.assertEqual(result["emMax"], 610)
-        self.assertIn(result["spectraSource"], {"api", "detail", "api+synthetic"})
+        self.assertEqual(result["spectraSource"], "api")
         self.assertGreater(result["exPoints"], 5)
         self.assertGreater(result["emPoints"], 5)
         self.assertGreater(result["exPeak"], 90)
@@ -455,6 +455,75 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(result["emPoints"], 10)
         self.assertGreater(result["exPeak"], 90)
         self.assertGreater(result["emPeak"], 90)
+
+    def test_bundled_cache_records_keep_real_bundled_spectra(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = rt.searchFallbackFluorophores('mCherry')[0];
+            return {
+              name: fluor.name,
+              spectraSource: fluor.spectraSource,
+              exPoints: fluor.spectra.ex1p.length,
+              emPoints: fluor.spectra.em.length,
+              activeStateName: fluor.activeStateName,
+            };
+            """
+        )
+
+        self.assertEqual(result["name"], "mCherry")
+        self.assertEqual(result["spectraSource"], "bundled_cache")
+        self.assertGreater(result["exPoints"], 5)
+        self.assertGreater(result["emPoints"], 5)
+        self.assertIn(result["activeStateName"], {"Default state", "default"})
+
+    def test_instrument_route_catalog_is_normalized_from_payload(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              id: 'scope-1',
+              available_routes: [
+                { id: 'epi', label: 'Epi route' },
+                { id: 'confocal', label: 'Confocal route' }
+              ],
+              default_route: 'epi',
+              light_sources: [
+                {
+                  id: 'sources',
+                  positions: [
+                    { slot: 1, value: { display_label: '488 laser', path: 'confocal', wavelength_nm: 488, kind: 'laser' } },
+                    { slot: 2, value: { display_label: 'LED', path: 'epi', wavelength_nm: 470, kind: 'led' } }
+                  ]
+                }
+              ],
+              detectors: [
+                {
+                  id: 'detectors',
+                  positions: [
+                    { slot: 1, value: { display_label: 'PMT', path: 'confocal', kind: 'pmt' } },
+                    { slot: 2, value: { display_label: 'Camera', path: 'epi', kind: 'camera' } }
+                  ]
+                }
+              ],
+              stages: {
+                excitation: [],
+                cube: [],
+                dichroic: [],
+                emission: []
+              },
+              splitters: [],
+              valid_paths: []
+            });
+            return {
+              defaultRoute: instrument.defaultRoute,
+              routeIds: instrument.routeOptions.map((entry) => entry.id),
+              routeLabels: instrument.routeOptions.map((entry) => entry.label),
+            };
+            """
+        )
+
+        self.assertEqual(result["defaultRoute"], "epi")
+        self.assertEqual(result["routeIds"], ["confocal", "epi"])
+        self.assertEqual(result["routeLabels"], ["Confocal route", "Epi route"])
 
     def test_point_detector_collection_window_changes_output(self) -> None:
         result = self.run_node_json(

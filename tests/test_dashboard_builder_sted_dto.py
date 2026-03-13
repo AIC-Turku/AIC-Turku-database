@@ -1,7 +1,9 @@
 import unittest
 import json
 import sys
+import tempfile
 import types
+from pathlib import Path
 
 yaml_stub = types.ModuleType("yaml")
 
@@ -35,7 +37,16 @@ jinja2_stub.Environment = _DummyEnvironment
 jinja2_stub.FileSystemLoader = _DummyLoader
 sys.modules.setdefault("jinja2", jinja2_stub)
 
-from scripts.dashboard_builder import build_hardware_dto, build_instrument_mega_dto, build_optical_path_dto, normalize_hardware
+from scripts.dashboard_builder import (
+    build_hardware_dto,
+    build_instrument_mega_dto,
+    build_llm_inventory_payload,
+    build_methods_generator_instrument_export,
+    build_methods_generator_page_config,
+    build_optical_path_dto,
+    json_script_data,
+    normalize_hardware,
+)
 from scripts.validate import Vocabulary
 
 
@@ -55,6 +66,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                 "light_source_roles": {"source": "inline", "allowed_values": ["excitation", "depletion"]},
                 "light_source_timing_modes": {"source": "inline", "allowed_values": ["cw", "pulsed"]},
                 "detector_kinds": {"source": "inline", "allowed_values": ["hybrid"]},
+                "optical_routes": {"source": "inline", "allowed_values": ["confocal", "epi"]},
                 "optical_modulator_types": {"source": "inline", "allowed_values": ["slm", "phase_plate"]},
                 "phase_mask_types": {"source": "inline", "allowed_values": ["vortex", "top_hat"]},
                 "adaptive_illumination_methods": {"source": "inline", "allowed_values": ["rescue_sted"]},
@@ -279,6 +291,120 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(detector["collection_max_nm"], 700)
         self.assertEqual(detector["channel_center_nm"], 675)
         self.assertEqual(detector["bandwidth_nm"], 50)
+
+    def test_route_metadata_is_rendered_in_source_and_detector_specs(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "laser",
+                            "manufacturer": "Leica",
+                            "model": "488 Laser",
+                            "wavelength_nm": 488,
+                            "path": "confocal",
+                        }
+                    ],
+                    "detectors": [
+                        {
+                            "kind": "hybrid",
+                            "manufacturer": "Leica",
+                            "model": "HyD",
+                            "path": "confocal",
+                        }
+                    ],
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+
+        self.assertIn("**Optical route:** confocal", "\n".join(hardware["light_sources"][0]["spec_lines"]))
+        self.assertIn("**Optical route:** confocal", "\n".join(hardware["detectors"][0]["spec_lines"]))
+
+    def test_methods_generator_export_carries_blockers_without_changing_main_dto(self) -> None:
+        instrument = {
+            "dto": {"id": "scope-1", "display_name": "Scope 1"},
+            "methods_generation": {"is_blocked": True, "blockers": [{"path": "software[0].version"}]},
+        }
+
+        exported = build_methods_generator_instrument_export(instrument)
+
+        self.assertEqual(exported["id"], "scope-1")
+        self.assertIn("methods_generation", exported)
+        self.assertTrue(exported["methods_generation"]["is_blocked"])
+
+    def test_llm_inventory_payload_includes_policy_grounding_metadata(self) -> None:
+        payload = build_llm_inventory_payload(
+            {"short_name": "Core"},
+            [
+                {
+                    "dto": {"id": "scope-1", "display_name": "Scope 1", "hardware": {"detectors": None}},
+                    "canonical": {
+                        "policy": {
+                            "missing_required": [{"path": "hardware.detectors", "title": "Detectors"}],
+                            "missing_conditional": [{"path": "software[].version", "title": "Software version"}],
+                            "alias_fallbacks": [{"path": "instrument.display_name", "alias": "instrument.name"}],
+                        }
+                    },
+                }
+            ],
+        )
+
+        scope = payload["active_microscopes"][0]
+        completeness = scope["inventory_completeness"]
+        self.assertEqual(completeness["policy_missing_required"][0]["path"], "hardware.detectors")
+        self.assertEqual(completeness["policy_missing_conditional"][0]["path"], "software[].version")
+        self.assertEqual(completeness["alias_fallbacks"][0]["alias"], "instrument.name")
+
+    def test_json_script_data_escapes_script_terminators_and_round_trips(self) -> None:
+        payload = {"text": 'Quote "line"\n</script><script>alert(1)</script>'}
+        encoded = json_script_data(payload)
+
+        self.assertNotIn("</script>", encoded)
+        self.assertEqual(json.loads(encoded), payload)
+
+    def test_methods_generator_page_config_reads_override_file_and_is_render_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            (repo_root / "acknowledgements.yaml").write_text(
+                json.dumps({
+                    "standard": 'Standard ack with "quotes" and </script>',
+                    "xcelligence_addition": "xCELL ack",
+                }),
+                encoding="utf-8",
+            )
+
+            config = build_methods_generator_page_config(
+                {
+                    "acknowledgements": {"standard": "fallback", "xcelligence_addition": "fallback x"},
+                    "methods_generator": {"instrument_data_url": "../assets/custom.json"},
+                },
+                repo_root,
+            )
+
+            template = Path("scripts/templates/methods_generator.md.j2").read_text(encoding="utf-8")
+            rendered = template.replace("{{ methods_generator_config_json | safe }}", json_script_data(config))
+
+            self.assertIn("../assets/custom.json", rendered)
+            match = rendered.split('<script id="methods-generator-config" type="application/json">', 1)[1].split('</script>', 1)[0].strip()
+            parsed = json.loads(match)
+            self.assertEqual(parsed["acknowledgements"]["standard"], 'Standard ack with "quotes" and </script>')
+            self.assertNotIn("</script>", match)
+
+    def test_plan_template_config_round_trips_with_escaped_facility_strings(self) -> None:
+        config = {
+            "facility_short_name": 'Core "A" </script>',
+            "facility_contact_url": "https://example.org/contact",
+            "facility_contact_label": "Contact Core Staff",
+            "llm_inventory_asset_url": "assets/llm_inventory.json",
+        }
+        template = Path("scripts/templates/plan_experiments.md.j2").read_text(encoding="utf-8")
+        rendered = template.replace("{{ plan_experiments_config_json | safe }}", json_script_data(config))
+        match = rendered.split('<script id="plan-experiments-config" type="application/json">', 1)[1].split('</script>', 1)[0].strip()
+
+        self.assertEqual(json.loads(match), config)
+        self.assertNotIn("</script>", match)
 
     def test_optical_path_dto_preserves_runtime_splitters_for_virtual_microscope(self) -> None:
         lightpath_dto = {

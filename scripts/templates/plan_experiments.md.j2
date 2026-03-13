@@ -24,7 +24,7 @@ Choosing the right microscope for your specific biological question can be chall
 ### Step 1: Download our Facility Database
 Download the tailored, AI-ready snapshot of our active microscope inventory. This file includes current hardware capabilities and live instrument health statuses.
 
-[⬇️ Download `llm_inventory.json`](assets/llm_inventory.json){: download="llm_inventory.json" .md-button .md-button--primary style="margin-top: 10px; margin-bottom: 20px;" }
+[⬇️ Download `llm_inventory.json`]({{ llm_inventory_asset_url }}){: download="llm_inventory.json" .md-button .md-button--primary style="margin-top: 10px; margin-bottom: 20px;" }
 
 ### Step 2: Open your preferred AI Assistant
 Go to your preferred AI tool (e.g., ChatGPT, Claude) and ensure it supports file uploads.
@@ -44,8 +44,28 @@ Upload the `llm_inventory.json` file you just downloaded. Then, describe your ex
   <textarea id="generated-prompt" rows="18" style="width: 100%; padding: 15px; padding-top: 50px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5; resize: vertical;" readonly></textarea>
 </div>
 
+<script id="plan-experiments-config" type="application/json">
+{{ plan_experiments_config_json | safe }}
+</script>
+
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    const configNode = document.getElementById("plan-experiments-config");
+    let pageConfig = {
+      facility_short_name: "Core Imaging Facility",
+      facility_contact_url: "#",
+      facility_contact_label: "Contact Core Imaging Facility Staff",
+      llm_inventory_asset_url: "assets/llm_inventory.json",
+    };
+    try {
+      if (configNode?.textContent?.trim()) {
+        pageConfig = JSON.parse(configNode.textContent);
+      }
+    } catch (error) {
+      console.error("Failed to parse plan-experiments config", error);
+    }
+
+    const facilityShortName = String(pageConfig?.facility_short_name || "Core Imaging Facility");
     const inputArea = document.getElementById("experiment-desc");
     const outputArea = document.getElementById("generated-prompt");
     const copyBtn = document.getElementById("copy-prompt-btn");
@@ -77,7 +97,7 @@ Please:
 - For every key requirement, label evidence as known vs unknown based on inventory completeness metadata.
 - Clearly state any important tradeoffs or uncertainty, and do not fill gaps with ungrounded assumptions.
 - Indicate which system is the top choice and which is the backup, if applicable.
-- Conclude your response by strongly encouraging me to discuss these recommendations with the {{ facility_short_name }} core facility staff before booking, as they can provide final validation and training.`;
+- Conclude your response by strongly encouraging me to discuss these recommendations with the ${facilityShortName} core facility staff before booking, as they can provide final validation and training.`;
 
     function updatePrompt() {
       const userText = inputArea.value.trim();
@@ -112,4 +132,4 @@ Please:
 
 While AI is a great starting point for navigating our equipment, nothing beats human expertise! If you are unsure about your experimental design, fluorophore choices, or which microscope is the perfect fit for your research, please don't hesitate to contact our core facility staff.
 
-[✉️ Contact {{ facility_short_name }} Staff]({{ facility_contact_url }}){: target="_blank" .md-button }
+[✉️ {{ facility_contact_label }}]({{ facility_contact_url }}){: target="_blank" .md-button }

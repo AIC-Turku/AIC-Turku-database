@@ -5,7 +5,15 @@
   }
   root.VirtualMicroscopeRuntime = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
-  const ROUTE_TAGS = new Set(['epi', 'tirf', 'confocal', 'multiphoton', 'shared', 'all']);
+  const ROUTE_TAGS = new Set(['epi', 'tirf', 'confocal', 'multiphoton', 'transmitted', 'shared', 'all']);
+  const ROUTE_LABELS = {
+    confocal: 'Confocal',
+    epi: 'Epi-fluorescence',
+    tirf: 'TIRF',
+    multiphoton: 'Multiphoton',
+    transmitted: 'Transmitted light',
+  };
+  const ROUTE_SORT_ORDER = ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
   const CAMERA_KINDS = new Set(['camera', 'scmos', 'cmos', 'ccd', 'emccd']);
   const HYBRID_KINDS = new Set(['hyd']);
   const APD_KINDS = new Set(['apd', 'spad']);
@@ -95,6 +103,38 @@
       }
     });
     return tags;
+  }
+
+  function routeSortKey(route) {
+    const index = ROUTE_SORT_ORDER.indexOf(route);
+    return [index >= 0 ? index : ROUTE_SORT_ORDER.length, route];
+  }
+
+  function routeLabel(route) {
+    const normalized = cleanString(route).toLowerCase();
+    if (!normalized) return '';
+    return ROUTE_LABELS[normalized] || normalized.replace(/_/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
+  }
+
+  function normalizeRouteCatalog(rawRoutes) {
+    const catalog = [];
+    const seen = new Set();
+    (Array.isArray(rawRoutes) ? rawRoutes : []).forEach((entry) => {
+      const routeId = cleanString(typeof entry === 'string' ? entry : (entry && (entry.id || entry.route || entry.value))).toLowerCase();
+      if (!routeId || !ROUTE_TAGS.has(routeId) || routeId === 'shared' || routeId === 'all' || seen.has(routeId)) return;
+      seen.add(routeId);
+      catalog.push({
+        id: routeId,
+        label: cleanString(entry && entry.label) || routeLabel(routeId),
+      });
+    });
+    catalog.sort((left, right) => {
+      const [leftIndex, leftRoute] = routeSortKey(left.id);
+      const [rightIndex, rightRoute] = routeSortKey(right.id);
+      if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+      return leftRoute.localeCompare(rightRoute);
+    });
+    return catalog;
   }
 
   function routesFromObject(obj) {
@@ -211,9 +251,35 @@
       });
   }
 
+  function collectRouteCatalogFallback(normalizedPayload) {
+    const tags = new Set();
+    const collect = (obj) => {
+      routesFromObject(obj).forEach((route) => {
+        if (route !== 'shared' && route !== 'all') tags.add(route);
+      });
+      if (obj && typeof obj === 'object') {
+        const linkedComponents = obj.linked_components || obj.linkedComponents;
+        if (linkedComponents && typeof linkedComponents === 'object') {
+          Object.values(linkedComponents).forEach(collect);
+        }
+        if (Array.isArray(obj.branches)) obj.branches.forEach(collect);
+        if (obj.component && typeof obj.component === 'object') collect(obj.component);
+      }
+    };
+    ['lightSources', 'cube', 'excitation', 'dichroic', 'emission', 'detectors', 'splitters'].forEach((key) => {
+      (Array.isArray(normalizedPayload[key]) ? normalizedPayload[key] : []).forEach((mechanism) => {
+        collect(mechanism);
+        if (mechanism && mechanism.positions && typeof mechanism.positions === 'object') {
+          Object.values(mechanism.positions).forEach(collect);
+        }
+      });
+    });
+    return normalizeRouteCatalog(Array.from(tags));
+  }
+
   function normalizeInstrumentPayload(rawPayload) {
     const payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
-    return {
+    const normalized = {
       metadata: payload.metadata || {},
       lightSources: normalizeMechanismList(payload.light_sources),
       cube: normalizeMechanismList(payload.stages && payload.stages.cube),
@@ -223,7 +289,15 @@
       splitters: normalizeSplitters(payload.runtime_splitters || payload.splitters),
       detectors: normalizeMechanismList(payload.detectors),
       validPaths: Array.isArray(payload.valid_paths) ? payload.valid_paths : [],
+      routeOptions: [],
+      defaultRoute: cleanString(payload.default_route).toLowerCase() || null,
     };
+    const explicitRouteOptions = normalizeRouteCatalog(payload.available_routes || payload.route_options || []);
+    normalized.routeOptions = explicitRouteOptions.length ? explicitRouteOptions : collectRouteCatalogFallback(normalized);
+    if (!normalized.defaultRoute || !normalized.routeOptions.some((entry) => entry.id === normalized.defaultRoute)) {
+      normalized.defaultRoute = normalized.routeOptions[0] ? normalized.routeOptions[0].id : null;
+    }
+    return normalized;
   }
 
   function normalizePoints(rawPoints) {
@@ -371,6 +445,27 @@
     return matched ? normalizePoints(matched.data || matched.points || matched.values) : [];
   }
 
+  function summarizeSpectrumSources(spectrumSources) {
+    const preferredOrder = ['api', 'detail', 'bundled_cache', 'synthetic'];
+    const seen = [];
+    preferredOrder.forEach((source) => {
+      if (Object.values(spectrumSources || {}).includes(source) && !seen.includes(source)) {
+        seen.push(source);
+      }
+    });
+    Object.values(spectrumSources || {}).forEach((source) => {
+      const cleaned = cleanString(source).toLowerCase();
+      if (cleaned && !seen.includes(cleaned)) seen.push(cleaned);
+    });
+    return seen.join('+') || 'none';
+  }
+
+  function normalizedStateName(state, index) {
+    const rawName = cleanString(state && (state.name || state.label));
+    if (/^default$/i.test(rawName)) return 'Default state';
+    return rawName || (index === 0 ? 'Default state' : `State ${index + 1}`);
+  }
+
   function spectrumRowCandidates(row) {
     const protein = row && (row.protein || row.fp || row.fluorophore || {});
     const state = row && (row.state || row.fp_state || {});
@@ -452,6 +547,7 @@
     const spectra = [];
     if (Array.isArray(state && state.spectra)) spectra.push(...state.spectra);
     if (!spectra.length) spectra.push(...collectTopLevelSpectra(detail));
+    const spectraOrigin = cleanString(fallbackSummary && fallbackSummary.sourceOrigin).toLowerCase() || 'detail';
     const maxima = findMaxima(state, findMaxima(detail, fallbackSummary));
     const ec = firstDefinedNumber(
       state && (state.ec ?? state.ext_coeff ?? state.extinction_coefficient),
@@ -468,20 +564,29 @@
       detail && (detail.brightness ?? detail.spectral_brightness),
       fallbackSummary && fallbackSummary.brightness,
     );
+    const ex1p = spectrumFromAliases(spectra, ['excitation', 'absorption', '1p', ' ex']);
+    const ex2p = spectrumFromAliases(spectra, ['2p', 'two-photon', 'two photon']);
+    const em = spectrumFromAliases(spectra, ['emission', ' em']);
+    const spectrumSources = {
+      ex1p: ex1p.length ? spectraOrigin : null,
+      ex2p: ex2p.length ? spectraOrigin : null,
+      em: em.length ? spectraOrigin : null,
+    };
     return {
       key: cleanString(state && (state.uuid || state.slug || state.id || state.name)) || `state_${index + 1}`,
       slug: cleanString(state && state.slug),
-      name: cleanString(state && (state.name || state.label)) || (index === 0 ? 'Default state' : `State ${index + 1}`),
+      name: normalizedStateName(state, index),
       isDefault: Boolean(state && (state.is_default || state.default || index === 0)),
-      ex1p: spectrumFromAliases(spectra, ['excitation', 'absorption', '1p', ' ex']),
-      ex2p: spectrumFromAliases(spectra, ['2p', 'two-photon', 'two photon']),
-      em: spectrumFromAliases(spectra, ['emission', ' em']),
+      ex1p,
+      ex2p,
+      em,
       exMax: maxima.exMax,
       emMax: maxima.emMax,
       ec,
       qy,
       brightness,
-      spectraSource: 'detail',
+      spectrumSources,
+      spectraSource: summarizeSpectrumSources(spectrumSources),
     };
   }
 
@@ -504,6 +609,7 @@
         ec: summary && summary.ec,
         qy: summary && summary.qy,
         brightness: summary && summary.brightness,
+        spectrumSources: { ex1p: null, ex2p: null, em: null },
         spectraSource: 'none',
       });
     }
@@ -519,15 +625,25 @@
     return matched || states.find((state) => state.isDefault) || states[0] || null;
   }
 
-  function injectExternalSpectra(states, spectraSeed) {
+  function injectExternalSpectra(states, spectraSeed, sourceOrigin) {
     const rows = normalizeFPbaseSpectraResponse(spectraSeed);
+    const spectraOrigin = cleanString(sourceOrigin || (spectraSeed && spectraSeed.sourceOrigin)).toLowerCase() || 'api';
     rows.forEach((row) => {
       const target = matchStateRecord(states, row);
       if (!target) return;
-      if (row.type === 'ex2p' && row.points.length) target.ex2p = row.points;
-      if (row.type === 'ex1p' && row.points.length) target.ex1p = row.points;
-      if (row.type === 'em' && row.points.length) target.em = row.points;
-      target.spectraSource = 'api';
+      if (row.type === 'ex2p' && row.points.length) {
+        target.ex2p = row.points;
+        target.spectrumSources.ex2p = spectraOrigin;
+      }
+      if (row.type === 'ex1p' && row.points.length) {
+        target.ex1p = row.points;
+        target.spectrumSources.ex1p = spectraOrigin;
+      }
+      if (row.type === 'em' && row.points.length) {
+        target.em = row.points;
+        target.spectrumSources.em = spectraOrigin;
+      }
+      target.spectraSource = summarizeSpectrumSources(target.spectrumSources);
     });
   }
 
@@ -535,12 +651,13 @@
     (Array.isArray(states) ? states : []).forEach((state) => {
       if (!Array.isArray(state.ex1p) || !state.ex1p.length) {
         state.ex1p = synthesizeSpectrumFromMaxima('ex1p', state.exMax);
-        if (state.ex1p.length) state.spectraSource = state.spectraSource === 'api' ? 'api+synthetic' : 'synthetic';
+        if (state.ex1p.length) state.spectrumSources.ex1p = 'synthetic';
       }
       if (!Array.isArray(state.em) || !state.em.length) {
         state.em = synthesizeSpectrumFromMaxima('em', state.emMax);
-        if (state.em.length) state.spectraSource = state.spectraSource === 'api' ? 'api+synthetic' : 'synthetic';
+        if (state.em.length) state.spectrumSources.em = 'synthetic';
       }
+      state.spectraSource = summarizeSpectrumSources(state.spectrumSources);
     });
   }
 
@@ -549,7 +666,7 @@
       ? summarySeed
       : (normalizeFPbaseSearchResults([detail])[0] || {});
     const states = ensureStateList(detail || {}, summary);
-    if (spectraSeed) injectExternalSpectra(states, spectraSeed);
+    if (spectraSeed) injectExternalSpectra(states, spectraSeed, summary && summary.sourceOrigin);
     ensureUsableStateSpectra(states);
     const activeState = states.find((state) => state.isDefault) || states[0];
     const key = summary.key || cleanString(detail && (detail.uuid || detail.slug || detail.id || detail.name)) || 'fluorophore';
@@ -576,13 +693,17 @@
       spectraSource: activeState.spectraSource || 'detail',
       raw: {
         summary: summarySeed || {},
+        detail: detail || {},
         detailId: cleanString(detail && (detail.id || detail.slug || detail.uuid || detail.name)),
       },
     };
   }
 
   function fallbackFluorophoreRecords() {
-    return FPBASE_FALLBACK_LIBRARY.map((entry) => normalizeFluorophoreDetail(entry, normalizeFPbaseSearchResults([entry])[0] || {}, entry));
+    return FPBASE_FALLBACK_LIBRARY.map((entry) => normalizeFluorophoreDetail(entry, {
+      ...(normalizeFPbaseSearchResults([entry])[0] || {}),
+      sourceOrigin: 'bundled_cache',
+    }, entry));
   }
 
   function searchFallbackFluorophores(query) {
@@ -1393,6 +1514,7 @@
 
   return {
     normalizeRouteTags,
+    routeLabel,
 
     routesFromObject,
     routeMatches,

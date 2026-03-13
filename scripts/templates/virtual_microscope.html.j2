@@ -31,6 +31,7 @@ hide:
     padding: 16px;
   }
   .vm-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .vm-panel-grid { display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); align-items:start; }
   .vm-section-title {
     margin: 0 0 12px; font-size: 13px; color: var(--muted);
     letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700;
@@ -55,17 +56,17 @@ hide:
   
   /* The Flow Graph */
   .light-path-graph {
-    display: flex; flex-wrap: nowrap; overflow-x: auto; align-items: center;
-    gap: 12px; padding: 16px; background: var(--md-code-bg-color);
+    display: flex; flex-direction: column; align-items: stretch;
+    gap: 10px; padding: 12px; background: var(--md-code-bg-color);
     border-radius: 12px; border: 1px solid var(--border);
   }
   .graph-node {
-    min-width: 160px; padding: 12px; background: var(--surface);
+    width: 100%; min-width: 0; padding: 12px; background: var(--surface);
     border: 2px solid var(--border); border-radius: 8px;
     display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
   }
   .graph-node.sample-node { border-color: var(--primary); background: rgba(var(--md-primary-fg-color--rgb), 0.05); }
-  .graph-arrow { color: var(--primary); font-size: 20px; flex-shrink: 0; }
+  .graph-arrow { color: var(--primary); font-size: 18px; align-self: center; transform: rotate(90deg); line-height: 1; }
   .node-title { font-size: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 4px;}
   
   /* Checkboxes for Lasers */
@@ -77,7 +78,7 @@ hide:
   .tunable-range-label { font-size: 11px; text-align: center; font-weight: bold;}
   .slider-row input[type="range"] { width: 100%; margin: 2px 0; accent-color: var(--primary); }
 
-  .vm-chart-wrap { background: #fff; border-radius: 12px; padding: 10px; border: 1px solid var(--border); height: 320px; }
+  .vm-chart-wrap { background: var(--surface); border-radius: 12px; padding: 10px; border: 1px solid var(--border); height: 300px; }
   .vm-panel-copy { font-size: 12px; color: var(--muted); margin: 4px 0 12px; }
   .vm-grid-two { display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
   .fp-search-wrap { position: relative; display: flex; gap: 8px; }
@@ -85,8 +86,12 @@ hide:
   .fp-dropdown li { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
   .fp-dropdown li:hover { background: var(--md-code-bg-color); }
   .vm-stack { display: grid; gap: 8px; }
+  .vm-source-grid { display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .vm-source-group-title { grid-column: 1 / -1; }
   .vm-mini { font-size: 11px; color: var(--muted); }
   .vm-metric { font-family: monospace; font-size: 12px; text-align: right; white-space: nowrap; }
+  .vm-route-field { margin: 0; min-width: 220px; }
+  .vm-summary-grid { display:grid; gap:8px 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 </style>
 
 <div class="vm-page">
@@ -101,44 +106,53 @@ hide:
   </header>
 
   <main class="vm-main">
-    
-    <div class="vm-panel">
-      <h2 class="vm-section-title">1. Fluorophore Reference Spectra</h2>
-      <p class="vm-panel-copy">Load fluorescent proteins from FPbase, choose active states, and compare excitation and emission spectra against the selected laser lines.</p>
-      <div class="vm-grid-two">
-        <div>
-          <div class="fp-search-wrap">
-            <input id="fluorophoreQuery" type="text" placeholder="e.g. GFP, mCherry, mNeonGreen" style="flex:1; border-radius:6px; border:1px solid var(--border); padding:8px;"/>
-            <button id="searchBtn" class="vm-btn">Search</button>
-            <ul id="searchResults" class="fp-dropdown"></ul>
+    <section class="vm-panel-grid">
+      <div class="vm-panel">
+        <h2 class="vm-section-title">1. Fluorophore Reference Spectra</h2>
+        <p class="vm-panel-copy">Load fluorescent proteins from FPbase, choose active states, and compare reference excitation and emission spectra against the currently selected sources.</p>
+        <div class="vm-grid-two">
+          <div>
+            <div class="fp-search-wrap">
+              <input id="fluorophoreQuery" type="text" placeholder="e.g. GFP, mCherry, mNeonGreen" style="flex:1; border-radius:6px; border:1px solid var(--border); padding:8px;"/>
+              <button id="searchBtn" class="vm-btn">Search</button>
+              <ul id="searchResults" class="fp-dropdown"></ul>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; cursor:pointer;">
+              <input id="use2Photon" type="checkbox" />
+              <span>Use 2-Photon Spectra when available</span>
+            </label>
+            <p id="searchStatus" style="font-size:11px; margin-top:6px; color:var(--muted);"></p>
           </div>
-          <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; cursor:pointer;">
-            <input id="use2Photon" type="checkbox" />
-            <span>Use 2-Photon Spectra when available</span>
-          </label>
-          <p id="searchStatus" style="font-size:11px; margin-top:6px; color:var(--muted);"></p>
+          <div>
+            <h3 class="vm-section-title" style="margin-top:0;">Loaded fluorophores</h3>
+            <ul id="selectedDyes" style="display:flex; flex-wrap:wrap; gap:8px; padding:0; margin:0;">
+              <li style="font-size:12px; color:var(--muted);">No dyes loaded.</li>
+            </ul>
+          </div>
         </div>
-        <div>
-          <h3 class="vm-section-title" style="margin-top:0;">Loaded fluorophores</h3>
-          <ul id="selectedDyes" style="display:flex; flex-wrap:wrap; gap:8px; padding:0; margin:0;">
-            <li style="font-size:12px; color:var(--muted);">No dyes loaded.</li>
-          </ul>
+        <div class="vm-chart-wrap" style="margin-top: 16px;">
+          <canvas id="referenceSpectraChart"></canvas>
         </div>
       </div>
-      <div class="vm-chart-wrap" style="margin-top: 16px;">
-        <canvas id="referenceSpectraChart"></canvas>
-      </div>
-    </div>
 
-    <div class="vm-panel">
-      <h2 class="vm-section-title">2. Propagated Light Through the Optical Path</h2>
-      <p class="vm-panel-copy">Configure the light path below. The middle spectrum panel shows excitation at the sample, fluorescence after the selected optics, detector-path fluorescence after any detector collection window, and any excitation light that still leaks into that path.</p>
-      <div id="lightPathGraph" class="light-path-graph"></div>
-      <div id="pathSummary" style="font-size:13px; margin:12px 0; padding:10px; border-radius:6px; background:var(--md-code-bg-color); border:1px dashed var(--border);"></div>
-      <div class="vm-chart-wrap">
-        <canvas id="propagationSpectraChart"></canvas>
+      <div class="vm-panel">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+          <div>
+            <h2 class="vm-section-title">2. Propagated Light Through the Optical Path</h2>
+            <p class="vm-panel-copy">Choose an optical route when the instrument supports more than one path, then configure the route-specific optics below. The propagated panel summarizes excitation at the sample, fluorescence after the selected optics, the detector-path spectrum, and any excitation leakage that survives the path.</p>
+          </div>
+          <div id="opticalRouteChooserWrap" class="vm-field vm-route-field" style="display:none;">
+            <label for="opticalRouteSelector">Optical route</label>
+            <select id="opticalRouteSelector"></select>
+          </div>
+        </div>
+        <div id="lightPathGraph" class="light-path-graph"></div>
+        <div id="pathSummary" class="vm-summary-grid" style="font-size:13px; margin:12px 0; padding:10px; border-radius:6px; background:var(--md-code-bg-color); border:1px dashed var(--border);"></div>
+        <div class="vm-chart-wrap">
+          <canvas id="propagationSpectraChart"></canvas>
+        </div>
       </div>
-    </div>
+    </section>
 
     <div class="vm-panel">
       <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>

@@ -80,14 +80,33 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
   </div>
 </div>
 
-<script>
+<script id="methods-generator-config" type="application/json">
+{{ methods_generator_config_json | safe }}
+</script>
 
+<script>
 document.addEventListener("DOMContentLoaded", async () => {
-    const instrumentsResponse = await fetch("../assets/instruments_data.json");
-    const instrumentsPayload = await instrumentsResponse.json();
-    const instruments = Array.isArray(instrumentsPayload)
-        ? instrumentsPayload
-        : (instrumentsPayload?.instruments || []);
+    const configNode = document.getElementById("methods-generator-config");
+    let pageConfig = {
+        acknowledgements: {
+            standard: "",
+            xcelligence_addition: "",
+        },
+        output_title: "Light Microscopy Methods",
+    };
+    try {
+        if (configNode?.textContent?.trim()) {
+            pageConfig = JSON.parse(configNode.textContent);
+        }
+    } catch (error) {
+        console.error("Failed to parse methods-generator config", error);
+    }
+
+    const acknowledgements = pageConfig?.acknowledgements || {};
+    const ackStandard = String(acknowledgements.standard || "");
+    const ackXcelligence = String(acknowledgements.xcelligence_addition || "");
+    const outputTitle = String(pageConfig?.output_title || "Light Microscopy Methods");
+    const instrumentDataUrl = String(pageConfig?.instrument_data_url || "../assets/instruments_data.json");
 
     const systemSelect = document.getElementById("system-select");
     const hwOptions = document.getElementById("hardware-options");
@@ -96,21 +115,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     const clearBtn = document.getElementById("clear-btn");
     const addBtn = document.getElementById("add-btn");
 
-    let currentInst = null;
-    let accumulatedMethods = [];
-    let usedInstrumentNames = new Set();
-
     const methodsMetadataWarning = document.getElementById("methods-metadata-warning");
     const methodsMetadataBlockers = document.getElementById("methods-metadata-blockers");
 
-    // Populate dropdown
-    instruments.forEach(inst => {
-        const opt = document.createElement("option");
-        opt.value = inst.id;
-        opt.textContent = inst.retired ? `${inst.display_name} (Retired)` : inst.display_name;
-        systemSelect.appendChild(opt);
-    });
+    let instruments = [];
+    let currentInst = null;
+    let accumulatedEntries = new Map();
+    let usedInstruments = new Map();
 
+    function cleanText(value) {
+        return typeof value === "string" ? value.trim() : "";
+    }
+
+    function uniqueTexts(values) {
+        return Array.from(new Set((Array.isArray(values) ? values : []).map(cleanText).filter(Boolean)));
+    }
+
+    function dedupeSentences(values) {
+        const seen = new Set();
+        return (Array.isArray(values) ? values : []).reduce((acc, value) => {
+            const cleaned = cleanText(value);
+            if (!cleaned) return acc;
+            const key = cleaned.toLowerCase();
+            if (seen.has(key)) return acc;
+            seen.add(key);
+            acc.push(cleaned);
+            return acc;
+        }, []);
+    }
+
+    function humanJoin(values) {
+        const items = uniqueTexts(values);
+        if (!items.length) return "";
+        if (items.length === 1) return items[0];
+        if (items.length === 2) return `${items[0]} and ${items[1]}`;
+        return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+    }
+
+    function showLoadError(message) {
+        const finalMessage = cleanText(message) || "Failed to load instrument data.";
+        currentInst = null;
+        hwOptions.style.display = "none";
+        addBtn.disabled = true;
+        methodsMetadataWarning.style.display = "none";
+        methodsMetadataBlockers.innerHTML = "";
+        outputText.value = finalMessage;
+    }
+
+    function populateDropdown() {
+        systemSelect.innerHTML = '<option value="">-- Choose an instrument --</option>';
+        instruments.forEach(inst => {
+            const opt = document.createElement("option");
+            opt.value = inst.id;
+            opt.textContent = inst.retired ? `${inst.display_name} (Retired)` : inst.display_name;
+            systemSelect.appendChild(opt);
+        });
+    }
 
     function formatBlockerLabel(blocker) {
         return (blocker?.title || blocker?.path || "Missing field").toString().trim();
@@ -148,6 +208,173 @@ document.addEventListener("DOMContentLoaded", async () => {
         return status;
     }
 
+    function bindCheckboxes(containerId, items, prefix) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = "";
+
+        if (!Array.isArray(items) || items.length === 0) {
+            container.innerHTML = "<span style='color: gray; font-size: 0.9em;'>No data available.</span>";
+            return;
+        }
+
+        items.forEach((item, index) => {
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "4px";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.id = `${prefix}-${index}`;
+            checkbox.value = item.id || `${prefix}-${index}`;
+            checkbox.dataset.displayLabel = item.display_label || "";
+            checkbox.dataset.methodSentence = item.method_sentence || "";
+            checkbox.dataset.category = prefix;
+
+            const label = document.createElement("label");
+            label.htmlFor = checkbox.id;
+            label.textContent = " " + (item.display_label || "Unnamed item");
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+
+            if (item.display_subtitle) {
+                const sub = document.createElement("div");
+                sub.textContent = item.display_subtitle;
+                sub.style.fontSize = "0.8em";
+                sub.style.fontStyle = "italic";
+                sub.style.color = "gray";
+                sub.style.marginLeft = "24px";
+                wrapper.appendChild(sub);
+            }
+
+            container.appendChild(wrapper);
+        });
+    }
+
+    function getCheckedSelections(prefix) {
+        return Array.from(document.querySelectorAll(`input[id^="${prefix}-"]:checked`)).map(cb => ({
+            id: cb.value,
+            displayLabel: cleanText(cb.dataset.displayLabel),
+            methodSentence: cleanText(cb.dataset.methodSentence),
+        }));
+    }
+
+    function getCheckedIds(prefix) {
+        return getCheckedSelections(prefix).map(item => item.id).sort();
+    }
+
+    function groupedLabelSentence(prefix, selections) {
+        const labels = uniqueTexts(selections.map(item => item.displayLabel));
+        if (!labels.length) {
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
+        }
+
+        if (prefix === "modality") {
+            return labels.length === 1
+                ? `Imaging modality used was ${labels[0]}.`
+                : `Imaging modalities used included ${humanJoin(labels)}.`;
+        }
+        if (prefix === "module") {
+            return labels.length === 1
+                ? `Installed module used was ${labels[0]}.`
+                : `Installed modules used included ${humanJoin(labels)}.`;
+        }
+        if (prefix === "scanner") {
+            return `The scan engine used was ${humanJoin(labels)}.`;
+        }
+        if (prefix === "obj") {
+            return labels.length === 1
+                ? `Objective used was ${labels[0]}.`
+                : `Objectives used were ${humanJoin(labels)}.`;
+        }
+        if (prefix === "det") {
+            return `Detection was performed using ${humanJoin(labels)}.`;
+        }
+        if (prefix === "light") {
+            return `Excitation was provided by ${humanJoin(labels)}.`;
+        }
+        if (prefix === "magnification-changer") {
+            return labels.length === 1
+                ? `Magnification changer setting used was ${labels[0]}.`
+                : `Magnification changer settings used were ${humanJoin(labels)}.`;
+        }
+        if (prefix === "filter") {
+            return labels.length === 1
+                ? `The selected optical filter was ${labels[0]}.`
+                : `Selected optical filters were ${humanJoin(labels)}.`;
+        }
+        return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
+    }
+
+    function buildSelectionSignature(dto) {
+        return JSON.stringify({
+            instrumentId: dto.id,
+            modality: getCheckedIds("modality"),
+            module: getCheckedIds("module"),
+            scanner: getCheckedIds("scanner"),
+            obj: getCheckedIds("obj"),
+            light: getCheckedIds("light"),
+            filter: getCheckedIds("filter"),
+            splitter: getCheckedIds("splitter"),
+            det: getCheckedIds("det"),
+            magnificationChanger: getCheckedIds("magnification-changer"),
+            opticalModulator: getCheckedIds("optical-modulator"),
+            illuminationLogic: getCheckedIds("illumination-logic"),
+        });
+    }
+
+    function instrumentTriggersXcelligence(nameOrId) {
+        const normalized = cleanText(nameOrId).toLowerCase();
+        return ["xcelligence", "rtca esight"].some(token => normalized.includes(token));
+    }
+
+    function updateOutputText() {
+        if (accumulatedEntries.size === 0) {
+            outputText.value = 'Please select an instrument and click "Add to Methods".';
+            return;
+        }
+
+        const blocks = Array.from(accumulatedEntries.values()).map(entry => entry.text).filter(Boolean);
+        let finalOutput = `${outputTitle}:\n\n${blocks.join("\n\n")}`;
+
+        const acknowledgementParts = [ackStandard];
+        const usedXcell = Array.from(usedInstruments.entries()).some(([instrumentId, displayName]) => {
+            return instrumentTriggersXcelligence(instrumentId) || instrumentTriggersXcelligence(displayName);
+        });
+        if (usedXcell) acknowledgementParts.push(ackXcelligence);
+
+        const filteredAcknowledgements = acknowledgementParts.map(cleanText).filter(Boolean);
+        if (filteredAcknowledgements.length) {
+            finalOutput += `\n\nAcknowledgements:\n\n${filteredAcknowledgements.join(" ")}`;
+        }
+
+        outputText.value = finalOutput;
+    }
+
+    async function loadInstruments() {
+        try {
+            const instrumentsResponse = await fetch(instrumentDataUrl, {
+                headers: { Accept: "application/json" },
+            });
+            if (!instrumentsResponse.ok) {
+                throw new Error(`HTTP ${instrumentsResponse.status}`);
+            }
+            const instrumentsPayload = await instrumentsResponse.json();
+            instruments = Array.isArray(instrumentsPayload)
+                ? instrumentsPayload
+                : (instrumentsPayload?.instruments || []);
+            if (!Array.isArray(instruments) || instruments.length === 0) {
+                throw new Error("The instruments export did not contain any instruments.");
+            }
+            populateDropdown();
+            addBtn.disabled = false;
+            systemSelect.disabled = false;
+            updateOutputText();
+        } catch (error) {
+            console.error("Failed to load methods-generator instrument data", error);
+            showLoadError(`Failed to load instrument data for the Methods Generator from ${instrumentDataUrl}: ${error.message}. Please rebuild the dashboard and verify the configured JSON export exists and contains valid JSON.`);
+        }
+    }
+
     systemSelect.addEventListener("change", (e) => {
         const instId = e.target.value;
         currentInst = instruments.find(i => i.id === instId);
@@ -179,53 +406,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         bindCheckboxes("splitter-list", opticalPath.splitters || [], "splitter");
     });
 
-    function bindCheckboxes(containerId, items, prefix) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = "";
-
-        if (!Array.isArray(items) || items.length === 0) {
-            container.innerHTML = "<span style='color: gray; font-size: 0.9em;'>No data available.</span>";
-            return;
-        }
-
-        items.forEach((item, index) => {
-            const wrapper = document.createElement("div");
-            wrapper.style.marginBottom = "4px";
-
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
-            checkbox.id = `${prefix}-${index}`;
-            checkbox.value = item.id || `${prefix}-${index}`;
-            checkbox.dataset.displayLabel = item.display_label || "";
-            checkbox.dataset.methodSentence = item.method_sentence || "";
-
-            const label = document.createElement("label");
-            label.htmlFor = checkbox.id;
-            label.textContent = " " + (item.display_label || "Unnamed item");
-
-            wrapper.appendChild(checkbox);
-            wrapper.appendChild(label);
-
-            if (item.display_subtitle) {
-                const sub = document.createElement("div");
-                sub.textContent = item.display_subtitle;
-                sub.style.fontSize = "0.8em";
-                sub.style.fontStyle = "italic";
-                sub.style.color = "gray";
-                sub.style.marginLeft = "24px";
-                wrapper.appendChild(sub);
-            }
-
-            container.appendChild(wrapper);
-        });
-    }
-
-    function getCheckedMethodSentences(prefix) {
-        return Array.from(document.querySelectorAll(`input[id^="${prefix}-"]:checked`))
-            .map(cb => cb.dataset.methodSentence)
-            .filter(Boolean);
-    }
-
     addBtn.addEventListener("click", () => {
         if (!currentInst) return;
 
@@ -236,75 +416,71 @@ document.addEventListener("DOMContentLoaded", async () => {
             const blockerSummary = methodsMetadataStatus.blockers
                 .map(blocker => blocker.title || blocker.path || "Missing field")
                 .join(", ");
-            accumulatedMethods.push(`Methods text for ${dto.display_name} cannot be generated yet because required instrument metadata is missing: ${blockerSummary}.`);
+            accumulatedEntries.set(`blocked::${dto.id}`, {
+                instrumentId: dto.id,
+                text: `Methods text for ${dto.display_name} cannot be generated yet because required instrument metadata is missing: ${blockerSummary}.`,
+            });
             updateOutputText();
             return;
         }
 
-        const textParts = [
+        const groupedSelections = [
+            groupedLabelSentence("modality", getCheckedSelections("modality")),
+            groupedLabelSentence("module", getCheckedSelections("module")),
+            groupedLabelSentence("scanner", getCheckedSelections("scanner")),
+            groupedLabelSentence("obj", getCheckedSelections("obj")),
+            groupedLabelSentence("light", getCheckedSelections("light")),
+            groupedLabelSentence("det", getCheckedSelections("det")),
+            groupedLabelSentence("magnification-changer", getCheckedSelections("magnification-changer")),
+            groupedLabelSentence("filter", getCheckedSelections("filter")),
+        ];
+
+        const specialistSelections = dedupeSentences([
+            ...getCheckedSelections("optical-modulator").map(item => item.methodSentence),
+            ...getCheckedSelections("illumination-logic").map(item => item.methodSentence),
+            ...getCheckedSelections("splitter").map(item => item.methodSentence),
+        ]);
+
+        const textParts = dedupeSentences([
             dto.methods?.base_sentence,
-            ...getCheckedMethodSentences("modality"),
-            ...getCheckedMethodSentences("module"),
-            ...getCheckedMethodSentences("scanner"),
+            ...groupedSelections,
             dto.methods?.environment_sentence,
             ...(dto.methods?.stage_sentences || []),
             dto.methods?.autofocus_sentence,
             dto.methods?.triggering_sentence,
-            ...getCheckedMethodSentences("obj"),
-            ...getCheckedMethodSentences("det"),
-            ...getCheckedMethodSentences("light"),
-            ...getCheckedMethodSentences("magnification-changer"),
-            ...getCheckedMethodSentences("optical-modulator"),
-            ...getCheckedMethodSentences("illumination-logic"),
-            ...getCheckedMethodSentences("filter"),
-            ...getCheckedMethodSentences("splitter"),
+            ...specialistSelections,
             ...(dto.methods?.processing_sentences || []),
             "[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)].",
             "[PLEASE SPECIFY: Exposure time(s), excitation power(s), camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable].",
             "Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile.",
             "[DATA AVAILABILITY]: The raw microscopy image files (.nd2/.czi/.lif) generated in this study should be deposited in BioImage Archive or Zenodo to support Open Science and reproducibility; include the accession number or DOI in the final manuscript.",
-        ].filter(Boolean);
+        ]);
 
-        accumulatedMethods.push(textParts.join(" "));
+        const signature = buildSelectionSignature(dto);
+        accumulatedEntries.set(signature, {
+            instrumentId: dto.id,
+            text: textParts.join(" "),
+        });
+        usedInstruments.set(dto.id, dto.display_name || dto.id);
         updateOutputText();
     });
 
-    function updateOutputText() {
-        if (accumulatedMethods.length === 0) {
-            outputText.value = "Please select an instrument and click \"Add to Methods\".";
-            return;
-        }
-
-        let finalOutput = "Light Microscopy Methods:\n\n";
-        finalOutput += accumulatedMethods.join("\n\n");
-
-        // Acknowledgements Section
-        finalOutput += "\n\nAcknowledgements:\n\n";
-
-        // Use the dynamically injected text from acknowledgements.yaml
-        finalOutput += {{ ack_standard }};
-
-        // Check for xCELLigence usage (partial match on name)
-        const usedXcell = Array.from(usedInstrumentNames).some(name => name.toLowerCase().includes("xcelligence"));
-        if (usedXcell) {
-            finalOutput += " " + {{ ack_xcelligence }};
-        }
-
-        outputText.value = finalOutput;
-    }
-
     clearBtn.addEventListener("click", () => {
-        accumulatedMethods = [];
-        usedInstrumentNames.clear();
+        accumulatedEntries = new Map();
+        usedInstruments = new Map();
         updateOutputText();
     });
 
     copyBtn.addEventListener("click", () => {
-        if (accumulatedMethods.length === 0) return;
+        if (accumulatedEntries.size === 0) return;
         navigator.clipboard.writeText(outputText.value);
         const feedback = document.getElementById("copy-feedback");
         feedback.style.display = "inline";
         setTimeout(() => feedback.style.display = "none", 2000);
     });
+
+    addBtn.disabled = true;
+    systemSelect.disabled = true;
+    await loadInstruments();
 });
 </script>

@@ -37,6 +37,8 @@
     propagationChart: document.getElementById('propagationSpectraChart'),
     detectionChart: document.getElementById('detectionChart'),
     scopeSel: document.getElementById('microscopeSelector'),
+    routeWrap: document.getElementById('opticalRouteChooserWrap'),
+    routeSel: document.getElementById('opticalRouteSelector'),
     graph: document.getElementById('lightPathGraph'),
     fpQuery: document.getElementById('fluorophoreQuery'),
     searchBtn: document.getElementById('searchBtn'),
@@ -99,6 +101,10 @@
 
   function mapToArray(map) {
     return Array.from(map.values());
+  }
+
+  function routeSelectionIsExplicit() {
+    return Boolean(state.activeInstrument && Array.isArray(state.activeInstrument.routeOptions) && state.activeInstrument.routeOptions.length > 1);
   }
 
   function uniqueTexts(values) {
@@ -190,7 +196,7 @@
   }
 
   function activeRouteOrder() {
-    return ['tirf', 'multiphoton', 'confocal', 'epi'];
+    return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
   }
 
   function inferRouteFromSourceSettings() {
@@ -209,7 +215,24 @@
   }
 
   function normalizeRouteLabel(route) {
-    return route ? route.toUpperCase() : 'Any compatible route';
+    if (!route) return 'Any compatible route';
+    return VM.routeLabel ? VM.routeLabel(route) : route.toUpperCase();
+  }
+
+  function describeSpectraSource(sourceId) {
+    const sourceMap = {
+      api: 'FPbase spectra API',
+      detail: 'FPbase detail spectra',
+      'detail+api': 'FPbase detail + API spectra',
+      bundled_cache: 'Bundled FP cache',
+      synthetic: 'Synthetic fallback',
+      'api+synthetic': 'FPbase API + synthetic fallback',
+      'detail+synthetic': 'FPbase detail + synthetic fallback',
+      'detail+api+synthetic': 'FPbase detail + API + synthetic fallback',
+      'bundled_cache+synthetic': 'Bundled cache + synthetic fallback',
+      none: 'No spectra available',
+    };
+    return sourceMap[cleanString(sourceId)] || cleanString(sourceId) || 'Unknown source';
   }
 
   function seedSettingsFromInstrument() {
@@ -243,6 +266,11 @@
       currentInstrumentId = event.target.value;
       loadInstrument();
     });
+    DOM.routeSel.addEventListener('change', (event) => {
+      state.activeRoute = cleanString(event.target.value).toLowerCase() || null;
+      renderGraphFlow();
+      refreshOutputs();
+    });
     DOM.searchBtn.addEventListener('click', () => searchFPbase(DOM.fpQuery.value));
     DOM.fpQuery.addEventListener('keypress', (event) => {
       if (event.key === 'Enter') searchFPbase(DOM.fpQuery.value);
@@ -264,11 +292,38 @@
   function loadInstrument() {
     state.activeInstrumentRaw = state.allInstruments[currentInstrumentId] || {};
     state.activeInstrument = VM.normalizeInstrumentPayload(state.activeInstrumentRaw);
-    state.activeRoute = null;
+    state.activeRoute = state.activeInstrument.defaultRoute || null;
     state.spectralBandsByMechanism.clear();
     seedSettingsFromInstrument();
+    renderRouteSelector();
     renderGraphFlow();
     refreshOutputs();
+  }
+
+  function renderRouteSelector() {
+    const options = Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
+      ? state.activeInstrument.routeOptions
+      : [];
+    DOM.routeSel.innerHTML = '';
+
+    if (options.length <= 1) {
+      DOM.routeWrap.style.display = 'none';
+      const singleRoute = options[0] ? cleanString(options[0].id).toLowerCase() : null;
+      state.activeRoute = singleRoute || state.activeRoute || state.activeInstrument.defaultRoute || null;
+      return;
+    }
+
+    options.forEach((option) => {
+      const entry = option && typeof option === 'object' ? option : { id: option, label: normalizeRouteLabel(option) };
+      const opt = document.createElement('option');
+      opt.value = cleanString(entry.id).toLowerCase();
+      opt.textContent = cleanString(entry.label) || normalizeRouteLabel(entry.id);
+      DOM.routeSel.appendChild(opt);
+    });
+    const selectedRoute = state.activeRoute || state.activeInstrument.defaultRoute || (options[0] && options[0].id) || '';
+    DOM.routeSel.value = selectedRoute;
+    state.activeRoute = cleanString(DOM.routeSel.value).toLowerCase() || null;
+    DOM.routeWrap.style.display = 'flex';
   }
 
   function createNode(title) {
@@ -309,6 +364,7 @@
   }
 
   function pruneConflictingSources() {
+    if (routeSelectionIsExplicit()) return;
     const chosenRoute = inferRouteFromSourceSettings();
     if (!chosenRoute) return;
     mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
@@ -402,11 +458,12 @@
 
   function createLightSourceControl(mechanism) {
     const block = document.createElement('div');
-    block.className = 'vm-stack';
+    block.className = 'vm-stack vm-source-grid';
     block.dataset.stage = 'lightSources';
     block.dataset.mechanismId = mechanism.id || '';
 
     const title = document.createElement('div');
+    title.className = 'vm-source-group-title';
     title.style.fontSize = '11px';
     title.style.fontWeight = '700';
     title.style.color = 'var(--muted)';
@@ -434,7 +491,6 @@
       checkbox.addEventListener('change', () => {
         setting.enabled = checkbox.checked;
         pruneConflictingSources();
-        state.activeRoute = inferRouteFromSourceSettings();
         renderGraphFlow();
         refreshOutputs();
       });
@@ -1451,7 +1507,7 @@
       const stateSuffix = fluorophore.activeStateName && fluorophore.states && fluorophore.states.length > 1
         ? ` (${fluorophore.activeStateName})`
         : '';
-      const spectraSuffix = fluorophore.spectraSource ? ` • spectra ${fluorophore.spectraSource}` : '';
+      const spectraSuffix = fluorophore.spectraSource ? ` • spectra ${describeSpectraSource(fluorophore.spectraSource)}` : '';
       return `${fluorophore.name}${stateSuffix}${spectraSuffix}`;
     }).join(', ') || 'None';
     const sourceText = selection.sources.map((source) => {
@@ -1569,7 +1625,11 @@
   function refreshOutputs() {
 
     if (!state.activeInstrumentRaw || !state.activeInstrument) return;
-    state.activeRoute = inferRouteFromSourceSettings();
+    if (!routeSelectionIsExplicit()) {
+      state.activeRoute = inferRouteFromSourceSettings() || state.activeInstrument.defaultRoute || null;
+    } else if (!state.activeRoute) {
+      state.activeRoute = state.activeInstrument.defaultRoute || null;
+    }
     enforceValidStageOptions();
     const selection = collectRuntimeSelection();
     const fluorophores = mapToArray(state.loadedProteins);
@@ -1726,7 +1786,7 @@
 
     results.forEach((protein) => {
       const item = document.createElement('li');
-      const sourceTag = protein.fallbackRecord ? 'cached' : 'live';
+      const sourceTag = protein.fallbackRecord ? 'bundled cache' : 'live';
       item.textContent = `${protein.name} (Ex:${protein.exMax || '?'} Em:${protein.emMax || '?'}) • ${sourceTag}`;
       item.addEventListener('click', () => {
         loadProtein(protein);
@@ -1743,7 +1803,12 @@
 
   async function fetchProteinBundle(protein) {
     if (protein.fallbackRecord) {
-      return { detail: protein.fallbackRecord.raw && protein.fallbackRecord.raw.summary ? protein.fallbackRecord.raw.summary : protein.fallbackRecord, spectra: protein.fallbackRecord };
+      return {
+        detail: protein.fallbackRecord.raw && protein.fallbackRecord.raw.detail
+          ? protein.fallbackRecord.raw.detail
+          : (protein.fallbackRecord.raw && protein.fallbackRecord.raw.summary ? protein.fallbackRecord.raw.summary : protein.fallbackRecord),
+        spectra: protein.fallbackRecord,
+      };
     }
     let detail = null;
     let spectra = null;
@@ -1776,7 +1841,7 @@
       const bundle = await fetchProteinBundle(summary);
       const fluorophore = VM.normalizeFluorophoreDetail(bundle.detail, summary, bundle.spectra);
       state.loadedProteins.set(cacheKey, fluorophore);
-      DOM.searchStatus.textContent = `${fluorophore.name} loaded (${fluorophore.spectraSource || 'detail'} spectra).`;
+      DOM.searchStatus.textContent = `${fluorophore.name} loaded (${describeSpectraSource(fluorophore.spectraSource || 'detail')}).`;
       renderActiveDyes();
       refreshOutputs();
     } catch (error) {
@@ -1827,7 +1892,7 @@
       } else if (fluorophore.activeStateName) {
         const subtitle = document.createElement('span');
         subtitle.className = 'vm-mini';
-        subtitle.textContent = `${fluorophore.activeStateName}${fluorophore.spectraSource ? ` • ${fluorophore.spectraSource}` : ''}`;
+        subtitle.textContent = `${fluorophore.activeStateName}${fluorophore.spectraSource ? ` • ${describeSpectraSource(fluorophore.spectraSource)}` : ''}`;
         left.appendChild(subtitle);
       }
 

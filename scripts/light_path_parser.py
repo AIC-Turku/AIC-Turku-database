@@ -18,7 +18,15 @@ CONTINUOUS_MECHANISM_TYPES = {"tunable", "fixed", "spectral_slider"}
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
 MULTIBAND_FILTER_TYPES = {"multiband_bandpass"}
 NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough"}
-ROUTE_TAGS = {"epi", "tirf", "confocal", "multiphoton", "shared", "all"}
+ROUTE_TAGS = {"epi", "tirf", "confocal", "multiphoton", "transmitted", "shared", "all"}
+ROUTE_LABELS = {
+    "confocal": "Confocal",
+    "epi": "Epi-fluorescence",
+    "tirf": "TIRF",
+    "multiphoton": "Multiphoton",
+    "transmitted": "Transmitted light",
+}
+ROUTE_SORT_ORDER = ("confocal", "epi", "tirf", "multiphoton", "transmitted")
 CUBE_LINK_KEYS = ("excitation_filter", "dichroic", "emission_filter")
 CAMERA_DETECTOR_KINDS = {"camera", "scmos", "cmos", "ccd", "emccd"}
 POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}
@@ -53,6 +61,30 @@ def _format_numeric(value: Any) -> str:
 
 def _clean_string(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
+
+
+def _coerce_slot_key(value: Any) -> int | None:
+    """Normalize mechanism/cube position keys from legacy YAML spellings.
+
+    Existing ledgers use both integer keys and labels such as ``Pos_1``. The
+    parser/runtime should preserve the mechanical slot order rather than drop
+    these positions during normalization.
+    """
+
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if cleaned.isdigit():
+            return int(cleaned)
+        match = re.search(r"(\d+)$", cleaned)
+        if match:
+            return int(match.group(1))
+    return None
 
 
 def _iter_mechanisms(light_path: dict[str, Any], stage_key: str) -> list[dict[str, Any]]:
@@ -196,10 +228,11 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
 
             for position_key, component in positions.items():
                 pos_ctx = f"{mech_ctx}.positions[{position_key!r}]"
-                if not isinstance(position_key, int) or isinstance(position_key, bool):
+                normalized_position_key = _coerce_slot_key(position_key)
+                if normalized_position_key is None:
                     errors.append(f"{pos_ctx}: position key must be an integer.")
                     continue
-                if slots is not None and (position_key < 1 or position_key > slots):
+                if slots is not None and (normalized_position_key < 1 or normalized_position_key > slots):
                     errors.append(f"{pos_ctx}: position key must be between 1 and {slots}.")
 
                 if not isinstance(component, dict):
@@ -582,9 +615,15 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
     positions: list[dict[str, Any]] = []
 
     if isinstance(raw_positions, dict):
-        for slot in sorted(raw_positions):
-            component = raw_positions.get(slot)
-            if not isinstance(slot, int) or isinstance(slot, bool) or not isinstance(component, dict):
+        normalized_positions = sorted(
+            (
+                (_coerce_slot_key(slot), component)
+                for slot, component in raw_positions.items()
+            ),
+            key=lambda item: (item[0] is None, item[0]),
+        )
+        for slot, component in normalized_positions:
+            if slot is None or not isinstance(component, dict):
                 continue
             component_payload = _component_payload(component)
             component_payload["slot"] = slot
@@ -654,9 +693,15 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
     raw_positions = mechanism.get("positions", {})
     positions: list[dict[str, Any]] = []
     if isinstance(raw_positions, dict):
-        for slot in sorted(raw_positions):
-            cube_position = raw_positions.get(slot)
-            if not isinstance(slot, int) or isinstance(slot, bool) or not isinstance(cube_position, dict):
+        normalized_positions = sorted(
+            (
+                (_coerce_slot_key(slot), cube_position)
+                for slot, cube_position in raw_positions.items()
+            ),
+            key=lambda item: (item[0] is None, item[0]),
+        )
+        for slot, cube_position in normalized_positions:
+            if slot is None or not isinstance(cube_position, dict):
                 continue
 
             linked_components: dict[str, dict[str, Any]] = {}
@@ -741,11 +786,71 @@ def _choice_positions(mechanism: dict[str, Any]) -> list[dict[str, Any]]:
         return [pos for pos in positions if isinstance(pos, dict) and isinstance(pos.get("slot"), int)]
     if isinstance(positions, dict):
         return [
-            {"slot": int(slot), **position}
+            {"slot": normalized_slot, **position}
             for slot, position in positions.items()
-            if isinstance(slot, int) and not isinstance(slot, bool) and isinstance(position, dict)
+            for normalized_slot in [_coerce_slot_key(slot)]
+            if normalized_slot is not None and isinstance(position, dict)
         ]
     return []
+
+
+def _route_sort_key(route_id: str) -> tuple[int, str]:
+    try:
+        return ROUTE_SORT_ORDER.index(route_id), route_id
+    except ValueError:
+        return len(ROUTE_SORT_ORDER), route_id
+
+
+def _route_catalog_entries(payload: dict[str, Any]) -> list[dict[str, str]]:
+    constrained_routes: set[str] = set()
+
+    def collect_from_component(component: Any) -> None:
+        if not isinstance(component, dict):
+            return
+        constrained_routes.update(
+            route for route in _normalize_routes(component.get("routes") or component.get("path") or component.get("paths") or component.get("route"))
+            if route not in {"shared", "all"}
+        )
+        linked_components = component.get("linked_components")
+        if isinstance(linked_components, dict):
+            for linked in linked_components.values():
+                collect_from_component(linked)
+
+    for mechanism in payload.get("light_sources", []) or []:
+        if isinstance(mechanism, dict):
+            for position in _choice_positions(mechanism):
+                collect_from_component(position)
+
+    for mechanism in payload.get("detectors", []) or []:
+        if isinstance(mechanism, dict):
+            for position in _choice_positions(mechanism):
+                collect_from_component(position)
+
+    stages = payload.get("stages") if isinstance(payload.get("stages"), dict) else {}
+    for stage_name in ("excitation", "dichroic", "emission", "cube"):
+        for mechanism in stages.get(stage_name, []) if isinstance(stages, dict) else []:
+            if not isinstance(mechanism, dict):
+                continue
+            collect_from_component(mechanism)
+            for position in _choice_positions(mechanism):
+                collect_from_component(position)
+
+    for splitter in payload.get("splitters", []) or []:
+        if not isinstance(splitter, dict):
+            continue
+        collect_from_component(splitter)
+        for branch in splitter.get("branches", []) or []:
+            if isinstance(branch, dict):
+                collect_from_component(branch)
+                collect_from_component(branch.get("component"))
+
+    return [
+        {
+            "id": route_id,
+            "label": ROUTE_LABELS.get(route_id, route_id.replace("_", " ").title()),
+        }
+        for route_id in sorted(constrained_routes, key=_route_sort_key)
+    ]
 
 
 
@@ -904,6 +1009,8 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
         "stages": {"excitation": [], "dichroic": [], "emission": [], "cube": []},
         "splitters": [],
         "valid_paths": [],
+        "available_routes": [],
+        "default_route": None,
     }
 
     raw_sources = hardware.get("light_sources", [])
@@ -966,4 +1073,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
         payload["splitters"].append(_splitter_payload(index, splitter))
 
     payload["valid_paths"] = calculate_valid_paths(payload)
+    payload["available_routes"] = _route_catalog_entries(payload)
+    if payload["available_routes"]:
+        payload["default_route"] = payload["available_routes"][0]["id"]
     return json.loads(json.dumps(payload))

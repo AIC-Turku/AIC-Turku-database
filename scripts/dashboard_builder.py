@@ -76,15 +76,15 @@ def load_facility_config(repo_root: Path) -> dict[str, Any]:
     """Load repository-level facility branding and copy settings."""
     default_config: dict[str, Any] = {
         "facility": {
-            "short_name": "AIC Turku",
-            "full_name": "Advanced Imaging Core Facility at Turku Bioscience Centre",
-            "site_name": "AIC Microscopy Dashboard",
-            "public_site_url": "https://aic-turku.github.io/AIC-Turku-database/",
-            "contact_url": "https://bioscience.fi/aic/",
-            "organization_url": "https://bioscience.fi/aic/",
+            "short_name": "Core Imaging Facility",
+            "full_name": "Core Imaging Facility",
+            "site_name": "Microscopy Dashboard",
+            "public_site_url": "",
+            "contact_url": "#",
+            "organization_url": "#",
             "acknowledgements": {
-                "standard": "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577.",
-                "xcelligence_addition": "Testament funds from Henna Ruusunen also supported this work.",
+                "standard": "",
+                "xcelligence_addition": "",
             },
         },
         "branding": {
@@ -125,6 +125,127 @@ def load_vocabularies(vocab_dir: Path) -> dict[str, dict[str, Any]]:
         except Exception:
             pass
     return vocabs
+
+
+def json_script_data(payload: Any) -> str:
+    """Serialize data safely for embedding inside a <script type="application/json"> tag."""
+    return (
+        json.dumps(payload, ensure_ascii=False)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
+
+
+def _collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str], list[str]]:
+    known_fields: list[str] = []
+    missing_fields: list[str] = []
+
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_prefix = f"{prefix}.{key}" if prefix else str(key)
+            child_known, child_missing = _collect_known_missing_paths(child, child_prefix)
+            known_fields.extend(child_known)
+            missing_fields.extend(child_missing)
+        return known_fields, missing_fields
+
+    if isinstance(value, list):
+        if not value:
+            known_fields.append(prefix)
+            return known_fields, missing_fields
+        for index, child in enumerate(value):
+            child_prefix = f"{prefix}[{index}]"
+            child_known, child_missing = _collect_known_missing_paths(child, child_prefix)
+            known_fields.extend(child_known)
+            missing_fields.extend(child_missing)
+        return known_fields, missing_fields
+
+    if value is None:
+        missing_fields.append(prefix)
+    else:
+        known_fields.append(prefix)
+
+    return known_fields, missing_fields
+
+
+def build_methods_generator_page_config(facility: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    facility_ack = facility.get("acknowledgements", {}) if isinstance(facility.get("acknowledgements"), dict) else {}
+    ack_data = {
+        "standard": str(facility_ack.get("standard", "")),
+        "xcelligence_addition": str(facility_ack.get("xcelligence_addition", "")),
+    }
+
+    acknowledgements_path = repo_root / "acknowledgements.yaml"
+    if acknowledgements_path.exists():
+        ack_loaded = yaml.safe_load(acknowledgements_path.read_text(encoding="utf-8"))
+        if isinstance(ack_loaded, dict):
+            ack_data = {
+                "standard": str(ack_loaded.get("standard", ack_data["standard"])),
+                "xcelligence_addition": str(ack_loaded.get("xcelligence_addition", ack_data["xcelligence_addition"])),
+            }
+
+    methods_config = facility.get("methods_generator", {}) if isinstance(facility.get("methods_generator"), dict) else {}
+    return {
+        "output_title": str(methods_config.get("output_title", "Light Microscopy Methods")),
+        "instrument_data_url": str(methods_config.get("instrument_data_url", "../assets/instruments_data.json")),
+        "acknowledgements": ack_data,
+    }
+
+
+def build_plan_experiments_page_config(facility: dict[str, Any]) -> dict[str, Any]:
+    planner_config = facility.get("plan_experiments", {}) if isinstance(facility.get("plan_experiments"), dict) else {}
+    facility_short_name = str(facility.get("short_name") or facility.get("full_name") or "Core Imaging Facility")
+    facility_contact_url = str(facility.get("contact_url", "#"))
+    return {
+        "facility_short_name": facility_short_name,
+        "facility_contact_url": facility_contact_url,
+        "facility_contact_label": str(planner_config.get("contact_button_label", f"Contact {facility_short_name} Staff")),
+        "llm_inventory_asset_url": str(planner_config.get("llm_inventory_asset_url", "assets/llm_inventory.json")),
+    }
+
+
+def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str, Any]:
+    dto = copy.deepcopy(inst.get("dto") or {})
+    dto["methods_generation"] = copy.deepcopy(inst.get("methods_generation") or {})
+    return dto
+
+
+def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict[str, Any]]) -> dict[str, Any]:
+    llm_payload = {
+        "facility_name": str(facility.get("short_name") or facility.get("full_name") or "Core Imaging Facility"),
+        "facility_contact_url": str(facility.get("contact_url", "")),
+        "public_site_url": str(facility.get("public_site_url", "")),
+        "policy": {
+            "intent": "LLM-safe experiment planning inventory",
+            "grounding_requirement": "Only use fields explicitly present in this JSON file.",
+            "do_not_infer_constraints": [
+                "Do not invent hardware specifications, accessories, wavelengths, objectives, detector performance, or automation features that are not explicitly listed.",
+                "Treat null values and listed missing fields as unknown. Unknown does not mean available.",
+                "When required details are missing, ask follow-up questions or clearly state uncertainty.",
+            ],
+        },
+        "active_microscopes": [],
+    }
+
+    for inst in instruments:
+        dto = copy.deepcopy(inst["dto"])
+        known_fields, missing_fields = _collect_known_missing_paths(dto)
+        policy = ((inst.get("canonical") or {}).get("policy") or {}) if isinstance(inst, dict) else {}
+        dto["inventory_completeness"] = {
+            "known_fields": sorted(known_fields),
+            "missing_fields": sorted(missing_fields),
+            "known_field_count": len(known_fields),
+            "missing_field_count": len(missing_fields),
+            "policy_missing_required": copy.deepcopy(policy.get("missing_required") or []),
+            "policy_missing_conditional": copy.deepcopy(policy.get("missing_conditional") or []),
+            "alias_fallbacks": copy.deepcopy(policy.get("alias_fallbacks") or []),
+            "uncertainty_note": "Missing fields are unknown and must not be assumed.",
+        }
+        llm_payload["active_microscopes"].append(dto)
+
+    return llm_payload
 
 
 def vocab_label(vocabulary: Vocabulary, vocab_name: str, term_id: str) -> str:
@@ -482,6 +603,7 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
     manufacturer = clean_text(det.get("manufacturer") or det.get("name"))
     model = clean_text(det.get("model"))
     kind_label = _vocab_display(vocabulary, "detector_kinds", det.get("kind") or det.get("type"))
+    route_label = _vocab_display(vocabulary, "optical_routes", det.get("path") or det.get("route"))
     pixel_pitch = _fmt_num(det.get("pixel_pitch_um") or det.get("pixel_size_um"))
     sensor_format = clean_text(det.get("sensor_format_px"))
     binning = clean_text(det.get("binning"))
@@ -503,6 +625,7 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
         method_sentence = f"Detection was performed using {display_label}{f' ({kind_label})' if kind_label else ''}."
     spec_lines = _spec_lines(
         ("Type", kind_label),
+        ("Optical route", route_label),
         ("Supports time gating", _bool_display(supports_time_gating) if supports_time_gating is not None else None),
         ("Default gating delay", f"`{gating_delay_ns} ns`" if gating_delay_ns else None),
         ("Default gate width", f"`{gate_width_ns} ns`" if gate_width_ns else None),
@@ -544,6 +667,7 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     kind_label = _vocab_display(vocabulary, "light_source_kinds", src.get("kind") or src.get("type"))
     role_label = _vocab_display(vocabulary, "light_source_roles", normalized_role)
     timing_mode_label = _vocab_display(vocabulary, "light_source_timing_modes", normalized_timing_mode)
+    route_label = _vocab_display(vocabulary, "optical_routes", src.get("path") or src.get("route"))
     pulse_width_ps = _fmt_num(src.get("pulse_width_ps"))
     repetition_rate_mhz = _fmt_num(src.get("repetition_rate_mhz"))
     depletion_targets_nm = [_fmt_num(item) for item in (src.get("depletion_targets_nm") or []) if _fmt_num(item)] if isinstance(src.get("depletion_targets_nm"), list) else []
@@ -583,6 +707,7 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     spec_lines = _spec_lines(
         ("Type", kind_label),
         ("Role", role_label),
+        ("Optical route", route_label),
         ("Timing mode", timing_mode_label),
         ("Pulse width", f"`{pulse_width_ps} ps`" if pulse_width_ps else None),
         ("Repetition rate", f"`{repetition_rate_mhz} MHz`" if repetition_rate_mhz else None),
@@ -1981,7 +2106,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             event_dir.mkdir(parents=True, exist_ok=True)
             (event_dir / f"{event_id}.md").write_text(event_md, encoding="utf-8")
 
-    vm_html = tpl_vm.render(lightpath_data_json=json.dumps(global_vm_payloads))
+    vm_html = tpl_vm.render(lightpath_data_json=json_script_data(global_vm_payloads))
     (docs_root / "virtual_microscope.md").write_text(vm_html, encoding="utf-8")
 
     # Fleet + status pages
@@ -1992,94 +2117,32 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     json_path = docs_root / "assets" / "instruments_data.json"
     json_path.parent.mkdir(parents=True, exist_ok=True) 
     json_payload = {
-        "instruments": [inst["dto"] for inst in sorted([*instruments, *retired_instruments], key=lambda item: item.get("id", ""))],
+        "instruments": [
+            build_methods_generator_instrument_export(inst)
+            for inst in sorted([*instruments, *retired_instruments], key=lambda item: item.get("id", ""))
+        ],
     }
     json_path.write_text(json.dumps(json_payload, indent=2), encoding="utf-8")
 
     # Export AI/LLM Optimized Decision-Support Inventory
     llm_inventory_path = docs_root / "assets" / "llm_inventory.json"
-    llm_payload = {
-        "facility_name": str(facility.get("short_name", "AIC Turku")),
-        "policy": {
-            "intent": "LLM-safe experiment planning inventory",
-            "grounding_requirement": "Only use fields explicitly present in this JSON file.",
-            "do_not_infer_constraints": [
-                "Do not invent hardware specifications, accessories, wavelengths, objectives, detector performance, or automation features that are not explicitly listed.",
-                "Treat null values and listed missing fields as unknown. Unknown does not mean available.",
-                "When required details are missing, ask follow-up questions or clearly state uncertainty.",
-            ],
-        },
-        "active_microscopes": [],
-    }
-
-    def collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str], list[str]]:
-        known_fields: list[str] = []
-        missing_fields: list[str] = []
-
-        if isinstance(value, dict):
-            for key, child in value.items():
-                child_prefix = f"{prefix}.{key}" if prefix else str(key)
-                child_known, child_missing = collect_known_missing_paths(child, child_prefix)
-                known_fields.extend(child_known)
-                missing_fields.extend(child_missing)
-            return known_fields, missing_fields
-
-        if isinstance(value, list):
-            if not value:
-                known_fields.append(prefix)
-                return known_fields, missing_fields
-            for index, child in enumerate(value):
-                child_prefix = f"{prefix}[{index}]"
-                child_known, child_missing = collect_known_missing_paths(child, child_prefix)
-                known_fields.extend(child_known)
-                missing_fields.extend(child_missing)
-            return known_fields, missing_fields
-
-        if value is None:
-            missing_fields.append(prefix)
-        else:
-            known_fields.append(prefix)
-
-        return known_fields, missing_fields
-
-    for inst in instruments:
-        dto = copy.deepcopy(inst["dto"])
-        known_fields, missing_fields = collect_known_missing_paths(dto)
-        dto["inventory_completeness"] = {
-            "known_fields": sorted(known_fields),
-            "missing_fields": sorted(missing_fields),
-            "known_field_count": len(known_fields),
-            "missing_field_count": len(missing_fields),
-            "uncertainty_note": "Missing fields are unknown and must not be assumed.",
-        }
-        llm_payload["active_microscopes"].append(dto)
-
+    llm_payload = build_llm_inventory_payload(facility, instruments)
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
     # Render Methods Generator page
-    acknowledgements_path = repo_root / "acknowledgements.yaml"
-    facility_ack = facility.get("acknowledgements", {}) if isinstance(facility.get("acknowledgements"), dict) else {}
-    ack_data = {
-        "standard": str(facility_ack.get("standard", "")),
-        "xcelligence_addition": str(facility_ack.get("xcelligence_addition", "")),
-    }
-    if acknowledgements_path.exists():
-        ack_loaded = yaml.safe_load(acknowledgements_path.read_text(encoding="utf-8"))
-        if isinstance(ack_loaded, dict):
-            ack_data = {
-                "standard": str(ack_loaded.get("standard", ack_data["standard"])),
-                "xcelligence_addition": str(ack_loaded.get("xcelligence_addition", ack_data["xcelligence_addition"])),
-            }
-
+    methods_page_config = build_methods_generator_page_config(facility, repo_root)
     methods_md = tpl_methods.render(
-        ack_standard=json.dumps(ack_data.get("standard", "")),
-        ack_xcelligence=json.dumps(ack_data.get("xcelligence_addition", "")),
+        methods_generator_config_json=json_script_data(methods_page_config),
     )
     (docs_root / "methods_generator.md").write_text(methods_md, encoding="utf-8")
 
+    plan_page_config = build_plan_experiments_page_config(facility)
     plan_md = tpl_plan.render(
-        facility_short_name=str(facility.get("short_name", "Core")),
-        facility_contact_url=str(facility.get("contact_url", "#")),
+        plan_experiments_config_json=json_script_data(plan_page_config),
+        facility_short_name=plan_page_config["facility_short_name"],
+        facility_contact_url=plan_page_config["facility_contact_url"],
+        facility_contact_label=plan_page_config["facility_contact_label"],
+        llm_inventory_asset_url=plan_page_config["llm_inventory_asset_url"],
     )
     (docs_root / "plan_experiments.md").write_text(plan_md, encoding="utf-8")
 

@@ -309,9 +309,9 @@ class EventValidationReport:
 @dataclass
 class InstrumentCompletenessReport:
     sections: list[dict[str, Any]]
-    missing_required: list[dict[str, str]]
-    missing_conditional: list[dict[str, str]]
-    alias_fallbacks: list[dict[str, str]]
+    missing_required: list[dict[str, Any]]
+    missing_conditional: list[dict[str, Any]]
+    alias_fallbacks: list[dict[str, Any]]
 
 
 def load_policy(policy_path: Path) -> tuple[dict[str, Any] | None, str | None]:
@@ -534,9 +534,22 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
     vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
     item_field_vocab_index = _build_item_field_vocab_index(policy.rules)
     sections: dict[tuple[str | None, str | None], list[dict[str, Any]]] = {}
-    missing_required: list[dict[str, str]] = []
-    missing_conditional: list[dict[str, str]] = []
-    alias_fallbacks: list[dict[str, str]] = []
+    missing_required: list[dict[str, Any]] = []
+    missing_conditional: list[dict[str, Any]] = []
+    alias_fallbacks: list[dict[str, Any]] = []
+
+    def _missing_entry(rule: PolicyRule, *, alias_hits: list[str] | None = None, condition_triggered: bool = False) -> dict[str, Any]:
+        return {
+            'path': rule.path,
+            'title': rule.title or rule.path,
+            'status': rule.status,
+            'section_id': rule.section_id,
+            'section_title': rule.section_title or rule.section_id or 'Section',
+            'used_by': list(rule.used_by) if rule.used_by is not None else [],
+            'aliases': list(rule.aliases) if rule.aliases is not None else [],
+            'alias_used': bool(alias_hits),
+            'condition_triggered': condition_triggered,
+        }
 
     for rule in policy.rules:
         resolved = _resolve_rule_nodes(payload, rule.path)
@@ -558,7 +571,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
         if rule.status == 'required':
             missing = not present or any(node.value in (None, '') for node in resolved)
             if missing:
-                missing_required.append({'path': rule.path, 'title': rule.title or rule.path})
+                missing_required.append(_missing_entry(rule, alias_hits=alias_hits))
         elif rule.status == 'conditional' and rule.required_if is not None:
             condition_triggered = _evaluate_required_if(
                 rule.required_if,
@@ -581,7 +594,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
                         missing = True
                         break
             if missing:
-                missing_conditional.append({'path': rule.path, 'title': rule.title or rule.path})
+                missing_conditional.append(_missing_entry(rule, alias_hits=alias_hits, condition_triggered=condition_triggered))
 
         section_key = (rule.section_id, rule.section_title)
         sections.setdefault(section_key, []).append(

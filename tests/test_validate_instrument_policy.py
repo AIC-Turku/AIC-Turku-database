@@ -244,6 +244,9 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         rule_entry = report.sections[0]['rules'][0]
         self.assertEqual(rule_entry['used_by'], ['dashboard', 'audit_pdf'])
         self.assertTrue(rule_entry['missing'])
+        self.assertEqual(report.missing_conditional[0]['used_by'], ['dashboard', 'audit_pdf'])
+        self.assertEqual(report.missing_conditional[0]['section_id'], 'hardware')
+        self.assertTrue(report.missing_conditional[0]['condition_triggered'])
 
 
 

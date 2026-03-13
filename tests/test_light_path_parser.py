@@ -271,6 +271,90 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(cube["dichroic"]["cutoffs_nm"], [570.0])
         self.assertEqual(cube["emission_filter"]["center_nm"], 605.0)
 
+    def test_legacy_position_keys_are_normalized_in_mechanisms(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "excitation_mechanisms": [
+                            {
+                                "name": "Legacy Excitation Wheel",
+                                "positions": {
+                                    "Pos_1": {
+                                        "component_type": "bandpass",
+                                        "center_nm": 405,
+                                        "width_nm": 10,
+                                    },
+                                    "2": {
+                                        "component_type": "bandpass",
+                                        "center_nm": 488,
+                                        "width_nm": 10,
+                                    },
+                                },
+                            }
+                        ],
+                        "cube_mechanisms": [
+                            {
+                                "positions": {
+                                    "Pos_3": {
+                                        "name": "TRITC Cube",
+                                        "excitation_filter": {"component_type": "bandpass", "center_nm": 550, "width_nm": 25},
+                                        "dichroic": {"component_type": "dichroic", "cutoffs_nm": [570]},
+                                        "emission_filter": {"component_type": "bandpass", "center_nm": 605, "width_nm": 70},
+                                    }
+                                }
+                            }
+                        ],
+                    }
+                }
+            }
+        )
+
+        excitation_slots = [position["slot"] for position in payload["stages"]["excitation"][0]["positions"]]
+        cube_slots = [position["slot"] for position in payload["stages"]["cube"][0]["positions"]]
+        self.assertEqual(excitation_slots, [1, 2])
+        self.assertEqual(cube_slots, [3])
+
+    def test_available_routes_and_default_route_are_exported_for_multi_route_payloads(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_sources": [
+                        {"kind": "laser", "wavelength_nm": 488, "path": "confocal"},
+                        {"kind": "led", "wavelength_nm": 470, "path": "epi"},
+                    ],
+                    "detectors": [
+                        {"kind": "pmt", "channel_name": "PMT", "path": "confocal"},
+                        {"kind": "camera", "channel_name": "Camera", "path": "epi"},
+                    ],
+                    "light_path": {
+                        "excitation_mechanisms": [
+                            {
+                                "name": "Excitation Wheel",
+                                "path": "confocal",
+                                "positions": {
+                                    1: {"component_type": "bandpass", "center_nm": 488, "width_nm": 10}
+                                },
+                            }
+                        ],
+                        "emission_mechanisms": [
+                            {
+                                "name": "Emission Wheel",
+                                "path": "epi",
+                                "positions": {
+                                    1: {"component_type": "bandpass", "center_nm": 525, "width_nm": 50}
+                                },
+                            }
+                        ],
+                    },
+                }
+            }
+        )
+
+        self.assertEqual([entry["id"] for entry in payload["available_routes"]], ["confocal", "epi"])
+        self.assertEqual(payload["default_route"], "confocal")
+        self.assertGreaterEqual(len(payload["valid_paths"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
