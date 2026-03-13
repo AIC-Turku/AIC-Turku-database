@@ -42,3 +42,11 @@ terms:
   - id: block
     label: "Block"
     description: "A 100% blocking/shutter position."
+  - id: passthrough
+    label: "Passthrough"
+    description: "Explicit slot that does not materially alter spectral routing."
+
+  - id: neutral_density
+    label: "Neutral Density"
+    description: "Broadband neutral-density attenuator. Spectral shape is preserved even if total intensity is reduced."
+

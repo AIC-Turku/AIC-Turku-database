@@ -96,6 +96,17 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'copy-feedback',
               'methods-metadata-warning',
               'methods-metadata-blockers',
+              'section-modality',
+              'section-module',
+              'section-scanner',
+              'section-obj',
+              'section-light',
+              'section-filter',
+              'section-splitter',
+              'section-det',
+              'section-magnification-changer',
+              'section-optical-modulator',
+              'section-illumination-logic',
               'modality-list',
               'module-list',
               'scanner-list',
@@ -267,6 +278,86 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("Failed to load instrument data for the Methods Generator", result["output"])
         self.assertTrue(result["addDisabled"])
         self.assertTrue(result["selectDisabled"])
+
+
+    def test_empty_sections_are_hidden_for_instruments_without_applicable_items(self) -> None:
+        instrument = {
+            "id": "scope-1",
+            "display_name": "Scope 1",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [{"id": "obj-1", "display_label": "63x Oil", "display_subtitle": "NA 1.40"}],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {"filters": [], "splitters": []},
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-1';
+            systemSelect.listeners.change({ target: systemSelect });
+            return {
+              sectionObj: document.getElementById('section-obj').style.display,
+              sectionModule: document.getElementById('section-module').style.display,
+              sectionLight: document.getElementById('section-light').style.display,
+            };
+            """,
+        )
+
+        self.assertEqual(result["sectionObj"], "")
+        self.assertEqual(result["sectionModule"], "none")
+        self.assertEqual(result["sectionLight"], "none")
+
+    def test_item_details_are_rendered_inline_with_checkbox_labels(self) -> None:
+        instrument = {
+            "id": "scope-1",
+            "display_name": "Scope 1",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [
+                    {
+                        "id": "obj-1",
+                        "display_label": "HC PL APO 63x Oil",
+                        "display_subtitle": "NA 1.40",
+                    }
+                ],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {"filters": [], "splitters": []},
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-1';
+            systemSelect.listeners.change({ target: systemSelect });
+            const label = document.getElementById('obj-list').children[0].children[1].textContent;
+            return { label };
+            """,
+        )
+
+        self.assertIn('HC PL APO 63x Oil', result['label'])
+        self.assertIn('NA 1.40', result['label'])
+        self.assertIn('—', result['label'])
 
 
 if __name__ == "__main__":

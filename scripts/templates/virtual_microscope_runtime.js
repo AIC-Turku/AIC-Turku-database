@@ -873,7 +873,7 @@
 
   function componentMask(component, grid, context) {
     const type = cleanString(component && (component.component_type || component.type)).toLowerCase();
-    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough') {
+    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density') {
       return grid.map(() => 1);
     }
     if (type === 'block' || type === 'blocker') {
@@ -1284,7 +1284,10 @@
     const grid = wavelengthGrid(normalizedInstrument.metadata && normalizedInstrument.metadata.wavelength_grid);
     const selected = selection && typeof selection === 'object' ? selection : {};
     const selectedSources = Array.isArray(selected.sources) ? selected.sources : [];
-    const excitationSources = selectedSources.filter((source) => cleanString(source.role).toLowerCase() !== 'depletion');
+    const excitationSources = selectedSources.filter((source) => {
+      const role = cleanString(source.role).toLowerCase();
+      return role !== 'depletion' && role !== 'transmitted_illumination';
+    });
     const depletionSources = selectedSources.filter((source) => cleanString(source.role).toLowerCase() === 'depletion');
     const excitationComponents = Array.isArray(selected.excitation) ? selected.excitation : [];
     const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];

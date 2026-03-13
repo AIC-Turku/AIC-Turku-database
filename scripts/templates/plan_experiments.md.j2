@@ -74,8 +74,10 @@ Upload the `llm_inventory.json` file you just downloaded. Then, describe your ex
 
 Use only the attached JSON inventory as ground truth for hardware and status.
 Do not invent or infer absent hardware details. Specifically, if a field is null, missing, or listed under missing metadata, treat it as unknown and do not assume it exists.
+Use each microscope's hardware_focus_summary for quick screening, but verify recommendations against the underlying raw hardware fields before making a final recommendation.
 If critical details are missing (in the experiment description or inventory), explicitly state uncertainty and ask focused follow-up questions.
 Only recommend microscopes listed in the attached JSON file.
+Keep the response hardware focused: discuss optics, routes, sources, filters, detectors, objectives, environmental control, and operational status. Do not drift into generic biological interpretation.
 
 I have attached a JSON file describing the microscopes available in my core facility, including operational status, capabilities, and known-vs-missing metadata.
 
@@ -90,11 +92,12 @@ Recommend the best 1 or 2 microscopes from the attached file for this experiment
 Please:
 - Exclude systems that are offline or have listed issues that make them unsuitable.
 - Explain why each recommended system fits the experiment.
-- Mention the relevant modality, objective(s), and excitation light source(s).
+- Mention the relevant modality, route, objective(s), excitation light source(s), and detector(s).
 - **Provide a precise optical configuration:** Using the \`hardware.light_path\` topological data, tell me exactly which slots to select in the \`excitation_mechanisms\`, \`dichroic_mechanisms\`, and \`emission_mechanisms\` to successfully capture my fluorophores.
 - **Handle splitters:** If the recommended system uses \`splitters\` for simultaneous multi-camera imaging, explain which specific signals will be routed to Path 1 vs Path 2.
-- Mention useful supporting features such as incubation, autofocus, detector type, or piezo only when they are explicitly present in the inventory.
+- Mention useful supporting features such as incubation, autofocus, detector type, adaptive illumination, or piezo only when they are explicitly present in the inventory.
 - For every key requirement, label evidence as known vs unknown based on inventory completeness metadata.
+- Keep the recommendation hardware focused and concise; do not add generic microscopy background unless it directly affects the route or hardware choice.
 - Clearly state any important tradeoffs or uncertainty, and do not fill gaps with ungrounded assumptions.
 - Indicate which system is the top choice and which is the backup, if applicable.
 - Conclude your response by strongly encouraging me to discuss these recommendations with the ${facilityShortName} core facility staff before booking, as they can provide final validation and training.`;

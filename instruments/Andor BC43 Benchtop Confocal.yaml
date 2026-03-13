@@ -89,6 +89,7 @@ hardware:
       model: Transmitted Light Illuminator
       wavelength_nm: broadband
       path: shared
+      role: transmitted_illumination  # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
       notes: Used for Brightfield and Differential Phase Contrast (DPC).
       url: ''
 

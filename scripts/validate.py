@@ -243,6 +243,10 @@ def _is_descriptive_wavelength(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip()) and not _is_valid_wavelength(value)
 
 
+def _nodes_have_present_value(nodes: list[ResolvedNode]) -> bool:
+    return any(node.value not in (None, '') for node in nodes)
+
+
 def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
     started_utc = payload.get("started_utc")
     if isinstance(started_utc, str):
@@ -1161,11 +1165,12 @@ def validate_instrument_ledgers(
 
         for rule in policy.rules:
             resolved = _resolve_rule_nodes(payload, rule.path)
+            resolved_has_value = _nodes_have_present_value(resolved)
 
             if rule.aliases:
                 for alias in rule.aliases:
                     alias_resolved = _resolve_rule_nodes(payload, alias)
-                    if alias_resolved and not resolved:
+                    if _nodes_have_present_value(alias_resolved) and not resolved_has_value:
                         warnings.append(
                             ValidationIssue(
                                 code='field_alias_used',
@@ -1174,7 +1179,7 @@ def validate_instrument_ledgers(
                             )
                         )
 
-            if rule.superseded_by and resolved:
+            if rule.superseded_by and resolved_has_value:
                 warnings.append(
                     ValidationIssue(
                         code='field_superseded',
@@ -1194,7 +1199,7 @@ def validate_instrument_ledgers(
                     item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                 )
 
-            if is_required and not resolved:
+            if is_required and not resolved_has_value:
                 if is_retired_instrument:
                     continue
                 warnings.append(

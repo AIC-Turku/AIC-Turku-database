@@ -29,7 +29,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.dashboard_builder import YamlLoadError, load_instruments
-from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role
 from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     build_instrument_completeness_report,
@@ -105,7 +105,20 @@ def _source_readiness_issue(index: int, source: dict[str, Any]) -> list[dict[str
         issues.append({"severity": "warning", "field": "kind", "message": f"Light source '{label}' is missing kind/type metadata."})
     role = source.get("role")
     if not role:
-        issues.append({"severity": "warning", "field": "role", "message": f"Light source '{label}' is missing source role metadata."})
+        inferred_role = infer_light_source_role(source)
+        if inferred_role == "depletion":
+            issues.append({
+                "severity": "warning",
+                "field": "role",
+                "message": f"Light source '{label}' is missing explicit source role metadata; runtime inferred depletion from free text. Encode role='depletion' in YAML.",
+            })
+        else:
+            pretty_role = inferred_role.replace('_', ' ')
+            issues.append({
+                "severity": "info",
+                "field": "role",
+                "message": f"Light source '{label}' is missing explicit source role metadata; runtime will treat it as {pretty_role}.",
+            })
     wave = source.get("wavelength_nm")
     tunable_min = source.get("tunable_min_nm")
     tunable_max = source.get("tunable_max_nm")
@@ -373,8 +386,14 @@ def generate_full_audit(
         missing_required_counter: Counter[str] = Counter()
         missing_conditional_counter: Counter[str] = Counter()
         alias_counter: Counter[str] = Counter()
+        methods_blocker_counter: Counter[str] = Counter()
         for instrument in [*instruments, *retired_instruments]:
             report = build_instrument_completeness_report(instrument.get("canonical") or {})
+            methods_blockers = [
+                entry
+                for entry in [*report.missing_required, *report.missing_conditional]
+                if isinstance(entry, dict) and isinstance(entry.get("used_by"), list) and "method_generator" in entry.get("used_by")
+            ]
             completeness_rows.append(
                 {
                     "instrument_id": instrument.get("id"),
@@ -382,14 +401,17 @@ def generate_full_audit(
                     "missing_required_count": len(report.missing_required),
                     "missing_conditional_count": len(report.missing_conditional),
                     "alias_fallback_count": len(report.alias_fallbacks),
+                    "methods_blocker_count": len(methods_blockers),
                     "missing_required": report.missing_required,
                     "missing_conditional": report.missing_conditional,
                     "alias_fallbacks": report.alias_fallbacks,
+                    "methods_blockers": methods_blockers,
                 }
             )
             missing_required_counter.update(entry.get("path") for entry in report.missing_required if entry.get("path"))
             missing_conditional_counter.update(entry.get("path") for entry in report.missing_conditional if entry.get("path"))
             alias_counter.update(entry.get("path") for entry in report.alias_fallbacks if entry.get("path"))
+            methods_blocker_counter.update(entry.get("path") for entry in methods_blockers if entry.get("path"))
 
         vm_rows = [audit_virtual_microscope_instrument(instrument) for instrument in [*instruments, *retired_instruments]]
         vm_readiness_counter = Counter(row.get("readiness", "unknown") for row in vm_rows)
@@ -440,6 +462,7 @@ def generate_full_audit(
                 "top_missing_required_paths": _top_items(missing_required_counter),
                 "top_missing_conditional_paths": _top_items(missing_conditional_counter),
                 "top_alias_fallback_paths": _top_items(alias_counter),
+                "top_methods_blocker_paths": _top_items(methods_blocker_counter),
                 "instruments": completeness_rows,
             },
             "virtual_microscope": {
@@ -502,6 +525,42 @@ def render_markdown_report(report: dict[str, Any]) -> str:
     top_required = report["completeness"]["top_missing_required_paths"]
     if top_required:
         for item in top_required:
+            lines.append(f"- `{item['name']}` — {item['count']}")
+    else:
+        lines.append("- None")
+
+    lines.extend([
+        "",
+        "### Most common missing conditional instrument-policy fields",
+        "",
+    ])
+    top_conditional = report["completeness"].get("top_missing_conditional_paths", [])
+    if top_conditional:
+        for item in top_conditional:
+            lines.append(f"- `{item['name']}` — {item['count']}")
+    else:
+        lines.append("- None")
+
+    lines.extend([
+        "",
+        "### Common alias fallback paths",
+        "",
+    ])
+    top_aliases = report["completeness"].get("top_alias_fallback_paths", [])
+    if top_aliases:
+        for item in top_aliases:
+            lines.append(f"- `{item['name']}` — {item['count']}")
+    else:
+        lines.append("- None")
+
+    lines.extend([
+        "",
+        "### Fields currently blocking trustworthy methods generation",
+        "",
+    ])
+    top_methods = report["completeness"].get("top_methods_blocker_paths", [])
+    if top_methods:
+        for item in top_methods:
             lines.append(f"- `{item['name']}` — {item['count']}")
     else:
         lines.append("- None")

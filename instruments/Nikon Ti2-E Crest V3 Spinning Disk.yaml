@@ -128,6 +128,7 @@ hardware:
       wavelength_nm: white
       power: ''
       path: shared
+      role: transmitted_illumination  # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
       notes: For DIA transmitted illumination
       url: ''
 

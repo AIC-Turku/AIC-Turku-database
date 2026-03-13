@@ -112,6 +112,8 @@ The methods generator consumes `dashboard_docs/assets/instruments_data.json` and
 ### Current behavior
 
 - blocks generation when policy-critical metadata required for trustworthy method text is missing,
+- hides empty hardware sections for the currently selected instrument,
+- renders option details inline with the checkbox label when compact explanatory text is available,
 - deduplicates repeated add-clicks for the same instrument/selection signature,
 - groups some repeated hardware categories into cleaner sentences,
 - appends acknowledgements from config,
@@ -133,6 +135,7 @@ That export is designed to reduce ungrounded recommendations by including:
 - facility identity,
 - active microscopes only,
 - structured instrument DTO data,
+- `hardware_focus_summary` for quick hardware-first screening,
 - null/missing-field inventory completeness,
 - policy-derived missing required fields,
 - policy-derived missing conditional fields,
@@ -157,6 +160,21 @@ The completeness audit is intended to report what is missing, not just fail with
 - conditional-trigger state
 
 That metadata is reused by the methods generator and LLM inventory export.
+
+Repository-wide audit output can also be generated with:
+
+```bash
+PYTHONPATH=. python scripts/full_audit.py --repo-root . --json-out audit.json --markdown-out audit.md
+```
+
+That report summarizes:
+
+- top missing required policy fields,
+- top missing conditional policy fields,
+- common alias-fallback paths,
+- fields currently blocking trustworthy methods generation,
+- virtual microscope readiness,
+- FPbase/browser runtime contract health.
 
 ## Reusing this repository as a template
 

@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role
 
 
 class LightPathParserTests(unittest.TestCase):
@@ -354,6 +354,26 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual([entry["id"] for entry in payload["available_routes"]], ["confocal", "epi"])
         self.assertEqual(payload["default_route"], "confocal")
         self.assertGreaterEqual(len(payload["valid_paths"]), 1)
+
+
+    def test_infer_transmitted_light_source_role_from_path_and_kind(self) -> None:
+        self.assertEqual(
+            infer_light_source_role({
+                "kind": "halogen_lamp",
+                "path": "transmitted",
+                "notes": "Brightfield and DIC source",
+            }),
+            "transmitted_illumination",
+        )
+
+    def test_infer_light_source_role_defaults_to_excitation_when_no_transmitted_hints_exist(self) -> None:
+        self.assertEqual(
+            infer_light_source_role({
+                "kind": "laser",
+                "wavelength_nm": 488,
+            }),
+            "excitation",
+        )
 
 
 if __name__ == "__main__":

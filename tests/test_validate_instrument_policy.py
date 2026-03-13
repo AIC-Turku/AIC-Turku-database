@@ -274,6 +274,55 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(vocabulary.resolve_canonical('light_source_roles', 'sted'), 'depletion')
         self.assertTrue(vocabulary.check('light_source_roles', 'excitation')[0])
 
+    def test_missing_canonical_and_alias_detector_pixel_fields_do_not_emit_false_superseded_warning(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'detector_kinds': {'source': 'inline', 'allowed_values': ['scmos']},
+                },
+                'sections': [
+                    {
+                        'id': 'detectors',
+                        'title': 'Detectors',
+                        'rules': [
+                            {'path': 'hardware.detectors', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.detectors[].kind', 'status': 'conditional', 'type': 'string', 'vocab': 'detector_kinds', 'required_if': {'parent_present': 'hardware.detectors[]'}},
+                            {
+                                'path': 'hardware.detectors[].pixel_pitch_um',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'aliases': ['hardware.detectors[].pixel_size_um'],
+                                'required_if': {'item_kind_in': ['scmos']},
+                            },
+                            {
+                                'path': 'hardware.detectors[].pixel_size_um',
+                                'status': 'optional',
+                                'type': 'positive_number',
+                                'superseded_by': 'hardware.detectors[].pixel_pitch_um',
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/camera-gap.yaml',
+            {
+                'instrument': {'instrument_id': 'camera-gap'},
+                'hardware': {
+                    'detectors': [
+                        {'kind': 'scmos'},
+                    ]
+                },
+            },
+        )
+
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        warning_codes = [warning.code for warning in warnings]
+        self.assertIn('missing_conditional_field', warning_codes)
+        self.assertNotIn('field_superseded', warning_codes)
+
     def test_evaluate_required_if_supports_item_field_in(self) -> None:
         vocabulary = Vocabulary(vocab_registry={})
         condition = {'item_field_in': {'timing_mode': ['pulsed'], 'role': ['depletion']}}

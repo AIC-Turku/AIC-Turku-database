@@ -43,7 +43,7 @@ from scripts.validate import (
     validate_event_ledgers,
     validate_instrument_ledgers,
 )
-from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -212,6 +212,73 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
     return dto
 
 
+def _display_labels(rows: Any, *, installed_only: bool = False) -> list[str]:
+    labels: list[str] = []
+    if not isinstance(rows, list):
+        return labels
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if installed_only and row.get("is_installed") is False:
+            continue
+        label = clean_text(row.get("display_label") or row.get("name") or row.get("model") or row.get("id"))
+        if label:
+            labels.append(label)
+    return labels
+
+
+
+def _build_hardware_focus_summary(dto: dict[str, Any]) -> dict[str, Any]:
+    hardware = dto.get("hardware") if isinstance(dto.get("hardware"), dict) else {}
+    optical_path = hardware.get("optical_path") if isinstance(hardware.get("optical_path"), dict) else {}
+    route_rows = optical_path.get("available_routes") if isinstance(optical_path.get("available_routes"), list) else []
+    if not route_rows and isinstance(dto.get("available_routes"), list):
+        route_rows = dto.get("available_routes")
+    route_labels = [
+        clean_text(route.get("label") or route.get("display_label") or route.get("id"))
+        for route in route_rows
+        if isinstance(route, dict) and clean_text(route.get("label") or route.get("display_label") or route.get("id"))
+    ]
+
+    supporting_features: list[str] = []
+    environment = hardware.get("environment") if isinstance(hardware.get("environment"), dict) else {}
+    if environment.get("present"):
+        supporting_features.append("environmental control")
+    hardware_autofocus = hardware.get("hardware_autofocus") if isinstance(hardware.get("hardware_autofocus"), dict) else {}
+    if hardware_autofocus.get("present"):
+        supporting_features.append("hardware autofocus")
+    triggering = hardware.get("triggering") if isinstance(hardware.get("triggering"), dict) else {}
+    if triggering.get("present"):
+        supporting_features.append("hardware triggering")
+    if _display_labels(hardware.get("optical_modulators")):
+        supporting_features.append("optical modulation")
+    if _display_labels(hardware.get("illumination_logic")):
+        supporting_features.append("adaptive illumination")
+    if _display_labels(hardware.get("magnification_changers")):
+        supporting_features.append("magnification changer")
+
+    completeness = dto.get("inventory_completeness") if isinstance(dto.get("inventory_completeness"), dict) else {}
+    policy_missing_required = completeness.get("policy_missing_required") if isinstance(completeness.get("policy_missing_required"), list) else []
+    policy_missing_conditional = completeness.get("policy_missing_conditional") if isinstance(completeness.get("policy_missing_conditional"), list) else []
+    caveat_titles = [
+        clean_text(entry.get("title") or entry.get("path"))
+        for entry in [*policy_missing_required, *policy_missing_conditional]
+        if isinstance(entry, dict) and clean_text(entry.get("title") or entry.get("path"))
+    ]
+
+    return {
+        "modality_labels": _display_labels(dto.get("modalities")),
+        "route_labels": route_labels,
+        "installed_objective_labels": _display_labels(hardware.get("objectives"), installed_only=True),
+        "light_source_labels": _display_labels(hardware.get("light_sources")),
+        "detector_labels": _display_labels(hardware.get("detectors")),
+        "supporting_feature_labels": sorted(dict.fromkeys(supporting_features)),
+        "planning_caveat_labels": caveat_titles[:8],
+        "status": copy.deepcopy(dto.get("status") or {}),
+    }
+
+
+
 def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict[str, Any]]) -> dict[str, Any]:
     llm_payload = {
         "facility_name": str(facility.get("short_name") or facility.get("full_name") or "Core Imaging Facility"),
@@ -220,6 +287,7 @@ def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict
         "policy": {
             "intent": "LLM-safe experiment planning inventory",
             "grounding_requirement": "Only use fields explicitly present in this JSON file.",
+            "llm_usage_note": "Use hardware_focus_summary for quick screening, but cite raw hardware fields when recommending routes, optics, sources, and detectors.",
             "do_not_infer_constraints": [
                 "Do not invent hardware specifications, accessories, wavelengths, objectives, detector performance, or automation features that are not explicitly listed.",
                 "Treat null values and listed missing fields as unknown. Unknown does not mean available.",
@@ -243,6 +311,7 @@ def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict
             "alias_fallbacks": copy.deepcopy(policy.get("alias_fallbacks") or []),
             "uncertainty_note": "Missing fields are unknown and must not be assumed.",
         }
+        dto["hardware_focus_summary"] = _build_hardware_focus_summary(dto)
         llm_payload["active_microscopes"].append(dto)
 
     return llm_payload
@@ -516,6 +585,20 @@ def _fmt_num(value: Any) -> str:
     return str(value)
 
 
+def _format_wavelength_label(value: Any) -> str:
+    wavelength = _fmt_num(value)
+    if not wavelength:
+        return ""
+    normalized = wavelength.strip().lower()
+    if normalized.endswith("nm"):
+        return wavelength.strip()
+    try:
+        float(normalized)
+    except (TypeError, ValueError):
+        return wavelength.strip()
+    return f"{wavelength} nm"
+
+
 def _bool_display(value: Any) -> str:
     if value is True:
         return "Yes"
@@ -648,12 +731,9 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
 
 def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[str, Any]:
     notes_text = clean_text(src.get("notes")).lower()
-    raw_role = clean_text(src.get("role")).lower()
     raw_timing_mode = clean_text(src.get("timing_mode")).lower()
 
-    normalized_role = raw_role
-    if not normalized_role and ("sted depletion" in notes_text or "depletion" in notes_text):
-        normalized_role = "depletion"
+    normalized_role = infer_light_source_role(src)
 
     normalized_timing_mode = raw_timing_mode
     if not normalized_timing_mode:
@@ -672,6 +752,7 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     repetition_rate_mhz = _fmt_num(src.get("repetition_rate_mhz"))
     depletion_targets_nm = [_fmt_num(item) for item in (src.get("depletion_targets_nm") or []) if _fmt_num(item)] if isinstance(src.get("depletion_targets_nm"), list) else []
     wavelength = _fmt_num(src.get("wavelength_nm") or src.get("wavelength"))
+    wavelength_label = _format_wavelength_label(src.get("wavelength_nm") or src.get("wavelength"))
     technology = clean_text(src.get("technology"))
     power = clean_text(src.get("power"))
 
@@ -686,7 +767,7 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     display_label = " ".join(
         part
         for part in [
-            f"{wavelength} nm" if wavelength else "",
+            wavelength_label,
             kind_label,
             manufacturer,
             deduplicated_model,
@@ -702,6 +783,8 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         targets_clause = f" targeting {_human_list([f'{item} nm' for item in depletion_targets_nm])}" if depletion_targets_nm else ""
         depletion_descriptor = "pulsed depletion laser" if normalized_timing_mode == "pulsed" else "depletion laser"
         method_sentence = f"STED depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a {depletion_descriptor}{targets_clause}."
+    elif normalized_role == "transmitted_illumination":
+        method_sentence = f"Transmitted illumination was provided by {display_label}."
     else:
         method_sentence = f"Excitation was provided by {display_label}."
     spec_lines = _spec_lines(
@@ -713,7 +796,7 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         ("Repetition rate", f"`{repetition_rate_mhz} MHz`" if repetition_rate_mhz else None),
         ("Depletion targets", ", ".join(f"`{item} nm`" for item in depletion_targets_nm) if depletion_targets_nm else None),
         ("Technology", technology),
-        ("Wavelength", f"`{wavelength} nm`" if wavelength else None),
+        ("Wavelength", f"`{wavelength_label}`" if wavelength_label else None),
         ("Power", f"`{power}`" if power else None),
         ("Notes", clean_text(src.get("notes"))),
     )
@@ -1532,6 +1615,21 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "image_filename": _discover_image_filename(instrument_id),
         "url": clean_text(inst_section.get("url")),
         "canonical": {
+            "instrument": {
+                "display_name": display_name,
+                "instrument_id": instrument_id,
+                "manufacturer": clean_text(inst_section.get("manufacturer")),
+                "model": clean_text(inst_section.get("model")),
+                "year_of_purchase": clean_text(inst_section.get("year_of_purchase")),
+                "funding": clean_text(inst_section.get("funding")),
+                "stand_orientation": clean_text(inst_section.get("stand_orientation")),
+                "ocular_availability": clean_text(inst_section.get("ocular_availability")),
+                "location": clean_text(inst_section.get("location")),
+                "notes": notes_raw,
+                "url": clean_text(inst_section.get("url")),
+            },
+            "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
+            "modules": copy.deepcopy(modules),
             "notes": notes_parsed,
             "software": software,
             "hardware": hardware,

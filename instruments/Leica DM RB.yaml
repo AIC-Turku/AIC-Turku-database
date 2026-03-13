@@ -33,6 +33,7 @@ hardware:
       wavelength_nm: broadband
       power: 100 W
       path: transmitted
+      role: transmitted_illumination  # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
       notes: Transmitted light source for Brightfield and Darkfield
       url: ''
     - kind: arc_lamp

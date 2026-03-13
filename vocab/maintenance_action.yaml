@@ -2,7 +2,7 @@ terms:
   - id: service
     label: "Service"
     description: "General maintenance intervention including inspection and routine adjustments. Used when work does not fit a more specific action type."
-    synonyms: ["maintenance"]
+    synonyms: ["maintenance", "calibration_and_alignment"]
   - id: repair
     label: "Repair"
     description: "Fixes a confirmed fault or malfunction by restoring or replacing failing parts. Use when resolving a broken or degraded subsystem."
@@ -22,11 +22,11 @@ terms:
   - id: replace
     label: "Replace"
     description: "Substitutes a component with a new or refurbished part. Use when parts are worn, failed, or upgraded directly."
-    synonyms: ["part replacement"]
+    synonyms: ["part replacement", "part_replacement"]
   - id: update
     label: "Update"
     description: "Applies software, firmware, or configuration updates to the instrument ecosystem. Use for non-hardware-change version or settings updates."
-    synonyms: ["upgrade software", "firmware update"]
+    synonyms: ["upgrade software", "firmware update", "software_update"]
   - id: other
     label: "Other"
     description: "Action does not match the predefined categories. Provide specific context in free-text details."

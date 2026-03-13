@@ -21,42 +21,60 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
   </div>
 
   <div id="hardware-options" style="display: none;">
-    <strong>2. Imaging Modalities:</strong>
-    <div id="modality-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-modality" class="methods-option-section">
+      <strong>2. Imaging Modalities:</strong>
+      <div id="modality-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <strong>3. Hardware Modules &amp; Environmental Control:</strong>
-    <div id="module-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-module" class="methods-option-section">
+      <strong>3. Hardware Modules &amp; Environmental Control:</strong>
+      <div id="module-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <strong>4. Scanner:</strong>
-    <div id="scanner-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-scanner" class="methods-option-section">
+      <strong>4. Scanner:</strong>
+      <div id="scanner-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <strong>5. Objectives:</strong>
-    <div id="obj-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-obj" class="methods-option-section">
+      <strong>5. Objectives:</strong>
+      <div id="obj-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <strong>6. Light Sources (Lasers/LEDs):</strong>
-    <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-light" class="methods-option-section">
+      <strong>6. Light Sources (Lasers/LEDs):</strong>
+      <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <div class="md-typeset">
+    <div id="section-filter" class="md-typeset methods-option-section">
       <h4>7. Filters / Dichroics:</h4>
       <div id="filter-list" class="checkbox-group"></div>
     </div>
 
-    <div class="md-typeset" id="section-splitters">
+    <div class="md-typeset methods-option-section" id="section-splitter">
       <h4>8. Camera / Emission Splitters:</h4>
       <div id="splitter-list" class="checkbox-group"></div>
     </div>
 
-    <strong>9. Detectors:</strong>
-    <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-det" class="methods-option-section">
+      <strong>9. Detectors:</strong>
+      <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <strong>10. Magnification Changers:</strong>
-    <div id="magnification-changer-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-magnification-changer" class="methods-option-section">
+      <strong>10. Magnification Changers:</strong>
+      <div id="magnification-changer-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <strong>11. Optical Modulators:</strong>
-    <div id="optical-modulator-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-optical-modulator" class="methods-option-section">
+      <strong>11. Optical Modulators:</strong>
+      <div id="optical-modulator-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
-    <strong>12. Adaptive Illumination Logic:</strong>
-    <div id="illumination-logic-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    <div id="section-illumination-logic" class="methods-option-section">
+      <strong>12. Adaptive Illumination Logic:</strong>
+      <div id="illumination-logic-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
+    </div>
 
     <button id="add-btn" class="md-button md-button--primary" style="margin-top: 10px;">+ Add to Methods</button>
   </div>
@@ -212,12 +230,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
 
-        if (!Array.isArray(items) || items.length === 0) {
-            container.innerHTML = "<span style='color: gray; font-size: 0.9em;'>No data available.</span>";
-            return;
+        const normalizedItems = Array.isArray(items) ? items.filter(item => item && typeof item === 'object') : [];
+        if (!normalizedItems.length) {
+            return 0;
         }
 
-        items.forEach((item, index) => {
+        normalizedItems.forEach((item, index) => {
             const wrapper = document.createElement("div");
             wrapper.style.marginBottom = "4px";
 
@@ -228,26 +246,24 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.displayLabel = item.display_label || "";
             checkbox.dataset.methodSentence = item.method_sentence || "";
             checkbox.dataset.category = prefix;
+            checkbox.dataset.role = item.role || "";
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
-            label.textContent = " " + (item.display_label || "Unnamed item");
+            const inlineDetail = cleanText(item.display_subtitle);
+            label.textContent = " " + (item.display_label || "Unnamed item") + (inlineDetail ? ` — ${inlineDetail}` : "");
 
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
-
-            if (item.display_subtitle) {
-                const sub = document.createElement("div");
-                sub.textContent = item.display_subtitle;
-                sub.style.fontSize = "0.8em";
-                sub.style.fontStyle = "italic";
-                sub.style.color = "gray";
-                sub.style.marginLeft = "24px";
-                wrapper.appendChild(sub);
-            }
-
             container.appendChild(wrapper);
         });
+        return normalizedItems.length;
+    }
+
+    function toggleSectionVisibility(sectionId, hasItems) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        section.style.display = hasItems ? "" : "none";
     }
 
     function getCheckedSelections(prefix) {
@@ -255,6 +271,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             id: cb.value,
             displayLabel: cleanText(cb.dataset.displayLabel),
             methodSentence: cleanText(cb.dataset.methodSentence),
+            role: cleanText(cb.dataset.role),
         }));
     }
 
@@ -290,7 +307,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             return `Detection was performed using ${humanJoin(labels)}.`;
         }
         if (prefix === "light") {
-            return `Excitation was provided by ${humanJoin(labels)}.`;
+            const excitationLabels = selections.filter(item => {
+                const role = cleanText(item.role).toLowerCase();
+                return role !== 'depletion' && role !== 'transmitted_illumination';
+            }).map(item => item.displayLabel);
+            const transmittedLabels = selections.filter(item => cleanText(item.role).toLowerCase() === 'transmitted_illumination').map(item => item.displayLabel);
+            const depletionSentences = dedupeSentences(
+                selections
+                    .filter(item => cleanText(item.role).toLowerCase() === 'depletion')
+                    .map(item => item.methodSentence)
+            );
+            const clauses = [];
+            if (excitationLabels.length) clauses.push(`Excitation was provided by ${humanJoin(excitationLabels)}.`);
+            if (transmittedLabels.length) clauses.push(`Transmitted illumination was provided by ${humanJoin(transmittedLabels)}.`);
+            if (depletionSentences.length) clauses.push(depletionSentences.join(' '));
+            return clauses.join(' ');
         }
         if (prefix === "magnification-changer") {
             return labels.length === 1
@@ -391,19 +422,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const dto = currentInst;
 
-        bindCheckboxes("modality-list", dto.modalities || [], "modality");
-        bindCheckboxes("module-list", dto.modules || [], "module");
-        bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner");
-        bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj");
-        bindCheckboxes("light-list", dto.hardware?.light_sources || [], "light");
-        bindCheckboxes("det-list", dto.hardware?.detectors || [], "det");
-        bindCheckboxes("magnification-changer-list", dto.hardware?.magnification_changers || [], "magnification-changer");
-        bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator");
-        bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic");
+        toggleSectionVisibility("section-modality", bindCheckboxes("modality-list", dto.modalities || [], "modality") > 0);
+        toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
+        toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
+        toggleSectionVisibility("section-obj", bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj") > 0);
+        toggleSectionVisibility("section-light", bindCheckboxes("light-list", dto.hardware?.light_sources || [], "light") > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", dto.hardware?.detectors || [], "det") > 0);
+        toggleSectionVisibility("section-magnification-changer", bindCheckboxes("magnification-changer-list", dto.hardware?.magnification_changers || [], "magnification-changer") > 0);
+        toggleSectionVisibility("section-optical-modulator", bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator") > 0);
+        toggleSectionVisibility("section-illumination-logic", bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic") > 0);
 
         const opticalPath = dto.hardware?.optical_path || {};
-        bindCheckboxes("filter-list", opticalPath.filters || [], "filter");
-        bindCheckboxes("splitter-list", opticalPath.splitters || [], "splitter");
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", opticalPath.filters || [], "filter") > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", opticalPath.splitters || [], "splitter") > 0);
     });
 
     addBtn.addEventListener("click", () => {

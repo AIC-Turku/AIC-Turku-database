@@ -17,7 +17,7 @@ DISCRETE_MECHANISM_TYPES = {"filter_wheel", "slider", "turret"}
 CONTINUOUS_MECHANISM_TYPES = {"tunable", "fixed", "spectral_slider"}
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
 MULTIBAND_FILTER_TYPES = {"multiband_bandpass"}
-NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough"}
+NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough", "neutral_density"}
 ROUTE_TAGS = {"epi", "tirf", "confocal", "multiphoton", "transmitted", "shared", "all"}
 ROUTE_LABELS = {
     "confocal": "Confocal",
@@ -32,6 +32,16 @@ CAMERA_DETECTOR_KINDS = {"camera", "scmos", "cmos", "ccd", "emccd"}
 POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}
 TUNABLE_RANGE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:-|to|–)\s*(\d+(?:\.\d+)?)\s*nm", re.IGNORECASE)
 POWER_VALUE_RE = re.compile(r"(\d+(?:\.\d+)?)")
+TRANSMITTED_ROLE_HINTS = (
+    'transmitted',
+    'brightfield',
+    'darkfield',
+    'phase contrast',
+    'phase-contrast',
+    'dic',
+    'diascopic',
+    'dia',
+)
 
 
 def _is_positive_number(value: Any) -> bool:
@@ -471,14 +481,39 @@ def _light_source_display_label(source: dict[str, Any]) -> str:
 
 
 
-def _source_role(source: dict[str, Any]) -> str:
+def infer_light_source_role(source: dict[str, Any]) -> str:
     explicit = _clean_string(source.get("role")).lower()
     if explicit:
         return explicit
+
+    routes = _normalize_routes(source.get("path") or source.get("paths") or source.get("route") or source.get("routes"))
+    if "transmitted" in routes:
+        return "transmitted_illumination"
+
     notes = _clean_string(source.get("notes")).lower()
+    kind = _clean_string(source.get("kind") or source.get("type")).lower()
+    identity = " ".join(
+        part
+        for part in [
+            _clean_string(source.get("manufacturer")),
+            _clean_string(source.get("model") or source.get("name")),
+            notes,
+        ]
+        if part
+    ).lower()
+
     if "sted depletion" in notes or "depletion" in notes:
         return "depletion"
+
+    if kind == "halogen_lamp" or any(token in identity for token in TRANSMITTED_ROLE_HINTS):
+        return "transmitted_illumination"
+
     return "excitation"
+
+
+
+def _source_role(source: dict[str, Any]) -> str:
+    return infer_light_source_role(source)
 
 
 

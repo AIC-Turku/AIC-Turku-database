@@ -62,8 +62,8 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
     def setUp(self) -> None:
         self.vocabulary = Vocabulary(
             vocab_registry={
-                "light_source_kinds": {"source": "inline", "allowed_values": ["laser"]},
-                "light_source_roles": {"source": "inline", "allowed_values": ["excitation", "depletion"]},
+                "light_source_kinds": {"source": "inline", "allowed_values": ["laser", "halogen_lamp"]},
+                "light_source_roles": {"source": "inline", "allowed_values": ["excitation", "depletion", "transmitted_illumination"]},
                 "light_source_timing_modes": {"source": "inline", "allowed_values": ["cw", "pulsed"]},
                 "detector_kinds": {"source": "inline", "allowed_values": ["hybrid"]},
                 "optical_routes": {"source": "inline", "allowed_values": ["confocal", "epi"]},
@@ -170,6 +170,30 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(light["role"], "depletion")
         self.assertEqual(light["timing_mode"], "pulsed")
         self.assertIn("STED depletion was delivered", light["method_sentence"])
+
+
+    def test_transmitted_light_role_uses_transmitted_methods_sentence(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "halogen_lamp",
+                            "manufacturer": "Leica",
+                            "model": "TL lamp",
+                            "path": "transmitted",
+                            "role": "transmitted_illumination",
+                        }
+                    ]
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+
+        light = hardware["light_sources"][0]
+        self.assertEqual(light["role"], "transmitted_illumination")
+        self.assertIn("Transmitted illumination was provided by", light["method_sentence"])
 
     def test_wavelength_model_placeholder_is_deduplicated_in_label(self) -> None:
         inst = {
@@ -356,6 +380,38 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(completeness["policy_missing_required"][0]["path"], "hardware.detectors")
         self.assertEqual(completeness["policy_missing_conditional"][0]["path"], "software[].version")
         self.assertEqual(completeness["alias_fallbacks"][0]["alias"], "instrument.name")
+
+
+    def test_llm_inventory_payload_adds_hardware_focus_summary(self) -> None:
+        payload = build_llm_inventory_payload(
+            {"short_name": "Core"},
+            [
+                {
+                    "dto": {
+                        "id": "scope-1",
+                        "display_name": "Scope 1",
+                        "modalities": [{"display_label": "Confocal"}],
+                        "hardware": {
+                            "objectives": [{"display_label": "63x Oil", "is_installed": True}],
+                            "light_sources": [{"display_label": "488 nm laser"}],
+                            "detectors": [{"display_label": "HyD"}],
+                            "optical_modulators": [{"display_label": "SLM"}],
+                            "illumination_logic": [{"display_label": "Adaptive illumination"}],
+                            "optical_path": {"available_routes": [{"label": "Confocal route"}]},
+                        },
+                    },
+                    "canonical": {"policy": {}},
+                }
+            ],
+        )
+
+        summary = payload["active_microscopes"][0]["hardware_focus_summary"]
+        self.assertEqual(summary["modality_labels"], ["Confocal"])
+        self.assertEqual(summary["route_labels"], ["Confocal route"])
+        self.assertEqual(summary["light_source_labels"], ["488 nm laser"])
+        self.assertEqual(summary["detector_labels"], ["HyD"])
+        self.assertIn("adaptive illumination", summary["supporting_feature_labels"])
+        self.assertIn("optical modulation", summary["supporting_feature_labels"])
 
     def test_json_script_data_escapes_script_terminators_and_round_trips(self) -> None:
         payload = {"text": 'Quote "line"\n</script><script>alert(1)</script>'}

@@ -13,3 +13,7 @@ terms:
   - id: alignment
     label: "Alignment"
     description: "Alignment or service beam not used as primary excitation/depletion."
+  - id: transmitted_illumination
+    label: "Transmitted Illumination"
+    description: "Diascopic or transmitted-light illumination source used for brightfield, phase contrast, darkfield, or DIC."
+    synonyms: ["transmitted", "brightfield", "diascopic", "dia"]

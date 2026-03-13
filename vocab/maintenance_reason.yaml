@@ -2,11 +2,11 @@ terms:
   - id: scheduled
     label: "Scheduled"
     description: "Planned preventive maintenance performed at regular intervals. Includes routine service contracts and periodic inspections."
-    synonyms: ["preventive maintenance", "pm"]
+    synonyms: ["preventive maintenance", "preventative_maintenance", "preventive_maintenance", "pm"]
   - id: problem
     label: "Problem"
     description: "Triggered by a reported fault, performance issue, or unexpected behavior. Use when intervention is reactive to a defect."
-    synonyms: ["issue", "breakdown"]
+    synonyms: ["issue", "breakdown", "repair"]
   - id: upgrade
     label: "Upgrade"
     description: "Initiated to improve capability, performance, or feature set beyond baseline operation. Can include hardware or software enhancement projects."

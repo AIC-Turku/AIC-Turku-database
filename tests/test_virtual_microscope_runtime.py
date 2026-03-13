@@ -476,6 +476,59 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(result["emPoints"], 5)
         self.assertIn(result["activeStateName"], {"Default state", "default"})
 
+    def test_transmitted_light_sources_do_not_drive_fluorophore_excitation(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                ex2p: [],
+                em: [[480, 0], [500, 50], [520, 100], [545, 60], [570, 10], [600, 0]]
+              },
+              exMax: 488,
+              emMax: 520
+            };
+            const instrument = { metadata: { wavelength_grid: { min_nm: 450, max_nm: 650, step_nm: 2 } } };
+            function simulate(sources) {
+              return rt.simulateInstrument(
+                instrument,
+                {
+                  sources,
+                  excitation: [{ component_type: 'passthrough' }],
+                  dichroic: [],
+                  emission: [{ component_type: 'bandpass', center_nm: 525, width_nm: 50 }],
+                  splitters: [],
+                  detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera', qe_peak_pct: 80 }],
+                  selectionMap: {}
+                },
+                [fluor],
+                {}
+              ).results[0];
+            }
+            const excitationOnly = simulate([
+              { display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }
+            ]);
+            const excitationPlusTransmitted = simulate([
+              { display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' },
+              { display_label: 'TL lamp', kind: 'led', role: 'transmitted_illumination', wavelength_nm: 488, spectral_mode: 'line' }
+            ]);
+            const transmittedOnly = simulate([
+              { display_label: 'TL lamp', kind: 'led', role: 'transmitted_illumination', wavelength_nm: 488, spectral_mode: 'line' }
+            ]);
+            return {
+              excitationOnly: excitationOnly.excitationStrength,
+              excitationPlusTransmitted: excitationPlusTransmitted.excitationStrength,
+              transmittedOnly: transmittedOnly.excitationStrength
+            };
+            """
+        )
+
+        self.assertAlmostEqual(result["excitationOnly"], result["excitationPlusTransmitted"], places=9)
+        self.assertEqual(result["transmittedOnly"], 0)
+
     def test_instrument_route_catalog_is_normalized_from_payload(self) -> None:
         result = self.run_node_json(
             """

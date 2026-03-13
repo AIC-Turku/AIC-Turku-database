@@ -74,7 +74,12 @@ class FullAuditScriptTests(unittest.TestCase):
                 "event_errors": {"count": 0},
                 "event_warnings": {"count": 1},
             },
-            "completeness": {"top_missing_required_paths": [{"name": "hardware.detectors[]", "count": 2}]},
+            "completeness": {
+                "top_missing_required_paths": [{"name": "hardware.detectors[]", "count": 2}],
+                "top_missing_conditional_paths": [{"name": "software[].version", "count": 1}],
+                "top_alias_fallback_paths": [{"name": "instrument.display_name", "count": 1}],
+                "top_methods_blocker_paths": [{"name": "hardware.detectors[]", "count": 2}],
+            },
             "virtual_microscope": {
                 "readiness_counts": {"ok": 2, "warning": 1},
                 "instruments": [
@@ -92,7 +97,32 @@ class FullAuditScriptTests(unittest.TestCase):
         self.assertIn("# Repository Audit", markdown)
         self.assertIn("## Inventory", markdown)
         self.assertIn("### FPbase/browser runtime contract", markdown)
+        self.assertIn("### Most common missing conditional instrument-policy fields", markdown)
+        self.assertIn("### Fields currently blocking trustworthy methods generation", markdown)
         self.assertIn("Test Scope", markdown)
+
+    def test_virtual_microscope_audit_treats_inferable_transmitted_role_as_info(self) -> None:
+        instrument = {
+            "id": "test-scope",
+            "display_name": "Test Scope",
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {"kind": "halogen_lamp", "path": "transmitted", "notes": "Brightfield lamp"}
+                    ],
+                    "detectors": [],
+                    "light_path": {},
+                }
+            },
+        }
+
+        audit = audit_virtual_microscope_instrument(instrument)
+
+        role_infos = [entry for entry in audit["info"] if entry["field"] == "role"]
+        self.assertTrue(role_infos)
+        self.assertTrue(any("transmitted illumination" in entry["message"] for entry in role_infos))
+        self.assertFalse(any(entry["field"] == "role" for entry in audit["warnings"]))
+
 
     def test_audit_fpbase_runtime_contract_works_with_recorded_fixture(self) -> None:
         result = audit_fpbase_runtime_contract(REPO_ROOT)
