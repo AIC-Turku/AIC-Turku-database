@@ -1718,15 +1718,19 @@
 
   function fpbaseSpectraUrls(protein) {
     const urls = [];
-    if (protein.name) {
-      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__name__iexact=${encodeURIComponent(protein.name)}&format=json`);
-      urls.push(`https://www.fpbase.org/api/proteins/spectra/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
-    }
+    // 1. Prioritize exact database identifiers (slug and uuid) over fuzzy names
     if (protein.slug) {
       urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__slug__iexact=${encodeURIComponent(protein.slug)}&format=json`);
+      // Add the alternate API path just in case of API routing changes
+      urls.push(`https://www.fpbase.org/api/spectra/?protein__slug__iexact=${encodeURIComponent(protein.slug)}&format=json`);
     }
     if (protein.uuid) {
       urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__uuid=${encodeURIComponent(protein.uuid)}&format=json`);
+    }
+    // 2. Fallback to fuzzy name searches
+    if (protein.name) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
     }
     return uniqueTexts(urls);
   }
@@ -1810,10 +1814,13 @@
         detail: protein.fallbackRecord.raw && protein.fallbackRecord.raw.detail
           ? protein.fallbackRecord.raw.detail
           : (protein.fallbackRecord.raw && protein.fallbackRecord.raw.summary ? protein.fallbackRecord.raw.summary : protein.fallbackRecord),
-        spectra: null,
+        spectra: protein.fallbackRecord,
       };
     }
+
     let detail = null;
+    let spectra = null;
+
     try {
       const detailResponse = await requestJSONFirst(fpbaseDetailUrls(protein));
       const detailRows = VM.normalizeResultsShape(detailResponse);
@@ -1821,8 +1828,23 @@
     } catch (error) {
       detail = protein.raw || protein;
     }
-    // Skip the flaky separate spectra API call; the detail object already contains the states & spectra
-    return { detail, spectra: null };
+
+    // Explicitly verify that the fetched spectra payload actually contains data points.
+    // A query might return HTTP 200 OK but with an empty { results: [] } array.
+    for (const url of fpbaseSpectraUrls(protein)) {
+      try {
+        const response = await requestJSON(url);
+        const parsedRows = VM.normalizeFPbaseSpectraResponse(response);
+        if (parsedRows && parsedRows.length > 0) {
+          spectra = response;
+          break; // Found valid spectra, stop checking other URLs
+        }
+      } catch (error) {
+        // Network or parsing error, continue to the next fallback URL
+      }
+    }
+
+    return { detail, spectra };
   }
 
   async function loadProtein(summary) {
