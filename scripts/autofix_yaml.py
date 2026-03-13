@@ -101,9 +101,10 @@ def fix_data_by_path(data: dict, parts: list[str], vocab_name: str, vocabs: dict
 def fix_legacy_fields(data: dict) -> bool:
     """Manually catches renamed/deprecated fields across older files."""
     changed = False
+    record_type = data.get("record_type", "")
 
-    # 1. Fix QC field names
-    if "contact" in data and "performed_by" not in data:
+    # 1. Fix QC field names (Only for QC sessions to protect maintenance records)
+    if record_type == "qc_session" and "contact" in data and "performed_by" not in data:
         data["performed_by"] = data.pop("contact")
         changed = True
 
