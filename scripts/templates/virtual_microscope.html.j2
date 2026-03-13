@@ -17,10 +17,10 @@ hide:
     --danger: #dc2626;
 
     width: 100%;
-    display: flex;             /* Changed from grid to flex */
-    flex-direction: column;    /* Stack everything vertically */
-    gap: 16px;
-    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 12px;
   }
   .vm-panel {
     background: var(--surface);
@@ -28,61 +28,222 @@ hide:
     border-radius: 12px;
     box-shadow: var(--md-shadow-z1);
     color: var(--text);
-    padding: 16px;
+    padding: 14px;
   }
-  .vm-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-  .vm-panel-grid { display:grid; gap:16px; grid-template-columns: 1fr; align-items:start; }
+  .vm-main {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 4fr) minmax(280px, 1fr);
+    align-items: start;
+  }
+  .vm-main-left,
+  .vm-main-right,
+  .vm-stack {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+  }
   .vm-section-title {
-    margin: 0 0 12px; font-size: 13px; color: var(--muted);
-    letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700;
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .vm-panel-copy {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 2px 0 10px;
+    line-height: 1.45;
   }
   .vm-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
   .vm-field label { font-size: 12px; font-weight: 600; }
-  .vm-field select, .vm-field input[type="text"] {
-    width: 100%; border-radius: 6px; border: 1px solid var(--border);
-    padding: 8px 10px; font: inherit; font-size: 13px; background: var(--surface); color: var(--text);
+  .vm-field select,
+  .vm-field input[type="text"] {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
   }
   .vm-btn {
-    border: none; background: var(--primary); color: #fff;
-    border-radius: 6px; padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 13px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
   }
-  .vm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .vm-list-item {
-    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
-    display: flex; justify-content: space-between; align-items: center; font-size: 13px;
-  }
-  .dye-chip { border-color: #fecaca; color: var(--danger); width: max-content; }
-  .dye-chip button { background: none; border: none; color: inherit; cursor: pointer; font-weight: bold; margin-left: 8px;}
   .vm-btn-primary { background: linear-gradient(135deg, var(--primary), #7c3aed); }
-  .vm-autoconfig-status { min-height: 18px; margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+  .vm-search-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: start;
+  }
+  .vm-search-box {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(148, 163, 184, 0.06);
+  }
+  .vm-search-box-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+  .vm-search-box-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .vm-search-box-subtitle { font-size: 11px; color: var(--muted); }
+  .fp-search-wrap { position: relative; display: flex; gap: 8px; }
+  .fp-dropdown {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+    display: none;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .fp-dropdown li { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
+  .fp-dropdown li:hover { background: var(--md-code-bg-color); }
+  .vm-mini { font-size: 11px; color: var(--muted); }
+  .vm-status-inline { min-height: 16px; margin: 0; font-size: 11px; color: var(--muted); }
+  .vm-status-inline[data-tone="error"] { color: var(--danger); font-weight: 700; }
+  .vm-status-inline[data-tone="warning"] { color: #b45309; font-weight: 700; }
+  .vm-status-inline[data-tone="success"] { color: #059669; font-weight: 700; }
+  .vm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .vm-list-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    gap: 12px;
+    background: rgba(148, 163, 184, 0.04);
+  }
+  .dye-chip { border-color: #fecaca; color: var(--danger); width: max-content; background: rgba(254, 242, 242, 0.7); }
+  .dye-chip button { background: none; border: none; color: inherit; cursor: pointer; font-weight: bold; margin-left: 8px; }
+  .vm-loaded-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .vm-chart-stack { display: grid; gap: 10px; margin-top: 10px; }
+  .vm-chart-panel {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    background: var(--surface);
+  }
+  .vm-chart-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .vm-chart-title { font-size: 12px; font-weight: 700; color: var(--text); }
+  .vm-chart-subtitle { font-size: 11px; color: var(--muted); }
+  .vm-chart-wrap { background: var(--surface); border-radius: 12px; padding: 4px; height: 280px; }
+  .vm-chart-wrap.vm-chart-wrap-short { height: 250px; }
+  .vm-path-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom: 10px;
+  }
+  .vm-route-field { margin: 0; min-width: 220px; }
+  .vm-utility-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .vm-autoconfig-status { min-height: 18px; margin: 0; font-size: 11px; color: var(--muted); }
   .vm-autoconfig-status[data-tone="success"] { color: #059669; font-weight: 700; }
   .vm-autoconfig-status[data-tone="warning"] { color: #b45309; font-weight: 700; }
+  .vm-summary-grid {
+    display:grid;
+    gap:8px 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    font-size:13px;
+    margin: 10px 0 0;
+    padding:10px;
+    border-radius:8px;
+    background: var(--md-code-bg-color);
+    border:1px dashed var(--border);
+  }
 
-  /* The Flow Graph */
   .light-path-graph {
-    display: flex; flex-direction: column; align-items: stretch;
-    gap: 14px; padding: 14px; background: var(--md-code-bg-color);
-    border-radius: 12px; border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+    background: var(--md-code-bg-color);
+    border-radius: 12px;
+    border: 1px solid var(--border);
   }
-  .vm-pipeline-shell { display: grid; gap: 14px; }
-  .vm-pipeline {
-    display: flex; align-items: center; gap: 10px; overflow-x: auto;
-    padding-bottom: 4px;
-  }
+  .vm-pipeline-shell { display: grid; gap: 12px; }
+  .vm-pipeline { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
   .vm-stage-tab {
-    border: 1px solid var(--border); background: var(--surface); color: var(--text);
-    border-radius: 999px; padding: 8px 14px; white-space: nowrap; font-weight: 700;
-    font-size: 12px; cursor: pointer; box-shadow: var(--md-shadow-z1);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 8px 14px;
+    white-space: nowrap;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: var(--md-shadow-z1);
   }
   .vm-stage-tab.active { border-color: var(--primary); color: var(--primary); }
   .optical-pipe {
-    flex: 1 1 56px; min-width: 56px; height: 10px; border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.32); background: rgba(148, 163, 184, 0.14);
-    overflow: hidden; position: relative;
+    flex: 1 1 56px;
+    min-width: 56px;
+    height: 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: rgba(148, 163, 184, 0.14);
+    overflow: hidden;
+    position: relative;
   }
   .flowing-light {
     --beam-color: transparent;
-    position: absolute; inset: 0;
+    position: absolute;
+    inset: 0;
     background: repeating-linear-gradient(90deg,
       color-mix(in srgb, var(--beam-color) 20%, transparent) 0px,
       var(--beam-color) 12px,
@@ -98,121 +259,186 @@ hide:
     from { background-position: 0 0; }
     to { background-position: 180px 0; }
   }
-  .vm-inspector {
-    border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
-    padding: 14px;
-  }
+  .vm-inspector { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 14px; }
   .vm-stage-panel { display: none; gap: 10px; }
   .vm-stage-panel.active { display: grid; }
   .vm-stage-panel-title { font-size: 13px; font-weight: 800; color: var(--primary); text-transform: uppercase; }
   .vm-component-meta {
-    display: grid; gap: 4px; margin-top: 6px; padding: 8px 10px; border-radius: 8px;
-    border: 1px dashed var(--border); background: rgba(148, 163, 184, 0.08); font-size: 11px;
+    display: grid;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    background: rgba(148, 163, 184, 0.08);
+    font-size: 11px;
     color: var(--muted);
   }
   .vm-linked-note {
-    display: grid; gap: 6px; padding: 10px; border-radius: 10px;
-    background: rgba(var(--md-primary-fg-color--rgb), 0.05); border: 1px solid var(--border);
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(var(--md-primary-fg-color--rgb), 0.05);
+    border: 1px solid var(--border);
   }
   .vm-linked-note-title { font-weight: 700; font-size: 12px; color: var(--primary); }
-
-  /* Checkboxes for Lasers */
   .checkbox-group { display: flex; flex-direction: column; gap: 6px; }
-  .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; font-weight: normal;}
-  
-  /* Tunable Sliders */
+  .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; font-weight: normal; }
   .tunable-control { border: 1px dashed var(--border); padding: 8px; border-radius: 6px; display: grid; gap: 6px; background: var(--md-code-bg-color); }
-  .tunable-range-label { font-size: 11px; text-align: center; font-weight: bold;}
+  .tunable-range-label { font-size: 11px; text-align: center; font-weight: bold; }
   .slider-row input[type="range"] { width: 100%; margin: 2px 0; accent-color: var(--primary); }
-
-  .vm-chart-wrap { background: var(--surface); border-radius: 12px; padding: 10px; border: 1px solid var(--border); height: 300px; }
-  .vm-panel-copy { font-size: 12px; color: var(--muted); margin: 4px 0 12px; }
-  .vm-grid-two { display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-  .fp-search-wrap { position: relative; display: flex; gap: 8px; }
-  .fp-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); z-index: 100; max-height: 200px; overflow-y: auto; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none;}
-  .fp-dropdown li { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
-  .fp-dropdown li:hover { background: var(--md-code-bg-color); }
-  .vm-stack { display: grid; gap: 8px; }
   .vm-source-grid { display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
   .vm-source-group-title { grid-column: 1 / -1; }
-  .vm-mini { font-size: 11px; color: var(--muted); }
   .vm-metric { font-family: monospace; font-size: 12px; text-align: right; white-space: nowrap; }
-  .vm-route-field { margin: 0; min-width: 220px; }
-  .vm-summary-grid { display:grid; gap:8px 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .vm-side-chart { height: 260px; margin-bottom: 10px; }
+  .vm-card-column { display: grid; gap: 10px; }
+  .vm-info-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(148, 163, 184, 0.05);
+    display: grid;
+    gap: 6px;
+  }
+  .vm-info-card-title { font-size: 13px; font-weight: 700; }
+  .vm-info-card-subtitle { font-size: 11px; color: var(--muted); }
+  .vm-info-grid { display: grid; gap: 4px; }
+  .vm-info-row { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; }
+  .vm-info-row strong { color: var(--text); }
+
+  @media (max-width: 1100px) {
+    .vm-main { grid-template-columns: 1fr; }
+  }
 </style>
 
 <div class="vm-page">
-  <header class="vm-panel" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+  <header class="vm-panel" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
     <div>
-      <h2 class="vm-section-title" style="margin: 0;">Microscope System</h2>
-      <p style="font-size:12px; color:var(--muted); margin: 4px 0 0 0;">Select a system to load its physical light path configuration.</p>
+      <h2 class="vm-section-title" style="margin:0;">Microscope System</h2>
+      <p style="font-size:12px; color:var(--muted); margin:2px 0 0 0;">Select a system to load its physical light path configuration.</p>
     </div>
-    <div class="vm-field" style="margin: 0; flex-grow: 1; max-width: 400px;">
-      <select id="microscopeSelector" style="font-size: 14px; padding: 10px; font-weight: bold;"></select>
+    <div class="vm-field" style="margin:0; flex-grow:1; max-width:420px;">
+      <select id="microscopeSelector" style="font-size:14px; padding:10px; font-weight:bold;"></select>
     </div>
   </header>
 
   <main class="vm-main">
-    <section class="vm-panel-grid">
-      <div class="vm-panel">
+    <div class="vm-main-left">
+      <section class="vm-panel">
         <h2 class="vm-section-title">1. Fluorophore Reference Spectra</h2>
-        <p class="vm-panel-copy">Load fluorescent proteins from FPbase, choose active states, and compare reference excitation and emission spectra against the currently selected sources.</p>
-        <div class="vm-grid-two">
-          <div>
+        <p class="vm-panel-copy">Use the local dye library and FPbase separately. The top chart focuses on excitation light reaching the sample; the lower chart focuses on emitted light that survives the collection path.</p>
+
+        <div class="vm-search-grid">
+          <div class="vm-search-box">
+            <div class="vm-search-box-header">
+              <div>
+                <div class="vm-search-box-title">Local dye library</div>
+                <div class="vm-search-box-subtitle">Search imported spectra from <code>assets/data/spectra/fluorophores/</code>.</div>
+              </div>
+            </div>
+            <div class="fp-search-wrap">
+              <input id="localFluorophoreQuery" type="text" placeholder="e.g. AF488" style="flex:1; border-radius:6px; border:1px solid var(--border); padding:8px;"/>
+              <button id="localSearchBtn" class="vm-btn">Search</button>
+              <ul id="localSearchResults" class="fp-dropdown"></ul>
+            </div>
+            <p id="localSearchStatus" class="vm-status-inline"></p>
+          </div>
+
+          <div class="vm-search-box">
+            <div class="vm-search-box-header">
+              <div>
+                <div class="vm-search-box-title">FPbase proteins</div>
+                <div class="vm-search-box-subtitle">Search FPbase remotely. Local dyes remain separate and are not mixed into this menu.</div>
+              </div>
+            </div>
             <div class="fp-search-wrap">
               <input id="fluorophoreQuery" type="text" placeholder="e.g. GFP, mCherry, mNeonGreen" style="flex:1; border-radius:6px; border:1px solid var(--border); padding:8px;"/>
               <button id="searchBtn" class="vm-btn">Search</button>
-              <button id="vm-btn-autoconfig" class="vm-btn vm-btn-primary">✨ Auto-Configure</button>
               <ul id="searchResults" class="fp-dropdown"></ul>
             </div>
-            <p id="vm-autoconfig-status" class="vm-autoconfig-status"></p>
-            <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; cursor:pointer;">
-              <input id="use2Photon" type="checkbox" />
-              <span>Use 2-Photon Spectra when available</span>
-            </label>
-            <p id="searchStatus" style="font-size:11px; margin-top:6px; color:var(--muted);"></p>
-          </div>
-          <div>
-            <h3 class="vm-section-title" style="margin-top:0;">Loaded fluorophores</h3>
-            <ul id="selectedDyes" style="display:flex; flex-wrap:wrap; gap:8px; padding:0; margin:0;">
-              <li style="font-size:12px; color:var(--muted);">No dyes loaded.</li>
-            </ul>
+            <p id="searchStatus" class="vm-status-inline"></p>
           </div>
         </div>
-        <div class="vm-chart-wrap" style="margin-top: 16px;">
-          <canvas id="referenceSpectraChart"></canvas>
-        </div>
-      </div>
 
-      <div class="vm-panel">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+        <div class="vm-loaded-row">
           <div>
-            <h2 class="vm-section-title">2. Propagated Light Through the Optical Path</h2>
-            <p class="vm-panel-copy">Choose an optical route when the instrument supports more than one path, then configure the route-specific optics below. The propagated panel summarizes excitation at the sample, fluorescence after the selected optics, the detector-path spectrum, and any excitation leakage that survives the path.</p>
+            <h3 class="vm-section-title" style="margin:0 0 4px;">Loaded fluorophores</h3>
+            <div class="vm-mini">Loaded local dyes and FPbase proteins share the same downstream simulation.</div>
+          </div>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; margin:0;">
+            <input id="use2Photon" type="checkbox" />
+            <span>Use 2-photon spectra when available</span>
+          </label>
+        </div>
+        <ul id="selectedDyes" style="display:flex; flex-wrap:wrap; gap:8px; padding:0; margin:10px 0 0 0;">
+          <li style="font-size:12px; color:var(--muted);">No dyes loaded.</li>
+        </ul>
+
+        <div class="vm-chart-stack">
+          <div class="vm-chart-panel">
+            <div class="vm-chart-header">
+              <div>
+                <div class="vm-chart-title">Excitation arriving at the sample</div>
+                <div class="vm-chart-subtitle">Absorption spectra are compared against the selected excitation light after excitation-side optics.</div>
+              </div>
+              <p id="referenceStatus" class="vm-status-inline"></p>
+            </div>
+            <div class="vm-chart-wrap vm-chart-wrap-short">
+              <canvas id="referenceSpectraChart"></canvas>
+            </div>
+          </div>
+
+          <div class="vm-chart-panel">
+            <div class="vm-chart-header">
+              <div>
+                <div class="vm-chart-title">Emission and collection</div>
+                <div class="vm-chart-subtitle">Full fluorophore emission is shown alongside the part that survives the collection filters and detector window.</div>
+              </div>
+              <p id="emissionStatus" class="vm-status-inline"></p>
+            </div>
+            <div class="vm-chart-wrap vm-chart-wrap-short">
+              <canvas id="propagationSpectraChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="vm-panel">
+        <div class="vm-path-head">
+          <div>
+            <h2 class="vm-section-title">2. Controlling the Optical Path</h2>
+            <p class="vm-panel-copy">Choose the microscope route, then tune the optics and light sources below. The pipe colors visualize how the spectrum evolves along the path.</p>
           </div>
           <div id="opticalRouteChooserWrap" class="vm-field vm-route-field" style="display:none;">
             <label for="opticalRouteSelector">Optical route</label>
             <select id="opticalRouteSelector"></select>
           </div>
         </div>
-        <div id="lightPathGraph" class="light-path-graph"></div>
-        <div id="pathSummary" class="vm-summary-grid" style="font-size:13px; margin:12px 0; padding:10px; border-radius:6px; background:var(--md-code-bg-color); border:1px dashed var(--border);"></div>
-        <div class="vm-chart-wrap">
-          <canvas id="propagationSpectraChart"></canvas>
+        <div class="vm-utility-row">
+          <button id="vm-btn-autoconfig" class="vm-btn vm-btn-primary">✨ Auto-Configure optimal path</button>
+          <p id="vm-autoconfig-status" class="vm-autoconfig-status"></p>
         </div>
-      </div>
-    </section>
-
-    <div class="vm-panel">
-      <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>
-      <p class="vm-panel-copy">The bottom panel integrates detector-weighted fluorescence by fluorophore and path. Use it to compare crosstalk, collection efficiency, STED/depletion choices, and path-specific excitation-leakage warnings.</p>
-      <div class="vm-chart-wrap" style="height:280px; margin-bottom:12px;">
-        <canvas id="detectionChart"></canvas>
-      </div>
-      <ul id="signalSimulator" class="vm-list">
-        <li style="font-size:13px; color:var(--muted)">Setup light sources and detectors to compute efficiency.</li>
-      </ul>
+        <div id="lightPathGraph" class="light-path-graph"></div>
+        <div id="pathSummary" class="vm-summary-grid"></div>
+      </section>
     </div>
+
+    <aside class="vm-main-right">
+      <section class="vm-panel">
+        <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>
+        <p class="vm-panel-copy">The right column summarizes detector-weighted collection and path quality for every loaded fluorophore under the current optical settings.</p>
+        <div class="vm-chart-wrap vm-side-chart">
+          <canvas id="detectionChart"></canvas>
+        </div>
+        <div id="signalSimulator" class="vm-card-column">
+          <div class="vm-info-card">
+            <div class="vm-info-card-title">No simulation yet</div>
+            <div class="vm-info-card-subtitle">Load a fluorophore, then configure excitation and detection to compare collection efficiency.</div>
+          </div>
+        </div>
+      </section>
+    </aside>
   </main>
 </div>
 

@@ -41,16 +41,33 @@
     routeWrap: document.getElementById('opticalRouteChooserWrap'),
     routeSel: document.getElementById('opticalRouteSelector'),
     graph: document.getElementById('lightPathGraph'),
+    localQuery: document.getElementById('localFluorophoreQuery'),
+    localSearchBtn: document.getElementById('localSearchBtn'),
+    localSearchStatus: document.getElementById('localSearchStatus'),
+    localResults: document.getElementById('localSearchResults'),
     fpQuery: document.getElementById('fluorophoreQuery'),
     searchBtn: document.getElementById('searchBtn'),
     searchStatus: document.getElementById('searchStatus'),
     fpResults: document.getElementById('searchResults'),
+    referenceStatus: document.getElementById('referenceStatus'),
+    emissionStatus: document.getElementById('emissionStatus'),
     use2Photon: document.getElementById('use2Photon'),
     activeDyes: document.getElementById('selectedDyes'),
     summary: document.getElementById('pathSummary'),
     scoreboard: document.getElementById('signalSimulator'),
     autoConfigBtn: document.getElementById('vm-btn-autoconfig'),
     autoConfigStatus: document.getElementById('vm-autoconfig-status'),
+  };
+
+  const LOCAL_FLUOROPHORE_INDEX_URL = 'assets/data/spectra/fluorophores/index.json';
+  const LOCAL_FLUOROPHORE_BY_ID_URL = 'assets/data/spectra/fluorophores/by_id.json';
+  const LOCAL_FLUOROPHORE_BASE_URL = 'assets/data/spectra/fluorophores';
+
+  const localLibraryCache = {
+    index: null,
+    byId: null,
+    indexPromise: null,
+    byIdPromise: null,
   };
 
   function cleanString(value) {
@@ -111,6 +128,13 @@
     if (!DOM.autoConfigStatus) return;
     DOM.autoConfigStatus.textContent = cleanString(message);
     DOM.autoConfigStatus.dataset.tone = tone;
+  }
+
+  function setInlineStatus(node, message, tone = 'info') {
+    if (!node) return;
+    node.textContent = cleanString(message);
+    if (tone && tone !== 'info') node.dataset.tone = tone;
+    else delete node.dataset.tone;
   }
 
   function formatNumericNm(value) {
@@ -260,14 +284,14 @@
     const excitationAtSample = Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : excitationFiltered;
     const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
     const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
-    const detected = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'spectrum', grid);
+    const preDetector = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'preDetectorSpectrum', grid);
 
     setPipeSpectrumColor(stagePipeKey('sources', 'excitation'), sourceMixed, grid);
     setPipeSpectrumColor(stagePipeKey('excitation', 'dichroic'), excitationFiltered, grid);
     setPipeSpectrumColor(stagePipeKey('dichroic', 'sample'), excitationAtSample, grid);
     setPipeSpectrumColor(stagePipeKey('sample', 'emission'), generatedEmission, grid);
     setPipeSpectrumColor(stagePipeKey('emission', 'splitters'), postEmission, grid);
-    setPipeSpectrumColor(stagePipeKey('splitters', 'detectors'), detected, grid);
+    setPipeSpectrumColor(stagePipeKey('splitters', 'detectors'), preDetector, grid);
   }
 
   function activeFilterMaskDatasets(selection, grid) {
@@ -488,6 +512,7 @@
       detail: 'FPbase detail spectra',
       'detail+api': 'FPbase detail + API spectra',
       bundled_cache: 'Bundled FP cache',
+      local: 'Local spectra library',
       synthetic: 'Synthetic fallback',
       'api+synthetic': 'FPbase API + synthetic fallback',
       'detail+synthetic': 'FPbase detail + synthetic fallback',
@@ -534,6 +559,11 @@
       renderGraphFlow();
       refreshOutputs();
     });
+    DOM.localSearchBtn.addEventListener('click', () => searchLocalLibrary(DOM.localQuery.value));
+    DOM.localQuery.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') searchLocalLibrary(DOM.localQuery.value);
+    });
+    DOM.localQuery.addEventListener('input', debounce(() => searchLocalLibrary(DOM.localQuery.value), 150));
     DOM.searchBtn.addEventListener('click', () => searchFPbase(DOM.fpQuery.value));
     DOM.fpQuery.addEventListener('keypress', (event) => {
       if (event.key === 'Enter') searchFPbase(DOM.fpQuery.value);
@@ -548,8 +578,14 @@
     }
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.fp-search-wrap')) {
-        DOM.fpResults.style.display = 'none';
+        if (DOM.fpResults) DOM.fpResults.style.display = 'none';
+        if (DOM.localResults) DOM.localResults.style.display = 'none';
       }
+    });
+
+    loadLocalFluorophoreIndex().catch((error) => {
+      console.error('Failed to preload local fluorophore index', error);
+      setInlineStatus(DOM.localSearchStatus, `Local spectra index unavailable: ${error.message}`, 'error');
     });
 
     loadInstrument();
@@ -1466,8 +1502,8 @@
   }
 
   function initCharts() {
-    referenceChart = initLineChart(DOM.referenceChart, 'Normalized absorption / emission (%)');
-    propagationChart = initLineChart(DOM.propagationChart, 'Propagated light (%)');
+    referenceChart = initLineChart(DOM.referenceChart, 'Relative absorption / excitation (%)');
+    propagationChart = initLineChart(DOM.propagationChart, 'Relative emission / collection (%)');
     detectionChart = initBarChart(DOM.detectionChart);
   }
 
@@ -1544,34 +1580,64 @@
     return Array.from(grouped.values());
   }
 
-  function sourceReferenceDatasets(selection) {
+  function combinedMask(components, grid, mode) {
+    return (Array.isArray(components) ? components : []).reduce((accumulator, component) => {
+      const mask = VM.componentMask(component, grid, { mode });
+      return accumulator.map((value, index) => value * (mask[index] || 0));
+    }, grid.map(() => 1));
+  }
+
+  function baselineMaskDataset(label, grid, maskValues, color, rowIndex = 0) {
+    const baseline = 3 + (rowIndex * 4);
+    return {
+      label,
+      data: grid.map((wavelength, index) => ({
+        x: wavelength,
+        y: (maskValues[index] || 0) > 0.05 ? baseline : null,
+      })),
+      fill: false,
+      pointRadius: 0,
+      tension: 0,
+      borderWidth: 6,
+      borderColor: color,
+      spanGaps: false,
+      order: -30,
+    };
+  }
+
+  function sourceReferenceDatasets(selection, grid) {
     const datasets = [];
+    const excitationMask = combinedMask([...(selection.excitation || []), ...(selection.dichroic || [])], grid, 'excitation');
     selection.sources.forEach((source) => {
       const wavelength = numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm);
-      const isLine = ['line', 'tunable_line'].includes(cleanString(source.spectral_mode).toLowerCase()) || cleanString(source.kind).toLowerCase() === 'laser';
       const color = source.role === 'depletion' ? '#dc2626' : colorHex(wavelength || 520);
-      if (isLine && wavelength !== null) {
-        datasets.push({
-          label: `${source.display_label || source.name || 'Source'} line`,
-          data: [{ x: wavelength, y: 0 }, { x: wavelength, y: 100 }],
-          borderColor: color,
-          borderWidth: 2,
-          borderDash: source.role === 'depletion' ? [6, 4] : [2, 2],
-          fill: false,
-          pointRadius: 0,
-          tension: 0,
-        });
-      } else {
-        const grid = VM.wavelengthGrid({ min_nm: 350, max_nm: determineChartMax(selection), step_nm: 2 });
-        const sourceSpectrum = VM.sourceSpectrum(source, grid);
-        const scale = spectrumScale([sourceSpectrum]);
-        datasets.push(chartDatasetFromGrid(source.display_label || source.name || 'Source', grid, asPercentArray(sourceSpectrum, scale), {
-          borderColor: color,
-          backgroundColor: rgbaFromHex(color, 0.08),
-        }));
-      }
+      const atSample = VM.sourceSpectrum(source, grid).map((value, index) => value * (excitationMask[index] || 0));
+      if (!atSample.some((value) => value > 1e-6)) return;
+      datasets.push(chartDatasetFromGrid(`${source.display_label || source.name || 'Source'} at sample`, grid, asPercentArray(atSample, 1), {
+        borderColor: color,
+        backgroundColor: rgbaFromHex(color, 0.12),
+        borderWidth: 2,
+        fill: false,
+        tension: 0,
+      }));
     });
     return datasets;
+  }
+
+  function bestPathEntriesByFluorophore(simulation) {
+    const pathEntries = Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [];
+    const results = Array.isArray(simulation && simulation.results) ? simulation.results : [];
+    const bestByFluor = new Map();
+    results.forEach((row) => {
+      const current = bestByFluor.get(row.fluorophoreKey);
+      if (!current || Number(row.detectorWeightedIntensity || 0) > Number(current.detectorWeightedIntensity || 0)) {
+        bestByFluor.set(row.fluorophoreKey, row);
+      }
+    });
+    return Array.from(bestByFluor.values()).map((result) => {
+      const path = pathEntries.find((entry) => entry.fluorophoreKey === result.fluorophoreKey && entry.pathKey === result.pathKey);
+      return path ? { result, path } : null;
+    }).filter(Boolean);
   }
 
   function renderReferenceSpectra(selection, simulation) {
@@ -1581,33 +1647,32 @@
       ? simulation.grid
       : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
     const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
-    const datasets = [...activeFilterMaskDatasets(selection, grid), ...sourceReferenceDatasets(selection)];
+    const excitationMask = combinedMask([...(selection.excitation || []), ...(selection.dichroic || [])], grid, 'excitation');
+    const datasets = [baselineMaskDataset('Excitation passband', grid, excitationMask, 'rgba(37, 99, 235, 0.9)', 0), ...sourceReferenceDatasets(selection, grid)];
 
     emissionEntries.forEach((entry) => {
       const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
-      const color = colorHex((fluor && fluor.emMax) || 520);
+      const color = colorHex((fluor && fluor.exMax) || 520);
       const absorptionSpectrum = Array.isArray(entry.absorptionSpectrum) ? entry.absorptionSpectrum : [];
       if (absorptionSpectrum.some((value) => value > 1e-6)) {
         datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} absorption`, grid, asPercentArray(absorptionSpectrum, 1), {
           borderColor: color,
-          borderDash: [5, 4],
+          borderDash: [4, 3],
           borderWidth: 2,
-          backgroundColor: rgbaFromHex(color, 0.02),
-        }));
-      }
-
-      const generatedSpectrum = Array.isArray(entry.generatedSpectrum) ? entry.generatedSpectrum : [];
-      if (generatedSpectrum.some((value) => value > 1e-6)) {
-        const exPct = Math.round((Number(entry.excitationEfficiency || 0)) * 100);
-        const depPct = Math.round((Number(entry.depletionOverlap || 0)) * 100);
-        datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} emission (Ex ${exPct}%, Dep ${depPct}%)`, grid, asPercentArray(generatedSpectrum, 1), {
-          borderColor: color,
-          backgroundColor: rgbaFromHex(color, 0.14),
-          borderWidth: 2,
-          fill: true,
+          fill: false,
+          backgroundColor: rgbaFromHex(color, 0.04),
         }));
       }
     });
+
+    const excitationAtSample = Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : [];
+    if (selection.sources.length && !excitationAtSample.some((value) => value > 1e-6)) {
+      setInlineStatus(DOM.referenceStatus, 'Selected excitation optics block the current source before it reaches the sample.', 'warning');
+    } else if (!selection.sources.length) {
+      setInlineStatus(DOM.referenceStatus, 'Enable an excitation source to see light at the sample.');
+    } else {
+      setInlineStatus(DOM.referenceStatus, '');
+    }
 
     referenceChart.data.datasets = datasets;
     referenceChart.options.scales.x.max = chartMax;
@@ -1619,74 +1684,66 @@
     const chartMax = determineChartMax(selection);
     const grid = Array.isArray(simulation && simulation.grid) ? simulation.grid : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
     const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
-    const pathEntries = Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [];
-    const aggregatedLeakage = aggregateSpectraByLabel(pathEntries, 'excitationLeakageSpectrum', grid, 'pathKey');
+    const bestPaths = bestPathEntriesByFluorophore(simulation);
+    const emissionMask = combinedMask([...(selection.dichroic || []), ...(selection.emission || [])], grid, 'emission');
+    const datasets = [baselineMaskDataset('Emission passband', grid, emissionMask, 'rgba(5, 150, 105, 0.85)', 0)];
 
-    const totalEmission = sumSpectra(emissionEntries, 'postOpticsSpectrum', grid);
-    const scaleToFit = [totalEmission];
-    pathEntries.forEach((entry) => scaleToFit.push(entry.spectrum));
-    const scale = spectrumScale(scaleToFit);
-
-    const datasets = [...activeFilterMaskDatasets(selection, grid)];
-
-    if (Array.isArray(simulation && simulation.excitationAtSample) && simulation.excitationAtSample.some((value) => value > 0)) {
-      datasets.push(chartDatasetFromGrid('Excitation at sample', grid, asPercentArray(simulation.excitationAtSample, scale), {
-        borderColor: 'rgba(148, 163, 184, 1)',
-        backgroundColor: 'rgba(148, 163, 184, 0.2)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0,
-      }));
-    }
+    bestPaths.forEach(({ result, path }, index) => {
+      datasets.push(baselineMaskDataset(`${result.detectorLabel} collection`, grid, path.collectionMask || grid.map(() => 0), 'rgba(148, 163, 184, 0.95)', index + 1));
+    });
 
     emissionEntries.forEach((entry) => {
       const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
       const color = colorHex((fluor && fluor.emMax) || 520);
-      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} (generated)`, grid, asPercentArray(entry.generatedSpectrum, scale), {
-        borderColor: color,
-        borderDash: [3, 3],
-        borderWidth: 1.5,
-      }));
-    });
-
-    pathEntries.forEach((entry) => {
-      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
-      const color = colorHex((fluor && fluor.emMax) || 520);
-
-      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} at ${entry.detectorLabel}`, grid, asPercentArray(entry.spectrum, scale), {
-        borderColor: color,
-        backgroundColor: rgbaFromHex(color, 0.45),
-        borderWidth: 2,
-        fill: true,
-        tension: 0.2,
-      }));
-
-      if (entry.collectionMask && entry.collectionMask.some((value) => value < 0.999)) {
-        datasets.push(chartDatasetFromGrid(`${entry.detectorLabel} window`, grid, asPercentArray(entry.collectionMask, 1), {
-          borderColor: '#94a3b8',
-          borderDash: [2, 4],
-          borderWidth: 1.5,
+      const fullEmission = Array.isArray(entry.generatedSpectrum) ? entry.generatedSpectrum : [];
+      const postOptics = Array.isArray(entry.postOpticsSpectrum) ? entry.postOpticsSpectrum : [];
+      if (fullEmission.some((value) => value > 1e-6)) {
+        datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} full emission`, grid, asPercentArray(fullEmission, 1), {
+          borderColor: color,
+          borderDash: [4, 3],
+          borderWidth: 1.8,
+          fill: false,
+        }));
+      }
+      if (postOptics.some((value) => value > 1e-6)) {
+        datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} after collection filters`, grid, asPercentArray(postOptics, 1), {
+          borderColor: color,
+          backgroundColor: rgbaFromHex(color, 0.18),
+          borderWidth: 2,
+          fill: true,
+          tension: 0.1,
         }));
       }
     });
 
-    aggregatedLeakage.forEach((entry) => {
-      if (!entry.values.some((value) => value > 1e-6)) return;
-      datasets.push(chartDatasetFromGrid(`${entry.label} LEAKAGE!`, grid, asPercentArray(entry.values, scale), {
-        borderColor: '#dc2626',
-        backgroundColor: 'rgba(220, 38, 38, 0.5)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0,
-      }));
+    bestPaths.forEach(({ result, path }) => {
+      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === result.fluorophoreKey);
+      const color = colorHex((fluor && fluor.emMax) || 520);
+      const collected = Array.isArray(path.spectrum) ? path.spectrum : [];
+      if (collected.some((value) => value > 1e-6)) {
+        datasets.push(chartDatasetFromGrid(`${result.fluorophoreName} collected at ${result.detectorLabel}`, grid, asPercentArray(collected, 1), {
+          borderColor: color,
+          backgroundColor: rgbaFromHex(color, 0.34),
+          borderWidth: 2.2,
+          fill: true,
+          tension: 0.1,
+        }));
+      }
     });
+
+    if (!bestPaths.length && emissionEntries.length) {
+      setInlineStatus(DOM.emissionStatus, 'No detector path is currently collecting emitted light.', 'warning');
+    } else if (!emissionEntries.length) {
+      setInlineStatus(DOM.emissionStatus, 'Load a fluorophore and enable excitation to display emission.', 'info');
+    } else {
+      const blocked = bestPaths.every(({ path }) => !Array.isArray(path.spectrum) || !path.spectrum.some((value) => value > 1e-6));
+      setInlineStatus(DOM.emissionStatus, blocked ? 'Emission is generated but blocked by the collection path.' : '', blocked ? 'warning' : 'info');
+    }
 
     propagationChart.data.datasets = datasets;
     propagationChart.options.scales.x.max = chartMax;
     propagationChart.update();
   }
-
-
 
   function averageSpectrumCurves(curves, grid) {
     if (!Array.isArray(curves) || !curves.length) return grid.map(() => 0);
@@ -1931,11 +1988,19 @@
   function renderScoreboard(simulation) {
     DOM.scoreboard.innerHTML = '';
     if (!state.loadedProteins.size) {
-      DOM.scoreboard.innerHTML = '<li style="font-size:13px;color:var(--muted)">Load a fluorophore to evaluate detector paths.</li>';
+      DOM.scoreboard.innerHTML = `
+        <div class="vm-info-card">
+          <div class="vm-info-card-title">No fluorophores loaded</div>
+          <div class="vm-info-card-subtitle">Load a fluorophore to evaluate collection paths.</div>
+        </div>`;
       return;
     }
     if (!simulation || !Array.isArray(simulation.results) || !simulation.results.length) {
-      DOM.scoreboard.innerHTML = '<li style="font-size:13px;color:var(--muted)">Select at least one excitation source and one detector to evaluate signal.</li>';
+      DOM.scoreboard.innerHTML = `
+        <div class="vm-info-card">
+          <div class="vm-info-card-title">No collection path yet</div>
+          <div class="vm-info-card-subtitle">Select at least one excitation source and one detector to compute collected light.</div>
+        </div>`;
       return;
     }
 
@@ -1945,32 +2010,28 @@
       .sort((left, right) => (right.correctnessScore || 0) - (left.correctnessScore || 0))
       .forEach((result) => {
         const dyeColor = colorHex(mapToArray(state.loadedProteins).find((item) => item.key === result.fluorophoreKey)?.emMax || 520);
-        const depletionText = Number(result.depletionOverlap || 0) > 0
-          ? ` • depletion ${Math.round((result.depletionOverlap || 0) * 100)}%`
-          : '';
-        const leakageText = result.excitationLeakageWarningLevel !== 'none'
-          ? ` • leak ${result.excitationLeakageWarningLevel}`
-          : '';
-        const item = document.createElement('li');
-        item.className = 'vm-list-item';
-        item.style.alignItems = 'flex-start';
-        item.style.gap = '12px';
-        item.innerHTML = `
-          <div style="min-width:0;">
-            <div style="font-weight:700; color:${dyeColor};">${result.fluorophoreName}</div>
-            <div style="font-size:11px; color:var(--muted);">${result.fluorophoreState} • ${result.pathLabel}</div>
-            <div style="font-size:11px; color:var(--muted);">Detector: ${result.detectorLabel} (${result.detectorClass})${depletionText}${leakageText}</div>
-            ${result.laserLeakageNote ? `<div style="font-size:11px; color:var(--danger); font-weight:700;">${result.laserLeakageNote}</div>` : ''}
+        const card = document.createElement('div');
+        card.className = 'vm-info-card';
+        card.style.borderLeft = `4px solid ${dyeColor}`;
+        const depletionText = Number(result.depletionOverlap || 0) > 0 ? `${Math.round((result.depletionOverlap || 0) * 100)}%` : '0%';
+        const leakPct = ((result.excitationLeakageThroughput || 0) * 100).toFixed(1);
+        card.innerHTML = `
+          <div class="vm-info-card-title" style="color:${dyeColor};">${result.fluorophoreName}</div>
+          <div class="vm-info-card-subtitle">${result.fluorophoreState} • ${result.pathLabel}</div>
+          <div class="vm-info-grid">
+            <div class="vm-info-row"><span>Detector</span><strong>${result.detectorLabel}</strong></div>
+            <div class="vm-info-row"><span>Quality</span><strong style="color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${result.qualityLabel}</strong></div>
+            <div class="vm-info-row"><span>Recorded</span><strong>${Number(result.recordedIntensity || 0).toFixed(3)}</strong></div>
+            <div class="vm-info-row"><span>Generated → detector</span><strong>${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</strong></div>
+            <div class="vm-info-row"><span>Excitation</span><strong>${((result.excitationEfficiency || 0) * 100).toFixed(1)}%</strong></div>
+            <div class="vm-info-row"><span>Crosstalk</span><strong>${Number(result.crosstalkPct || 0).toFixed(1)}%</strong></div>
+            <div class="vm-info-row"><span>Leakage</span><strong>${leakPct}%</strong></div>
+            <div class="vm-info-row"><span>Depletion overlap</span><strong>${depletionText}</strong></div>
+            <div class="vm-info-row"><span>Score</span><strong>${Number(result.correctnessScore || 0).toFixed(1)}</strong></div>
           </div>
-          <div class="vm-metric">
-            <div style="font-weight:700; color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${result.qualityLabel}</div>
-            <div>Recorded ${Number(result.recordedIntensity || 0).toFixed(3)}</div>
-            <div>Generated→detector ${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</div>
-            <div>Crosstalk ${Number(result.crosstalkPct || 0).toFixed(1)}% | Leak ${((result.excitationLeakageFraction || 0) * 100).toFixed(1)}%</div>
-            <div>Ex ${((result.excitationEfficiency || 0) * 100).toFixed(1)}% | Score ${Number(result.correctnessScore || 0).toFixed(1)}</div>
-          </div>
+          ${result.laserLeakageNote ? `<div class="vm-mini" style="color:var(--danger); font-weight:700;">${result.laserLeakageNote}</div>` : ''}
         `;
-        DOM.scoreboard.appendChild(item);
+        DOM.scoreboard.appendChild(card);
       });
   }
 
@@ -2017,7 +2078,7 @@
 
   async function requestJSON(url) {
     const response = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!response.ok) throw new Error(`FPbase request failed (${response.status})`);
+    if (!response.ok) throw new Error(`Request failed (${response.status})`);
     return response.json();
   }
 
@@ -2048,6 +2109,8 @@
       `https://www.fpbase.org/api/proteins/?name__iexact=${q}&format=json`,
       `https://www.fpbase.org/api/proteins/?name__istartswith=${q}&format=json`,
       `https://www.fpbase.org/api/proteins/?name__icontains=${q}&format=json`,
+      `https://www.fpbase.org/api/proteins/basic/?name__iexact=${q}&format=json`,
+      `https://www.fpbase.org/api/proteins/basic/?name__icontains=${q}&format=json`,
     ];
   }
 
@@ -2059,29 +2122,36 @@
     const urls = [];
     proteinIdentifiers(protein).forEach((identifier) => {
       urls.push(`https://www.fpbase.org/api/proteins/${encodeURIComponent(identifier)}/?format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/?slug__iexact=${encodeURIComponent(identifier)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/basic/?slug__iexact=${encodeURIComponent(identifier)}&format=json`);
     });
     if (protein.name) {
       urls.push(`https://www.fpbase.org/api/proteins/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
       urls.push(`https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/basic/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/basic/?name__icontains=${encodeURIComponent(protein.name)}&format=json`);
     }
     return uniqueTexts(urls);
   }
 
   function fpbaseSpectraUrls(protein) {
     const urls = [];
-    // 1. Prioritize exact database identifiers (slug and uuid) over fuzzy names
     if (protein.slug) {
       urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__slug__iexact=${encodeURIComponent(protein.slug)}&format=json`);
-      // Add the alternate API path just in case of API routing changes
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__slug=${encodeURIComponent(protein.slug)}&format=json`);
       urls.push(`https://www.fpbase.org/api/spectra/?protein__slug__iexact=${encodeURIComponent(protein.slug)}&format=json`);
     }
     if (protein.uuid) {
       urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__uuid=${encodeURIComponent(protein.uuid)}&format=json`);
     }
-    // 2. Fallback to fuzzy name searches
+    if (protein.id) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein=${encodeURIComponent(protein.id)}&format=json`);
+    }
     if (protein.name) {
       urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__name__icontains=${encodeURIComponent(protein.name)}&format=json`);
       urls.push(`https://www.fpbase.org/api/proteins/spectra/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/spectra/?protein__name__iexact=${encodeURIComponent(protein.name)}&format=json`);
     }
     return uniqueTexts(urls);
   }
@@ -2100,17 +2170,133 @@
       ec: record.ec,
       qy: record.qy,
       fallbackRecord: record,
+      source: 'fpbase',
     }));
+  }
+
+  function normalizedLocalSummary(row) {
+    if (!row || typeof row !== 'object') return null;
+    return {
+      key: cleanString(row.slug || row.id || row.name),
+      canonicalKey: cleanString(row.slug || row.id || row.name),
+      id: cleanString(row.id),
+      slug: cleanString(row.slug || row.id),
+      name: cleanString(row.name || row.slug || row.id),
+      uuid: '',
+      aliases: Array.isArray(row.aliases) ? row.aliases : [],
+      exMax: numberOrNull(row.exMax),
+      emMax: numberOrNull(row.emMax),
+      brightness: numberOrNull(row.brightness),
+      ec: numberOrNull(row.ec),
+      qy: numberOrNull(row.qy),
+      source: 'local',
+      source_library: cleanString(row.source_library || 'Local'),
+      raw: row,
+    };
+  }
+
+  async function loadLocalFluorophoreIndex() {
+    if (Array.isArray(localLibraryCache.index)) return localLibraryCache.index;
+    if (!localLibraryCache.indexPromise) {
+      localLibraryCache.indexPromise = requestJSON(LOCAL_FLUOROPHORE_INDEX_URL)
+        .then((rows) => {
+          localLibraryCache.index = Array.isArray(rows) ? rows.map(normalizedLocalSummary).filter(Boolean) : [];
+          return localLibraryCache.index;
+        })
+        .finally(() => {
+          localLibraryCache.indexPromise = null;
+        });
+    }
+    return localLibraryCache.indexPromise;
+  }
+
+  async function loadLocalFluorophoreById() {
+    if (localLibraryCache.byId && typeof localLibraryCache.byId === 'object') return localLibraryCache.byId;
+    if (!localLibraryCache.byIdPromise) {
+      localLibraryCache.byIdPromise = requestJSON(LOCAL_FLUOROPHORE_BY_ID_URL)
+        .then((rows) => {
+          localLibraryCache.byId = rows && typeof rows === 'object' ? rows : {};
+          return localLibraryCache.byId;
+        })
+        .finally(() => {
+          localLibraryCache.byIdPromise = null;
+        });
+    }
+    return localLibraryCache.byIdPromise;
+  }
+
+  function searchTokens(row) {
+    return uniqueTexts([
+      row && row.name,
+      row && row.slug,
+      row && row.id,
+      ...(Array.isArray(row && row.aliases) ? row.aliases : []),
+    ]).map((value) => cleanString(value).toLowerCase()).filter(Boolean);
+  }
+
+  function renderSearchResultList(listNode, rows, onPick) {
+    if (!listNode) return;
+    listNode.innerHTML = '';
+    rows.forEach((row) => {
+      const item = document.createElement('li');
+      item.textContent = `${row.name} (Ex:${row.exMax || '?'} Em:${row.emMax || '?'}) [${row.source === 'local' ? 'local' : (row.fallbackRecord ? 'FPbase cache' : 'FPbase')}]`;
+      item.addEventListener('click', () => onPick(row));
+      listNode.appendChild(item);
+    });
+    listNode.style.display = rows.length ? 'block' : 'none';
+  }
+
+  async function searchLocalFluorophores(query) {
+    const q = cleanString(query).toLowerCase();
+    if (q.length < 1) return [];
+    const index = await loadLocalFluorophoreIndex();
+    return index
+      .filter((row) => searchTokens(row).some((token) => token.includes(q)))
+      .sort((left, right) => {
+        const leftExact = searchTokens(left).some((token) => token === q) ? 0 : 1;
+        const rightExact = searchTokens(right).some((token) => token === q) ? 0 : 1;
+        if (leftExact !== rightExact) return leftExact - rightExact;
+        return cleanString(left.name).localeCompare(cleanString(right.name));
+      })
+      .slice(0, 10);
+  }
+
+  async function searchLocalLibrary(query) {
+    const q = cleanString(query);
+    if (q.length < 1) {
+      if (DOM.localResults) DOM.localResults.style.display = 'none';
+      setInlineStatus(DOM.localSearchStatus, '');
+      return;
+    }
+    setInlineStatus(DOM.localSearchStatus, 'Searching local dye library…');
+    try {
+      const results = await searchLocalFluorophores(q);
+      if (!results.length) {
+        if (DOM.localResults) DOM.localResults.style.display = 'none';
+        setInlineStatus(DOM.localSearchStatus, `No local dye found for “${q}”.`, 'warning');
+        return;
+      }
+      renderSearchResultList(DOM.localResults, results, (row) => {
+        loadProtein({ ...row, source: 'local' });
+        DOM.localResults.style.display = 'none';
+        DOM.localQuery.value = '';
+      });
+      setInlineStatus(DOM.localSearchStatus, `${results.length} local dye candidate${results.length === 1 ? '' : 's'} loaded from the local spectra library.`, 'success');
+    } catch (error) {
+      console.error('Local fluorophore search failed', error);
+      if (DOM.localResults) DOM.localResults.style.display = 'none';
+      setInlineStatus(DOM.localSearchStatus, `Local spectra index unavailable: ${error.message}`, 'error');
+    }
   }
 
   async function searchFPbase(query) {
     const q = cleanString(query);
     if (q.length < 2) {
       DOM.fpResults.style.display = 'none';
-      DOM.searchStatus.textContent = '';
+      setInlineStatus(DOM.searchStatus, '');
       return;
     }
-    DOM.searchStatus.textContent = 'Searching FPbase…';
+    setInlineStatus(DOM.searchStatus, 'Searching FPbase…');
     let results = [];
     let usedFallback = false;
     try {
@@ -2118,7 +2304,7 @@
       for (const endpoint of fpbaseSearchUrls(q)) {
         try {
           const data = await requestJSON(endpoint);
-          normalized.push(...VM.normalizeFPbaseSearchResults(data));
+          normalized.push(...VM.normalizeFPbaseSearchResults(data).map((row) => ({ ...row, source: 'fpbase' })));
         } catch (error) {
           // continue to next documented lookup
         }
@@ -2135,28 +2321,36 @@
       results = normalizeSearchFallback(q).slice(0, 10);
     }
 
-    DOM.fpResults.innerHTML = '';
     if (!results.length) {
       DOM.fpResults.style.display = 'none';
-      DOM.searchStatus.textContent = `No FPbase proteins found for “${q}”.`;
+      setInlineStatus(DOM.searchStatus, `No FPbase proteins found for “${q}”.`, 'warning');
       return;
     }
 
-    results.forEach((protein) => {
-      const item = document.createElement('li');
-      const sourceTag = protein.fallbackRecord ? 'bundled cache' : 'live';
-      item.textContent = `${protein.name} (Ex:${protein.exMax || '?'} Em:${protein.emMax || '?'}) • ${sourceTag}`;
-      item.addEventListener('click', () => {
-        loadProtein(protein);
-        DOM.fpResults.style.display = 'none';
-        DOM.fpQuery.value = '';
-      });
-      DOM.fpResults.appendChild(item);
+    renderSearchResultList(DOM.fpResults, results, (protein) => {
+      loadProtein({ ...protein, source: 'fpbase' });
+      DOM.fpResults.style.display = 'none';
+      DOM.fpQuery.value = '';
     });
-    DOM.fpResults.style.display = 'block';
-    DOM.searchStatus.textContent = usedFallback
-      ? `${results.length} fluorophore candidate${results.length === 1 ? '' : 's'} loaded from the bundled FP cache.`
-      : `${results.length} candidate fluorophore${results.length === 1 ? '' : 's'} loaded from FPbase.`;
+    setInlineStatus(
+      DOM.searchStatus,
+      usedFallback
+        ? `${results.length} fluorophore candidate${results.length === 1 ? '' : 's'} loaded from the bundled FP cache.`
+        : `${results.length} candidate fluorophore${results.length === 1 ? '' : 's'} loaded from FPbase.`,
+      usedFallback ? 'warning' : 'success'
+    );
+  }
+
+  function exactMatchFromRows(rows, protein) {
+    const slug = cleanString(protein && protein.slug).toLowerCase();
+    const uuid = cleanString(protein && protein.uuid).toLowerCase();
+    const name = cleanString(protein && protein.name).toLowerCase();
+    const candidates = Array.isArray(rows) ? rows : [];
+    return candidates.find((row) => cleanString(row && row.slug).toLowerCase() === slug)
+      || candidates.find((row) => cleanString(row && row.uuid).toLowerCase() === uuid)
+      || candidates.find((row) => cleanString(row && row.name).toLowerCase() === name)
+      || candidates[0]
+      || null;
   }
 
   async function fetchProteinBundle(protein) {
@@ -2175,20 +2369,20 @@
     try {
       const detailResponse = await requestJSONFirst(fpbaseDetailUrls(protein));
       const detailRows = VM.normalizeResultsShape(detailResponse);
-      detail = Array.isArray(detailRows) && detailRows.length ? detailRows[0] : detailResponse;
+      detail = Array.isArray(detailRows) && detailRows.length
+        ? exactMatchFromRows(detailRows, protein)
+        : detailResponse;
     } catch (error) {
       detail = protein.raw || protein;
     }
 
-    // Explicitly verify that the fetched spectra payload actually contains data points.
-    // A query might return HTTP 200 OK but with an empty { results: [] } array.
     for (const url of fpbaseSpectraUrls(protein)) {
       try {
         const response = await requestJSON(url);
         const parsedRows = VM.normalizeFPbaseSpectraResponse(response);
         if (parsedRows && parsedRows.length > 0) {
           spectra = response;
-          break; // Found valid spectra, stop checking other URLs
+          break;
         }
       } catch (error) {
         // Network or parsing error, continue to the next fallback URL
@@ -2198,26 +2392,75 @@
     return { detail, spectra };
   }
 
+  async function loadLocalFluorophoreRecord(summary) {
+    const slugMap = await loadLocalFluorophoreById();
+    const candidates = [summary.slug, summary.id, summary.name].map((value) => cleanString(value).toLowerCase()).filter(Boolean);
+    const slug = candidates.map((token) => slugMap[token]).find(Boolean) || cleanString(summary.slug || summary.id || summary.name).toLowerCase();
+    if (!slug) throw new Error('Local fluorophore slug could not be resolved');
+    return requestJSON(`${LOCAL_FLUOROPHORE_BASE_URL}/${encodeURIComponent(slug)}.json`);
+  }
+
+  function fluorophoreIdentity(summary) {
+    return cleanString(summary && (summary.slug || summary.id || summary.uuid || summary.name)).toLowerCase();
+  }
+
+  function hydrateLoadedFluorophore(fluorophore, summary) {
+    const source = cleanString(summary && summary.source).toLowerCase() || 'fpbase';
+    const identityKey = fluorophoreIdentity(summary || fluorophore);
+    return {
+      ...fluorophore,
+      source,
+      sourceLibrary: cleanString(summary && summary.source_library) || (source === 'local' ? 'Local spectra library' : 'FPbase'),
+      identityKey,
+    };
+  }
+
   async function loadProtein(summary) {
-    const cacheKey = summary.key || summary.slug || summary.id || summary.name;
+    const source = cleanString(summary && summary.source).toLowerCase() || 'fpbase';
+    const identityKey = fluorophoreIdentity(summary);
+    const cacheKey = `${source}:${identityKey || cleanString(summary.name)}`;
     if (state.loadedProteins.has(cacheKey)) return;
+
+    if (source === 'fpbase' && identityKey) {
+      const localLoaded = mapToArray(state.loadedProteins).find((entry) => entry.source === 'local' && entry.identityKey === identityKey);
+      if (localLoaded) {
+        setInlineStatus(DOM.searchStatus, `${localLoaded.name} is already loaded from the local spectra library; keeping the local entry.`, 'warning');
+        return;
+      }
+    }
+
     if (summary.states && summary.spectra) {
-      state.loadedProteins.set(cacheKey, summary);
+      state.loadedProteins.set(cacheKey, hydrateLoadedFluorophore(summary, summary));
       renderActiveDyes();
       refreshOutputs();
       return;
     }
-    DOM.searchStatus.textContent = `Loading ${summary.name}…`;
+
+    const statusNode = source === 'local' ? DOM.localSearchStatus : DOM.searchStatus;
+    setInlineStatus(statusNode, `Loading ${summary.name}…`);
     try {
-      const bundle = await fetchProteinBundle(summary);
-      const fluorophore = VM.normalizeFluorophoreDetail(bundle.detail, summary, bundle.spectra);
+      let fluorophore = null;
+      if (source === 'local') {
+        const detail = await loadLocalFluorophoreRecord(summary);
+        fluorophore = hydrateLoadedFluorophore(VM.normalizeFluorophoreDetail(detail, { ...summary, sourceOrigin: 'local' }, detail), summary);
+        if (identityKey) {
+          Array.from(state.loadedProteins.entries()).forEach(([key, entry]) => {
+            if (entry && entry.identityKey === identityKey && entry.source !== 'local') {
+              state.loadedProteins.delete(key);
+            }
+          });
+        }
+      } else {
+        const bundle = await fetchProteinBundle(summary);
+        fluorophore = hydrateLoadedFluorophore(VM.normalizeFluorophoreDetail(bundle.detail, summary, bundle.spectra), summary);
+      }
       state.loadedProteins.set(cacheKey, fluorophore);
-      DOM.searchStatus.textContent = `${fluorophore.name} loaded (${describeSpectraSource(fluorophore.spectraSource || 'detail')}).`;
+      setInlineStatus(statusNode, `${fluorophore.name} loaded (${describeSpectraSource(fluorophore.spectraSource || fluorophore.source || 'detail')}).`, 'success');
       renderActiveDyes();
       refreshOutputs();
     } catch (error) {
       console.error('Failed to load fluorophore detail', error);
-      DOM.searchStatus.textContent = `Error loading fluorophore: ${error.message}`;
+      setInlineStatus(statusNode, `Error loading fluorophore: ${error.message}`, 'error');
     }
   }
 
@@ -2243,6 +2486,12 @@
       title.textContent = fluorophore.name;
       left.appendChild(title);
 
+      const subtitle = document.createElement('span');
+      subtitle.className = 'vm-mini';
+      const sourceLabel = fluorophore.source === 'local' ? 'local dye' : 'FPbase';
+      subtitle.textContent = `${sourceLabel}${fluorophore.activeStateName ? ` • ${fluorophore.activeStateName}` : ''}${fluorophore.spectraSource ? ` • ${describeSpectraSource(fluorophore.spectraSource)}` : ''}`;
+      left.appendChild(subtitle);
+
       if (Array.isArray(fluorophore.states) && fluorophore.states.length > 1) {
         const select = document.createElement('select');
         select.style.fontSize = '12px';
@@ -2254,17 +2503,12 @@
           select.appendChild(option);
         });
         select.addEventListener('change', () => {
-          const updated = VM.setFluorophoreState(fluorophore, select.value);
+          const updated = { ...VM.setFluorophoreState(fluorophore, select.value), source: fluorophore.source, sourceLibrary: fluorophore.sourceLibrary, identityKey: fluorophore.identityKey };
           state.loadedProteins.set(key, updated);
           renderActiveDyes();
           refreshOutputs();
         });
         left.appendChild(select);
-      } else if (fluorophore.activeStateName) {
-        const subtitle = document.createElement('span');
-        subtitle.className = 'vm-mini';
-        subtitle.textContent = `${fluorophore.activeStateName}${fluorophore.spectraSource ? ` • ${describeSpectraSource(fluorophore.spectraSource)}` : ''}`;
-        left.appendChild(subtitle);
       }
 
       item.appendChild(left);

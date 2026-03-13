@@ -416,33 +416,79 @@
   }
 
   function normalizeTypeToken(spectrum) {
-    return String(
-      (spectrum && (spectrum.spectrum_type || spectrum.type || spectrum.subtype || spectrum.category || spectrum.name)) || ''
-    ).toLowerCase();
+    const raw = [
+      spectrum && spectrum.spectrum_type,
+      spectrum && spectrum.type,
+      spectrum && spectrum.subtype,
+      spectrum && spectrum.category,
+      spectrum && spectrum.name,
+      spectrum && spectrum.label,
+      spectrum && spectrum.kind,
+    ].map((value) => cleanString(value)).filter(Boolean).join(' ').toLowerCase();
+    const token = raw.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!token) return '';
+    if (/\b(2p|two photon|two photons|two-photon|2 photon|twophoton|multiphoton)\b/.test(token)) return 'ex2p';
+    if (/\b(em|emission|fluorescence|fluo)\b/.test(token)) return 'em';
+    if (/\b(ex|excitation|absorption|absorbance|1p|one photon|one-photon)\b/.test(token)) return 'ex1p';
+    return token;
   }
 
   function matchSpectrumType(token, aliases) {
-    return aliases.some((alias) => token.includes(alias));
+    const normalizedToken = cleanString(token).toLowerCase();
+    return aliases.some((alias) => {
+      const normalizedAlias = cleanString(alias).toLowerCase();
+      return normalizedToken === normalizedAlias || normalizedToken.includes(normalizedAlias);
+    });
+  }
+
+  function pointsFromSpectrumRow(row) {
+    if (Array.isArray(row)) return normalizePoints(row);
+    return normalizePoints(
+      row && (row.data || row.points || row.values || row.spectrum || row.curve || row.trace || row.measurements)
+    );
+  }
+
+  function collectSpectraContainers(detail) {
+    const containers = [];
+    const visited = new Set();
+    const queue = [detail];
+    while (queue.length) {
+      const current = queue.shift();
+      if (!current || typeof current !== 'object' || visited.has(current)) continue;
+      visited.add(current);
+      [current.spectra, current.spectrum, current.spectral_data, current.data, current.rows].forEach((value) => {
+        if (Array.isArray(value) && value.length) containers.push(value);
+      });
+      if (Array.isArray(current.states)) queue.push(...current.states);
+      if (current.default_state && typeof current.default_state === 'object') queue.push(current.default_state);
+      if (current.state && typeof current.state === 'object') queue.push(current.state);
+      if (current.protein && typeof current.protein === 'object') queue.push(current.protein);
+      if (current.fp && typeof current.fp === 'object') queue.push(current.fp);
+      if (current.fluorophore && typeof current.fluorophore === 'object') queue.push(current.fluorophore);
+      if (Array.isArray(current.results)) queue.push(...current.results);
+      if (Array.isArray(current.proteins)) queue.push(...current.proteins);
+    }
+    return containers;
   }
 
   function collectTopLevelSpectra(detail) {
-    const collected = [];
-    if (Array.isArray(detail && detail.spectra)) collected.push(...detail.spectra);
-    if (Array.isArray(detail && detail.spectrum)) collected.push(...detail.spectrum);
-    if (detail && Array.isArray(detail.spectral_data)) collected.push(...detail.spectral_data);
-    if (Array.isArray(detail && detail.states)) {
-      detail.states.forEach((state) => {
-        if (Array.isArray(state && state.spectra)) collected.push(...state.spectra);
-      });
+    return collectSpectraContainers(detail).flatMap((collection) => collection);
+  }
+
+  function extractSpectra(detail, aliases) {
+    for (const collection of collectSpectraContainers(detail)) {
+      for (const spectrum of collection) {
+        const token = normalizeTypeToken(spectrum);
+        if (!matchSpectrumType(token, aliases)) continue;
+        const points = pointsFromSpectrumRow(spectrum);
+        if (points.length) return points;
+      }
     }
-    return collected;
+    return [];
   }
 
   function spectrumFromAliases(spectra, aliases) {
-    const matched = (Array.isArray(spectra) ? spectra : []).find((spectrum) =>
-      matchSpectrumType(normalizeTypeToken(spectrum), aliases)
-    );
-    return matched ? normalizePoints(matched.data || matched.points || matched.values) : [];
+    return extractSpectra({ spectra: Array.isArray(spectra) ? spectra : [] }, aliases);
   }
 
   function summarizeSpectrumSources(spectrumSources) {
@@ -488,16 +534,16 @@
     const rows = [];
     const enqueue = (row) => {
       if (!row || typeof row !== 'object') return;
-      const points = normalizePoints(row.data || row.points || row.values || row.spectrum);
+      const points = pointsFromSpectrumRow(row);
       if (!points.length && Array.isArray(row.spectra)) {
         row.spectra.forEach(enqueue);
         return;
       }
       if (!points.length) return;
       const token = normalizeTypeToken(row);
-      const type = matchSpectrumType(token, ['2p', 'two-photon', 'two photon'])
+      const type = matchSpectrumType(token, ['ex2p', '2p', 'two photon'])
         ? 'ex2p'
-        : matchSpectrumType(token, ['emission', ' em'])
+        : matchSpectrumType(token, ['em', 'emission', 'fluorescence'])
           ? 'em'
           : 'ex1p';
       const { proteinKeys, stateKeys } = spectrumRowCandidates(row);
@@ -1864,6 +1910,9 @@
     normalizeInstrumentPayload,
     normalizeResultsShape,
     normalizeFPbaseSearchResults,
+    normalizeTypeToken,
+    collectSpectraContainers,
+    extractSpectra,
     normalizeFPbaseSpectraResponse,
     normalizeFluorophoreDetail,
     searchFallbackFluorophores,
