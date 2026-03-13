@@ -147,7 +147,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
 
 
-    def test_notes_do_not_override_explicit_light_source_metadata(self) -> None:
+    def test_explicit_light_source_role_is_used_instead_of_notes_inference(self) -> None:
         inst = {
             "canonical": {
                 "hardware": {
@@ -157,7 +157,8 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                             "manufacturer": "Legacy",
                             "model": "Laser",
                             "wavelength_nm": 775,
-                            "notes": "STED depletion (pulsed, for 640 nm)",
+                            "role": "depletion",
+                            "notes": "Legacy free-text should not be used for role parsing",
                         }
                     ]
                 }
@@ -167,8 +168,8 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
 
         light = hardware["light_sources"][0]
-        self.assertEqual(light["role"], "excitation")
-        self.assertNotIn("STED depletion was delivered", light["method_sentence"])
+        self.assertEqual(light["role"], "depletion")
+        self.assertIn("STED depletion was delivered", light["method_sentence"])
 
 
     def test_transmitted_light_role_uses_transmitted_methods_sentence(self) -> None:
