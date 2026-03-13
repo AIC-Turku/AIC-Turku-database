@@ -105,6 +105,43 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(len(result["spectra"]["ex1p"]), 0)
         self.assertGreater(len(result["spectra"]["em"]), 0)
 
+    def test_spectrascope_short_spectrum_tokens_are_normalized(self) -> None:
+        result = self.run_node_json(
+            """
+            const detail = {
+              id: 'af488',
+              name: 'AF488',
+              exMax: 490,
+              emMax: 525,
+              spectra: [
+                { spectrum_type: 'ex', data: [[450, 0.1], [490, 1.0], [530, 0.0]] },
+                { spectrum_type: 'em', data: [[500, 0.0], [525, 1.0], [560, 0.2]] }
+              ]
+            };
+            return rt.normalizeFluorophoreDetail(detail, { key: 'af488', name: 'AF488', sourceOrigin: 'local' });
+            """
+        )
+
+        self.assertEqual(result["name"], "AF488")
+        self.assertEqual(result["spectraSource"], "local")
+        self.assertGreater(len(result["spectra"]["ex1p"]), 0)
+        self.assertGreater(len(result["spectra"]["em"]), 0)
+
+    def test_fpbase_spectra_response_handles_short_tokens(self) -> None:
+        result = self.run_node_json(
+            """
+            return rt.normalizeFPbaseSpectraResponse({
+              results: [
+                { protein_name: 'AF488', spectrum_type: 'ex', data: [[450, 0.1], [490, 1.0], [530, 0.0]] },
+                { protein_name: 'AF488', spectrum_type: 'em', data: [[500, 0.0], [525, 1.0], [560, 0.2]] }
+              ]
+            });
+            """
+        )
+
+        self.assertEqual([row["type"] for row in result], ["ex1p", "em"])
+        self.assertTrue(all(len(row["points"]) > 0 for row in result))
+
     def test_source_spectrum_parses_multi_line_descriptors(self) -> None:
         result = self.run_node_json(
             """
