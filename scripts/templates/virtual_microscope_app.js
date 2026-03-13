@@ -2162,24 +2162,6 @@
     return uniqueTexts(urls);
   }
 
-  function normalizeSearchFallback(query) {
-    return VM.searchFallbackFluorophores(query).map((record) => ({
-      key: record.key,
-      canonicalKey: record.canonicalKey,
-      id: record.id,
-      uuid: record.uuid,
-      slug: record.slug,
-      name: record.name,
-      exMax: record.exMax,
-      emMax: record.emMax,
-      brightness: record.brightness,
-      ec: record.ec,
-      qy: record.qy,
-      fallbackRecord: record,
-      source: 'fpbase',
-    }));
-  }
-
   function normalizedLocalSummary(row) {
     if (!row || typeof row !== 'object') return null;
     return {
@@ -2245,7 +2227,7 @@
     listNode.innerHTML = '';
     rows.forEach((row) => {
       const item = document.createElement('li');
-      item.textContent = `${row.name} (Ex:${row.exMax || '?'} Em:${row.emMax || '?'}) [${row.source === 'local' ? 'local' : (row.fallbackRecord ? 'FPbase cache' : 'FPbase')}]`;
+      item.textContent = `${row.name} (Ex:${row.exMax || '?'} Em:${row.emMax || '?'}) [${row.source === 'local' ? 'local' : 'FPbase'}]`;
       item.addEventListener('click', () => onPick(row));
       listNode.appendChild(item);
     });
@@ -2304,7 +2286,7 @@
     }
     setInlineStatus(DOM.searchStatus, 'Searching FPbase…');
     let results = [];
-    let usedFallback = false;
+
     try {
       const normalized = [];
       for (const endpoint of fpbaseSearchUrls(q)) {
@@ -2318,18 +2300,14 @@
       results = dedupeFluorophoreResults(normalized)
         .filter((protein) => [protein.name, protein.slug, protein.uuid].some((value) => cleanString(value).toLowerCase().includes(q.toLowerCase())))
         .slice(0, 10);
-      if (!results.length) {
-        usedFallback = true;
-        results = normalizeSearchFallback(q).slice(0, 10);
-      }
     } catch (error) {
-      usedFallback = true;
-      results = normalizeSearchFallback(q).slice(0, 10);
+      console.error('FPbase search completely failed', error);
     }
 
     if (!results.length) {
       DOM.fpResults.style.display = 'none';
-      setInlineStatus(DOM.searchStatus, `No FPbase proteins found for “${q}”.`, 'warning');
+      // Output a clear error telling them the API failed or no matches were found
+      setInlineStatus(DOM.searchStatus, `No remote FPbase proteins found for “${q}” or the API is currently unavailable. Try searching your Local dye library instead.`, 'error');
       return;
     }
 
@@ -2338,15 +2316,8 @@
       DOM.fpResults.style.display = 'none';
       DOM.fpQuery.value = '';
     });
-    setInlineStatus(
-      DOM.searchStatus,
-      usedFallback
-        ? `${results.length} fluorophore candidate${results.length === 1 ? '' : 's'} loaded from the bundled FP cache.`
-        : `${results.length} candidate fluorophore${results.length === 1 ? '' : 's'} loaded from FPbase.`,
-      usedFallback ? 'warning' : 'success'
-    );
+    setInlineStatus(DOM.searchStatus, `${results.length} candidate fluorophore${results.length === 1 ? '' : 's'} loaded from FPbase.`, 'success');
   }
-
   function exactMatchFromRows(rows, protein) {
     const slug = cleanString(protein && protein.slug).toLowerCase();
     const uuid = cleanString(protein && protein.uuid).toLowerCase();
@@ -2360,15 +2331,6 @@
   }
 
   async function fetchProteinBundle(protein) {
-    if (protein.fallbackRecord) {
-      return {
-        detail: protein.fallbackRecord.raw && protein.fallbackRecord.raw.detail
-          ? protein.fallbackRecord.raw.detail
-          : (protein.fallbackRecord.raw && protein.fallbackRecord.raw.summary ? protein.fallbackRecord.raw.summary : protein.fallbackRecord),
-        spectra: protein.fallbackRecord,
-      };
-    }
-
     let detail = null;
     let spectra = null;
 
@@ -2397,7 +2359,6 @@
 
     return { detail, spectra };
   }
-
   async function loadLocalFluorophoreRecord(summary) {
     const slugMap = await loadLocalFluorophoreById();
     const candidates = [summary.slug, summary.id, summary.name].map((value) => cleanString(value).toLowerCase()).filter(Boolean);
