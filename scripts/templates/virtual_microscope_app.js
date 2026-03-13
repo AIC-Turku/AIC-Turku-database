@@ -59,9 +59,9 @@
     autoConfigStatus: document.getElementById('vm-autoconfig-status'),
   };
 
-  const LOCAL_FLUOROPHORE_INDEX_URL = 'assets/data/spectra/fluorophores/index.json';
-  const LOCAL_FLUOROPHORE_BY_ID_URL = 'assets/data/spectra/fluorophores/by_id.json';
-  const LOCAL_FLUOROPHORE_BASE_URL = 'assets/data/spectra/fluorophores';
+  const LOCAL_FLUOROPHORE_INDEX_URL = '../assets/data/spectra/fluorophores/index.json';
+  const LOCAL_FLUOROPHORE_BY_ID_URL = '../assets/data/spectra/fluorophores/by_id.json';
+  const LOCAL_FLUOROPHORE_BASE_URL = '../assets/data/spectra/fluorophores';
 
   const localLibraryCache = {
     index: null,
