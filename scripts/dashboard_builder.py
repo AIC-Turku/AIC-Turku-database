@@ -338,49 +338,7 @@ def normalize_optional_bool(value: Any) -> bool | None:
 
 
 
-def _coerce_float(value: Any) -> float | None:
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return float(value)
-    if isinstance(value, str):
-        cleaned = value.strip()
-        if not cleaned:
-            return None
-        try:
-            return float(cleaned)
-        except ValueError:
-            return None
-    return None
-
-
-def _infer_tunable_range(*values: Any) -> tuple[float | None, float | None]:
-    pattern = re.compile(r"(\d+(?:\.\d+)?)\s*(?:-|to|–)\s*(\d+(?:\.\d+)?)\s*nm", re.IGNORECASE)
-    for value in values:
-        if not isinstance(value, str) or not value.strip():
-            continue
-        match = pattern.search(value)
-        if match is None:
-            continue
-        low = _coerce_float(match.group(1))
-        high = _coerce_float(match.group(2))
-        if low is None or high is None:
-            continue
-        return (min(low, high), max(low, high))
-    return (None, None)
-
-
 def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any) -> dict[str, Any]:
-    tunable_min = get_val(light_source, "tunable_min_nm")
-    tunable_max = get_val(light_source, "tunable_max_nm")
-    if tunable_min in (None, "") or tunable_max in (None, ""):
-        inferred_min, inferred_max = _infer_tunable_range(
-            get_val(light_source, "notes"),
-            get_val(light_source, "model", "name"),
-        )
-        if tunable_min in (None, ""):
-            tunable_min = inferred_min
-        if tunable_max in (None, ""):
-            tunable_max = inferred_max
-
     return {
         "kind": get_val(light_source, "kind", "type"),
         "manufacturer": get_val(light_source, "manufacturer"),
@@ -388,8 +346,8 @@ def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any)
         "technology": get_val(light_source, "technology"),
         "wavelength_nm": get_val(light_source, "wavelength_nm", "wavelength"),
         "width_nm": get_val(light_source, "width_nm", "bandwidth_nm"),
-        "tunable_min_nm": tunable_min,
-        "tunable_max_nm": tunable_max,
+        "tunable_min_nm": get_val(light_source, "tunable_min_nm"),
+        "tunable_max_nm": get_val(light_source, "tunable_max_nm"),
         "simultaneous_lines_max": get_val(light_source, "simultaneous_lines_max"),
         "power": get_val(light_source, "power"),
         "path": get_val(light_source, "path"),
@@ -1270,62 +1228,6 @@ def is_valid_instrument_id(value: str) -> bool:
     return bool(INSTRUMENT_ID_PATTERN.fullmatch(value))
 
 
-def parse_notes_compact(notes: str) -> dict[str, Any]:
-    """Parse legacy notes strings like: 'type: "..." | filters: [..] | imaging_modes: [...]'."""
-    notes = clean_text(notes)
-    if "|" not in notes or ":" not in notes:
-        return {"raw": notes} if notes else {}
-
-    out: dict[str, Any] = {}
-    parts = [p.strip() for p in notes.split("|") if p.strip()]
-
-    for part in parts:
-        if ":" not in part:
-            continue
-        key, raw_val = part.split(":", 1)
-        key = key.strip().lower().replace(" ", "_")
-        raw_val = raw_val.strip()
-
-        # Try to parse list-ish values safely.
-        if raw_val.startswith("[") and raw_val.endswith("]"):
-            try:
-                parsed = yaml.safe_load(raw_val)
-                if isinstance(parsed, list):
-                    out[key] = [clean_text(x) for x in parsed]
-                    continue
-            except yaml.YAMLError:
-                pass
-
-        # Unquote a simple quoted string
-        if (raw_val.startswith('"') and raw_val.endswith('"')) or (raw_val.startswith("'") and raw_val.endswith("'")):
-            raw_val = raw_val[1:-1]
-
-        out[key] = clean_text(raw_val)
-
-    if not out and notes:
-        out["raw"] = notes
-
-    return out
-
-
-def extract_instrument_location(raw_location: str, notes: str) -> str:
-    """Return microscope location from dedicated field or note text fallback."""
-    location = clean_text(raw_location)
-    if location:
-        return location
-
-    cleaned_notes = clean_text(notes)
-    if not cleaned_notes:
-        return ""
-
-    match = re.search(r"\blocation\s*:\s*([^|\n\r]+)", cleaned_notes, flags=re.IGNORECASE)
-    if not match:
-        return ""
-
-    extracted = match.group(1).strip().rstrip(". ")
-    return clean_text(extracted)
-
-
 def strip_empty_values(data: Any) -> Any:
     """Recursively remove empty optional values while preserving False/0."""
 
@@ -1527,7 +1429,6 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         return None
 
     notes_raw = clean_text(inst_section.get("notes"))
-    notes_parsed = parse_notes_compact(notes_raw) if notes_raw else {}
 
     raw_modules = payload.get("modules") or []
     modules = []
@@ -1606,9 +1507,9 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "funding": clean_text(inst_section.get("funding")),
         "stand_orientation": clean_text(inst_section.get("stand_orientation")),
         "ocular_availability": clean_text(inst_section.get("ocular_availability")),
-        "location": extract_instrument_location(inst_section.get("location"), notes_raw),
+        "location": clean_text(inst_section.get("location")),
         "notes_raw": notes_raw,
-        "notes": notes_parsed,
+        "notes": notes_raw,
         "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
         "modules": modules,
         "software": software,
@@ -1630,7 +1531,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
             },
             "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
             "modules": copy.deepcopy(modules),
-            "notes": notes_parsed,
+            "notes": notes_raw,
             "software": software,
             "hardware": hardware,
             "policy": {

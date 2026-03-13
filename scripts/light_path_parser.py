@@ -392,21 +392,6 @@ def _normalize_power_weight(raw_power: Any) -> float | None:
 
 
 
-def _legacy_tunable_range(*texts: Any) -> tuple[float | None, float | None]:
-    for text in texts:
-        if not isinstance(text, str) or not text.strip():
-            continue
-        match = TUNABLE_RANGE_RE.search(text)
-        if match is None:
-            continue
-        low = _coerce_number(match.group(1))
-        high = _coerce_number(match.group(2))
-        if low is None or high is None:
-            continue
-        return (min(low, high), max(low, high))
-    return (None, None)
-
-
 
 def _normalize_component_numeric_fields(component_payload: dict[str, Any], source: dict[str, Any]) -> None:
     for key in ("center_nm", "width_nm", "cut_on_nm", "cut_off_nm", "wavelength_nm", "tunable_min_nm", "tunable_max_nm", "pulse_width_ps", "repetition_rate_mhz", "qe_peak_pct", "read_noise_e", "default_gating_delay_ns", "default_gate_width_ns", "power_weight", "collection_min_nm", "collection_max_nm", "collection_center_nm", "collection_width_nm", "channel_center_nm", "bandwidth_nm", "min_nm", "max_nm"):
@@ -490,24 +475,6 @@ def infer_light_source_role(source: dict[str, Any]) -> str:
     if "transmitted" in routes:
         return "transmitted_illumination"
 
-    notes = _clean_string(source.get("notes")).lower()
-    kind = _clean_string(source.get("kind") or source.get("type")).lower()
-    identity = " ".join(
-        part
-        for part in [
-            _clean_string(source.get("manufacturer")),
-            _clean_string(source.get("model") or source.get("name")),
-            notes,
-        ]
-        if part
-    ).lower()
-
-    if "sted depletion" in notes or "depletion" in notes:
-        return "depletion"
-
-    if kind == "halogen_lamp" or any(token in identity for token in TRANSMITTED_ROLE_HINTS):
-        return "transmitted_illumination"
-
     return "excitation"
 
 
@@ -549,12 +516,6 @@ def _source_spectral_mode(kind: str, wavelength: Any, width_nm: Any, tunable_min
 def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
     tunable_min = source.get("tunable_min_nm")
     tunable_max = source.get("tunable_max_nm")
-    if _coerce_number(tunable_min) is None or _coerce_number(tunable_max) is None:
-        inferred_min, inferred_max = _legacy_tunable_range(source.get("notes"), source.get("model"), source.get("name"))
-        if _coerce_number(tunable_min) is None:
-            tunable_min = inferred_min
-        if _coerce_number(tunable_max) is None:
-            tunable_max = inferred_max
 
     wavelength = source.get("wavelength_nm")
     width_nm = source.get("width_nm")
