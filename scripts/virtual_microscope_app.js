@@ -1,0 +1,2439 @@
+(function () {
+  const VM = window.VirtualMicroscopeRuntime;
+  if (!VM) {
+    console.error('Virtual microscope runtime is missing.');
+    return;
+  }
+
+  let globalData = {};
+  try {
+    const raw = document.getElementById('lightpath-data').textContent.trim();
+    if (raw) globalData = JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to parse virtual microscope payload', err);
+  }
+
+  const LOCAL_FLUOROPHORE_INDEX_URL = 'assets/data/spectra/fluorophores/index.json';
+  const LOCAL_FLUOROPHORE_BY_ID_URL = 'assets/data/spectra/fluorophores/by_id.json';
+  const MAX_SEARCH_RESULTS = 10;
+
+  const state = {
+    allInstruments: globalData,
+    activeInstrumentRaw: null,
+    activeInstrument: null,
+    loadedProteins: new Map(),
+    preferTwoPhoton: false,
+    activeRoute: null,
+    spectralBandsByMechanism: new Map(),
+    detectorSettings: new Map(),
+    sourceSettings: new Map(),
+    lastSelection: null,
+    lastSimulation: null,
+    activeInspectorStage: null,
+    localFluorophoreIndex: null,
+    localFluorophoreIndexPromise: null,
+    localFluorophoreById: null,
+    localFluorophoreByIdPromise: null,
+    localLibraryError: '',
+  };
+
+  let currentInstrumentId = null;
+  let referenceChart = null;
+  let propagationChart = null;
+  let detectionChart = null;
+
+  const DOM = {
+    referenceChart: document.getElementById('referenceSpectraChart'),
+    propagationChart: document.getElementById('propagationSpectraChart'),
+    detectionChart: document.getElementById('detectionChart'),
+    scopeSel: document.getElementById('microscopeSelector'),
+    routeWrap: document.getElementById('opticalRouteChooserWrap'),
+    routeSel: document.getElementById('opticalRouteSelector'),
+    graph: document.getElementById('lightPathGraph'),
+    fpQuery: document.getElementById('fluorophoreQuery'),
+    searchBtn: document.getElementById('searchBtn'),
+    searchStatus: document.getElementById('searchStatus'),
+    fpResults: document.getElementById('searchResults'),
+    use2Photon: document.getElementById('use2Photon'),
+    activeDyes: document.getElementById('selectedDyes'),
+    summary: document.getElementById('pathSummary'),
+    scoreboard: document.getElementById('signalSimulator'),
+    autoConfigBtn: document.getElementById('vm-btn-autoconfig'),
+    autoConfigStatus: document.getElementById('vm-autoconfig-status'),
+  };
+
+  function cleanString(value) {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function numberOrNull(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const numeric = Number(value.trim());
+      return Number.isFinite(numeric) ? numeric : null;
+    }
+    return null;
+  }
+
+  function rgbaFromHex(hex, alpha) {
+    const cleaned = String(hex || '').replace('#', '');
+    if (cleaned.length !== 6) return `rgba(59, 130, 246, ${alpha})`;
+    const r = Number.parseInt(cleaned.slice(0, 2), 16);
+    const g = Number.parseInt(cleaned.slice(2, 4), 16);
+    const b = Number.parseInt(cleaned.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function colorHex(wavelength) {
+    const wl = numberOrNull(wavelength) ?? 520;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    if (wl >= 380 && wl < 440) {
+      r = -(wl - 440) / 60;
+      b = 1;
+    } else if (wl >= 440 && wl < 490) {
+      g = (wl - 440) / 50;
+      b = 1;
+    } else if (wl >= 490 && wl < 510) {
+      g = 1;
+      b = -(wl - 510) / 20;
+    } else if (wl >= 510 && wl < 580) {
+      r = (wl - 510) / 70;
+      g = 1;
+    } else if (wl >= 580 && wl < 645) {
+      r = 1;
+      g = -(wl - 645) / 65;
+    } else if (wl >= 645 && wl <= 780) {
+      r = 1;
+    }
+    const toHex = (value) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
+
+  function stagePipeKey(leftStage, rightStage) {
+    return `${leftStage}->${rightStage}`;
+  }
+
+  function setStatusMessage(message, tone = 'info') {
+    if (!DOM.autoConfigStatus) return;
+    DOM.autoConfigStatus.textContent = cleanString(message);
+    DOM.autoConfigStatus.dataset.tone = tone;
+  }
+
+  function formatNumericNm(value) {
+    const numeric = numberOrNull(value);
+    return numeric === null ? null : `${Math.round(numeric)} nm`;
+  }
+
+  function formatComponentMetadata(component, context = {}) {
+    if (!component || typeof component !== 'object') return [];
+    const type = cleanString(component.component_type || component.type || context.stage || '').replace(/_/g, ' ');
+    const rows = [];
+    if (type) rows.push(`Type: ${type}`);
+    if (numberOrNull(component.center_nm) !== null) rows.push(`Center: ${formatNumericNm(component.center_nm)}`);
+    if (numberOrNull(component.width_nm) !== null) rows.push(`Bandwidth: ${Math.round(numberOrNull(component.width_nm))} nm`);
+    if (numberOrNull(component.cut_on_nm) !== null) rows.push(`Cut-on: ${formatNumericNm(component.cut_on_nm)}`);
+    if (numberOrNull(component.cut_off_nm) !== null) rows.push(`Cut-off: ${formatNumericNm(component.cut_off_nm)}`);
+    if (Array.isArray(component.cutoffs_nm) && component.cutoffs_nm.length) {
+      rows.push(`Cutoffs: ${component.cutoffs_nm.map((value) => formatNumericNm(value)).filter(Boolean).join(', ')}`);
+    }
+    if (Array.isArray(component.bands) && component.bands.length) {
+      rows.push(`Bands: ${component.bands.map((band) => {
+        const center = numberOrNull(band && band.center_nm);
+        const width = numberOrNull(band && band.width_nm);
+        if (center === null || width === null) return cleanString(band && band.label) || 'band';
+        const low = Math.round(center - (width / 2));
+        const high = Math.round(center + (width / 2));
+        return `${cleanString(band && band.label) || 'Band'} ${low}-${high} nm`;
+      }).join(' • ')}`);
+    }
+    if (numberOrNull(component.wavelength_nm) !== null) rows.push(`Wavelength: ${formatNumericNm(component.wavelength_nm)}`);
+    if (numberOrNull(component.selected_wavelength_nm) !== null) rows.push(`Selected λ: ${formatNumericNm(component.selected_wavelength_nm)}`);
+    if (numberOrNull(component.tunable_min_nm) !== null && numberOrNull(component.tunable_max_nm) !== null) {
+      rows.push(`Tunable range: ${Math.round(numberOrNull(component.tunable_min_nm))}-${Math.round(numberOrNull(component.tunable_max_nm))} nm`);
+    }
+    if (component.role) rows.push(`Role: ${component.role}`);
+    if (component.kind) rows.push(`Kind: ${component.kind}`);
+    if (component.detector_class) rows.push(`Detector: ${component.detector_class}`);
+    if (numberOrNull(component.collection_min_nm) !== null && numberOrNull(component.collection_max_nm) !== null) {
+      rows.push(`Collection: ${Math.round(numberOrNull(component.collection_min_nm))}-${Math.round(numberOrNull(component.collection_max_nm))} nm`);
+    }
+    return rows;
+  }
+
+  function createMetadataBlock() {
+    const meta = document.createElement('div');
+    meta.className = 'vm-component-meta';
+    return meta;
+  }
+
+  function updateMetadataBlock(metaNode, component, context = {}) {
+    if (!metaNode) return;
+    const rows = formatComponentMetadata(component, context);
+    metaNode.innerHTML = rows.length
+      ? rows.map((row) => `<div>${row}</div>`).join('')
+      : '<span>No component metadata available.</span>';
+  }
+
+  function parseJsonValue(value) {
+    try {
+      return value ? JSON.parse(value) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function createLinkedStageNote(titleText, message, component) {
+    const wrap = document.createElement('div');
+    wrap.className = 'vm-linked-note';
+    const title = document.createElement('div');
+    title.className = 'vm-linked-note-title';
+    title.textContent = titleText;
+    wrap.appendChild(title);
+    const text = document.createElement('div');
+    text.className = 'vm-mini';
+    text.textContent = message;
+    wrap.appendChild(text);
+    if (component) {
+      const meta = createMetadataBlock();
+      updateMetadataBlock(meta, component, {});
+      wrap.appendChild(meta);
+    }
+    return wrap;
+  }
+
+  function createPipelineBadge(stageId, label) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'vm-stage-tab';
+    button.dataset.stageId = stageId;
+    button.textContent = label;
+    button.addEventListener('click', () => setInspectorStage(stageId));
+    return button;
+  }
+
+  function createPipeSegment(pipeKey) {
+    const pipe = document.createElement('div');
+    pipe.className = 'optical-pipe';
+    pipe.dataset.pipeKey = pipeKey;
+    const light = document.createElement('div');
+    light.className = 'flowing-light';
+    light.dataset.pipeKey = pipeKey;
+    pipe.appendChild(light);
+    return pipe;
+  }
+
+  function createInspectorPanel(stageId, label, subtitle = '') {
+    const panel = document.createElement('div');
+    panel.className = 'vm-stage-panel';
+    panel.dataset.stageId = stageId;
+    const title = document.createElement('div');
+    title.className = 'vm-stage-panel-title';
+    title.textContent = label;
+    panel.appendChild(title);
+    if (subtitle) {
+      const copy = document.createElement('div');
+      copy.className = 'vm-mini';
+      copy.textContent = subtitle;
+      panel.appendChild(copy);
+    }
+    return panel;
+  }
+
+  function setInspectorStage(stageId) {
+    state.activeInspectorStage = stageId;
+    Array.from(DOM.graph.querySelectorAll('.vm-stage-tab')).forEach((button) => {
+      button.classList.toggle('active', button.dataset.stageId === stageId);
+    });
+    Array.from(DOM.graph.querySelectorAll('.vm-stage-panel')).forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.stageId === stageId);
+    });
+  }
+
+  function setPipeSpectrumColor(pipeKey, spectrum, grid) {
+    const light = DOM.graph.querySelector(`.flowing-light[data-pipe-key="${CSS.escape(pipeKey)}"]`);
+    if (!light) return;
+    const color = VM.spectrumToCSSColor(spectrum, grid);
+    light.style.setProperty('--beam-color', color);
+    light.dataset.empty = color === 'rgba(0,0,0,0)' ? 'true' : 'false';
+  }
+
+  function updatePipelineBeamColors(selection, simulation) {
+    const grid = Array.isArray(simulation && simulation.grid)
+      ? simulation.grid
+      : VM.wavelengthGrid({ min_nm: 350, max_nm: determineChartMax(selection), step_nm: 2 });
+    const sourceMixed = currentSourceSpectrum(grid);
+    const excitationFiltered = applyComponentsToSpectrum(sourceMixed, selection.excitation, grid, 'excitation');
+    const excitationAtSample = Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : excitationFiltered;
+    const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
+    const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
+    const detected = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'spectrum', grid);
+
+    setPipeSpectrumColor(stagePipeKey('sources', 'excitation'), sourceMixed, grid);
+    setPipeSpectrumColor(stagePipeKey('excitation', 'dichroic'), excitationFiltered, grid);
+    setPipeSpectrumColor(stagePipeKey('dichroic', 'sample'), excitationAtSample, grid);
+    setPipeSpectrumColor(stagePipeKey('sample', 'emission'), generatedEmission, grid);
+    setPipeSpectrumColor(stagePipeKey('emission', 'splitters'), postEmission, grid);
+    setPipeSpectrumColor(stagePipeKey('splitters', 'detectors'), detected, grid);
+  }
+
+  function activeFilterMaskDatasets(selection, grid) {
+    const datasets = [];
+    const addMaskSet = (components, stage, color, alpha) => {
+      (Array.isArray(components) ? components : []).forEach((component, index) => {
+        const label = component.display_label || component.label || `${stage} ${index + 1}`;
+        const mode = stage === 'excitation' ? 'excitation' : 'emission';
+        const values = VM.componentMask(component, grid, { mode });
+        if (!Array.isArray(values) || !values.some((value) => value > 1e-6)) return;
+        datasets.push(chartDatasetFromGrid(`${label} mask`, grid, asPercentArray(values, 1), {
+          borderColor: color,
+          backgroundColor: alpha,
+          borderDash: [6, 4],
+          borderWidth: 1.4,
+          fill: true,
+          tension: 0,
+          pointRadius: 0,
+          order: -20,
+        }));
+      });
+    };
+    addMaskSet(selection.excitation, 'excitation', 'rgba(37, 99, 235, 0.75)', 'rgba(37, 99, 235, 0.08)');
+    addMaskSet(selection.dichroic, 'dichroic', 'rgba(168, 85, 247, 0.75)', 'rgba(168, 85, 247, 0.07)');
+    addMaskSet(selection.emission, 'emission', 'rgba(5, 150, 105, 0.75)', 'rgba(5, 150, 105, 0.08)');
+    return datasets;
+  }
+
+  function applyOptimizedConfiguration(config) {
+    if (!config || !state.activeInstrument) return false;
+    const instrument = state.activeInstrument;
+    const route = cleanString(config.route).toLowerCase() || state.activeRoute || instrument.defaultRoute || null;
+    state.activeRoute = route;
+    if (DOM.routeSel) DOM.routeSel.value = route || '';
+
+    const enabledSourceRefs = new Map((Array.isArray(config.sources) ? config.sources : []).map((entry) => [`${entry.mechanismId}::${entry.slot}`, entry]));
+    mechanismsForRoute(instrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        const ref = enabledSourceRefs.get(`${mechanism.id}::${source.slot}`);
+        setting.enabled = Boolean(ref);
+        if (ref && numberOrNull(ref.selected_wavelength_nm) !== null) {
+          setting.selected_wavelength_nm = numberOrNull(ref.selected_wavelength_nm);
+        }
+      });
+    });
+
+    const enabledDetectorRefs = new Map((Array.isArray(config.detectors) ? config.detectors : []).map((entry) => [`${entry.mechanismId}::${entry.slot}`, entry]));
+    mechanismsForRoute(instrument.detectors, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((detector) => {
+        const setting = ensureDetectorSetting(mechanism, detector);
+        const ref = enabledDetectorRefs.get(`${mechanism.id}::${detector.slot}`);
+        setting.enabled = Boolean(ref);
+        if (ref && numberOrNull(ref.collection_min_nm) !== null) setting.collection_min_nm = numberOrNull(ref.collection_min_nm);
+        if (ref && numberOrNull(ref.collection_max_nm) !== null) setting.collection_max_nm = numberOrNull(ref.collection_max_nm);
+      });
+    });
+
+    renderGraphFlow();
+    const selectionMap = config.selectionMap && typeof config.selectionMap === 'object' ? config.selectionMap : {};
+    Array.from(DOM.graph.querySelectorAll('select[data-stage][data-mechanism-id]')).forEach((select) => {
+      const mechanismId = select.dataset.mechanismId;
+      const desiredSlot = selectionMap[mechanismId];
+      if (!Number.isFinite(Number(desiredSlot))) return;
+      const match = Array.from(select.options).find((option) => Number(option.dataset.slot) === Number(desiredSlot));
+      if (match) {
+        select.value = match.value;
+        select.dataset.userSet = 'true';
+      }
+    });
+    refreshOutputs();
+    return true;
+  }
+
+  function runAutoConfigure() {
+    if (!state.activeInstrumentRaw || !state.loadedProteins.size) {
+      setStatusMessage('Load at least one fluorophore before auto-configuring.', 'warning');
+      return;
+    }
+    const result = VM.optimizeLightPath(mapToArray(state.loadedProteins), state.activeInstrumentRaw, {
+      preferTwoPhoton: state.preferTwoPhoton,
+      currentRoute: state.activeRoute,
+    });
+    if (!result) {
+      setStatusMessage('No compatible zero-leakage configuration was found for the current fluorophores.', 'warning');
+      return;
+    }
+    applyOptimizedConfiguration(result);
+    setStatusMessage(
+      result.strictLeakageSatisfied === false ? 'Optimized the best near-zero-leakage configuration.' : 'Configuration Optimized!',
+      result.strictLeakageSatisfied === false ? 'warning' : 'success'
+    );
+  }
+
+  function mapToArray(map) {
+    return Array.from(map.values());
+  }
+
+  function routeSelectionIsExplicit() {
+    return Boolean(state.activeInstrument && Array.isArray(state.activeInstrument.routeOptions) && state.activeInstrument.routeOptions.length > 1);
+  }
+
+  function uniqueTexts(values) {
+    return Array.from(new Set((Array.isArray(values) ? values : [])
+      .map((value) => cleanString(value))
+      .filter(Boolean)));
+  }
+
+  function sourceSettingKey(source) {
+    return `${source.slot || 0}::${source.display_label || source.name || source.model || 'source'}`;
+  }
+
+  function detectorSettingKey(mechanism, detector) {
+    return `${mechanism.id || 'detector'}::${detector.display_label || detector.name || detector.channel_name || 'detector'}`;
+  }
+
+  function ensureSourceSetting(source) {
+    const key = sourceSettingKey(source);
+    if (!state.sourceSettings.has(key)) {
+      const tunableMin = numberOrNull(source.tunable_min_nm);
+      const tunableMax = numberOrNull(source.tunable_max_nm);
+      const selectedWavelength = numberOrNull(source.wavelength_nm)
+        ?? ((tunableMin !== null && tunableMax !== null) ? Math.round((tunableMin + tunableMax) / 2) : null);
+      state.sourceSettings.set(key, {
+        enabled: false,
+        selected_wavelength_nm: selectedWavelength,
+        user_weight: numberOrNull(source.power_weight) ?? 1,
+      });
+    }
+    return state.sourceSettings.get(key);
+  }
+
+
+  function parseCollectionWindow(textValue) {
+    const text = cleanString(textValue);
+    if (!text) return { min: null, max: null };
+    const bandMatch = text.match(/(\d{3,4})\s*[-–]\s*(\d{3,4})/);
+    if (bandMatch) {
+      const low = Number(bandMatch[1]);
+      const high = Number(bandMatch[2]);
+      return { min: low, max: high };
+    }
+    const singleMatch = text.match(/(\d{3,4})\s*nm/i);
+    if (singleMatch) {
+      return { min: Number(singleMatch[1]) - 20, max: Number(singleMatch[1]) + 20 };
+    }
+    return { min: null, max: null };
+  }
+
+  function defaultDetectorCollection(detector) {
+    const parsed = [detector && detector.channel_name, detector && detector.display_label, detector && detector.name]
+      .map(parseCollectionWindow)
+      .find((entry) => entry.min !== null && entry.max !== null) || { min: null, max: null };
+    const explicitMin = numberOrNull(detector && (detector.collection_min_nm ?? detector.min_nm));
+    const explicitMax = numberOrNull(detector && (detector.collection_max_nm ?? detector.max_nm));
+    if (explicitMin !== null && explicitMax !== null) {
+      return { min: Math.min(explicitMin, explicitMax), max: Math.max(explicitMin, explicitMax) };
+    }
+    const center = numberOrNull(detector && (detector.collection_center_nm ?? detector.channel_center_nm ?? detector.wavelength_nm)) ?? ((parsed.min !== null && parsed.max !== null) ? ((parsed.min + parsed.max) / 2) : 550);
+    const width = numberOrNull(detector && (detector.collection_width_nm ?? detector.bandwidth_nm ?? detector.width_nm)) ?? ((parsed.min !== null && parsed.max !== null) ? (parsed.max - parsed.min) : 40);
+    const halfWidth = Math.max(2, width / 2);
+    return { min: center - halfWidth, max: center + halfWidth };
+  }
+
+  function ensureDetectorSetting(mechanism, detector) {
+    const key = detectorSettingKey(mechanism, detector);
+    if (!state.detectorSettings.has(key)) {
+      const detectorClass = detector.detector_class || VM.detectorClass(detector.kind);
+      const defaults = defaultDetectorCollection(detector);
+      state.detectorSettings.set(key, {
+        enabled: true,
+        collection_enabled: detectorClass !== 'camera',
+        collection_min_nm: defaults.min,
+        collection_max_nm: defaults.max,
+      });
+    }
+    return state.detectorSettings.get(key);
+  }
+
+  function mechanismsForRoute(mechanisms, activeRoute) {
+    return (Array.isArray(mechanisms) ? mechanisms : []).filter((mechanism) => VM.routeMatches(mechanism.__routes, activeRoute));
+  }
+
+  function positionsForRoute(mechanism, activeRoute) {
+    const entries = Object.entries(mechanism && mechanism.positions ? mechanism.positions : {});
+    return Object.fromEntries(
+      entries.filter(([, component]) => VM.routeMatches(component.__routes || mechanism.__routes, activeRoute))
+    );
+  }
+
+  function activeRouteOrder() {
+    return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
+  }
+
+  function inferRouteFromSourceSettings() {
+    const tags = new Set();
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        if (!setting.enabled) return;
+        VM.normalizeRouteTags(source.routes || source.path || source.__routes || []).forEach((tag) => tags.add(tag));
+      });
+    });
+    for (const candidate of activeRouteOrder()) {
+      if (tags.has(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  function normalizeRouteLabel(route) {
+    if (!route) return 'Any compatible route';
+    return VM.routeLabel ? VM.routeLabel(route) : route.toUpperCase();
+  }
+
+  function describeSpectraSource(sourceId) {
+    const sourceMap = {
+      api: 'FPbase spectra API',
+      detail: 'FPbase detail spectra',
+      local: 'Local spectral library',
+      'detail+api': 'FPbase detail + API spectra',
+      bundled_cache: 'Bundled FP cache',
+      synthetic: 'Synthetic fallback',
+      'api+synthetic': 'FPbase API + synthetic fallback',
+      'detail+synthetic': 'FPbase detail + synthetic fallback',
+      'detail+api+synthetic': 'FPbase detail + API + synthetic fallback',
+      'bundled_cache+synthetic': 'Bundled cache + synthetic fallback',
+      'local+synthetic': 'Local library + synthetic fallback',
+      none: 'No spectra available',
+    };
+    return sourceMap[cleanString(sourceId)] || cleanString(sourceId) || 'Unknown source';
+  }
+
+  function seedSettingsFromInstrument() {
+    state.sourceSettings.clear();
+    state.detectorSettings.clear();
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => ensureSourceSetting(source));
+    });
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.detectors, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((detector) => ensureDetectorSetting(mechanism, detector));
+    });
+  }
+
+  function init() {
+    initCharts();
+    const entries = Object.entries(state.allInstruments || {});
+    if (!entries.length) return;
+
+    entries.forEach(([id, payload]) => {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = payload && payload.display_name ? payload.display_name : id;
+      DOM.scopeSel.appendChild(option);
+    });
+
+    const requestedScope = new URLSearchParams(window.location.search).get('scope');
+    currentInstrumentId = (requestedScope && state.allInstruments[requestedScope]) ? requestedScope : entries[0][0];
+    DOM.scopeSel.value = currentInstrumentId;
+
+    DOM.scopeSel.addEventListener('change', (event) => {
+      currentInstrumentId = event.target.value;
+      loadInstrument();
+    });
+    DOM.routeSel.addEventListener('change', (event) => {
+      state.activeRoute = cleanString(event.target.value).toLowerCase() || null;
+      renderGraphFlow();
+      refreshOutputs();
+    });
+    DOM.searchBtn.addEventListener('click', () => searchFluorophores(DOM.fpQuery.value));
+    DOM.fpQuery.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') searchFluorophores(DOM.fpQuery.value);
+    });
+    DOM.fpQuery.addEventListener('input', debounce(() => searchFluorophores(DOM.fpQuery.value), 300));
+    DOM.use2Photon.addEventListener('change', (event) => {
+      state.preferTwoPhoton = Boolean(event.target.checked);
+      refreshOutputs();
+    });
+    if (DOM.autoConfigBtn) {
+      DOM.autoConfigBtn.addEventListener('click', runAutoConfigure);
+    }
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.fp-search-wrap')) {
+        DOM.fpResults.style.display = 'none';
+      }
+    });
+
+    loadInstrument();
+  }
+
+  function loadInstrument() {
+    state.activeInstrumentRaw = state.allInstruments[currentInstrumentId] || {};
+    state.activeInstrument = VM.normalizeInstrumentPayload(state.activeInstrumentRaw);
+    state.activeRoute = state.activeInstrument.defaultRoute || null;
+    state.spectralBandsByMechanism.clear();
+    seedSettingsFromInstrument();
+    renderRouteSelector();
+    renderGraphFlow();
+    refreshOutputs();
+  }
+
+  function renderRouteSelector() {
+    const options = Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
+      ? state.activeInstrument.routeOptions
+      : [];
+    DOM.routeSel.innerHTML = '';
+
+    if (options.length <= 1) {
+      DOM.routeWrap.style.display = 'none';
+      const singleRoute = options[0] ? cleanString(options[0].id).toLowerCase() : null;
+      state.activeRoute = singleRoute || state.activeRoute || state.activeInstrument.defaultRoute || null;
+      return;
+    }
+
+    options.forEach((option) => {
+      const entry = option && typeof option === 'object' ? option : { id: option, label: normalizeRouteLabel(option) };
+      const opt = document.createElement('option');
+      opt.value = cleanString(entry.id).toLowerCase();
+      opt.textContent = cleanString(entry.label) || normalizeRouteLabel(entry.id);
+      DOM.routeSel.appendChild(opt);
+    });
+    const selectedRoute = state.activeRoute || state.activeInstrument.defaultRoute || (options[0] && options[0].id) || '';
+    DOM.routeSel.value = selectedRoute;
+    state.activeRoute = cleanString(DOM.routeSel.value).toLowerCase() || null;
+    DOM.routeWrap.style.display = 'flex';
+  }
+
+
+  function snapshotStageSelections() {
+    return Array.from(DOM.graph.querySelectorAll('select[data-stage]')).map((select) => ({
+      stage: select.dataset.stage,
+      mechanismId: select.dataset.mechanismId || '',
+      value: select.value,
+    }));
+  }
+
+  function restoreStageSelections(snapshot) {
+    (Array.isArray(snapshot) ? snapshot : []).forEach((saved) => {
+      const selector = `select[data-stage="${saved.stage}"][data-mechanism-id="${CSS.escape(saved.mechanismId || '')}"]`;
+      const select = DOM.graph.querySelector(selector);
+      if (!select) return;
+      if (Array.from(select.options).some((option) => option.value === saved.value)) {
+        select.value = saved.value;
+      }
+    });
+  }
+
+  function normalizeSourceRoutes(source) {
+
+    return VM.normalizeRouteTags(source.routes || source.path || source.__routes || []);
+  }
+
+  function pruneConflictingSources() {
+    if (routeSelectionIsExplicit()) return;
+    const chosenRoute = inferRouteFromSourceSettings();
+    if (!chosenRoute) return;
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        if (!setting.enabled) return;
+        if (!VM.routeMatches(normalizeSourceRoutes(source), chosenRoute)) {
+          setting.enabled = false;
+        }
+      });
+    });
+  }
+
+  function renderGraphFlow() {
+    const snapshot = snapshotStageSelections();
+    DOM.graph.innerHTML = '';
+    if (!state.activeInstrument) return;
+
+    const inst = state.activeInstrument;
+    const route = state.activeRoute;
+    const lightSourceMechanisms = mechanismsForRoute(inst.lightSources, route);
+    const cubeMechanisms = mechanismsForRoute(inst.cube, route);
+    const excitationMechanisms = mechanismsForRoute(inst.excitation, route);
+    const dichroicMechanisms = mechanismsForRoute(inst.dichroic, route);
+    const emissionMechanisms = mechanismsForRoute(inst.emission, route);
+    const splitterMechanisms = mechanismsForRoute(inst.splitters, route);
+    const detectorMechanisms = mechanismsForRoute(inst.detectors, route);
+
+    const shell = document.createElement('div');
+    shell.className = 'vm-pipeline-shell';
+    const pipeline = document.createElement('div');
+    pipeline.className = 'vm-pipeline';
+    const inspector = document.createElement('div');
+    inspector.className = 'vm-inspector';
+    shell.appendChild(pipeline);
+    shell.appendChild(inspector);
+    DOM.graph.appendChild(shell);
+
+    const stages = [];
+
+    if (lightSourceMechanisms.length) {
+      stages.push({
+        id: 'sources',
+        label: 'Sources',
+        subtitle: 'Enable sources, tune wavelengths, and set relative power.',
+        build(panel) {
+          lightSourceMechanisms.forEach((mechanism) => panel.appendChild(createLightSourceControl(mechanism)));
+        },
+      });
+    }
+
+    if (cubeMechanisms.length || excitationMechanisms.length) {
+      stages.push({
+        id: 'excitation',
+        label: 'Excitation',
+        subtitle: cubeMechanisms.length
+          ? 'Filter-cube selections drive the excitation, dichroic, and emission path together.'
+          : 'Choose the excitation filter path that reaches the sample.',
+        build(panel) {
+          if (cubeMechanisms.length) {
+            cubeMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('cube', mechanism, index)));
+          } else {
+            excitationMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('excitation', mechanism, index)));
+          }
+        },
+      });
+    }
+
+    if (cubeMechanisms.length || dichroicMechanisms.length) {
+      stages.push({
+        id: 'dichroic',
+        label: 'Dichroic',
+        subtitle: cubeMechanisms.length
+          ? 'The dichroic is integrated inside the selected cube.'
+          : 'Choose the dichroic that reflects excitation and transmits emission.',
+        build(panel) {
+          if (cubeMechanisms.length) {
+            const cubeSelect = DOM.graph.querySelector('select[data-stage="cube"]');
+            const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
+            const linked = cubeValue && (cubeValue.dichroic_filter || cubeValue.dichroic || cubeValue.di);
+            panel.appendChild(createLinkedStageNote('Integrated cube dichroic', 'This route uses the cube selector from the Excitation tab.', linked));
+          } else {
+            dichroicMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('dichroic', mechanism, index)));
+          }
+        },
+      });
+    }
+
+    stages.push({
+      id: 'sample',
+      label: 'Sample',
+      subtitle: 'The selected excitation drives fluorophore emission at the specimen plane.',
+      build(panel) {
+        panel.appendChild(createLinkedStageNote('Emission generation', 'Loaded fluorophores absorb the excitation spectrum here and emit according to their reference spectra.'));
+      },
+    });
+
+    if (emissionMechanisms.length || cubeMechanisms.length) {
+      stages.push({
+        id: 'emission',
+        label: 'Emission',
+        subtitle: cubeMechanisms.length
+          ? 'Emission filtering may be partly integrated inside the selected cube.'
+          : 'Choose the emission filters that clean up the fluorescence before detection.',
+        build(panel) {
+          if (cubeMechanisms.length) {
+            const cubeSelect = DOM.graph.querySelector('select[data-stage="cube"]');
+            const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
+            const linked = cubeValue && (cubeValue.emission_filter || cubeValue.emission || cubeValue.em);
+            if (linked) {
+              panel.appendChild(createLinkedStageNote('Integrated cube emission filter', 'This emission window is currently set by the cube selection.', linked));
+            }
+          }
+          emissionMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('emission', mechanism, index)));
+        },
+      });
+    }
+
+    if (splitterMechanisms.length) {
+      stages.push({
+        id: 'splitters',
+        label: 'Splitters',
+        subtitle: 'Route post-emission light into one or more detection branches.',
+        build(panel) {
+          splitterMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('splitters', mechanism, index)));
+        },
+      });
+    }
+
+    if (detectorMechanisms.length) {
+      stages.push({
+        id: 'detectors',
+        label: 'Detectors',
+        subtitle: 'Enable detectors and adjust their collection windows.',
+        build(panel) {
+          detectorMechanisms.forEach((mechanism) => panel.appendChild(createDetectorControl(mechanism)));
+        },
+      });
+    }
+
+    if (!stages.length) return;
+
+    stages.forEach((stage, index) => {
+      if (index > 0) pipeline.appendChild(createPipeSegment(stagePipeKey(stages[index - 1].id, stage.id)));
+      pipeline.appendChild(createPipelineBadge(stage.id, stage.label));
+      const panel = createInspectorPanel(stage.id, stage.label, stage.subtitle);
+      stage.build(panel);
+      inspector.appendChild(panel);
+    });
+
+    restoreStageSelections(snapshot);
+    enforceValidStageOptions();
+    const availableStageIds = stages.map((stage) => stage.id);
+    const preferredStage = availableStageIds.includes(state.activeInspectorStage) ? state.activeInspectorStage : availableStageIds[0];
+    setInspectorStage(preferredStage);
+  }
+
+  function createLightSourceControl(mechanism) {
+
+    const block = document.createElement('div');
+    block.className = 'vm-stack vm-source-grid';
+    block.dataset.stage = 'lightSources';
+    block.dataset.mechanismId = mechanism.id || '';
+
+    const title = document.createElement('div');
+    title.className = 'vm-source-group-title';
+    title.style.fontSize = '11px';
+    title.style.fontWeight = '700';
+    title.style.color = 'var(--muted)';
+    title.textContent = mechanism.display_label || mechanism.name || 'Light Sources';
+    block.appendChild(title);
+
+    Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
+      const setting = ensureSourceSetting(source);
+      const sourceKey = sourceSettingKey(source);
+      const card = document.createElement('div');
+      card.className = 'tunable-control';
+
+      const label = document.createElement('label');
+      label.style.display = 'flex';
+      label.style.alignItems = 'center';
+      label.style.gap = '8px';
+      label.style.fontSize = '12px';
+      label.style.fontWeight = '600';
+      label.style.cursor = 'pointer';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = Boolean(setting.enabled);
+      checkbox.dataset.routes = normalizeSourceRoutes(source).join(',');
+      checkbox.addEventListener('change', () => {
+        setting.enabled = checkbox.checked;
+        pruneConflictingSources();
+        renderGraphFlow();
+        refreshOutputs();
+      });
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(source.display_label || source.name || 'Source'));
+      card.appendChild(label);
+
+      const meta = document.createElement('div');
+      meta.className = 'vm-mini';
+      meta.textContent = [
+        source.role ? `role: ${source.role}` : '',
+        source.kind ? `kind: ${source.kind}` : '',
+        normalizeSourceRoutes(source).length ? `routes: ${normalizeSourceRoutes(source).join(', ')}` : '',
+      ].filter(Boolean).join(' • ');
+      if (meta.textContent) card.appendChild(meta);
+
+      const tunableMin = numberOrNull(source.tunable_min_nm);
+      const tunableMax = numberOrNull(source.tunable_max_nm);
+      if (tunableMin !== null && tunableMax !== null) {
+        const readout = document.createElement('div');
+        readout.className = 'tunable-range-label';
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = String(Math.round(tunableMin));
+        slider.max = String(Math.round(tunableMax));
+        slider.step = '1';
+        slider.value = String(Math.round(numberOrNull(setting.selected_wavelength_nm) ?? ((tunableMin + tunableMax) / 2)));
+        slider.disabled = !setting.enabled;
+        slider.addEventListener('input', () => {
+          setting.selected_wavelength_nm = Number(slider.value);
+          readout.textContent = `Tuned to ${slider.value} nm`;
+          refreshOutputs();
+        });
+        readout.textContent = `Tuned to ${slider.value} nm`;
+        card.appendChild(readout);
+        card.appendChild(slider);
+      } else if (numberOrNull(source.wavelength_nm) !== null) {
+        const fixed = document.createElement('div');
+        fixed.className = 'vm-mini';
+        fixed.textContent = `λ = ${source.wavelength_nm} nm`;
+        card.appendChild(fixed);
+      }
+
+      const powerReadout = document.createElement('div');
+      powerReadout.className = 'tunable-range-label';
+      const powerSlider = document.createElement('input');
+      powerSlider.type = 'range';
+      powerSlider.min = '0';
+      powerSlider.max = '1';
+      powerSlider.step = '0.01';
+      powerSlider.value = String(numberOrNull(setting.user_weight) ?? 1);
+      powerSlider.disabled = !setting.enabled;
+      powerSlider.addEventListener('input', () => {
+        setting.user_weight = Number(powerSlider.value);
+        powerReadout.textContent = `Relative source power: ${Math.round(Number(powerSlider.value) * 100)}%`;
+        refreshOutputs();
+      });
+      const syncPowerDisabled = () => {
+        powerSlider.disabled = !setting.enabled;
+      };
+      checkbox.addEventListener('change', syncPowerDisabled);
+      powerReadout.textContent = `Relative source power: ${Math.round(Number(powerSlider.value) * 100)}%`;
+      card.appendChild(powerReadout);
+      card.appendChild(powerSlider);
+
+      const simultaneousLines = numberOrNull(source.simultaneous_lines_max);
+      if (simultaneousLines !== null) {
+        const note = document.createElement('div');
+        note.className = 'vm-mini';
+        note.textContent = `Supports up to ${simultaneousLines} simultaneous tuned lines.`;
+        card.appendChild(note);
+      }
+
+      card.dataset.sourceKey = sourceKey;
+      block.appendChild(card);
+    });
+
+    return block;
+  }
+
+  function spectralMechanismKey(stageKey, mechanism, index) {
+    return `${currentInstrumentId || 'scope'}::${stageKey}::${mechanism && (mechanism.id || mechanism.name || index)}`;
+  }
+
+  function spectralArrayBounds(mechanism) {
+    const min = numberOrNull(mechanism && (mechanism.band_min_nm ?? mechanism.min_nm)) ?? 350;
+    const max = numberOrNull(mechanism && (mechanism.band_max_nm ?? mechanism.max_nm)) ?? 800;
+    return { min, max: Math.max(max, min + 5) };
+  }
+
+  function defaultSpectralBand(mechanism, idx) {
+    const bounds = spectralArrayBounds(mechanism);
+    const width = Math.max(5, numberOrNull(mechanism && mechanism.default_band_width_nm) ?? 20);
+    const start = Math.min(bounds.max - 1, bounds.min + (idx * 10));
+    return {
+      label: `Band ${idx + 1}`,
+      min_nm: Math.round(start),
+      max_nm: Math.round(Math.min(bounds.max, start + width)),
+    };
+  }
+
+  function getSpectralBands(stageKey, mechanism, index) {
+    const key = spectralMechanismKey(stageKey, mechanism, index);
+    if (!state.spectralBandsByMechanism.has(key)) {
+      state.spectralBandsByMechanism.set(key, [defaultSpectralBand(mechanism, 0)]);
+    }
+    return { key, bands: state.spectralBandsByMechanism.get(key) || [] };
+  }
+
+  function createMechanismControl(stageKey, mechanism, index) {
+    if (mechanism.control_kind === 'spectral_array') {
+      return createSpectralArrayControl(stageKey, mechanism, index);
+    }
+
+    if (mechanism.control_kind === 'tunable_slider') {
+      const block = document.createElement('div');
+      block.className = 'tunable-control';
+      block.dataset.stage = stageKey;
+      block.dataset.mechanismName = mechanism.name || '';
+      block.dataset.mechanismId = mechanism.id || '';
+
+      const readout = document.createElement('div');
+      readout.className = 'tunable-range-label';
+      const row = document.createElement('div');
+      row.className = 'slider-row';
+      const minInput = document.createElement('input');
+      minInput.type = 'range';
+      minInput.min = String(mechanism.min_nm ?? 400);
+      minInput.max = String(mechanism.max_nm ?? 800);
+      minInput.value = String(mechanism.default_min_nm ?? mechanism.min_nm ?? 450);
+      const maxInput = document.createElement('input');
+      maxInput.type = 'range';
+      maxInput.min = String(mechanism.min_nm ?? 400);
+      maxInput.max = String(mechanism.max_nm ?? 800);
+      maxInput.value = String(mechanism.default_max_nm ?? mechanism.max_nm ?? 550);
+
+      const update = () => {
+        if (Number(minInput.value) > Number(maxInput.value)) minInput.value = maxInput.value;
+        block.dataset.value = JSON.stringify({
+          component_type: 'tunable',
+          type: 'tunable',
+          render_kind: 'tunable',
+          label: `${mechanism.name || stageKey} ${minInput.value}-${maxInput.value}`,
+          display_label: `${mechanism.name || stageKey} ${minInput.value}-${maxInput.value}`,
+          band_start_nm: Number(minInput.value),
+          band_end_nm: Number(maxInput.value),
+        });
+        readout.textContent = `${mechanism.control_label || mechanism.name || stageKey}: ${minInput.value}–${maxInput.value} nm`;
+        refreshOutputs();
+      };
+
+      minInput.addEventListener('input', update);
+      maxInput.addEventListener('input', update);
+      row.appendChild(minInput);
+      row.appendChild(maxInput);
+      block.appendChild(readout);
+      block.appendChild(row);
+      update();
+      return block;
+    }
+
+    const block = document.createElement('div');
+    block.className = 'vm-field';
+    const label = document.createElement('label');
+    label.textContent = mechanism.control_label || mechanism.display_label || mechanism.name || stageKey;
+    const select = document.createElement('select');
+    select.dataset.stage = stageKey;
+    select.dataset.mechanismName = mechanism.name || '';
+    select.dataset.mechanismId = mechanism.id || '';
+
+    const options = Array.isArray(mechanism.options) && mechanism.options.length
+      ? mechanism.options.filter((option) => VM.routeMatches((option.value && option.value.__routes) || mechanism.__routes, state.activeRoute))
+      : Object.entries(positionsForRoute(mechanism, state.activeRoute)).map(([slot, component]) => ({
+          slot: Number(slot),
+          display_label: component.display_label || component.label || `Slot ${slot}`,
+          value: component,
+        }));
+
+    options.forEach((option) => {
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify(option.value);
+      opt.textContent = option.display_label || option.value && (option.value.display_label || option.value.label) || `Slot ${option.slot}`;
+      if (Number.isFinite(Number(option.slot))) {
+        opt.dataset.slot = String(option.slot);
+      } else if (Number.isFinite(Number(option.value && option.value.slot))) {
+        opt.dataset.slot = String(option.value.slot);
+      }
+      select.appendChild(opt);
+    });
+    const metadata = createMetadataBlock();
+    const syncMetadata = () => updateMetadataBlock(metadata, parseJsonValue(select.value), { stage: stageKey });
+    select.addEventListener('change', () => {
+      select.dataset.userSet = 'true';
+      syncMetadata();
+      refreshOutputs();
+    });
+    block.appendChild(label);
+    block.appendChild(select);
+    block.appendChild(metadata);
+    syncMetadata();
+    return block;
+  }
+
+  function createSpectralArrayControl(stageKey, mechanism, index) {
+    const block = document.createElement('div');
+    block.className = 'tunable-control';
+    block.dataset.stage = stageKey;
+    block.dataset.mechanismName = mechanism.name || '';
+    block.dataset.mechanismId = mechanism.id || '';
+    block.dataset.mechanismType = 'spectral_array';
+
+    const title = document.createElement('div');
+    title.className = 'tunable-range-label';
+    title.textContent = `${mechanism.control_label || mechanism.name || 'Spectral Array'} Bands`;
+    block.appendChild(title);
+
+    const bounds = spectralArrayBounds(mechanism);
+    const stateRef = getSpectralBands(stageKey, mechanism, index);
+    const maxBands = Math.max(1, numberOrNull(mechanism && mechanism.max_bands) ?? 4);
+    block.dataset.mechanismKey = stateRef.key;
+
+    const bandWrap = document.createElement('div');
+    bandWrap.style.display = 'grid';
+    bandWrap.style.gap = '8px';
+
+    stateRef.bands.forEach((band, bandIndex) => {
+      const row = document.createElement('div');
+      row.style.border = '1px solid var(--border)';
+      row.style.borderRadius = '6px';
+      row.style.padding = '6px';
+      row.style.display = 'grid';
+      row.style.gap = '6px';
+
+      const top = document.createElement('div');
+      top.style.display = 'flex';
+      top.style.gap = '6px';
+      top.style.alignItems = 'center';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = band.label;
+      nameInput.placeholder = `Band ${bandIndex + 1}`;
+      nameInput.style.flex = '1';
+      nameInput.style.fontSize = '12px';
+      nameInput.addEventListener('input', () => {
+        stateRef.bands[bandIndex].label = nameInput.value;
+        refreshOutputs();
+      });
+      top.appendChild(nameInput);
+
+      if (stateRef.bands.length > 1) {
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'vm-btn';
+        removeButton.style.background = 'var(--danger)';
+        removeButton.style.padding = '4px 8px';
+        removeButton.textContent = 'Remove';
+        removeButton.addEventListener('click', () => {
+          stateRef.bands.splice(bandIndex, 1);
+          renderGraphFlow();
+          refreshOutputs();
+        });
+        top.appendChild(removeButton);
+      }
+      row.appendChild(top);
+
+      const readout = document.createElement('div');
+      readout.className = 'tunable-range-label';
+      row.appendChild(readout);
+
+      const sliders = document.createElement('div');
+      sliders.className = 'slider-row';
+      const minInput = document.createElement('input');
+      minInput.type = 'range';
+      minInput.min = String(bounds.min);
+      minInput.max = String(bounds.max);
+      minInput.value = String(band.min_nm ?? bounds.min);
+      const maxInput = document.createElement('input');
+      maxInput.type = 'range';
+      maxInput.min = String(bounds.min);
+      maxInput.max = String(bounds.max);
+      maxInput.value = String(band.max_nm ?? (Number(minInput.value) + 20));
+
+      const updateBand = (source) => {
+        let minVal = Number(minInput.value);
+        let maxVal = Number(maxInput.value);
+        if (minVal > maxVal) {
+          if (source === 'min') maxVal = minVal;
+          else minVal = maxVal;
+        }
+        minVal = Math.max(bounds.min, Math.min(minVal, bounds.max - 1));
+        maxVal = Math.max(minVal + 1, Math.min(maxVal, bounds.max));
+        minInput.value = String(Math.round(minVal));
+        maxInput.value = String(Math.round(maxVal));
+        stateRef.bands[bandIndex].min_nm = Number(minInput.value);
+        stateRef.bands[bandIndex].max_nm = Number(maxInput.value);
+        readout.textContent = `${stateRef.bands[bandIndex].label || `Band ${bandIndex + 1}`}: ${minInput.value}–${maxInput.value} nm`;
+        refreshOutputs();
+      };
+
+      minInput.addEventListener('input', () => updateBand('min'));
+      maxInput.addEventListener('input', () => updateBand('max'));
+      sliders.appendChild(minInput);
+      sliders.appendChild(maxInput);
+      row.appendChild(sliders);
+      updateBand('init');
+      bandWrap.appendChild(row);
+    });
+
+    block.appendChild(bandWrap);
+
+    const addButton = document.createElement('button');
+    addButton.type = 'button';
+    addButton.className = 'vm-btn';
+    addButton.style.marginTop = '4px';
+    addButton.textContent = 'Add Detector Band';
+    addButton.disabled = stateRef.bands.length >= maxBands;
+    addButton.addEventListener('click', () => {
+      if (stateRef.bands.length >= maxBands) return;
+      stateRef.bands.push(defaultSpectralBand(mechanism, stateRef.bands.length));
+      renderGraphFlow();
+      refreshOutputs();
+    });
+    block.appendChild(addButton);
+    return block;
+  }
+
+
+  function createDetectorControl(mechanism) {
+    const detector = Object.values(positionsForRoute(mechanism, state.activeRoute))[0];
+    if (!detector) return document.createElement('div');
+    const setting = ensureDetectorSetting(mechanism, detector);
+    const labelText = mechanism.display_label || detector.display_label || detector.name || 'Detector';
+    const detectorClass = detector.detector_class || VM.detectorClass(detector.kind);
+
+    const block = document.createElement('div');
+    block.className = 'tunable-control';
+    block.dataset.stage = 'detectors';
+    block.dataset.mechanismId = mechanism.id || '';
+
+    const label = document.createElement('label');
+    label.style.display = 'flex';
+    label.style.alignItems = 'center';
+    label.style.gap = '8px';
+    label.style.fontSize = '12px';
+    label.style.fontWeight = '600';
+    label.style.cursor = 'pointer';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = Boolean(setting.enabled);
+    checkbox.addEventListener('change', () => {
+      setting.enabled = checkbox.checked;
+      syncDetectorMetadata();
+      refreshOutputs();
+    });
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(labelText));
+    block.appendChild(label);
+
+    const meta = document.createElement('div');
+    meta.className = 'vm-mini';
+    meta.textContent = `${detectorClass}${detector.supports_time_gating ? ' • time-gated' : ''}`;
+    block.appendChild(meta);
+    const metadata = createMetadataBlock();
+    const syncDetectorMetadata = () => updateMetadataBlock(metadata, {
+      ...detector,
+      detector_class: detectorClass,
+      collection_min_nm: setting.collection_min_nm,
+      collection_max_nm: setting.collection_max_nm,
+    }, { stage: 'detector' });
+    block.appendChild(metadata);
+
+    if (detectorClass !== 'camera') {
+      setting.collection_enabled = true;
+      const collectionToggle = document.createElement('label');
+      collectionToggle.className = 'vm-mini';
+      collectionToggle.style.display = 'flex';
+      collectionToggle.style.alignItems = 'center';
+      collectionToggle.style.gap = '6px';
+      collectionToggle.style.marginTop = '4px';
+      const toggleInput = document.createElement('input');
+      toggleInput.type = 'checkbox';
+      toggleInput.checked = true;
+      toggleInput.disabled = true;
+      setting.collection_enabled = true;
+      collectionToggle.appendChild(toggleInput);
+      collectionToggle.appendChild(document.createTextNode('Detector collection window (always applied)'));
+      block.appendChild(collectionToggle);
+
+      const minReadout = document.createElement('div');
+      minReadout.className = 'vm-mini';
+      const minSlider = document.createElement('input');
+      minSlider.type = 'range';
+      minSlider.min = '350';
+      minSlider.max = '850';
+      minSlider.step = '1';
+      minSlider.value = String(Math.round(numberOrNull(setting.collection_min_nm) ?? 500));
+      minSlider.addEventListener('input', () => {
+        const proposedMin = Number(minSlider.value);
+        const currentMax = numberOrNull(setting.collection_max_nm) ?? 700;
+        setting.collection_min_nm = Math.min(proposedMin, currentMax - 1);
+        minSlider.value = String(Math.round(setting.collection_min_nm));
+        if (numberOrNull(setting.collection_max_nm) !== null && Number(setting.collection_max_nm) <= setting.collection_min_nm) {
+          setting.collection_max_nm = setting.collection_min_nm + 1;
+          maxSlider.value = String(Math.round(setting.collection_max_nm));
+        }
+        minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
+        maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
+        syncDetectorMetadata();
+        refreshOutputs();
+      });
+      minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
+      block.appendChild(minReadout);
+      block.appendChild(minSlider);
+
+      const maxReadout = document.createElement('div');
+      maxReadout.className = 'vm-mini';
+      const maxSlider = document.createElement('input');
+      maxSlider.type = 'range';
+      maxSlider.min = '351';
+      maxSlider.max = '900';
+      maxSlider.step = '1';
+      maxSlider.value = String(Math.round(numberOrNull(setting.collection_max_nm) ?? 540));
+      maxSlider.addEventListener('input', () => {
+        const proposedMax = Number(maxSlider.value);
+        const currentMin = numberOrNull(setting.collection_min_nm) ?? 350;
+        setting.collection_max_nm = Math.max(proposedMax, currentMin + 1);
+        maxSlider.value = String(Math.round(setting.collection_max_nm));
+        if (numberOrNull(setting.collection_min_nm) !== null && Number(setting.collection_min_nm) >= setting.collection_max_nm) {
+          setting.collection_min_nm = setting.collection_max_nm - 1;
+          minSlider.value = String(Math.round(setting.collection_min_nm));
+        }
+        minReadout.textContent = `Collection min: ${Math.round(Number(minSlider.value))} nm`;
+        maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
+        syncDetectorMetadata();
+        refreshOutputs();
+      });
+      maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
+      block.appendChild(maxReadout);
+      block.appendChild(maxSlider);
+    }
+
+    syncDetectorMetadata();
+
+    if (detector.supports_time_gating) {
+      const gate = document.createElement('div');
+      gate.className = 'vm-mini';
+      const delay = numberOrNull(detector.default_gating_delay_ns) ?? 0;
+      const width = numberOrNull(detector.default_gate_width_ns) ?? 0;
+      gate.textContent = `Default gate: delay ${delay} ns, width ${width} ns`;
+      block.appendChild(gate);
+    }
+
+    return block;
+  }
+
+  function buildSelectionMapFromDom() {
+    const selectionMap = {};
+    Array.from(DOM.graph.querySelectorAll('select[data-stage][data-mechanism-id]')).forEach((select) => {
+      const mechanismId = select.dataset.mechanismId;
+      const slot = Number(select.selectedOptions[0] && select.selectedOptions[0].dataset.slot);
+      if (mechanismId && Number.isFinite(slot)) {
+        selectionMap[mechanismId] = slot;
+      }
+    });
+    return selectionMap;
+  }
+
+  function enforceValidStageOptions() {
+    if (!state.activeInstrument || !Array.isArray(state.activeInstrument.validPaths) || !state.activeInstrument.validPaths.length) {
+      return;
+    }
+    for (let pass = 0; pass < 3; pass += 1) {
+      let changed = false;
+      const currentSelection = buildSelectionMapFromDom();
+      Array.from(DOM.graph.querySelectorAll('select[data-stage][data-mechanism-id]')).forEach((select) => {
+        const mechanismId = select.dataset.mechanismId;
+        if (!mechanismId) return;
+        Array.from(select.options).forEach((option) => {
+          const slot = Number(option.dataset.slot);
+          if (!Number.isFinite(slot)) {
+            option.disabled = false;
+            return;
+          }
+          const trialSelection = { ...currentSelection, [mechanismId]: slot };
+          option.disabled = !VM.selectionIsValid(state.activeInstrument.validPaths, trialSelection);
+        });
+        const chosen = select.selectedOptions[0];
+        if (chosen && chosen.disabled) {
+          const replacement = Array.from(select.options).find((option) => !option.disabled);
+          if (replacement) {
+            select.value = replacement.value;
+            changed = true;
+          }
+        }
+      });
+      if (!changed) break;
+    }
+  }
+
+  function expandCubeSelection(cubePosition, mechanismName) {
+    const expanded = [];
+    const excitation = cubePosition.excitation_filter || cubePosition.excitation || cubePosition.ex;
+    const dichroic = cubePosition.dichroic_filter || cubePosition.dichroic || cubePosition.di || cubePosition.dichroic;
+    const emission = cubePosition.emission_filter || cubePosition.emission || cubePosition.em;
+    if (excitation) expanded.push({ stage: 'excitation', name: `${mechanismName} (Cube Ex)`, component: excitation });
+    if (dichroic) expanded.push({ stage: 'dichroic', name: `${mechanismName} (Cube Di)`, component: dichroic });
+    if (emission) expanded.push({ stage: 'emission', name: `${mechanismName} (Cube Em)`, component: emission });
+    return expanded;
+  }
+
+  function collectRuntimeSelection() {
+    const selection = {
+      sources: [],
+      excitation: [],
+      dichroic: [],
+      emission: [],
+      splitters: [],
+      detectors: [],
+      selectionMap: buildSelectionMapFromDom(),
+      debugSelections: [],
+    };
+
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, state.activeRoute).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        if (!setting.enabled) return;
+        selection.sources.push({
+          ...source,
+          selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+          user_weight: numberOrNull(setting.user_weight) ?? numberOrNull(source.power_weight) ?? 1,
+        });
+      });
+    });
+
+    const pushStageComponent = (stage, name, component) => {
+      if (!component || typeof component !== 'object') return;
+      const enriched = {
+        ...component,
+        label: component.label || component.display_label || name,
+        display_label: component.display_label || component.label || name,
+      };
+      if (stage === 'excitation') selection.excitation.push(enriched);
+      else if (stage === 'dichroic') selection.dichroic.push(enriched);
+      else if (stage === 'emission') selection.emission.push(enriched);
+      else if (stage === 'splitters') selection.splitters.push(enriched);
+      selection.debugSelections.push({ stage, name, component: enriched });
+    };
+
+    Array.from(DOM.graph.querySelectorAll('select[data-stage]')).forEach((select) => {
+      if (!select.value) return;
+      let value;
+      try {
+        value = JSON.parse(select.value);
+      } catch (error) {
+        return;
+      }
+      const stage = select.dataset.stage;
+      const mechanismName = select.dataset.mechanismName || stage;
+      if (stage === 'cube') {
+        selection.debugSelections.push({ stage: 'cube', name: mechanismName, component: value });
+        expandCubeSelection(value, mechanismName).forEach((entry) => pushStageComponent(entry.stage, entry.name, entry.component));
+      } else if (stage === 'splitters') {
+        pushStageComponent('splitters', mechanismName, value);
+      } else if (stage !== 'detectors') {
+        pushStageComponent(stage, mechanismName, value);
+      }
+    });
+
+    Array.from(DOM.graph.querySelectorAll('.tunable-control[data-stage]')).forEach((block) => {
+      const stage = block.dataset.stage;
+      const mechanismName = block.dataset.mechanismName || stage;
+      if (block.dataset.mechanismType === 'spectral_array') {
+        const bands = state.spectralBandsByMechanism.get(block.dataset.mechanismKey || '') || [];
+        if (!bands.length) return;
+        pushStageComponent(stage, mechanismName, {
+          component_type: 'multiband_bandpass',
+          type: 'multiband_bandpass',
+          render_kind: 'band',
+          label: `${mechanismName} spectral array`,
+          display_label: `${mechanismName} spectral array`,
+          bands: bands.map((band) => ({
+            center_nm: (Number(band.min_nm) + Number(band.max_nm)) / 2,
+            width_nm: Math.max(1, Number(band.max_nm) - Number(band.min_nm)),
+            label: band.label,
+          })),
+        });
+      } else if (block.dataset.value) {
+        try {
+          pushStageComponent(stage, mechanismName, JSON.parse(block.dataset.value));
+        } catch (error) {
+          // ignore invalid tunable payloads
+        }
+      }
+    });
+
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.detectors, state.activeRoute).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((detector) => {
+        const setting = ensureDetectorSetting(mechanism, detector);
+        if (!setting.enabled) return;
+        selection.detectors.push({
+          ...detector,
+          collection_enabled: Boolean(setting.collection_enabled),
+          collection_min_nm: numberOrNull(setting.collection_min_nm),
+          collection_max_nm: numberOrNull(setting.collection_max_nm),
+        });
+      });
+    });
+
+    return selection;
+  }
+
+
+  function initLineChart(canvas, yTitle) {
+    return new Chart(canvas, {
+      type: 'line',
+      data: { datasets: [] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          tooltip: { enabled: true },
+          legend: { position: 'bottom', labels: { boxWidth: 12 } },
+        },
+        scales: {
+          x: { type: 'linear', min: 350, max: 800, title: { display: true, text: 'Wavelength (nm)' } },
+          y: { min: 0, max: 105, title: { display: true, text: yTitle } },
+        },
+      },
+    });
+  }
+
+  function initBarChart(canvas) {
+    return new Chart(canvas, {
+      type: 'bar',
+      data: { labels: [], datasets: [] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { enabled: true },
+        },
+        scales: {
+          x: { ticks: { autoSkip: false } },
+          y: { beginAtZero: true, title: { display: true, text: 'Detected intensity (a.u.)' } },
+        },
+      },
+    });
+  }
+
+  function initCharts() {
+    referenceChart = initLineChart(DOM.referenceChart, 'Normalized absorption / emission (%)');
+    propagationChart = initLineChart(DOM.propagationChart, 'Propagated light (%)');
+    detectionChart = initBarChart(DOM.detectionChart);
+  }
+
+  function chartDatasetFromGrid(label, grid, values, style) {
+    return {
+      label,
+      data: grid.map((wavelength, index) => ({ x: wavelength, y: Math.min(105, Math.max(0, values[index] || 0)) })),
+      fill: false,
+      pointRadius: 0,
+      tension: 0.15,
+      borderWidth: 2,
+      ...style,
+    };
+  }
+
+  function maxWavelengthFromPoints(points) {
+    if (!Array.isArray(points) || !points.length) return null;
+    return Math.max(...points.map((point) => numberOrNull(point.x) ?? 0));
+  }
+
+  function determineChartMax(selection) {
+    let maxWavelength = 800;
+    selection.sources.forEach((source) => {
+      maxWavelength = Math.max(
+        maxWavelength,
+        numberOrNull(source.selected_wavelength_nm) ?? 0,
+        numberOrNull(source.wavelength_nm) ?? 0,
+        numberOrNull(source.tunable_max_nm) ?? 0
+      );
+    });
+    mapToArray(state.loadedProteins).forEach((fluorophore) => {
+      const spectra = VM.fluorophoreSpectra(fluorophore, { preferTwoPhoton: state.preferTwoPhoton });
+      maxWavelength = Math.max(
+        maxWavelength,
+        maxWavelengthFromPoints(spectra.ex) ?? 0,
+        maxWavelengthFromPoints(spectra.em) ?? 0
+      );
+    });
+    return Math.min(1700, Math.max(800, Math.ceil(maxWavelength / 50) * 50));
+  }
+
+  function spectrumScale(curves) {
+    const globalMax = Math.max(0.001, ...curves.flatMap((values) => Array.isArray(values) ? values : []));
+    return globalMax;
+  }
+
+  function asPercentArray(values, scale) {
+    const denominator = Math.max(0.001, scale || 1);
+    return (Array.isArray(values) ? values : []).map((value) => (Number(value || 0) / denominator) * 100);
+  }
+
+  function sumSpectra(entries, field, grid) {
+    return (Array.isArray(entries) ? entries : []).reduce((accumulator, entry) => {
+      const values = Array.isArray(entry && entry[field]) ? entry[field] : [];
+      return accumulator.map((current, index) => current + (values[index] || 0));
+    }, grid.map(() => 0));
+  }
+
+  function aggregateSpectraByLabel(entries, field, grid, dedupeKeyField = null) {
+    const grouped = new Map();
+    const seenKeys = new Set();
+    (Array.isArray(entries) ? entries : []).forEach((entry) => {
+      const dedupeKey = dedupeKeyField ? cleanString(entry && entry[dedupeKeyField]) : '';
+      if (dedupeKeyField && dedupeKey && seenKeys.has(dedupeKey)) return;
+      if (dedupeKeyField && dedupeKey) seenKeys.add(dedupeKey);
+      const key = entry.pathLabel || entry.label || entry.detectorLabel || 'Path';
+      if (!grouped.has(key)) {
+        grouped.set(key, { label: key, values: grid.map(() => 0), entry });
+      }
+      const target = grouped.get(key);
+      const values = Array.isArray(entry && entry[field]) ? entry[field] : [];
+      target.values = target.values.map((current, index) => current + (values[index] || 0));
+    });
+    return Array.from(grouped.values());
+  }
+
+  function sourceReferenceDatasets(selection) {
+    const datasets = [];
+    selection.sources.forEach((source) => {
+      const wavelength = numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm);
+      const isLine = ['line', 'tunable_line'].includes(cleanString(source.spectral_mode).toLowerCase()) || cleanString(source.kind).toLowerCase() === 'laser';
+      const color = source.role === 'depletion' ? '#dc2626' : colorHex(wavelength || 520);
+      if (isLine && wavelength !== null) {
+        datasets.push({
+          label: `${source.display_label || source.name || 'Source'} line`,
+          data: [{ x: wavelength, y: 0 }, { x: wavelength, y: 100 }],
+          borderColor: color,
+          borderWidth: 2,
+          borderDash: source.role === 'depletion' ? [6, 4] : [2, 2],
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+        });
+      } else {
+        const grid = VM.wavelengthGrid({ min_nm: 350, max_nm: determineChartMax(selection), step_nm: 2 });
+        const sourceSpectrum = VM.sourceSpectrum(source, grid);
+        const scale = spectrumScale([sourceSpectrum]);
+        datasets.push(chartDatasetFromGrid(source.display_label || source.name || 'Source', grid, asPercentArray(sourceSpectrum, scale), {
+          borderColor: color,
+          backgroundColor: rgbaFromHex(color, 0.08),
+        }));
+      }
+    });
+    return datasets;
+  }
+
+  function renderReferenceSpectra(selection, simulation) {
+    if (!referenceChart) return;
+    const chartMax = determineChartMax(selection);
+    const grid = Array.isArray(simulation && simulation.grid)
+      ? simulation.grid
+      : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
+    const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
+    const datasets = [...activeFilterMaskDatasets(selection, grid), ...sourceReferenceDatasets(selection)];
+
+    emissionEntries.forEach((entry) => {
+      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
+      const color = colorHex((fluor && fluor.emMax) || 520);
+      const absorptionSpectrum = Array.isArray(entry.absorptionSpectrum) ? entry.absorptionSpectrum : [];
+      if (absorptionSpectrum.some((value) => value > 1e-6)) {
+        datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} absorption`, grid, asPercentArray(absorptionSpectrum, 1), {
+          borderColor: color,
+          borderDash: [5, 4],
+          borderWidth: 2,
+          backgroundColor: rgbaFromHex(color, 0.02),
+        }));
+      }
+
+      const generatedSpectrum = Array.isArray(entry.generatedSpectrum) ? entry.generatedSpectrum : [];
+      if (generatedSpectrum.some((value) => value > 1e-6)) {
+        const exPct = Math.round((Number(entry.excitationEfficiency || 0)) * 100);
+        const depPct = Math.round((Number(entry.depletionOverlap || 0)) * 100);
+        datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} emission (Ex ${exPct}%, Dep ${depPct}%)`, grid, asPercentArray(generatedSpectrum, 1), {
+          borderColor: color,
+          backgroundColor: rgbaFromHex(color, 0.14),
+          borderWidth: 2,
+          fill: true,
+        }));
+      }
+    });
+
+    referenceChart.data.datasets = datasets;
+    referenceChart.options.scales.x.max = chartMax;
+    referenceChart.update();
+  }
+
+  function renderPropagationPanel(selection, simulation) {
+    if (!propagationChart) return;
+    const chartMax = determineChartMax(selection);
+    const grid = Array.isArray(simulation && simulation.grid) ? simulation.grid : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
+    const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
+    const pathEntries = Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [];
+    const aggregatedLeakage = aggregateSpectraByLabel(pathEntries, 'excitationLeakageSpectrum', grid, 'pathKey');
+
+    const totalEmission = sumSpectra(emissionEntries, 'postOpticsSpectrum', grid);
+    const scaleToFit = [totalEmission];
+    pathEntries.forEach((entry) => scaleToFit.push(entry.spectrum));
+    const scale = spectrumScale(scaleToFit);
+
+    const datasets = [...activeFilterMaskDatasets(selection, grid)];
+
+    if (Array.isArray(simulation && simulation.excitationAtSample) && simulation.excitationAtSample.some((value) => value > 0)) {
+      datasets.push(chartDatasetFromGrid('Excitation at sample', grid, asPercentArray(simulation.excitationAtSample, scale), {
+        borderColor: 'rgba(148, 163, 184, 1)',
+        backgroundColor: 'rgba(148, 163, 184, 0.2)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0,
+      }));
+    }
+
+    emissionEntries.forEach((entry) => {
+      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
+      const color = colorHex((fluor && fluor.emMax) || 520);
+      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} (generated)`, grid, asPercentArray(entry.generatedSpectrum, scale), {
+        borderColor: color,
+        borderDash: [3, 3],
+        borderWidth: 1.5,
+      }));
+    });
+
+    pathEntries.forEach((entry) => {
+      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
+      const color = colorHex((fluor && fluor.emMax) || 520);
+
+      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} at ${entry.detectorLabel}`, grid, asPercentArray(entry.spectrum, scale), {
+        borderColor: color,
+        backgroundColor: rgbaFromHex(color, 0.45),
+        borderWidth: 2,
+        fill: true,
+        tension: 0.2,
+      }));
+
+      if (entry.collectionMask && entry.collectionMask.some((value) => value < 0.999)) {
+        datasets.push(chartDatasetFromGrid(`${entry.detectorLabel} window`, grid, asPercentArray(entry.collectionMask, 1), {
+          borderColor: '#94a3b8',
+          borderDash: [2, 4],
+          borderWidth: 1.5,
+        }));
+      }
+    });
+
+    aggregatedLeakage.forEach((entry) => {
+      if (!entry.values.some((value) => value > 1e-6)) return;
+      datasets.push(chartDatasetFromGrid(`${entry.label} LEAKAGE!`, grid, asPercentArray(entry.values, scale), {
+        borderColor: '#dc2626',
+        backgroundColor: 'rgba(220, 38, 38, 0.5)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0,
+      }));
+    });
+
+    propagationChart.data.datasets = datasets;
+    propagationChart.options.scales.x.max = chartMax;
+    propagationChart.update();
+  }
+
+
+
+  function averageSpectrumCurves(curves, grid) {
+    if (!Array.isArray(curves) || !curves.length) return grid.map(() => 0);
+    const sum = grid.map(() => 0);
+    curves.forEach((curve) => {
+      curve.forEach((value, index) => {
+        sum[index] += value || 0;
+      });
+    });
+    return sum.map((value) => value / curves.length);
+  }
+
+  function currentSourceSpectrum(grid) {
+    const spectra = [];
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, state.activeRoute).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        if (!setting.enabled) return;
+        spectra.push(VM.sourceSpectrum({
+          ...source,
+          selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+        }, grid));
+      });
+    });
+    return sumSpectra(spectra.map((values) => ({ values })), 'values', grid);
+  }
+
+  function meanFluorophoreCurve(grid, type) {
+    const curves = mapToArray(state.loadedProteins).map((fluorophore) => {
+      const spectra = VM.fluorophoreSpectra(fluorophore, { preferTwoPhoton: state.preferTwoPhoton });
+      const points = type === 'emission' ? spectra.em : spectra.ex;
+      return VM.normalizePoints(points).length ? grid.map((wavelength) => 0) : null;
+    }).filter(Boolean);
+    const normalized = mapToArray(state.loadedProteins).map((fluorophore) => {
+      const spectra = VM.fluorophoreSpectra(fluorophore, { preferTwoPhoton: state.preferTwoPhoton });
+      const points = type === 'emission' ? spectra.em : spectra.ex;
+      const max = Math.max(1, ...VM.normalizePoints(points).map((point) => point.y || 0));
+      return grid.map((wavelength) => {
+        const pts = VM.normalizePoints(points);
+        if (!pts.length) return 0;
+        let value = pts[0].y;
+        if (wavelength <= pts[0].x) value = pts[0].y;
+        else if (wavelength >= pts[pts.length - 1].x) value = pts[pts.length - 1].y;
+        else {
+          for (let index = 0; index < pts.length - 1; index += 1) {
+            const left = pts[index];
+            const right = pts[index + 1];
+            if (wavelength < left.x || wavelength > right.x) continue;
+            const ratio = (wavelength - left.x) / Math.max(1e-9, right.x - left.x);
+            value = left.y + ((right.y - left.y) * ratio);
+            break;
+          }
+        }
+        return value / max;
+      });
+    }).filter(Boolean);
+    return averageSpectrumCurves(normalized, grid);
+  }
+
+  function integrated(values, grid) {
+    if (!Array.isArray(values) || values.length !== grid.length || values.length < 2) return 0;
+    let area = 0;
+    for (let index = 0; index < values.length - 1; index += 1) {
+      area += ((values[index] || 0) + (values[index + 1] || 0)) * (grid[index + 1] - grid[index]) / 2;
+    }
+    return area;
+  }
+
+  function multiply(left, right) {
+    return left.map((value, index) => value * (right[index] || 0));
+  }
+
+  function optionComponentsForStage(stage, optionValue, mechanismName) {
+    if (!optionValue || typeof optionValue !== 'object') return [];
+    if (stage === 'cube') {
+      return expandCubeSelection(optionValue, mechanismName).map((entry) => ({ ...entry.component, __stage: entry.stage }));
+    }
+    return [{ ...optionValue, __stage: stage }];
+  }
+
+  function applyComponentsToSpectrum(spectrum, components, grid, mode) {
+    let values = spectrum.slice();
+    (Array.isArray(components) ? components : []).forEach((component) => {
+      values = values.map((value, index) => value * ((VM.componentMask(component, grid, { mode })[index]) || 0));
+    });
+    return values;
+  }
+
+  function scoreStageOption(stage, mechanismName, optionValue, excitationSpectrum, emissionSpectrum, grid) {
+    const components = optionComponentsForStage(stage, optionValue, mechanismName);
+    if (!components.length) return -1;
+    let excitationScore = 0;
+    let emissionScore = 0;
+    const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
+    const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
+    if (excitationSpectrum) {
+      const output = applyComponentsToSpectrum(excitationSpectrum, exComponents, grid, 'excitation');
+      excitationScore = integrated(output, grid);
+    }
+    if (emissionSpectrum) {
+      const output = applyComponentsToSpectrum(emissionSpectrum, emComponents, grid, 'emission');
+      emissionScore = integrated(output, grid);
+    }
+    if (stage === 'excitation' || stage === 'cube' || stage === 'dichroic') {
+      return (excitationScore * 3) + emissionScore;
+    }
+    return emissionScore + (excitationScore * 0.25);
+  }
+
+  function autoRepairBlockedPath(selection, simulation) {
+    if (!state.activeInstrument || !state.loadedProteins.size || !selection.sources.length) return false;
+    const noExcitation = !Array.isArray(simulation && simulation.excitationAtSample) || !simulation.excitationAtSample.some((value) => value > 1e-6);
+    const noDetection = !Array.isArray(simulation && simulation.results) || !simulation.results.some((result) => Number(result.detectorWeightedIntensity || 0) > 1e-6);
+    if (!noExcitation && !noDetection) return false;
+
+    const grid = Array.isArray(simulation && simulation.grid) && simulation.grid.length
+      ? simulation.grid
+      : VM.wavelengthGrid(state.activeInstrument.metadata && state.activeInstrument.metadata.wavelength_grid);
+    const sourceSpectrum = currentSourceSpectrum(grid);
+    if (!sourceSpectrum.some((value) => value > 0)) return false;
+    const exCurve = meanFluorophoreCurve(grid, 'excitation');
+    const emCurve = meanFluorophoreCurve(grid, 'emission');
+    let excitationProbe = multiply(sourceSpectrum, exCurve);
+    let emissionProbe = emCurve.slice();
+    let changed = false;
+
+    Array.from(DOM.graph.querySelectorAll('select[data-stage]')).forEach((select) => {
+      if (select.dataset.userSet === 'true' || !select.options.length) return;
+      const stage = select.dataset.stage;
+      if (stage === 'detectors' || stage === 'splitters') return;
+      const mechanismName = select.dataset.mechanismName || stage;
+      let bestValue = select.value;
+      let bestScore = -Infinity;
+      Array.from(select.options).forEach((option) => {
+        let parsed;
+        try {
+          parsed = JSON.parse(option.value);
+        } catch (error) {
+          return;
+        }
+        const score = scoreStageOption(stage, mechanismName, parsed, excitationProbe, emissionProbe, grid);
+        if (score > bestScore) {
+          bestScore = score;
+          bestValue = option.value;
+        }
+      });
+      if (bestValue && select.value !== bestValue) {
+        select.value = bestValue;
+        changed = true;
+      }
+      let parsedCurrent = null;
+      try {
+        parsedCurrent = JSON.parse(select.value);
+      } catch (error) {
+        parsedCurrent = null;
+      }
+      const components = optionComponentsForStage(stage, parsedCurrent, mechanismName);
+      const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
+      const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
+      if (exComponents.length) excitationProbe = applyComponentsToSpectrum(excitationProbe, exComponents, grid, 'excitation');
+      if (emComponents.length) emissionProbe = applyComponentsToSpectrum(emissionProbe, emComponents, grid, 'emission');
+    });
+
+    return changed;
+  }
+
+  function renderSummary(selection, simulation) {
+    const fluorText = mapToArray(state.loadedProteins).map((fluorophore) => {
+      const stateSuffix = fluorophore.activeStateName && fluorophore.states && fluorophore.states.length > 1
+        ? ` (${fluorophore.activeStateName})`
+        : '';
+      const spectraSuffix = fluorophore.spectraSource ? ` • spectra ${describeSpectraSource(fluorophore.spectraSource)}` : '';
+      return `${fluorophore.name}${stateSuffix}${spectraSuffix}`;
+    }).join(', ') || 'None';
+    const sourceText = selection.sources.map((source) => {
+      const wavelength = numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm);
+      const lambdaText = wavelength !== null ? ` @ ${Math.round(wavelength)} nm` : '';
+      return `${source.display_label || source.name || 'Source'}${lambdaText}`;
+    }).join(', ') || 'None';
+    const detectorText = selection.detectors.map((detector) => {
+      const minNm = numberOrNull(detector.collection_min_nm);
+      const maxNm = numberOrNull(detector.collection_max_nm);
+      const window = detector.collection_enabled && minNm !== null && maxNm !== null
+        ? ` • ${Math.round(minNm)}-${Math.round(maxNm)} nm`
+        : '';
+      return `${detector.display_label || detector.name || 'Detector'}${window}`;
+    }).join(', ') || 'None';
+    const opticalStages = selection.debugSelections.map((entry) => entry.name).join(' → ') || 'No stage optics selected';
+    const results = Array.isArray(simulation && simulation.results) ? simulation.results : [];
+    const stedText = uniqueTexts(results
+      .filter((result) => result.sted && result.sted.applied)
+      .map((result) => `${result.fluorophoreName}: ${result.sted.label} via ${result.sted.sourceLabel}`))
+      .join('; ') || 'No depletion source selected';
+    const recommendationsText = uniqueTexts(results
+      .slice()
+      .sort((left, right) => (right.planningScore || 0) - (left.planningScore || 0))
+      .filter((result, index, rows) => rows.findIndex((candidate) => candidate.fluorophoreKey === result.fluorophoreKey) === index)
+      .map((result) => `${result.fluorophoreName}: ${result.pathLabel} (${result.qualityLabel})`))
+      .join('; ') || 'Load a fluorophore to rank detector paths';
+    const leakageWarnings = uniqueTexts(results
+      .filter((result) => result.excitationLeakageWarningLevel === 'high' || result.excitationLeakageWarningLevel === 'moderate')
+      .map((result) => `${result.pathLabel}: ${result.laserLeakageNote}`))
+      .join(' ');
+    const validity = simulation && simulation.validSelection === false
+      ? '<span style="color:var(--danger);font-weight:700;">Invalid mechanical path</span>'
+      : '<span style="color:var(--primary);font-weight:700;">Valid path</span>';
+
+    DOM.summary.innerHTML = [
+      `<div><strong>Route:</strong> ${normalizeRouteLabel(state.activeRoute)} • ${validity}</div>`,
+      `<div><strong>Fluorophores:</strong> ${fluorText}</div>`,
+      `<div><strong>Sources:</strong> ${sourceText}</div>`,
+      `<div><strong>Detectors:</strong> ${detectorText}</div>`,
+      `<div><strong>Optical path:</strong> ${opticalStages}</div>`,
+      `<div><strong>STED pairing:</strong> ${stedText}</div>`,
+      `<div><strong>Recommended paths:</strong> ${recommendationsText}</div>`,
+      leakageWarnings ? `<div><strong>Leakage warning:</strong> <span style="color:var(--danger);font-weight:600;">${leakageWarnings}</span></div>` : '',
+    ].filter(Boolean).join('');
+  }
+
+  function renderDetectionChart(simulation) {
+    if (!detectionChart) return;
+    const results = Array.isArray(simulation && simulation.results) ? simulation.results : [];
+    if (!results.length) {
+      detectionChart.data.labels = [];
+      detectionChart.data.datasets = [];
+      detectionChart.update();
+      return;
+    }
+    const fluorLabels = Array.from(new Set(results.map((row) => row.fluorophoreName)));
+    const pathLabels = Array.from(new Set(results.map((row) => row.pathLabel)));
+    const palette = ['rgba(37, 99, 235, 0.75)', 'rgba(124, 58, 237, 0.75)', 'rgba(234, 88, 12, 0.75)', 'rgba(15, 118, 110, 0.75)', 'rgba(190, 24, 93, 0.75)'];
+    detectionChart.data.labels = fluorLabels;
+    detectionChart.data.datasets = pathLabels.map((pathLabel, index) => ({
+      label: pathLabel,
+      data: fluorLabels.map((fluorName) => results.filter((row) => row.fluorophoreName === fluorName && row.pathLabel === pathLabel).reduce((sum, row) => sum + Number(row.detectorWeightedIntensity || 0), 0)),
+      backgroundColor: palette[index % palette.length],
+      borderWidth: 0,
+    }));
+    detectionChart.update();
+  }
+
+  function renderScoreboard(simulation) {
+    DOM.scoreboard.innerHTML = '';
+    if (!state.loadedProteins.size) {
+      DOM.scoreboard.innerHTML = '<li style="font-size:13px;color:var(--muted)">Load a fluorophore to evaluate detector paths.</li>';
+      return;
+    }
+    if (!simulation || !Array.isArray(simulation.results) || !simulation.results.length) {
+      DOM.scoreboard.innerHTML = '<li style="font-size:13px;color:var(--muted)">Select at least one excitation source and one detector to evaluate signal.</li>';
+      return;
+    }
+
+    const qualityColors = { good: 'var(--primary)', usable: '#ca8a04', poor: 'var(--danger)', blocked: 'var(--muted)' };
+    simulation.results
+      .slice()
+      .sort((left, right) => (right.correctnessScore || 0) - (left.correctnessScore || 0))
+      .forEach((result) => {
+        const dyeColor = colorHex(mapToArray(state.loadedProteins).find((item) => item.key === result.fluorophoreKey)?.emMax || 520);
+        const depletionText = Number(result.depletionOverlap || 0) > 0
+          ? ` • depletion ${Math.round((result.depletionOverlap || 0) * 100)}%`
+          : '';
+        const leakageText = result.excitationLeakageWarningLevel !== 'none'
+          ? ` • leak ${result.excitationLeakageWarningLevel}`
+          : '';
+        const item = document.createElement('li');
+        item.className = 'vm-list-item';
+        item.style.alignItems = 'flex-start';
+        item.style.gap = '12px';
+        item.innerHTML = `
+          <div style="min-width:0;">
+            <div style="font-weight:700; color:${dyeColor};">${result.fluorophoreName}</div>
+            <div style="font-size:11px; color:var(--muted);">${result.fluorophoreState} • ${result.pathLabel}</div>
+            <div style="font-size:11px; color:var(--muted);">Detector: ${result.detectorLabel} (${result.detectorClass})${depletionText}${leakageText}</div>
+            ${result.laserLeakageNote ? `<div style="font-size:11px; color:var(--danger); font-weight:700;">${result.laserLeakageNote}</div>` : ''}
+          </div>
+          <div class="vm-metric">
+            <div style="font-weight:700; color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${result.qualityLabel}</div>
+            <div>Recorded ${Number(result.recordedIntensity || 0).toFixed(3)}</div>
+            <div>Generated→detector ${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</div>
+            <div>Crosstalk ${Number(result.crosstalkPct || 0).toFixed(1)}% | Leak ${((result.excitationLeakageFraction || 0) * 100).toFixed(1)}%</div>
+            <div>Ex ${((result.excitationEfficiency || 0) * 100).toFixed(1)}% | Score ${Number(result.correctnessScore || 0).toFixed(1)}</div>
+          </div>
+        `;
+        DOM.scoreboard.appendChild(item);
+      });
+  }
+
+  function refreshOutputs() {
+
+    if (!state.activeInstrumentRaw || !state.activeInstrument) return;
+    if (!routeSelectionIsExplicit()) {
+      state.activeRoute = inferRouteFromSourceSettings() || state.activeInstrument.defaultRoute || null;
+    } else if (!state.activeRoute) {
+      state.activeRoute = state.activeInstrument.defaultRoute || null;
+    }
+    enforceValidStageOptions();
+    const selection = collectRuntimeSelection();
+    const fluorophores = mapToArray(state.loadedProteins);
+    let simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
+      preferTwoPhoton: state.preferTwoPhoton,
+    });
+    if (autoRepairBlockedPath(selection, simulation)) {
+      enforceValidStageOptions();
+      const repairedSelection = collectRuntimeSelection();
+      simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {
+        preferTwoPhoton: state.preferTwoPhoton,
+      });
+      state.lastSelection = repairedSelection;
+      state.lastSimulation = simulation;
+      renderReferenceSpectra(repairedSelection, simulation);
+      renderPropagationPanel(repairedSelection, simulation);
+      updatePipelineBeamColors(repairedSelection, simulation);
+      renderSummary(repairedSelection, simulation);
+      renderDetectionChart(simulation);
+      renderScoreboard(simulation);
+      return;
+    }
+    state.lastSelection = selection;
+    state.lastSimulation = simulation;
+    renderReferenceSpectra(selection, simulation);
+    renderPropagationPanel(selection, simulation);
+    updatePipelineBeamColors(selection, simulation);
+    renderSummary(selection, simulation);
+    renderDetectionChart(simulation);
+    renderScoreboard(simulation);
+  }
+
+
+  async function requestJSON(url, label = 'JSON request') {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`${label} failed (${response.status})`);
+    return response.json();
+  }
+
+  async function requestJSONFirst(urls, label = 'JSON request') {
+    let lastError = null;
+    for (const url of (Array.isArray(urls) ? urls : [])) {
+      try {
+        return await requestJSON(url, label);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error('No FPbase endpoint could be reached.');
+  }
+
+  function fluorophoreSearchTokens(row) {
+    return uniqueTexts([
+      row && row.key,
+      row && row.id,
+      row && row.slug,
+      row && row.uuid,
+      row && row.name,
+      ...((row && Array.isArray(row.aliases)) ? row.aliases : []),
+    ])
+      .map((value) => cleanString(value).toLowerCase())
+      .filter(Boolean);
+  }
+
+  function dedupeFluorophoreResults(rows) {
+    const seen = new Set();
+    const deduped = [];
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      if (!row) return;
+      const tokens = fluorophoreSearchTokens(row);
+      if (!tokens.length) {
+        const fallbackKey = cleanString(row.key || row.slug || row.id || row.uuid || row.name).toLowerCase();
+        if (!fallbackKey || seen.has(fallbackKey)) return;
+        seen.add(fallbackKey);
+        deduped.push(row);
+        return;
+      }
+      if (tokens.some((token) => seen.has(token))) return;
+      tokens.forEach((token) => seen.add(token));
+      deduped.push(row);
+    });
+    return deduped;
+  }
+
+  function localLibraryWarningSuffix() {
+    return state.localLibraryError ? ` Local library warning: ${state.localLibraryError}.` : '';
+  }
+
+  function withLocalLibraryStatus(message) {
+    return `${cleanString(message)}${localLibraryWarningSuffix()}`.trim();
+  }
+
+  async function loadLocalFluorophoreIndex() {
+    if (Array.isArray(state.localFluorophoreIndex)) return state.localFluorophoreIndex;
+    if (!state.localFluorophoreIndexPromise) {
+      state.localFluorophoreIndexPromise = requestJSON(LOCAL_FLUOROPHORE_INDEX_URL, 'Local fluorophore index')
+        .then((data) => {
+          state.localLibraryError = '';
+          state.localFluorophoreIndex = Array.isArray(data) ? data : [];
+          return state.localFluorophoreIndex;
+        })
+        .catch((error) => {
+          state.localLibraryError = error.message;
+          state.localFluorophoreIndex = [];
+          return [];
+        });
+    }
+    return state.localFluorophoreIndexPromise;
+  }
+
+  async function loadLocalFluorophoreById() {
+    if (state.localFluorophoreById && typeof state.localFluorophoreById === 'object') return state.localFluorophoreById;
+    if (!state.localFluorophoreByIdPromise) {
+      state.localFluorophoreByIdPromise = requestJSON(LOCAL_FLUOROPHORE_BY_ID_URL, 'Local fluorophore lookup map')
+        .then((data) => {
+          state.localLibraryError = '';
+          state.localFluorophoreById = data && typeof data === 'object' ? data : {};
+          return state.localFluorophoreById;
+        })
+        .catch((error) => {
+          state.localLibraryError = error.message;
+          state.localFluorophoreById = {};
+          return {};
+        });
+    }
+    return state.localFluorophoreByIdPromise;
+  }
+
+  async function fetchLocalFluorophoreDetail(summary) {
+    const byId = await loadLocalFluorophoreById();
+    const lookupKey = cleanString(summary && (summary.id || summary.slug || summary.key)).toLowerCase();
+    const mapped = lookupKey ? byId[lookupKey] : null;
+    const assetPath = cleanString(summary && summary.asset_path) || cleanString(mapped && mapped.asset_path);
+    if (!assetPath) throw new Error(`Local fluorophore asset not found for ${summary && summary.name ? summary.name : 'selection'}`);
+    return requestJSON(assetPath, `Local fluorophore ${summary && summary.name ? summary.name : lookupKey}`);
+  }
+
+  async function searchLocalFluorophores(query) {
+    const q = cleanString(query).toLowerCase();
+    if (!q) return [];
+    const index = await loadLocalFluorophoreIndex();
+    return (Array.isArray(index) ? index : [])
+      .filter((row) => fluorophoreSearchTokens(row).some((token) => token.includes(q)))
+      .slice(0, MAX_SEARCH_RESULTS)
+      .map((row) => ({
+        ...row,
+        key: cleanString(row.id || row.slug || row.name),
+        canonicalKey: cleanString(row.id || row.slug || row.name),
+        source: 'local',
+        sourceOrigin: 'local',
+      }));
+  }
+
+  function renderSearchResults(results) {
+    DOM.fpResults.innerHTML = '';
+    (Array.isArray(results) ? results : []).forEach((protein) => {
+      const item = document.createElement('li');
+      const sourceTag = protein.source === 'local' ? 'local' : 'FPbase';
+      item.textContent = `${protein.name} (Ex:${protein.exMax || '?'} Em:${protein.emMax || '?'}) [${sourceTag}]`;
+      item.addEventListener('click', () => {
+        loadProtein(protein);
+        DOM.fpResults.style.display = 'none';
+        DOM.fpQuery.value = '';
+      });
+      DOM.fpResults.appendChild(item);
+    });
+    DOM.fpResults.style.display = DOM.fpResults.children.length ? 'block' : 'none';
+  }
+
+  function fpbaseSearchUrls(query) {
+    const q = encodeURIComponent(query);
+    return [
+      `https://www.fpbase.org/api/proteins/?name__iexact=${q}&format=json`,
+      `https://www.fpbase.org/api/proteins/?name__istartswith=${q}&format=json`,
+      `https://www.fpbase.org/api/proteins/?name__icontains=${q}&format=json`,
+    ];
+  }
+
+  function proteinIdentifiers(protein) {
+    return uniqueTexts([protein.slug, protein.uuid, protein.id, protein.name]);
+  }
+
+  function fpbaseDetailUrls(protein) {
+    const urls = [];
+    proteinIdentifiers(protein).forEach((identifier) => {
+      urls.push(`https://www.fpbase.org/api/proteins/${encodeURIComponent(identifier)}/?format=json`);
+    });
+    if (protein.name) {
+      urls.push(`https://www.fpbase.org/api/proteins/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/?name__icontains=${encodeURIComponent(protein.name)}&format=json`);
+    }
+    return uniqueTexts(urls);
+  }
+
+  function fpbaseSpectraUrls(protein) {
+    const urls = [];
+    // 1. Prioritize exact database identifiers (slug and uuid) over fuzzy names
+    if (protein.slug) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__slug__iexact=${encodeURIComponent(protein.slug)}&format=json`);
+      // Add the alternate API path just in case of API routing changes
+      urls.push(`https://www.fpbase.org/api/spectra/?protein__slug__iexact=${encodeURIComponent(protein.slug)}&format=json`);
+    }
+    if (protein.uuid) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__uuid=${encodeURIComponent(protein.uuid)}&format=json`);
+    }
+    // 2. Fallback to fuzzy name searches
+    if (protein.name) {
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?protein__name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+      urls.push(`https://www.fpbase.org/api/proteins/spectra/?name__iexact=${encodeURIComponent(protein.name)}&format=json`);
+    }
+    return uniqueTexts(urls);
+  }
+
+  function normalizeSearchFallback(query) {
+    return VM.searchFallbackFluorophores(query).map((record) => ({
+      key: record.key,
+      canonicalKey: record.canonicalKey,
+      id: record.id,
+      uuid: record.uuid,
+      slug: record.slug,
+      name: record.name,
+      exMax: record.exMax,
+      emMax: record.emMax,
+      brightness: record.brightness,
+      ec: record.ec,
+      qy: record.qy,
+      fallbackRecord: record,
+      source: 'fpbase',
+      sourceOrigin: 'bundled_cache',
+    }));
+  }
+
+  async function searchFPbase(query) {
+    const q = cleanString(query);
+    if (q.length < 2) return { results: [], usedFallback: false };
+    let results = [];
+    let usedFallback = false;
+    try {
+      const normalized = [];
+      for (const endpoint of fpbaseSearchUrls(q)) {
+        try {
+          const data = await requestJSON(endpoint, 'FPbase search request');
+          normalized.push(...VM.normalizeFPbaseSearchResults(data).map((protein) => ({
+            ...protein,
+            source: 'fpbase',
+            sourceOrigin: 'fpbase',
+          })));
+        } catch (error) {
+          // continue to next documented lookup
+        }
+      }
+      results = dedupeFluorophoreResults(normalized)
+        .filter((protein) => fluorophoreSearchTokens(protein).some((token) => token.includes(q.toLowerCase())))
+        .slice(0, MAX_SEARCH_RESULTS);
+      if (!results.length) {
+        usedFallback = true;
+        results = normalizeSearchFallback(q).slice(0, MAX_SEARCH_RESULTS);
+      }
+    } catch (error) {
+      usedFallback = true;
+      results = normalizeSearchFallback(q).slice(0, MAX_SEARCH_RESULTS);
+    }
+    return { results, usedFallback };
+  }
+
+  async function searchFluorophores(query) {
+    const q = cleanString(query);
+    if (q.length < 2) {
+      DOM.fpResults.style.display = 'none';
+      DOM.searchStatus.textContent = state.localLibraryError ? withLocalLibraryStatus('') : '';
+      return;
+    }
+    DOM.searchStatus.textContent = withLocalLibraryStatus('Searching local library and FPbase…');
+    const [localResults, fpbaseState] = await Promise.all([
+      searchLocalFluorophores(q),
+      searchFPbase(q),
+    ]);
+    const mergedResults = dedupeFluorophoreResults([...localResults, ...(fpbaseState.results || [])]).slice(0, MAX_SEARCH_RESULTS);
+    if (!mergedResults.length) {
+      DOM.fpResults.style.display = 'none';
+      DOM.searchStatus.textContent = withLocalLibraryStatus(`No fluorophores found for “${q}”.`);
+      return;
+    }
+    renderSearchResults(mergedResults);
+    const hasLocal = localResults.length > 0;
+    const hasFpbase = (fpbaseState.results || []).some((row) => row.source === 'fpbase' && !row.fallbackRecord);
+    const usedFallback = Boolean(fpbaseState.usedFallback);
+    const sourceParts = [];
+    if (hasLocal) sourceParts.push('local library');
+    if (hasFpbase) sourceParts.push('FPbase');
+    if (!hasFpbase && usedFallback) sourceParts.push('bundled FPbase fallback');
+    const sourceText = sourceParts.length ? sourceParts.join(' + ') : 'available sources';
+    DOM.searchStatus.textContent = withLocalLibraryStatus(
+      `${mergedResults.length} candidate fluorophore${mergedResults.length === 1 ? '' : 's'} loaded from ${sourceText}.`
+    );
+  }
+
+  async function fetchProteinBundle(protein) {
+    if (protein.fallbackRecord) {
+      return {
+        detail: protein.fallbackRecord.raw && protein.fallbackRecord.raw.detail
+          ? protein.fallbackRecord.raw.detail
+          : (protein.fallbackRecord.raw && protein.fallbackRecord.raw.summary ? protein.fallbackRecord.raw.summary : protein.fallbackRecord),
+        spectra: protein.fallbackRecord,
+      };
+    }
+
+    let detail = null;
+    let spectra = null;
+
+    try {
+      const detailResponse = await requestJSONFirst(fpbaseDetailUrls(protein), 'FPbase detail request');
+      const detailRows = VM.normalizeResultsShape(detailResponse);
+      detail = Array.isArray(detailRows) && detailRows.length ? detailRows[0] : detailResponse;
+    } catch (error) {
+      detail = protein.raw || protein;
+    }
+
+    // Explicitly verify that the fetched spectra payload actually contains data points.
+    // A query might return HTTP 200 OK but with an empty { results: [] } array.
+    for (const url of fpbaseSpectraUrls(protein)) {
+      try {
+        const response = await requestJSON(url, 'FPbase spectra request');
+        const parsedRows = VM.normalizeFPbaseSpectraResponse(response);
+        if (parsedRows && parsedRows.length > 0) {
+          spectra = response;
+          break; // Found valid spectra, stop checking other URLs
+        }
+      } catch (error) {
+        // Network or parsing error, continue to the next fallback URL
+      }
+    }
+
+    return { detail, spectra };
+  }
+
+  async function fetchProteinDetail(summary) {
+    if (summary && summary.source === 'local') {
+      return {
+        detail: await fetchLocalFluorophoreDetail(summary),
+        spectra: null,
+      };
+    }
+    return fetchProteinBundle(summary);
+  }
+
+  function hydrateProteinFromSearch(summary, bundle) {
+    const sourceOrigin = summary && summary.source === 'local' ? 'local' : (summary && summary.sourceOrigin) || 'fpbase';
+    return VM.normalizeFluorophoreDetail(bundle.detail, { ...summary, sourceOrigin }, bundle.spectra);
+  }
+
+  async function loadProtein(summary) {
+    const cacheKey = summary.key || summary.slug || summary.id || summary.name;
+    if (state.loadedProteins.has(cacheKey)) return;
+    if (summary.states && summary.spectra) {
+      state.loadedProteins.set(cacheKey, summary);
+      renderActiveDyes();
+      refreshOutputs();
+      return;
+    }
+    DOM.searchStatus.textContent = withLocalLibraryStatus(`Loading ${summary.name}…`);
+    try {
+      const bundle = await fetchProteinDetail(summary);
+      const fluorophore = hydrateProteinFromSearch(summary, bundle);
+      state.loadedProteins.set(cacheKey, fluorophore);
+      DOM.searchStatus.textContent = withLocalLibraryStatus(`${fluorophore.name} loaded (${describeSpectraSource(fluorophore.spectraSource || summary.sourceOrigin || 'detail')}).`);
+      renderActiveDyes();
+      refreshOutputs();
+    } catch (error) {
+      console.error('Failed to load fluorophore detail', error);
+      DOM.searchStatus.textContent = withLocalLibraryStatus(`Error loading fluorophore: ${error.message}`);
+    }
+  }
+
+  function renderActiveDyes() {
+
+    DOM.activeDyes.innerHTML = '';
+    if (!state.loadedProteins.size) {
+      DOM.activeDyes.innerHTML = '<li style="font-size:12px;color:var(--muted)">No dyes loaded.</li>';
+      return;
+    }
+
+    state.loadedProteins.forEach((fluorophore, key) => {
+      const item = document.createElement('li');
+      item.className = 'vm-list-item dye-chip';
+      item.style.alignItems = 'center';
+      item.style.gap = '10px';
+      item.style.borderLeft = `4px solid ${colorHex(fluorophore.emMax || 520)}`;
+
+      const left = document.createElement('div');
+      left.style.display = 'grid';
+      left.style.gap = '4px';
+      const title = document.createElement('span');
+      title.textContent = fluorophore.name;
+      left.appendChild(title);
+
+      if (Array.isArray(fluorophore.states) && fluorophore.states.length > 1) {
+        const select = document.createElement('select');
+        select.style.fontSize = '12px';
+        fluorophore.states.forEach((entry) => {
+          const option = document.createElement('option');
+          option.value = entry.key;
+          option.textContent = entry.name;
+          if (entry.key === fluorophore.activeStateKey) option.selected = true;
+          select.appendChild(option);
+        });
+        select.addEventListener('change', () => {
+          const updated = VM.setFluorophoreState(fluorophore, select.value);
+          state.loadedProteins.set(key, updated);
+          renderActiveDyes();
+          refreshOutputs();
+        });
+        left.appendChild(select);
+      } else if (fluorophore.activeStateName) {
+        const subtitle = document.createElement('span');
+        subtitle.className = 'vm-mini';
+        subtitle.textContent = `${fluorophore.activeStateName}${fluorophore.spectraSource ? ` • ${describeSpectraSource(fluorophore.spectraSource)}` : ''}`;
+        left.appendChild(subtitle);
+      }
+
+      item.appendChild(left);
+
+      const remove = document.createElement('button');
+      remove.textContent = '✕';
+      remove.addEventListener('click', () => {
+        state.loadedProteins.delete(key);
+        renderActiveDyes();
+        refreshOutputs();
+      });
+      item.appendChild(remove);
+      DOM.activeDyes.appendChild(item);
+    });
+  }
+
+  function debounce(fn, wait) {
+    let timeout = null;
+    return function debounced(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(this, args), wait);
+    };
+  }
+
+  window.addEventListener('load', init);
+})();
