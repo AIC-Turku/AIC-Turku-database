@@ -1278,58 +1278,64 @@
     const grid = Array.isArray(simulation && simulation.grid) ? simulation.grid : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
     const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
     const pathEntries = Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [];
-    const totalEmission = sumSpectra(emissionEntries, 'postOpticsSpectrum', grid);
-    const aggregatedPaths = aggregateSpectraByLabel(pathEntries, 'spectrum', grid);
     const aggregatedLeakage = aggregateSpectraByLabel(pathEntries, 'excitationLeakageSpectrum', grid, 'pathKey');
-    const scale = spectrumScale([
-      Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : [],
-      totalEmission,
-      ...aggregatedPaths.map((entry) => entry.values),
-      ...aggregatedLeakage.map((entry) => entry.values),
-    ]);
+
+    const totalEmission = sumSpectra(emissionEntries, 'postOpticsSpectrum', grid);
+    const scaleToFit = [totalEmission];
+    pathEntries.forEach((entry) => scaleToFit.push(entry.spectrum));
+    const scale = spectrumScale(scaleToFit);
 
     const datasets = [];
+
     if (Array.isArray(simulation && simulation.excitationAtSample) && simulation.excitationAtSample.some((value) => value > 0)) {
       datasets.push(chartDatasetFromGrid('Excitation at sample', grid, asPercentArray(simulation.excitationAtSample, scale), {
-        borderColor: '#334155',
+        borderColor: 'rgba(148, 163, 184, 1)',
+        backgroundColor: 'rgba(148, 163, 184, 0.2)',
         borderWidth: 2,
+        fill: true,
+        tension: 0,
       }));
     }
+
     emissionEntries.forEach((entry) => {
       const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
       const color = colorHex((fluor && fluor.emMax) || 520);
-      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} after optics`, grid, asPercentArray(entry.postOpticsSpectrum, scale), {
+      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} (generated)`, grid, asPercentArray(entry.generatedSpectrum, scale), {
         borderColor: color,
-        borderDash: [5, 3],
-        backgroundColor: rgbaFromHex(color, 0.05),
+        borderDash: [3, 3],
+        borderWidth: 1.5,
       }));
     });
-    const palette = ['#0f766e', '#7c3aed', '#ea580c', '#2563eb', '#be123c'];
-    const pathColorByLabel = new Map();
-    aggregatedPaths.forEach((entry, index) => {
-      const color = palette[index % palette.length];
-      pathColorByLabel.set(entry.label, color);
-      datasets.push(chartDatasetFromGrid(entry.label, grid, asPercentArray(entry.values, scale), {
+
+    pathEntries.forEach((entry) => {
+      const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
+      const color = colorHex((fluor && fluor.emMax) || 520);
+
+      datasets.push(chartDatasetFromGrid(`${entry.fluorophoreName} at ${entry.detectorLabel}`, grid, asPercentArray(entry.spectrum, scale), {
         borderColor: color,
-        backgroundColor: rgbaFromHex(color, 0.08),
-        borderWidth: 3,
+        backgroundColor: rgbaFromHex(color, 0.45),
+        borderWidth: 2,
+        fill: true,
+        tension: 0.2,
       }));
-      const mask = entry.entry && Array.isArray(entry.entry.collectionMask) ? entry.entry.collectionMask : [];
-      if (mask.some((value) => value < 0.999)) {
-        datasets.push(chartDatasetFromGrid(`${entry.label} window`, grid, asPercentArray(mask, 1), {
-          borderColor: color,
+
+      if (entry.collectionMask && entry.collectionMask.some((value) => value < 0.999)) {
+        datasets.push(chartDatasetFromGrid(`${entry.detectorLabel} window`, grid, asPercentArray(entry.collectionMask, 1), {
+          borderColor: '#94a3b8',
           borderDash: [2, 4],
           borderWidth: 1.5,
         }));
       }
     });
+
     aggregatedLeakage.forEach((entry) => {
       if (!entry.values.some((value) => value > 1e-6)) return;
-      const color = pathColorByLabel.get(entry.label) || '#dc2626';
-      datasets.push(chartDatasetFromGrid(`${entry.label} excitation leak`, grid, asPercentArray(entry.values, scale), {
-        borderColor: color,
-        borderDash: [6, 3],
-        borderWidth: 1.75,
+      datasets.push(chartDatasetFromGrid(`${entry.label} LEAKAGE!`, grid, asPercentArray(entry.values, scale), {
+        borderColor: '#dc2626',
+        backgroundColor: 'rgba(220, 38, 38, 0.5)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0,
       }));
     });
 
@@ -1337,6 +1343,7 @@
     propagationChart.options.scales.x.max = chartMax;
     propagationChart.update();
   }
+
 
 
   function averageSpectrumCurves(curves, grid) {
