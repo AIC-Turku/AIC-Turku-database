@@ -1810,11 +1810,10 @@
         detail: protein.fallbackRecord.raw && protein.fallbackRecord.raw.detail
           ? protein.fallbackRecord.raw.detail
           : (protein.fallbackRecord.raw && protein.fallbackRecord.raw.summary ? protein.fallbackRecord.raw.summary : protein.fallbackRecord),
-        spectra: protein.fallbackRecord,
+        spectra: null,
       };
     }
     let detail = null;
-    let spectra = null;
     try {
       const detailResponse = await requestJSONFirst(fpbaseDetailUrls(protein));
       const detailRows = VM.normalizeResultsShape(detailResponse);
@@ -1822,12 +1821,8 @@
     } catch (error) {
       detail = protein.raw || protein;
     }
-    try {
-      spectra = await requestJSONFirst(fpbaseSpectraUrls(protein));
-    } catch (error) {
-      spectra = null;
-    }
-    return { detail, spectra };
+    // Skip the flaky separate spectra API call; the detail object already contains the states & spectra
+    return { detail, spectra: null };
   }
 
   async function loadProtein(summary) {
