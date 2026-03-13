@@ -97,7 +97,10 @@
     let r = 0;
     let g = 0;
     let b = 0;
-    if (wl >= 380 && wl < 440) {
+    if (wl < 380) {
+      r = 0.5;
+      b = 1;
+    } else if (wl >= 380 && wl < 440) {
       r = -(wl - 440) / 60;
       b = 1;
     } else if (wl >= 440 && wl < 490) {
@@ -114,6 +117,8 @@
       g = -(wl - 645) / 65;
     } else if (wl >= 645 && wl <= 780) {
       r = 1;
+    } else if (wl > 780) {
+      r = 0.5;
     }
     const toHex = (value) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0');
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
@@ -268,6 +273,7 @@
   }
 
   function setPipeSpectrumColor(pipeKey, spectrum, grid) {
+    if (!pipeKey || typeof pipeKey !== 'string') return;
     const light = DOM.graph.querySelector(`.flowing-light[data-pipe-key="${CSS.escape(pipeKey)}"]`);
     if (!light) return;
     const color = VM.spectrumToCSSColor(spectrum, grid);
