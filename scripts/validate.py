@@ -435,7 +435,8 @@ def _resolve_path_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
 
     for segment in segments:
         is_list = segment.endswith('[]')
-        key = segment[:-2] if is_list else segment
+        is_map = segment.endswith('{}')
+        key = segment[:-2] if (is_list or is_map) else segment
         next_nodes: list[ResolvedNode] = []
         for node in nodes:
             current = node.value
@@ -451,6 +452,13 @@ def _resolve_path_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
                 for idx, item in enumerate(child):
                     ctx = item if isinstance(item, dict) else None
                     next_nodes.append(ResolvedNode(value=item, path=f"{child_path}[{idx}]", context_item=ctx))
+            elif is_map:
+                if not isinstance(child, dict):
+                    continue
+                for map_key, item in child.items():
+                    map_item_path = f"{child_path}.{map_key}"
+                    ctx = item if isinstance(item, dict) else None
+                    next_nodes.append(ResolvedNode(value=item, path=map_item_path, context_item=ctx))
             else:
                 ctx = node.context_item if node.context_item is not None else (child if isinstance(child, dict) else None)
                 next_nodes.append(ResolvedNode(value=child, path=child_path, context_item=ctx))
@@ -470,7 +478,7 @@ def _resolve_rule_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
     segments = dotted_path.split('.')
     if len(segments) == 1:
         segment = segments[0]
-        if segment.endswith('[]'):
+        if segment.endswith('[]') or segment.endswith('{}'):
             key = segment[:-2]
             if key in payload:
                 return [ResolvedNode(value=payload.get(key), path=key, context_item=None)]
@@ -487,7 +495,8 @@ def _resolve_rule_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
 
     leaf_segment = segments[-1]
     is_leaf_list = leaf_segment.endswith('[]')
-    leaf_key = leaf_segment[:-2] if is_leaf_list else leaf_segment
+    is_leaf_map = leaf_segment.endswith('{}')
+    leaf_key = leaf_segment[:-2] if (is_leaf_list or is_leaf_map) else leaf_segment
     resolved_nodes: list[ResolvedNode] = []
     for parent in parent_nodes:
         if not isinstance(parent.value, dict):
@@ -518,6 +527,21 @@ def _resolve_rule_nodes(payload: dict[str, Any], dotted_path: str) -> list[Resol
             for idx, item in enumerate(child):
                 ctx = item if isinstance(item, dict) else None
                 resolved_nodes.append(ResolvedNode(value=item, path=f"{child_path}[{idx}]", context_item=ctx))
+            continue
+        if is_leaf_map:
+            if not isinstance(child, dict):
+                resolved_nodes.append(
+                    ResolvedNode(
+                        value=child,
+                        path=child_path,
+                        context_item=parent.context_item if parent.context_item is not None else parent.value,
+                    )
+                )
+                continue
+            for map_key, item in child.items():
+                item_path = f"{child_path}.{map_key}"
+                ctx = item if isinstance(item, dict) else None
+                resolved_nodes.append(ResolvedNode(value=item, path=item_path, context_item=ctx))
             continue
 
         ctx = parent.context_item if parent.context_item is not None else (child if isinstance(child, dict) else None)
@@ -706,7 +730,7 @@ def _parent_path_from_list_path(path: str) -> str:
 def _list_context_path(path: str) -> str | None:
     parts = [part for part in path.split('.') if part]
     for idx in range(len(parts) - 1, -1, -1):
-        if parts[idx].endswith('[]'):
+        if parts[idx].endswith('[]') or parts[idx].endswith('{}'):
             return '.'.join(parts[: idx + 1])
     return None
 
