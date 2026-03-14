@@ -117,8 +117,8 @@ hardware:
               center_nm: 357
               width_nm: 44
             dichroic:
-              component_type: longpass
-              cut_on_nm: 400
+              component_type: dichroic
+              cutoffs_nm: [400]
             emission_filter:
               component_type: bandpass
               center_nm: 447
@@ -131,8 +131,8 @@ hardware:
               center_nm: 445
               width_nm: 45
             dichroic:
-              component_type: longpass
-              cut_on_nm: 480
+              component_type: dichroic
+              cutoffs_nm: [480]
             emission_filter:
               component_type: bandpass
               center_nm: 510
@@ -146,8 +146,8 @@ hardware:
               center_nm: 470
               width_nm: 22
             dichroic:
-              component_type: longpass
-              cut_on_nm: 495
+              component_type: dichroic
+              cutoffs_nm: [495]
             emission_filter:
               component_type: bandpass
               center_nm: 510
@@ -161,8 +161,8 @@ hardware:
               center_nm: 531
               width_nm: 40
             dichroic:
-              component_type: longpass
-              cut_on_nm: 560
+              component_type: dichroic
+              cutoffs_nm: [560]
             emission_filter:
               component_type: bandpass
               center_nm: 593
@@ -175,8 +175,8 @@ hardware:
               center_nm: 628
               width_nm: 40
             dichroic:
-              component_type: longpass
-              cut_on_nm: 660
+              component_type: dichroic
+              cutoffs_nm: [660]
             emission_filter:
               component_type: bandpass
               center_nm: 692
