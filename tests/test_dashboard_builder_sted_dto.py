@@ -135,10 +135,14 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertIn("pulsed depletion laser", light["method_sentence"])
         self.assertIn("Role", "\n".join(light["spec_lines"]))
         self.assertIn("Timing mode", "\n".join(light["spec_lines"]))
+        self.assertEqual(light["kind_label"], "laser")
+        self.assertEqual(light["role_label"], "depletion")
+        self.assertEqual(light["timing_mode_label"], "pulsed")
 
         detector = hardware["detectors"][0]
         self.assertIn("time-gated acquisition", detector["method_sentence"])
         self.assertIn("Supports time gating", "\n".join(detector["spec_lines"]))
+        self.assertEqual(detector["kind_label"], "hybrid")
 
         modulator = hardware["optical_modulators"][0]
         self.assertEqual(modulator["display_label"], "slm")

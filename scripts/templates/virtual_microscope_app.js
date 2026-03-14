@@ -175,8 +175,10 @@
     if (numberOrNull(component.tunable_min_nm) !== null && numberOrNull(component.tunable_max_nm) !== null) {
       rows.push(`Tunable range: ${Math.round(numberOrNull(component.tunable_min_nm))}-${Math.round(numberOrNull(component.tunable_max_nm))} nm`);
     }
-    if (component.role) rows.push(`Role: ${component.role}`);
-    if (component.kind) rows.push(`Kind: ${component.kind}`);
+    const roleLabel = cleanString(component.role_label || component.role);
+    const kindLabel = cleanString(component.kind_label || component.kind);
+    if (roleLabel) rows.push(`Role: ${roleLabel}`);
+    if (kindLabel) rows.push(`Kind: ${kindLabel}`);
     if (component.detector_class) rows.push(`Detector: ${component.detector_class}`);
     if (numberOrNull(component.collection_min_nm) !== null && numberOrNull(component.collection_max_nm) !== null) {
       rows.push(`Collection: ${Math.round(numberOrNull(component.collection_min_nm))}-${Math.round(numberOrNull(component.collection_max_nm))} nm`);
@@ -921,8 +923,9 @@
       const meta = document.createElement('div');
       meta.className = 'vm-mini';
       meta.textContent = [
-        source.role ? `role: ${source.role}` : '',
-        source.kind ? `kind: ${source.kind}` : '',
+        source.role_label ? `role: ${source.role_label}` : (source.role ? `role: ${source.role}` : ''),
+        source.kind_label ? `kind: ${source.kind_label}` : (source.kind ? `kind: ${source.kind}` : ''),
+        source.route_label ? `route: ${source.route_label}` : '',
         normalizeSourceRoutes(source).length ? `routes: ${normalizeSourceRoutes(source).join(', ')}` : '',
       ].filter(Boolean).join(' • ');
       if (meta.textContent) card.appendChild(meta);
@@ -1335,7 +1338,7 @@
     if (!detector) return document.createElement('div');
     const setting = ensureDetectorSetting(mechanism, detector);
     const detectorClass = detector.detector_class || VM.detectorClass(detector.kind || detector.endpoint_type);
-    const endpointType = cleanString(detector.endpoint_type || detectorClass || detector.kind || 'detector').replace(/_/g, ' ');
+    const endpointType = cleanString(detector.kind_label || detector.endpoint_type_label || detector.endpoint_type || detectorClass || detector.kind || 'detector').replace(/_/g, ' ');
     const labelText = mechanism.display_label || detector.display_label || detector.name || 'Detector';
     const block = document.createElement('div');
     block.className = 'tunable-control';
