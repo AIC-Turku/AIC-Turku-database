@@ -305,11 +305,11 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             },
         )
 
-        instrument_ids, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        instrument_ids, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
 
         self.assertIn('valid-scope', instrument_ids)
-        self.assertNotIn('invalid-scope', instrument_ids)
-        self.assertIn('missing_required_field', {issue.code for issue in issues})
+        self.assertIn('invalid-scope', instrument_ids)
+        self.assertIn('missing_required_field', {warning.code for warning in warnings})
 
     def test_missing_canonical_and_alias_detector_pixel_fields_do_not_emit_false_superseded_warning(self) -> None:
         self._write_json_yaml(
@@ -358,7 +358,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         issue_codes = [issue.code for issue in issues]
         warning_codes = [warning.code for warning in warnings]
-        self.assertIn('missing_conditional_field', issue_codes)
+        self.assertIn('missing_conditional_field', warning_codes)
         self.assertNotIn('field_superseded', warning_codes)
 
     def test_evaluate_required_if_supports_item_field_in(self) -> None:
@@ -430,12 +430,12 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             },
         )
 
-        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
-        self.assertIn('missing_conditional_field', {issue.code for issue in issues})
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertIn('missing_conditional_field', {warning.code for warning in warnings})
         self.assertTrue(
             any(
                 path.endswith('instruments/map-missing-bands.yaml:hardware.light_path.excitation_mechanisms[0].positions.Pos_1.bands')
-                for path in {issue.path for issue in issues}
+                for path in {warning.path for warning in warnings}
             )
         )
 
@@ -562,13 +562,13 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
 
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
-        self.assertIn('missing_conditional_field', {issue.code for issue in issues})
+        self.assertIn('missing_conditional_field', {warning.code for warning in warnings})
         self.assertTrue(
             any(
-                issue.path.endswith(
+                warning.path.endswith(
                     'instruments/map-missing-multiband-bands.yaml:hardware.light_path.emission_mechanisms[0].positions.Pos_1.bands'
                 )
-                for issue in issues
+                for warning in warnings
             )
         )
 
@@ -706,10 +706,10 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             },
         )
 
-        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
 
-        self.assertIn('missing_required_field', {issue.code for issue in issues})
-        self.assertTrue(any('excitation_mechanisms[].slots' in issue.message for issue in issues if issue.code == 'missing_required_field'))
+        self.assertIn('missing_required_field', {warning.code for warning in warnings})
+        self.assertTrue(any('excitation_mechanisms[].slots' in warning.message for warning in warnings if warning.code == 'missing_required_field'))
 
     def test_required_if_field_equals_any_not_triggered_when_values_do_not_match(self) -> None:
         self._write_json_yaml(
@@ -753,9 +753,9 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             },
         )
 
-        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
 
-        self.assertNotIn('missing_conditional_field', {issue.code for issue in issues})
+        self.assertNotIn('missing_conditional_field', {warning.code for warning in warnings})
 
     def test_validator_does_not_infer_tunable_requirements_from_notes(self) -> None:
         self._write_json_yaml(
@@ -948,8 +948,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
 
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
-        issue_codes = {issue.code for issue in issues}
-        self.assertIn('missing_conditional_field', issue_codes)
+        warning_codes = {warning.code for warning in warnings}
+        self.assertIn('missing_conditional_field', warning_codes)
 
 
     def test_list_item_type_validation_for_depletion_targets(self) -> None:
@@ -1107,8 +1107,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             },
         )
 
-        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
-        missing_conditional_messages = [w.message for w in issues if w.code == 'missing_conditional_field']
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        missing_conditional_messages = [w.message for w in warnings if w.code == 'missing_conditional_field']
         self.assertTrue(any('hardware.light_sources[].pulse_width_ps' in msg for msg in missing_conditional_messages))
         self.assertTrue(any('hardware.light_sources[].depletion_targets_nm' in msg for msg in missing_conditional_messages))
 
@@ -1190,7 +1190,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
 
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
-        missing_messages = [w.message for w in issues if w.code == 'missing_conditional_field']
+        missing_messages = [w.message for w in warnings if w.code == 'missing_conditional_field']
         self.assertFalse(any(w.code == 'invalid_light_path' for w in warnings))
         self.assertTrue(any('hardware.light_path.excitation_mechanisms[].positions{}.center_nm' in message for message in missing_messages))
         self.assertTrue(any('hardware.light_path.emission_mechanisms[].positions{}.bands' in message for message in missing_messages))

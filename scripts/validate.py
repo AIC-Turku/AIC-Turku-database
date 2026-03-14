@@ -1247,7 +1247,7 @@ def validate_instrument_ledgers(
             if is_required and not resolved_has_value:
                 if is_retired_instrument:
                     continue
-                issues.append(
+                warnings.append(
                     ValidationIssue(
                         code='missing_required_field',
                         path=f"{instrument_file.as_posix()}:{rule.path}",
@@ -1272,7 +1272,7 @@ def validate_instrument_ledgers(
                         item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                     )
                     if required_for_item and value in (None, ''):
-                        issues.append(
+                        warnings.append(
                             ValidationIssue(
                                 code='missing_conditional_field',
                                 path=full_path,
