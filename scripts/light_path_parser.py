@@ -3,6 +3,12 @@
 The virtual microscope consumes a validated, normalized hardware payload generated from
 instrument YAML. This module keeps that payload browser-friendly while preserving enough
 metadata for route-aware spectral simulation.
+
+Identity field semantics used by parser payloads:
+- manufacturer: company/vendor/brand that makes a component
+- model: vendor-facing model/designation (primary structured identity)
+- product_code: explicit catalog/order/SKU/reference code only, never inferred
+- name: local/display instance label for UI context
 """
 
 from __future__ import annotations
@@ -333,11 +339,12 @@ def _render_kind(component: dict[str, Any]) -> str:
 
 def _build_details(component: dict[str, Any]) -> str:
     manufacturer = component.get("manufacturer")
+    model = component.get("model")
     product_code = component.get("product_code")
     notes = component.get("notes")
     parts = [
         str(part).strip()
-        for part in (manufacturer, product_code, notes)
+        for part in (manufacturer, model, product_code, notes)
         if isinstance(part, str) and part.strip()
     ]
     return " | ".join(parts)

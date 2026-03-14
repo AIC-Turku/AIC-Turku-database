@@ -15,6 +15,12 @@ Produces:
 - mkdocs.yml (auto-generated)
 
 The builder is intentionally deterministic: same inputs -> same output tree.
+
+Identity semantics contract used throughout DTO normalization:
+- manufacturer: vendor/brand that makes the component
+- model: vendor-facing model/designation of the component
+- product_code: explicit catalog/order/SKU/reference code only (never inferred)
+- name: local/display instance label (never treated as model/product_code)
 """
 
 from __future__ import annotations
@@ -607,17 +613,19 @@ def _vocab_display(vocabulary: Vocabulary, vocab_name: str, value: Any) -> str:
 
 
 def _objective_display_label(vocabulary: Vocabulary, obj: dict[str, Any]) -> str:
-    model = clean_text(obj.get("model") or obj.get("name"))
+    model = clean_text(obj.get("model"))
+    instance_name = clean_text(obj.get("name"))
     mag = _fmt_num(obj.get("magnification") or obj.get("mag"))
     na = _fmt_num(obj.get("numerical_aperture") or obj.get("na"))
     immersion = _vocab_display(vocabulary, "objective_immersion", obj.get("immersion"))
-    parts = [model, f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion.upper() if immersion else ""]
-    return " ".join(part for part in parts if part).strip() or model or "Objective"
+    identity_label = instance_name or model
+    parts = [identity_label, f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion.upper() if immersion else ""]
+    return " ".join(part for part in parts if part).strip() or identity_label or "Objective"
 
 
 def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str, Any]:
     manufacturer = clean_text(obj.get("manufacturer"))
-    model = clean_text(obj.get("model") or obj.get("name"))
+    model = clean_text(obj.get("model"))
     product_code = clean_text(obj.get("product_code"))
     immersion = _vocab_display(vocabulary, "objective_immersion", obj.get("immersion"))
     correction = _vocab_display(vocabulary, "objective_corrections", obj.get("correction") or obj.get("correction_class"))
@@ -658,6 +666,7 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
 def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str, Any]:
     manufacturer = clean_text(det.get("manufacturer"))
     model = clean_text(det.get("model"))
+    product_code = clean_text(det.get("product_code"))
     kind_label = _vocab_display(vocabulary, "detector_kinds", det.get("kind") or det.get("type"))
     route_label = _vocab_display(vocabulary, "optical_routes", det.get("path") or det.get("route"))
     pixel_pitch = _fmt_num(det.get("pixel_pitch_um") or det.get("pixel_size_um"))
@@ -691,6 +700,7 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
         ("Bit depth", f"`{bit_depth}`" if bit_depth else None),
         ("QE peak", f"`{_fmt_num(det.get('qe_peak_pct'))}%`" if det.get("qe_peak_pct") not in (None, "") else None),
         ("Read noise", f"`{_fmt_num(det.get('read_noise_e'))} e-`" if det.get("read_noise_e") not in (None, "") else None),
+        ("Product code", f"`{product_code}`" if product_code else None),
         ("Notes", clean_text(det.get("notes"))),
     )
     return {
@@ -723,6 +733,7 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
     wavelength = _fmt_num(src.get("wavelength_nm") or src.get("wavelength"))
     wavelength_label = _format_wavelength_label(src.get("wavelength_nm") or src.get("wavelength"))
     technology = clean_text(src.get("technology"))
+    product_code = clean_text(src.get("product_code"))
     power = clean_text(src.get("power"))
 
     normalized_model = model.lower()
@@ -769,6 +780,7 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         ("Technology", technology),
         ("Wavelength", f"`{wavelength_label}`" if wavelength_label else None),
         ("Power", f"`{power}`" if power else None),
+        ("Product code", f"`{product_code}`" if product_code else None),
         ("Notes", clean_text(src.get("notes"))),
     )
     return {
@@ -795,9 +807,10 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
         if clean_text(item)
     ] if isinstance(modulator.get("supported_phase_masks"), list) else []
     manufacturer = clean_text(modulator.get("manufacturer"))
-    model = clean_text(modulator.get("model") or modulator.get("name"))
+    model = clean_text(modulator.get("model"))
+    instance_name = clean_text(modulator.get("name"))
     component_reference = _component_reference(manufacturer, model, type_label or "optical modulator")
-    display_label = type_label or model or "Optical Modulator"
+    display_label = type_label or instance_name or model or "Optical Modulator"
     method_sentence = f"Beam shaping used {component_reference} optics{f' with {_human_list(supported_masks)} phase mask support' if supported_masks else ''}."
     if modulator_type in {"slm", "phase_plate", "vortex_plate"}:
         method_sentence = f"STED beam shaping was configured with {component_reference}{f' using {_human_list(supported_masks)} phase mask profiles' if supported_masks else ''}."
@@ -819,9 +832,10 @@ def build_illumination_logic_dto(vocabulary: Vocabulary, logic: dict[str, Any]) 
     method_label = _vocab_display(vocabulary, "adaptive_illumination_methods", method_id)
     default_enabled = normalize_optional_bool(logic.get("default_enabled"))
     manufacturer = clean_text(logic.get("manufacturer"))
-    model = clean_text(logic.get("model") or logic.get("name"))
+    model = clean_text(logic.get("model"))
+    instance_name = clean_text(logic.get("name"))
     component_reference = _component_reference(manufacturer, model, method_label or "adaptive illumination logic")
-    display_label = method_label or model or "Illumination Logic"
+    display_label = method_label or instance_name or model or "Illumination Logic"
     method_sentence = f"Adaptive illumination used {component_reference}{', enabled by default' if default_enabled is True else ''}."
     return {
         **copy.deepcopy(logic),
@@ -839,7 +853,8 @@ def build_illumination_logic_dto(vocabulary: Vocabulary, logic: dict[str, Any]) 
 def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[str, Any]:
     scanner_type = _vocab_display(vocabulary, "scanner_types", scanner.get("type"))
     manufacturer = clean_text(scanner.get("manufacturer"))
-    model = clean_text(scanner.get("model") or scanner.get("name"))
+    model = clean_text(scanner.get("model"))
+    instance_name = clean_text(scanner.get("name"))
     light_sheet_type = clean_text(scanner.get("light_sheet_type"))
     line_rate = _fmt_num(scanner.get("line_rate_hz"))
     pinhole = _fmt_num(scanner.get("pinhole_um"))
@@ -861,7 +876,7 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
     )
     return {
         **copy.deepcopy(scanner),
-        "display_label": scanner_type or "No Scanner",
+        "display_label": scanner_type or instance_name or model or "No Scanner",
         "display_subtitle": " ".join(part for part in [manufacturer, model] if part).strip(),
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
@@ -925,10 +940,11 @@ def build_stage_dto(vocabulary: Vocabulary, stage: dict[str, Any]) -> dict[str, 
 
 def build_magnification_changer_dto(changer: dict[str, Any]) -> dict[str, Any]:
     manufacturer = clean_text(changer.get("manufacturer"))
-    model = clean_text(changer.get("model") or changer.get("name"))
+    model = clean_text(changer.get("model"))
+    instance_name = clean_text(changer.get("name"))
     magnification = _fmt_num(changer.get("magnification"))
     component_reference = _component_reference(manufacturer, model, "magnification changer")
-    display_label = model or "Magnification Changer"
+    display_label = instance_name or model or "Magnification Changer"
     spec_lines = _spec_lines(
         ("Manufacturer", manufacturer),
         ("Magnification", f"`{magnification}x`" if magnification else None),
@@ -1614,7 +1630,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     for module in canonical_modules:
         if not isinstance(module, dict):
             continue
-        module_id = clean_text(module.get("name"))
+        module_id = clean_text(module.get("type") or module.get("name"))
         module_name = clean_text(module.get("display_name")) or _vocab_display(vocabulary, "modules", module_id) or module_id
         manufacturer = clean_text(module.get("manufacturer"))
         model = clean_text(module.get("model"))
@@ -1921,6 +1937,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         if isinstance(m, dict):
             modules.append(
                 {
+                    "type": clean_text(m.get("type") or m.get("name")),
                     "name": clean_text(m.get("name")),
                     "manufacturer": clean_text(m.get("manufacturer")),
                     "model": clean_text(m.get("model")),
@@ -1929,7 +1946,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
                 }
             )
         elif isinstance(m, str):
-            modules.append({"name": clean_text(m), "manufacturer": "", "model": "", "notes": "", "url": ""})
+            modules.append({"type": clean_text(m), "name": "", "manufacturer": "", "model": "", "notes": "", "url": ""})
 
     modalities = payload.get("modalities")
     if not isinstance(modalities, list):
@@ -2377,7 +2394,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             for modality_id in inst.get("modalities", [])
         ]
         for module in inst.get("modules", []):
-            module_name = clean_text(module.get("name"))
+            module_name = clean_text(module.get("type") or module.get("name"))
             module["display_name"] = vocab_label(vocabulary, "modules", module_name)
 
     # Generate Vocabulary Dictionary Markdown with Tabs

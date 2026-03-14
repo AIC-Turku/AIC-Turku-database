@@ -14,6 +14,12 @@ status_definitions:
   conditional: must be present when the stated condition is true
   optional: useful but not required for instrument-level reporting completeness
 
+identity_semantics:
+  manufacturer: Company/vendor/brand that makes the hardware component or module.
+  model: Vendor-facing model name/designation; primary structured hardware identity field.
+  product_code: Explicit catalog/order/SKU/reference code only; optional and never inferred from model or name.
+  name: Local/display/instance label; not equivalent to model or product_code. Use only when it differs from model.
+
 vocab_registry:
   modalities:
     source: file
@@ -200,6 +206,11 @@ vocab_registry:
     path: vocab/adaptive_illumination_methods.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  identity_semantics:
+    source: file
+    path: vocab/identity_semantics.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: false
 
 sections:
   - id: general_identity
@@ -227,14 +238,14 @@ sections:
         type: string
         vocab: null
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for instrument identification and methods wording.
+        rationale: Company/vendor/brand that makes the instrument.
 
       - path: instrument.model
         title: Model
         status: required
         type: string
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for instrument identification and methods wording.
+        rationale: Vendor-facing model designation used as the primary structured identity field for the instrument; do not substitute display names or catalog codes.
 
       - path: instrument.year_of_purchase
         title: Year of purchase
@@ -305,15 +316,24 @@ sections:
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Only present when installed modules materially change imaging capabilities.
 
-      - path: modules[].name
-        title: Module name
+      - path: modules[].type
+        title: Module type
         status: conditional
         type: string
         vocab: modules
+        aliases: ["modules[].name"]
         required_if:
           parent_present: "modules[]"
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required when a module/path is installed and materially changes imaging capabilities.
+        rationale: Canonical module classifier used for structured capability reporting.
+
+      - path: modules[].name
+        title: Module display name (legacy)
+        status: optional
+        type: string
+        superseded_by: modules[].type
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Legacy/local display label. Prefer modules[].type for canonical module identity.
 
       - path: modules[].notes
         title: Module notes
@@ -336,7 +356,7 @@ sections:
         required_if:
           parent_present: "modules[]"
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
+        rationale: Vendor-facing module model/designation used as primary structured identity for the installed module.
 
       - path: modules[].model
         title: Module model
@@ -345,7 +365,7 @@ sections:
         required_if:
           parent_present: "modules[]"
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
+        rationale: Vendor-facing module model/designation used as primary structured identity for the installed module.
 
   - id: software
     title: Software
@@ -485,21 +505,21 @@ sections:
         status: required
         type: string
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for unambiguous hardware identification.
+        rationale: Company/vendor/brand that makes the declared light source component.
 
       - path: hardware.light_sources[].model
         title: Light source model
         status: required
         type: string
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for unambiguous hardware identification.
+        rationale: Vendor-facing hardware model/designation used as the primary structured identity field for the component.
 
       - path: hardware.light_sources[].product_code
         title: Light source product code
         status: optional
         type: string
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Catalog/product code for exact source variant tracking when available.
+        rationale: Explicit catalog/order/SKU/reference code only when separately known from the model; leave missing when unknown.
 
       - path: hardware.light_sources[].technology
         title: Light source technology subtype
@@ -1153,10 +1173,17 @@ sections:
         status: optional
         type: string
 
+      - path: hardware.light_path.cube_mechanisms[].positions{}.model
+        title: Cube model
+        status: optional
+        type: string
+        rationale: Vendor-facing cube model/designation.
+
       - path: hardware.light_path.cube_mechanisms[].positions{}.product_code
         title: Cube product code
         status: optional
         type: string
+        rationale: Explicit catalog/order/SKU/reference code for the cube only when separately known from its model/designation.
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.notes
         title: Cube notes
@@ -1417,10 +1444,17 @@ sections:
         status: optional
         type: string
 
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.model
+        title: Excitation position component model
+        status: optional
+        type: string
+        rationale: Vendor-facing excitation component model/designation.
+
       - path: hardware.light_path.excitation_mechanisms[].positions{}.product_code
         title: Excitation position component product code
         status: optional
         type: string
+        rationale: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.bands
         title: Excitation position multiband array
@@ -1573,10 +1607,17 @@ sections:
         status: optional
         type: string
 
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.model
+        title: Dichroic position component model
+        status: optional
+        type: string
+        rationale: Vendor-facing dichroic component model/designation.
+
       - path: hardware.light_path.dichroic_mechanisms[].positions{}.product_code
         title: Dichroic position component product code
         status: optional
         type: string
+        rationale: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
 
       - path: hardware.light_path.dichroic_mechanisms[].positions{}.center_nm
         title: Dichroic position center wavelength (nm)
@@ -1681,10 +1722,17 @@ sections:
         status: optional
         type: string
 
+      - path: hardware.light_path.emission_mechanisms[].positions{}.model
+        title: Emission position component model
+        status: optional
+        type: string
+        rationale: Vendor-facing emission component model/designation.
+
       - path: hardware.light_path.emission_mechanisms[].positions{}.product_code
         title: Emission position component product code
         status: optional
         type: string
+        rationale: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.bands
         title: Emission position multiband array
@@ -1783,7 +1831,7 @@ sections:
         status: optional
         type: string
         used_by: [dashboard]
-        rationale: Human-readable endpoint name for virtual microscope selection UI.
+        rationale: Local/display endpoint label for UI selection; not a replacement for structured model or product_code fields.
 
       - path: hardware.light_path.endpoints[].path
         title: Endpoint optical route
@@ -1938,7 +1986,7 @@ sections:
         status: optional
         type: string
         used_by: [audit_pdf, dashboard]
-        rationale: Very useful for staff lookup, but not minimal.
+        rationale: Explicit catalog/order/SKU/reference code only; optional and must not be inferred from model or name.
 
       - path: hardware.objectives[].magnification
         title: Objective magnification

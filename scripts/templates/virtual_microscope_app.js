@@ -153,6 +153,12 @@
     const type = cleanString(component.component_type || component.type || context.stage || '').replace(/_/g, ' ');
     const rows = [];
     if (type) rows.push(`Type: ${type}`);
+    const manufacturer = cleanString(component.manufacturer);
+    const model = cleanString(component.model);
+    const productCode = cleanString(component.product_code);
+    if (manufacturer) rows.push(`Manufacturer: ${manufacturer}`);
+    if (model) rows.push(`Model: ${model}`);
+    if (productCode) rows.push(`Product code: ${productCode}`);
     if (numberOrNull(component.center_nm) !== null) rows.push(`Center: ${formatNumericNm(component.center_nm)}`);
     if (numberOrNull(component.width_nm) !== null) rows.push(`Bandwidth: ${Math.round(numberOrNull(component.width_nm))} nm`);
     if (numberOrNull(component.cut_on_nm) !== null) rows.push(`Cut-on: ${formatNumericNm(component.cut_on_nm)}`);

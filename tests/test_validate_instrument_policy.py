@@ -206,6 +206,97 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
+
+
+    def test_evaluate_required_if_modules_any_of_uses_type_field(self) -> None:
+        vocabulary = Vocabulary(vocab_registry={'modules': {'source': 'inline', 'allowed_values': ['incubation']}})
+        payload = {'modules': [{'type': 'incubation'}]}
+        self.assertTrue(
+            _evaluate_required_if(
+                {'modules_any_of': ['incubation']},
+                payload=payload,
+                item_context=None,
+                vocabulary=vocabulary,
+            )
+        )
+
+    def test_validate_instrument_ledgers_warns_when_product_code_duplicates_model_or_name(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'hardware',
+                        'title': 'Hardware',
+                        'rules': [
+                            {'path': 'hardware.light_sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'hardware.light_sources[].model', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.light_sources[].name', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.light_sources[].product_code', 'status': 'optional', 'type': 'string'},
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/example.yaml',
+            {
+                'instrument': {'instrument_id': 'scope-1', 'display_name': 'Scope 1'},
+                'hardware': {
+                    'light_sources': [
+                        {'model': 'OBIS 488', 'product_code': 'OBIS 488'},
+                        {'name': 'Blue laser', 'product_code': 'Blue laser'},
+                        {'name': 'Blue laser', 'model': 'OBIS 488', 'product_code': 'SKU-001'},
+                    ]
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual(issues, [])
+        redundant = [w for w in warnings if w.code == 'redundant_product_code']
+        self.assertEqual(len(redundant), 2)
+
+    def test_validate_instrument_ledgers_warns_when_name_duplicates_model(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'hardware',
+                        'title': 'Hardware',
+                        'rules': [
+                            {'path': 'hardware.light_sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'hardware.light_sources[].model', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.light_sources[].name', 'status': 'optional', 'type': 'string'},
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/example.yaml',
+            {
+                'instrument': {'instrument_id': 'scope-1', 'display_name': 'Scope 1'},
+                'hardware': {
+                    'light_sources': [
+                        {'name': 'OBIS 488', 'model': 'OBIS 488'},
+                        {'name': 'Blue laser', 'model': 'OBIS 488'},
+                    ]
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual(issues, [])
+        redundant = [w for w in warnings if w.code == 'redundant_name_model']
+        self.assertEqual(len(redundant), 1)
+        self.assertIn('name', redundant[0].message)
+
     def test_completeness_report_preserves_used_by_and_flags_missing_item_leaf(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',

@@ -719,6 +719,64 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertIsInstance(objectives, list)
         self.assertEqual(objectives[0]["manufacturer"], "Nikon")
 
+    def test_objective_uses_name_as_display_label_without_overwriting_model(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "objectives": [
+                        {
+                            "id": "obj1",
+                            "name": "Oil Objective Slot A",
+                            "manufacturer": "Nikon",
+                            "model": "Plan Apo 60x/1.4 Oil",
+                            "magnification": 60,
+                            "numerical_aperture": 1.4,
+                            "immersion": "oil",
+                            "correction": "plan_apo",
+                        }
+                    ]
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+        objective = hardware["objectives"][0]
+        self.assertEqual(objective["display_label"], "Oil Objective Slot A 60x/1.4 OIL")
+        self.assertIn("**Model:** Plan Apo 60x/1.4 Oil", objective["spec_lines"])
+
+    def test_product_code_is_not_inferred_for_detector_or_light_source(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "laser",
+                            "manufacturer": "Vendor",
+                            "model": "488 nm Laser Family",
+                            "name": "Blue excitation",
+                            "wavelength_nm": 488,
+                        }
+                    ],
+                    "detectors": [
+                        {
+                            "kind": "hybrid",
+                            "manufacturer": "Vendor",
+                            "model": "Detector Model",
+                            "name": "Channel A",
+                        }
+                    ],
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+        light = hardware["light_sources"][0]
+        detector = hardware["detectors"][0]
+        self.assertNotIn("Product code", "\n".join(light["spec_lines"]))
+        self.assertNotIn("Product code", "\n".join(detector["spec_lines"]))
+        self.assertIsNone(light.get("product_code"))
+        self.assertIsNone(detector.get("product_code"))
+
 
 if __name__ == "__main__":
     unittest.main()
