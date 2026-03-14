@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role
+from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role, validate_light_path
 
 
 class LightPathParserTests(unittest.TestCase):
@@ -129,6 +129,41 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(splitter["control_label"], "Camera Splitter")
         self.assertEqual(splitter["options"][0]["slot"], 1)
 
+
+    def test_validate_light_path_ignores_policy_owned_component_shape_requirements(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "detectors": [{"channel_name": "Cam"}],
+                    "light_path": {
+                        "excitation_mechanisms": [
+                            {"positions": {1: {"component_type": "bandpass"}}}
+                        ]
+                    },
+                }
+            }
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_validate_light_path_keeps_splitter_target_graph_validation(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "detectors": [{"channel_name": "Cam"}],
+                    "light_path": {
+                        "splitters": [
+                            {
+                                "path_1": {"targets": ["Cam"]},
+                                "path_2": {"targets": ["Missing"]},
+                            }
+                        ]
+                    },
+                }
+            }
+        )
+
+        self.assertTrue(any("does not match any declared detector or endpoint" in message for message in errors))
 
     def test_light_source_metadata_is_preserved_for_runtime_simulation(self) -> None:
         payload = generate_virtual_microscope_payload(
