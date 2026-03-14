@@ -144,10 +144,14 @@ hardware:
           Pos_1:
             component_type: multiband_bandpass
             product_code: FF01-440/521/607/700-25
-            cutoffs_nm: [440, 521, 607, 700]
+            bands:
+              - { center_nm: 440, width_nm: 25 }
+              - { center_nm: 521, width_nm: 25 }
+              - { center_nm: 607, width_nm: 25 }
+              - { center_nm: 700, width_nm: 25 }
             notes: >
-              Quad-band emitter for multicolor spinning-disk imaging. Original shorthand:
-              440/521/607/700, approximately 25 nm-wide passbands.
+              Quad-band emitter for multicolor spinning-disk imaging. Product code FF01-440/521/607/700-25
+              indicates approximately 25 nm-wide passbands centered at 440, 521, 607, and 700 nm.
           Pos_2:
             component_type: bandpass
             product_code: FF01-445/45-25

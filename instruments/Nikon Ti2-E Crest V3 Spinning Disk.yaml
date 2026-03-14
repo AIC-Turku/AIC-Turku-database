@@ -161,12 +161,19 @@ hardware:
             name: Celesta-DA/FI/TR/Cy5/Cy7-A
             component_type: multiband_bandpass
             product_code: MXR00543
-            cutoffs_nm: [391, 477, 549, 639, 741]
+            bands:
+              - { center_nm: 391, width_nm: 54.4 }
+              - { center_nm: 477, width_nm: 20.4 }
+              - { center_nm: 549, width_nm: 25.7 }
+              - { center_nm: 638.5, width_nm: 27.6 }
+              - { center_nm: 741, width_nm: 45.1 }
           Pos_2:
             name: Celesta CFP-YFP-A
             component_type: multiband_bandpass
             product_code: MXR00544
-            cutoffs_nm: [449, 520]
+            bands:
+              - { center_nm: 449, width_nm: 26.7 }
+              - { center_nm: 520, width_nm: 27.9 }
           Pos_3:
             name: Neutral Density
             component_type: neutral_density
@@ -199,12 +206,19 @@ hardware:
             name: Celesta-DA/FI/TR/Cy5/Cy7-A
             component_type: multiband_bandpass
             product_code: MXR00541 / MXR00543
-            cutoffs_nm: [411, 511, 593, 684, 817]
+            bands:
+              - { center_nm: 441, width_nm: 36.1 }
+              - { center_nm: 511, width_nm: 34.3 }
+              - { center_nm: 592.5, width_nm: 45.2 }
+              - { center_nm: 684, width_nm: 44.4 }
+              - { center_nm: 817, width_nm: 78.8 }
           Pos_2:
             name: Celesta CFP-YFP-A
             component_type: multiband_bandpass
             product_code: MXR00542 / MXR00544
-            cutoffs_nm: [484, 561]
+            bands:
+              - { center_nm: 484, width_nm: 25.9 }
+              - { center_nm: 561, width_nm: 38.9 }
           Pos_3:
             component_type: bandpass
             center_nm: 438

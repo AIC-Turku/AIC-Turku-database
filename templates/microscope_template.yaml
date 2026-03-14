@@ -149,7 +149,10 @@ hardware:
           width_nm: ""  # Excitation position bandwidth (nm)
           cut_on_nm: ""  # Excitation position cut-on wavelength (nm)
           cut_off_nm: ""  # Excitation position cut-off wavelength (nm)
-          cutoffs_nm:  # Excitation position multi-cutoff wavelengths (nm)
+          bands:  # Excitation position multiband array
+            - center_nm: ""  # Excitation position band center (nm)
+              width_nm: ""  # Excitation position band width (nm)
+          cutoffs_nm:  # Excitation position multi-cutoff wavelengths (nm; for dichroic-like entries)
             - ""
     dichroic_mechanisms:  # Dichroic mechanisms
       -
@@ -185,7 +188,10 @@ hardware:
           width_nm: ""  # Emission position bandwidth (nm)
           cut_on_nm: ""  # Emission position cut-on wavelength (nm)
           cut_off_nm: ""  # Emission position cut-off wavelength (nm)
-          cutoffs_nm:  # Emission position multi-cutoff wavelengths (nm)
+          bands:  # Emission position multiband array
+            - center_nm: ""  # Emission position band center (nm)
+              width_nm: ""  # Emission position band width (nm)
+          cutoffs_nm:  # Emission position multi-cutoff wavelengths (nm; for dichroic-like entries)
             - ""
     splitters:  # Light path splitters
       -
