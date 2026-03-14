@@ -1223,28 +1223,46 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
                 }
             )
 
+    explicit_endpoints = _collect_endpoint_rows(hardware, light_path)
+
     raw_detectors = hardware.get("detectors", [])
     if isinstance(raw_detectors, list) and raw_detectors:
         for idx, det in enumerate(raw_detectors, start=1):
             if not isinstance(det, dict):
                 continue
+            detector_id = _clean_identifier(det.get("id"))
+            if detector_id:
+                matched_endpoint = next(
+                    (
+                        endpoint
+                        for endpoint in explicit_endpoints
+                        if _clean_identifier(endpoint.get("id")) == detector_id
+                    ),
+                    None,
+                )
+                if isinstance(matched_endpoint, dict):
+                    if "routes" in matched_endpoint:
+                        det["routes"] = matched_endpoint.get("routes")
+                    if "path" in matched_endpoint:
+                        det["path"] = matched_endpoint.get("path")
             mechanism_id = f"detector_{idx}"
             position = _detector_position(idx, det, mechanism_id=mechanism_id)
             payload["terminals"].append(dict(position))
-            payload["detectors"].append(
-                {
-                    "id": mechanism_id,
-                    "name": position.get("channel_name") or position.get("display_label"),
-                    "display_label": position.get("display_label"),
-                    "type": "detector_group",
-                    "control_kind": "detector_toggle",
-                    "selection_mode": "multi",
-                    "positions": {1: position},
-                    "options": [{"slot": 1, "display_label": position.get("display_label"), "value": position}],
-                }
-            )
+            detector_group = {
+                "id": mechanism_id,
+                "name": position.get("channel_name") or position.get("display_label"),
+                "display_label": position.get("display_label"),
+                "type": "detector_group",
+                "control_kind": "detector_toggle",
+                "selection_mode": "multi",
+                "positions": {1: position},
+                "options": [{"slot": 1, "display_label": position.get("display_label"), "value": position}],
+            }
+            if position.get("routes"):
+                detector_group["routes"] = position.get("routes")
+                detector_group["path"] = position.get("path")
+            payload["detectors"].append(detector_group)
 
-    explicit_endpoints = _collect_endpoint_rows(hardware, light_path)
     for idx, endpoint in enumerate(explicit_endpoints, start=1):
         payload["terminals"].append(_terminal_payload_from_endpoint(idx, endpoint))
 
