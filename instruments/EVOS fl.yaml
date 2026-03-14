@@ -106,7 +106,7 @@ hardware:
         type: turret
         slots: 5
         path: epi
-        notes: 'Filter sets must be changed manually. Only CIC personnel are allowed to change filter cubes. The facility has 5 cubes available: DAPI, CFP, GFP, RFP, and Cy5.'
+        notes: 'Filter sets must be changed manually. Only AIC personnel are allowed to change filter cubes.'
         positions:
           Pos_1:
             name: DAPI
