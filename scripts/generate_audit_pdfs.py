@@ -1,4 +1,8 @@
-"""Generate per-instrument audit PDFs from the HTML audit template."""
+"""Generate per-instrument audit PDFs from the HTML audit template.
+
+This is an auxiliary audit-only reporting script (not the primary production site build),
+but it now consumes the same validator-selected authoritative instrument set as the dashboard flow.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +17,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.audit_analyzer import analyze_instrument_completeness
-from scripts.dashboard_builder import load_facility_config, load_instruments
+from scripts.dashboard_builder import load_facility_config, load_instruments, validated_instrument_selection
 
 
 SECTION_DEFINITIONS = {
@@ -63,7 +67,9 @@ def main() -> None:
     facility_name = facility.get("full_name") or facility.get("short_name") or ""
     logo_path = branding.get("logo")
 
-    instruments = load_instruments(include_retired=False)
+    # Auxiliary audit output still follows the same validator-selected boundary as dashboard generation.
+    validated_instrument_ids, _, _ = validated_instrument_selection("instruments")
+    instruments = load_instruments(include_retired=False, allowed_instrument_ids=validated_instrument_ids)
     css_path = repo_root / "assets" / "stylesheets" / "dashboard.css"
     stylesheets = [CSS(filename=css_path)] if css_path.exists() else []
     sections = _selected_sections()

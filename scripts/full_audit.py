@@ -28,7 +28,7 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.dashboard_builder import YamlLoadError, load_instruments
+from scripts.dashboard_builder import YamlLoadError, load_instruments, validated_instrument_selection
 from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role
 from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
@@ -373,10 +373,25 @@ def generate_full_audit(
 
         active_load_errors: list[YamlLoadError] = []
         retired_load_errors: list[YamlLoadError] = []
-        instruments = load_instruments("instruments", load_errors=active_load_errors, include_retired=False)
-        retired_instruments = load_instruments("instruments", load_errors=retired_load_errors, include_retired=True) if include_retired else []
+        # Authoritative selection boundary: only validator-selected instruments enter audit DTO checks.
+        instrument_ids, instrument_errors, instrument_warnings = validated_instrument_selection("instruments")
+        instruments = load_instruments(
+            "instruments",
+            load_errors=active_load_errors,
+            include_retired=False,
+            allowed_instrument_ids=instrument_ids,
+        )
+        retired_instruments = (
+            load_instruments(
+                "instruments",
+                load_errors=retired_load_errors,
+                include_retired=True,
+                allowed_instrument_ids=instrument_ids,
+            )
+            if include_retired
+            else []
+        )
 
-        instrument_ids, instrument_errors, instrument_warnings = validate_instrument_ledgers(instruments_dir=Path("instruments"))
         event_report = validate_event_ledgers(
             instrument_ids=instrument_ids,
             allowed_record_types=allowed_record_types,

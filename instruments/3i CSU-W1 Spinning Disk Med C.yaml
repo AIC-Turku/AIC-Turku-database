@@ -16,27 +16,33 @@ instrument:
   url: ""
 
 modalities:
-  - confocal_spinning_disk
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - phase_contrast
+- confocal_spinning_disk
+- widefield_fluorescence
+- transmitted_brightfield
+- phase_contrast
 
 modules:
-  - name: incubation
-    notes: Okolab Full Enclosure Incubator with Temperature and digital CO2/O2 Control
-    url: ""
-  - name: hardware_autofocus
-    notes: Zeiss Definite Focus 2
-    url: ""
-  - name: frap
-    notes: FRAP/Photoactivation module
-    url: ""
+- name: incubation
+  notes: Okolab Full Enclosure Incubator with Temperature and digital CO2/O2 Control
+  url: ""
+  manufacturer: Okolab
+  model: Full Enclosure Incubator
+- name: hardware_autofocus
+  notes: Zeiss Definite Focus 2
+  url: ""
+  manufacturer: Zeiss
+  model: Definite Focus 2
+- name: frap
+  notes: FRAP/Photoactivation module
+  url: ""
 
+  manufacturer: 3i
+  model: Vector FRAP/Photoactivation Module
 software:
-  - role: acquisition
-    name: 3i SlideBook
-    version: "6"
-    url: ""
+- role: acquisition
+  name: 3i SlideBook
+  version: "6"
+  url: ""
 
 hardware:
   environment:
@@ -59,326 +65,327 @@ hardware:
     url: ""
 
   light_sources:
-    - kind: laser
-      role: excitation
-      path: confocal
-      manufacturer: 3i
-      model: LaserStack v4
-      wavelength_nm: 405
-      power: 100 mW
-      notes: "Measured fiber output: 46 mW"
-      url: ""
+  - kind: laser
+    role: excitation
+    path: confocal
+    manufacturer: 3i
+    model: LaserStack v4
+    wavelength_nm: 405
+    power: 100 mW
+    notes: "Measured fiber output: 46 mW"
+    url: ""
 
-    - kind: laser
-      role: excitation
-      path: confocal
-      manufacturer: 3i
-      model: LaserStack v4
-      wavelength_nm: 488
-      power: 150 mW
-      notes: "Measured fiber output: 102 mW"
-      url: ""
+  - kind: laser
+    role: excitation
+    path: confocal
+    manufacturer: 3i
+    model: LaserStack v4
+    wavelength_nm: 488
+    power: 150 mW
+    notes: "Measured fiber output: 102 mW"
+    url: ""
 
-    - kind: laser
-      role: excitation
-      path: confocal
-      manufacturer: 3i
-      model: LaserStack v4
-      wavelength_nm: 561
-      power: 150 mW
-      notes: "Measured fiber output: 105.5 mW"
-      url: ""
+  - kind: laser
+    role: excitation
+    path: confocal
+    manufacturer: 3i
+    model: LaserStack v4
+    wavelength_nm: 561
+    power: 150 mW
+    notes: "Measured fiber output: 105.5 mW"
+    url: ""
 
-    - kind: laser
-      role: excitation
-      path: confocal
-      manufacturer: 3i
-      model: LaserStack v4
-      wavelength_nm: 640
-      power: 100 mW
-      notes: "Measured fiber output: 50.4 mW"
-      url: ""
+  - kind: laser
+    role: excitation
+    path: confocal
+    manufacturer: 3i
+    model: LaserStack v4
+    wavelength_nm: 640
+    power: 100 mW
+    notes: "Measured fiber output: 50.4 mW"
+    url: ""
 
-    - kind: led
-      path: epi
-      manufacturer: CoolLED
-      model: pE-300
-      wavelength_nm: broadband
-      power: ""
-      notes: White-light LED source with liquid light guide for widefield fluorescence
-      url: ""
+  - kind: led
+    path: epi
+    manufacturer: CoolLED
+    model: pE-300
+    wavelength_nm: broadband
+    power: ""
+    notes: White-light LED source with liquid light guide for widefield fluorescence
+    url: ""
 
   detectors:
-    - kind: scmos
-      manufacturer: Photometrics
-      model: Prime BSI sCMOS
-      pixel_pitch_um: 6.5
-      qe_peak_pct: 95
-      sensor_format_px: "2048 x 2048"
-      path: confocal
-      notes: "6.5 µm pixel size, ~95% peak QE"
-      url: "https://www.teledynevisionsolutions.com/products/prime-bsi/?vertical=tvs-photometrics&segment=tvs"
+  - kind: scmos
+    manufacturer: Photometrics
+    model: Prime BSI sCMOS
+    pixel_pitch_um: 6.5
+    qe_peak_pct: 95
+    sensor_format_px: "2048 x 2048"
+    path: confocal
+    notes: "6.5 µm pixel size, ~95% peak QE"
+    url: "https://www.teledynevisionsolutions.com/products/prime-bsi/?vertical=tvs-photometrics&segment=tvs"
 
+    id: detector_1
   light_path:
     dichroic_mechanisms:
-      - name: CSU-W1 Dichroic Slider
-        type: slider
-        path: confocal
-        slots: 3
-        positions:
-          Pos_1:
-            component_type: multiband_dichroic
-            product_code: Di01-T405/488/568/647
-            cutoffs_nm: [405, 488, 568, 647]
-            notes: >
-              Yokogawa/CSU-W1-compatible multiband dichroic for 405/488/561/640-class
-              excitation and corresponding fluorescence routing. Product code uses
-              the vendor's 568 naming convention even though the installed laser line is 561 nm.
+    - name: CSU-W1 Dichroic Slider
+      type: slider
+      path: confocal
+      slots: 3
+      positions:
+        Pos_1:
+          component_type: multiband_dichroic
+          product_code: Di01-T405/488/568/647
+          cutoffs_nm: [405, 488, 568, 647]
+          notes: >
+            Yokogawa/CSU-W1-compatible multiband dichroic for 405/488/561/640-class
+            excitation and corresponding fluorescence routing. Product code uses
+            the vendor's 568 naming convention even though the installed laser line is 561 nm.
 
     emission_mechanisms:
-      - name: CSU-W1 Emission Wheel
-        type: filter_wheel
-        path: confocal
-        slots: 5
-        positions:
-          Pos_1:
-            component_type: multiband_bandpass
-            product_code: FF01-440/521/607/700-25
-            bands:
-              - { center_nm: 440, width_nm: 25 }
-              - { center_nm: 521, width_nm: 25 }
-              - { center_nm: 607, width_nm: 25 }
-              - { center_nm: 700, width_nm: 25 }
-            notes: >
-              Quad-band emitter for multicolor spinning-disk imaging. Product code FF01-440/521/607/700-25
-              indicates approximately 25 nm-wide passbands centered at 440, 521, 607, and 700 nm.
-          Pos_2:
-            component_type: bandpass
-            product_code: FF01-445/45-25
-            center_nm: 445
-            width_nm: 45
-          Pos_3:
-            component_type: bandpass
-            product_code: FF01-525/30-25
-            center_nm: 525
-            width_nm: 30
-          Pos_4:
-            component_type: bandpass
-            product_code: FF02-617/73-25
-            center_nm: 617
-            width_nm: 73
-          Pos_5:
-            component_type: bandpass
-            product_code: FF01-692/40-25
-            center_nm: 692
-            width_nm: 40
+    - name: CSU-W1 Emission Wheel
+      type: filter_wheel
+      path: confocal
+      slots: 5
+      positions:
+        Pos_1:
+          component_type: multiband_bandpass
+          product_code: FF01-440/521/607/700-25
+          bands:
+          - {center_nm: 440, width_nm: 25}
+          - {center_nm: 521, width_nm: 25}
+          - {center_nm: 607, width_nm: 25}
+          - {center_nm: 700, width_nm: 25}
+          notes: >
+            Quad-band emitter for multicolor spinning-disk imaging. Product code FF01-440/521/607/700-25
+            indicates approximately 25 nm-wide passbands centered at 440, 521, 607, and 700 nm.
+        Pos_2:
+          component_type: bandpass
+          product_code: FF01-445/45-25
+          center_nm: 445
+          width_nm: 45
+        Pos_3:
+          component_type: bandpass
+          product_code: FF01-525/30-25
+          center_nm: 525
+          width_nm: 30
+        Pos_4:
+          component_type: bandpass
+          product_code: FF02-617/73-25
+          center_nm: 617
+          width_nm: 73
+        Pos_5:
+          component_type: bandpass
+          product_code: FF01-692/40-25
+          center_nm: 692
+          width_nm: 40
 
     cube_mechanisms:
-      - name: Zeiss Widefield Fluorescence Positions
-        type: filter_wheel
-        path: epi
-        slots: 3
-        positions:
-          Pos_1:
-            name: DAPI Cube
-            product_code: LED-DAPI-A-ZHE-Zero
-            notes: >
-              Placeholder entry for widefield fluorescence position. Exact excitation,
-              dichroic, and emission spectra should be filled in when verified from
-              the installed Zeiss filter set documentation.
-            excitation_filter:
-              component_type: empty
-            dichroic:
-              component_type: empty
-            emission_filter:
-              component_type: empty
+    - name: Zeiss Widefield Fluorescence Positions
+      type: filter_wheel
+      path: epi
+      slots: 3
+      positions:
+        Pos_1:
+          name: DAPI Cube
+          product_code: LED-DAPI-A-ZHE-Zero
+          notes: >
+            Placeholder entry for widefield fluorescence position. Exact excitation,
+            dichroic, and emission spectra should be filled in when verified from
+            the installed Zeiss filter set documentation.
+          excitation_filter:
+            component_type: empty
+          dichroic:
+            component_type: empty
+          emission_filter:
+            component_type: empty
 
-          Pos_2:
-            name: FITC Cube
-            product_code: LED-FITC-A-ZHE-Zero
-            notes: >
-              Placeholder entry for widefield fluorescence position. Exact excitation,
-              dichroic, and emission spectra should be filled in when verified from
-              the installed Zeiss filter set documentation.
-            excitation_filter:
-              component_type: empty
-            dichroic:
-              component_type: empty
-            emission_filter:
-              component_type: empty
+        Pos_2:
+          name: FITC Cube
+          product_code: LED-FITC-A-ZHE-Zero
+          notes: >
+            Placeholder entry for widefield fluorescence position. Exact excitation,
+            dichroic, and emission spectra should be filled in when verified from
+            the installed Zeiss filter set documentation.
+          excitation_filter:
+            component_type: empty
+          dichroic:
+            component_type: empty
+          emission_filter:
+            component_type: empty
 
-          Pos_3:
-            name: TRITC Cube
-            product_code: LED-TRITC-A-ZHE-Zero
-            notes: >
-              Placeholder entry for widefield fluorescence position. Exact excitation,
-              dichroic, and emission spectra should be filled in when verified from
-              the installed Zeiss filter set documentation.
-            excitation_filter:
-              component_type: empty
-            dichroic:
-              component_type: empty
-            emission_filter:
-              component_type: empty
+        Pos_3:
+          name: TRITC Cube
+          product_code: LED-TRITC-A-ZHE-Zero
+          notes: >
+            Placeholder entry for widefield fluorescence position. Exact excitation,
+            dichroic, and emission spectra should be filled in when verified from
+            the installed Zeiss filter set documentation.
+          excitation_filter:
+            component_type: empty
+          dichroic:
+            component_type: empty
+          emission_filter:
+            component_type: empty
 
   objectives:
-    - id: 5x_air
-      manufacturer: Zeiss
-      model: EC Plan-Neofluar 5x/0.16 NA Ph1
-      product_code: 420331-9911-000
-      magnification: 5.0
-      numerical_aperture: 0.16
-      working_distance: 18.5 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - Ph1
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420331-9911-000/Objective-EC-Plan-Neofluar-5x-0.16-Ph1-M27"
-      is_installed: true
+  - id: 5x_air
+    manufacturer: Zeiss
+    model: EC Plan-Neofluar 5x/0.16 NA Ph1
+    product_code: 420331-9911-000
+    magnification: 5.0
+    numerical_aperture: 0.16
+    working_distance: 18.5 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - Ph1
+    notes: ""
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420331-9911-000/Objective-EC-Plan-Neofluar-5x-0.16-Ph1-M27"
+    is_installed: true
 
-    - id: 10x_air
-      manufacturer: Zeiss
-      model: Plan-Apochromat 10x/0.45 NA Ph1
-      product_code: 420641-9910-000
-      magnification: 10.0
-      numerical_aperture: 0.45
-      working_distance: 2.0 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - Ph1
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
-      is_installed: true
+  - id: 10x_air
+    manufacturer: Zeiss
+    model: Plan-Apochromat 10x/0.45 NA Ph1
+    product_code: 420641-9910-000
+    magnification: 10.0
+    numerical_aperture: 0.45
+    working_distance: 2.0 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties:
+    - Ph1
+    notes: ""
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27"
+    is_installed: true
 
-    - id: 20x_air
-      manufacturer: Zeiss
-      model: Plan-Apochromat 20x/0.8 NA
-      product_code: 420650-9902-000
-      magnification: 20.0
-      numerical_aperture: 0.8
-      working_distance: 0.55 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420650-9902-000/Objective-Plan-Apochromat-20x-0.8-M27"
-      is_installed: true
+  - id: 20x_air
+    manufacturer: Zeiss
+    model: Plan-Apochromat 20x/0.8 NA
+    product_code: 420650-9902-000
+    magnification: 20.0
+    numerical_aperture: 0.8
+    working_distance: 0.55 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: ""
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420650-9902-000/Objective-Plan-Apochromat-20x-0.8-M27"
+    is_installed: true
 
-    - id: 20x_air_2
-      manufacturer: Zeiss
-      model: LD Plan-Neofluar 20x/0.4 NA Corr
-      product_code: 421350-9971-000
-      magnification: 20.0
-      numerical_aperture: 0.4
-      working_distance: 7.9 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: true
-      specialties:
-        - correction_collar
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421350-9971-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-M27"
-      is_installed: true
+  - id: 20x_air_2
+    manufacturer: Zeiss
+    model: LD Plan-Neofluar 20x/0.4 NA Corr
+    product_code: 421350-9971-000
+    magnification: 20.0
+    numerical_aperture: 0.4
+    working_distance: 7.9 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: true
+    specialties:
+    - correction_collar
+    notes: "Correction collar for 0-1.5 mm glass."
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421350-9971-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-M27"
+    is_installed: true
 
-    - id: 40x_air
-      manufacturer: Zeiss
-      model: LD Plan-Neofluar 40x/0.6 NA Corr
-      product_code: 421360-9971-000
-      magnification: 40.0
-      numerical_aperture: 0.6
-      working_distance: 2.9 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: true
-      specialties:
-        - correction_collar
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/no/shop/objectives/421360-9971-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-M27"
-      is_installed: true
+  - id: 40x_air
+    manufacturer: Zeiss
+    model: LD Plan-Neofluar 40x/0.6 NA Corr
+    product_code: 421360-9971-000
+    magnification: 40.0
+    numerical_aperture: 0.6
+    working_distance: 2.9 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: true
+    specialties:
+    - correction_collar
+    notes: "Correction collar for 0-1.5 mm glass."
+    url: "https://www.micro-shop.zeiss.com/en/no/shop/objectives/421360-9971-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-M27"
+    is_installed: true
 
-    - id: 40x_water
-      manufacturer: Zeiss
-      model: C-Apochromat 40x/1.2 W Corr
-      product_code: 421767-9970-000
-      magnification: 40.0
-      numerical_aperture: 1.2
-      working_distance: 0.28 mm
-      immersion: water
-      correction: apochromat
-      afc_compatible: true
-      specialties:
-        - Correction ring for 0.17 mm cover glass
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421767-9970-000/Objective-C-Apochromat-40x-1.2-W-Corr-M27"
-      is_installed: true
+  - id: 40x_water
+    manufacturer: Zeiss
+    model: C-Apochromat 40x/1.2 W Corr
+    product_code: 421767-9970-000
+    magnification: 40.0
+    numerical_aperture: 1.2
+    working_distance: 0.28 mm
+    immersion: water
+    correction: apochromat
+    afc_compatible: true
+    specialties:
+    - Correction ring for 0.17 mm cover glass
+    notes: ""
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421767-9970-000/Objective-C-Apochromat-40x-1.2-W-Corr-M27"
+    is_installed: true
 
-    - id: 63x_oil
-      manufacturer: Zeiss
-      model: Plan-Apochromat 63x/1.4 NA Oil
-      product_code: 420780-9900-000
-      magnification: 63.0
-      numerical_aperture: 1.4
-      working_distance: 0.19 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: ""
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420780-9900-000/Objective-Plan-Apochromat-63x-1.4-Oil-M27"
-      is_installed: true
+  - id: 63x_oil
+    manufacturer: Zeiss
+    model: Plan-Apochromat 63x/1.4 NA Oil
+    product_code: 420780-9900-000
+    magnification: 63.0
+    numerical_aperture: 1.4
+    working_distance: 0.19 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: ""
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420780-9900-000/Objective-Plan-Apochromat-63x-1.4-Oil-M27"
+    is_installed: true
 
-    - id: 100x_oil
-      manufacturer: Zeiss
-      model: alpha Plan-Apochromat 100x/1.46 NA Oil DIC
-      product_code: 420792-9800-000
-      magnification: 100.0
-      numerical_aperture: 1.46
-      working_distance: 0.11 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties:
-        - DIC
-      notes: >
-        Verify recommended immersion oil and intended use conditions if this objective
-        is used for the highest-NA applications.
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9800-000/Objective-alpha-Plan-Apochromat-100x-1.46-Oil-DIC-M27"
-      is_installed: true
+  - id: 100x_oil
+    manufacturer: Zeiss
+    model: alpha Plan-Apochromat 100x/1.46 NA Oil DIC
+    product_code: 420792-9800-000
+    magnification: 100.0
+    numerical_aperture: 1.46
+    working_distance: 0.11 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties:
+    - DIC
+    notes: >
+      Verify recommended immersion oil and intended use conditions if this objective
+      is used for the highest-NA applications.
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9800-000/Objective-alpha-Plan-Apochromat-100x-1.46-Oil-DIC-M27"
+    is_installed: true
 
-    - id: 25x_multi
-      manufacturer: Zeiss
-      model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
-      product_code: "420852-9871"
-      magnification: 25.0
-      numerical_aperture: 0.8
-      working_distance: "0.57 mm at cover glass 0.17"
-      immersion: multi
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - DIC
-        - (UV)VIS-IR
-      notes: "Optional objective. Multi-immersion correction-collar objective."
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27"
-      is_installed: false
+  - id: 25x_multi
+    manufacturer: Zeiss
+    model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
+    product_code: "420852-9871"
+    magnification: 25.0
+    numerical_aperture: 0.8
+    working_distance: "0.57 mm at cover glass 0.17"
+    immersion: multi
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties:
+    - DIC
+    - (UV)VIS-IR
+    notes: "Optional objective. Multi-immersion correction-collar objective."
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27"
+    is_installed: false
 
-    - id: 63x_water
-      manufacturer: Zeiss
-      model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
-      product_code: "421787-9970"
-      magnification: 63.0
-      numerical_aperture: 1.2
-      working_distance: "0.28 mm at cover glass 0.17"
-      immersion: water
-      correction: apochromat
-      afc_compatible: false
-      specialties:
-        - UV-VIS-IR
-      notes: "Optional objective. Water-immersion correction-collar objective."
-      url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27"
-      is_installed: false
+  - id: 63x_water
+    manufacturer: Zeiss
+    model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
+    product_code: "421787-9970"
+    magnification: 63.0
+    numerical_aperture: 1.2
+    working_distance: "0.28 mm at cover glass 0.17"
+    immersion: water
+    correction: apochromat
+    afc_compatible: false
+    specialties:
+    - UV-VIS-IR
+    notes: "Optional objective. Water-immersion correction-collar objective."
+    url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27"
+    is_installed: false

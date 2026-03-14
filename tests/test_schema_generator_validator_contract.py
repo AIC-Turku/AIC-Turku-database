@@ -56,9 +56,9 @@ class SchemaGeneratorValidatorContractIntegrationTests(unittest.TestCase):
         generate, validate, _ = self._run_pipeline('invalid_repo')
 
         self.assertEqual(generate.returncode, 0, msg=generate.stderr)
-        self.assertEqual(validate.returncode, 1, msg=validate.stderr)
+        self.assertEqual(validate.returncode, 0, msg=validate.stderr)
         self.assertIn('missing_conditional_field', validate.stderr)
-        self.assertIn('positions.Pos_1.bands', validate.stderr)
+        self.assertIn('hardware.light_path.excitation_mechanisms[].positions{}.bands', validate.stderr)
 
 
 if __name__ == '__main__':

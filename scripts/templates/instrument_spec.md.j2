@@ -77,15 +77,19 @@
 {% if dto.modules %}
 <div class="aic-section">
   <div class="aic-section__title">Modules</div>
-  <div class="aic-chiprow">
+  <ul>
     {% for m in dto.modules %}
+    <li>
       {% if m.url %}
-        <a href="{{ m.url }}" target="_blank" class="aic-chip aic-chip--muted" title="{{ m.display_subtitle }}">{{ m.display_label }} ↗</a>
+        <a href="{{ m.url }}" target="_blank">{{ m.display_label }} ↗</a>
       {% else %}
-        <span class="aic-chip aic-chip--muted" title="{{ m.display_subtitle }}">{{ m.display_label }}</span>
+        {{ m.display_label }}
       {% endif %}
+      {% if m.display_subtitle %}<br><small class="aic-muted">{{ m.display_subtitle }}</small>{% endif %}
+      {% if m.display_notes %}<br><small class="aic-muted">{{ m.display_notes }}</small>{% endif %}
+    </li>
     {% endfor %}
-  </div>
+  </ul>
 </div>
 {% endif %}
 

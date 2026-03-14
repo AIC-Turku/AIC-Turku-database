@@ -12,121 +12,129 @@ instrument:
   url: ''
 
 modalities:
-  - confocal_point
-  - spectral_imaging
-  - flim
-  - fcs
-  - transmitted_brightfield
+- confocal_point
+- spectral_imaging
+- flim
+- fcs
+- transmitted_brightfield
 
 modules:
-  - name: flim # Flag: Verify this matches a canonical ID in vocab/modules.yaml
-    notes: FAST Lifetime Contrast (FALCON) module
-    url: ''
-  - name: fcs # Flag: Verify this matches a canonical ID in vocab/modules.yaml
-    notes: Fluorescence correlation spectroscopy module
-    url: ''
-  - name: aobs # Flag: Verify this matches a canonical ID in vocab/modules.yaml
-    notes: Acousto-Optical Beam Splitter (spectral splitter)
-    url: ''
+- name: flim   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+  notes: FAST Lifetime Contrast (FALCON) module
+  url: ''
+  manufacturer: Leica Microsystems
+  model: FALCON
+- name: fcs   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+  notes: Fluorescence correlation spectroscopy module
+  url: ''
+  manufacturer: Leica Microsystems
+  model: FCS Module
+- name: aobs   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+  notes: Acousto-Optical Beam Splitter (spectral splitter)
+  url: ''
 
+  manufacturer: Leica Microsystems
+  model: AOBS
 software:
-  - role: acquisition
-    name: Leica LAS X with FALCON (FLIM)
-    version: ''
-    url: ''
+- role: acquisition
+  name: Leica LAS X with FALCON (FLIM)
+  version: ''
+  url: ''
 hardware:
   scanner:
     type: resonant
-    line_rate_hz: null # Flag: Required because scanner type is 'resonant'. Please provide the line rate in Hz (e.g., 8000).
+    line_rate_hz:      # Flag: Required because scanner type is 'resonant'. Please provide the line rate in Hz (e.g., 8000).
     notes: High-speed resonant scanner
     url: ''
 
   light_sources:
-    - kind: white_light_laser
-      manufacturer: Leica
-      model: White Light Laser (WLL)
-      wavelength_nm: tunable
-      power: ''
-      notes: continuous, up to 8 simultaneous lines via AOBS
-      url: ''
-    - kind: laser
-      manufacturer: Leica
-      model: 405 nm diode laser
-      wavelength_nm: '405'
-      power: ''
-      notes: ''
-      url: ''
+  - kind: white_light_laser
+    manufacturer: Leica
+    model: White Light Laser (WLL)
+    wavelength_nm: tunable
+    power: ''
+    notes: continuous, up to 8 simultaneous lines via AOBS
+    url: ''
+  - kind: laser
+    manufacturer: Leica
+    model: 405 nm diode laser
+    wavelength_nm: '405'
+    power: ''
+    notes: ''
+    url: ''
 
   detectors:
-    - kind: hyd
-      manufacturer: Leica
-      model: HyD SP detectors
-      qe_peak_pct: null # Flag: Required conditionally because confocal_point modality is present.
-      notes: 4x detectors (Power HyD S, S Core, X, R)
-      url: ''
-    - kind: pmt
-      manufacturer: Leica
-      model: Transmitted light detector
-      qe_peak_pct: null # Flag: Required conditionally because confocal_point modality is present.
-      notes: Brightfield PMT
-      url: ''
+  - kind: hyd
+    manufacturer: Leica
+    model: HyD SP detectors
+    qe_peak_pct:        # Flag: Required conditionally because confocal_point modality is present.
+    notes: 4x detectors (Power HyD S, S Core, X, R)
+    url: ''
+    id: detector_1
+  - kind: pmt
+    manufacturer: Leica
+    model: Transmitted light detector
+    qe_peak_pct:        # Flag: Required conditionally because confocal_point modality is present.
+    notes: Brightfield PMT
+    url: ''
 
+    id: detector_2
   objectives:
-    - id: 10x_air
-      manufacturer: Leica
-      model: HC PL APO CS2
-      product_code: ''
-      magnification: 10.0
-      numerical_aperture: 0.4
-      working_distance: '' # Flag: Required conditionally because confocal_point is present. Please provide a value (e.g., '2.2 mm').
-      immersion: air
-      correction: apochromat
-      afc_compatible: false
-      specialties: []
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 20x_multi
-      manufacturer: Leica
-      model: HC PL APO IMM CORR CS2
-      product_code: ''
-      magnification: 20.0
-      numerical_aperture: 0.75
-      working_distance: '' # Flag: Required conditionally because confocal_point is present.
-      immersion: multi # Flag: Verify 'multi' is a valid canonical ID in vocab/objective_immersion.yaml
-      correction: apochromat
-      afc_compatible: false
-      specialties:
-        - Correction Ring (CORR)
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 40x_glycerol
-      manufacturer: Leica
-      model: HC PL APO GLYC CORR CS2
-      product_code: ''
-      magnification: 40.0
-      numerical_aperture: 1.25
-      working_distance: '' # Flag: Required conditionally because confocal_point is present.
-      immersion: glycerol # Flag: Verify 'glycerol' is a valid canonical ID in vocab/objective_immersion.yaml
-      correction: apochromat
-      afc_compatible: false
-      specialties:
-        - Correction Ring (CORR)
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 63x_oil
-      manufacturer: Leica
-      model: HC PL APO OIL CS2
-      product_code: ''
-      magnification: 63.0
-      numerical_aperture: 1.4
-      working_distance: '' # Flag: Required conditionally because confocal_point is present.
-      immersion: oil
-      correction: apochromat
-      afc_compatible: false
-      specialties: []
-      notes: ''
-      url: ''
-      is_installed: true
+  - id: 10x_air
+    manufacturer: Leica
+    model: HC PL APO CS2
+    product_code: ''
+    magnification: 10.0
+    numerical_aperture: 0.4
+    working_distance: ''   # Flag: Required conditionally because confocal_point is present. Please provide a value (e.g., '2.2 mm').
+    immersion: air
+    correction: apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 20x_multi
+    manufacturer: Leica
+    model: HC PL APO IMM CORR CS2
+    product_code: ''
+    magnification: 20.0
+    numerical_aperture: 0.75
+    working_distance: ''   # Flag: Required conditionally because confocal_point is present.
+    immersion: multi   # Flag: Verify 'multi' is a valid canonical ID in vocab/objective_immersion.yaml
+    correction: apochromat
+    afc_compatible: false
+    specialties:
+    - Correction Ring (CORR)
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 40x_glycerol
+    manufacturer: Leica
+    model: HC PL APO GLYC CORR CS2
+    product_code: ''
+    magnification: 40.0
+    numerical_aperture: 1.25
+    working_distance: ''   # Flag: Required conditionally because confocal_point is present.
+    immersion: glycerol   # Flag: Verify 'glycerol' is a valid canonical ID in vocab/objective_immersion.yaml
+    correction: apochromat
+    afc_compatible: false
+    specialties:
+    - Correction Ring (CORR)
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 63x_oil
+    manufacturer: Leica
+    model: HC PL APO OIL CS2
+    product_code: ''
+    magnification: 63.0
+    numerical_aperture: 1.4
+    working_distance: ''   # Flag: Required conditionally because confocal_point is present.
+    immersion: oil
+    correction: apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true

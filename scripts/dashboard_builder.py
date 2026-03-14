@@ -1604,15 +1604,24 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         }
         for modality_id in canonical_modalities
     ]
-    modules = [
-        {
-            **copy.deepcopy(module),
-            "display_label": clean_text(module.get("display_name") or module.get("name")),
-            "display_subtitle": clean_text(module.get("notes")),
-            "method_sentence": f"The {clean_text(module.get('display_name') or module.get('name'))} module was used." if clean_text(module.get("display_name") or module.get("name")) else "",
-        }
-        for module in canonical_modules if isinstance(module, dict)
-    ]
+    modules = []
+    for module in canonical_modules:
+        if not isinstance(module, dict):
+            continue
+        module_name = clean_text(module.get("display_name") or module.get("name"))
+        manufacturer = clean_text(module.get("manufacturer"))
+        model = clean_text(module.get("model"))
+        notes = clean_text(module.get("notes"))
+        provenance = " ".join(part for part in [manufacturer, model] if part).strip()
+        modules.append(
+            {
+                **copy.deepcopy(module),
+                "display_label": module_name,
+                "display_subtitle": provenance,
+                "display_notes": notes,
+                "method_sentence": f"The {module_name} module was used." if module_name else "",
+            }
+        )
 
     acquisition_software = next((row["display_label"] for row in software_rows if clean_text(row.get("role")).lower() == "acquisition" and clean_text(row.get("display_label"))), "[MISSING ACQUISITION SOFTWARE NAME AND VERSION]")
     microscope_identity = " ".join(part for part in [clean_text(canonical_instrument.get("manufacturer")), clean_text(canonical_instrument.get("model"))] if part).strip()
@@ -2228,6 +2237,12 @@ def _discover_image_filename(instrument_id: str) -> str:
     return "placeholder.svg"
 
 
+
+
+def validated_instrument_selection(instruments_dir: str | Path = "instruments") -> tuple[set[str], list[Any], list[Any]]:
+    """Resolve authoritative instrument IDs from the validator for downstream DTO/reporting flows."""
+    return validate_instrument_ledgers(instruments_dir=Path(instruments_dir))
+
 def load_instruments(
     instruments_dir: str = "instruments",
     load_errors: list[YamlLoadError] | None = None,
@@ -2332,7 +2347,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     vocabulary = Vocabulary(repo_root / "vocab", vocab_registry=combined_registry or None)
 
     load_errors: list[YamlLoadError] = []
-    validated_instrument_ids, instrument_validation_issues, instrument_validation_warnings = validate_instrument_ledgers()
+    validated_instrument_ids, instrument_validation_issues, instrument_validation_warnings = validated_instrument_selection()
 
     # Source-of-truth gate: only validated instruments may enter canonicalization/DTO production flow.
     instruments = load_instruments(

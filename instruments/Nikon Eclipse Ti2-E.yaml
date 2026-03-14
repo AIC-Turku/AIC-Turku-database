@@ -12,23 +12,27 @@ instrument:
   url: ''
 
 modalities:
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - dic
+- widefield_fluorescence
+- transmitted_brightfield
+- dic
 
 modules:
-  - name: incubation
-    notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
-    url: ''
-  - name: hardware_autofocus
-    notes: Nikon Perfect Focus System (autofocus)
-    url: ''
+- name: incubation
+  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
+  url: ''
+  manufacturer: Okolab
+  model: H201-T
+- name: hardware_autofocus
+  notes: Nikon Perfect Focus System (autofocus)
+  url: ''
 
+  manufacturer: Nikon
+  model: Perfect Focus System
 software:
-  - role: acquisition
-    name: Nikon NIS-Elements AR
-    version: '5.11'
-    url: ''
+- role: acquisition
+  name: Nikon NIS-Elements AR
+  version: '5.11'
+  url: ''
 hardware:
   environment:
     temperature_control: true
@@ -46,268 +50,270 @@ hardware:
     url: ''
 
   light_sources:
-    - kind: led
-      manufacturer: Lumencor
-      model: Spectra X LED system
-      wavelength_nm: 395/25; 440/20; 475/28; 550/15; 575/35; 640/30; 730/40 # Flag: Verify if your schema validation accepts semicolon-separated values for spectral_descriptor
-      power: ''
-      notes: 550 nm module available by request
-      url: ''
+  - kind: led
+    manufacturer: Lumencor
+    model: Spectra X LED system
+    wavelength_nm: 395/25; 440/20; 475/28; 550/15; 575/35; 640/30; 730/40   # Flag: Verify if your schema validation accepts semicolon-separated values for spectral_descriptor
+    power: ''
+    notes: 550 nm module available by request
+    url: ''
 
   detectors:
-    - kind: scmos
-      manufacturer: Hamamatsu
-      model: Orca Flash4.0 V3
-      pixel_pitch_um: null # Flag: Required field for scmos. Please add physical pixel size (e.g., 6.5).
-      sensor_format_px: "2048 x 2044"
-      notes: sCMOS
-      url: ''
-    - kind: cmos # Changed from scmos to cmos based on notes
-      manufacturer: Nikon
-      model: DS-Fi3
-      pixel_pitch_um: null # Flag: Required field for cmos. Please add physical pixel size.
-      sensor_format_px: "2880 x 2048"
-      notes: Color CMOS
-      url: ''
+  - kind: scmos
+    manufacturer: Hamamatsu
+    model: Orca Flash4.0 V3
+    pixel_pitch_um:        # Flag: Required field for scmos. Please add physical pixel size (e.g., 6.5).
+    sensor_format_px: "2048 x 2044"
+    notes: sCMOS
+    url: ''
+    id: detector_1
+  - kind: cmos   # Changed from scmos to cmos based on notes
+    manufacturer: Nikon
+    model: DS-Fi3
+    pixel_pitch_um:        # Flag: Required field for cmos. Please add physical pixel size.
+    sensor_format_px: "2880 x 2048"
+    notes: Color CMOS
+    url: ''
 
+    id: detector_2
   filters:
-    - name: Chroma 89403bs
-      location: Filter Turret
-      product_code: 89403bs
-      excitation: '' # Flag: Required because widefield_fluorescence is present.
-      dichroic: ''   # Flag: Required because widefield_fluorescence is present.
-      emission: ''   # Flag: Required because widefield_fluorescence is present.
-      notes: Dichroic for CFP/YFP/mCherry/Cy7
-      url: ''
-    - name: Chroma 84000v2
-      location: Filter Turret
-      product_code: 84000v2
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: ''   # Flag: Required field.
-      notes: Quad-band for DAPI/FITC/TRITC/Cy5
-      url: ''
-    - name: Chroma 96377
-      location: Filter Turret
-      product_code: '96377'
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 809/81
-      notes: Cy7 emission filter
-      url: ''
-    - name: DAPI Emission
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 435/26
-      notes: ''
-      url: ''
-    - name: CFP Emission
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 475/20
-      notes: ''
-      url: ''
-    - name: GFP Emission
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 515/30
-      notes: ''
-      url: ''
-    - name: YFP Emission
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 540/21
-      notes: ''
-      url: ''
-    - name: TRITC Emission
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 595/40
-      notes: Additional optional emission
-      url: ''
-    - name: mCherry Emission
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 632/60
-      notes: Additional optional emission
-      url: ''
-    - name: Cy5 Emission
-      location: Emission Wheel
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: 705/71
-      notes: Additional optional emission
-      url: ''
-    - name: Lamp Filter Cubes
-      location: Epi Turret
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: ''   # Flag: Required field.
-      notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
-      url: ''
-    - name: DIC Fixed Analyzer
-      location: Analyzer Slider
-      product_code: ''
-      excitation: '' # Flag: Required field.
-      dichroic: ''   # Flag: Required field.
-      emission: ''   # Flag: Required field.
-      notes: For DIC imaging
-      url: ''
+  - name: Chroma 89403bs
+    location: Filter Turret
+    product_code: 89403bs
+    excitation: ''   # Flag: Required because widefield_fluorescence is present.
+    dichroic: ''     # Flag: Required because widefield_fluorescence is present.
+    emission: ''     # Flag: Required because widefield_fluorescence is present.
+    notes: Dichroic for CFP/YFP/mCherry/Cy7
+    url: ''
+  - name: Chroma 84000v2
+    location: Filter Turret
+    product_code: 84000v2
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: ''     # Flag: Required field.
+    notes: Quad-band for DAPI/FITC/TRITC/Cy5
+    url: ''
+  - name: Chroma 96377
+    location: Filter Turret
+    product_code: '96377'
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 809/81
+    notes: Cy7 emission filter
+    url: ''
+  - name: DAPI Emission
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 435/26
+    notes: ''
+    url: ''
+  - name: CFP Emission
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 475/20
+    notes: ''
+    url: ''
+  - name: GFP Emission
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 515/30
+    notes: ''
+    url: ''
+  - name: YFP Emission
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 540/21
+    notes: ''
+    url: ''
+  - name: TRITC Emission
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 595/40
+    notes: Additional optional emission
+    url: ''
+  - name: mCherry Emission
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 632/60
+    notes: Additional optional emission
+    url: ''
+  - name: Cy5 Emission
+    location: Emission Wheel
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: 705/71
+    notes: Additional optional emission
+    url: ''
+  - name: Lamp Filter Cubes
+    location: Epi Turret
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: ''     # Flag: Required field.
+    notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
+    url: ''
+  - name: DIC Fixed Analyzer
+    location: Analyzer Slider
+    product_code: ''
+    excitation: ''   # Flag: Required field.
+    dichroic: ''     # Flag: Required field.
+    emission: ''     # Flag: Required field.
+    notes: For DIC imaging
+    url: ''
 
   objectives:
-    - id: 2x_air
-      manufacturer: Nikon
-      model: Plan UW 2x/0.06
-      product_code: MRL00022
-      magnification: 2.0
-      numerical_aperture: 0.06
-      working_distance: 7.5 mm
-      immersion: air
-      correction: plan_achromat
-      afc_compatible: false
-      specialties:
-        - polarization
-      notes: 'Mode suitability: BF recommended; FLUO (VIS) possible; polarization possible.'
-      url: ''
-      is_installed: true
-    - id: 4x_air
-      manufacturer: Nikon
-      model: Plan Fluor 4x/0.13
-      product_code: MRH00041
-      magnification: 4.0
-      numerical_aperture: 0.13
-      working_distance: 17.2 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - polarization
-      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
-      url: ''
-      is_installed: true
-    - id: 4x_air_2
-      manufacturer: Nikon
-      model: "Plan Apo \u03BBD 4x/0.20"
-      product_code: MRD70040
-      magnification: 4.0
-      numerical_aperture: 0.2
-      working_distance: 20.0 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties: []
-      notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended.'
-      url: ''
-      is_installed: true
-    - id: 10x_air
-      manufacturer: Nikon
-      model: Plan Fluor 10x/0.30 OFN 25 Ph1 DL
-      product_code: MRH20101
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: 15.2 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: true
-      specialties:
-        - phase
-      notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Nikon
-      model: S Plan Fluor ELWD ADM 20x/0.45 DIC N1
-      product_code: MRH08230
-      magnification: 20.0
-      numerical_aperture: 0.45
-      working_distance: 8.2 - 6.9 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: true
-      specialties:
-        - long_working_distance
-        - dic
-        - polarization
-      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
-      url: ''
-      is_installed: true
-    - id: 20x_air_2
-      manufacturer: Nikon
-      model: "Plan Apo \u03BB 20x/0.75 OFN25 DIC N2"
-      product_code: MRD00205
-      magnification: 20.0
-      numerical_aperture: 0.75
-      working_distance: 1.0 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties:
-        - dic
-        - polarization
-      notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
-      url: ''
-      is_installed: true
-    - id: 40x_air
-      manufacturer: Nikon
-      model: S Plan Fluor ELWD 40x/0.60 OFN22 Ph2
-      product_code: MRH48430
-      magnification: 40.0
-      numerical_aperture: 0.6
-      working_distance: 3.6 - 2.8 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: true
-      specialties:
-        - long_working_distance
-        - phase
-      notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
-      url: ''
-      is_installed: true
-    - id: 60x_oil
-      manufacturer: Nikon
-      model: "Plan Apo \u03BB 60x/1.40 Oil OFN25 DIC N2"
-      product_code: MRD01605
-      magnification: 60.0
-      numerical_aperture: 1.4
-      working_distance: 0.13 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties:
-        - dic
-        - polarization
-      notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
-      url: ''
-      is_installed: true
-    - id: 100x_oil
-      manufacturer: Nikon
-      model: Apo TIRF 100x/1.49 Oil
-      product_code: MRD01991
-      magnification: 100.0
-      numerical_aperture: 1.49
-      working_distance: 0.16 - 0.10 mm
-      immersion: oil
-      correction: apochromat
-      afc_compatible: true
-      specialties:
-        - tirf
-        - phase
-        - dic
-        - polarization
-      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
-      url: ''
-      is_installed: true
+  - id: 2x_air
+    manufacturer: Nikon
+    model: Plan UW 2x/0.06
+    product_code: MRL00022
+    magnification: 2.0
+    numerical_aperture: 0.06
+    working_distance: 7.5 mm
+    immersion: air
+    correction: plan_achromat
+    afc_compatible: false
+    specialties:
+    - polarization
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) possible; polarization possible.'
+    url: ''
+    is_installed: true
+  - id: 4x_air
+    manufacturer: Nikon
+    model: Plan Fluor 4x/0.13
+    product_code: MRH00041
+    magnification: 4.0
+    numerical_aperture: 0.13
+    working_distance: 17.2 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - polarization
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
+    url: ''
+    is_installed: true
+  - id: 4x_air_2
+    manufacturer: Nikon
+    model: "Plan Apo λD 4x/0.20"
+    product_code: MRD70040
+    magnification: 4.0
+    numerical_aperture: 0.2
+    working_distance: 20.0 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended.'
+    url: ''
+    is_installed: true
+  - id: 10x_air
+    manufacturer: Nikon
+    model: Plan Fluor 10x/0.30 OFN 25 Ph1 DL
+    product_code: MRH20101
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: 15.2 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: true
+    specialties:
+    - phase
+    notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Nikon
+    model: S Plan Fluor ELWD ADM 20x/0.45 DIC N1
+    product_code: MRH08230
+    magnification: 20.0
+    numerical_aperture: 0.45
+    working_distance: 8.2 - 6.9 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: true
+    specialties:
+    - long_working_distance
+    - dic
+    - polarization
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
+    url: ''
+    is_installed: true
+  - id: 20x_air_2
+    manufacturer: Nikon
+    model: "Plan Apo λ 20x/0.75 OFN25 DIC N2"
+    product_code: MRD00205
+    magnification: 20.0
+    numerical_aperture: 0.75
+    working_distance: 1.0 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties:
+    - dic
+    - polarization
+    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: Nikon
+    model: S Plan Fluor ELWD 40x/0.60 OFN22 Ph2
+    product_code: MRH48430
+    magnification: 40.0
+    numerical_aperture: 0.6
+    working_distance: 3.6 - 2.8 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: true
+    specialties:
+    - long_working_distance
+    - phase
+    notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
+    url: ''
+    is_installed: true
+  - id: 60x_oil
+    manufacturer: Nikon
+    model: "Plan Apo λ 60x/1.40 Oil OFN25 DIC N2"
+    product_code: MRD01605
+    magnification: 60.0
+    numerical_aperture: 1.4
+    working_distance: 0.13 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties:
+    - dic
+    - polarization
+    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
+    url: ''
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Nikon
+    model: Apo TIRF 100x/1.49 Oil
+    product_code: MRD01991
+    magnification: 100.0
+    numerical_aperture: 1.49
+    working_distance: 0.16 - 0.10 mm
+    immersion: oil
+    correction: apochromat
+    afc_compatible: true
+    specialties:
+    - tirf
+    - phase
+    - dic
+    - polarization
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
+    url: ''
+    is_installed: true
