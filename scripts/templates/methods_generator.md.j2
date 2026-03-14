@@ -194,6 +194,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         return (blocker?.title || blocker?.path || "Missing field").toString().trim();
     }
 
+    function missingMetadataNote(blockers) {
+        const labels = uniqueTexts((Array.isArray(blockers) ? blockers : []).map(formatBlockerLabel));
+        if (!labels.length) {
+            return "Some instrument metadata is missing; ask staff to confirm the exact settings.";
+        }
+        return `Some instrument metadata is missing (${humanJoin(labels)}); ask staff to confirm the exact settings.`;
+    }
+
     function getMethodsMetadataStatus(inst) {
         const metadata = inst?.methods_generation || {};
         const blockers = Array.isArray(metadata?.blockers)
@@ -449,15 +457,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const methodsMetadataStatus = getMethodsMetadataStatus(currentInst);
         if (methodsMetadataStatus.isBlocked) {
             renderMethodsMetadataWarning(currentInst);
-            const blockerSummary = methodsMetadataStatus.blockers
-                .map(blocker => blocker.title || blocker.path || "Missing field")
-                .join(", ");
-            accumulatedEntries.set(`blocked::${dto.id}`, {
-                instrumentId: dto.id,
-                text: `Methods text for ${dto.display_name} cannot be generated yet because required instrument metadata is missing: ${blockerSummary}.`,
-            });
-            updateOutputText();
-            return;
         }
 
         const groupedSelections = {
@@ -506,12 +505,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         ]).join(" ");
 
         const paragraphDeposition = cleanText(dto.methods?.data_deposition_recommendation);
+        const paragraphMissingMetadata = methodsMetadataStatus.isBlocked
+            ? missingMetadataNote(methodsMetadataStatus.blockers)
+            : "";
 
         const textParts = [
             paragraphHardware,
             paragraphLightPath,
             paragraphAcquisition,
             paragraphDeposition,
+            paragraphMissingMetadata,
         ].map(cleanText).filter(Boolean);
 
         const signature = buildSelectionSignature(dto);
