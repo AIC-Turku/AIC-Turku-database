@@ -648,6 +648,46 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(light.get("timing_mode", ""), "")
         self.assertNotIn("pulsed", light["method_sentence"].lower())
 
+    def test_build_instrument_mega_dto_uses_module_vocab_labels(self) -> None:
+        inst = {
+            "id": "scope-modules",
+            "display_name": "Scope Modules",
+            "canonical": {
+                "instrument": {
+                    "manufacturer": "Maker",
+                    "model": "Model",
+                    "stand_orientation": "inverted",
+                    "ocular_availability": "yes",
+                },
+                "software": [{"role": "acquisition", "name": "Acquire", "version": "1.0"}],
+                "modalities": [],
+                "modules": [{"name": "hardware_autofocus", "manufacturer": "Nikon", "model": "PFS"}],
+                "hardware": {},
+            },
+        }
+
+        with mock.patch("scripts.dashboard_builder._vocab_display", return_value="Hardware Autofocus"):
+            dto = build_instrument_mega_dto(self.vocabulary, inst, EMPTY_LIGHTPATH)
+
+        self.assertEqual(dto["modules"][0]["display_label"], "Hardware Autofocus")
+
+    def test_scanner_subtitle_does_not_duplicate_notes(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "scanner": {
+                        "type": "galvo",
+                        "notes": "Scanner notes only",
+                    }
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+        scanner = hardware["scanner"]
+        self.assertEqual(scanner["display_subtitle"], "")
+        self.assertIn("**Notes:** Scanner notes only", scanner["spec_lines"])
+
     def test_normalize_instrument_dto_preserves_module_manufacturer_and_model(self) -> None:
         payload = {
             "instrument": {"instrument_id": "scope-1", "display_name": "Scope 1"},

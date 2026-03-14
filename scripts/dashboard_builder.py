@@ -862,7 +862,7 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
     return {
         **copy.deepcopy(scanner),
         "display_label": scanner_type or "No Scanner",
-        "display_subtitle": " ".join(part for part in [manufacturer, model] if part).strip() or clean_text(scanner.get("notes")),
+        "display_subtitle": " ".join(part for part in [manufacturer, model] if part).strip(),
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
         "present": bool(scanner_type and scanner_type != "No Scanner"),
@@ -1614,7 +1614,8 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     for module in canonical_modules:
         if not isinstance(module, dict):
             continue
-        module_name = clean_text(module.get("display_name") or module.get("name"))
+        module_id = clean_text(module.get("name"))
+        module_name = clean_text(module.get("display_name")) or _vocab_display(vocabulary, "modules", module_id) or module_id
         manufacturer = clean_text(module.get("manufacturer"))
         model = clean_text(module.get("model"))
         notes = clean_text(module.get("notes"))

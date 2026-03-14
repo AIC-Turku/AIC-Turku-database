@@ -4,9 +4,9 @@
   {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
 {%- endmacro %}
 
-{% set dto = instrument.dto %}
-{% set hw = dto.hardware %}
-{% set identity = dto.identity if dto.identity else {} %}
+{%- set dto = instrument.dto -%}
+{%- set hw = dto.hardware -%}
+{%- set identity = dto.identity if dto.identity else {} -%}
 
 # {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
