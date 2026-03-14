@@ -136,6 +136,10 @@ hardware:
               component_type: ""  # Cube excitation filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
               center_nm: ""  # Cube excitation center (nm)
               width_nm: ""  # Cube excitation width (nm)
+              cut_on_nm: ""  # Cube excitation cut-on wavelength (nm)
+              cut_off_nm: ""  # Cube excitation cut-off wavelength (nm)
+              cutoffs_nm:  # Cube excitation multi-cutoff wavelengths (nm)
+                - ""
             emission_filter:  # Cube position emission filter
               bands:  # Cube emission multiband array
                 -
@@ -143,6 +147,10 @@ hardware:
                   width_nm: ""  # Emission band width (nm)
               center_nm: ""  # Cube emission center (nm)
               width_nm: ""  # Cube emission width (nm)
+              cut_on_nm: ""  # Cube emission cut-on wavelength (nm)
+              cut_off_nm: ""  # Cube emission cut-off wavelength (nm)
+              cutoffs_nm:  # Cube emission multi-cutoff wavelengths (nm)
+                - ""
               component_type: ""  # Cube emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             path: ""  # Cube position path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
             name: ""  # Cube name
@@ -151,6 +159,14 @@ hardware:
             dichroic:  # Cube position dichroic
               cutoffs_nm:  # Cube dichroic cutoffs (nm)
                 - ""
+              center_nm: ""  # Cube dichroic center wavelength (nm)
+              width_nm: ""  # Cube dichroic bandwidth (nm)
+              cut_on_nm: ""  # Cube dichroic cut-on wavelength (nm)
+              cut_off_nm: ""  # Cube dichroic cut-off wavelength (nm)
+              bands:  # Cube dichroic multiband array
+                -
+                  center_nm: ""  # Cube dichroic band center (nm)
+                  width_nm: ""  # Cube dichroic band width (nm)
               component_type: ""  # Cube dichroic component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
         path: ""  # Cube mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
         notes: ""  # Cube mechanism notes
@@ -179,13 +195,12 @@ hardware:
               - ""
     dichroic_mechanisms:  # Dichroic mechanisms
       -
-        name: ""  # Dichroic mechanism name
-        type: ""  # Dichroic mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
-        path: ""  # Dichroic mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-        notes: ""  # Dichroic mechanism notes
-        slots: ""  # Dichroic mechanism slots
         positions:  # Dichroic mechanism positions map
           Pos_1:
+            bands:  # Dichroic position multiband array
+              -
+                center_nm: ""  # Dichroic position band center (nm)
+                width_nm: ""  # Dichroic position band width (nm)
             component_type: ""  # Dichroic position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             manufacturer: ""  # Dichroic position component manufacturer
             product_code: ""  # Dichroic position component product code
@@ -195,6 +210,11 @@ hardware:
             cut_off_nm: ""  # Dichroic position cut-off wavelength (nm)
             cutoffs_nm:  # Dichroic position multi-cutoff wavelengths (nm)
               - ""
+        name: ""  # Dichroic mechanism name
+        type: ""  # Dichroic mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
+        path: ""  # Dichroic mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
+        notes: ""  # Dichroic mechanism notes
+        slots: ""  # Dichroic mechanism slots
     emission_mechanisms:  # Emission mechanisms
       -
         name: ""  # Emission mechanism name

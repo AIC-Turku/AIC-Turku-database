@@ -964,33 +964,49 @@ sections:
         title: Cube excitation multiband array
         status: conditional
         type: list
+        min_items: 1
         item_type: object
+        required_if:
+          item_field_in:
+            component_type: [multiband_bandpass]
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[].center_nm
         title: Excitation band center (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[]"
         
       - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[].width_nm
         title: Excitation band width (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[]"
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands
         title: Cube emission multiband array
         status: conditional
         type: list
+        min_items: 1
         item_type: object
+        required_if:
+          item_field_in:
+            component_type: [multiband_bandpass]
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[].center_nm
         title: Emission band center (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[]"
         
       - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[].width_nm
         title: Emission band width (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[]"
         
       - path: hardware.light_path.cube_mechanisms[].path
         title: Cube mechanism path tag
@@ -1060,27 +1076,148 @@ sections:
         title: Cube excitation center (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.width_nm
         title: Cube excitation width (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.cut_on_nm
+        title: Cube excitation cut-on wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [longpass]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.cut_off_nm
+        title: Cube excitation cut-off wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [shortpass]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.cutoffs_nm
+        title: Cube excitation multi-cutoff wavelengths (nm)
+        status: conditional
+        type: list
+        item_type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [dichroic, multiband_dichroic, polychroic]
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.cutoffs_nm
         title: Cube dichroic cutoffs (nm)
         status: conditional
         type: list
         item_type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [dichroic, multiband_dichroic, polychroic]
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.center_nm
         title: Cube emission center (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.width_nm
         title: Cube emission width (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.cut_on_nm
+        title: Cube emission cut-on wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [longpass]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.cut_off_nm
+        title: Cube emission cut-off wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [shortpass]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.cutoffs_nm
+        title: Cube emission multi-cutoff wavelengths (nm)
+        status: conditional
+        type: list
+        item_type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [dichroic, multiband_dichroic, polychroic]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.center_nm
+        title: Cube dichroic center wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.width_nm
+        title: Cube dichroic bandwidth (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.cut_on_nm
+        title: Cube dichroic cut-on wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [longpass]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.cut_off_nm
+        title: Cube dichroic cut-off wavelength (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [shortpass]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands
+        title: Cube dichroic multiband array
+        status: conditional
+        type: list
+        min_items: 1
+        item_type: object
+        required_if:
+          item_field_in:
+            component_type: [multiband_bandpass]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[].center_nm
+        title: Cube dichroic band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[].width_nm
+        title: Cube dichroic band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[]"
         
       - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic
         title: Cube position dichroic
@@ -1207,27 +1344,66 @@ sections:
         title: Excitation position center wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.width_nm
         title: Excitation position bandwidth (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.cut_on_nm
         title: Excitation position cut-on wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [longpass]
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.cut_off_nm
         title: Excitation position cut-off wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [shortpass]
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.cutoffs_nm
         title: Excitation position multi-cutoff wavelengths (nm)
         status: conditional
         type: list
         item_type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [dichroic, multiband_dichroic, polychroic]
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.bands
+        title: Dichroic position multiband array
+        status: conditional
+        type: list
+        min_items: 1
+        item_type: object
+        required_if:
+          item_field_in:
+            component_type: [multiband_bandpass]
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.bands[].center_nm
+        title: Dichroic position band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.bands[]"
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.bands[].width_nm
+        title: Dichroic position band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.bands[]"
 
       - path: hardware.light_path.dichroic_mechanisms
         title: Dichroic mechanisms
@@ -1300,27 +1476,42 @@ sections:
         title: Dichroic position center wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.dichroic_mechanisms[].positions{}.width_nm
         title: Dichroic position bandwidth (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm
         title: Dichroic position cut-on wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [longpass]
 
       - path: hardware.light_path.dichroic_mechanisms[].positions{}.cut_off_nm
         title: Dichroic position cut-off wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [shortpass]
 
       - path: hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm
         title: Dichroic position multi-cutoff wavelengths (nm)
         status: conditional
         type: list
         item_type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [dichroic, multiband_dichroic, polychroic]
 
       - path: hardware.light_path.emission_mechanisms
         title: Emission mechanisms
@@ -1417,27 +1608,42 @@ sections:
         title: Emission position center wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.width_nm
         title: Emission position bandwidth (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [bandpass, notch]
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.cut_on_nm
         title: Emission position cut-on wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [longpass]
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm
         title: Emission position cut-off wavelength (nm)
         status: conditional
         type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [shortpass]
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.cutoffs_nm
         title: Emission position multi-cutoff wavelengths (nm)
         status: conditional
         type: list
         item_type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [dichroic, multiband_dichroic, polychroic]
 
       - path: hardware.light_path.splitters
         title: Light path splitters
