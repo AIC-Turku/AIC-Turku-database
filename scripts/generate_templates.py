@@ -22,11 +22,12 @@ class Rule:
     allowed_values: list[object] = field(default_factory=list)
     item_type: str | None = None
     vocab: str | None = None
+    example_key: str | None = None
 
 
 @dataclass
 class Node:
-    kind: str = "mapping"  # mapping | list | scalar
+    kind: str = "mapping"  # mapping | list | object_map | scalar
     children: dict[str, "Node"] = field(default_factory=dict)
     item: "Node" | None = None
     rule: Rule | None = None
@@ -98,6 +99,7 @@ def _extract_rules(schema: dict) -> list[Rule]:
                         allowed_values=list(raw.get("allowed_values") or []),
                         item_type=(str(raw.get("item_type")) if raw.get("item_type") is not None else None),
                         vocab=(str(raw.get("vocab")) if raw.get("vocab") is not None else None),
+                        example_key=(str(raw.get("example_key")) if raw.get("example_key") is not None else None),
                     )
                 )
     else:
@@ -117,6 +119,7 @@ def _extract_rules(schema: dict) -> list[Rule]:
                     allowed_values=list(raw.get("allowed_values") or []),
                     item_type=(str(raw.get("item_type")) if raw.get("item_type") is not None else None),
                     vocab=(str(raw.get("vocab")) if raw.get("vocab") is not None else None),
+                    example_key=(str(raw.get("example_key")) if raw.get("example_key") is not None else None),
                 )
             )
     return rules
@@ -167,10 +170,16 @@ def _ensure_child(mapping_node: Node, key: str, kind: str = "mapping") -> Node:
             child.kind = "list"
             if child.item is None:
                 child.item = Node(kind="scalar")
+        elif kind == "object_map" and child.kind in {"scalar", "mapping"}:
+            child.kind = "object_map"
+            if child.item is None:
+                child.item = Node(kind="mapping")
     return child
 
 
 def _rule_leaf_kind(rule: Rule) -> str:
+    if rule.value_type in {"mapping", "object"}:
+        return "mapping"
     return "list" if rule.value_type == "list" else "scalar"
 
 
@@ -192,6 +201,19 @@ def _insert_rule(root: Node, rule: Rule) -> None:
                 return
 
             current = list_node.item
+            continue
+
+        if token.endswith("{}"):
+            key = token[:-2]
+            map_node = _ensure_child(current, key, kind="object_map")
+            if map_node.item is None or map_node.item.kind == "scalar":
+                map_node.item = Node(kind="mapping")
+
+            if is_last:
+                map_node.rule = rule
+                return
+
+            current = map_node.item
             continue
 
         desired_kind = _rule_leaf_kind(rule) if is_last else "mapping"
@@ -310,6 +332,11 @@ def _render_node(
             lines.extend(_render_list(child, indent + 2, vocab_values, top_key_groups))
             continue
 
+        if child.kind == "object_map":
+            lines.append(f"{prefix}{key}:{inline_comment}")
+            lines.extend(_render_object_map(child, indent + 2, vocab_values, top_key_groups))
+            continue
+
         lines.append(f"{prefix}{key}:{inline_comment}")
         lines.extend(_render_node(child, indent + 2, vocab_values, top_key_groups, top_level=False))
 
@@ -324,6 +351,19 @@ def _render_list(node: Node, indent: int, vocab_values: dict[str, list[str]], to
         return [f"{prefix}- {_yaml_scalar(_rule_default_value(item.rule or node.rule))}"]
 
     lines = [f"{prefix}-"]
+    lines.extend(_render_node(item, indent + 2, vocab_values, top_key_groups, top_level=False))
+    return lines
+
+
+def _render_object_map(node: Node, indent: int, vocab_values: dict[str, list[str]], top_key_groups: dict[str, str]) -> list[str]:
+    prefix = " " * indent
+    entry_key = node.rule.example_key if node.rule and node.rule.example_key else "example_key"
+    item = node.item or Node(kind="mapping")
+
+    if item.kind == "scalar":
+        return [f"{prefix}{entry_key}: {_yaml_scalar(_rule_default_value(item.rule or node.rule))}"]
+
+    lines = [f"{prefix}{entry_key}:"]
     lines.extend(_render_node(item, indent + 2, vocab_values, top_key_groups, top_level=False))
     return lines
 
