@@ -365,6 +365,48 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertEqual('0.85em', result['noteFontSize'])
         self.assertEqual('var(--md-default-fg-color--light)', result['noteColor'])
 
+    def test_methods_are_still_generated_when_metadata_blockers_exist(self) -> None:
+        instrument = {
+            "id": "scope-1",
+            "display_name": "Scope 1",
+            "retired": False,
+            "methods_generation": {
+                "is_blocked": True,
+                "blockers": [
+                    {"kind": "instrument_metadata", "title": "Objective NA"},
+                    {"kind": "instrument_metadata", "path": "software[0].version"},
+                ],
+            },
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {"filters": [], "splitters": []},
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-1';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+
+        self.assertIn("Base method block.", result["output"])
+        self.assertIn("Some instrument metadata is missing", result["output"])
+        self.assertIn("ask staff", result["output"])
+        self.assertIn("Objective NA", result["output"])
+
 
 if __name__ == "__main__":
     unittest.main()
