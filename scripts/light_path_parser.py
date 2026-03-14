@@ -111,6 +111,59 @@ def _collect_splitters(hardware: dict[str, Any], light_path: dict[str, Any]) -> 
     return splitters
 
 
+
+def _collect_endpoint_rows(hardware: dict[str, Any], light_path: dict[str, Any]) -> list[dict[str, Any]]:
+    endpoints: list[dict[str, Any]] = []
+    for collection in (
+        light_path.get("endpoints", []),
+        light_path.get("terminals", []),
+        light_path.get("detection_endpoints", []),
+        hardware.get("endpoints", []),
+        hardware.get("terminals", []),
+        hardware.get("detection_endpoints", []),
+    ):
+        if not isinstance(collection, list):
+            continue
+        for entry in collection:
+            if isinstance(entry, dict):
+                endpoints.append(entry)
+    return endpoints
+
+
+
+def _clean_identifier(value: Any) -> str:
+    cleaned = _clean_string(value).lower()
+    if not cleaned:
+        return ""
+    return re.sub(r"[^a-z0-9]+", "_", cleaned).strip("_")
+
+
+
+def _normalize_endpoint_type(value: Any) -> str:
+    raw = _clean_string(value).lower()
+    token = _clean_identifier(raw)
+    if not raw and not token:
+        return "detector"
+    if any(keyword in raw for keyword in ("eyepiece", "ocular")) or token in {"eyepiece", "eyepieces", "ocular", "oculars", "binocular", "trinocular"}:
+        return "eyepiece"
+    if ("camera" in raw and "port" in raw) or token in {"camera_port", "cameraport"}:
+        return "camera_port"
+    if token in CAMERA_DETECTOR_KINDS | POINT_DETECTOR_KINDS | {"hyd", "apd", "spad", "detector", "camera"}:
+        return "detector"
+    return token or "detector"
+
+
+
+def _routes_overlap(left: list[str], right: list[str]) -> bool:
+    left_set = {tag for tag in left if tag != "all"}
+    right_set = {tag for tag in right if tag != "all"}
+    if not left_set or not right_set:
+        return True
+    if "shared" in left_set or "shared" in right_set:
+        return True
+    return bool(left_set & right_set)
+
+
 def _require_positive_number(component: dict[str, Any], field: str, errors: list[str], context: str) -> None:
     if not _is_positive_number(component.get(field)):
         errors.append(f"{context}: component_type requires positive `{field}`.")
@@ -184,6 +237,36 @@ def _validate_component(component: dict[str, Any], errors: list[str], context: s
         return
 
 
+def _validate_splitter_branch(branch: dict[str, Any], errors: list[str], context: str) -> None:
+    _validate_optional_path(branch, errors, context)
+    mode = branch.get("mode")
+    if mode is not None and (not isinstance(mode, str) or not mode.strip()):
+        errors.append(f"{context}: `mode` must be a non-empty string when provided.")
+    component = branch.get("emission_filter") if isinstance(branch.get("emission_filter"), dict) else branch.get("component")
+    if isinstance(component, dict):
+        _validate_component(component, errors, f"{context}.component")
+    targets = branch.get("targets") or branch.get("target_ids") or branch.get("terminal_ids") or branch.get("endpoint_ids")
+    if targets is not None:
+        values = targets if isinstance(targets, list) else [targets]
+        if not all(isinstance(item, str) and item.strip() for item in values):
+            errors.append(f"{context}: targets must be a string or list of non-empty strings when provided.")
+
+
+
+def _validate_endpoint(endpoint: dict[str, Any], errors: list[str], context: str) -> None:
+    _validate_optional_path(endpoint, errors, context)
+    endpoint_type = endpoint.get("endpoint_type") or endpoint.get("type") or endpoint.get("kind")
+    if endpoint_type is not None and (not isinstance(endpoint_type, str) or not endpoint_type.strip()):
+        errors.append(f"{context}: endpoint type must be a non-empty string when provided.")
+    if endpoint.get("id") is not None and (not isinstance(endpoint.get("id"), str) or not endpoint.get("id").strip()):
+        errors.append(f"{context}: `id` must be a non-empty string when provided.")
+    for numeric_field in ("collection_min_nm", "collection_max_nm", "collection_center_nm", "collection_width_nm"):
+        value = endpoint.get(numeric_field)
+        if value is not None and _coerce_number(value) is None:
+            errors.append(f"{context}: `{numeric_field}` must be numeric when provided.")
+
+
+
 def validate_light_path(instrument_dict: dict) -> list[str]:
     """Validate light-path mechanisms and optical components in an instrument record."""
     errors: list[str] = []
@@ -192,6 +275,26 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
     if not isinstance(light_path, dict):
         return ["hardware.light_path must be a mapping/object."]
 
+    def branch_targets(raw_branch: dict[str, Any]) -> list[str]:
+        raw_targets = (
+            raw_branch.get("targets")
+            or raw_branch.get("target_ids")
+            or raw_branch.get("terminal_ids")
+            or raw_branch.get("endpoint_ids")
+            or raw_branch.get("target")
+            or raw_branch.get("endpoint")
+        )
+        values = raw_targets if isinstance(raw_targets, list) else [raw_targets]
+        normalized: list[str] = []
+        for value in values:
+            identifier = _clean_identifier(value)
+            if identifier and identifier not in normalized:
+                normalized.append(identifier)
+        return normalized
+
+    known_target_ids: set[str] = set()
+    explicit_endpoint_ids: dict[str, int] = {}
+
     for src_index, source in enumerate(hardware.get("light_sources", [])):
         if isinstance(source, dict):
             _validate_optional_path(source, errors, f"hardware.light_sources[{src_index}]")
@@ -199,6 +302,16 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
     for det_index, detector in enumerate(hardware.get("detectors", [])):
         if isinstance(detector, dict):
             _validate_optional_path(detector, errors, f"hardware.detectors[{det_index}]")
+            for candidate in (
+                detector.get("id"),
+                detector.get("channel_name"),
+                detector.get("channel"),
+                detector.get("name"),
+                detector.get("display_label"),
+            ):
+                normalized_candidate = _clean_identifier(candidate)
+                if normalized_candidate:
+                    known_target_ids.add(normalized_candidate)
 
     for stage in ("excitation_mechanisms", "dichroic_mechanisms", "emission_mechanisms", "cube_mechanisms"):
         for mech_index, mechanism in enumerate(_iter_mechanisms(light_path, stage)):
@@ -251,6 +364,29 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                 else:
                     _validate_component(component, errors, pos_ctx)
 
+    endpoint_rows = _collect_endpoint_rows(hardware, light_path)
+    for endpoint_index, endpoint in enumerate(endpoint_rows):
+        if not isinstance(endpoint, dict):
+            continue
+        _validate_endpoint(endpoint, errors, f"endpoints[{endpoint_index}]")
+        explicit_id = _clean_identifier(endpoint.get("id"))
+        if explicit_id:
+            if explicit_id in explicit_endpoint_ids:
+                errors.append(
+                    f"endpoints[{endpoint_index}]: duplicate endpoint id `{endpoint.get('id')}` already declared in endpoints[{explicit_endpoint_ids[explicit_id]}]."
+                )
+            else:
+                explicit_endpoint_ids[explicit_id] = endpoint_index
+        for candidate in (
+            endpoint.get("id"),
+            endpoint.get("terminal_id"),
+            endpoint.get("name"),
+            endpoint.get("display_label"),
+        ):
+            normalized_candidate = _clean_identifier(candidate)
+            if normalized_candidate:
+                known_target_ids.add(normalized_candidate)
+
     for split_idx, splitter in enumerate(_collect_splitters(hardware, light_path)):
         split_ctx = f"splitters[{split_idx}]"
         _validate_optional_path(splitter, errors, split_ctx)
@@ -264,6 +400,12 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                 errors,
                 f"{split_ctx}.path_1.emission_filter",
             )
+        if isinstance(splitter.get("path_1"), dict):
+            _validate_splitter_branch(splitter["path_1"], errors, f"{split_ctx}.path_1")
+            if known_target_ids:
+                for target_id in branch_targets(splitter["path_1"]):
+                    if target_id not in known_target_ids:
+                        errors.append(f"{split_ctx}.path_1: target `{target_id}` does not match any declared detector or endpoint.")
 
         if isinstance(splitter.get("path_2", {}).get("emission_filter"), dict):
             _validate_component(
@@ -271,6 +413,25 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                 errors,
                 f"{split_ctx}.path_2.emission_filter",
             )
+        if isinstance(splitter.get("path_2"), dict):
+            _validate_splitter_branch(splitter["path_2"], errors, f"{split_ctx}.path_2")
+            if known_target_ids:
+                for target_id in branch_targets(splitter["path_2"]):
+                    if target_id not in known_target_ids:
+                        errors.append(f"{split_ctx}.path_2: target `{target_id}` does not match any declared detector or endpoint.")
+
+        if isinstance(splitter.get("branches"), list):
+            for branch_index, branch in enumerate(splitter.get("branches") or []):
+                if not isinstance(branch, dict):
+                    errors.append(f"{split_ctx}.branches[{branch_index}]: branch entry must be an object.")
+                    continue
+                _validate_splitter_branch(branch, errors, f"{split_ctx}.branches[{branch_index}]")
+                if known_target_ids:
+                    for target_id in branch_targets(branch):
+                        if target_id not in known_target_ids:
+                            errors.append(
+                                f"{split_ctx}.branches[{branch_index}]: target `{target_id}` does not match any declared detector or endpoint."
+                            )
 
     return errors
 
@@ -474,6 +635,10 @@ def _source_role(source: dict[str, Any]) -> str:
 
 def _detector_class(kind: str) -> str:
     normalized = kind.lower().strip()
+    if normalized in {"eyepiece", "eyepieces", "ocular", "oculars"}:
+        return "eyepiece"
+    if normalized in {"camera_port", "cameraport"}:
+        return "camera_port"
     if normalized in CAMERA_DETECTOR_KINDS:
         return "camera"
     if normalized in {"hyd"}:
@@ -546,17 +711,21 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
 
 
 
-def _detector_position(slot: int, detector: dict[str, Any]) -> dict[str, Any]:
+def _detector_position(slot: int, detector: dict[str, Any], *, terminal_id: str | None = None, mechanism_id: str | None = None) -> dict[str, Any]:
     kind = _clean_string(detector.get("kind") or detector.get("type") or "detector").lower() or "detector"
     manufacturer = _clean_string(detector.get("manufacturer") or detector.get("name"))
     model = _clean_string(detector.get("model"))
     channel_name = _clean_string(detector.get("channel_name") or detector.get("channel") or detector.get("name")) or f"Detector {slot}"
     display_label = " ".join(part for part in [channel_name if channel_name not in {manufacturer, model} else "", manufacturer, model] if part).strip() or channel_name or manufacturer or model or f"Detector {slot}"
+    resolved_terminal_id = terminal_id or _clean_identifier(detector.get("id")) or f"terminal_detector_{slot}"
     position = {
+        "id": resolved_terminal_id,
+        "terminal_id": resolved_terminal_id,
         "slot": 1,
         "component_type": "detector",
         "render_kind": "detector",
         "type": "detector",
+        "endpoint_type": "detector",
         "kind": kind,
         "detector_class": _detector_class(kind),
         "name": display_label,
@@ -584,6 +753,9 @@ def _detector_position(slot: int, detector: dict[str, Any]) -> dict[str, Any]:
         "max_nm": detector.get("max_nm"),
         "notes": detector.get("notes"),
         "details": _build_details(detector),
+        "source_mechanism_id": mechanism_id,
+        "default_enabled": detector.get("default_enabled") if isinstance(detector.get("default_enabled"), bool) else True,
+        "is_digital": True,
     }
     routes = _normalize_routes(detector.get("path") or detector.get("paths") or detector.get("route") or detector.get("routes"))
     if routes:
@@ -593,6 +765,168 @@ def _detector_position(slot: int, detector: dict[str, Any]) -> dict[str, Any]:
     return position
 
 
+
+def _terminal_payload_from_endpoint(index: int, endpoint: dict[str, Any], *, default_name: str | None = None) -> dict[str, Any]:
+    endpoint_type = _normalize_endpoint_type(
+        endpoint.get("endpoint_type") or endpoint.get("type") or endpoint.get("kind") or endpoint.get("name")
+    )
+    terminal_id = _clean_identifier(endpoint.get("id")) or f"terminal_{endpoint_type}_{index}"
+    kind = _clean_string(endpoint.get("kind") or endpoint_type).lower() or endpoint_type
+    default_labels = {
+        "eyepiece": "Eyepieces",
+        "camera_port": "Camera Port",
+        "detector": f"Endpoint {index}",
+    }
+    display_label = _clean_string(endpoint.get("display_label") or endpoint.get("name") or default_name) or default_labels.get(endpoint_type, f"Endpoint {index}")
+    payload: dict[str, Any] = {
+        "id": terminal_id,
+        "terminal_id": terminal_id,
+        "slot": 1,
+        "component_type": "detector",
+        "render_kind": "detector",
+        "type": endpoint_type,
+        "endpoint_type": endpoint_type,
+        "kind": kind if endpoint_type == "detector" else endpoint_type,
+        "detector_class": endpoint_type if endpoint_type in {"eyepiece", "camera_port"} else _detector_class(kind),
+        "name": display_label,
+        "display_label": display_label,
+        "channel_name": display_label,
+        "manufacturer": endpoint.get("manufacturer"),
+        "product_code": endpoint.get("model") or endpoint.get("product_code"),
+        "model": endpoint.get("model"),
+        "qe_peak_pct": endpoint.get("qe_peak_pct"),
+        "read_noise_e": endpoint.get("read_noise_e"),
+        "collection_min_nm": endpoint.get("collection_min_nm") or endpoint.get("min_nm"),
+        "collection_max_nm": endpoint.get("collection_max_nm") or endpoint.get("max_nm"),
+        "collection_center_nm": endpoint.get("collection_center_nm") or endpoint.get("channel_center_nm"),
+        "collection_width_nm": endpoint.get("collection_width_nm") or endpoint.get("bandwidth_nm"),
+        "channel_center_nm": endpoint.get("channel_center_nm"),
+        "bandwidth_nm": endpoint.get("bandwidth_nm"),
+        "min_nm": endpoint.get("min_nm"),
+        "max_nm": endpoint.get("max_nm"),
+        "notes": endpoint.get("notes"),
+        "details": _build_details(endpoint),
+        "default_enabled": endpoint.get("default_enabled") if isinstance(endpoint.get("default_enabled"), bool) else False,
+        "is_digital": endpoint_type == "detector",
+    }
+    if endpoint_type == "eyepiece":
+        if payload.get("collection_min_nm") is None:
+            payload["collection_min_nm"] = 390
+        if payload.get("collection_max_nm") is None:
+            payload["collection_max_nm"] = 700
+        if payload.get("collection_enabled") is None:
+            payload["collection_enabled"] = True
+    elif endpoint_type == "camera_port":
+        if payload.get("collection_enabled") is None:
+            payload["collection_enabled"] = False
+    routes = _normalize_routes(endpoint.get("path") or endpoint.get("paths") or endpoint.get("route") or endpoint.get("routes"))
+    if routes:
+        payload["routes"] = routes
+        payload["path"] = routes[0]
+    _normalize_component_numeric_fields(payload, payload)
+    return payload
+
+
+
+def _terminal_mechanism_payload(index: int, terminal: dict[str, Any]) -> dict[str, Any]:
+    mechanism_payload: dict[str, Any] = {
+        "id": f"endpoint_{_clean_identifier(terminal.get('id')) or index}",
+        "name": terminal.get("display_label") or terminal.get("name") or f"Endpoint {index}",
+        "display_label": terminal.get("display_label") or terminal.get("name") or f"Endpoint {index}",
+        "type": "endpoint_group",
+        "control_kind": "detector_toggle",
+        "selection_mode": "multi",
+        "positions": {1: dict(terminal)},
+        "options": [{"slot": 1, "display_label": terminal.get("display_label") or terminal.get("name"), "value": dict(terminal)}],
+    }
+    routes = _normalize_routes(terminal.get("routes") or terminal.get("path"))
+    if routes:
+        mechanism_payload["routes"] = routes
+        mechanism_payload["path"] = routes[0]
+    return mechanism_payload
+
+
+
+def _candidate_terminals_for_routes(terminals: list[dict[str, Any]], routes: list[str]) -> list[dict[str, Any]]:
+    return [
+        terminal
+        for terminal in terminals
+        if _routes_overlap(routes, terminal.get("routes") if isinstance(terminal.get("routes"), list) else _normalize_routes(terminal.get("path")))
+    ]
+
+
+
+def _resolve_target_ids(raw_targets: Any, terminals: list[dict[str, Any]]) -> list[str]:
+    values = raw_targets if isinstance(raw_targets, list) else [raw_targets]
+    resolved: list[str] = []
+    for value in values:
+        identifier = _clean_identifier(value)
+        if not identifier:
+            continue
+        for terminal in terminals:
+            candidate_tokens = {
+                _clean_identifier(terminal.get("id")),
+                _clean_identifier(terminal.get("terminal_id")),
+                _clean_identifier(terminal.get("name")),
+                _clean_identifier(terminal.get("display_label")),
+                _clean_identifier(terminal.get("channel_name")),
+                _clean_identifier(terminal.get("source_mechanism_id")),
+            }
+            if identifier in candidate_tokens and terminal.get("id") and terminal["id"] not in resolved:
+                resolved.append(terminal["id"])
+                break
+    return resolved
+
+
+
+def _append_inferred_terminal(terminals: list[dict[str, Any]], endpoint_type: str, *, name: str, path: str | None = None, default_enabled: bool = False) -> None:
+    payload = _terminal_payload_from_endpoint(
+        len(terminals) + 1,
+        {
+            "id": f"auto_{endpoint_type}",
+            "name": name,
+            "type": endpoint_type,
+            "path": path or "shared",
+            "default_enabled": default_enabled,
+            "notes": "Auto-generated endpoint inferred from microscope metadata.",
+        },
+    )
+    terminals.append(payload)
+
+
+
+def _infer_default_terminals(
+    instrument_dict: dict[str, Any],
+    splitters: list[dict[str, Any]],
+    terminals: list[dict[str, Any]],
+) -> None:
+    instrument_meta = instrument_dict.get("instrument", {}) if isinstance(instrument_dict.get("instrument"), dict) else {}
+    ocular = _clean_string(instrument_meta.get("ocular_availability")).lower()
+    has_digital = any(bool(terminal.get("is_digital")) for terminal in terminals)
+
+    def has_endpoint(endpoint_type: str) -> bool:
+        return any(_normalize_endpoint_type(terminal.get("endpoint_type") or terminal.get("type") or terminal.get("kind")) == endpoint_type for terminal in terminals)
+
+    default_enable = not has_digital
+    if ocular in {"binocular", "trinocular"} and not has_endpoint("eyepiece"):
+        _append_inferred_terminal(terminals, "eyepiece", name="Eyepieces", path="shared", default_enabled=default_enable)
+    if ocular in {"trinocular", "camera_only"} and not has_endpoint("camera_port"):
+        _append_inferred_terminal(terminals, "camera_port", name="Camera Port", path="shared", default_enabled=default_enable)
+
+    for splitter in splitters:
+        text = " ".join(
+            part for part in (
+                _clean_string(splitter.get("name")),
+                _clean_string(splitter.get("notes")),
+            )
+            if part
+        ).lower()
+        routes = _normalize_routes(splitter.get("path") or splitter.get("paths") or splitter.get("route") or splitter.get("routes"))
+        route_hint = routes[0] if routes else "shared"
+        if "camera" in text and "port" in text and not has_endpoint("camera_port"):
+            _append_inferred_terminal(terminals, "camera_port", name="Camera Port", path=route_hint, default_enabled=default_enable)
+        if any(keyword in text for keyword in ("eyepiece", "ocular")) and not has_endpoint("eyepiece"):
+            _append_inferred_terminal(terminals, "eyepiece", name="Eyepieces", path=route_hint, default_enabled=default_enable)
 
 def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any]) -> dict[str, Any]:
     raw_positions = mechanism.get("positions", {})
@@ -810,6 +1144,9 @@ def _route_catalog_entries(payload: dict[str, Any]) -> list[dict[str, str]]:
             for position in _choice_positions(mechanism):
                 collect_from_component(position)
 
+    for terminal in payload.get("terminals", []) or []:
+        collect_from_component(terminal)
+
     stages = payload.get("stages") if isinstance(payload.get("stages"), dict) else {}
     for stage_name in ("excitation", "dichroic", "emission", "cube"):
         for mechanism in stages.get(stage_name, []) if isinstance(stages, dict) else []:
@@ -887,7 +1224,7 @@ def calculate_valid_paths(payload: dict) -> list[dict[str, int]]:
 
 
 
-def _splitter_payload(index: int, splitter: dict[str, Any]) -> dict[str, Any]:
+def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     name = splitter.get("name", f"Splitter {index + 1}")
     dichroic_component = splitter.get("dichroic", {}).copy() if isinstance(splitter.get("dichroic"), dict) else {}
     if "cut_on_nm" in dichroic_component and "cutoffs_nm" not in dichroic_component:
@@ -895,57 +1232,147 @@ def _splitter_payload(index: int, splitter: dict[str, Any]) -> dict[str, Any]:
 
     path_1 = splitter.get("path_1") if isinstance(splitter.get("path_1"), dict) else {}
     path_2 = splitter.get("path_2") if isinstance(splitter.get("path_2"), dict) else {}
-    path_1_filter = path_1.get("emission_filter") if isinstance(path_1.get("emission_filter"), dict) else {"component_type": "mirror", "notes": "No branch filter declared."}
-    path_2_filter = path_2.get("emission_filter") if isinstance(path_2.get("emission_filter"), dict) else {"component_type": "mirror", "notes": "No branch filter declared."}
+    routes = _normalize_routes(splitter.get("path") or splitter.get("paths") or splitter.get("route") or splitter.get("routes"))
+    candidate_terminals = _candidate_terminals_for_routes(terminals or [], routes)
 
     dichroic_pos = _component_payload(dichroic_component, default_name="Splitter Dichroic") if dichroic_component else {}
-    path1_pos = _component_payload(path_1_filter, default_name="Path 1 Filter", branch_mode="transmitted")
-    path2_pos = _component_payload(path_2_filter, default_name="Path 2 Filter", branch_mode="reflected")
 
-    display_parts = [
-        f"Di: {dichroic_pos.get('label')}" if dichroic_pos else "",
-        f"P1: {path1_pos.get('label')}" if path1_pos else "",
-        f"P2: {path2_pos.get('label')}" if path2_pos else "",
-    ]
-    routes = _normalize_routes(splitter.get("path") or splitter.get("paths") or splitter.get("route") or splitter.get("routes"))
-    branches = [
-        {
-            "id": f"splitter_{index}_path1",
-            "label": _clean_string(path_1.get("name")) or "Path 1",
+    def branch_component(raw_branch: dict[str, Any], *, default_name: str, branch_mode: str) -> dict[str, Any]:
+        component = raw_branch.get("emission_filter") if isinstance(raw_branch.get("emission_filter"), dict) else raw_branch.get("component")
+        if not isinstance(component, dict):
+            component = {"component_type": "passthrough", "notes": "No branch filter declared."}
+        return _component_payload(component, default_name=default_name, branch_mode=branch_mode)
+
+    def branch_targets(raw_branch: dict[str, Any]) -> list[str]:
+        return _resolve_target_ids(
+            raw_branch.get("targets")
+            or raw_branch.get("target_ids")
+            or raw_branch.get("terminal_ids")
+            or raw_branch.get("endpoint_ids")
+            or raw_branch.get("target")
+            or raw_branch.get("endpoint"),
+            candidate_terminals or (terminals or []),
+        )
+
+    branches: list[dict[str, Any]] = []
+    raw_branches = splitter.get("branches") if isinstance(splitter.get("branches"), list) else []
+    if raw_branches:
+        for branch_index, raw_branch in enumerate(raw_branches, start=1):
+            if not isinstance(raw_branch, dict):
+                continue
+            mode = _clean_string(raw_branch.get("mode")).lower() or ("transmitted" if branch_index == 1 else "reflected")
+            component = branch_component(raw_branch, default_name=f"Branch {branch_index} Filter", branch_mode=mode)
+            branch_payload = {
+                "id": _clean_identifier(raw_branch.get("id")) or f"splitter_{index}_branch_{branch_index}",
+                "label": _clean_string(raw_branch.get("name") or raw_branch.get("label")) or f"Branch {branch_index}",
+                "mode": mode,
+                "component": component,
+                "target_ids": branch_targets(raw_branch),
+            }
+            if routes:
+                branch_payload["routes"] = list(routes)
+                branch_payload["path"] = routes[0]
+            branches.append(branch_payload)
+    elif path_1 or path_2 or dichroic_component:
+        path1_pos = branch_component(path_1, default_name="Path 1 Filter", branch_mode="transmitted")
+        path2_pos = branch_component(path_2, default_name="Path 2 Filter", branch_mode="reflected")
+        branches = [
+            {
+                "id": f"splitter_{index}_path1",
+                "label": _clean_string(path_1.get("name")) or "Path 1",
+                "mode": "transmitted",
+                "component": path1_pos,
+                "target_ids": branch_targets(path_1),
+            },
+            {
+                "id": f"splitter_{index}_path2",
+                "label": _clean_string(path_2.get("name")) or "Path 2",
+                "mode": "reflected",
+                "component": path2_pos,
+                "target_ids": branch_targets(path_2),
+            },
+        ]
+        if routes:
+            for branch in branches:
+                branch["routes"] = list(routes)
+                branch["path"] = routes[0]
+    else:
+        default_branch = {
+            "id": f"splitter_{index}_main",
+            "label": _clean_string(splitter.get("branch_name")) or name,
             "mode": "transmitted",
-            "component": path1_pos,
-        },
-        {
-            "id": f"splitter_{index}_path2",
-            "label": _clean_string(path_2.get("name")) or "Path 2",
-            "mode": "reflected",
-            "component": path2_pos,
-        },
-    ]
-    if routes:
+            "component": _component_payload({"component_type": "passthrough"}, default_name="Pass-through", branch_mode="transmitted"),
+            "target_ids": [],
+        }
+        if routes:
+            default_branch["routes"] = list(routes)
+            default_branch["path"] = routes[0]
+        branches = [default_branch]
+
+    if branches:
+        named_targets = {
+            "camera_port": next((terminal.get("id") for terminal in (candidate_terminals or terminals or []) if terminal.get("endpoint_type") == "camera_port"), None),
+            "eyepiece": next((terminal.get("id") for terminal in (candidate_terminals or terminals or []) if terminal.get("endpoint_type") == "eyepiece"), None),
+        }
         for branch in branches:
-            branch["routes"] = list(routes)
-            branch["path"] = routes[0]
+            if branch.get("target_ids"):
+                continue
+            label_hint = " ".join(
+                part for part in (
+                    _clean_string(branch.get("label")),
+                    _clean_string(name),
+                    _clean_string(splitter.get("notes")),
+                )
+                if part
+            ).lower()
+            if "camera" in label_hint and "port" in label_hint and named_targets.get("camera_port"):
+                branch["target_ids"] = [named_targets["camera_port"]]
+            elif any(keyword in label_hint for keyword in ("eyepiece", "ocular")) and named_targets.get("eyepiece"):
+                branch["target_ids"] = [named_targets["eyepiece"]]
+
+    unresolved = [branch for branch in branches if not branch.get("target_ids")]
+    available_terminals = [terminal for terminal in (candidate_terminals or terminals or []) if terminal.get("id")]
+    explicitly_targeted = {target for branch in branches for target in branch.get("target_ids", [])}
+    unassigned_terminals = [terminal for terminal in available_terminals if terminal.get("id") not in explicitly_targeted]
+    if unresolved and len(unassigned_terminals) == 1:
+        terminal_id = unassigned_terminals[0].get("id")
+        for branch in unresolved:
+            branch["target_ids"] = [terminal_id]
+    elif unresolved and len(unresolved) == len(unassigned_terminals) and unassigned_terminals:
+        for branch, terminal in zip(unresolved, unassigned_terminals):
+            branch["target_ids"] = [terminal.get("id")]
+
+    display_parts = []
+    if dichroic_pos:
+        display_parts.append(f"Di: {dichroic_pos.get('label')}")
+    for branch in branches:
+        branch_label = branch.get("component", {}).get("label") if isinstance(branch.get("component"), dict) else ""
+        if branch_label:
+            display_parts.append(f"{branch.get('label')}: {branch_label}")
+
+    path1_pos = branches[0].get("component") if branches else {}
+    path2_pos = branches[1].get("component") if len(branches) > 1 else {}
 
     splitter_payload = {
         "id": f"splitter_{index}",
         "name": name,
-        "display_label": " | ".join(part for part in display_parts if part),
+        "display_label": " | ".join(part for part in display_parts if part) or name,
         "dichroic": {
             "name": "Splitter Dichroic",
             "positions": {1: dichroic_pos} if dichroic_pos else {},
         },
         "path1": {
-            "name": _clean_string(path_1.get("name")) or "Path 1 (Transmitted)",
-            "positions": {1: path1_pos},
+            "name": branches[0].get("label") if branches else "Path 1 (Transmitted)",
+            "positions": {1: path1_pos} if isinstance(path1_pos, dict) else {},
         },
         "path2": {
-            "name": _clean_string(path_2.get("name")) or "Path 2 (Reflected)",
-            "positions": {1: path2_pos},
+            "name": branches[1].get("label") if len(branches) > 1 else "Path 2 (Reflected)",
+            "positions": {1: path2_pos} if isinstance(path2_pos, dict) else {},
         },
         "branches": branches,
         "control_kind": "dropdown",
         "control_label": name,
+        "branch_selection_required": any(not branch.get("target_ids") for branch in branches) and len(branches) > 1,
     }
     if routes:
         splitter_payload["routes"] = routes
@@ -957,11 +1384,13 @@ def _splitter_payload(index: int, splitter: dict[str, Any]) -> dict[str, Any]:
             "slot": 1,
             "display_label": splitter_payload["display_label"] or name,
             "value": {
+                "id": splitter_payload["id"],
                 "label": splitter_payload["display_label"] or name,
                 "dichroic": splitter_payload["dichroic"],
                 "path1": splitter_payload["path1"],
                 "path2": splitter_payload["path2"],
                 "branches": branches,
+                "branch_selection_required": splitter_payload["branch_selection_required"],
             },
         }
     ]
@@ -990,6 +1419,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
         },
         "light_sources": [],
         "detectors": [],
+        "terminals": [],
         "stages": {"excitation": [], "dichroic": [], "emission": [], "cube": []},
         "splitters": [],
         "valid_paths": [],
@@ -1026,10 +1456,12 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
         for idx, det in enumerate(raw_detectors, start=1):
             if not isinstance(det, dict):
                 continue
-            position = _detector_position(idx, det)
+            mechanism_id = f"detector_{idx}"
+            position = _detector_position(idx, det, mechanism_id=mechanism_id)
+            payload["terminals"].append(dict(position))
             payload["detectors"].append(
                 {
-                    "id": f"detector_{idx}",
+                    "id": mechanism_id,
                     "name": position.get("channel_name") or position.get("display_label"),
                     "display_label": position.get("display_label"),
                     "type": "detector_group",
@@ -1039,6 +1471,18 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
                     "options": [{"slot": 1, "display_label": position.get("display_label"), "value": position}],
                 }
             )
+
+    explicit_endpoints = _collect_endpoint_rows(hardware, light_path)
+    for idx, endpoint in enumerate(explicit_endpoints, start=1):
+        payload["terminals"].append(_terminal_payload_from_endpoint(idx, endpoint))
+
+    splitters_raw = _collect_splitters(hardware, light_path)
+    _infer_default_terminals(instrument_dict, splitters_raw, payload["terminals"])
+
+    for terminal_index, terminal in enumerate(payload["terminals"], start=1):
+        if terminal.get("endpoint_type") == "detector":
+            continue
+        payload["detectors"].append(_terminal_mechanism_payload(terminal_index, terminal))
 
     for stage_name, source_key in stage_mappings.items():
         mechanisms = _iter_mechanisms(light_path, source_key)
@@ -1053,8 +1497,8 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
                 for index, mechanism in enumerate(mechanisms)
             ]
 
-    for index, splitter in enumerate(_collect_splitters(hardware, light_path)):
-        payload["splitters"].append(_splitter_payload(index, splitter))
+    for index, splitter in enumerate(splitters_raw):
+        payload["splitters"].append(_splitter_payload(index, splitter, payload["terminals"]))
 
     payload["valid_paths"] = calculate_valid_paths(payload)
     payload["available_routes"] = _route_catalog_entries(payload)

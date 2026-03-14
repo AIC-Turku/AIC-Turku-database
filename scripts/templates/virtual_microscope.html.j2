@@ -33,7 +33,7 @@ hide:
   .vm-main {
     display: grid;
     gap: 14px;
-    grid-template-columns: minmax(0, 4fr) minmax(280px, 1fr);
+    grid-template-columns: 1fr;
     align-items: start;
   }
   .vm-main-left,
@@ -215,8 +215,23 @@ hide:
     border-radius: 12px;
     border: 1px solid var(--border);
   }
-  .vm-pipeline-shell { display: grid; gap: 12px; }
-  .vm-pipeline { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .vm-pipeline-shell {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+    align-items: start;
+  }
+  .vm-pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(148, 163, 184, 0.08);
+  }
   .vm-stage-tab {
     border: 1px solid var(--border);
     background: var(--surface);
@@ -229,14 +244,18 @@ hide:
     cursor: pointer;
     box-shadow: var(--md-shadow-z1);
   }
-  .vm-stage-tab.active { border-color: var(--primary); color: var(--primary); }
+  .vm-stage-tab.active {
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent), var(--md-shadow-z1);
+  }
   .optical-pipe {
     flex: 1 1 56px;
     min-width: 56px;
-    height: 10px;
+    height: 12px;
     border-radius: 999px;
     border: 1px solid rgba(148, 163, 184, 0.32);
-    background: rgba(148, 163, 184, 0.14);
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.08), rgba(148, 163, 184, 0.22));
     overflow: hidden;
     position: relative;
   }
@@ -255,11 +274,20 @@ hide:
     opacity: 0.95;
   }
   .flowing-light[data-empty="true"] { opacity: 0.15; }
+  .flowing-light[data-empty="false"] {
+    box-shadow: 0 0 18px color-mix(in srgb, var(--beam-color) 42%, transparent);
+  }
   @keyframes vm-flow-light {
     from { background-position: 0 0; }
     to { background-position: 180px 0; }
   }
-  .vm-inspector { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 14px; }
+  .vm-inspector {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
   .vm-stage-panel { display: none; gap: 10px; }
   .vm-stage-panel.active { display: grid; }
   .vm-stage-panel-title { font-size: 13px; font-weight: 800; color: var(--primary); text-transform: uppercase; }
@@ -306,9 +334,61 @@ hide:
   .vm-info-grid { display: grid; gap: 4px; }
   .vm-info-row { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; }
   .vm-info-row strong { color: var(--text); }
+  .vm-results-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .vm-results-chart-panel,
+  .vm-results-scoreboard {
+    display: grid;
+    gap: 10px;
+  }
+  .vm-results-panel .vm-panel-copy {
+    margin-bottom: 0;
+  }
+  .vm-side-chart {
+    height: 320px;
+    margin-bottom: 0;
+  }
+  .vm-splitter-card {
+    border-style: solid;
+    border-width: 1px;
+    border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+    background: linear-gradient(180deg, rgba(var(--md-primary-fg-color--rgb), 0.05), rgba(148, 163, 184, 0.06));
+  }
+  .vm-branch-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .vm-branch-row {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    padding: 10px 10px 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+  }
+  .vm-branch-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: color-mix(in srgb, var(--primary) 50%, transparent);
+  }
 
   @media (max-width: 1100px) {
-    .vm-main { grid-template-columns: 1fr; }
+    .vm-main,
+    .vm-pipeline-shell,
+    .vm-results-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
@@ -404,25 +484,9 @@ hide:
         </div>
       </section>
     </div>
-
-    <aside class="vm-main-right">
-      <section class="vm-panel">
-        <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>
-        <p class="vm-panel-copy">The right column summarizes detector-weighted collection and path quality for every loaded fluorophore under the current optical settings.</p>
-        <div class="vm-chart-wrap vm-side-chart">
-          <canvas id="detectionChart"></canvas>
-        </div>
-        <div id="signalSimulator" class="vm-card-column">
-          <div class="vm-info-card">
-            <div class="vm-info-card-title">No simulation yet</div>
-            <div class="vm-info-card-subtitle">Load a fluorophore, then configure excitation and detection to compare collection efficiency.</div>
-          </div>
-        </div>
-      </section>
-    </aside>
   </main>
 
-  <section class="vm-panel" style="margin-top:14px;">
+  <section class="vm-panel">
     <div class="vm-path-head">
       <div>
         <h2 class="vm-section-title">2. Controlling the Optical Path</h2>
@@ -439,6 +503,30 @@ hide:
     </div>
     <div id="lightPathGraph" class="light-path-graph"></div>
     <div id="pathSummary" class="vm-summary-grid"></div>
+  </section>
+
+  <section class="vm-panel vm-results-panel">
+    <div class="vm-path-head">
+      <div>
+        <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>
+        <p class="vm-panel-copy">Results now live below the pipeline so the optical workspace stays wide. Each endpoint receives its own routed path, benchmark score, and leakage readout.</p>
+      </div>
+    </div>
+    <div class="vm-results-grid">
+      <div class="vm-results-chart-panel">
+        <div class="vm-chart-wrap vm-side-chart">
+          <canvas id="detectionChart"></canvas>
+        </div>
+      </div>
+      <div class="vm-results-scoreboard">
+        <div id="signalSimulator" class="vm-card-column">
+          <div class="vm-info-card">
+            <div class="vm-info-card-title">No simulation yet</div>
+            <div class="vm-info-card-subtitle">Load a fluorophore, then configure excitation and detection to compare collection efficiency.</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </div>
 

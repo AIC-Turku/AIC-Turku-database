@@ -21,6 +21,31 @@
 
 
 
+  const BUNDLED_FALLBACK_FLUOROPHORE_BUNDLES = [
+    {
+      summary: {
+        uuid: 'ZERB6',
+        slug: 'mcherry',
+        name: 'mCherry',
+        sourceOrigin: 'bundled_cache',
+        states: [{ slug: 'mcherry_default', name: 'default', ex_max: 587, em_max: 610, ext_coeff: 72000, qy: 0.22, brightness: 15.84 }],
+      },
+      detail: {
+        uuid: 'ZERB6',
+        slug: 'mcherry',
+        name: 'mCherry',
+        states: [{ slug: 'mcherry_default', name: 'default', is_default: true, ex_max: 587, em_max: 610, ext_coeff: 72000, qy: 0.22, brightness: 15.84 }],
+      },
+      spectra: {
+        sourceOrigin: 'bundled_cache',
+        results: [
+          { protein_uuid: 'ZERB6', protein_slug: 'mcherry', protein_name: 'mCherry', state_slug: 'mcherry_default', state_name: 'default', spectrum_type: 'excitation', data: [[460, 0], [500, 8], [540, 35], [560, 62], [575, 90], [587, 100], [600, 82], [620, 28], [650, 0]] },
+          { protein_uuid: 'ZERB6', protein_slug: 'mcherry', protein_name: 'mCherry', state_slug: 'mcherry_default', state_name: 'default', spectrum_type: 'emission', data: [[560, 0], [580, 18], [595, 55], [610, 100], [625, 82], [645, 40], [675, 8], [710, 0]] },
+        ],
+      },
+    },
+  ];
+
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
@@ -105,7 +130,9 @@
   }
 
   function detectorClass(kind) {
-    const normalized = cleanString(kind).toLowerCase();
+    const normalized = cleanString(kind).toLowerCase().replace(/[\s-]+/g, '_');
+    if (['eyepiece', 'eyepieces', 'ocular', 'oculars'].includes(normalized)) return 'eyepiece';
+    if (['camera_port', 'cameraport', 'camera_ports'].includes(normalized)) return 'camera_port';
     if (CAMERA_KINDS.has(normalized)) return 'camera';
     if (HYBRID_KINDS.has(normalized)) return 'hybrid';
     if (APD_KINDS.has(normalized)) return 'apd';
@@ -168,41 +195,118 @@
       });
   }
 
+  function normalizeIdentifier(value) {
+    return cleanString(value).toLowerCase();
+  }
+
+  function normalizeTargetIds(value) {
+    const items = Array.isArray(value) ? value : [value];
+    const ids = [];
+    const seen = new Set();
+    items.forEach((item) => {
+      const cleaned = normalizeIdentifier(item);
+      if (!cleaned || seen.has(cleaned)) return;
+      seen.add(cleaned);
+      ids.push(cleaned);
+    });
+    return ids;
+  }
+
+  function normalizeEndpointType(value) {
+    const normalized = normalizeIdentifier(value).replace(/[\s-]+/g, '_');
+    if (!normalized) return 'detector';
+    if (['eyepiece', 'eyepieces', 'ocular', 'oculars'].includes(normalized)) return 'eyepiece';
+    if (['camera_port', 'cameraport', 'camera_ports'].includes(normalized)) return 'camera_port';
+    return normalized;
+  }
+
+  function normalizeTerminals(rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .filter((row) => row && typeof row === 'object')
+      .map((terminal, index) => {
+        const routes = routesFromObject(terminal);
+        const endpointType = normalizeEndpointType(terminal.endpoint_type || terminal.type || terminal.kind);
+        const baseId = cleanString(terminal.id || terminal.terminal_id || terminal.name || terminal.display_label) || `terminal_${index + 1}`;
+        const kind = cleanString(terminal.kind).toLowerCase() || endpointType;
+        const out = {
+          ...terminal,
+          id: baseId,
+          terminal_id: baseId,
+          endpoint_type: endpointType,
+          kind,
+          name: cleanString(terminal.name) || cleanString(terminal.display_label) || `Endpoint ${index + 1}`,
+          display_label: cleanString(terminal.display_label) || cleanString(terminal.name) || `Endpoint ${index + 1}`,
+          detector_class: terminal.detector_class || detectorClass(kind),
+          __routes: routes,
+          default_enabled: terminal.default_enabled === undefined ? false : Boolean(terminal.default_enabled),
+          is_digital: terminal.is_digital === undefined ? endpointType !== 'eyepiece' : Boolean(terminal.is_digital),
+        };
+        const collectionMin = numberOrNull(out.collection_min_nm);
+        const collectionMax = numberOrNull(out.collection_max_nm);
+        if (endpointType === 'eyepiece' && collectionMin === null && collectionMax === null) {
+          out.collection_min_nm = 390;
+          out.collection_max_nm = 700;
+        }
+        return out;
+      });
+  }
+
   function normalizeSplitters(rows) {
     return (Array.isArray(rows) ? rows : [])
       .filter((row) => row && typeof row === 'object')
       .map((splitter, index) => {
         const routes = routesFromObject(splitter);
-        const legacyPath1 = splitter.path1 && splitter.path1.positions ? splitter.path1.positions[1] || splitter.path1.positions['1'] : null;
-        const legacyPath2 = splitter.path2 && splitter.path2.positions ? splitter.path2.positions[1] || splitter.path2.positions['1'] : null;
-        const branches = Array.isArray(splitter.branches) && splitter.branches.length
-          ? splitter.branches.map((branch, branchIndex) => ({
-              ...branch,
-              id: branch.id || `splitter_${index}_branch_${branchIndex + 1}`,
-              component: branch.component && typeof branch.component === 'object' ? { ...branch.component } : {},
-              __routes: routesFromObject(branch).length ? routesFromObject(branch) : routes,
-            }))
-          : [
-              {
-                id: `splitter_${index}_path1`,
-                label: (splitter.path1 && splitter.path1.name) || 'Path 1',
-                mode: 'transmitted',
-                component: legacyPath1 && typeof legacyPath1 === 'object' ? { ...legacyPath1 } : { component_type: 'mirror', label: 'Mirror' },
-                __routes: routes,
-              },
-              {
-                id: `splitter_${index}_path2`,
-                label: (splitter.path2 && splitter.path2.name) || 'Path 2',
-                mode: 'reflected',
-                component: legacyPath2 && typeof legacyPath2 === 'object' ? { ...legacyPath2 } : { component_type: 'mirror', label: 'Mirror' },
-                __routes: routes,
-              },
-            ];
+        const legacyPath1 = (splitter.path1 && splitter.path1.positions ? splitter.path1.positions[1] || splitter.path1.positions['1'] : null)
+          || (splitter.path_1 && splitter.path_1.emission_filter ? splitter.path_1.emission_filter : null);
+        const legacyPath2 = (splitter.path2 && splitter.path2.positions ? splitter.path2.positions[1] || splitter.path2.positions['1'] : null)
+          || (splitter.path_2 && splitter.path_2.emission_filter ? splitter.path_2.emission_filter : null);
+        const buildBranch = (branch, branchIndex, fallbackMode) => {
+          const mode = cleanString(branch && branch.mode).toLowerCase() || fallbackMode || (branchIndex === 0 ? 'transmitted' : 'reflected');
+          let component = branch && branch.component && typeof branch.component === 'object' ? { ...branch.component } : null;
+          if (!component && branch && branch.emission_filter && typeof branch.emission_filter === 'object') {
+            component = { ...branch.emission_filter };
+          }
+          if (!component && branch && (branch.component_type || branch.type)) {
+            component = { ...branch };
+          }
+          if (!component) component = { component_type: 'passthrough', label: 'Pass-through' };
+          return {
+            ...branch,
+            id: cleanString(branch && branch.id) || `splitter_${index}_branch_${branchIndex + 1}`,
+            label: cleanString(branch && (branch.label || branch.name)) || `Branch ${branchIndex + 1}`,
+            mode,
+            component,
+            target_ids: normalizeTargetIds(branch && (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint)),
+            __routes: routesFromObject(branch).length ? routesFromObject(branch) : routes,
+          };
+        };
+
+        let branches = [];
+        if (Array.isArray(splitter.branches) && splitter.branches.length) {
+          branches = splitter.branches.map((branch, branchIndex) => buildBranch(branch, branchIndex, branchIndex === 0 ? 'transmitted' : 'reflected'));
+        } else if (legacyPath1 || legacyPath2 || splitter.path1 || splitter.path2 || splitter.path_1 || splitter.path_2) {
+          const left = splitter.path1 || splitter.path_1 || {};
+          const right = splitter.path2 || splitter.path_2 || {};
+          branches = [
+            buildBranch({ ...left, component: legacyPath1 || left.component || left.emission_filter }, 0, 'transmitted'),
+            buildBranch({ ...right, component: legacyPath2 || right.component || right.emission_filter }, 1, 'reflected'),
+          ].filter((branch, branchIndex) => branchIndex === 0 || legacyPath2 || right.component || right.emission_filter || cleanString(right.name || right.label));
+        } else {
+          branches = [buildBranch({
+            id: `splitter_${index}_main`,
+            label: cleanString(splitter.name) || 'Primary Path',
+            component: { component_type: 'passthrough', label: 'Pass-through' },
+          }, 0, 'transmitted')];
+        }
+
         return {
           ...splitter,
           id: splitter.id || `splitter_${index}`,
           __routes: routes,
           branches,
+          branch_selection_required: splitter.branch_selection_required === undefined
+            ? (branches.length > 1 && branches.some((branch) => !branch.target_ids.length))
+            : Boolean(splitter.branch_selection_required),
         };
       });
   }
@@ -222,7 +326,7 @@
         if (obj.component && typeof obj.component === 'object') collect(obj.component);
       }
     };
-    ['lightSources', 'cube', 'excitation', 'dichroic', 'emission', 'detectors', 'splitters'].forEach((key) => {
+    ['lightSources', 'cube', 'excitation', 'dichroic', 'emission', 'detectors', 'splitters', 'terminals'].forEach((key) => {
       (Array.isArray(normalizedPayload[key]) ? normalizedPayload[key] : []).forEach((mechanism) => {
         collect(mechanism);
         if (mechanism && mechanism.positions && typeof mechanism.positions === 'object') {
@@ -244,6 +348,7 @@
       emission: normalizeMechanismList(payload.stages && payload.stages.emission),
       splitters: normalizeSplitters(payload.runtime_splitters || payload.splitters),
       detectors: normalizeMechanismList(payload.detectors),
+      terminals: normalizeTerminals(payload.terminals || payload.detection_endpoints || []),
       validPaths: Array.isArray(payload.valid_paths) ? payload.valid_paths : [],
       routeOptions: [],
       defaultRoute: cleanString(payload.default_route).toLowerCase() || null,
@@ -723,6 +828,36 @@
     };
   }
 
+  let bundledFallbackSearchCache = null;
+
+  function bundledFallbackFluorophores() {
+    if (bundledFallbackSearchCache) return bundledFallbackSearchCache.slice();
+    bundledFallbackSearchCache = BUNDLED_FALLBACK_FLUOROPHORE_BUNDLES.map((bundle, index) => {
+      const summarySeed = bundle && bundle.summary && typeof bundle.summary === 'object'
+        ? { ...bundle.summary, sourceOrigin: 'bundled_cache' }
+        : { key: `bundled_${index + 1}`, name: `Bundled ${index + 1}`, sourceOrigin: 'bundled_cache' };
+      const detail = bundle && bundle.detail && typeof bundle.detail === 'object' ? bundle.detail : summarySeed;
+      const spectra = bundle && bundle.spectra && typeof bundle.spectra === 'object'
+        ? { ...bundle.spectra, sourceOrigin: 'bundled_cache' }
+        : null;
+      const fluor = normalizeFluorophoreDetail(detail, summarySeed, spectra);
+      return { ...fluor, spectraSource: fluor.spectraSource || 'bundled_cache' };
+    });
+    return bundledFallbackSearchCache.slice();
+  }
+
+  function searchFallbackFluorophores(query) {
+    const normalized = cleanString(query).toLowerCase();
+    const library = bundledFallbackFluorophores();
+    if (!normalized) return library;
+    return library.filter((fluor) => {
+      const haystack = [fluor.name, fluor.slug, fluor.uuid, fluor.key, fluor.canonicalKey, fluor.activeStateName]
+        .map((value) => cleanString(value).toLowerCase())
+        .filter(Boolean);
+      return haystack.some((value) => value.includes(normalized));
+    });
+  }
+
   function fluorophoreSpectra(fluorophore, options) {
 
     const preferTwoPhoton = Boolean(options && options.preferTwoPhoton);
@@ -859,31 +994,53 @@
     }
     const count = Math.min(spectrumArray.length, grid.length);
     let total = 0;
+    let peak = 0;
     let red = 0;
     let green = 0;
     let blue = 0;
+    let visibleBins = 0;
+    let visibleActive = 0;
     for (let index = 0; index < count; index += 1) {
       const intensity = Math.max(0, Number(spectrumArray[index] || 0));
       if (intensity <= 0) continue;
-      const [r, g, b] = wavelengthToRGB(grid[index]);
+      const wavelength = grid[index];
+      const [r, g, b] = wavelengthToRGB(wavelength);
       red += r * intensity;
       green += g * intensity;
       blue += b * intensity;
       total += intensity;
+      peak = Math.max(peak, intensity);
+      if (wavelength >= 390 && wavelength <= 700) visibleBins += 1;
     }
     if (total <= 1e-9) return 'rgba(0,0,0,0)';
-    return `rgb(${Math.round(red / total)}, ${Math.round(green / total)}, ${Math.round(blue / total)})`;
+    const threshold = peak * 0.18;
+    for (let index = 0; index < count; index += 1) {
+      const wavelength = grid[index];
+      if (wavelength < 390 || wavelength > 700) continue;
+      const intensity = Math.max(0, Number(spectrumArray[index] || 0));
+      if (intensity >= threshold) visibleActive += 1;
+    }
+    const coverage = visibleBins ? (visibleActive / visibleBins) : 0;
+    let outRed = red / total;
+    let outGreen = green / total;
+    let outBlue = blue / total;
+    if (coverage >= 0.35) {
+      const whiten = clamp((coverage - 0.35) / 0.45, 0, 1) * 0.88;
+      outRed = ((1 - whiten) * outRed) + (whiten * 248);
+      outGreen = ((1 - whiten) * outGreen) + (whiten * 248);
+      outBlue = ((1 - whiten) * outBlue) + (whiten * 248);
+    }
+    return `rgb(${Math.round(outRed)}, ${Math.round(outGreen)}, ${Math.round(outBlue)})`;
   }
 
   function bandMask(grid, start, end, edgeWidth) {
     const low = Math.min(start, end);
     const high = Math.max(start, end);
+    const shoulder = Math.max(0.5, numberOrNull(edgeWidth) ?? 2);
     return grid.map((wavelength) => {
-      if (wavelength <= low || wavelength >= high) {
-        const lowEdge = smoothStep(wavelength, low, edgeWidth || 2);
-        const highEdge = 1 - smoothStep(wavelength, high, edgeWidth || 2);
-        return clamp(Math.min(lowEdge, highEdge), 0, 1);
-      }
+      if (wavelength < low || wavelength > high) return 0;
+      if (wavelength <= low + shoulder) return clamp((wavelength - low) / shoulder, 0, 1);
+      if (wavelength >= high - shoulder) return clamp((high - wavelength) / shoulder, 0, 1);
       return 1;
     });
   }
@@ -1023,6 +1180,21 @@
     return Array.from(new Set(values));
   }
 
+  function broadbandSpectrum(grid, source) {
+    const minNm = firstDefinedNumber(source && source.broadband_min_nm, source && source.min_nm, 380) ?? 380;
+    const maxNm = firstDefinedNumber(source && source.broadband_max_nm, source && source.max_nm, 760) ?? 760;
+    const kind = cleanString(source && source.kind).toLowerCase();
+    const mode = cleanString(source && source.spectral_mode).toLowerCase();
+    const envelope = bandMask(grid, minNm, maxNm, 18);
+    const warmBias = kind === 'halogen_lamp' ? 0.16 : 0.08;
+    const amplitude = mode === 'broadband' ? ((kind === 'white_light_laser' || kind === 'supercontinuum') ? 0.22 : 0.12) : 0.1;
+    return envelope.map((value, index) => {
+      const wavelength = grid[index];
+      const redTilt = clamp(1 + (((wavelength - 550) / 240) * warmBias), 0.65, 1.25);
+      return clamp(value * amplitude * redTilt, 0, 1);
+    });
+  }
+
   function sourceSpectrum(source, grid) {
     const centers = sourceCenters(source);
     const center = centers.length ? centers[0] : null;
@@ -1030,6 +1202,11 @@
     const tunableMin = numberOrNull(source && source.tunable_min_nm);
     const tunableMax = numberOrNull(source && source.tunable_max_nm);
     const mode = cleanString(source && source.spectral_mode).toLowerCase();
+    const kind = cleanString(source && source.kind).toLowerCase();
+
+    if (mode === 'broadband' || kind === 'halogen_lamp' || kind === 'arc_lamp' || kind === 'metal_halide') {
+      return broadbandSpectrum(grid, source);
+    }
     if (centers.length > 1 && (mode === 'line' || mode === 'tunable_line' || !mode)) {
       return centers.reduce((sum, item) => addArrays(sum, gaussianSpectrum(grid, item, width || 2)), grid.map(() => 0));
     }
@@ -1042,6 +1219,9 @@
     }
     if (tunableMin !== null && tunableMax !== null) {
       const chosen = center !== null ? center : ((tunableMin + tunableMax) / 2);
+      if (mode === 'tunable_band') {
+        return bandMask(grid, chosen - ((width || 30) / 2), chosen + ((width || 30) / 2), 3);
+      }
       return gaussianSpectrum(grid, chosen, width || 2);
     }
     if (center !== null) {
@@ -1049,7 +1229,10 @@
         ? bandMask(grid, center - (width / 2), center + (width / 2), 3)
         : gaussianSpectrum(grid, center, 2);
     }
-    return grid.map((wavelength) => (wavelength >= 350 && wavelength <= 800 ? 1 : 0));
+    if (kind === 'white_light_laser' || kind === 'supercontinuum') {
+      return broadbandSpectrum(grid, source);
+    }
+    return grid.map((wavelength) => (wavelength >= 350 && wavelength <= 800 ? 0.08 : 0));
   }
 
   function sourceWeight(source, selectedSources) {
@@ -1082,9 +1265,9 @@
   function sourceExcitationContribution(sourceSpectrumAtSample, excitationCurve, grid) {
     const overlapPower = integrateSpectrum(multiplyArrays(sourceSpectrumAtSample, excitationCurve), grid);
     const lineArea = integrateSpectrum(sourceSpectrumAtSample, grid);
-    const peakAbsorption = clamp(arrayMax(excitationCurve), 0.05, 1);
-    const referenceMatchedLineArea = Math.max(2.25 * peakAbsorption, 0.25);
-    return clamp(safeRatio(overlapPower, Math.max(lineArea, referenceMatchedLineArea)), 0, 1.5);
+    if (lineArea <= 1e-9) return 0;
+    const modeAwareReference = Math.max(2.25, lineArea > 30 ? 28 : lineArea);
+    return clamp(overlapPower / modeAwareReference, 0, 1.5);
   }
 
   function dominantWavelength(spectrum, grid) {
@@ -1102,12 +1285,19 @@
 
   function detectorResponse(detector, grid) {
     const kind = cleanString(detector && detector.kind).toLowerCase();
-    const className = detectorClass(kind);
+    const className = detectorClass(kind || (detector && detector.endpoint_type));
     let center = 550;
     let width = 260;
     let floor = 0.1;
     let peak = normalizePercent(detector && detector.qe_peak_pct, null);
 
+    if (className === 'eyepiece') {
+      const visibleMask = bandMask(grid, 390, 700, 12);
+      return visibleMask.map((value) => clamp((0.15 + (0.85 * value)) * 0.95, 0, 1));
+    }
+    if (className === 'camera_port') {
+      return grid.map((wavelength) => (wavelength >= 350 && wavelength <= 900 ? 1 : 0));
+    }
     if (className === 'camera') {
       center = 560;
       width = 280;
@@ -1137,6 +1327,7 @@
   }
 
   function detectorCollectionBounds(detector) {
+    const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && (detector.kind || detector.endpoint_type));
     const explicitMin = firstDefinedNumber(
       detector && detector.collection_min_nm,
       detector && detector.min_nm,
@@ -1150,6 +1341,8 @@
       const high = Math.max(explicitMin, explicitMax);
       return { min: low, max: high };
     }
+    if (className === 'eyepiece') return { min: 390, max: 700 };
+    if (className === 'camera' || className === 'camera_port') return { min: null, max: null };
     const center = firstDefinedNumber(
       detector && detector.collection_center_nm,
       detector && detector.channel_center_nm,
@@ -1166,11 +1359,14 @@
   }
 
   function detectorCollectionMask(detector, grid) {
-    const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && detector.kind);
-    if (className === 'camera') return grid.map(() => 1);
+    const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && (detector.kind || detector.endpoint_type));
+    if (className === 'camera' || className === 'camera_port') return grid.map(() => 1);
     if (detector && detector.collection_enabled === false) return grid.map(() => 1);
     const bounds = detectorCollectionBounds(detector);
     if (bounds.min === null || bounds.max === null) return grid.map(() => 1);
+    if (className === 'eyepiece') {
+      return bandMask(grid, bounds.min, bounds.max, 12);
+    }
     return componentMask({
       component_type: 'bandpass',
       center_nm: (bounds.min + bounds.max) / 2,
@@ -1216,37 +1412,56 @@
     }, inputSpectrum.slice());
   }
 
+  function branchTargetIds(branch) {
+    return normalizeTargetIds(branch && (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint));
+  }
+
+  function selectedBranchIdsForSplitter(splitter, branchDefs) {
+    const selected = new Set(normalizeTargetIds(splitter && (splitter.selected_branch_ids || splitter.selectedBranchIds || splitter.active_branch_ids || splitter.activeBranchIds)));
+    if (!selected.size && splitter && splitter.branch_selection_required && Array.isArray(branchDefs) && branchDefs.length) {
+      selected.add(normalizeIdentifier(branchDefs[0].id));
+    }
+    return selected;
+  }
+
   function propagateSplitters(inputSpectrum, splitters, grid) {
-    let branches = [{ id: 'main', label: 'Main Path', spectrum: inputSpectrum.slice() }];
-    (Array.isArray(splitters) ? splitters : []).forEach((splitter) => {
+    let branches = [{ id: 'main', label: 'Main Path', spectrum: inputSpectrum.slice(), targetIds: [] }];
+    (Array.isArray(splitters) ? splitters : []).forEach((splitter, splitterIndex) => {
       const nextBranches = [];
       const splitterDichroic = splitter && splitter.dichroic && splitter.dichroic.positions
         ? splitter.dichroic.positions[1] || splitter.dichroic.positions['1']
-        : null;
-      const branchDefs = Array.isArray(splitter && splitter.branches) ? splitter.branches : [];
+        : (splitter && splitter.dichroic && typeof splitter.dichroic === 'object' ? splitter.dichroic : null);
+      const branchDefs = Array.isArray(splitter && splitter.branches) && splitter.branches.length
+        ? splitter.branches
+        : [{ id: `splitter_${splitterIndex}_main`, label: cleanString(splitter && splitter.label) || 'Primary Path', mode: 'transmitted', component: { component_type: 'passthrough' }, target_ids: [] }];
+      const explicitlySelectedBranchIds = selectedBranchIdsForSplitter(splitter, branchDefs);
+      const requiresSelection = Boolean(splitter && splitter.branch_selection_required) && branchDefs.length > 1;
+
       branches.forEach((branch) => {
-        const transmittedBase = splitterDichroic
-          ? applyMask(branch.spectrum, componentMask(splitterDichroic, grid, { mode: 'emission', branchMode: 'transmitted' }))
-          : branch.spectrum.slice();
-        const reflectedBase = splitterDichroic
-          ? applyMask(branch.spectrum, componentMask(splitterDichroic, grid, { mode: 'emission', branchMode: 'reflected' }))
-          : branch.spectrum.slice();
-
-        const transmittedDef = branchDefs.find((item) => cleanString(item.mode).toLowerCase() === 'transmitted') || branchDefs[0] || { id: `${splitter.id}_path1`, label: 'Path 1', component: { component_type: 'mirror' } };
-        const reflectedDef = branchDefs.find((item) => cleanString(item.mode).toLowerCase() === 'reflected') || branchDefs[1] || { id: `${splitter.id}_path2`, label: 'Path 2', component: { component_type: 'mirror' } };
-
-        nextBranches.push({
-          id: `${branch.id}/${transmittedDef.id}`,
-          label: `${branch.label} -> ${transmittedDef.label || 'Path 1'}`,
-          spectrum: applyMask(transmittedBase, componentMask(transmittedDef.component || {}, grid, { mode: 'emission', branchMode: 'transmitted' })),
-        });
-        nextBranches.push({
-          id: `${branch.id}/${reflectedDef.id}`,
-          label: `${branch.label} -> ${reflectedDef.label || 'Path 2'}`,
-          spectrum: applyMask(reflectedBase, componentMask(reflectedDef.component || {}, grid, { mode: 'emission', branchMode: 'reflected' })),
+        branchDefs.forEach((branchDef, branchIndex) => {
+          const normalizedBranchId = normalizeIdentifier(branchDef && branchDef.id) || `splitter_${splitterIndex}_branch_${branchIndex + 1}`;
+          if ((requiresSelection || explicitlySelectedBranchIds.size) && !explicitlySelectedBranchIds.has(normalizedBranchId)) return;
+          const mode = cleanString(branchDef && branchDef.mode).toLowerCase() || (branchIndex === 0 ? 'transmitted' : 'reflected');
+          const baseSpectrum = splitterDichroic
+            ? applyMask(branch.spectrum, componentMask(splitterDichroic, grid, { mode: 'emission', branchMode: mode }))
+            : branch.spectrum.slice();
+          const branchSpectrum = applyMask(baseSpectrum, componentMask((branchDef && branchDef.component) || {}, grid, { mode: 'emission', branchMode: mode }));
+          const localTargets = branchTargetIds(branchDef);
+          const inheritedTargets = Array.isArray(branch.targetIds) ? branch.targetIds : [];
+          const mergedTargets = inheritedTargets.length && localTargets.length
+            ? inheritedTargets.filter((id) => localTargets.includes(id))
+            : (inheritedTargets.length ? inheritedTargets.slice() : localTargets.slice());
+          nextBranches.push({
+            id: `${branch.id}/${cleanString(branchDef && branchDef.id) || `branch_${branchIndex + 1}`}`,
+            label: `${branch.label} -> ${cleanString(branchDef && (branchDef.label || branchDef.name)) || `Branch ${branchIndex + 1}`}`,
+            spectrum: branchSpectrum,
+            targetIds: mergedTargets,
+            splitterId: splitter && splitter.id ? splitter.id : `splitter_${splitterIndex}`,
+            branchId: normalizedBranchId,
+          });
         });
       });
-      branches = nextBranches;
+      if (nextBranches.length) branches = nextBranches;
     });
     return branches;
   }
@@ -1457,9 +1672,12 @@
     routeMechanismsForOptimization(normalizedInstrument.detectors, route).forEach((mechanism) => {
       Object.values(mechanism.positions || {}).forEach((detector) => {
         const bounds = detectorCollectionBounds(detector);
-        const coverage = emTargets.reduce((sum, emMax) => sum + ((emMax >= bounds.min && emMax <= bounds.max) ? 1 : 0), 0);
-        const response = pointMaskScore({ component_type: 'bandpass', center_nm: (bounds.min + bounds.max) / 2, width_nm: Math.max(4, bounds.max - bounds.min) }, emTargets, 'emission');
-        scored.push({ mechanismId: mechanism.id, slot: detector.slot, detector: { ...detector }, score: (coverage * 10) + response });
+        const coverage = emTargets.reduce((sum, emMax) => sum + ((bounds.min === null || bounds.max === null || (emMax >= bounds.min && emMax <= bounds.max)) ? 1 : 0), 0);
+        const response = (bounds.min === null || bounds.max === null)
+          ? 1
+          : pointMaskScore({ component_type: 'bandpass', center_nm: (bounds.min + bounds.max) / 2, width_nm: Math.max(4, bounds.max - bounds.min) }, emTargets, 'emission');
+        const endpointBoost = detectorClass(detector && (detector.kind || detector.endpoint_type)) === 'eyepiece' ? 0.25 : 0;
+        scored.push({ mechanismId: mechanism.id, slot: detector.slot, detector: { ...detector }, score: (coverage * 10) + response + endpointBoost });
       });
     });
     const narrowed = scored.sort((a, b) => b.score - a.score).slice(0, 3);
@@ -1602,6 +1820,99 @@
   }
 
 
+  function knownDetectorCatalog(normalizedInstrument) {
+    const catalog = [];
+    (Array.isArray(normalizedInstrument && normalizedInstrument.detectors) ? normalizedInstrument.detectors : []).forEach((mechanism) => {
+      Object.values(mechanism.positions || {}).forEach((detector) => catalog.push({ ...detector }));
+    });
+    (Array.isArray(normalizedInstrument && normalizedInstrument.terminals) ? normalizedInstrument.terminals : []).forEach((terminal) => {
+      catalog.push({
+        ...terminal,
+        id: terminal.id || terminal.terminal_id,
+        terminal_id: terminal.terminal_id || terminal.id,
+        display_label: terminal.display_label || terminal.name || 'Endpoint',
+        name: terminal.name || terminal.display_label || 'Endpoint',
+        kind: terminal.kind || terminal.endpoint_type || 'detector',
+        detector_class: terminal.detector_class || detectorClass(terminal.kind || terminal.endpoint_type),
+      });
+    });
+    const seen = new Set();
+    return catalog.filter((entry) => {
+      const key = Array.from(detectorIdentifiers(entry))[0] || `${seen.size}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function detectorIdentifiers(detector) {
+    const ids = new Set();
+    [
+      detector && detector.id,
+      detector && detector.terminal_id,
+      detector && detector.display_label,
+      detector && detector.name,
+      detector && detector.channel_name,
+      detector && detector.source_mechanism_id,
+    ].forEach((value) => {
+      const cleaned = normalizeIdentifier(value);
+      if (cleaned) ids.add(cleaned);
+    });
+    return ids;
+  }
+
+  function hydrateDetectorSelection(detector, normalizedInstrument) {
+    const catalog = knownDetectorCatalog(normalizedInstrument);
+    const ids = detectorIdentifiers(detector);
+    const match = catalog.find((entry) => Array.from(detectorIdentifiers(entry)).some((value) => ids.has(value)));
+    if (match) {
+      return {
+        ...match,
+        ...detector,
+        id: detector && detector.id ? detector.id : (match.id || match.terminal_id),
+        terminal_id: detector && detector.terminal_id ? detector.terminal_id : (match.terminal_id || match.id),
+        display_label: detector && detector.display_label ? detector.display_label : (match.display_label || match.name),
+        name: detector && detector.name ? detector.name : (match.name || match.display_label),
+        kind: detector && detector.kind ? detector.kind : (match.kind || match.endpoint_type || 'detector'),
+        detector_class: detector && detector.detector_class ? detector.detector_class : (match.detector_class || detectorClass(match.kind || match.endpoint_type)),
+      };
+    }
+    const fallbackId = cleanString(detector && (detector.id || detector.terminal_id || detector.display_label || detector.name)) || 'detector';
+    return {
+      ...(detector || {}),
+      id: fallbackId,
+      terminal_id: detector && detector.terminal_id ? detector.terminal_id : fallbackId,
+      display_label: cleanString(detector && (detector.display_label || detector.name)) || 'Detector',
+      name: cleanString(detector && (detector.name || detector.display_label)) || 'Detector',
+      kind: cleanString(detector && detector.kind) || cleanString(detector && detector.endpoint_type) || 'detector',
+      detector_class: detector && detector.detector_class ? detector.detector_class : detectorClass(detector && (detector.kind || detector.endpoint_type)),
+    };
+  }
+
+  function inferredDetectorTargets(normalizedInstrument) {
+    const catalog = knownDetectorCatalog(normalizedInstrument);
+    const explicitlyDefault = catalog.filter((entry) => entry.default_enabled === true);
+    if (explicitlyDefault.length) return explicitlyDefault;
+    const digital = catalog.filter((entry) => entry.endpoint_type !== 'eyepiece');
+    if (digital.length) return digital;
+    if (catalog.length) return catalog;
+    return [{
+      id: 'virtual_detector',
+      terminal_id: 'virtual_detector',
+      display_label: 'Virtual Detector',
+      name: 'Virtual Detector',
+      kind: 'detector',
+      detector_class: 'detector',
+    }];
+  }
+
+  function branchAcceptsDetector(branch, detector) {
+    const targets = Array.isArray(branch && branch.targetIds) ? branch.targetIds : branchTargetIds(branch);
+    if (!targets.length) return true;
+    const ids = detectorIdentifiers(detector);
+    return targets.some((target) => ids.has(normalizeIdentifier(target)));
+  }
+
   function simulateInstrument(instrument, selection, fluorophores, options) {
     const normalizedInstrument = normalizeInstrumentPayload(instrument);
     const grid = wavelengthGrid(normalizedInstrument.metadata && normalizedInstrument.metadata.wavelength_grid);
@@ -1616,7 +1927,9 @@
     const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];
     const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
     const selectedSplitters = Array.isArray(selected.splitters) ? selected.splitters : [];
-    const selectedDetectors = Array.isArray(selected.detectors) ? selected.detectors : [];
+    const explicitDetectorSelections = Array.isArray(selected.detectors) ? selected.detectors : [];
+    const resolvedDetectors = (explicitDetectorSelections.length ? explicitDetectorSelections : inferredDetectorTargets(normalizedInstrument))
+      .map((detector) => hydrateDetectorSelection(detector, normalizedInstrument));
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
 
     const propagatedExcitationSources = excitationSources.map((source) => {
@@ -1643,7 +1956,7 @@
       const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
         ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid)
-        : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters }];
+        : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
       return {
         sourceLabel: entry.source.display_label || entry.source.name || 'Source',
         sourceCenters: sourceCenters(entry.source),
@@ -1660,9 +1973,6 @@
       const excitationCurve = normalizeSpectrumForGrid(ex, grid);
       const emissionCurve = normalizeSpectrumForGrid(em, grid);
       const excitationOverlapPower = integrateSpectrum(multiplyArrays(excitationAtSample, excitationCurve), grid);
-      // Excitation is additive per source. Each propagated source contributes based on how much of
-      // its own spectrum lands where the fluorophore can absorb; unrelated active lasers should not
-      // dilute one another by appearing in a shared denominator.
       const excitationStrength = clamp(
         propagatedExcitationSources.reduce(
           (sum, entry) => sum + sourceExcitationContribution(entry.atSample, excitationCurve, grid),
@@ -1674,12 +1984,14 @@
       const sted = evaluateStedPair(fluorophore, excitationSources, depletionSources, grid);
       const brightnessFactor = fluorophoreBrightnessFactor(fluorophore);
       const generatedEmission = scaleArray(emissionCurve, excitationStrength * sted.suppressionFactor * brightnessFactor);
+      const theoreticalBestEmission = scaleArray(emissionCurve, brightnessFactor);
       const afterDichroic = applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' });
       const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
         ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid)
-        : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters }];
+        : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
       const emissionArea = integrateSpectrum(generatedEmission, grid);
+      const theoreticalBestArea = integrateSpectrum(theoreticalBestEmission, grid);
 
       emittedSpectra.push({
         fluorophoreKey: fluorophore.key,
@@ -1693,19 +2005,13 @@
         sted,
       });
 
-      const detectorTargets = selectedDetectors.length ? selectedDetectors : [{
-        id: 'virtual_detector',
-        display_label: 'Virtual Detector',
-        name: 'Virtual Detector',
-        kind: 'detector',
-        detector_class: 'detector',
-      }];
-
-      detectorTargets.forEach((detector) => {
-        const response = detectorResponse(detector, grid);
-        const collectionMask = detectorCollectionMask(detector, grid);
-        const gatingFactor = detectorGatingFactor(detector);
-        branches.forEach((branch) => {
+      branches.forEach((branch) => {
+        const candidateDetectors = resolvedDetectors.filter((detector) => branchAcceptsDetector(branch, detector));
+        if (!candidateDetectors.length) return;
+        candidateDetectors.forEach((detector) => {
+          const response = detectorResponse(detector, grid);
+          const collectionMask = detectorCollectionMask(detector, grid);
+          const gatingFactor = detectorGatingFactor(detector);
           const collectedSpectrum = applyMask(branch.spectrum, collectionMask);
           const emissionPathThroughput = safeRatio(integrateSpectrum(collectedSpectrum, grid), emissionArea);
           const detectorWeightedIntensity = integrateSpectrum(multiplyArrays(collectedSpectrum, response), grid) * gatingFactor;
@@ -1740,15 +2046,19 @@
           const excitationLeakageSourceLabels = leakageContributions
             .filter((entry) => entry.throughput >= 0.005)
             .map((entry) => entry.sourceLabel);
+          const detectorId = detector.id || detector.terminal_id || detector.display_label || detector.name || 'detector';
+          const pathKey = `${branch.id}::${detectorId}`;
+          const pathLabel = `${branch.label} -> ${detector.display_label || detector.name || 'Detector'}`;
 
           pathSpectra.push({
             fluorophoreKey: fluorophore.key,
             fluorophoreName: fluorophore.name,
-            detectorKey: detector.id || detector.display_label || detector.name,
+            detectorKey: detectorId,
             detectorLabel: detector.display_label || detector.name || 'Detector',
-            detectorClass: detector.detector_class || detectorClass(detector.kind),
-            pathKey: `${branch.id}::${detector.id || detector.display_label || detector.name || 'detector'}`,
-            pathLabel: `${branch.label} -> ${detector.display_label || detector.name || 'Detector'}`,
+            detectorClass: detector.detector_class || detectorClass(detector.kind || detector.endpoint_type),
+            endpointType: detector.endpoint_type || 'detector',
+            pathKey,
+            pathLabel,
             spectrum: collectedSpectrum,
             preDetectorSpectrum: branch.spectrum.slice(),
             collectionMask,
@@ -1760,16 +2070,18 @@
             excitationLeakageThroughput,
             excitationLeakageWarningLevel,
             excitationLeakageSourceLabels,
+            targetIds: Array.isArray(branch.targetIds) ? branch.targetIds.slice() : [],
           });
           results.push({
             fluorophoreKey: fluorophore.key,
             fluorophoreName: fluorophore.name,
             fluorophoreState: fluorophore.activeStateName || 'Default state',
-            detectorKey: detector.id || detector.display_label || detector.name,
+            detectorKey: detectorId,
             detectorLabel: detector.display_label || detector.name || 'Detector',
-            detectorClass: detector.detector_class || detectorClass(detector.kind),
-            pathKey: `${branch.id}::${detector.id || detector.display_label || detector.name || 'detector'}`,
-            pathLabel: `${branch.label} -> ${detector.display_label || detector.name || 'Detector'}`,
+            detectorClass: detector.detector_class || detectorClass(detector.kind || detector.endpoint_type),
+            endpointType: detector.endpoint_type || 'detector',
+            pathKey,
+            pathLabel,
             excitationStrength,
             emissionPathThroughput,
             detectorWeightedIntensity,
@@ -1779,6 +2091,10 @@
             excitationLeakageThroughput,
             excitationLeakageWarningLevel,
             excitationLeakageSourceLabels,
+            benchmarkGeneratedEmission: emissionArea,
+            theoreticalBestCase: theoreticalBestArea,
+            benchmarkFraction: safeRatio(detectorWeightedIntensity, emissionArea),
+            theoreticalBenchmarkFraction: safeRatio(detectorWeightedIntensity, theoreticalBestArea),
           });
         });
       });
@@ -1795,25 +2111,22 @@
       result.crosstalkPct = total > 0 ? (bleed / total) * 100 : 0;
     });
 
-    const bestPlanningScoreByFluor = new Map();
     results.forEach((result) => {
       const crosstalkPenalty = clamp(1 - ((result.crosstalkPct || 0) / 100), 0.1, 1);
-      result.planningScore = result.detectorWeightedIntensity * crosstalkPenalty * leakagePenalty(result.excitationLeakageThroughput || 0);
+      const leakPenalty = leakagePenalty(result.excitationLeakageThroughput || 0);
+      const benchmarkFraction = result.benchmarkFraction || 0;
+      const theoreticalBenchmarkFraction = result.theoreticalBenchmarkFraction || 0;
       result.recordedIntensity = result.detectorWeightedIntensity;
-      result.correctnessScore = result.planningScore;
-      const currentBest = bestPlanningScoreByFluor.get(result.fluorophoreKey) || 0;
-      if (result.planningScore > currentBest) {
-        bestPlanningScoreByFluor.set(result.fluorophoreKey, result.planningScore);
-      }
-    });
-    results.forEach((result) => {
-      const relativePlanningScore = safeRatio(result.planningScore, bestPlanningScoreByFluor.get(result.fluorophoreKey) || 0);
-      result.relativePlanningScore = relativePlanningScore;
+      result.relativePlanningScore = benchmarkFraction;
+      result.planningScore = clamp(100 * benchmarkFraction * crosstalkPenalty * leakPenalty, 0, 100);
+      result.correctnessScore = clamp(100 * theoreticalBenchmarkFraction * crosstalkPenalty * leakPenalty, 0, 100);
+      result.benchmarkPct = benchmarkFraction * 100;
+      result.theoreticalBenchmarkPct = theoreticalBenchmarkFraction * 100;
       if (result.detectorWeightedIntensity <= 1e-6 || result.excitationStrength <= 0.02) {
         result.qualityLabel = 'blocked';
-      } else if (relativePlanningScore >= 0.75 && result.excitationLeakageWarningLevel !== 'high' && (result.crosstalkPct || 0) < 30) {
+      } else if (benchmarkFraction >= 0.55 && result.excitationLeakageWarningLevel !== 'high' && (result.crosstalkPct || 0) < 20) {
         result.qualityLabel = 'good';
-      } else if (relativePlanningScore >= 0.35 && result.excitationLeakageWarningLevel !== 'high') {
+      } else if (benchmarkFraction >= 0.25 && result.excitationLeakageWarningLevel !== 'high') {
         result.qualityLabel = 'usable';
       } else {
         result.qualityLabel = 'poor';
@@ -1837,7 +2150,7 @@
       emittedSpectra,
       pathSpectra,
       selectedSources: selectedSources.map((source) => source.display_label || source.name || 'Source'),
-      selectedDetectors: selectedDetectors.map((detector) => detector.display_label || detector.name || 'Detector'),
+      selectedDetectors: resolvedDetectors.map((detector) => detector.display_label || detector.name || 'Detector'),
       validSelection: selectionIsValid(normalizedInstrument.validPaths, selected.selectionMap || {}),
       results,
     };
@@ -1852,6 +2165,7 @@
     detectorClass,
     normalizeMechanismList,
     normalizeSplitters,
+    normalizeTerminals,
     normalizeInstrumentPayload,
     normalizeResultsShape,
     normalizeFPbaseSearchResults,
@@ -1861,6 +2175,7 @@
     normalizeFPbaseSpectraResponse,
     normalizeFluorophoreDetail,
     setFluorophoreState,
+    searchFallbackFluorophores,
     fluorophoreSpectra,
     normalizePoints,
     wavelengthGrid,

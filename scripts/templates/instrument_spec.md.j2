@@ -205,6 +205,76 @@
 {% endif %}
 {% endif %}
 
+{% if hw.optical_path.static_graph %}
+### 🗺️ Numbered Light-Path Graph
+
+<style>
+.aic-lightpath-panel { margin: 0 0 1rem 0; border: 1px solid rgba(148,163,184,.28); border-radius: 22px; background: linear-gradient(180deg, rgba(248,250,252,.95), rgba(255,255,255,.98)); box-shadow: 0 16px 40px rgba(15,23,42,.06); overflow: hidden; }
+.aic-lightpath-panel__header { padding: 18px 22px 0 22px; }
+.aic-lightpath-panel__title { font-size: 1.06rem; font-weight: 700; margin: 0 0 .25rem 0; color: #0f172a; }
+.aic-lightpath-panel__subtitle { color: #475569; font-size: .92rem; margin: 0 0 .9rem 0; }
+.aic-lightpath-panel__svg { padding: 0 12px 14px 12px; overflow-x: auto; }
+.aic-lightpath-panel__svg svg { min-width: 920px; width: 100%; height: auto; display: block; }
+.aic-lightpath-notes { display: grid; gap: .85rem; margin: 1rem 0 0 0; }
+.aic-lightpath-callout { border-radius: 16px; padding: 14px 16px; border: 1px solid rgba(148,163,184,.24); background: rgba(255,255,255,.9); }
+.aic-lightpath-callout strong { display: block; margin-bottom: .35rem; color: #0f172a; }
+.aic-lightpath-index { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .92rem; }
+.aic-lightpath-index th, .aic-lightpath-index td { padding: .7rem .75rem; border-bottom: 1px solid rgba(226,232,240,.9); vertical-align: top; }
+.aic-lightpath-index th { text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #475569; background: rgba(248,250,252,.9); }
+.aic-lightpath-nodeid { display: inline-flex; width: 1.7rem; height: 1.7rem; align-items: center; justify-content: center; border-radius: 999px; background: #0f172a; color: #fff; font-weight: 700; font-size: .82rem; }
+.aic-lightpath-muted { color: #64748b; }
+</style>
+
+<div class="aic-lightpath-panel">
+  <div class="aic-lightpath-panel__header">
+    <div class="aic-lightpath-panel__title">Logical light-path graph</div>
+    <p class="aic-lightpath-panel__subtitle">A numbered, static overview of the instrument’s optical graph. The numbering below is intended to line up the human-readable spec sheet with the machine-readable YAML and the simulator routing model.</p>
+  </div>
+  <div class="aic-lightpath-panel__svg">{{ hw.optical_path.static_graph.svg | safe }}</div>
+</div>
+
+<div class="aic-lightpath-notes">
+  <div class="aic-lightpath-callout">
+    <strong>Schema status</strong>
+    {% for note in hw.optical_path.static_graph.schema_notes %}
+    <div>{{ note }}</div>
+    {% endfor %}
+  </div>
+  {% if hw.optical_path.static_graph.recommendations %}
+  <div class="aic-lightpath-callout">
+    <strong>YAML improvements recommended for a fully explicit graph</strong>
+    {% for rec in hw.optical_path.static_graph.recommendations %}
+    <div>• {{ rec }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<table class="aic-lightpath-index">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Graph node</th>
+      <th>YAML path</th>
+      <th>What is recorded here</th>
+      <th>Downstream targets</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for node in hw.optical_path.static_graph.nodes %}
+    <tr>
+      <td><span class="aic-lightpath-nodeid">{{ node.number }}</span></td>
+      <td><strong>{{ node.title }}</strong><br><span class="aic-lightpath-muted">{{ node.notes or '—' }}</span></td>
+      <td><code>{{ node.yaml_path }}</code></td>
+      <td>{% if node.item_preview %}{{ node.item_preview }}{% else %}<span class="aic-lightpath-muted">Topology anchor / no position preview</span>{% endif %}</td>
+      <td>{% if node.downstream %}{{ node.downstream }}{% else %}<span class="aic-lightpath-muted">Terminal node</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endif %}
+
 {% if hw.optical_path.sections or hw.optical_path.splitters %}
 ### 🎛️ Optical Path & Filters
 

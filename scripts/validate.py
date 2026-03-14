@@ -10,6 +10,8 @@ from typing import Any, Iterable
 
 import yaml
 
+from scripts.light_path_parser import validate_light_path
+
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 YEAR_PATTERN = re.compile(r"^\d{4}$")
@@ -1309,6 +1311,15 @@ def validate_instrument_ledgers(
                                 )
                             )
 
+
+        for light_path_error in validate_light_path(payload):
+            issues.append(
+                ValidationIssue(
+                    code='invalid_light_path',
+                    path=instrument_file.as_posix(),
+                    message=light_path_error,
+                )
+            )
 
         detector_nodes = _resolve_path_nodes(payload, 'hardware.detectors')
         detector_kinds: set[str] = set()

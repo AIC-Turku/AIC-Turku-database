@@ -23,6 +23,7 @@
     spectralBandsByMechanism: new Map(),
     detectorSettings: new Map(),
     sourceSettings: new Map(),
+    splitterBranchSelections: new Map(),
     lastSelection: null,
     lastSimulation: null,
     activeInspectorStage: null,
@@ -414,6 +415,56 @@
     return `${mechanism.id || 'detector'}::${detector.display_label || detector.name || detector.channel_name || 'detector'}`;
   }
 
+  function splitterBranchSelectionKey(mechanism) {
+    return mechanism && (mechanism.id || mechanism.name || mechanism.display_label || 'splitter');
+  }
+
+  function ensureSplitterBranchSelection(mechanism) {
+    const key = splitterBranchSelectionKey(mechanism);
+    if (!state.splitterBranchSelections.has(key)) {
+      const branches = Array.isArray(mechanism && mechanism.branches) ? mechanism.branches : [];
+      const defaults = mechanism && mechanism.branch_selection_required && branches.length
+        ? [cleanString(branches[0].id || '')]
+        : [];
+      state.splitterBranchSelections.set(key, defaults.filter(Boolean));
+    }
+    return state.splitterBranchSelections.get(key);
+  }
+
+  function knownEndpointEntries() {
+    const entries = [];
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.detectors, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((detector) => {
+        entries.push({
+          id: detector.id || detector.terminal_id || detector.display_label || detector.name,
+          label: detector.display_label || detector.name || mechanism.display_label || 'Endpoint',
+          endpoint_type: detector.endpoint_type || detector.detector_class || detector.kind || 'detector',
+        });
+      });
+    });
+    (Array.isArray(state.activeInstrument && state.activeInstrument.terminals) ? state.activeInstrument.terminals : []).forEach((terminal) => {
+      entries.push({
+        id: terminal.id || terminal.terminal_id || terminal.display_label || terminal.name,
+        label: terminal.display_label || terminal.name || 'Endpoint',
+        endpoint_type: terminal.endpoint_type || terminal.kind || 'detector',
+      });
+    });
+    const seen = new Set();
+    return entries.filter((entry) => {
+      const key = cleanString(entry.id).toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function endpointLabelForTargetId(targetId) {
+    const normalized = cleanString(targetId).toLowerCase();
+    if (!normalized) return 'Endpoint';
+    const match = knownEndpointEntries().find((entry) => cleanString(entry.id).toLowerCase() === normalized);
+    return match ? match.label : targetId;
+  }
+
   function ensureSourceSetting(source) {
     const key = sourceSettingKey(source);
     if (!state.sourceSettings.has(key)) {
@@ -465,11 +516,12 @@
   function ensureDetectorSetting(mechanism, detector) {
     const key = detectorSettingKey(mechanism, detector);
     if (!state.detectorSettings.has(key)) {
-      const detectorClass = detector.detector_class || VM.detectorClass(detector.kind);
+      const detectorClass = detector.detector_class || VM.detectorClass(detector.kind || detector.endpoint_type);
       const defaults = defaultDetectorCollection(detector);
+      const defaultEnabled = detector.default_enabled === undefined ? true : Boolean(detector.default_enabled);
       state.detectorSettings.set(key, {
-        enabled: true,
-        collection_enabled: detectorClass !== 'camera',
+        enabled: defaultEnabled,
+        collection_enabled: !['camera', 'camera_port'].includes(detectorClass),
         collection_min_nm: defaults.min,
         collection_max_nm: defaults.max,
       });
@@ -532,6 +584,7 @@
   function seedSettingsFromInstrument() {
     state.sourceSettings.clear();
     state.detectorSettings.clear();
+    state.splitterBranchSelections.clear();
     mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
       Object.values(positionsForRoute(mechanism, null)).forEach((source) => ensureSourceSetting(source));
     });
@@ -783,9 +836,9 @@
       stages.push({
         id: 'splitters',
         label: 'Splitters',
-        subtitle: 'Route post-emission light into one or more detection branches.',
+        subtitle: 'Mechanical splitters are rendered explicitly. Auto-routed branches already know their endpoints; manual branches can be toggled here.',
         build(panel) {
-          splitterMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('splitters', mechanism, index)));
+          splitterMechanisms.forEach((mechanism) => panel.appendChild(createSplitterControl(mechanism)));
         },
       });
     }
@@ -793,8 +846,8 @@
     if (detectorMechanisms.length) {
       stages.push({
         id: 'detectors',
-        label: 'Detectors',
-        subtitle: 'Enable detectors and adjust their collection windows.',
+        label: 'Detectors & Endpoints',
+        subtitle: 'Enable digital detectors, camera ports, or eyepieces. When splitter targets are defined, each endpoint gets its own full routed path automatically.',
         build(panel) {
           detectorMechanisms.forEach((mechanism) => panel.appendChild(createDetectorControl(mechanism)));
         },
@@ -1057,6 +1110,97 @@
     return block;
   }
 
+
+  function createSplitterControl(mechanism) {
+    const block = document.createElement('div');
+    block.className = 'tunable-control vm-splitter-card';
+    block.dataset.stage = 'splitters';
+    block.dataset.mechanismId = mechanism.id || '';
+
+    const title = document.createElement('div');
+    title.className = 'vm-stage-panel-title';
+    title.style.fontSize = '12px';
+    title.style.textTransform = 'none';
+    title.textContent = mechanism.control_label || mechanism.display_label || mechanism.name || 'Splitter';
+    block.appendChild(title);
+
+    if (mechanism.notes) {
+      const notes = document.createElement('div');
+      notes.className = 'vm-mini';
+      notes.textContent = mechanism.notes;
+      block.appendChild(notes);
+    }
+
+    const metadata = createMetadataBlock();
+    updateMetadataBlock(metadata, (mechanism.dichroic && mechanism.dichroic.positions && (mechanism.dichroic.positions[1] || mechanism.dichroic.positions['1'])) || { label: 'No splitter dichroic declared.' }, { stage: 'splitter' });
+    block.appendChild(metadata);
+
+    const branches = Array.isArray(mechanism.branches) ? mechanism.branches : [];
+    const selectedBranches = ensureSplitterBranchSelection(mechanism);
+    const branchList = document.createElement('div');
+    branchList.className = 'vm-branch-list';
+
+    branches.forEach((branch) => {
+      const row = document.createElement('div');
+      row.className = 'vm-branch-row';
+      const heading = document.createElement('div');
+      heading.className = 'vm-info-row';
+      const titleCell = document.createElement('strong');
+      titleCell.textContent = branch.label || branch.name || 'Branch';
+      heading.appendChild(titleCell);
+      const modeCell = document.createElement('span');
+      modeCell.className = 'vm-mini';
+      modeCell.textContent = cleanString(branch.mode) || 'branch';
+      heading.appendChild(modeCell);
+      row.appendChild(heading);
+
+      const componentMeta = document.createElement('div');
+      componentMeta.className = 'vm-mini';
+      componentMeta.textContent = (branch.component && (branch.component.display_label || branch.component.label))
+        ? `Filter: ${branch.component.display_label || branch.component.label}`
+        : 'No branch filter declared';
+      row.appendChild(componentMeta);
+
+      const targetIds = Array.isArray(branch.target_ids) ? branch.target_ids : [];
+      const targetText = targetIds.length
+        ? targetIds.map((targetId) => endpointLabelForTargetId(targetId)).join(', ')
+        : 'Manual branch selection';
+      const targetMeta = document.createElement('div');
+      targetMeta.className = 'vm-mini';
+      targetMeta.textContent = `Targets: ${targetText}`;
+      row.appendChild(targetMeta);
+
+      if (mechanism.branch_selection_required) {
+        const chooser = document.createElement('label');
+        chooser.className = 'vm-mini';
+        chooser.style.display = 'flex';
+        chooser.style.alignItems = 'center';
+        chooser.style.gap = '6px';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = selectedBranches.includes(cleanString(branch.id || ''));
+        input.addEventListener('change', () => {
+          const active = ensureSplitterBranchSelection(mechanism).slice();
+          const branchId = cleanString(branch.id || '');
+          const idx = active.indexOf(branchId);
+          if (input.checked && idx === -1) active.push(branchId);
+          if (!input.checked && idx >= 0) active.splice(idx, 1);
+          if (!active.length && branchId) active.push(branchId);
+          state.splitterBranchSelections.set(splitterBranchSelectionKey(mechanism), active);
+          refreshOutputs();
+        });
+        chooser.appendChild(input);
+        chooser.appendChild(document.createTextNode('Enable this branch'));
+        row.appendChild(chooser);
+      }
+
+      branchList.appendChild(row);
+    });
+
+    block.appendChild(branchList);
+    return block;
+  }
+
   function createSpectralArrayControl(stageKey, mechanism, index) {
     const block = document.createElement('div');
     block.className = 'tunable-control';
@@ -1186,9 +1330,9 @@
     const detector = Object.values(positionsForRoute(mechanism, state.activeRoute))[0];
     if (!detector) return document.createElement('div');
     const setting = ensureDetectorSetting(mechanism, detector);
+    const detectorClass = detector.detector_class || VM.detectorClass(detector.kind || detector.endpoint_type);
+    const endpointType = cleanString(detector.endpoint_type || detectorClass || detector.kind || 'detector').replace(/_/g, ' ');
     const labelText = mechanism.display_label || detector.display_label || detector.name || 'Detector';
-    const detectorClass = detector.detector_class || VM.detectorClass(detector.kind);
-
     const block = document.createElement('div');
     block.className = 'tunable-control';
     block.dataset.stage = 'detectors';
@@ -1216,7 +1360,7 @@
 
     const meta = document.createElement('div');
     meta.className = 'vm-mini';
-    meta.textContent = `${detectorClass}${detector.supports_time_gating ? ' • time-gated' : ''}`;
+    meta.textContent = `${endpointType}${detector.supports_time_gating ? ' • time-gated' : ''}`;
     block.appendChild(meta);
     const metadata = createMetadataBlock();
     const syncDetectorMetadata = () => updateMetadataBlock(metadata, {
@@ -1227,7 +1371,8 @@
     }, { stage: 'detector' });
     block.appendChild(metadata);
 
-    if (detectorClass !== 'camera') {
+    const showsWindowControls = !['camera', 'camera_port', 'eyepiece'].includes(detectorClass);
+    if (showsWindowControls) {
       setting.collection_enabled = true;
       const collectionToggle = document.createElement('label');
       collectionToggle.className = 'vm-mini';
@@ -1239,7 +1384,6 @@
       toggleInput.type = 'checkbox';
       toggleInput.checked = true;
       toggleInput.disabled = true;
-      setting.collection_enabled = true;
       collectionToggle.appendChild(toggleInput);
       collectionToggle.appendChild(document.createTextNode('Detector collection window (always applied)'));
       block.appendChild(collectionToggle);
@@ -1295,6 +1439,16 @@
       maxReadout.textContent = `Collection max: ${Math.round(Number(maxSlider.value))} nm`;
       block.appendChild(maxReadout);
       block.appendChild(maxSlider);
+    } else if (detectorClass === 'eyepiece') {
+      const info = document.createElement('div');
+      info.className = 'vm-mini';
+      info.textContent = 'Visual endpoint • fixed visible-band collection';
+      block.appendChild(info);
+    } else if (detectorClass === 'camera_port') {
+      const info = document.createElement('div');
+      info.className = 'vm-mini';
+      info.textContent = 'Passive camera port endpoint • no extra collection window';
+      block.appendChild(info);
     }
 
     syncDetectorMetadata();
@@ -1417,9 +1571,7 @@
       if (stage === 'cube') {
         selection.debugSelections.push({ stage: 'cube', name: mechanismName, component: value });
         expandCubeSelection(value, mechanismName).forEach((entry) => pushStageComponent(entry.stage, entry.name, entry.component));
-      } else if (stage === 'splitters') {
-        pushStageComponent('splitters', mechanismName, value);
-      } else if (stage !== 'detectors') {
+      } else if (stage !== 'detectors' && stage !== 'splitters') {
         pushStageComponent(stage, mechanismName, value);
       }
     });
@@ -1449,6 +1601,22 @@
           // ignore invalid tunable payloads
         }
       }
+    });
+
+
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.splitters, state.activeRoute).forEach((mechanism) => {
+      const selectedBranchIds = ensureSplitterBranchSelection(mechanism);
+      selection.splitters.push({
+        id: mechanism.id,
+        label: mechanism.display_label || mechanism.name || 'Splitter',
+        dichroic: mechanism.dichroic,
+        path1: mechanism.path1,
+        path2: mechanism.path2,
+        branches: Array.isArray(mechanism.branches) ? mechanism.branches.map((branch) => ({ ...branch })) : [],
+        branch_selection_required: Boolean(mechanism.branch_selection_required),
+        selected_branch_ids: Array.isArray(selectedBranchIds) ? selectedBranchIds.slice() : [],
+      });
+      selection.debugSelections.push({ stage: 'splitters', name: mechanism.name || mechanism.display_label || 'Splitter', component: mechanism });
     });
 
     mechanismsForRoute(state.activeInstrument && state.activeInstrument.detectors, state.activeRoute).forEach((mechanism) => {
@@ -1935,7 +2103,7 @@
       const window = detector.collection_enabled && minNm !== null && maxNm !== null
         ? ` • ${Math.round(minNm)}-${Math.round(maxNm)} nm`
         : '';
-      return `${detector.display_label || detector.name || 'Detector'}${window}`;
+      return `${detector.display_label || detector.name || 'Endpoint'}${window}`;
     }).join(', ') || 'None';
     const opticalStages = selection.debugSelections.map((entry) => entry.name).join(' → ') || 'No stage optics selected';
     const results = Array.isArray(simulation && simulation.results) ? simulation.results : [];
@@ -1961,7 +2129,7 @@
       `<div><strong>Route:</strong> ${normalizeRouteLabel(state.activeRoute)} • ${validity}</div>`,
       `<div><strong>Fluorophores:</strong> ${fluorText}</div>`,
       `<div><strong>Sources:</strong> ${sourceText}</div>`,
-      `<div><strong>Detectors:</strong> ${detectorText}</div>`,
+      `<div><strong>Detectors / endpoints:</strong> ${detectorText}</div>`,
       `<div><strong>Optical path:</strong> ${opticalStages}</div>`,
       `<div><strong>STED pairing:</strong> ${stedText}</div>`,
       `<div><strong>Recommended paths:</strong> ${recommendationsText}</div>`,
@@ -2005,7 +2173,7 @@
       DOM.scoreboard.innerHTML = `
         <div class="vm-info-card">
           <div class="vm-info-card-title">No collection path yet</div>
-          <div class="vm-info-card-subtitle">Select at least one excitation source and one detector to compute collected light.</div>
+          <div class="vm-info-card-subtitle">Select at least one excitation source and one detector or endpoint to compute collected light.</div>
         </div>`;
       return;
     }
@@ -2025,9 +2193,11 @@
           <div class="vm-info-card-title" style="color:${dyeColor};">${result.fluorophoreName}</div>
           <div class="vm-info-card-subtitle">${result.fluorophoreState} • ${result.pathLabel}</div>
           <div class="vm-info-grid">
-            <div class="vm-info-row"><span>Detector</span><strong>${result.detectorLabel}</strong></div>
+            <div class="vm-info-row"><span>Endpoint</span><strong>${result.detectorLabel}</strong></div>
             <div class="vm-info-row"><span>Quality</span><strong style="color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${result.qualityLabel}</strong></div>
             <div class="vm-info-row"><span>Recorded</span><strong>${Number(result.recordedIntensity || 0).toFixed(3)}</strong></div>
+            <div class="vm-info-row"><span>Path benchmark</span><strong>${Number(result.benchmarkPct || 0).toFixed(1)}%</strong></div>
+            <div class="vm-info-row"><span>Theoretical benchmark</span><strong>${Number(result.theoreticalBenchmarkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Generated → detector</span><strong>${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Excitation</span><strong>${((result.excitationEfficiency || 0) * 100).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Crosstalk</span><strong>${Number(result.crosstalkPct || 0).toFixed(1)}%</strong></div>
