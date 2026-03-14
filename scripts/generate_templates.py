@@ -63,12 +63,12 @@ def _load_yaml(path: Path) -> dict:
 
 
 def _default_title(path: str) -> str:
-    leaf = path.split(".")[-1].replace("[]", "")
+    leaf = path.split(".")[-1].replace("[]", "").replace("{}", "")
     return leaf.replace("_", " ").strip().title() or path
 
 
 def _default_group(path: str) -> str:
-    top = path.split(".")[0].replace("[]", "")
+    top = path.split(".")[0].replace("[]", "").replace("{}", "")
     return top.replace("_", " ").strip().title()
 
 
@@ -184,6 +184,12 @@ def _rule_leaf_kind(rule: Rule) -> str:
 
 
 def _insert_rule(root: Node, rule: Rule) -> None:
+    """Insert a schema rule into the template tree.
+
+    Path token suffixes map to structure semantics:
+    - ``[]`` => list item wildcard
+    - ``{}`` => object-map value wildcard (rendered with ``example_key`` when available)
+    """
     tokens = rule.path.split(".")
     current = root
 
@@ -256,7 +262,7 @@ def _yaml_scalar(value: object) -> str:
 
 
 def _top_key(path: str) -> str:
-    return path.split(".")[0].replace("[]", "")
+    return path.split(".")[0].replace("[]", "").replace("{}", "")
 
 
 def _build_group_lookup(rules: list[Rule]) -> dict[str, str]:
@@ -402,6 +408,7 @@ def main() -> int:
             if existing != output:
                 dirty.append(template_path)
         else:
+            template_path.parent.mkdir(parents=True, exist_ok=True)
             template_path.write_text(output, encoding="utf-8")
             print(f"Generated {template_path}")
 
