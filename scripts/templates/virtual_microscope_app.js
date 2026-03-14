@@ -294,19 +294,34 @@
     const grid = Array.isArray(simulation && simulation.grid)
       ? simulation.grid
       : VM.wavelengthGrid({ min_nm: 350, max_nm: determineChartMax(selection), step_nm: 2 });
+
     const sourceMixed = currentSourceSpectrum(grid);
     const excitationFiltered = applyComponentsToSpectrum(sourceMixed, selection.excitation, grid, 'excitation');
     const excitationAtSample = Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : excitationFiltered;
+
     const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
     const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
-    const preDetector = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'preDetectorSpectrum', grid);
 
-    setPipeSpectrumColor(stagePipeKey('sources', 'excitation'), sourceMixed, grid);
-    setPipeSpectrumColor(stagePipeKey('excitation', 'dichroic'), excitationFiltered, grid);
-    setPipeSpectrumColor(stagePipeKey('dichroic', 'sample'), excitationAtSample, grid);
-    setPipeSpectrumColor(stagePipeKey('sample', 'emission'), generatedEmission, grid);
-    setPipeSpectrumColor(stagePipeKey('emission', 'splitters'), postEmission, grid);
-    setPipeSpectrumColor(stagePipeKey('splitters', 'detectors'), preDetector, grid);
+    // Find all active pipes currently rendered in the DOM topology
+    const pipes = Array.from(DOM.graph.querySelectorAll('.optical-pipe'));
+
+    pipes.forEach((pipe) => {
+      const key = pipe.dataset.pipeKey;
+      if (!key) return;
+
+      // Determine what light is flowing into this pipe based on its origin
+      const fromNode = key.split('->')[0];
+      let spectrum = grid.map(() => 0);
+
+      if (fromNode === 'sources') spectrum = sourceMixed;
+      else if (fromNode === 'excitation') spectrum = excitationFiltered;
+      else if (fromNode === 'dichroic') spectrum = excitationAtSample;
+      else if (fromNode === 'sample') spectrum = generatedEmission;
+      else if (fromNode === 'emission') spectrum = postEmission;
+      else if (fromNode === 'splitters') spectrum = postEmission; // Prevents double-counting paths
+
+      setPipeSpectrumColor(key, spectrum, grid);
+    });
   }
 
   function activeFilterMaskDatasets(selection, grid) {
@@ -1945,17 +1960,32 @@
 
   function currentSourceSpectrum(grid) {
     const spectra = [];
+    const activeSettings = [];
+
+    // Collect all enabled sources
     mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, state.activeRoute).forEach((mechanism) => {
       Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
         const setting = ensureSourceSetting(source);
         if (!setting.enabled) return;
-        spectra.push(VM.sourceSpectrum({
-          ...source,
-          selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
-        }, grid));
+        activeSettings.push({ source, setting });
       });
     });
-    return sumSpectra(spectra.map((values) => ({ values })), 'values', grid);
+
+    // Calculate maximum weight to normalize against (matches simulator logic)
+    const maxWeight = Math.max(1e-9, ...activeSettings.map((entry) => numberOrNull(entry.setting.user_weight) ?? 1));
+
+    // Scale each spectrum by its relative power weight
+    activeSettings.forEach(({ source, setting }) => {
+      const raw = VM.sourceSpectrum({
+        ...source,
+        selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+      }, grid);
+
+      const weight = Math.max(0.1, Math.min(2, (numberOrNull(setting.user_weight) ?? 1) / maxWeight));
+      spectra.push({ values: raw.map((value) => value * weight) });
+    });
+
+    return sumSpectra(spectra, 'values', grid);
   }
 
   function meanFluorophoreCurve(grid, type) {
