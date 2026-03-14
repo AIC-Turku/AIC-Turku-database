@@ -18,8 +18,8 @@ instrument:
 modalities:
   - confocal_spinning_disk
   - widefield_fluorescence
-  - transmitted_brightfield
-  - phase_contrast
+  - frap
+  - photoactivation
 
 modules:
   - name: incubation
