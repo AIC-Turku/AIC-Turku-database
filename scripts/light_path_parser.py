@@ -429,7 +429,7 @@ def _component_payload(component: dict[str, Any], *, default_name: str = "", bra
 def _light_source_display_label(source: dict[str, Any]) -> str:
     kind = _clean_string(source.get("kind") or source.get("type") or "source").replace("_", " ")
     manufacturer = _clean_string(source.get("manufacturer"))
-    model = _clean_string(source.get("model") or source.get("name"))
+    model = _clean_string(source.get("model"))
     wavelength = source.get("wavelength_nm")
     tunable_min = source.get("tunable_min_nm")
     tunable_max = source.get("tunable_max_nm")
@@ -445,6 +445,11 @@ def _light_source_display_label(source: dict[str, Any]) -> str:
 
 
 def infer_light_source_role(source: dict[str, Any]) -> str:
+    """SIMULATOR-ONLY fallback role inference.
+
+    This helper is intentionally non-authoritative and must not be used to populate
+    canonical/production role fields. Canonical role must come from explicit YAML `role`.
+    """
     explicit = _clean_string(source.get("role")).lower()
     if explicit:
         return explicit
@@ -458,7 +463,7 @@ def infer_light_source_role(source: dict[str, Any]) -> str:
 
 
 def _source_role(source: dict[str, Any]) -> str:
-    return infer_light_source_role(source)
+    return _clean_string(source.get("role")).lower()
 
 
 
@@ -511,11 +516,12 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
         "type": kind,
         "kind": kind,
         "role": role,
+        "simulator_inferred_role": infer_light_source_role(source) if not role else role,
         "name": display_label,
         "display_label": display_label,
         "manufacturer": source.get("manufacturer"),
-        "product_code": source.get("model") or source.get("name"),
-        "model": source.get("model") or source.get("name"),
+        "product_code": source.get("product_code"),
+        "model": source.get("model"),
         "technology": source.get("technology"),
         "wavelength_nm": wavelength,
         "width_nm": width_nm,
@@ -542,7 +548,7 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
 
 def _detector_position(slot: int, detector: dict[str, Any], *, terminal_id: str | None = None, mechanism_id: str | None = None) -> dict[str, Any]:
     kind = _clean_string(detector.get("kind") or detector.get("type") or "detector").lower() or "detector"
-    manufacturer = _clean_string(detector.get("manufacturer") or detector.get("name"))
+    manufacturer = _clean_string(detector.get("manufacturer"))
     model = _clean_string(detector.get("model"))
     channel_name = _clean_string(detector.get("channel_name") or detector.get("channel") or detector.get("name")) or f"Detector {slot}"
     display_label = " ".join(part for part in [channel_name if channel_name not in {manufacturer, model} else "", manufacturer, model] if part).strip() or channel_name or manufacturer or model or f"Detector {slot}"
@@ -560,8 +566,8 @@ def _detector_position(slot: int, detector: dict[str, Any], *, terminal_id: str 
         "name": display_label,
         "display_label": display_label,
         "channel_name": channel_name,
-        "manufacturer": detector.get("manufacturer") or detector.get("name"),
-        "product_code": detector.get("model"),
+        "manufacturer": detector.get("manufacturer"),
+        "product_code": detector.get("product_code"),
         "model": detector.get("model"),
         "pixel_pitch_um": detector.get("pixel_pitch_um") or detector.get("pixel_size_um"),
         "sensor_format_px": detector.get("sensor_format_px"),
@@ -621,7 +627,7 @@ def _terminal_payload_from_endpoint(index: int, endpoint: dict[str, Any], *, def
         "display_label": display_label,
         "channel_name": display_label,
         "manufacturer": endpoint.get("manufacturer"),
-        "product_code": endpoint.get("model") or endpoint.get("product_code"),
+        "product_code": endpoint.get("product_code"),
         "model": endpoint.get("model"),
         "qe_peak_pct": endpoint.get("qe_peak_pct"),
         "read_noise_e": endpoint.get("read_noise_e"),
@@ -687,23 +693,23 @@ def _candidate_terminals_for_routes(terminals: list[dict[str, Any]], routes: lis
 
 def _resolve_target_ids(raw_targets: Any, terminals: list[dict[str, Any]]) -> list[str]:
     values = raw_targets if isinstance(raw_targets, list) else [raw_targets]
+    terminals_by_id: dict[str, str] = {}
+    for terminal in terminals:
+        if not isinstance(terminal, dict):
+            continue
+        for key in ("id", "terminal_id"):
+            identifier = _clean_identifier(terminal.get(key))
+            if identifier and identifier not in terminals_by_id and isinstance(terminal.get("id"), str):
+                terminals_by_id[identifier] = terminal["id"]
+
     resolved: list[str] = []
     for value in values:
         identifier = _clean_identifier(value)
-        if not identifier:
+        if not identifier or identifier not in terminals_by_id:
             continue
-        for terminal in terminals:
-            candidate_tokens = {
-                _clean_identifier(terminal.get("id")),
-                _clean_identifier(terminal.get("terminal_id")),
-                _clean_identifier(terminal.get("name")),
-                _clean_identifier(terminal.get("display_label")),
-                _clean_identifier(terminal.get("channel_name")),
-                _clean_identifier(terminal.get("source_mechanism_id")),
-            }
-            if identifier in candidate_tokens and terminal.get("id") and terminal["id"] not in resolved:
-                resolved.append(terminal["id"])
-                break
+        resolved_id = terminals_by_id[identifier]
+        if resolved_id not in resolved:
+            resolved.append(resolved_id)
     return resolved
 
 
@@ -1059,8 +1065,6 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
     if "cut_on_nm" in dichroic_component and "cutoffs_nm" not in dichroic_component:
         dichroic_component["cutoffs_nm"] = [dichroic_component["cut_on_nm"]]
 
-    path_1 = splitter.get("path_1") if isinstance(splitter.get("path_1"), dict) else {}
-    path_2 = splitter.get("path_2") if isinstance(splitter.get("path_2"), dict) else {}
     routes = _normalize_routes(splitter.get("path") or splitter.get("paths") or splitter.get("route") or splitter.get("routes"))
     candidate_terminals = _candidate_terminals_for_routes(terminals or [], routes)
 
@@ -1069,7 +1073,7 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
     def branch_component(raw_branch: dict[str, Any], *, default_name: str, branch_mode: str) -> dict[str, Any]:
         component = raw_branch.get("emission_filter") if isinstance(raw_branch.get("emission_filter"), dict) else raw_branch.get("component")
         if not isinstance(component, dict):
-            component = {"component_type": "passthrough", "notes": "No branch filter declared."}
+            component = {}
         return _component_payload(component, default_name=default_name, branch_mode=branch_mode)
 
     def branch_targets(raw_branch: dict[str, Any]) -> list[str]:
@@ -1102,74 +1106,6 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
                 branch_payload["routes"] = list(routes)
                 branch_payload["path"] = routes[0]
             branches.append(branch_payload)
-    elif path_1 or path_2 or dichroic_component:
-        path1_pos = branch_component(path_1, default_name="Path 1 Filter", branch_mode="transmitted")
-        path2_pos = branch_component(path_2, default_name="Path 2 Filter", branch_mode="reflected")
-        branches = [
-            {
-                "id": f"splitter_{index}_path1",
-                "label": _clean_string(path_1.get("name")) or "Path 1",
-                "mode": "transmitted",
-                "component": path1_pos,
-                "target_ids": branch_targets(path_1),
-            },
-            {
-                "id": f"splitter_{index}_path2",
-                "label": _clean_string(path_2.get("name")) or "Path 2",
-                "mode": "reflected",
-                "component": path2_pos,
-                "target_ids": branch_targets(path_2),
-            },
-        ]
-        if routes:
-            for branch in branches:
-                branch["routes"] = list(routes)
-                branch["path"] = routes[0]
-    else:
-        default_branch = {
-            "id": f"splitter_{index}_main",
-            "label": _clean_string(splitter.get("branch_name")) or name,
-            "mode": "transmitted",
-            "component": _component_payload({"component_type": "passthrough"}, default_name="Pass-through", branch_mode="transmitted"),
-            "target_ids": [],
-        }
-        if routes:
-            default_branch["routes"] = list(routes)
-            default_branch["path"] = routes[0]
-        branches = [default_branch]
-
-    if branches:
-        named_targets = {
-            "camera_port": next((terminal.get("id") for terminal in (candidate_terminals or terminals or []) if terminal.get("endpoint_type") == "camera_port"), None),
-            "eyepiece": next((terminal.get("id") for terminal in (candidate_terminals or terminals or []) if terminal.get("endpoint_type") == "eyepiece"), None),
-        }
-        for branch in branches:
-            if branch.get("target_ids"):
-                continue
-            label_hint = " ".join(
-                part for part in (
-                    _clean_string(branch.get("label")),
-                    _clean_string(name),
-                    _clean_string(splitter.get("notes")),
-                )
-                if part
-            ).lower()
-            if "camera" in label_hint and "port" in label_hint and named_targets.get("camera_port"):
-                branch["target_ids"] = [named_targets["camera_port"]]
-            elif any(keyword in label_hint for keyword in ("eyepiece", "ocular")) and named_targets.get("eyepiece"):
-                branch["target_ids"] = [named_targets["eyepiece"]]
-
-    unresolved = [branch for branch in branches if not branch.get("target_ids")]
-    available_terminals = [terminal for terminal in (candidate_terminals or terminals or []) if terminal.get("id")]
-    explicitly_targeted = {target for branch in branches for target in branch.get("target_ids", [])}
-    unassigned_terminals = [terminal for terminal in available_terminals if terminal.get("id") not in explicitly_targeted]
-    if unresolved and len(unassigned_terminals) == 1:
-        terminal_id = unassigned_terminals[0].get("id")
-        for branch in unresolved:
-            branch["target_ids"] = [terminal_id]
-    elif unresolved and len(unresolved) == len(unassigned_terminals) and unassigned_terminals:
-        for branch, terminal in zip(unresolved, unassigned_terminals):
-            branch["target_ids"] = [terminal.get("id")]
 
     display_parts = []
     if dichroic_pos:
@@ -1227,7 +1163,7 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
 
 
 
-def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
+def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferred_terminals: bool = False) -> dict:
     """Build a frontend-friendly virtual microscope payload from normalized hardware data."""
     hardware = instrument_dict.get("hardware", {})
     light_path = hardware.get("light_path", {})
@@ -1306,7 +1242,19 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
         payload["terminals"].append(_terminal_payload_from_endpoint(idx, endpoint))
 
     splitters_raw = _collect_splitters(hardware, light_path)
-    _infer_default_terminals(instrument_dict, splitters_raw, payload["terminals"])
+    if include_inferred_terminals:
+        _infer_default_terminals(instrument_dict, splitters_raw, payload["terminals"])
+        payload["metadata"]["uses_inferred_terminals"] = True
+
+    splitters_with_missing_branches = [
+        splitter
+        for splitter in splitters_raw
+        if isinstance(splitter, dict) and not isinstance(splitter.get("branches"), list)
+    ]
+    payload["metadata"]["graph_incomplete"] = (
+        len(payload["terminals"]) == 0
+        or bool(splitters_with_missing_branches)
+    )
 
     for terminal_index, terminal in enumerate(payload["terminals"], start=1):
         if terminal.get("endpoint_type") == "detector":
@@ -1328,6 +1276,15 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
 
     for index, splitter in enumerate(splitters_raw):
         payload["splitters"].append(_splitter_payload(index, splitter, payload["terminals"]))
+
+    if any(
+        not branch.get("target_ids")
+        for splitter in payload["splitters"]
+        if isinstance(splitter, dict)
+        for branch in splitter.get("branches", [])
+        if isinstance(branch, dict)
+    ):
+        payload["metadata"]["graph_incomplete"] = True
 
     payload["valid_paths"] = calculate_valid_paths(payload)
     payload["available_routes"] = _route_catalog_entries(payload)

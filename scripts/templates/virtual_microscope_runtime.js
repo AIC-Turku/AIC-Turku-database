@@ -220,6 +220,23 @@
     return normalized;
   }
 
+  function simulatorApproximationModeEnabled(metadata, options) {
+    const modeFromOptions = cleanString(options && (options.simulationMode || options.mode)).toLowerCase();
+    if (modeFromOptions === 'approximate' || modeFromOptions === 'simulator_approximation') return true;
+    if (modeFromOptions === 'strict' || modeFromOptions === 'hardware_truth') return false;
+
+    if (options && Object.prototype.hasOwnProperty.call(options, 'strictHardwareTruth')) {
+      return options.strictHardwareTruth === false;
+    }
+
+    const modeFromMetadata = cleanString(metadata && (metadata.simulation_mode || metadata.runtime_mode)).toLowerCase();
+    if (modeFromMetadata === 'approximate' || modeFromMetadata === 'simulator_approximation') return true;
+    if (modeFromMetadata === 'strict' || modeFromMetadata === 'hardware_truth') return false;
+
+    if (metadata && metadata.non_authoritative_simulator_mode === true) return true;
+    return false;
+  }
+
   function normalizeTerminals(rows) {
     return (Array.isArray(rows) ? rows : [])
       .filter((row) => row && typeof row === 'object')
@@ -251,7 +268,8 @@
       });
   }
 
-  function normalizeSplitters(rows) {
+  function normalizeSplitters(rows, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
     return (Array.isArray(rows) ? rows : [])
       .filter((row) => row && typeof row === 'object')
       .map((splitter, index) => {
@@ -269,14 +287,17 @@
           if (!component && branch && (branch.component_type || branch.type)) {
             component = { ...branch };
           }
-          if (!component) component = { component_type: 'passthrough', label: 'Pass-through' };
+          if (!component && allowApproximation) component = { component_type: 'passthrough', label: 'Pass-through' };
+          if (!component) component = {};
           return {
             ...branch,
             id: cleanString(branch && branch.id) || `splitter_${index}_branch_${branchIndex + 1}`,
             label: cleanString(branch && (branch.label || branch.name)) || `Branch ${branchIndex + 1}`,
             mode,
             component,
-            target_ids: normalizeTargetIds(branch && (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint)),
+            target_ids: normalizeTargetIds(branch && (allowApproximation
+              ? (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint)
+              : branch.target_ids)),
             __routes: routesFromObject(branch).length ? routesFromObject(branch) : routes,
           };
         };
@@ -284,14 +305,14 @@
         let branches = [];
         if (Array.isArray(splitter.branches) && splitter.branches.length) {
           branches = splitter.branches.map((branch, branchIndex) => buildBranch(branch, branchIndex, branchIndex === 0 ? 'transmitted' : 'reflected'));
-        } else if (legacyPath1 || legacyPath2 || splitter.path1 || splitter.path2 || splitter.path_1 || splitter.path_2) {
+        } else if (allowApproximation && (legacyPath1 || legacyPath2 || splitter.path1 || splitter.path2 || splitter.path_1 || splitter.path_2)) {
           const left = splitter.path1 || splitter.path_1 || {};
           const right = splitter.path2 || splitter.path_2 || {};
           branches = [
             buildBranch({ ...left, component: legacyPath1 || left.component || left.emission_filter }, 0, 'transmitted'),
             buildBranch({ ...right, component: legacyPath2 || right.component || right.emission_filter }, 1, 'reflected'),
           ].filter((branch, branchIndex) => branchIndex === 0 || legacyPath2 || right.component || right.emission_filter || cleanString(right.name || right.label));
-        } else {
+        } else if (allowApproximation) {
           branches = [buildBranch({
             id: `splitter_${index}_main`,
             label: cleanString(splitter.name) || 'Primary Path',
@@ -337,8 +358,9 @@
     return normalizeRouteCatalog(Array.from(tags));
   }
 
-  function normalizeInstrumentPayload(rawPayload) {
+  function normalizeInstrumentPayload(rawPayload, options) {
     const payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+    const approximationMode = simulatorApproximationModeEnabled(payload.metadata || {}, options);
     const normalized = {
       metadata: payload.metadata || {},
       lightSources: normalizeMechanismList(payload.light_sources),
@@ -346,17 +368,25 @@
       excitation: normalizeMechanismList(payload.stages && payload.stages.excitation),
       dichroic: normalizeMechanismList(payload.stages && payload.stages.dichroic),
       emission: normalizeMechanismList(payload.stages && payload.stages.emission),
-      splitters: normalizeSplitters(payload.runtime_splitters || payload.splitters),
+      splitters: normalizeSplitters(payload.runtime_splitters || payload.splitters, { allowApproximation: approximationMode }),
       detectors: normalizeMechanismList(payload.detectors),
       terminals: normalizeTerminals(payload.terminals || payload.detection_endpoints || []),
       validPaths: Array.isArray(payload.valid_paths) ? payload.valid_paths : [],
       routeOptions: [],
       defaultRoute: cleanString(payload.default_route).toLowerCase() || null,
+      strictHardwareTruth: !approximationMode,
+      simulationMode: approximationMode ? 'approximate' : 'strict',
     };
     const explicitRouteOptions = normalizeRouteCatalog(payload.available_routes || payload.route_options || []);
-    normalized.routeOptions = explicitRouteOptions.length ? explicitRouteOptions : collectRouteCatalogFallback(normalized);
+    normalized.routeOptions = explicitRouteOptions.length
+      ? explicitRouteOptions
+      : (approximationMode ? collectRouteCatalogFallback(normalized) : []);
     if (!normalized.defaultRoute || !normalized.routeOptions.some((entry) => entry.id === normalized.defaultRoute)) {
+      if (!approximationMode) {
+        normalized.defaultRoute = null;
+      } else {
       normalized.defaultRoute = normalized.routeOptions[0] ? normalized.routeOptions[0].id : null;
+      }
     }
     return normalized;
   }
@@ -1412,19 +1442,24 @@
     }, inputSpectrum.slice());
   }
 
-  function branchTargetIds(branch) {
-    return normalizeTargetIds(branch && (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint));
+  function branchTargetIds(branch, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
+    return normalizeTargetIds(branch && (allowApproximation
+      ? (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint)
+      : branch.target_ids));
   }
 
-  function selectedBranchIdsForSplitter(splitter, branchDefs) {
+  function selectedBranchIdsForSplitter(splitter, branchDefs, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
     const selected = new Set(normalizeTargetIds(splitter && (splitter.selected_branch_ids || splitter.selectedBranchIds || splitter.active_branch_ids || splitter.activeBranchIds)));
-    if (!selected.size && splitter && splitter.branch_selection_required && Array.isArray(branchDefs) && branchDefs.length) {
+    if (allowApproximation && !selected.size && splitter && splitter.branch_selection_required && Array.isArray(branchDefs) && branchDefs.length) {
       selected.add(normalizeIdentifier(branchDefs[0].id));
     }
     return selected;
   }
 
-  function propagateSplitters(inputSpectrum, splitters, grid) {
+  function propagateSplitters(inputSpectrum, splitters, grid, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
     let branches = [{ id: 'main', label: 'Main Path', spectrum: inputSpectrum.slice(), targetIds: [] }];
     (Array.isArray(splitters) ? splitters : []).forEach((splitter, splitterIndex) => {
       const nextBranches = [];
@@ -1433,8 +1468,10 @@
         : (splitter && splitter.dichroic && typeof splitter.dichroic === 'object' ? splitter.dichroic : null);
       const branchDefs = Array.isArray(splitter && splitter.branches) && splitter.branches.length
         ? splitter.branches
-        : [{ id: `splitter_${splitterIndex}_main`, label: cleanString(splitter && splitter.label) || 'Primary Path', mode: 'transmitted', component: { component_type: 'passthrough' }, target_ids: [] }];
-      const explicitlySelectedBranchIds = selectedBranchIdsForSplitter(splitter, branchDefs);
+        : (allowApproximation
+          ? [{ id: `splitter_${splitterIndex}_main`, label: cleanString(splitter && splitter.label) || 'Primary Path', mode: 'transmitted', component: { component_type: 'passthrough' }, target_ids: [] }]
+          : []);
+      const explicitlySelectedBranchIds = selectedBranchIdsForSplitter(splitter, branchDefs, options);
       const requiresSelection = Boolean(splitter && splitter.branch_selection_required) && branchDefs.length > 1;
 
       branches.forEach((branch) => {
@@ -1446,7 +1483,7 @@
             ? applyMask(branch.spectrum, componentMask(splitterDichroic, grid, { mode: 'emission', branchMode: mode }))
             : branch.spectrum.slice();
           const branchSpectrum = applyMask(baseSpectrum, componentMask((branchDef && branchDef.component) || {}, grid, { mode: 'emission', branchMode: mode }));
-          const localTargets = branchTargetIds(branchDef);
+          const localTargets = branchTargetIds(branchDef, options);
           const inheritedTargets = Array.isArray(branch.targetIds) ? branch.targetIds : [];
           const mergedTargets = inheritedTargets.length && localTargets.length
             ? inheritedTargets.filter((id) => localTargets.includes(id))
@@ -1889,7 +1926,9 @@
     };
   }
 
-  function inferredDetectorTargets(normalizedInstrument) {
+  function inferredDetectorTargets(normalizedInstrument, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
+    if (!allowApproximation) return [];
     const catalog = knownDetectorCatalog(normalizedInstrument);
     const explicitlyDefault = catalog.filter((entry) => entry.default_enabled === true);
     if (explicitlyDefault.length) return explicitlyDefault;
@@ -1906,15 +1945,18 @@
     }];
   }
 
-  function branchAcceptsDetector(branch, detector) {
-    const targets = Array.isArray(branch && branch.targetIds) ? branch.targetIds : branchTargetIds(branch);
-    if (!targets.length) return true;
+  function branchAcceptsDetector(branch, detector, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
+    if (!branch || !branch.splitterId) return true;
+    const targets = Array.isArray(branch && branch.targetIds) ? branch.targetIds : branchTargetIds(branch, options);
+    if (!targets.length) return allowApproximation;
     const ids = detectorIdentifiers(detector);
     return targets.some((target) => ids.has(normalizeIdentifier(target)));
   }
 
   function simulateInstrument(instrument, selection, fluorophores, options) {
-    const normalizedInstrument = normalizeInstrumentPayload(instrument);
+    const normalizedInstrument = normalizeInstrumentPayload(instrument, options);
+    const allowApproximation = !normalizedInstrument.strictHardwareTruth;
     const grid = wavelengthGrid(normalizedInstrument.metadata && normalizedInstrument.metadata.wavelength_grid);
     const selected = selection && typeof selection === 'object' ? selection : {};
     const selectedSources = Array.isArray(selected.sources) ? selected.sources : [];
@@ -1928,7 +1970,7 @@
     const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
     const selectedSplitters = Array.isArray(selected.splitters) ? selected.splitters : [];
     const explicitDetectorSelections = Array.isArray(selected.detectors) ? selected.detectors : [];
-    const resolvedDetectors = (explicitDetectorSelections.length ? explicitDetectorSelections : inferredDetectorTargets(normalizedInstrument))
+    const resolvedDetectors = (explicitDetectorSelections.length ? explicitDetectorSelections : inferredDetectorTargets(normalizedInstrument, { allowApproximation }))
       .map((detector) => hydrateDetectorSelection(detector, normalizedInstrument));
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
 
@@ -1955,7 +1997,7 @@
       const afterDichroic = applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' });
       const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid)
+        ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid, { allowApproximation })
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
       return {
         sourceLabel: entry.source.display_label || entry.source.name || 'Source',
@@ -1988,7 +2030,7 @@
       const afterDichroic = applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' });
       const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid)
+        ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid, { allowApproximation })
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
       const emissionArea = integrateSpectrum(generatedEmission, grid);
       const theoreticalBestArea = integrateSpectrum(theoreticalBestEmission, grid);
@@ -2006,7 +2048,7 @@
       });
 
       branches.forEach((branch) => {
-        const candidateDetectors = resolvedDetectors.filter((detector) => branchAcceptsDetector(branch, detector));
+        const candidateDetectors = resolvedDetectors.filter((detector) => branchAcceptsDetector(branch, detector, { allowApproximation }));
         if (!candidateDetectors.length) return;
         candidateDetectors.forEach((detector) => {
           const response = detectorResponse(detector, grid);

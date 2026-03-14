@@ -373,8 +373,8 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
                 id: 'split1',
                 dichroic: { positions: { 1: { component_type: 'dichroic', cutoffs_nm: [560] } } },
                 branches: [
-                  { id: 'red', label: 'Red path', mode: 'transmitted', component: { component_type: 'bandpass', center_nm: 700, width_nm: 75 } },
-                  { id: 'green', label: 'Green path', mode: 'reflected', component: { component_type: 'bandpass', center_nm: 525, width_nm: 50 } }
+                  { id: 'red', label: 'Red path', mode: 'transmitted', component: { component_type: 'bandpass', center_nm: 700, width_nm: 75 }, target_ids: ['cam'] },
+                  { id: 'green', label: 'Green path', mode: 'reflected', component: { component_type: 'bandpass', center_nm: 525, width_nm: 50 }, target_ids: ['cam'] }
                 ]
               }],
               detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera', qe_peak_pct: 80, user_gain: 1 }],
@@ -614,6 +614,158 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["defaultRoute"], "epi")
         self.assertEqual(result["routeIds"], ["confocal", "epi"])
         self.assertEqual(result["routeLabels"], ["Confocal route", "Epi route"])
+
+    def test_strict_mode_does_not_fallback_route_catalog_from_component_tags(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'strict' },
+              light_sources: [
+                {
+                  id: 'sources',
+                  positions: {
+                    1: { display_label: '488 laser', path: 'confocal', wavelength_nm: 488, kind: 'laser' }
+                  }
+                }
+              ],
+              detectors: [],
+              stages: { excitation: [], cube: [], dichroic: [], emission: [] },
+              splitters: [],
+              valid_paths: []
+            });
+            return {
+              defaultRoute: instrument.defaultRoute,
+              routeIds: instrument.routeOptions.map((entry) => entry.id),
+              strictHardwareTruth: instrument.strictHardwareTruth,
+            };
+            """
+        )
+
+        self.assertTrue(result["strictHardwareTruth"])
+        self.assertEqual(result["routeIds"], [])
+        self.assertIsNone(result["defaultRoute"])
+
+    def test_approximation_mode_keeps_route_catalog_fallback(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'approximate' },
+              light_sources: [
+                {
+                  id: 'sources',
+                  positions: {
+                    1: { display_label: '488 laser', path: 'confocal', wavelength_nm: 488, kind: 'laser' },
+                    2: { display_label: '470 LED', path: 'epi', wavelength_nm: 470, kind: 'led' }
+                  }
+                }
+              ],
+              detectors: [],
+              stages: { excitation: [], cube: [], dichroic: [], emission: [] },
+              splitters: [],
+              valid_paths: []
+            });
+            return {
+              routeIds: instrument.routeOptions.map((entry) => entry.id),
+              defaultRoute: instrument.defaultRoute,
+              strictHardwareTruth: instrument.strictHardwareTruth,
+            };
+            """
+        )
+
+        self.assertFalse(result["strictHardwareTruth"])
+        self.assertEqual(result["routeIds"], ["confocal", "epi"])
+        self.assertEqual(result["defaultRoute"], "confocal")
+
+    def test_strict_mode_does_not_invent_virtual_detectors(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[450, 0], [488, 100], [530, 0]],
+                ex2p: [],
+                em: [[500, 0], [520, 100], [560, 0]]
+              },
+              exMax: 488,
+              emMax: 520
+            };
+            const instrument = { metadata: { simulation_mode: 'strict', wavelength_grid: { min_nm: 450, max_nm: 650, step_nm: 2 } } };
+            const simulation = rt.simulateInstrument(
+              instrument,
+              {
+                sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                excitation: [{ component_type: 'passthrough' }],
+                dichroic: [],
+                emission: [{ component_type: 'bandpass', center_nm: 520, width_nm: 50 }],
+                splitters: [],
+                detectors: [],
+                selectionMap: {}
+              },
+              [fluor],
+              {}
+            );
+            return {
+              selectedDetectors: simulation.selectedDetectors,
+              resultsCount: simulation.results.length,
+            };
+            """
+        )
+
+        self.assertEqual(result["selectedDetectors"], [])
+        self.assertEqual(result["resultsCount"], 0)
+
+    def test_strict_mode_requires_explicit_splitter_target_ids(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[450, 0], [488, 100], [530, 0]],
+                ex2p: [],
+                em: [[500, 0], [520, 100], [560, 0]]
+              },
+              exMax: 488,
+              emMax: 520
+            };
+            const instrument = { metadata: { simulation_mode: 'strict', wavelength_grid: { min_nm: 450, max_nm: 650, step_nm: 2 } } };
+            function simulateWithTargets(target_ids) {
+              return rt.simulateInstrument(
+                instrument,
+                {
+                  sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                  excitation: [{ component_type: 'passthrough' }],
+                  dichroic: [],
+                  emission: [{ component_type: 'bandpass', center_nm: 520, width_nm: 50 }],
+                  splitters: [
+                    {
+                      id: 'split',
+                      branches: [
+                        { id: 'branch_1', label: 'Branch 1', component: { component_type: 'passthrough' }, target_ids }
+                      ]
+                    }
+                  ],
+                  detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera' }],
+                  selectionMap: {}
+                },
+                [fluor],
+                {}
+              );
+            }
+            const missingTargets = simulateWithTargets([]);
+            const explicitTargets = simulateWithTargets(['cam']);
+            return {
+              missingCount: missingTargets.results.length,
+              explicitCount: explicitTargets.results.length,
+            };
+            """
+        )
+
+        self.assertEqual(result["missingCount"], 0)
+        self.assertGreater(result["explicitCount"], 0)
 
     def test_point_detector_collection_window_changes_output(self) -> None:
         result = self.run_node_json(

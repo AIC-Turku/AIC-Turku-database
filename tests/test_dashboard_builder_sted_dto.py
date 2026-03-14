@@ -1,5 +1,7 @@
 import unittest
+from unittest import mock
 import json
+import os
 import sys
 import tempfile
 import types
@@ -46,6 +48,8 @@ from scripts.dashboard_builder import (
     build_optical_path_dto,
     json_script_data,
     normalize_hardware,
+    normalize_instrument_dto,
+    load_instruments,
 )
 from scripts.validate import Vocabulary
 
@@ -467,6 +471,33 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(json.loads(match), config)
         self.assertNotIn("</script>", match)
 
+    def test_optical_path_dto_marks_missing_explicit_terminals_as_incomplete(self) -> None:
+        dto = build_optical_path_dto({"stages": {}, "splitters": [], "terminals": []})
+
+        section = next(item for item in dto["sections"] if item["id"] == "terminals")
+        self.assertEqual(section["items"][0]["id"], "no_explicit_terminals")
+        self.assertIn("Action needed", section["items"][0]["spec_lines"][0])
+
+    def test_optical_path_static_graph_does_not_fabricate_unspecified_endpoint(self) -> None:
+        dto = build_optical_path_dto(
+            {
+                "stages": {},
+                "terminals": [],
+                "splitters": [
+                    {
+                        "name": "Incomplete Splitter",
+                        "branches": [{"id": "branch_1", "label": "Branch 1", "target_ids": []}],
+                    }
+                ],
+            }
+        )
+
+        node_keys = [node.get("key") for node in dto.get("static_graph", {}).get("nodes", [])]
+        edge_labels = [edge.get("label", "") for edge in dto.get("static_graph", {}).get("edges", [])]
+
+        self.assertNotIn("unspecified_endpoint", node_keys)
+        self.assertFalse(any("inferred" in label.lower() for label in edge_labels))
+
     def test_optical_path_dto_preserves_runtime_splitters_for_virtual_microscope(self) -> None:
         lightpath_dto = {
             "stages": {},
@@ -492,6 +523,157 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(dto["runtime_splitters"][0]["branches"][0]["mode"], "transmitted")
         self.assertEqual(dto["runtime_splitters"][0]["branches"][1]["component"]["center_nm"], 525)
         self.assertEqual(dto["splitters"][0]["display_label"], "Di: 560 LP | P1: 700/75 | P2: 525/50")
+
+    def test_build_instrument_mega_dto_uses_canonical_identity_as_source_of_truth(self) -> None:
+        inst = {
+            "id": "scope-9",
+            "display_name": "Top-level Name",
+            "manufacturer": "Top-level Manufacturer",
+            "model": "Top-level Model",
+            "stand_orientation": "upright",
+            "software": [{"role": "acquisition", "name": "TopLevelSW", "version": "1.0"}],
+            "modalities": ["confocal"],
+            "modules": [{"name": "legacy-module"}],
+            "canonical": {
+                "instrument": {
+                    "manufacturer": "Canonical Manufacturer",
+                    "model": "Canonical Model",
+                    "stand_orientation": "inverted",
+                    "ocular_availability": "yes",
+                    "year_of_purchase": "2020",
+                    "funding": "Grant",
+                    "location": "Room 1",
+                },
+                "software": [{"role": "acquisition", "name": "CanonicalSW", "version": "2.0"}],
+                "modalities": [],
+                "modules": [],
+                "hardware": {"light_sources": [], "detectors": [], "stages": []},
+            },
+        }
+
+        dto = build_instrument_mega_dto(self.vocabulary, inst, EMPTY_LIGHTPATH)
+
+        self.assertEqual(dto["identity"]["manufacturer"], "Canonical Manufacturer")
+        self.assertEqual(dto["identity"]["model"], "Canonical Model")
+        self.assertIn("Canonical Manufacturer Canonical Model", dto["methods"]["base_sentence"])
+        self.assertNotIn("Top-level Manufacturer", dto["methods"]["base_sentence"])
+
+    def test_normalize_instrument_dto_marks_top_level_objectives_compatibility_in_provenance(self) -> None:
+        payload = {
+            "instrument": {"instrument_id": "scope-legacy", "display_name": "Legacy Scope"},
+            "objectives": [{"manufacturer": "Nikon", "model": "CFI", "magnification": 60}],
+            "hardware": {},
+        }
+
+        with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+            report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
+            normalized = normalize_instrument_dto(payload, Path("instruments/scope-legacy.yaml"), retired=False)
+
+        self.assertTrue(
+            normalized["canonical"]["provenance"]["deprecated_compatibility"]["top_level_objectives_to_hardware_objectives"]
+        )
+
+    def test_load_instruments_respects_validated_handoff_filter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            instruments_dir = root / "instruments"
+            instruments_dir.mkdir(parents=True, exist_ok=True)
+            (instruments_dir / "valid.yaml").write_text(
+                json.dumps({"instrument": {"instrument_id": "valid-scope", "display_name": "Valid"}, "hardware": {}}),
+                encoding="utf-8",
+            )
+            (instruments_dir / "invalid.yaml").write_text(
+                json.dumps({"instrument": {"instrument_id": "invalid-scope", "display_name": "Invalid"}, "hardware": {}}),
+                encoding="utf-8",
+            )
+
+            prev = Path.cwd()
+            try:
+                os.chdir(root)
+                with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+                    report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
+                    instruments = load_instruments(
+                        "instruments",
+                        allowed_instrument_ids={"valid-scope"},
+                    )
+            finally:
+                os.chdir(prev)
+
+        self.assertEqual([inst["id"] for inst in instruments], ["valid-scope"])
+
+    def test_build_light_source_dto_does_not_infer_role_when_missing(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "laser",
+                            "manufacturer": "NoRole",
+                            "model": "X",
+                            "wavelength_nm": 488,
+                        }
+                    ]
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+        light = hardware["light_sources"][0]
+        self.assertEqual(light["role"], "")
+        self.assertEqual(light["method_sentence"], "Light source in use: 488 nm laser NoRole X.")
+
+    def test_build_light_source_dto_does_not_infer_timing_mode_from_notes(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "light_sources": [
+                        {
+                            "kind": "laser",
+                            "manufacturer": "Legacy",
+                            "model": "TextOnly",
+                            "role": "depletion",
+                            "notes": "pulsed mode in notes only",
+                        }
+                    ]
+                }
+            }
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=EMPTY_LIGHTPATH)
+        light = hardware["light_sources"][0]
+        self.assertEqual(light.get("timing_mode", ""), "")
+        self.assertNotIn("pulsed", light["method_sentence"].lower())
+
+    def test_normalize_instrument_dto_preserves_module_manufacturer_and_model(self) -> None:
+        payload = {
+            "instrument": {"instrument_id": "scope-1", "display_name": "Scope 1"},
+            "modules": [{"name": "confocal", "manufacturer": "Leica", "model": "TCS", "notes": "n", "url": "u"}],
+            "hardware": {},
+        }
+
+        with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+            report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
+            normalized = normalize_instrument_dto(payload, Path("instruments/scope-1.yaml"), retired=False)
+
+        self.assertIsNotNone(normalized)
+        self.assertEqual(normalized["modules"][0]["manufacturer"], "Leica")
+        self.assertEqual(normalized["modules"][0]["model"], "TCS")
+
+    def test_normalize_instrument_dto_migrates_legacy_top_level_objectives_to_hardware(self) -> None:
+        payload = {
+            "instrument": {"instrument_id": "scope-2", "display_name": "Scope 2"},
+            "objectives": [{"manufacturer": "Nikon", "model": "CFI", "magnification": 60}],
+            "hardware": {},
+        }
+
+        with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+            report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
+            normalized = normalize_instrument_dto(payload, Path("instruments/scope-2.yaml"), retired=False)
+
+        self.assertIsNotNone(normalized)
+        objectives = normalized["canonical"]["hardware"].get("objectives")
+        self.assertIsInstance(objectives, list)
+        self.assertEqual(objectives[0]["manufacturer"], "Nikon")
 
 
 if __name__ == "__main__":

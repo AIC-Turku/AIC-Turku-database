@@ -94,11 +94,25 @@ hardware:
               center_nm: 605
               width_nm: 70
 
+    endpoints:
+      - id: camera_port_main
+        endpoint_type: camera_port
+        display_label: Camera Port
+        path: shared
+
     splitters:
       - name: Camera Port
         type: emission_splitter
         path: shared
         notes: Port for standalone camera system (no computer required); image storage via USB memory device.
+        branches:
+          - id: camera_port_primary
+            label: Camera Port Path
+            mode: transmitted
+            component:
+              component_type: passthrough
+            target_ids:
+              - camera_port_main
 
   objectives:
     - id: 10x_air

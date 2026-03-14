@@ -401,6 +401,10 @@
     return Boolean(state.activeInstrument && Array.isArray(state.activeInstrument.routeOptions) && state.activeInstrument.routeOptions.length > 1);
   }
 
+  function strictHardwareTruthMode() {
+    return Boolean(state.activeInstrument && state.activeInstrument.strictHardwareTruth);
+  }
+
   function uniqueTexts(values) {
     return Array.from(new Set((Array.isArray(values) ? values : [])
       .map((value) => cleanString(value))
@@ -681,7 +685,7 @@
       opt.textContent = cleanString(entry.label) || normalizeRouteLabel(entry.id);
       DOM.routeSel.appendChild(opt);
     });
-    const selectedRoute = state.activeRoute || state.activeInstrument.defaultRoute || (options[0] && options[0].id) || '';
+    const selectedRoute = state.activeRoute || state.activeInstrument.defaultRoute || (strictHardwareTruthMode() ? '' : ((options[0] && options[0].id) || ''));
     DOM.routeSel.value = selectedRoute;
     state.activeRoute = cleanString(DOM.routeSel.value).toLowerCase() || null;
     DOM.routeWrap.style.display = 'flex';
@@ -2214,7 +2218,11 @@
   function refreshOutputs() {
 
     if (!state.activeInstrumentRaw || !state.activeInstrument) return;
-    if (!routeSelectionIsExplicit()) {
+    if (strictHardwareTruthMode()) {
+      if (!routeSelectionIsExplicit()) {
+        state.activeRoute = state.activeInstrument.defaultRoute || null;
+      }
+    } else if (!routeSelectionIsExplicit()) {
       state.activeRoute = inferRouteFromSourceSettings() || state.activeInstrument.defaultRoute || null;
     } else if (!state.activeRoute) {
       state.activeRoute = state.activeInstrument.defaultRoute || null;
@@ -2225,7 +2233,7 @@
     let simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
       preferTwoPhoton: state.preferTwoPhoton,
     });
-    if (autoRepairBlockedPath(selection, simulation)) {
+    if (!strictHardwareTruthMode() && autoRepairBlockedPath(selection, simulation)) {
       enforceValidStageOptions();
       const repairedSelection = collectRuntimeSelection();
       simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {

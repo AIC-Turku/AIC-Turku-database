@@ -192,95 +192,95 @@ hardware:
       notes: Preset emission filter
       url: ''
 
-objectives:
-    - id: 10x_air
-      manufacturer: Zeiss
-      model: Plan-APOCHROMAT 10x/0.3
-      product_code: '420640-9800'
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: 2.0 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties: []
-      notes: ''
-      url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420640-9800-000/Objective-Plan-Apochromat-10x-0.3-M27'
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Zeiss
-      model: Plan-APOCHROMAT 20x/0.8
-      product_code: '420650-9901'
-      magnification: 20.0
-      numerical_aperture: 0.8
-      working_distance: 0.55 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties: []
-      notes: ''
-      url: 'https://www.micro-shop.zeiss.com/zh/us/shop/objectives/420650-9901-000/Objective-Plan-Apochromat-20x-0.8-M27'
-      is_installed: true
-    - id: 40x_multi
-      manufacturer: Zeiss
-      model: LD LCI Plan APOCHROMAT 40x/1.2 Imm Korr DIC (UV)VIS-IR
-      product_code: '420862-9970'
-      magnification: 40.0
-      numerical_aperture: 1.2
-      working_distance: 0.41 mm
-      immersion: multi
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - DIC
-        - (UV)VIS-IR
-      notes: 'Imm Korr (Multi-immersion, correction collar)'
-      url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27'
-      is_installed: true
-    - id: 63x_oil
-      manufacturer: Zeiss
-      model: C-Plan-APOCHROMAT 63x/1.4 Oil DIC UV-VIS-IR
-      product_code: '421782-9900'
-      magnification: 63.0
-      numerical_aperture: 1.4
-      working_distance: 0.14 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - DIC
-        - UV-VIS-IR
-      notes: ''
-      url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/421782-9900-000/Objective-C-Plan-Apochromat-63x-1.4-Oil-DIC-M27'
-      is_installed: true
-    - id: 25x_multi
-      manufacturer: Zeiss
-      model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
-      product_code: '420852-9871'
-      magnification: 25.0
-      numerical_aperture: 0.8
-      working_distance: '0.57 mm at cover glass 0.17'
-      immersion: multi
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - DIC
-        - (UV)VIS-IR
-      notes: 'Optional objective. Imm Korr (Multi-immersion, correction collar)'
-      url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27'
-      is_installed: false
-    - id: 63x_water
-      manufacturer: Zeiss
-      model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
-      product_code: '421787-9970'
-      magnification: 63.0
-      numerical_aperture: 1.2
-      working_distance: '0.28 mm at cover glass 0.17'
-      immersion: water
-      correction: apochromat
-      afc_compatible: false
-      specialties:
-        - UV-VIS-IR
-      notes: 'Optional objective. W Korr (Water immersion, correction collar)'
-      url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27'
-      is_installed: false
+  objectives:
+      - id: 10x_air
+        manufacturer: Zeiss
+        model: Plan-APOCHROMAT 10x/0.3
+        product_code: '420640-9800'
+        magnification: 10.0
+        numerical_aperture: 0.3
+        working_distance: 2.0 mm
+        immersion: air
+        correction: plan_apochromat
+        afc_compatible: false
+        specialties: []
+        notes: ''
+        url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420640-9800-000/Objective-Plan-Apochromat-10x-0.3-M27'
+        is_installed: true
+      - id: 20x_air
+        manufacturer: Zeiss
+        model: Plan-APOCHROMAT 20x/0.8
+        product_code: '420650-9901'
+        magnification: 20.0
+        numerical_aperture: 0.8
+        working_distance: 0.55 mm
+        immersion: air
+        correction: plan_apochromat
+        afc_compatible: false
+        specialties: []
+        notes: ''
+        url: 'https://www.micro-shop.zeiss.com/zh/us/shop/objectives/420650-9901-000/Objective-Plan-Apochromat-20x-0.8-M27'
+        is_installed: true
+      - id: 40x_multi
+        manufacturer: Zeiss
+        model: LD LCI Plan APOCHROMAT 40x/1.2 Imm Korr DIC (UV)VIS-IR
+        product_code: '420862-9970'
+        magnification: 40.0
+        numerical_aperture: 1.2
+        working_distance: 0.41 mm
+        immersion: multi
+        correction: plan_apochromat
+        afc_compatible: false
+        specialties:
+          - DIC
+          - (UV)VIS-IR
+        notes: 'Imm Korr (Multi-immersion, correction collar)'
+        url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27'
+        is_installed: true
+      - id: 63x_oil
+        manufacturer: Zeiss
+        model: C-Plan-APOCHROMAT 63x/1.4 Oil DIC UV-VIS-IR
+        product_code: '421782-9900'
+        magnification: 63.0
+        numerical_aperture: 1.4
+        working_distance: 0.14 mm
+        immersion: oil
+        correction: plan_apochromat
+        afc_compatible: false
+        specialties:
+          - DIC
+          - UV-VIS-IR
+        notes: ''
+        url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/421782-9900-000/Objective-C-Plan-Apochromat-63x-1.4-Oil-DIC-M27'
+        is_installed: true
+      - id: 25x_multi
+        manufacturer: Zeiss
+        model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
+        product_code: '420852-9871'
+        magnification: 25.0
+        numerical_aperture: 0.8
+        working_distance: '0.57 mm at cover glass 0.17'
+        immersion: multi
+        correction: plan_apochromat
+        afc_compatible: false
+        specialties:
+          - DIC
+          - (UV)VIS-IR
+        notes: 'Optional objective. Imm Korr (Multi-immersion, correction collar)'
+        url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27'
+        is_installed: false
+      - id: 63x_water
+        manufacturer: Zeiss
+        model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
+        product_code: '421787-9970'
+        magnification: 63.0
+        numerical_aperture: 1.2
+        working_distance: '0.28 mm at cover glass 0.17'
+        immersion: water
+        correction: apochromat
+        afc_compatible: false
+        specialties:
+          - UV-VIS-IR
+        notes: 'Optional objective. W Korr (Water immersion, correction collar)'
+        url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27'
+        is_installed: false
