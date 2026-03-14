@@ -577,6 +577,18 @@ def _human_list(items: list[str]) -> str:
     return f"{', '.join(cleaned[:-1])}, and {cleaned[-1]}"
 
 
+def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
+    manufacturer_text = clean_text(manufacturer)
+    model_text = clean_text(model)
+    if manufacturer_text and model_text:
+        return f"{manufacturer_text} {model_text}"
+    if model_text:
+        return model_text
+    if manufacturer_text:
+        return manufacturer_text
+    return fallback
+
+
 def _spec_lines(*pairs: tuple[str, Any]) -> list[str]:
     lines: list[str] = []
     for label, raw_value in pairs:
@@ -613,7 +625,8 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
     wd = clean_text(obj.get("working_distance") or obj.get("wd"))
     display_label = _objective_display_label(vocabulary, obj)
     method_core = " ".join(part for part in [f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion, "objective"] if part).strip()
-    method_meta = ", ".join(part for part in [manufacturer, product_code] if part)
+    objective_reference = _component_reference(manufacturer, model, "objective")
+    method_meta = ", ".join(part for part in [objective_reference, product_code] if part)
     method_sentence = (
         f"Images were acquired using a {method_core} ({method_meta})."
         if method_core and method_meta
@@ -778,14 +791,17 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
         for item in (modulator.get("supported_phase_masks") or [])
         if clean_text(item)
     ] if isinstance(modulator.get("supported_phase_masks"), list) else []
-    display_label = type_label or "Optical Modulator"
-    method_sentence = f"Beam shaping used {display_label} optics{f' with {_human_list(supported_masks)} phase mask support' if supported_masks else ''}."
+    manufacturer = clean_text(modulator.get("manufacturer"))
+    model = clean_text(modulator.get("model") or modulator.get("name"))
+    component_reference = _component_reference(manufacturer, model, type_label or "optical modulator")
+    display_label = type_label or model or "Optical Modulator"
+    method_sentence = f"Beam shaping used {component_reference} optics{f' with {_human_list(supported_masks)} phase mask support' if supported_masks else ''}."
     if modulator_type in {"slm", "phase_plate", "vortex_plate"}:
-        method_sentence = f"STED beam shaping was configured with a {display_label}{f' using {_human_list(supported_masks)} phase mask profiles' if supported_masks else ''}."
+        method_sentence = f"STED beam shaping was configured with {component_reference}{f' using {_human_list(supported_masks)} phase mask profiles' if supported_masks else ''}."
     return {
         **copy.deepcopy(modulator),
         "display_label": display_label,
-        "display_subtitle": clean_text(modulator.get("manufacturer")),
+        "display_subtitle": manufacturer,
         "spec_lines": _spec_lines(
             ("Type", type_label),
             ("Supported phase masks", ", ".join(f"`{item}`" for item in supported_masks) if supported_masks else None),
@@ -799,8 +815,11 @@ def build_illumination_logic_dto(vocabulary: Vocabulary, logic: dict[str, Any]) 
     method_id = clean_text(logic.get("method"))
     method_label = _vocab_display(vocabulary, "adaptive_illumination_methods", method_id)
     default_enabled = normalize_optional_bool(logic.get("default_enabled"))
-    display_label = method_label or "Illumination Logic"
-    method_sentence = f"Adaptive illumination used {display_label} logic{', enabled by default' if default_enabled is True else ''}."
+    manufacturer = clean_text(logic.get("manufacturer"))
+    model = clean_text(logic.get("model") or logic.get("name"))
+    component_reference = _component_reference(manufacturer, model, method_label or "adaptive illumination logic")
+    display_label = method_label or model or "Illumination Logic"
+    method_sentence = f"Adaptive illumination used {component_reference}{', enabled by default' if default_enabled is True else ''}."
     return {
         **copy.deepcopy(logic),
         "display_label": display_label,
@@ -816,6 +835,8 @@ def build_illumination_logic_dto(vocabulary: Vocabulary, logic: dict[str, Any]) 
 
 def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[str, Any]:
     scanner_type = _vocab_display(vocabulary, "scanner_types", scanner.get("type"))
+    manufacturer = clean_text(scanner.get("manufacturer"))
+    model = clean_text(scanner.get("model") or scanner.get("name"))
     light_sheet_type = clean_text(scanner.get("light_sheet_type"))
     line_rate = _fmt_num(scanner.get("line_rate_hz"))
     pinhole = _fmt_num(scanner.get("pinhole_um"))
@@ -828,16 +849,17 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
     )
     detail_bits = [f"line rate {line_rate} Hz" if line_rate else "", f"pinhole {pinhole} µm" if pinhole else ""]
     detail_text = ", ".join(bit for bit in detail_bits if bit)
+    component_reference = _component_reference(manufacturer, model, f"{scanner_type} scanner" if scanner_type else "scanner")
     method_sentence = (
-        f"The microscope used a {scanner_type} scanner ({detail_text})."
-        if scanner_type and detail_text
-        else f"The microscope used a {scanner_type} scanner." if scanner_type and scanner_type != "No Scanner"
+        f"The microscope used {component_reference} ({detail_text})."
+        if scanner_type and scanner_type != "No Scanner" and detail_text
+        else f"The microscope used {component_reference}." if scanner_type and scanner_type != "No Scanner"
         else ""
     )
     return {
         **copy.deepcopy(scanner),
         "display_label": scanner_type or "No Scanner",
-        "display_subtitle": clean_text(scanner.get("notes")),
+        "display_subtitle": " ".join(part for part in [manufacturer, model] if part).strip() or clean_text(scanner.get("notes")),
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
         "present": bool(scanner_type and scanner_type != "No Scanner"),
@@ -902,6 +924,7 @@ def build_magnification_changer_dto(changer: dict[str, Any]) -> dict[str, Any]:
     manufacturer = clean_text(changer.get("manufacturer"))
     model = clean_text(changer.get("model") or changer.get("name"))
     magnification = _fmt_num(changer.get("magnification"))
+    component_reference = _component_reference(manufacturer, model, "magnification changer")
     display_label = model or "Magnification Changer"
     spec_lines = _spec_lines(
         ("Manufacturer", manufacturer),
@@ -909,10 +932,10 @@ def build_magnification_changer_dto(changer: dict[str, Any]) -> dict[str, Any]:
         ("Notes", clean_text(changer.get("notes"))),
     )
     method_sentence = (
-        f"An intermediate magnification changer ({display_label}, {magnification}x) was used."
-        if display_label and magnification
-        else f"An intermediate magnification changer ({display_label}) was used."
-        if display_label
+        f"An intermediate magnification changer ({component_reference}, {magnification}x) was used."
+        if component_reference and magnification
+        else f"An intermediate magnification changer ({component_reference}) was used."
+        if component_reference
         else ""
     )
     return {
@@ -1634,6 +1657,11 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 if clean_text(row.get("method_sentence"))
             ],
             "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
+            "quarep_light_path_recommendation": "[PLEASE VERIFY: For each filter, dichroic, splitter, and modulator, report manufacturer and model/catalog number when available to align with QUAREP-LiMi hardware reporting recommendations].",
+            "specimen_preparation_recommendation": "[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)].",
+            "acquisition_settings_recommendation": "[PLEASE SPECIFY: Exposure time(s), excitation power(s), detector gain/offset, camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable].",
+            "nyquist_recommendation": "Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile.",
+            "data_deposition_recommendation": "[DATA AVAILABILITY]: The raw microscopy image files (.nd2/.czi/.lif) generated in this study should be deposited in BioImage Archive or Zenodo to support Open Science and reproducibility; include the accession number or DOI in the final manuscript.",
         },
     }
     return dto
