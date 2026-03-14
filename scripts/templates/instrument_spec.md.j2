@@ -10,6 +10,10 @@
 
 # {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
+!!! warning "Work in progress"
+    This dashboard is a work in progress. Please independently verify critical information, as not all features are working yet.
+
+
 {% set status_class = 'success' if dto.status.color == 'green' else 'warning' if dto.status.color == 'yellow' else 'danger' %}
 !!! {{ status_class }} "Current Status: {{ dto.status.badge }}"
     {{ dto.status.reason }}
