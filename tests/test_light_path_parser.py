@@ -391,6 +391,57 @@ class LightPathParserTests(unittest.TestCase):
         self.assertGreaterEqual(len(payload["valid_paths"]), 1)
 
 
+    def test_generate_virtual_microscope_payload_can_disable_inferred_terminals(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "instrument": {"ocular_availability": "trinocular"},
+                "hardware": {
+                    "light_sources": [{"kind": "halogen_lamp", "path": "transmitted"}],
+                    "light_path": {},
+                },
+            },
+            include_inferred_terminals=False,
+        )
+
+        self.assertEqual(payload["terminals"], [])
+        self.assertTrue(payload["metadata"].get("graph_incomplete"))
+
+    def test_source_position_role_stays_missing_when_yaml_role_is_missing(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_sources": [
+                        {"kind": "halogen_lamp", "path": "transmitted", "name": "Lamp"},
+                    ]
+                }
+            }
+        )
+
+        source = payload["light_sources"][0]["options"][0]["value"]
+        self.assertEqual(source.get("role"), "")
+        self.assertEqual(source.get("simulator_inferred_role"), "transmitted_illumination")
+
+    def test_product_code_is_not_backfilled_from_model_or_name(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_sources": [{"kind": "laser", "model": "Laser-1", "name": "Legacy Name"}],
+                    "detectors": [{"id": "det-1", "kind": "hyd", "model": "HyD Model"}],
+                    "light_path": {
+                        "endpoints": [{"id": "ep-1", "endpoint_type": "detector", "model": "Endpoint Model", "name": "Endpoint"}],
+                    },
+                }
+            }
+        )
+
+        source = payload["light_sources"][0]["options"][0]["value"]
+        detector = payload["detectors"][0]["options"][0]["value"]
+        endpoint = next(row for row in payload["terminals"] if row.get("terminal_id") == "ep_1")
+
+        self.assertIsNone(source.get("product_code"))
+        self.assertIsNone(detector.get("product_code"))
+        self.assertIsNone(endpoint.get("product_code"))
+
     def test_infer_transmitted_light_source_role_from_path_and_kind(self) -> None:
         self.assertEqual(
             infer_light_source_role({

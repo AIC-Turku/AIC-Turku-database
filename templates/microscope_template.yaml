@@ -73,10 +73,14 @@ hardware:
       repetition_rate_mhz: ""  # Light source repetition rate (MHz): Repetition rate is required for pulsed sources to support timing-aware method reporting.
       depletion_targets_nm:  # Depletion target wavelengths (nm): Structured STED depletion target wavelengths for depletion-designated sources.
         - ""
+      tunable_min_nm: ""  # Light source tunable minimum wavelength (nm): Explicit lower bound for tunable sources used by virtual microscope spectral simulations.
+      tunable_max_nm: ""  # Light source tunable maximum wavelength (nm): Explicit upper bound for tunable sources used by virtual microscope spectral simulations.
+      simultaneous_lines_max: ""  # Light source maximum simultaneous lines: Declares how many laser lines can be active simultaneously for planning UI summaries.
       notes: ""  # Light source notes: Useful for software aliases and caveats.
       url: ""  # Light source URL: Reference only.
   detectors:  # Detectors: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
     -
+      id: ""  # Detector ID: Stable graph target ID for virtual microscope routing and splitter branch targets.
       kind: ""  # Detector kind: Core detector class. | Allowed values (canonical IDs): pmt, gaasp_pmt, hyd, scmos, cmos, emccd, ccd, apd, spad
       manufacturer: ""  # Detector manufacturer: Needed for hardware identification.
       model: ""  # Detector model: Needed for hardware identification.
@@ -91,6 +95,14 @@ hardware:
       supports_time_gating: false  # Detector supports time gating: Instrument-level capability flag indicating whether detector time-gating is available.
       default_gating_delay_ns: ""  # Detector default gating delay (ns): Facility default detector gating delay setting used for instrument characterization, not experiment truth.
       default_gate_width_ns: ""  # Detector default gate width (ns): Facility default detector gate width setting used for instrument characterization, not experiment truth.
+      collection_min_nm: ""  # Detector collection window minimum wavelength (nm): Explicit lower bound of detector collection window for virtual microscope response modeling.
+      collection_max_nm: ""  # Detector collection window maximum wavelength (nm): Explicit upper bound of detector collection window for virtual microscope response modeling.
+      collection_center_nm: ""  # Detector collection window center wavelength (nm): Collection center wavelength used to derive detector passband when min/max are not supplied.
+      collection_width_nm: ""  # Detector collection window width (nm): Collection bandwidth used with collection_center_nm to derive detector passband.
+      channel_center_nm: ""  # Detector channel center wavelength (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_center_nm.
+      bandwidth_nm: ""  # Detector bandwidth (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_width_nm.
+      min_nm: ""  # Detector minimum wavelength (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_min_nm.
+      max_nm: ""  # Detector maximum wavelength (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_max_nm.
       url: ""  # Detector URL: Reference only.
   optical_modulators:  # Optical modulators: Optional inventory of phase and beam-shaping devices used by STED or adaptive illumination workflows.
     -
@@ -237,6 +249,12 @@ hardware:
             cut_off_nm: ""  # Emission position cut-off wavelength (nm)
             cutoffs_nm:  # Emission position multi-cutoff wavelengths (nm)
               - ""
+    endpoints:  # Light path endpoints: Explicit route graph endpoints consumed by light-path parser and virtual microscope runtime.
+      -
+        id: ""  # Endpoint ID: Stable endpoint key usable as splitter branch target.
+        endpoint_type: ""  # Endpoint type: Endpoint class used by runtime for detector/eyepiece/camera-port behavior. | Allowed values (canonical IDs): detector, camera_port, eyepiece
+        display_label: ""  # Endpoint display label: Human-readable endpoint name for virtual microscope selection UI.
+        path: ""  # Endpoint optical route: Optional route tag for endpoint-specific graph wiring. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
     splitters:  # Light path splitters
       -
         name: ""  # Splitter name
@@ -250,6 +268,12 @@ hardware:
         path_2:  # Splitter path 2 (reflected)
           emission_filter:
             component_type: ""  # Splitter path 2 emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
+        branches:  # Splitter branches: Explicit branch list consumed directly by virtual microscope runtime.
+          -
+            id: ""  # Splitter branch ID: Stable branch key used by runtime branch propagation.
+            mode: "transmitted"  # Splitter branch mode: Branch mode labels for transmitted/reflected semantics in runtime visualization. | Allowed values: transmitted, reflected
+            target_ids:  # Splitter branch target endpoint IDs: Explicit branch target IDs consumed by parser/runtime without fallback reconstruction.
+              - ""
   objectives:  # Objectives: Objective inventory is central to instrument completeness and QC mapping.
     -
       id: ""  # Objective ID: Stable per-objective key used for QC mapping.

@@ -170,6 +170,11 @@ vocab_registry:
     path: vocab/light_source_timing_modes.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  endpoint_types:
+    source: file
+    path: vocab/endpoint_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
   splitter_types:
     source: file
     path: vocab/splitter_types.yaml
@@ -581,6 +586,27 @@ sections:
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Structured STED depletion target wavelengths for depletion-designated sources.
 
+      - path: hardware.light_sources[].tunable_min_nm
+        title: Light source tunable minimum wavelength (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard]
+        rationale: Explicit lower bound for tunable sources used by virtual microscope spectral simulations.
+
+      - path: hardware.light_sources[].tunable_max_nm
+        title: Light source tunable maximum wavelength (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard]
+        rationale: Explicit upper bound for tunable sources used by virtual microscope spectral simulations.
+
+      - path: hardware.light_sources[].simultaneous_lines_max
+        title: Light source maximum simultaneous lines
+        status: optional
+        type: positive_number
+        used_by: [dashboard]
+        rationale: Declares how many laser lines can be active simultaneously for planning UI summaries.
+
       - path: hardware.light_sources[].notes
         title: Light source notes
         status: optional
@@ -606,6 +632,15 @@ sections:
         min_items: 1
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
+
+      - path: hardware.detectors[].id
+        title: Detector ID
+        status: conditional
+        type: string
+        required_if:
+          parent_present: "hardware.detectors[]"
+        used_by: [dashboard]
+        rationale: Stable graph target ID for virtual microscope routing and splitter branch targets.
 
       - path: hardware.detectors[].kind
         title: Detector kind
@@ -723,6 +758,70 @@ sections:
             supports_time_gating: [true]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Facility default detector gate width setting used for instrument characterization, not experiment truth.
+
+      - path: hardware.detectors[].collection_min_nm
+        title: Detector collection window minimum wavelength (nm)
+        status: optional
+        type: positive_number
+        aliases: ["hardware.detectors[].min_nm"]
+        used_by: [dashboard]
+        rationale: Explicit lower bound of detector collection window for virtual microscope response modeling.
+
+      - path: hardware.detectors[].collection_max_nm
+        title: Detector collection window maximum wavelength (nm)
+        status: optional
+        type: positive_number
+        aliases: ["hardware.detectors[].max_nm"]
+        used_by: [dashboard]
+        rationale: Explicit upper bound of detector collection window for virtual microscope response modeling.
+
+      - path: hardware.detectors[].collection_center_nm
+        title: Detector collection window center wavelength (nm)
+        status: optional
+        type: positive_number
+        aliases: ["hardware.detectors[].channel_center_nm"]
+        used_by: [dashboard]
+        rationale: Collection center wavelength used to derive detector passband when min/max are not supplied.
+
+      - path: hardware.detectors[].collection_width_nm
+        title: Detector collection window width (nm)
+        status: optional
+        type: positive_number
+        aliases: ["hardware.detectors[].bandwidth_nm"]
+        used_by: [dashboard]
+        rationale: Collection bandwidth used with collection_center_nm to derive detector passband.
+
+      - path: hardware.detectors[].channel_center_nm
+        title: Detector channel center wavelength (nm, legacy alias)
+        status: optional
+        type: positive_number
+        superseded_by: hardware.detectors[].collection_center_nm
+        used_by: [dashboard]
+        rationale: Deprecated alias retained for compatibility; prefer collection_center_nm.
+
+      - path: hardware.detectors[].bandwidth_nm
+        title: Detector bandwidth (nm, legacy alias)
+        status: optional
+        type: positive_number
+        superseded_by: hardware.detectors[].collection_width_nm
+        used_by: [dashboard]
+        rationale: Deprecated alias retained for compatibility; prefer collection_width_nm.
+
+      - path: hardware.detectors[].min_nm
+        title: Detector minimum wavelength (nm, legacy alias)
+        status: optional
+        type: positive_number
+        superseded_by: hardware.detectors[].collection_min_nm
+        used_by: [dashboard]
+        rationale: Deprecated alias retained for compatibility; prefer collection_min_nm.
+
+      - path: hardware.detectors[].max_nm
+        title: Detector maximum wavelength (nm, legacy alias)
+        status: optional
+        type: positive_number
+        superseded_by: hardware.detectors[].collection_max_nm
+        used_by: [dashboard]
+        rationale: Deprecated alias retained for compatibility; prefer collection_max_nm.
 
       - path: hardware.detectors[].url
         title: Detector URL
@@ -1645,6 +1744,48 @@ sections:
           item_field_in:
             component_type: [dichroic, multiband_dichroic, polychroic]
 
+      - path: hardware.light_path.endpoints
+        title: Light path endpoints
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard]
+        rationale: Explicit route graph endpoints consumed by light-path parser and virtual microscope runtime.
+
+      - path: hardware.light_path.endpoints[].id
+        title: Endpoint ID
+        status: conditional
+        type: string
+        required_if:
+          parent_present: "hardware.light_path.endpoints[]"
+        used_by: [dashboard]
+        rationale: Stable endpoint key usable as splitter branch target.
+
+      - path: hardware.light_path.endpoints[].endpoint_type
+        title: Endpoint type
+        status: conditional
+        type: string
+        vocab: endpoint_types
+        required_if:
+          parent_present: "hardware.light_path.endpoints[]"
+        used_by: [dashboard]
+        rationale: Endpoint class used by runtime for detector/eyepiece/camera-port behavior.
+
+      - path: hardware.light_path.endpoints[].display_label
+        title: Endpoint display label
+        status: optional
+        type: string
+        used_by: [dashboard]
+        rationale: Human-readable endpoint name for virtual microscope selection UI.
+
+      - path: hardware.light_path.endpoints[].path
+        title: Endpoint optical route
+        status: optional
+        type: string
+        vocab: optical_routes
+        used_by: [dashboard]
+        rationale: Optional route tag for endpoint-specific graph wiring.
+
       - path: hardware.light_path.splitters
         title: Light path splitters
         status: optional
@@ -1718,6 +1859,39 @@ sections:
         vocab: optical_component_types
         required_if:
           parent_present: "hardware.light_path.splitters[].path_2.emission_filter"
+
+      - path: hardware.light_path.splitters[].branches
+        title: Splitter branches
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard]
+        rationale: Explicit branch list consumed directly by virtual microscope runtime.
+
+      - path: hardware.light_path.splitters[].branches[].id
+        title: Splitter branch ID
+        status: conditional
+        type: string
+        required_if:
+          parent_present: "hardware.light_path.splitters[].branches[]"
+        used_by: [dashboard]
+        rationale: Stable branch key used by runtime branch propagation.
+
+      - path: hardware.light_path.splitters[].branches[].mode
+        title: Splitter branch mode
+        status: optional
+        type: string
+        allowed_values: [transmitted, reflected]
+        used_by: [dashboard]
+        rationale: Branch mode labels for transmitted/reflected semantics in runtime visualization.
+
+      - path: hardware.light_path.splitters[].branches[].target_ids
+        title: Splitter branch target endpoint IDs
+        status: optional
+        type: list
+        item_type: string
+        used_by: [dashboard]
+        rationale: Explicit branch target IDs consumed by parser/runtime without fallback reconstruction.
 
   - id: objectives
     title: Objectives

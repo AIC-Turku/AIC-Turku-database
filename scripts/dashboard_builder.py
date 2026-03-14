@@ -44,7 +44,7 @@ from scripts.validate import (
     validate_event_ledgers,
     validate_instrument_ledgers,
 )
-from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role
+from scripts.light_path_parser import generate_virtual_microscope_payload
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -343,7 +343,7 @@ def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any)
     return {
         "kind": get_val(light_source, "kind", "type"),
         "manufacturer": get_val(light_source, "manufacturer"),
-        "model": get_val(light_source, "model", "name"),
+        "model": get_val(light_source, "model"),
         "technology": get_val(light_source, "technology"),
         "wavelength_nm": get_val(light_source, "wavelength_nm", "wavelength"),
         "width_nm": get_val(light_source, "width_nm", "bandwidth_nm"),
@@ -364,8 +364,9 @@ def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any)
 
 def _normalized_detector_payload(detector: dict[str, Any], get_val: Any) -> dict[str, Any]:
     return {
+        "id": get_val(detector, "id"),
         "kind": get_val(detector, "kind", "type"),
-        "manufacturer": get_val(detector, "manufacturer", "name"),
+        "manufacturer": get_val(detector, "manufacturer"),
         "model": get_val(detector, "model"),
         "channel_name": get_val(detector, "channel_name", "channel", "name"),
         "path": get_val(detector, "path"),
@@ -443,7 +444,7 @@ def _print_agent_fix_prompt(load_errors: list[YamlLoadError], validation_issues:
     print("Tasks:", file=sys.stderr)
     print("1. Repair malformed YAML files reported below so they parse as top-level mappings.", file=sys.stderr)
     print("2. Resolve validation issues while preserving domain intent.", file=sys.stderr)
-    print("3. Re-run: python scripts/dashboard_builder.py --strict", file=sys.stderr)
+    print("3. Re-run: python -m scripts.dashboard_builder --strict", file=sys.stderr)
     print("4. Stop only when the command exits 0.", file=sys.stderr)
 
     if load_errors:
@@ -655,7 +656,7 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
 
 
 def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str, Any]:
-    manufacturer = clean_text(det.get("manufacturer") or det.get("name"))
+    manufacturer = clean_text(det.get("manufacturer"))
     model = clean_text(det.get("model"))
     kind_label = _vocab_display(vocabulary, "detector_kinds", det.get("kind") or det.get("type"))
     route_label = _vocab_display(vocabulary, "optical_routes", det.get("path") or det.get("route"))
@@ -702,20 +703,14 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
 
 
 def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[str, Any]:
-    notes_text = clean_text(src.get("notes")).lower()
     raw_timing_mode = clean_text(src.get("timing_mode")).lower()
 
-    normalized_role = infer_light_source_role(src)
+    normalized_role = clean_text(src.get("role")).lower()
 
     normalized_timing_mode = raw_timing_mode
-    if not normalized_timing_mode:
-        if "pulsed" in notes_text:
-            normalized_timing_mode = "pulsed"
-        elif "continuous" in notes_text or "cw" in notes_text:
-            normalized_timing_mode = "cw"
 
     manufacturer = clean_text(src.get("manufacturer"))
-    model = clean_text(src.get("model") or src.get("name"))
+    model = clean_text(src.get("model"))
     kind_label = _vocab_display(vocabulary, "light_source_kinds", src.get("kind") or src.get("type"))
     role_label = _vocab_display(vocabulary, "light_source_roles", normalized_role)
     timing_mode_label = _vocab_display(vocabulary, "light_source_timing_modes", normalized_timing_mode)
@@ -757,8 +752,10 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         method_sentence = f"STED depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a {depletion_descriptor}{targets_clause}."
     elif normalized_role == "transmitted_illumination":
         method_sentence = f"Transmitted illumination was provided by {display_label}."
-    else:
+    elif normalized_role == "excitation":
         method_sentence = f"Excitation was provided by {display_label}."
+    else:
+        method_sentence = f"Light source in use: {display_label}."
     spec_lines = _spec_lines(
         ("Type", kind_label),
         ("Role", role_label),
@@ -1498,6 +1495,22 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "display_label": "Detection Endpoints",
             "items": terminals,
         })
+    else:
+        sections.append({
+            "id": "terminals",
+            "display_label": "Detection Endpoints",
+            "items": [
+                {
+                    "id": "no_explicit_terminals",
+                    "display_label": "No explicit detection endpoints declared",
+                    "display_subtitle": "Structured graph incomplete",
+                    "spec_lines": [
+                        "**Action needed:** add hardware.light_path.endpoints[] and/or detector IDs to YAML.",
+                    ],
+                    "method_sentence": "",
+                }
+            ],
+        })
 
     renderables = [
         *filters,
@@ -1579,7 +1592,13 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
 
 
 def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_dto: dict[str, Any]) -> dict[str, Any]:
-    software_rows = [build_software_dto(vocabulary, sw) for sw in inst.get("software", []) if isinstance(sw, dict)]
+    canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
+    canonical_instrument = canonical.get("instrument") if isinstance(canonical.get("instrument"), dict) else {}
+    canonical_software = canonical.get("software") if isinstance(canonical.get("software"), list) else []
+    canonical_modalities = canonical.get("modalities") if isinstance(canonical.get("modalities"), list) else []
+    canonical_modules = canonical.get("modules") if isinstance(canonical.get("modules"), list) else []
+
+    software_rows = [build_software_dto(vocabulary, sw) for sw in canonical_software if isinstance(sw, dict)]
     hardware_dto = build_hardware_dto(vocabulary, inst, lightpath_dto)
     modalities = [
         {
@@ -1587,7 +1606,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             "display_label": _vocab_display(vocabulary, "modalities", modality_id),
             "method_sentence": f"{_vocab_display(vocabulary, 'modalities', modality_id)} imaging was performed." if _vocab_display(vocabulary, 'modalities', modality_id) else "",
         }
-        for modality_id in inst.get("modalities", [])
+        for modality_id in canonical_modalities
     ]
     modules = [
         {
@@ -1596,12 +1615,12 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             "display_subtitle": clean_text(module.get("notes")),
             "method_sentence": f"The {clean_text(module.get('display_name') or module.get('name'))} module was used." if clean_text(module.get("display_name") or module.get("name")) else "",
         }
-        for module in inst.get("modules", []) if isinstance(module, dict)
+        for module in canonical_modules if isinstance(module, dict)
     ]
 
     acquisition_software = next((row["display_label"] for row in software_rows if clean_text(row.get("role")).lower() == "acquisition" and clean_text(row.get("display_label"))), "[MISSING ACQUISITION SOFTWARE NAME AND VERSION]")
-    microscope_identity = " ".join(part for part in [clean_text(inst.get("manufacturer")), clean_text(inst.get("model"))] if part).strip()
-    stand = clean_text(inst.get("stand_orientation"))
+    microscope_identity = " ".join(part for part in [clean_text(canonical_instrument.get("manufacturer")), clean_text(canonical_instrument.get("model"))] if part).strip()
+    stand = clean_text(canonical_instrument.get("stand_orientation"))
     stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
     base_sentence = f"Images were acquired using the {microscope_identity} {stand_label.lower()} microscope, controlled by {acquisition_software}." if microscope_identity and stand_label else f"Images were acquired using the {microscope_identity} microscope, controlled by {acquisition_software}."
 
@@ -1617,19 +1636,19 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             "display_name": clean_text(inst.get("display_name")),
             "url": clean_text(inst.get("url")),
             "image_filename": clean_text(inst.get("image_filename")),
-            "manufacturer": clean_text(inst.get("manufacturer")),
-            "model": clean_text(inst.get("model")),
+            "manufacturer": clean_text(canonical_instrument.get("manufacturer")),
+            "model": clean_text(canonical_instrument.get("model")),
             "stand_orientation": {
                 "id": stand,
                 "display_label": stand_label,
             },
             "ocular_availability": {
-                "id": clean_text(inst.get("ocular_availability")),
-                "display_label": _vocab_display(vocabulary, "ocular_availability", inst.get("ocular_availability")),
+                "id": clean_text(canonical_instrument.get("ocular_availability")),
+                "display_label": _vocab_display(vocabulary, "ocular_availability", canonical_instrument.get("ocular_availability")),
             },
-            "year_of_purchase": clean_text(inst.get("year_of_purchase")),
-            "funding": clean_text(inst.get("funding")),
-            "location": clean_text(inst.get("location")),
+            "year_of_purchase": clean_text(canonical_instrument.get("year_of_purchase")),
+            "funding": clean_text(canonical_instrument.get("funding")),
+            "location": clean_text(canonical_instrument.get("location")),
         },
         "modalities": modalities,
         "modules": modules,
@@ -1888,16 +1907,35 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     modules = []
     for m in raw_modules:
         if isinstance(m, dict):
-            modules.append({"name": clean_text(m.get("name")), "notes": clean_text(m.get("notes")), "url": clean_text(m.get("url"))})
+            modules.append(
+                {
+                    "name": clean_text(m.get("name")),
+                    "manufacturer": clean_text(m.get("manufacturer")),
+                    "model": clean_text(m.get("model")),
+                    "notes": clean_text(m.get("notes")),
+                    "url": clean_text(m.get("url")),
+                }
+            )
         elif isinstance(m, str):
-            modules.append({"name": clean_text(m), "notes": "", "url": ""})
+            modules.append({"name": clean_text(m), "manufacturer": "", "model": "", "notes": "", "url": ""})
 
     modalities = payload.get("modalities")
     if not isinstance(modalities, list):
         modalities = []
 
     software = strip_empty_values(normalize_software(payload.get("software")))
-    hardware = strip_empty_values(normalize_hardware(payload.get("hardware") or {}))
+    raw_hardware = payload.get("hardware") or {}
+    if not isinstance(raw_hardware, dict):
+        raw_hardware = {}
+
+    legacy_top_level_objectives_used = False
+    # DEPRECATED compatibility path: some legacy YAML files declared objectives at top level.
+    # Canonical contract location is hardware.objectives; production YAML should migrate.
+    if "objectives" not in raw_hardware and isinstance(payload.get("objectives"), list):
+        raw_hardware = {**raw_hardware, "objectives": payload.get("objectives")}
+        legacy_top_level_objectives_used = True
+
+    hardware = strip_empty_values(normalize_hardware(raw_hardware))
     policy = build_instrument_completeness_report(payload)
 
     software_roles = ("acquisition", "processing", "analysis", "hardware_control", "other")
@@ -1951,50 +1989,59 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "software_by_role": software_by_role,
     }
 
+    canonical = {
+        "instrument": {
+            "display_name": display_name,
+            "instrument_id": instrument_id,
+            "manufacturer": clean_text(inst_section.get("manufacturer")),
+            "model": clean_text(inst_section.get("model")),
+            "year_of_purchase": clean_text(inst_section.get("year_of_purchase")),
+            "funding": clean_text(inst_section.get("funding")),
+            "stand_orientation": clean_text(inst_section.get("stand_orientation")),
+            "ocular_availability": clean_text(inst_section.get("ocular_availability")),
+            "location": clean_text(inst_section.get("location")),
+            "notes": notes_raw,
+            "url": clean_text(inst_section.get("url")),
+        },
+        "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
+        "modules": copy.deepcopy(modules),
+        "notes": notes_raw,
+        "software": software,
+        "hardware": hardware,
+        "policy": {
+            "sections": policy.sections,
+            "missing_required": policy.missing_required,
+            "missing_conditional": policy.missing_conditional,
+            "alias_fallbacks": policy.alias_fallbacks,
+        },
+        "provenance": {
+            "source_contract": "validated_canonical_yaml",
+            "deprecated_compatibility": {
+                "top_level_objectives_to_hardware_objectives": legacy_top_level_objectives_used,
+            },
+        },
+    }
+
+    canonical_instrument = canonical["instrument"]
     return {
         "retired": retired,
         "id": instrument_id,
-        "display_name": display_name,
-        "manufacturer": clean_text(inst_section.get("manufacturer")),
-        "model": clean_text(inst_section.get("model")),
-        "year_of_purchase": clean_text(inst_section.get("year_of_purchase")),
-        "funding": clean_text(inst_section.get("funding")),
-        "stand_orientation": clean_text(inst_section.get("stand_orientation")),
-        "ocular_availability": clean_text(inst_section.get("ocular_availability")),
-        "location": clean_text(inst_section.get("location")),
+        "display_name": canonical_instrument["display_name"],
+        "manufacturer": canonical_instrument["manufacturer"],
+        "model": canonical_instrument["model"],
+        "year_of_purchase": canonical_instrument["year_of_purchase"],
+        "funding": canonical_instrument["funding"],
+        "stand_orientation": canonical_instrument["stand_orientation"],
+        "ocular_availability": canonical_instrument["ocular_availability"],
+        "location": canonical_instrument["location"],
         "notes_raw": notes_raw,
         "notes": notes_raw,
-        "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
-        "modules": modules,
-        "software": software,
+        "modalities": copy.deepcopy(canonical["modalities"]),
+        "modules": copy.deepcopy(canonical["modules"]),
+        "software": copy.deepcopy(canonical["software"]),
         "image_filename": _discover_image_filename(instrument_id),
-        "url": clean_text(inst_section.get("url")),
-        "canonical": {
-            "instrument": {
-                "display_name": display_name,
-                "instrument_id": instrument_id,
-                "manufacturer": clean_text(inst_section.get("manufacturer")),
-                "model": clean_text(inst_section.get("model")),
-                "year_of_purchase": clean_text(inst_section.get("year_of_purchase")),
-                "funding": clean_text(inst_section.get("funding")),
-                "stand_orientation": clean_text(inst_section.get("stand_orientation")),
-                "ocular_availability": clean_text(inst_section.get("ocular_availability")),
-                "location": clean_text(inst_section.get("location")),
-                "notes": notes_raw,
-                "url": clean_text(inst_section.get("url")),
-            },
-            "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
-            "modules": copy.deepcopy(modules),
-            "notes": notes_raw,
-            "software": software,
-            "hardware": hardware,
-            "policy": {
-                "sections": policy.sections,
-                "missing_required": policy.missing_required,
-                "missing_conditional": policy.missing_conditional,
-                "alias_fallbacks": policy.alias_fallbacks,
-            },
-        },
+        "url": canonical_instrument["url"],
+        "canonical": canonical,
         "methods_generation": methods_generation,
     }
 
@@ -2189,6 +2236,7 @@ def load_instruments(
     instruments_dir: str = "instruments",
     load_errors: list[YamlLoadError] | None = None,
     include_retired: bool = False,
+    allowed_instrument_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     base = Path(instruments_dir)
     instruments: list[dict[str, Any]] = []
@@ -2212,6 +2260,9 @@ def load_instruments(
                         message="Missing or invalid instrument.instrument_id (must be URL-safe slug).",
                     )
                 )
+            continue
+
+        if allowed_instrument_ids is not None and normalized["id"] not in allowed_instrument_ids:
             continue
 
         instruments.append(normalized)
@@ -2285,8 +2336,20 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     vocabulary = Vocabulary(repo_root / "vocab", vocab_registry=combined_registry or None)
 
     load_errors: list[YamlLoadError] = []
-    instruments = load_instruments("instruments", load_errors=load_errors)
-    retired_instruments = load_instruments("instruments", load_errors=load_errors, include_retired=True)
+    validated_instrument_ids, instrument_validation_issues, instrument_validation_warnings = validate_instrument_ledgers()
+
+    # Source-of-truth gate: only validated instruments may enter canonicalization/DTO production flow.
+    instruments = load_instruments(
+        "instruments",
+        load_errors=load_errors,
+        allowed_instrument_ids=validated_instrument_ids,
+    )
+    retired_instruments = load_instruments(
+        "instruments",
+        load_errors=load_errors,
+        include_retired=True,
+        allowed_instrument_ids=validated_instrument_ids,
+    )
 
     global_vm_payloads: dict[str, dict[str, Any]] = {}
 
@@ -2399,7 +2462,6 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     qc_logs_by_instrument = index_instrument_logs("qc/sessions", load_errors=load_errors)
     maint_logs_by_instrument = index_instrument_logs("maintenance/events", load_errors=load_errors)
 
-    validated_instrument_ids, instrument_validation_issues, instrument_validation_warnings = validate_instrument_ledgers()
     validation_issues = list(instrument_validation_issues)
     event_validation_report = validate_event_ledgers(
         instrument_ids=validated_instrument_ids,
@@ -2469,7 +2531,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 latest_metrics.update(session_metrics)
         
         canonical_payload = inst.get("canonical", {})
-        lightpath_dto = generate_virtual_microscope_payload(canonical_payload if isinstance(canonical_payload, dict) else {"hardware": {}})
+        lightpath_dto = generate_virtual_microscope_payload(canonical_payload if isinstance(canonical_payload, dict) else {"hardware": {}}, include_inferred_terminals=False)
         if not isinstance(lightpath_dto, dict):
             lightpath_dto = {}
         inst["lightpath_dto"] = lightpath_dto

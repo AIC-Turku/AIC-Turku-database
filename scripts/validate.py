@@ -905,6 +905,26 @@ def _evaluate_required_if(
                         break
             conditions.append(matches)
 
+        field_equals_any = condition_spec.get('field_equals_any')
+        if isinstance(field_equals_any, dict):
+            field_path = field_equals_any.get('field')
+            allowed_values = field_equals_any.get('values')
+            if not isinstance(field_path, str) or not isinstance(allowed_values, list):
+                matches = False
+            else:
+                nodes = _resolve_path_nodes(payload, field_path)
+                normalized_allowed = {
+                    str(v).strip().casefold()
+                    for v in allowed_values
+                    if isinstance(v, (str, int, float, bool))
+                }
+                matches = any(
+                    isinstance(node.value, (str, int, float, bool))
+                    and str(node.value).strip().casefold() in normalized_allowed
+                    for node in nodes
+                )
+            conditions.append(matches)
+
         modules_any_of = condition_spec.get('modules_any_of')
         if isinstance(modules_any_of, list):
             module_nodes = _resolve_path_nodes(payload, 'modules')
@@ -956,7 +976,13 @@ def _evaluate_required_if(
     all_of = required_if.get('all_of')
     if isinstance(all_of, list):
         all_of_results = [
-            _evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary)
+            _evaluate_required_if(
+                condition,
+                payload=payload,
+                item_context=item_context,
+                vocabulary=vocabulary,
+                item_field_vocabs=item_field_vocabs,
+            )
             for condition in all_of
             if isinstance(condition, dict)
         ]
@@ -968,7 +994,13 @@ def _evaluate_required_if(
     any_of = required_if.get('any_of')
     if isinstance(any_of, list):
         any_of_results = [
-            _evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary)
+            _evaluate_required_if(
+                condition,
+                payload=payload,
+                item_context=item_context,
+                vocabulary=vocabulary,
+                item_field_vocabs=item_field_vocabs,
+            )
             for condition in any_of
             if isinstance(condition, dict)
         ]
@@ -990,6 +1022,7 @@ def _evaluate_required_if(
             'item_field_in',
             'any_item_field_in',
             'any_item_matches',
+            'field_equals_any',
         )
     )
 
@@ -1165,6 +1198,7 @@ def validate_instrument_ledgers(
     item_field_vocab_index = _build_item_field_vocab_index(policy.rules)
 
     for instrument_file in _iter_yaml_files(instruments_dir):
+        file_issue_count_before = len(issues)
         is_retired_instrument = 'retired' in instrument_file.parts
 
         payload, load_error = _load_yaml(instrument_file)
@@ -1213,7 +1247,7 @@ def validate_instrument_ledgers(
             if is_required and not resolved_has_value:
                 if is_retired_instrument:
                     continue
-                warnings.append(
+                issues.append(
                     ValidationIssue(
                         code='missing_required_field',
                         path=f"{instrument_file.as_posix()}:{rule.path}",
@@ -1238,7 +1272,7 @@ def validate_instrument_ledgers(
                         item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                     )
                     if required_for_item and value in (None, ''):
-                        warnings.append(
+                        issues.append(
                             ValidationIssue(
                                 code='missing_conditional_field',
                                 path=full_path,
@@ -1435,31 +1469,9 @@ def validate_instrument_ledgers(
                     )
                 )
 
-        light_sources_nodes = _resolve_path_nodes(payload, 'hardware.light_sources[]')
-        for source_node in light_sources_nodes:
-            source_value = source_node.value
-            if not isinstance(source_value, dict):
-                continue
-            note_value = source_value.get('note')
-            if not isinstance(note_value, str):
-                continue
-            lowered_note = note_value.strip().lower()
-            if not lowered_note:
-                continue
-            implies_tunable = any(keyword in lowered_note for keyword in ('tunable', 'range', 'sweep', 'nm-'))
-            if not implies_tunable:
-                continue
-            if source_value.get('tunable_min_nm') in (None, '') or source_value.get('tunable_max_nm') in (None, ''):
-                warnings.append(
-                    ValidationIssue(
-                        code='cross_field_rule_warning',
-                        path=f"{instrument_file.as_posix()}:{source_node.path}",
-                        message=(
-                            "If a light source note implies a tunable range, tunable_min_nm and "
-                            "tunable_max_nm should be explicitly declared in the YAML."
-                        ),
-                    )
-                )
+        # Deprecated semantic heuristic removed from production validation flow:
+        # do not infer tunable-source requirements from free-text notes.
+        # Structured fields are enforced via policy rules (e.g., tunable_min_nm/tunable_max_nm).
 
         instrument_section = payload.get('instrument')
         if not isinstance(instrument_section, dict):
@@ -1501,6 +1513,9 @@ def validate_instrument_ledgers(
                     ),
                 )
             )
+            continue
+
+        if len(issues) > file_issue_count_before:
             continue
 
         instrument_ids.add(instrument_id)

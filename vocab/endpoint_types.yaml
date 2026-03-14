@@ -1,0 +1,13 @@
+terms:
+  - id: detector
+    label: Detector
+    description: Detection endpoint represented by an electronic detector channel.
+    synonyms: [camera, pmt, hyd, apd, spad]
+  - id: camera_port
+    label: Camera port
+    description: Passive camera port endpoint.
+    synonyms: [camera port, cameraport]
+  - id: eyepiece
+    label: Eyepiece
+    description: Ocular/eyepiece endpoint for visual observation.
+    synonyms: [ocular, eyepieces, binocular, trinocular]

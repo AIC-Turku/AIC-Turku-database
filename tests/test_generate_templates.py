@@ -43,5 +43,20 @@ class TemplateGenerationTests(unittest.TestCase):
         self.assertNotIn('positions{}:', rendered)
 
 
+    def test_instrument_template_includes_light_path_endpoints_branches_and_spectral_fields(self) -> None:
+        rendered = Path('templates/microscope_template.yaml').read_text(encoding='utf-8')
+
+        self.assertIn('endpoints:', rendered)
+        self.assertIn('endpoint_type: ""', rendered)
+        self.assertIn('branches:', rendered)
+        self.assertIn('target_ids:', rendered)
+        self.assertIn('collection_min_nm: ""', rendered)
+        self.assertIn('collection_max_nm: ""', rendered)
+        self.assertIn('collection_center_nm: ""', rendered)
+        self.assertIn('collection_width_nm: ""', rendered)
+        self.assertIn('tunable_min_nm: ""', rendered)
+        self.assertIn('tunable_max_nm: ""', rendered)
+        self.assertIn('simultaneous_lines_max: ""', rendered)
+
 if __name__ == '__main__':
     unittest.main()

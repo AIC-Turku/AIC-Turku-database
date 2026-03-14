@@ -46,16 +46,16 @@ jobs:
           pip install -r requirements-docs.txt
 
       - name: Check generated templates are up to date
-        run: python scripts/generate_templates.py --check
+        run: python -m scripts.generate_templates --check
 
       - name: Validate YAML/schema/cross-references/naming
-        run: python scripts/validate.py
+        run: python -m scripts.validate
 
       - name: Run dashboard builder (strict)
-        run: python scripts/dashboard_builder.py --strict
+        run: python -m scripts.dashboard_builder --strict
 
       - name: Generate Audit PDFs
-        run: python scripts/generate_audit_pdfs.py
+        run: python -m scripts.generate_audit_pdfs
 
       - name: Upload audit report artifacts
         uses: actions/upload-artifact@v4

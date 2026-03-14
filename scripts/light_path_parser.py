@@ -429,7 +429,7 @@ def _component_payload(component: dict[str, Any], *, default_name: str = "", bra
 def _light_source_display_label(source: dict[str, Any]) -> str:
     kind = _clean_string(source.get("kind") or source.get("type") or "source").replace("_", " ")
     manufacturer = _clean_string(source.get("manufacturer"))
-    model = _clean_string(source.get("model") or source.get("name"))
+    model = _clean_string(source.get("model"))
     wavelength = source.get("wavelength_nm")
     tunable_min = source.get("tunable_min_nm")
     tunable_max = source.get("tunable_max_nm")
@@ -445,6 +445,11 @@ def _light_source_display_label(source: dict[str, Any]) -> str:
 
 
 def infer_light_source_role(source: dict[str, Any]) -> str:
+    """SIMULATOR-ONLY fallback role inference.
+
+    This helper is intentionally non-authoritative and must not be used to populate
+    canonical/production role fields. Canonical role must come from explicit YAML `role`.
+    """
     explicit = _clean_string(source.get("role")).lower()
     if explicit:
         return explicit
@@ -458,7 +463,7 @@ def infer_light_source_role(source: dict[str, Any]) -> str:
 
 
 def _source_role(source: dict[str, Any]) -> str:
-    return infer_light_source_role(source)
+    return _clean_string(source.get("role")).lower()
 
 
 
@@ -511,11 +516,12 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
         "type": kind,
         "kind": kind,
         "role": role,
+        "simulator_inferred_role": infer_light_source_role(source) if not role else role,
         "name": display_label,
         "display_label": display_label,
         "manufacturer": source.get("manufacturer"),
-        "product_code": source.get("model") or source.get("name"),
-        "model": source.get("model") or source.get("name"),
+        "product_code": source.get("product_code"),
+        "model": source.get("model"),
         "technology": source.get("technology"),
         "wavelength_nm": wavelength,
         "width_nm": width_nm,
@@ -542,7 +548,7 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
 
 def _detector_position(slot: int, detector: dict[str, Any], *, terminal_id: str | None = None, mechanism_id: str | None = None) -> dict[str, Any]:
     kind = _clean_string(detector.get("kind") or detector.get("type") or "detector").lower() or "detector"
-    manufacturer = _clean_string(detector.get("manufacturer") or detector.get("name"))
+    manufacturer = _clean_string(detector.get("manufacturer"))
     model = _clean_string(detector.get("model"))
     channel_name = _clean_string(detector.get("channel_name") or detector.get("channel") or detector.get("name")) or f"Detector {slot}"
     display_label = " ".join(part for part in [channel_name if channel_name not in {manufacturer, model} else "", manufacturer, model] if part).strip() or channel_name or manufacturer or model or f"Detector {slot}"
@@ -561,7 +567,7 @@ def _detector_position(slot: int, detector: dict[str, Any], *, terminal_id: str 
         "display_label": display_label,
         "channel_name": channel_name,
         "manufacturer": detector.get("manufacturer") or detector.get("name"),
-        "product_code": detector.get("model"),
+        "product_code": detector.get("product_code"),
         "model": detector.get("model"),
         "pixel_pitch_um": detector.get("pixel_pitch_um") or detector.get("pixel_size_um"),
         "sensor_format_px": detector.get("sensor_format_px"),
@@ -621,7 +627,7 @@ def _terminal_payload_from_endpoint(index: int, endpoint: dict[str, Any], *, def
         "display_label": display_label,
         "channel_name": display_label,
         "manufacturer": endpoint.get("manufacturer"),
-        "product_code": endpoint.get("model") or endpoint.get("product_code"),
+        "product_code": endpoint.get("product_code"),
         "model": endpoint.get("model"),
         "qe_peak_pct": endpoint.get("qe_peak_pct"),
         "read_noise_e": endpoint.get("read_noise_e"),
@@ -1227,7 +1233,7 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
 
 
 
-def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
+def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferred_terminals: bool = True) -> dict:
     """Build a frontend-friendly virtual microscope payload from normalized hardware data."""
     hardware = instrument_dict.get("hardware", {})
     light_path = hardware.get("light_path", {})
@@ -1306,7 +1312,10 @@ def generate_virtual_microscope_payload(instrument_dict: dict) -> dict:
         payload["terminals"].append(_terminal_payload_from_endpoint(idx, endpoint))
 
     splitters_raw = _collect_splitters(hardware, light_path)
-    _infer_default_terminals(instrument_dict, splitters_raw, payload["terminals"])
+    if include_inferred_terminals:
+        _infer_default_terminals(instrument_dict, splitters_raw, payload["terminals"])
+    else:
+        payload["metadata"]["graph_incomplete"] = len(payload["terminals"]) == 0
 
     for terminal_index, terminal in enumerate(payload["terminals"], start=1):
         if terminal.get("endpoint_type") == "detector":
