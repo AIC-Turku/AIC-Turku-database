@@ -12,31 +12,35 @@ instrument:
   url: https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope
 
 modalities:
-  - confocal_spinning_disk
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - phase_contrast
+- confocal_spinning_disk
+- widefield_fluorescence
+- transmitted_brightfield
+- phase_contrast
 
 modules:
-  - name: hardware_autofocus
-    notes: Dual function Focus Seek and Lock
-    url: ''
-  - name: incubation
-    notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
-    url: ''
+- name: hardware_autofocus
+  notes: Dual function Focus Seek and Lock
+  url: ''
+  manufacturer: Andor
+  model: Focus Seek and Lock
+- name: incubation
+  notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
+  url: ''
 
+  manufacturer: Andor
+  model: TOPSTAGE-ANDOR-BL3 Incubator Bundle
 software:
-  - role: acquisition
-    name: Fusion BC43
-    version: '2.7.0'
-    developer: Andor
-    url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
-  - role: analysis
-    name: Imaris Quant
-    version: ''
-    developer: Oxford Instruments / Andor
-    notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
-    url: ''
+- role: acquisition
+  name: Fusion BC43
+  version: '2.7.0'
+  developer: Andor
+  url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
+- role: analysis
+  name: Imaris Quant
+  version: ''
+  developer: Oxford Instruments / Andor
+  notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
+  url: ''
 
 hardware:
   environment:
@@ -56,172 +60,173 @@ hardware:
     url: ''
 
   light_sources:
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 405
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 488
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 561
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 638
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-    - kind: led
-      manufacturer: Andor
-      model: Transmitted Light Illuminator
-      wavelength_nm: broadband
-      path: shared
-      role: transmitted_illumination  # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
-      notes: Used for Brightfield and Differential Phase Contrast (DPC).
-      url: ''
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 405
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 488
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 561
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 638
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+  - kind: led
+    manufacturer: Andor
+    model: Transmitted Light Illuminator
+    wavelength_nm: broadband
+    path: shared
+    role: transmitted_illumination    # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
+    notes: Used for Brightfield and Differential Phase Contrast (DPC).
+    url: ''
 
   detectors:
-    - kind: scmos
-      manufacturer: Andor
-      model: 4.1 MP sCMOS
-      pixel_pitch_um: 6.5
-      qe_peak_pct: 82
-      notes: "16-bit. 18.4 mm field of view."
-      url: ''
+  - kind: scmos
+    manufacturer: Andor
+    model: 4.1 MP sCMOS
+    pixel_pitch_um: 6.5
+    qe_peak_pct: 82
+    notes: "16-bit. 18.4 mm field of view."
+    url: ''
 
+    id: detector_1
   light_path:
     dichroic_mechanisms:
-      - name: BC43 Internal Dichroic
-        type: fixed
-        positions:
-          Pos_1:
-            component_type: multiband_dichroic
-            cutoffs_nm: [405, 488, 561, 638]
-            notes: Built-in multiband dichroic for standard 4-line excitation.
+    - name: BC43 Internal Dichroic
+      type: fixed
+      positions:
+        Pos_1:
+          component_type: multiband_dichroic
+          cutoffs_nm: [405, 488, 561, 638]
+          notes: Built-in multiband dichroic for standard 4-line excitation.
 
     emission_mechanisms:
-      - name: BC43 Internal Emission Filters
-        type: filter_wheel
-        slots: 4
-        positions:
-          Pos_1:
-            name: DAPI
-            component_type: bandpass
-            center_nm: 450
-            width_nm: 50
-          Pos_2:
-            name: GFP
-            component_type: bandpass
-            center_nm: 525
-            width_nm: 50
-          Pos_3:
-            name: mCherry
-            component_type: bandpass
-            center_nm: 600
-            width_nm: 50
-          Pos_4:
-            name: CY5
-            component_type: bandpass
-            center_nm: 685
-            width_nm: 50
+    - name: BC43 Internal Emission Filters
+      type: filter_wheel
+      slots: 4
+      positions:
+        Pos_1:
+          name: DAPI
+          component_type: bandpass
+          center_nm: 450
+          width_nm: 50
+        Pos_2:
+          name: GFP
+          component_type: bandpass
+          center_nm: 525
+          width_nm: 50
+        Pos_3:
+          name: mCherry
+          component_type: bandpass
+          center_nm: 600
+          width_nm: 50
+        Pos_4:
+          name: CY5
+          component_type: bandpass
+          center_nm: 685
+          width_nm: 50
 
     splitters: []
 
   objectives:
-    - id: 10x_air
-      manufacturer: Nikon
-      model: 10X Plan Apo LD Air
-      product_code: INS-OBJ-10D-045
-      magnification: 10.0
-      numerical_aperture: 0.45
-      working_distance: 4.0 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Included in base BC43 CF. Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Nikon
-      model: 20X Plan Apo LD Air
-      product_code: INS-OBJ-20D-080
-      magnification: 20.0
-      numerical_aperture: 0.8
-      working_distance: 0.8 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 40x_air
-      manufacturer: Nikon
-      model: 40X Plan Apo LD Air
-      product_code: INS-OBJ-40D-095
-      magnification: 40.0
-      numerical_aperture: 0.95
-      working_distance: 0.21 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 40x_silicone
-      manufacturer: Nikon
-      model: 40X Plan Apo LS Sil Oil
-      product_code: INS-OBJ-40S-125-SIL
-      magnification: 40.0
-      numerical_aperture: 1.25
-      working_distance: 0.3 mm
-      immersion: silicone
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda S.'
-      url: ''
-      is_installed: true
-    - id: 60x_oil
-      manufacturer: Nikon
-      model: 60X Plan Apo LD Oil
-      product_code: INS-OBJ-60D-142-0
-      magnification: 60.0
-      numerical_aperture: 1.42
-      working_distance: 0.15 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 100x_oil
-      manufacturer: Nikon
-      model: 100x Plan Apo LD Oil
-      product_code: INS-OBJ-100D-145-0
-      magnification: 100.0
-      numerical_aperture: 1.45
-      working_distance: 0.13 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
+  - id: 10x_air
+    manufacturer: Nikon
+    model: 10X Plan Apo LD Air
+    product_code: INS-OBJ-10D-045
+    magnification: 10.0
+    numerical_aperture: 0.45
+    working_distance: 4.0 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Included in base BC43 CF. Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Nikon
+    model: 20X Plan Apo LD Air
+    product_code: INS-OBJ-20D-080
+    magnification: 20.0
+    numerical_aperture: 0.8
+    working_distance: 0.8 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: Nikon
+    model: 40X Plan Apo LD Air
+    product_code: INS-OBJ-40D-095
+    magnification: 40.0
+    numerical_aperture: 0.95
+    working_distance: 0.21 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 40x_silicone
+    manufacturer: Nikon
+    model: 40X Plan Apo LS Sil Oil
+    product_code: INS-OBJ-40S-125-SIL
+    magnification: 40.0
+    numerical_aperture: 1.25
+    working_distance: 0.3 mm
+    immersion: silicone
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda S.'
+    url: ''
+    is_installed: true
+  - id: 60x_oil
+    manufacturer: Nikon
+    model: 60X Plan Apo LD Oil
+    product_code: INS-OBJ-60D-142-0
+    magnification: 60.0
+    numerical_aperture: 1.42
+    working_distance: 0.15 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Nikon
+    model: 100x Plan Apo LD Oil
+    product_code: INS-OBJ-100D-145-0
+    magnification: 100.0
+    numerical_aperture: 1.45
+    working_distance: 0.13 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true

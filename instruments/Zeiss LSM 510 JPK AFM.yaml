@@ -12,23 +12,27 @@ instrument:
   url: ''
 
 modalities:
-  - confocal_point
-  - transmitted_brightfield
-  - afm
+- confocal_point
+- transmitted_brightfield
+- afm
 
 modules:
-  - name: afm_module
-    notes: JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range). Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force Mapping, Force Modulation, and Manipulation.
-    url: ''
-  - name: incubation
-    notes: Incubation chamber (live-cell environment)
-    url: ''
+- name: afm_module
+  notes: JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range). Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force Mapping, Force Modulation, and Manipulation.
+  url: ''
+  manufacturer: JPK
+  model: NanoWizard I with CellHesion
+- name: incubation
+  notes: Incubation chamber (live-cell environment)
+  url: ''
 
+  manufacturer: Zeiss
+  model: Live-cell Incubation Chamber
 software:
-  - role: acquisition
-    name: Unknown # Flag: Recommend replacing with the actual software name (e.g., Zeiss LSM 510 or JPK SPM)
-    version: ''
-    url: ''
+- role: acquisition
+  name: Unknown   # Flag: Recommend replacing with the actual software name (e.g., Zeiss LSM 510 or JPK SPM)
+  version: ''
+  url: ''
 hardware:
   environment:
     temperature_control: true # Flag: Conditionally required due to 'incubation' module
@@ -40,33 +44,34 @@ hardware:
     url: ''
 
   light_sources:
-    - kind: laser # Flag: Placeholder added. Policy requires min_items: 1.
-      manufacturer: '' # Flag: Required field.
-      model: '' # Flag: Required field.
-      wavelength_nm: '' # Flag: Required field.
-      power: ''
-      notes: Placeholder excitation source.
-      url: ''
+  - kind: laser   # Flag: Placeholder added. Policy requires min_items: 1.
+    manufacturer: ''   # Flag: Required field.
+    model: ''   # Flag: Required field.
+    wavelength_nm: ''   # Flag: Required field.
+    power: ''
+    notes: Placeholder excitation source.
+    url: ''
 
   detectors:
-    - kind: pmt # Flag: Placeholder added.
-      manufacturer: Zeiss
-      model: '' # Flag: Required field.
-      qe_peak_pct: null # Flag: Conditionally required because confocal_point modality is present.
-      notes: Placeholder detector.
-      url: ''
+  - kind: pmt   # Flag: Placeholder added.
+    manufacturer: Zeiss
+    model: ''   # Flag: Required field.
+    qe_peak_pct:        # Flag: Conditionally required because confocal_point modality is present.
+    notes: Placeholder detector.
+    url: ''
 
+    id: detector_1
   objectives:
-    - id: placeholder_objective # Flag: Placeholder added. Policy requires min_items: 1.
-      manufacturer: '' # Flag: Required field.
-      model: '' # Flag: Required field.
-      magnification: 10 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
-      numerical_aperture: 0.3 # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
-      working_distance: '' # Flag: Conditionally required because confocal_point modality is present.
-      immersion: '' # Flag: Required field. Needs to match vocab/objective_immersion.yaml
-      correction: '' # Flag: Required field. Needs to match vocab/objective_corrections.yaml
-      afc_compatible: false
-      specialties: []
-      notes: Placeholder objective.
-      url: ''
-      is_installed: true
+  - id: placeholder_objective   # Flag: Placeholder added. Policy requires min_items: 1.
+    manufacturer: ''   # Flag: Required field.
+    model: ''   # Flag: Required field.
+    magnification: 10   # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
+    numerical_aperture: 0.3   # Flag: Placeholder numeric value to satisfy schema; update with actual objective.
+    working_distance: ''   # Flag: Conditionally required because confocal_point modality is present.
+    immersion: ''   # Flag: Required field. Needs to match vocab/objective_immersion.yaml
+    correction: ''   # Flag: Required field. Needs to match vocab/objective_corrections.yaml
+    afc_compatible: false
+    specialties: []
+    notes: Placeholder objective.
+    url: ''
+    is_installed: true

@@ -53,7 +53,7 @@ jobs:
 
       - name: Run contract invariants test suite
         run: |
-          PYTHONPATH=. pytest -q \
+          PYTHONPATH=. python -m pytest -q \
             tests/test_contract_invariants.py \
             tests/test_virtual_microscope_runtime.py \
             tests/test_light_path_parser.py \

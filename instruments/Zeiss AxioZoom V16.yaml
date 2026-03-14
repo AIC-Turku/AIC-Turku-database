@@ -12,20 +12,22 @@ instrument:
   url: ''
 
 modalities:
-  - transmitted_brightfield
-  - optical_sectioning
-  - widefield_fluorescence
+- transmitted_brightfield
+- optical_sectioning
+- widefield_fluorescence
 
 modules:
-  - name: sim_module # Flag: Verify this matches a canonical ID in vocab/modules.yaml (often 'apotome')
-    notes: Zeiss ApoTome.2 module (structured illumination for optical sectioning)
-    url: ''
+- name: sim_module   # Flag: Verify this matches a canonical ID in vocab/modules.yaml (often 'apotome')
+  notes: Zeiss ApoTome.2 module (structured illumination for optical sectioning)
+  url: ''
 
+  manufacturer: Zeiss
+  model: ApoTome.2
 software:
-  - role: acquisition
-    name: Zeiss ZEN Pro
-    version: ''
-    url: ''
+- role: acquisition
+  name: Zeiss ZEN Pro
+  version: ''
+  url: ''
 hardware:
   scanner:
     type: none
@@ -33,104 +35,106 @@ hardware:
     url: ''
 
   light_sources:
-    - kind: led
-      manufacturer: Zeiss
-      model: CL 9000 LED CAN ring light
-      wavelength_nm: '' # Flag: Required field for 'led' kind. (e.g., 'broadband' or 'white')
-      power: ''
-      notes: top illumination
-      url: ''
-    - kind: led
-      manufacturer: VisiLED
-      model: MC1000 LED base light
-      wavelength_nm: '' # Flag: Required field for 'led' kind.
-      power: ''
-      notes: bottom illumination
-      url: ''
-    - kind: arc_lamp
-      manufacturer: Zeiss
-      model: HXP 200C
-      wavelength_nm: ''
-      power: ''
-      notes: Mercury lamp
-      url: ''
+  - kind: led
+    manufacturer: Zeiss
+    model: CL 9000 LED CAN ring light
+    wavelength_nm: ''   # Flag: Required field for 'led' kind. (e.g., 'broadband' or 'white')
+    power: ''
+    notes: top illumination
+    url: ''
+  - kind: led
+    manufacturer: VisiLED
+    model: MC1000 LED base light
+    wavelength_nm: ''   # Flag: Required field for 'led' kind.
+    power: ''
+    notes: bottom illumination
+    url: ''
+  - kind: arc_lamp
+    manufacturer: Zeiss
+    model: HXP 200C
+    wavelength_nm: ''
+    power: ''
+    notes: Mercury lamp
+    url: ''
 
   detectors:
-    - kind: scmos
-      manufacturer: Hamamatsu
-      model: ORCA-Flash4.0 LT+ sCMOS
-      pixel_pitch_um: 6.5 # Flag: Required by schema for scmos. Standard specification for this camera.
-      sensor_format_px: "2048 x 2048"
-      notes: mono
-      url: ''
-    - kind: cmos
-      manufacturer: Zeiss
-      model: AxioCam 105 Color
-      pixel_pitch_um: null # Flag: Required field for cmos detectors. Please add physical pixel size (usually 2.2).
-      sensor_format_px: "2560 x 1920"
-      notes: color
-      url: ''
+  - kind: scmos
+    manufacturer: Hamamatsu
+    model: ORCA-Flash4.0 LT+ sCMOS
+    pixel_pitch_um: 6.5   # Flag: Required by schema for scmos. Standard specification for this camera.
+    sensor_format_px: "2048 x 2048"
+    notes: mono
+    url: ''
+    id: detector_1
+  - kind: cmos
+    manufacturer: Zeiss
+    model: AxioCam 105 Color
+    pixel_pitch_um:        # Flag: Required field for cmos detectors. Please add physical pixel size (usually 2.2).
+    sensor_format_px: "2560 x 1920"
+    notes: color
+    url: ''
 
+    id: detector_2
   filters:
-    - name: DAPI (Filter set 49)
-      location: Internal Turret
-      product_code: '49'
-      excitation: G365
-      dichroic: '' # Flag: Required because widefield_fluorescence is present. (Usually FT 395 for Set 49)
-      emission: BP 445/50
-      notes: ''
-      url: ''
-    - name: Alexa 488 (Filter set 38 HE)
-      location: Internal Turret
-      product_code: 38 HE
-      excitation: BP 470/40
-      dichroic: '' # Flag: Required field. (Usually FT 495)
-      emission: BP 525/50
-      notes: ''
-      url: ''
-    - name: Alexa 568 (Filter set 45)
-      location: Internal Turret
-      product_code: '45'
-      excitation: BP 560/40
-      dichroic: '' # Flag: Required field. (Usually FT 580)
-      emission: BP 630/75
-      notes: ''
-      url: ''
-    - name: Alexa 647 (Filter set 50)
-      location: Internal Turret
-      product_code: '50'
-      excitation: BP 640/30
-      dichroic: '' # Flag: Required field. (Usually FT 660)
-      emission: BP 690/50
-      notes: ''
-      url: ''
+  - name: DAPI (Filter set 49)
+    location: Internal Turret
+    product_code: '49'
+    excitation: G365
+    dichroic: ''   # Flag: Required because widefield_fluorescence is present. (Usually FT 395 for Set 49)
+    emission: BP 445/50
+    notes: ''
+    url: ''
+  - name: Alexa 488 (Filter set 38 HE)
+    location: Internal Turret
+    product_code: 38 HE
+    excitation: BP 470/40
+    dichroic: ''   # Flag: Required field. (Usually FT 495)
+    emission: BP 525/50
+    notes: ''
+    url: ''
+  - name: Alexa 568 (Filter set 45)
+    location: Internal Turret
+    product_code: '45'
+    excitation: BP 560/40
+    dichroic: ''   # Flag: Required field. (Usually FT 580)
+    emission: BP 630/75
+    notes: ''
+    url: ''
+  - name: Alexa 647 (Filter set 50)
+    location: Internal Turret
+    product_code: '50'
+    excitation: BP 640/30
+    dichroic: ''   # Flag: Required field. (Usually FT 660)
+    emission: BP 690/50
+    notes: ''
+    url: ''
 
   objectives:
-    - id: 0.5x_air
-      manufacturer: Zeiss
-      model: PlanApo Z
-      product_code: ''
-      magnification: 0.5
-      numerical_aperture: 0.125
-      working_distance: 114 mm
-      immersion: air
-      correction: plan_apochromat # Mapped from vocab/objective_corrections.yaml based on 'PlanApo' model
-      afc_compatible: false
-      specialties: []
-      notes: 'System magnification range 3.5x-56x. Field of view range 66-4 mm. ApoTome compatible: No.'
-      url: ''
-      is_installed: true
-    - id: 1x_air
-      manufacturer: Zeiss
-      model: PlanApo Z
-      product_code: ''
-      magnification: 1.0
-      numerical_aperture: 0.125
-      working_distance: 56 mm
-      immersion: air
-      correction: plan_apochromat # Mapped from vocab/objective_corrections.yaml
-      afc_compatible: false
-      specialties: []
-      notes: System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome compatible from 40x-112x.
-      url: ''
-      is_installed: true
+  - id: 0.5x_air
+    manufacturer: Zeiss
+    model: PlanApo Z
+    product_code: ''
+    magnification: 0.5
+    numerical_aperture: 0.125
+    working_distance: 114 mm
+    immersion: air
+    correction: plan_apochromat   # Mapped from vocab/objective_corrections.yaml based on 'PlanApo' model
+    afc_compatible: false
+    specialties: []
+    notes: 'System magnification range 3.5x-56x. Field of view range 66-4 mm. ApoTome compatible: No.'
+    url: ''
+    is_installed: true
+  - id: 1x_air
+    manufacturer: Zeiss
+    model: PlanApo Z
+    product_code: ''
+    magnification: 1.0
+    numerical_aperture: 0.125
+    working_distance: 56 mm
+    immersion: air
+    correction: plan_apochromat   # Mapped from vocab/objective_corrections.yaml
+    afc_compatible: false
+    specialties: []
+    notes: System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome compatible from 40x-112x.
+    url: ''
+    is_installed: true
