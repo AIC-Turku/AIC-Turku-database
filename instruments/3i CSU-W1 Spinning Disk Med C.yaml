@@ -280,7 +280,7 @@ hardware:
       correction: plan_fluorite
       afc_compatible: true
       specialties:
-        - Correction collar for 0-1.5 mm glass
+        - correction_collar
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/us/shop/objectives/421350-9971-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-M27"
       is_installed: true
@@ -296,7 +296,7 @@ hardware:
       correction: plan_fluorite
       afc_compatible: true
       specialties:
-        - Correction collar for 0-1.5 mm glass
+        - correction_collar
       notes: ""
       url: "https://www.micro-shop.zeiss.com/en/no/shop/objectives/421360-9971-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-M27"
       is_installed: true
