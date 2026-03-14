@@ -352,6 +352,105 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
+    def test_object_map_wildcard_item_field_in_reports_missing_bands(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'light-path',
+                        'title': 'Light Path',
+                        'rules': [
+                            {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}},
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/map-missing-bands.yaml',
+            {
+                'instrument': {'instrument_id': 'map-missing-bands'},
+                'hardware': {
+                    'light_path': {
+                        'excitation_mechanisms': [
+                            {
+                                'positions': {
+                                    'Pos_1': {'component_type': 'multiband_bandpass'},
+                                }
+                            }
+                        ]
+                    }
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertIn('invalid_light_path', {issue.code for issue in issues})
+        self.assertIn('missing_conditional_field', {w.code for w in warnings})
+        self.assertTrue(
+            any(
+                path.endswith('instruments/map-missing-bands.yaml:hardware.light_path.excitation_mechanisms[0].positions.Pos_1.bands')
+                for path in {w.path for w in warnings}
+            )
+        )
+
+    def test_object_map_wildcard_item_field_in_passes_when_bands_present(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'light-path',
+                        'title': 'Light Path',
+                        'rules': [
+                            {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}},
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/map-bands-present.yaml',
+            {
+                'instrument': {'instrument_id': 'map-bands-present'},
+                'hardware': {
+                    'light_path': {
+                        'excitation_mechanisms': [
+                            {
+                                'positions': {
+                                    'Pos_1': {
+                                        'component_type': 'multiband_bandpass',
+                                        'bands': [
+                                            {'center_nm': 520, 'width_nm': 35},
+                                        ],
+                                    },
+                                }
+                            }
+                        ]
+                    }
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        self.assertNotIn('missing_conditional_field', {w.code for w in warnings})
+
 
 
     def test_evaluate_required_if_item_field_in_resolves_vocab_synonyms(self) -> None:
