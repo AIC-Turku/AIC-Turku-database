@@ -1018,6 +1018,7 @@ sections:
         title: Cube mechanism positions map
         status: optional
         type: object
+        example_key: Pos_1
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.path
         title: Cube position path tag
@@ -1158,6 +1159,7 @@ sections:
         title: Excitation mechanism positions map
         status: optional
         type: object
+        example_key: Pos_1
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.component_type
         title: Excitation position component type
@@ -1266,6 +1268,7 @@ sections:
         title: Dichroic mechanism positions map
         status: optional
         type: object
+        example_key: Pos_1
 
       - path: hardware.light_path.dichroic_mechanisms[].positions{}.component_type
         title: Dichroic position component type
@@ -1358,6 +1361,7 @@ sections:
         title: Emission mechanism positions map
         status: optional
         type: object
+        example_key: Pos_1
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.component_type
         title: Emission position component type
