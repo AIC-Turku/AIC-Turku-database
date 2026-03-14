@@ -393,7 +393,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
 
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
-        self.assertIn('invalid_light_path', {issue.code for issue in issues})
+        self.assertEqual(issues, [])
         self.assertIn('missing_conditional_field', {w.code for w in warnings})
         self.assertTrue(
             any(
@@ -450,6 +450,181 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         self.assertEqual(issues, [])
         self.assertNotIn('missing_conditional_field', {w.code for w in warnings})
+
+
+    def test_schema_requires_multiband_bands_for_excitation_and_emission_positions(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'light-path',
+                        'title': 'Light Path',
+                        'rules': [
+                            {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.light_path.emission_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'min_items': 1,
+                                'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}},
+                            },
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[].center_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[]'},
+                            },
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[].width_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[]'},
+                            },
+                            {
+                                'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'min_items': 1,
+                                'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}},
+                            },
+                            {
+                                'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands[].center_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.emission_mechanisms[].positions{}.bands[]'},
+                            },
+                            {
+                                'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands[].width_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.emission_mechanisms[].positions{}.bands[]'},
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/map-missing-multiband-bands.yaml',
+            {
+                'instrument': {'instrument_id': 'map-missing-multiband-bands'},
+                'hardware': {
+                    'light_path': {
+                        'excitation_mechanisms': [
+                            {'positions': {'Pos_1': {'component_type': 'multiband_bandpass', 'bands': [{'center_nm': 488, 'width_nm': 20}]}}}
+                        ],
+                        'emission_mechanisms': [
+                            {'positions': {'Pos_1': {'component_type': 'multiband_bandpass'}}}
+                        ],
+                    }
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        self.assertIn('missing_conditional_field', {warning.code for warning in warnings})
+        self.assertTrue(
+            any(
+                warning.path.endswith(
+                    'instruments/map-missing-multiband-bands.yaml:hardware.light_path.emission_mechanisms[0].positions.Pos_1.bands'
+                )
+                for warning in warnings
+            )
+        )
+
+    def test_schema_accepts_multiband_bands_with_required_fields_for_positions(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'light-path',
+                        'title': 'Light Path',
+                        'rules': [
+                            {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.light_path.emission_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'min_items': 1,
+                                'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}},
+                            },
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[].center_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[]'},
+                            },
+                            {
+                                'path': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[].width_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[].positions{}.bands[]'},
+                            },
+                            {
+                                'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands',
+                                'status': 'conditional',
+                                'type': 'list',
+                                'min_items': 1,
+                                'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}},
+                            },
+                            {
+                                'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands[].center_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.emission_mechanisms[].positions{}.bands[]'},
+                            },
+                            {
+                                'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands[].width_nm',
+                                'status': 'conditional',
+                                'type': 'positive_number',
+                                'required_if': {'parent_present': 'hardware.light_path.emission_mechanisms[].positions{}.bands[]'},
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/map-valid-multiband-bands.yaml',
+            {
+                'instrument': {'instrument_id': 'map-valid-multiband-bands'},
+                'hardware': {
+                    'light_path': {
+                        'excitation_mechanisms': [
+                            {
+                                'positions': {
+                                    'Pos_1': {
+                                        'component_type': 'multiband_bandpass',
+                                        'bands': [{'center_nm': 488, 'width_nm': 20}],
+                                    }
+                                }
+                            }
+                        ],
+                        'emission_mechanisms': [
+                            {
+                                'positions': {
+                                    'Pos_1': {
+                                        'component_type': 'multiband_bandpass',
+                                        'bands': [{'center_nm': 525, 'width_nm': 30}],
+                                    }
+                                }
+                            }
+                        ],
+                    }
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        self.assertNotIn('missing_conditional_field', {warning.code for warning in warnings})
 
 
 

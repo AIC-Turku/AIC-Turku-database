@@ -224,7 +224,8 @@ def _validate_component(component: dict[str, Any], errors: list[str], context: s
         _require_positive_number(component, "center_nm", errors, context)
         _require_positive_number(component, "width_nm", errors, context)
     elif component_type in MULTIBAND_FILTER_TYPES:
-        _validate_band_list(component, errors, context)
+        # Structural multiband requirements are enforced by schema policy rules.
+        pass
     elif component_type == "longpass":
         _require_positive_number(component, "cut_on_nm", errors, context)
     elif component_type == "shortpass":

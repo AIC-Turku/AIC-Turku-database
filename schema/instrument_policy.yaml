@@ -1183,17 +1183,25 @@ sections:
         title: Excitation position multiband array
         status: conditional
         type: list
+        min_items: 1
         item_type: object
+        required_if:
+          item_field_in:
+            component_type: [multiband_bandpass]
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.bands[].center_nm
         title: Excitation position band center (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.bands[]"
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.bands[].width_nm
         title: Excitation position band width (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.bands[]"
 
       - path: hardware.light_path.excitation_mechanisms[].positions{}.center_nm
         title: Excitation position center wavelength (nm)
@@ -1385,17 +1393,25 @@ sections:
         title: Emission position multiband array
         status: conditional
         type: list
+        min_items: 1
         item_type: object
+        required_if:
+          item_field_in:
+            component_type: [multiband_bandpass]
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.bands[].center_nm
         title: Emission position band center (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.bands[]"
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.bands[].width_nm
         title: Emission position band width (nm)
         status: conditional
         type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.bands[]"
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.center_nm
         title: Emission position center wavelength (nm)
