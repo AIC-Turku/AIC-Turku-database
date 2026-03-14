@@ -4,11 +4,11 @@ instrument:
   manufacturer: Thermo Fisher / AMG
   model: FL
   year_of_purchase: '2011'
-  funding: 'Turun Yliopisto / Biotekniikan keskus (Daniel Abankwa)'
+  funding: 'Turun Yliopisto / Biotekniikan keskus'
   stand_orientation: inverted
   ocular_availability: camera_only
   location: Local Cell Culture Lab, Biocity 5th Floor
-  notes: 'Widefield fluorescence microscope (inverted). Imaging modes: Brightfield (transmitted), Fluorescence (LED illumination). Usage: All users are free to use the microscope after instrument-specific training (contact Jouko Sandholm or Markku Saari). Sign your usage to the notebook (EVOS is not in the BTK reservation system). IMPORTANT: Only CIC personnel are allowed to change filter cubes.'
+  notes: 'Widefield fluorescence microscope (inverted). Imaging modes: Brightfield (transmitted), Fluorescence (LED illumination). Usage: All users are free to use the microscope after instrument-specific training (contact AIC staff for training). IMPORTANT: Only AIC personnel are allowed to change filter cubes.'
   url: ''
 
 modalities:
