@@ -1294,10 +1294,9 @@
 
   function sourceExcitationContribution(sourceSpectrumAtSample, excitationCurve, grid) {
     const overlapPower = integrateSpectrum(multiplyArrays(sourceSpectrumAtSample, excitationCurve), grid);
-    const lineArea = integrateSpectrum(sourceSpectrumAtSample, grid);
-    if (lineArea <= 1e-9) return 0;
-    const modeAwareReference = Math.max(2.25, lineArea > 30 ? 28 : lineArea);
-    return clamp(overlapPower / modeAwareReference, 0, 1.5);
+    const BASELINE_LASER_AREA = 2.12;
+    const strength = overlapPower / BASELINE_LASER_AREA;
+    return clamp(strength, 0, 1.5);
   }
 
   function dominantWavelength(spectrum, grid) {
