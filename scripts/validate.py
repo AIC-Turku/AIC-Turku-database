@@ -430,6 +430,11 @@ def _load_instrument_policy(
 
 
 def _resolve_path_nodes(payload: dict[str, Any], dotted_path: str) -> list[ResolvedNode]:
+    """Resolve dotted policy paths across mappings, list wildcards (``[]``), and object-map wildcards (``{}``).
+
+    ``[]`` iterates list items and ``{}`` iterates mapping values while preserving each concrete key in
+    the emitted ``ResolvedNode.path`` so downstream diagnostics point to the exact YAML location.
+    """
     segments = dotted_path.split('.') if dotted_path else []
     nodes: list[ResolvedNode] = [ResolvedNode(value=payload, path='', context_item=None)]
 
