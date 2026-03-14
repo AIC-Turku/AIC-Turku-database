@@ -1,0 +1,1 @@
+{"instrument": {"instrument_id": "invalid-multiband"}, "hardware": {"light_path": {"excitation_mechanisms": [{"positions": {"Pos_1": {"component_type": "multiband_bandpass"}}}]}}}
