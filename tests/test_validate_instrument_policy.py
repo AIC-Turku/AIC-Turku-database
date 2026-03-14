@@ -1030,6 +1030,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
         _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         missing_messages = [w.message for w in warnings if w.code == 'missing_conditional_field']
+        self.assertFalse(any(w.code == 'invalid_light_path' for w in warnings))
         self.assertTrue(any('hardware.light_path.excitation_mechanisms[].positions{}.center_nm' in message for message in missing_messages))
         self.assertTrue(any('hardware.light_path.emission_mechanisms[].positions{}.bands' in message for message in missing_messages))
         self.assertTrue(any('hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm' in message for message in missing_messages))

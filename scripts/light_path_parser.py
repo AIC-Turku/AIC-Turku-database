@@ -13,10 +13,7 @@ from itertools import product
 from typing import Any
 
 
-DISCRETE_MECHANISM_TYPES = {"filter_wheel", "slider", "turret"}
-CONTINUOUS_MECHANISM_TYPES = {"tunable", "fixed", "spectral_slider"}
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
-MULTIBAND_FILTER_TYPES = {"multiband_bandpass"}
 NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough", "neutral_density"}
 ROUTE_TAGS = {"epi", "tirf", "confocal", "multiphoton", "transmitted", "shared", "all"}
 ROUTE_LABELS = {
@@ -164,107 +161,12 @@ def _routes_overlap(left: list[str], right: list[str]) -> bool:
     return bool(left_set & right_set)
 
 
-def _require_positive_number(component: dict[str, Any], field: str, errors: list[str], context: str) -> None:
-    if not _is_positive_number(component.get(field)):
-        errors.append(f"{context}: component_type requires positive `{field}`.")
-
-
-def _validate_optional_path(item: dict[str, Any], errors: list[str], context: str) -> None:
-    path = item.get("path")
-    if path is not None and (not isinstance(path, str) or not path.strip()):
-        errors.append(f"{context}: `path` must be a non-empty string when provided.")
-
-
-def _validate_band_list(component: dict[str, Any], errors: list[str], context: str) -> None:
-    bands = component.get("bands")
-    if not isinstance(bands, list) or not bands:
-        errors.append(f"{context}: component_type requires `bands` as a non-empty list.")
-        return
-
-    for band_index, band in enumerate(bands):
-        if not isinstance(band, dict):
-            errors.append(f"{context}.bands[{band_index}]: band entry must be an object.")
-            continue
-        if not _is_positive_number(band.get("center_nm")):
-            errors.append(f"{context}.bands[{band_index}]: requires positive `center_nm`.")
-        if not _is_positive_number(band.get("width_nm")):
-            errors.append(f"{context}.bands[{band_index}]: requires positive `width_nm`.")
-
-
-def _validate_spectral_array(mechanism: dict[str, Any], errors: list[str], context: str) -> None:
-    min_nm = mechanism.get("min_nm")
-    if not _is_positive_number(min_nm):
-        min_nm = mechanism.get("band_min_nm")
-    if not _is_positive_number(min_nm):
-        errors.append(f"{context}: spectral_array requires positive `min_nm` (or `band_min_nm`).")
-
-    max_nm = mechanism.get("max_nm")
-    if not _is_positive_number(max_nm):
-        max_nm = mechanism.get("band_max_nm")
-    if not _is_positive_number(max_nm):
-        errors.append(f"{context}: spectral_array requires positive `max_nm` (or `band_max_nm`).")
-
-    bands = mechanism.get("bands")
-    if not _is_positive_number(bands):
-        bands = mechanism.get("max_bands")
-    if not _is_positive_number(bands):
-        errors.append(f"{context}: spectral_array requires positive `bands` (or `max_bands`).")
-
-    if _is_positive_number(min_nm) and _is_positive_number(max_nm) and min_nm >= max_nm:
-        errors.append(f"{context}: spectral_array requires `max_nm` to be greater than `min_nm`.")
-
-
-def _validate_component(component: dict[str, Any], errors: list[str], context: str) -> None:
-    component_type = component.get("component_type")
-    if not isinstance(component_type, str) or not component_type:
-        errors.append(f"{context}: missing or invalid `component_type`.")
-        return
-
-    if component_type in {"bandpass", "notch"}:
-        _require_positive_number(component, "center_nm", errors, context)
-        _require_positive_number(component, "width_nm", errors, context)
-    elif component_type in MULTIBAND_FILTER_TYPES:
-        # Structural multiband requirements are enforced by schema policy rules.
-        pass
-    elif component_type == "longpass":
-        _require_positive_number(component, "cut_on_nm", errors, context)
-    elif component_type == "shortpass":
-        _require_positive_number(component, "cut_off_nm", errors, context)
-    elif component_type in DICHROIC_TYPES:
-        cutoffs = component.get("cutoffs_nm")
-        if not isinstance(cutoffs, list) or not cutoffs or not all(_is_positive_number(item) for item in cutoffs):
-            errors.append(f"{context}: component_type requires `cutoffs_nm` as a list of positive numbers.")
-    elif component_type in NO_WAVELENGTH_TYPES:
-        return
-
-
 def _validate_splitter_branch(branch: dict[str, Any], errors: list[str], context: str) -> None:
-    _validate_optional_path(branch, errors, context)
-    mode = branch.get("mode")
-    if mode is not None and (not isinstance(mode, str) or not mode.strip()):
-        errors.append(f"{context}: `mode` must be a non-empty string when provided.")
-    component = branch.get("emission_filter") if isinstance(branch.get("emission_filter"), dict) else branch.get("component")
-    if isinstance(component, dict):
-        _validate_component(component, errors, f"{context}.component")
     targets = branch.get("targets") or branch.get("target_ids") or branch.get("terminal_ids") or branch.get("endpoint_ids")
     if targets is not None:
         values = targets if isinstance(targets, list) else [targets]
         if not all(isinstance(item, str) and item.strip() for item in values):
             errors.append(f"{context}: targets must be a string or list of non-empty strings when provided.")
-
-
-
-def _validate_endpoint(endpoint: dict[str, Any], errors: list[str], context: str) -> None:
-    _validate_optional_path(endpoint, errors, context)
-    endpoint_type = endpoint.get("endpoint_type") or endpoint.get("type") or endpoint.get("kind")
-    if endpoint_type is not None and (not isinstance(endpoint_type, str) or not endpoint_type.strip()):
-        errors.append(f"{context}: endpoint type must be a non-empty string when provided.")
-    if endpoint.get("id") is not None and (not isinstance(endpoint.get("id"), str) or not endpoint.get("id").strip()):
-        errors.append(f"{context}: `id` must be a non-empty string when provided.")
-    for numeric_field in ("collection_min_nm", "collection_max_nm", "collection_center_nm", "collection_width_nm"):
-        value = endpoint.get(numeric_field)
-        if value is not None and _coerce_number(value) is None:
-            errors.append(f"{context}: `{numeric_field}` must be numeric when provided.")
 
 
 
@@ -296,13 +198,8 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
     known_target_ids: set[str] = set()
     explicit_endpoint_ids: dict[str, int] = {}
 
-    for src_index, source in enumerate(hardware.get("light_sources", [])):
-        if isinstance(source, dict):
-            _validate_optional_path(source, errors, f"hardware.light_sources[{src_index}]")
-
     for det_index, detector in enumerate(hardware.get("detectors", [])):
         if isinstance(detector, dict):
-            _validate_optional_path(detector, errors, f"hardware.detectors[{det_index}]")
             for candidate in (
                 detector.get("id"),
                 detector.get("channel_name"),
@@ -314,62 +211,10 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                 if normalized_candidate:
                     known_target_ids.add(normalized_candidate)
 
-    for stage in ("excitation_mechanisms", "dichroic_mechanisms", "emission_mechanisms", "cube_mechanisms"):
-        for mech_index, mechanism in enumerate(_iter_mechanisms(light_path, stage)):
-            mech_type = mechanism.get("type")
-            mech_ctx = f"{stage}[{mech_index}]"
-            _validate_optional_path(mechanism, errors, mech_ctx)
-
-            if mech_type == "spectral_array":
-                _validate_spectral_array(mechanism, errors, mech_ctx)
-
-            if mech_type in DISCRETE_MECHANISM_TYPES:
-                slots = mechanism.get("slots")
-                if not isinstance(slots, int) or isinstance(slots, bool):
-                    errors.append(f"{mech_ctx}: discrete mechanism type `{mech_type}` requires integer `slots`.")
-                    continue
-            elif mech_type in CONTINUOUS_MECHANISM_TYPES:
-                slots = None
-            else:
-                slots = mechanism.get("slots") if isinstance(mechanism.get("slots"), int) else None
-
-            positions = mechanism.get("positions", {})
-            if not isinstance(positions, dict):
-                errors.append(f"{mech_ctx}: `positions` must be a mapping/object.")
-                continue
-
-            for position_key, component in positions.items():
-                pos_ctx = f"{mech_ctx}.positions[{position_key!r}]"
-                normalized_position_key = _coerce_slot_key(position_key)
-                if normalized_position_key is None:
-                    errors.append(f"{pos_ctx}: position key must be an integer.")
-                    continue
-                if slots is not None and (normalized_position_key < 1 or normalized_position_key > slots):
-                    errors.append(f"{pos_ctx}: position key must be between 1 and {slots}.")
-
-                if not isinstance(component, dict):
-                    errors.append(f"{pos_ctx}: position value must be a mapping/object.")
-                    continue
-
-                _validate_optional_path(component, errors, pos_ctx)
-
-                if stage == "cube_mechanisms":
-                    for link_key in CUBE_LINK_KEYS:
-                        linked_component = component.get(link_key)
-                        link_ctx = f"{pos_ctx}.{link_key}"
-                        if not isinstance(linked_component, dict):
-                            errors.append(f"{link_ctx}: missing or invalid linked component mapping/object.")
-                            continue
-                        _validate_optional_path(linked_component, errors, link_ctx)
-                        _validate_component(linked_component, errors, link_ctx)
-                else:
-                    _validate_component(component, errors, pos_ctx)
-
     endpoint_rows = _collect_endpoint_rows(hardware, light_path)
     for endpoint_index, endpoint in enumerate(endpoint_rows):
         if not isinstance(endpoint, dict):
             continue
-        _validate_endpoint(endpoint, errors, f"endpoints[{endpoint_index}]")
         explicit_id = _clean_identifier(endpoint.get("id"))
         if explicit_id:
             if explicit_id in explicit_endpoint_ids:
@@ -390,17 +235,6 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
 
     for split_idx, splitter in enumerate(_collect_splitters(hardware, light_path)):
         split_ctx = f"splitters[{split_idx}]"
-        _validate_optional_path(splitter, errors, split_ctx)
-
-        if isinstance(splitter.get("dichroic"), dict):
-            _validate_component(splitter["dichroic"], errors, f"{split_ctx}.dichroic")
-
-        if isinstance(splitter.get("path_1", {}).get("emission_filter"), dict):
-            _validate_component(
-                splitter["path_1"]["emission_filter"],
-                errors,
-                f"{split_ctx}.path_1.emission_filter",
-            )
         if isinstance(splitter.get("path_1"), dict):
             _validate_splitter_branch(splitter["path_1"], errors, f"{split_ctx}.path_1")
             if known_target_ids:
@@ -408,12 +242,6 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                     if target_id not in known_target_ids:
                         errors.append(f"{split_ctx}.path_1: target `{target_id}` does not match any declared detector or endpoint.")
 
-        if isinstance(splitter.get("path_2", {}).get("emission_filter"), dict):
-            _validate_component(
-                splitter["path_2"]["emission_filter"],
-                errors,
-                f"{split_ctx}.path_2.emission_filter",
-            )
         if isinstance(splitter.get("path_2"), dict):
             _validate_splitter_branch(splitter["path_2"], errors, f"{split_ctx}.path_2")
             if known_target_ids:
