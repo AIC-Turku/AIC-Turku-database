@@ -111,7 +111,9 @@
 {% if hw.environment.present %}
 ### 🌡️ Environmental Control
 
+<div class="grid cards" markdown>
 {{ render_spec_card(hw.environment) }}
+</div>
 {% endif %}
 
 {% if hw.light_sources %}
@@ -127,7 +129,9 @@
 {% if hw.scanner.present %}
 ### 🧭 Scanner
 
+<div class="grid cards" markdown>
 {{ render_spec_card(hw.scanner) }}
+</div>
 {% endif %}
 
 {% if hw.detectors %}
@@ -199,14 +203,15 @@
 
 {% if hw.hardware_autofocus.present or hw.triggering.present %}
 ### ⚙️ Advanced Hardware
+
+<div class="grid cards" markdown>
 {% if hw.hardware_autofocus.present %}
-- {{ hw.hardware_autofocus.display_label }}
-  {% for line in hw.hardware_autofocus.spec_lines %}<br>{{ line }}{% endfor %}
+{{ render_spec_card(hw.hardware_autofocus) }}
 {% endif %}
 {% if hw.triggering.present %}
-- {{ hw.triggering.display_label }}
-  {% for line in hw.triggering.spec_lines %}<br>{{ line }}{% endfor %}
+{{ render_spec_card(hw.triggering) }}
 {% endif %}
+</div>
 {% endif %}
 
 {% if hw.optical_path.static_graph %}
