@@ -1,0 +1,16 @@
+version: 1
+vocabulary_id: identity_semantics
+description: Canonical meaning of identity fields used across instrument metadata.
+terms:
+  - id: manufacturer
+    label: Manufacturer
+    description: Company/vendor/brand that makes the component or module.
+  - id: model
+    label: Model
+    description: Vendor-facing model name/designation; primary structured identity field.
+  - id: product_code
+    label: Product code
+    description: Explicit catalogue/order/SKU/reference code only; optional and never inferred from model or name.
+  - id: name
+    label: Name
+    description: Local/display/instance label only; not equivalent to model or product_code. Use only when it differs from model.

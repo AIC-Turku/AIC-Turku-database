@@ -7,8 +7,8 @@
 instrument:
   display_name: ""  # Display name: Primary human-readable instrument name shown in reports and methods output.
   instrument_id: ""  # Instrument ID: Stable machine-readable key used across QC, maintenance, and dashboard routing.
-  manufacturer: ""  # Manufacturer: Needed for instrument identification and methods wording.
-  model: ""  # Model: Needed for instrument identification and methods wording.
+  manufacturer: ""  # Manufacturer: Company/vendor/brand that makes the instrument.
+  model: ""  # Model: Vendor-facing model designation used as the primary structured identity field for the instrument; do not substitute display names or catalog codes.
   year_of_purchase: ""  # Year of purchase: Operational context and lifecycle planning; not essential for methods completeness.
   funding: ""  # Funding: Operational and acknowledgement context; not required for methods reporting.
   stand_orientation: ""  # Stand orientation: Used directly by methods generator and helps classify the platform. | Allowed values (canonical IDs): upright, inverted, stereo, benchtop, other
@@ -28,11 +28,12 @@ modalities:  # Imaging modalities: Core reporting category in QUAREP/JCB-style i
 # -----------------------------------------------------------------------------
 modules:  # Installed modules: Only present when installed modules materially change imaging capabilities.
   -
-    name: ""  # Module name: Required when a module/path is installed and materially changes imaging capabilities. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, hardware_triggering, workstation, impedance_module, universal_vessel_holder, camera_port
+    type: ""  # Module type: Canonical module classifier used for structured capability reporting. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, hardware_triggering, workstation, impedance_module, universal_vessel_holder, camera_port
+    name: ""  # Module display name (legacy): Legacy/local display label. Prefer modules[].type for canonical module identity.
     notes: ""  # Module notes: Useful for operational nuances and limitations.
     url: ""  # Module URL: Helpful vendor or manual reference.
-    manufacturer: ""  # Module manufacturer: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
-    model: ""  # Module model: Required by 4DN-BINA/QUAREP for exact hardware provenance when a module is present.
+    manufacturer: ""  # Module manufacturer: Vendor-facing module model/designation used as primary structured identity for the installed module.
+    model: ""  # Module model: Vendor-facing module model/designation used as primary structured identity for the installed module.
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
@@ -60,9 +61,9 @@ hardware:
   light_sources:  # Light sources: Each instrument needs at least one declared excitation source.
     -
       kind: ""  # Light source kind: Core excitation-source class. | Allowed values (canonical IDs): laser, white_light_laser, led, arc_lamp, metal_halide, halogen_lamp, multiphoton_laser, supercontinuum
-      manufacturer: ""  # Light source manufacturer: Needed for unambiguous hardware identification.
-      model: ""  # Light source model: Needed for unambiguous hardware identification.
-      product_code: ""  # Light source product code: Catalog/product code for exact source variant tracking when available.
+      manufacturer: ""  # Light source manufacturer: Company/vendor/brand that makes the declared light source component.
+      model: ""  # Light source model: Vendor-facing hardware model/designation used as the primary structured identity field for the component.
+      product_code: ""  # Light source product code: Explicit catalog/order/SKU/reference code only when separately known from the model; leave missing when unknown.
       technology: ""  # Light source technology subtype: Helpful subtype information for lasers or LED engines. | Allowed values (canonical IDs): diode, dpss, led_array, supercontinuum, ti_sapphire, other
       path: ""  # Light source path tag: Optional path tag to associate a source with specific illumination routes. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
       role: ""  # Light source role: Structured role assignment separates excitation and STED depletion lasers without relying on free-text notes. | Allowed values (canonical IDs): excitation, depletion, activation, alignment, transmitted_illumination
@@ -167,7 +168,8 @@ hardware:
               component_type: ""  # Cube emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             path: ""  # Cube position path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
             name: ""  # Cube name
-            product_code: ""  # Cube product code
+            model: ""  # Cube model: Vendor-facing cube model/designation.
+            product_code: ""  # Cube product code: Explicit catalog/order/SKU/reference code for the cube only when separately known from its model/designation.
             notes: ""  # Cube notes
             dichroic:  # Cube position dichroic
               cutoffs_nm:  # Cube dichroic cutoffs (nm)
@@ -195,7 +197,8 @@ hardware:
           Pos_1:
             component_type: ""  # Excitation position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             manufacturer: ""  # Excitation position component manufacturer
-            product_code: ""  # Excitation position component product code
+            model: ""  # Excitation position component model: Vendor-facing excitation component model/designation.
+            product_code: ""  # Excitation position component product code: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
             bands:  # Excitation position multiband array
               -
                 center_nm: ""  # Excitation position band center (nm)
@@ -216,7 +219,8 @@ hardware:
                 width_nm: ""  # Dichroic position band width (nm)
             component_type: ""  # Dichroic position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             manufacturer: ""  # Dichroic position component manufacturer
-            product_code: ""  # Dichroic position component product code
+            model: ""  # Dichroic position component model: Vendor-facing dichroic component model/designation.
+            product_code: ""  # Dichroic position component product code: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
             center_nm: ""  # Dichroic position center wavelength (nm)
             width_nm: ""  # Dichroic position bandwidth (nm)
             cut_on_nm: ""  # Dichroic position cut-on wavelength (nm)
@@ -239,7 +243,8 @@ hardware:
           Pos_1:
             component_type: ""  # Emission position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             manufacturer: ""  # Emission position component manufacturer
-            product_code: ""  # Emission position component product code
+            model: ""  # Emission position component model: Vendor-facing emission component model/designation.
+            product_code: ""  # Emission position component product code: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
             bands:  # Emission position multiband array
               -
                 center_nm: ""  # Emission position band center (nm)
@@ -254,7 +259,7 @@ hardware:
       -
         id: ""  # Endpoint ID: Stable endpoint key usable as splitter branch target.
         endpoint_type: ""  # Endpoint type: Endpoint class used by runtime for detector/eyepiece/camera-port behavior. | Allowed values (canonical IDs): detector, camera_port, eyepiece
-        display_label: ""  # Endpoint display label: Human-readable endpoint name for virtual microscope selection UI.
+        display_label: ""  # Endpoint display label: Local/display endpoint label for UI selection; not a replacement for structured model or product_code fields.
         path: ""  # Endpoint optical route: Optional route tag for endpoint-specific graph wiring. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
     splitters:  # Light path splitters
       -
@@ -280,7 +285,7 @@ hardware:
       id: ""  # Objective ID: Stable per-objective key used for QC mapping.
       manufacturer: ""  # Objective manufacturer: Needed for objective identification.
       model: ""  # Objective model: Needed for objective identification.
-      product_code: ""  # Objective product code: Very useful for staff lookup, but not minimal.
+      product_code: ""  # Objective product code: Explicit catalog/order/SKU/reference code only; optional and must not be inferred from model or name.
       magnification: ""  # Objective magnification: Core reporting field.
       numerical_aperture: ""  # Objective numerical aperture: Core reporting field.
       working_distance: ""  # Objective working distance: Helpful reference metadata, not usually minimal for methods.

@@ -33,6 +33,34 @@ class LightPathParserTests(unittest.TestCase):
         details = payload["stages"]["excitation"][0]["positions"][0]["details"]
         self.assertEqual(details, "Chroma | ET488/10 | Primary GFP channel")
 
+
+    def test_details_preserve_model_and_product_code_as_distinct_fields(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "excitation_mechanisms": [
+                            {
+                                "name": "Excitation Wheel",
+                                "type": "filter_wheel",
+                                "positions": {
+                                    1: {
+                                        "component_type": "bandpass",
+                                        "manufacturer": "Semrock",
+                                        "model": "BrightLine 615/10",
+                                        "product_code": "FF01-615/10-25",
+                                    }
+                                },
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+
+        details = payload["stages"]["excitation"][0]["positions"][0]["details"]
+        self.assertEqual(details, "Semrock | BrightLine 615/10 | FF01-615/10-25")
+
     def test_stage_mechanism_includes_notes(self) -> None:
         payload = generate_virtual_microscope_payload(
             {

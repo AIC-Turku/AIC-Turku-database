@@ -196,7 +196,8 @@ hardware:
         2:
           component_type: bandpass
           manufacturer: Semrock
-          product_code: BrightLine 615/10
+          model: BrightLine 615/10
+          product_code: ""
           center_nm: 615
           width_nm: 10
 

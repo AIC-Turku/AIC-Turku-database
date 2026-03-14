@@ -193,6 +193,18 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertEqual(microscope["manufacturer"], "DTO Manufacturer")
         self.assertEqual(microscope["hardware"]["light_sources"][0]["display_label"], "DTO Laser")
 
+    def test_identity_fields_do_not_conflate_model_with_name_in_authoritative_dto_builders(self) -> None:
+        builder_source = (REPO_ROOT / "scripts" / "dashboard_builder.py").read_text(encoding="utf-8")
+        forbidden_fallbacks = [
+            'model = clean_text(obj.get("model") or obj.get("name"))',
+            'model = clean_text(modulator.get("model") or modulator.get("name"))',
+            'model = clean_text(logic.get("model") or logic.get("name"))',
+            'model = clean_text(scanner.get("model") or scanner.get("name"))',
+            'model = clean_text(changer.get("model") or changer.get("name"))',
+        ]
+        for fallback in forbidden_fallbacks:
+            self.assertNotIn(fallback, builder_source)
+
     def test_runtime_and_app_keep_strict_mode_gates_for_non_authoritative_fallbacks(self) -> None:
         runtime_source = RUNTIME_PATH.read_text(encoding="utf-8")
         app_source = APP_PATH.read_text(encoding="utf-8")

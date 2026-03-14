@@ -245,8 +245,130 @@ def _is_descriptive_wavelength(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip()) and not _is_valid_wavelength(value)
 
 
+
+_NAME_MODEL_REDUNDANCY_PATHS: tuple[str, ...] = (
+    'hardware.light_sources',
+    'hardware.detectors',
+    'hardware.objectives',
+    'hardware.optical_modulators',
+    'hardware.illumination_logic',
+    'hardware.magnification_changers',
+    'hardware.stages',
+    'hardware.light_path.endpoints',
+    'hardware.light_path.splitters',
+    'hardware.light_path.cube_mechanisms',
+    'hardware.light_path.excitation_mechanisms',
+    'hardware.light_path.dichroic_mechanisms',
+    'hardware.light_path.emission_mechanisms',
+)
+
+
+def _append_name_model_redundancy_warnings(
+    warnings: list[ValidationIssue],
+    payload: dict[str, Any],
+    instrument_file: Path,
+) -> None:
+    """Warn when local display `name` duplicates structured `model`.
+
+    `name` is a local/display label while `model` is the primary structured identity.
+    If both are present and identical, `name` is redundant and increases semantic drift.
+    """
+
+    for path in _NAME_MODEL_REDUNDANCY_PATHS:
+        for node in _resolve_path_nodes(payload, path):
+            if not isinstance(node.value, list):
+                continue
+            for index, item in enumerate(node.value):
+                if not isinstance(item, dict):
+                    continue
+                raw_name = item.get('name')
+                raw_model = item.get('model')
+                if not (isinstance(raw_name, str) and isinstance(raw_model, str)):
+                    continue
+                name = raw_name.strip()
+                model = raw_model.strip()
+                if not name or not model:
+                    continue
+                if name == model:
+                    warnings.append(
+                        ValidationIssue(
+                            code='redundant_name_model',
+                            path=f"{instrument_file.as_posix()}:{node.path}[{index}]",
+                            message=(
+                                "`name` duplicates `model`. Keep `model` for structured identity and "
+                                "omit redundant `name` unless a distinct local display label is needed."
+                            ),
+                        )
+                    )
+
+
+
+_PRODUCT_CODE_REDUNDANCY_PATHS: tuple[str, ...] = (
+    'hardware.light_sources',
+    'hardware.detectors',
+    'hardware.objectives',
+    'hardware.light_path.cube_mechanisms',
+    'hardware.light_path.excitation_mechanisms',
+    'hardware.light_path.dichroic_mechanisms',
+    'hardware.light_path.emission_mechanisms',
+)
+
+
+def _append_product_code_redundancy_warnings(
+    warnings: list[ValidationIssue],
+    payload: dict[str, Any],
+    instrument_file: Path,
+) -> None:
+    """Warn when product_code duplicates model or name.
+
+    product_code should be a distinct catalog/SKU/reference code, not a mirror of model/name.
+    """
+
+    def _check_mapping(item: dict[str, Any], path: str) -> None:
+        product_code = item.get('product_code')
+        if not isinstance(product_code, str) or not product_code.strip():
+            return
+        pc = product_code.strip()
+        for field in ('model', 'name'):
+            raw = item.get(field)
+            if isinstance(raw, str) and raw.strip() and raw.strip() == pc:
+                warnings.append(
+                    ValidationIssue(
+                        code='redundant_product_code',
+                        path=f"{instrument_file.as_posix()}:{path}",
+                        message=(
+                            f"`product_code` duplicates `{field}`. Keep `product_code` only for distinct "
+                            "catalog/SKU/reference values."
+                        ),
+                    )
+                )
+                return
+
+    for path in _PRODUCT_CODE_REDUNDANCY_PATHS:
+        for node in _resolve_path_nodes(payload, path):
+            if isinstance(node.value, list):
+                for index, item in enumerate(node.value):
+                    if isinstance(item, dict):
+                        _check_mapping(item, f"{node.path}[{index}]")
+            elif isinstance(node.value, dict):
+                _check_mapping(node.value, node.path)
 def _nodes_have_present_value(nodes: list[ResolvedNode]) -> bool:
     return any(node.value not in (None, '') for node in nodes)
+
+
+def _context_item_alias_present(rule: PolicyRule, context_item: Any) -> bool:
+    if not isinstance(context_item, dict) or not rule.aliases:
+        return False
+    for alias in rule.aliases:
+        if not isinstance(alias, str):
+            continue
+        leaf = alias.split('.')[-1].replace('[]', '').replace('{}', '')
+        value = context_item.get(leaf)
+        if isinstance(value, str) and value.strip():
+            return True
+        if value not in (None, '') and not isinstance(value, str):
+            return True
+    return False
 
 
 def _get_software_roles(payload: dict[str, Any]) -> set[str]:
@@ -933,7 +1055,7 @@ def _evaluate_required_if(
                 module_ids = {
                     canonical
                     for module in module_nodes[0].value
-                    for raw_name in [module.get('name') if isinstance(module, dict) else None]
+                    for raw_name in [module.get('type') or module.get('name') if isinstance(module, dict) else None]
                     for canonical in [vocabulary.resolve_canonical('modules', raw_name) or raw_name if isinstance(raw_name, str) else None]
                     if isinstance(canonical, str)
                 }
@@ -1208,14 +1330,20 @@ def validate_instrument_ledgers(
         if payload is None:
             continue
 
+        _append_name_model_redundancy_warnings(warnings, payload, instrument_file)
+        _append_product_code_redundancy_warnings(warnings, payload, instrument_file)
+
         for rule in policy.rules:
             resolved = _resolve_rule_nodes(payload, rule.path)
             resolved_has_value = _nodes_have_present_value(resolved)
+            alias_has_value = False
 
             if rule.aliases:
                 for alias in rule.aliases:
                     alias_resolved = _resolve_rule_nodes(payload, alias)
-                    if _nodes_have_present_value(alias_resolved) and not resolved_has_value:
+                    alias_present = _nodes_have_present_value(alias_resolved)
+                    alias_has_value = alias_has_value or alias_present
+                    if alias_present and not resolved_has_value:
                         warnings.append(
                             ValidationIssue(
                                 code='field_alias_used',
@@ -1244,7 +1372,7 @@ def validate_instrument_ledgers(
                     item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                 )
 
-            if is_required and not resolved_has_value:
+            if is_required and not (resolved_has_value or alias_has_value):
                 if is_retired_instrument:
                     continue
                 warnings.append(
@@ -1272,6 +1400,8 @@ def validate_instrument_ledgers(
                         item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
                     )
                     if required_for_item and value in (None, ''):
+                        if _context_item_alias_present(rule, node.context_item):
+                            continue
                         warnings.append(
                             ValidationIssue(
                                 code='missing_conditional_field',
