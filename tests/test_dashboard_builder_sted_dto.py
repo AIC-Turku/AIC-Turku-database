@@ -243,6 +243,11 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertIn("magnification_changer_sentences", dto["methods"])
         self.assertIn("optical_modulator_sentences", dto["methods"])
         self.assertIn("illumination_logic_sentences", dto["methods"])
+        self.assertIn("quarep_light_path_recommendation", dto["methods"])
+        self.assertIn("specimen_preparation_recommendation", dto["methods"])
+        self.assertIn("acquisition_settings_recommendation", dto["methods"])
+        self.assertIn("nyquist_recommendation", dto["methods"])
+        self.assertIn("data_deposition_recommendation", dto["methods"])
         self.assertNotIn("canonical", dto)
         self.assertNotIn("methods_generation", dto)
 

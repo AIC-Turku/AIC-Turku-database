@@ -307,15 +307,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 : `Installed modules used included ${humanJoin(labels)}.`;
         }
         if (prefix === "scanner") {
-            return `The scan engine used was ${humanJoin(labels)}.`;
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         if (prefix === "obj") {
-            return labels.length === 1
-                ? `Objective used was ${labels[0]}.`
-                : `Objectives used were ${humanJoin(labels)}.`;
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         if (prefix === "det") {
-            return `Detection was performed using ${humanJoin(labels)}.`;
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         if (prefix === "light") {
             const excitationLabels = selections.filter(item => {
@@ -335,14 +333,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             return clauses.join(' ');
         }
         if (prefix === "magnification-changer") {
-            return labels.length === 1
-                ? `Magnification changer setting used was ${labels[0]}.`
-                : `Magnification changer settings used were ${humanJoin(labels)}.`;
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         if (prefix === "filter") {
-            return labels.length === 1
-                ? `The selected optical filter was ${labels[0]}.`
-                : `Selected optical filters were ${humanJoin(labels)}.`;
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
     }
@@ -466,16 +460,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        const groupedSelections = [
-            groupedLabelSentence("modality", getCheckedSelections("modality")),
-            groupedLabelSentence("module", getCheckedSelections("module")),
-            groupedLabelSentence("scanner", getCheckedSelections("scanner")),
-            groupedLabelSentence("obj", getCheckedSelections("obj")),
-            groupedLabelSentence("light", getCheckedSelections("light")),
-            groupedLabelSentence("det", getCheckedSelections("det")),
-            groupedLabelSentence("magnification-changer", getCheckedSelections("magnification-changer")),
-            groupedLabelSentence("filter", getCheckedSelections("filter")),
-        ];
+        const groupedSelections = {
+            modality: groupedLabelSentence("modality", getCheckedSelections("modality")),
+            module: groupedLabelSentence("module", getCheckedSelections("module")),
+            scanner: groupedLabelSentence("scanner", getCheckedSelections("scanner")),
+            objective: groupedLabelSentence("obj", getCheckedSelections("obj")),
+            light: groupedLabelSentence("light", getCheckedSelections("light")),
+            detector: groupedLabelSentence("det", getCheckedSelections("det")),
+            magnificationChanger: groupedLabelSentence("magnification-changer", getCheckedSelections("magnification-changer")),
+            filter: groupedLabelSentence("filter", getCheckedSelections("filter")),
+        };
 
         const specialistSelections = dedupeSentences([
             ...getCheckedSelections("optical-modulator").map(item => item.methodSentence),
@@ -483,25 +477,47 @@ document.addEventListener("DOMContentLoaded", async () => {
             ...getCheckedSelections("splitter").map(item => item.methodSentence),
         ]);
 
-        const textParts = dedupeSentences([
+        const paragraphHardware = dedupeSentences([
             dto.methods?.base_sentence,
-            ...groupedSelections,
+            groupedSelections.modality,
+            groupedSelections.module,
+            groupedSelections.scanner,
+            groupedSelections.objective,
+            groupedSelections.light,
+            groupedSelections.detector,
+            groupedSelections.magnificationChanger,
             dto.methods?.environment_sentence,
             ...(dto.methods?.stage_sentences || []),
             dto.methods?.autofocus_sentence,
             dto.methods?.triggering_sentence,
+        ]).join(" ");
+
+        const paragraphLightPath = dedupeSentences([
+            groupedSelections.filter,
             ...specialistSelections,
+            dto.methods?.quarep_light_path_recommendation,
+        ]).join(" ");
+
+        const paragraphAcquisition = dedupeSentences([
             ...(dto.methods?.processing_sentences || []),
-            "[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)].",
-            "[PLEASE SPECIFY: Exposure time(s), excitation power(s), camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable].",
-            "Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile.",
-            "[DATA AVAILABILITY]: The raw microscopy image files (.nd2/.czi/.lif) generated in this study should be deposited in BioImage Archive or Zenodo to support Open Science and reproducibility; include the accession number or DOI in the final manuscript.",
-        ]);
+            dto.methods?.specimen_preparation_recommendation,
+            dto.methods?.acquisition_settings_recommendation,
+            dto.methods?.nyquist_recommendation,
+        ]).join(" ");
+
+        const paragraphDeposition = cleanText(dto.methods?.data_deposition_recommendation);
+
+        const textParts = [
+            paragraphHardware,
+            paragraphLightPath,
+            paragraphAcquisition,
+            paragraphDeposition,
+        ].map(cleanText).filter(Boolean);
 
         const signature = buildSelectionSignature(dto);
         accumulatedEntries.set(signature, {
             instrumentId: dto.id,
-            text: textParts.join(" "),
+            text: textParts.join("\n\n"),
         });
         usedInstruments.set(dto.id, dto.display_name || dto.id);
         updateOutputText();
