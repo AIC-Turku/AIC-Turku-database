@@ -38,10 +38,13 @@ hardware:
     url: ''
 
   light_sources:
-  - kind: led   # Flag: Added placeholder. Policy strictly requires min_items: 1 for light_sources.
-    manufacturer: ''   # Flag: Required field.
-    model: ''   # Flag: Required field.
-    notes: Placeholder added to satisfy schema validation. EVOS uses LED Light Cubes.
+  - kind: led
+    manufacturer: Thermo Fisher / AMG
+    model: EVOS LED Light Cube illumination
+    wavelength_nm: 357/44; 445/45; 470/22; 531/40; 628/40
+    power: ''
+    notes: Integrated LED illumination via interchangeable EVOS Light Cubes (DAPI, CFP, GFP/Alexa 488, RFP/Alexa 555, Cy5/Alexa 647).
+    url: ''
 
   detectors:
   - kind: cmos

@@ -72,48 +72,54 @@ hardware:
 
   light_sources:
   - kind: laser
-    manufacturer: ''   # Flag: Required field. Needs a manufacturer.
+    manufacturer: GE Healthcare
     model: 405 nm
+    role: excitation
     technology: diode
     wavelength_nm: '405'
     power: 100 mW
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: GE Healthcare
     model: 445 nm
+    role: excitation
     technology: diode
     wavelength_nm: '445'
     power: 100 mW
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: GE Healthcare
     model: 488 nm
+    role: excitation
     technology: dpss
     wavelength_nm: '488'
     power: 100 mW
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: GE Healthcare
     model: 514 nm
+    role: excitation
     technology: dpss
     wavelength_nm: '514'
     power: 100 mW
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: GE Healthcare
     model: 568 nm
+    role: excitation
     technology: dpss
     wavelength_nm: '568'
     power: 100 mW
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: GE Healthcare
     model: 642 nm
+    role: excitation
     technology: diode
     wavelength_nm: '642'
     power: 110 mW
