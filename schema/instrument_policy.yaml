@@ -1177,6 +1177,22 @@ sections:
         status: optional
         type: string
 
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.bands
+        title: Excitation position multiband array
+        status: conditional
+        type: list
+        item_type: object
+
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.bands[].center_nm
+        title: Excitation position band center (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.bands[].width_nm
+        title: Excitation position band width (nm)
+        status: conditional
+        type: positive_number
+
       - path: hardware.light_path.excitation_mechanisms[].positions{}.center_nm
         title: Excitation position center wavelength (nm)
         status: conditional
@@ -1360,6 +1376,22 @@ sections:
         title: Emission position component product code
         status: optional
         type: string
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.bands
+        title: Emission position multiband array
+        status: conditional
+        type: list
+        item_type: object
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.bands[].center_nm
+        title: Emission position band center (nm)
+        status: conditional
+        type: positive_number
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.bands[].width_nm
+        title: Emission position band width (nm)
+        status: conditional
+        type: positive_number
 
       - path: hardware.light_path.emission_mechanisms[].positions{}.center_nm
         title: Emission position center wavelength (nm)
