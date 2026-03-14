@@ -133,7 +133,8 @@ hardware:
       url: ''
 
   detectors:
-    - kind: scmos
+    - id: detector_1
+      kind: scmos
       manufacturer: Photometrics
       model: Kinetix
       pixel_pitch_um: 6.5
@@ -141,7 +142,8 @@ hardware:
       sensor_format_px: "3200 x 3200"
       notes: Master Camera (1st F-cam) - GFP/Cy5 in DualCam mode
       url: https://www.photometrics.com/products/kinetix-family/kinetix
-    - kind: scmos
+    - id: detector_2
+      kind: scmos
       manufacturer: Photometrics
       model: Kinetix
       pixel_pitch_um: 6.5
@@ -151,6 +153,16 @@ hardware:
       url: https://www.photometrics.com/products/kinetix-family/kinetix
 
   light_path:
+    endpoints:
+      - id: detector_1
+        endpoint_type: detector
+        display_label: Kinetix 1
+        path: shared
+      - id: detector_2
+        endpoint_type: detector
+        display_label: Kinetix 2
+        path: shared
+
     excitation_mechanisms:
       - name: Crest Excitation Wheel
         type: filter_wheel
@@ -313,15 +325,42 @@ hardware:
         type: emission_splitter
         path: transmitted
         notes: Neutral filter for assigning the light path to single camera
+        branches:
+          - id: nikon_dia_primary
+            label: Primary Path
+            mode: transmitted
+            component:
+              component_type: passthrough
+            target_ids:
+              - detector_1
+              - detector_2
       - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
         type: emission_splitter
         path: confocal
         cutoffs_nm: [485, 560, 645]
         notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
+        branches:
+          - id: dualcam_gfpmcherry_primary
+            label: Primary Path
+            mode: transmitted
+            component:
+              component_type: passthrough
+            target_ids:
+              - detector_1
+              - detector_2
       - name: MXR00545 V3 DualCam-CFP/YFP 2 Bands Celesta Set
         type: emission_splitter
         path: confocal
         notes: 'Additional DualCam Splitter option for CFP/YFP imaging.'
+        branches:
+          - id: dualcam_cfpyfp_primary
+            label: Primary Path
+            mode: transmitted
+            component:
+              component_type: passthrough
+            target_ids:
+              - detector_1
+              - detector_2
 
   objectives:
     - id: 4x_air

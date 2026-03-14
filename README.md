@@ -77,6 +77,15 @@ That selector is populated from the validated / normalized payload (`available_r
 
 If only one route is available, the selector stays hidden.
 
+### Runtime strictness vs simulator approximations
+
+The runtime now distinguishes between:
+
+- **Strict hardware-truth mode (default):** honors only explicit validated graph data (`available_routes`, explicit splitter `branches[]`, explicit `target_ids`, explicit detector selections). In this mode the runtime/UI do **not** auto-select missing routes, invent detector targets, create virtual detectors, or auto-repair blocked paths.
+- **Approximation mode (explicit opt-in):** keeps usability-oriented simulator fallbacks for exploratory workflows (for example inferred route catalog fallback, default branch/target conveniences, and blocked-path auto-repair in the app).
+
+Approximation behavior is non-authoritative by design and should not be interpreted as hardware source-of-truth.
+
 ### FPbase integration
 
 Fluorophore spectra are loaded in this order:

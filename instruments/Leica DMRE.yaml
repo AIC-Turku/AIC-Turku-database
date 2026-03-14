@@ -37,12 +37,25 @@ hardware:
       url: ''
   
   light_path:
+    endpoints:
+      - id: camera_port_main
+        endpoint_type: camera_port
+        display_label: Camera Port
+        path: transmitted
     splitters:
       - name: Camera Port
         # VOCAB VERIFIED: 'emission_splitter' is canonical
         type: emission_splitter
         path: transmitted
         notes: Camera port in microscope body.
+        branches:
+          - id: camera_port_primary
+            label: Camera Port Path
+            mode: transmitted
+            component:
+              component_type: passthrough
+            target_ids:
+              - camera_port_main
 
   objectives:
     - id: 10x_air

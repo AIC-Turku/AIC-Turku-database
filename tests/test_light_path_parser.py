@@ -115,10 +115,28 @@ class LightPathParserTests(unittest.TestCase):
                             {
                                 "name": "Camera Splitter",
                                 "dichroic": {"component_type": "dichroic", "cutoffs_nm": [560]},
-                                "path_1": {"emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50}},
-                                "path_2": {"emission_filter": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75}},
+                                "branches": [
+                                    {
+                                        "id": "green",
+                                        "label": "Green",
+                                        "mode": "transmitted",
+                                        "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                                        "target_ids": ["detector_1"],
+                                    },
+                                    {
+                                        "id": "red",
+                                        "label": "Red",
+                                        "mode": "reflected",
+                                        "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75},
+                                        "target_ids": ["detector_2"],
+                                    },
+                                ],
                             }
-                        ]
+                        ],
+                        "endpoints": [
+                            {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
+                            {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
+                        ],
                     }
                 }
             }
@@ -255,17 +273,30 @@ class LightPathParserTests(unittest.TestCase):
                             "name": "Top-level Splitter",
                             "path": "confocal",
                             "dichroic": {"component_type": "dichroic", "cutoffs_nm": [560]},
-                            "path_1": {
-                                "name": "Red Path",
-                                "emission_filter": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75},
-                            },
-                            "path_2": {
-                                "name": "Green Path",
-                                "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
-                            },
+                            "branches": [
+                                {
+                                    "id": "red",
+                                    "name": "Red Path",
+                                    "mode": "transmitted",
+                                    "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75},
+                                    "target_ids": ["detector_1"],
+                                },
+                                {
+                                    "id": "green",
+                                    "name": "Green Path",
+                                    "mode": "reflected",
+                                    "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                                    "target_ids": ["detector_2"],
+                                },
+                            ],
                         }
                     ],
-                    "light_path": {},
+                    "light_path": {
+                        "endpoints": [
+                            {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
+                            {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
+                        ]
+                    },
                 }
             }
         )
@@ -278,6 +309,54 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(splitter["branches"][1]["mode"], "reflected")
         self.assertEqual(splitter["branches"][0]["component"]["center_nm"], 700.0)
         self.assertEqual(splitter["branches"][1]["component"]["center_nm"], 525.0)
+
+    def test_splitter_payload_does_not_fabricate_branches_from_legacy_path_nodes(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "splitters": [
+                            {
+                                "name": "Legacy Splitter",
+                                "path_1": {"targets": ["cam"]},
+                                "path_2": {"targets": ["pmt"]},
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+
+        self.assertEqual(payload["splitters"][0]["branches"], [])
+        self.assertTrue(payload["metadata"].get("graph_incomplete"))
+
+    def test_splitter_branch_targets_match_explicit_endpoint_ids_only(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "endpoints": [
+                            {"id": "cam_main", "endpoint_type": "camera_port", "display_label": "Main Cam Port"},
+                        ],
+                        "splitters": [
+                            {
+                                "name": "Routing Splitter",
+                                "branches": [
+                                    {
+                                        "id": "path_1",
+                                        "label": "Camera branch",
+                                        "target_ids": ["Main Cam Port"],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                }
+            }
+        )
+
+        self.assertEqual(payload["splitters"][0]["branches"][0]["target_ids"], [])
+        self.assertTrue(payload["metadata"].get("graph_incomplete"))
 
     def test_cube_payload_exposes_direct_component_aliases(self) -> None:
         payload = generate_virtual_microscope_payload(
@@ -390,6 +469,70 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(payload["default_route"], "confocal")
         self.assertGreaterEqual(len(payload["valid_paths"]), 1)
 
+
+    def test_generate_virtual_microscope_payload_can_disable_inferred_terminals(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "instrument": {"ocular_availability": "trinocular"},
+                "hardware": {
+                    "light_sources": [{"kind": "halogen_lamp", "path": "transmitted"}],
+                    "light_path": {},
+                },
+            },
+            include_inferred_terminals=False,
+        )
+
+        self.assertEqual(payload["terminals"], [])
+        self.assertTrue(payload["metadata"].get("graph_incomplete"))
+
+    def test_source_position_role_stays_missing_when_yaml_role_is_missing(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_sources": [
+                        {"kind": "halogen_lamp", "path": "transmitted", "name": "Lamp"},
+                    ]
+                }
+            }
+        )
+
+        source = payload["light_sources"][0]["options"][0]["value"]
+        self.assertEqual(source.get("role"), "")
+        self.assertEqual(source.get("simulator_inferred_role"), "transmitted_illumination")
+
+    def test_product_code_is_not_backfilled_from_model_or_name(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_sources": [{"kind": "laser", "model": "Laser-1", "name": "Legacy Name"}],
+                    "detectors": [{"id": "det-1", "kind": "hyd", "model": "HyD Model"}],
+                    "light_path": {
+                        "endpoints": [{"id": "ep-1", "endpoint_type": "detector", "model": "Endpoint Model", "name": "Endpoint"}],
+                    },
+                }
+            }
+        )
+
+        source = payload["light_sources"][0]["options"][0]["value"]
+        detector = payload["detectors"][0]["options"][0]["value"]
+        endpoint = next(row for row in payload["terminals"] if row.get("terminal_id") == "ep_1")
+
+        self.assertIsNone(source.get("product_code"))
+        self.assertIsNone(detector.get("product_code"))
+        self.assertIsNone(endpoint.get("product_code"))
+
+    def test_detector_manufacturer_is_not_backfilled_from_name(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "detectors": [{"id": "det-1", "kind": "hyd", "name": "Detector Legacy Name"}],
+                    "light_path": {},
+                }
+            }
+        )
+
+        detector = payload["detectors"][0]["options"][0]["value"]
+        self.assertIsNone(detector.get("manufacturer"))
 
     def test_infer_transmitted_light_source_role_from_path_and_kind(self) -> None:
         self.assertEqual(
