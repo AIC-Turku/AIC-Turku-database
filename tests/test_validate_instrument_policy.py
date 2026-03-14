@@ -984,5 +984,103 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertTrue(any("role='depletion'" in msg for msg in gap_messages))
         self.assertTrue(any('supports_time_gating=true' in msg for msg in gap_messages))
 
+
+    def test_optical_component_discriminator_rules_fail_when_required_shape_fields_missing(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'light-path',
+                        'title': 'Light Path',
+                        'rules': [
+                            {'path': 'hardware.light_path.excitation_mechanisms[].positions{}.component_type', 'status': 'conditional', 'type': 'string', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[].positions{}'}},
+                            {'path': 'hardware.light_path.excitation_mechanisms[].positions{}.center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['bandpass', 'notch']}}},
+                            {'path': 'hardware.light_path.excitation_mechanisms[].positions{}.width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['bandpass', 'notch']}}},
+                            {'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['longpass']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['dichroic', 'multiband_dichroic', 'polychroic']}}},
+                            {'path': 'hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['shortpass']}}},
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/missing-optical-shape-fields.yaml',
+            {
+                'instrument': {'instrument_id': 'missing-optical-shape-fields'},
+                'hardware': {
+                    'light_path': {
+                        'excitation_mechanisms': [{'positions': {'Pos_1': {'component_type': 'bandpass', 'width_nm': 20}}}],
+                        'emission_mechanisms': [{'positions': {'Pos_1': {'component_type': 'multiband_bandpass'}, 'Pos_2': {'component_type': 'shortpass'}}}],
+                        'dichroic_mechanisms': [{'positions': {'Pos_1': {'component_type': 'longpass'}, 'Pos_2': {'component_type': 'multiband_dichroic'}}}],
+                        'cube_mechanisms': [
+                            {'positions': {'Pos_1': {
+                                'excitation_filter': {'component_type': 'shortpass'},
+                                'dichroic': {'component_type': 'multiband_dichroic'},
+                                'emission_filter': {'component_type': 'bandpass', 'center_nm': 525, 'width_nm': 30},
+                            }}}
+                        ],
+                    }
+                },
+            },
+        )
+
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        missing_messages = [w.message for w in warnings if w.code == 'missing_conditional_field']
+        self.assertTrue(any('hardware.light_path.excitation_mechanisms[].positions{}.center_nm' in message for message in missing_messages))
+        self.assertTrue(any('hardware.light_path.emission_mechanisms[].positions{}.bands' in message for message in missing_messages))
+        self.assertTrue(any('hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm' in message for message in missing_messages))
+        self.assertTrue(any('hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm' in message for message in missing_messages))
+        self.assertTrue(any('hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm' in message for message in missing_messages))
+
+    def test_optical_component_discriminator_rules_accept_valid_shape_fields(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'light-path',
+                        'title': 'Light Path',
+                        'rules': [
+                            {'path': 'hardware.light_path.excitation_mechanisms[].positions{}.center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['bandpass', 'notch']}}},
+                            {'path': 'hardware.light_path.excitation_mechanisms[].positions{}.width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['bandpass', 'notch']}}},
+                            {'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['longpass']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['dichroic', 'multiband_dichroic', 'polychroic']}}},
+                            {'path': 'hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['shortpass']}}},
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/valid-optical-shape-fields.yaml',
+            {
+                'instrument': {'instrument_id': 'valid-optical-shape-fields'},
+                'hardware': {
+                    'light_path': {
+                        'excitation_mechanisms': [{'positions': {'Pos_1': {'component_type': 'bandpass', 'center_nm': 488, 'width_nm': 20}}}],
+                        'emission_mechanisms': [{'positions': {'Pos_1': {'component_type': 'multiband_bandpass', 'bands': [{'center_nm': 525, 'width_nm': 30}]}, 'Pos_2': {'component_type': 'shortpass', 'cut_off_nm': 700}}}],
+                        'dichroic_mechanisms': [{'positions': {'Pos_1': {'component_type': 'longpass', 'cut_on_nm': 560}, 'Pos_2': {'component_type': 'multiband_dichroic', 'cutoffs_nm': [405, 488, 561, 640]}}}],
+                        'cube_mechanisms': [
+                            {'positions': {'Pos_1': {
+                                'excitation_filter': {'component_type': 'shortpass', 'cut_off_nm': 700},
+                                'dichroic': {'component_type': 'multiband_dichroic', 'cutoffs_nm': [405, 488, 561, 640]},
+                                'emission_filter': {'component_type': 'bandpass', 'center_nm': 525, 'width_nm': 30},
+                            }}}
+                        ],
+                    }
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        self.assertNotIn('missing_conditional_field', {warning.code for warning in warnings})
+
 if __name__ == '__main__':
     unittest.main()
