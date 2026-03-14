@@ -44,7 +44,7 @@ hide:
     min-width: 0;
   }
   .vm-section-title {
-    margin: 0 0 6px;
+    margin: 0 0 3px;
     font-size: 13px;
     color: var(--muted);
     letter-spacing: 0.05em;
@@ -54,7 +54,7 @@ hide:
   .vm-panel-copy {
     font-size: 12px;
     color: var(--muted);
-    margin: 2px 0 10px;
+    margin: 0 0 8px;
     line-height: 1.45;
   }
   .vm-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
@@ -155,7 +155,12 @@ hide:
     flex-wrap: wrap;
     margin-top: 10px;
   }
-  .vm-chart-stack { display: grid; gap: 10px; margin-top: 10px; }
+  .vm-chart-stack {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .vm-chart-panel {
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -218,7 +223,7 @@ hide:
   .vm-pipeline-shell {
     display: grid;
     gap: 14px;
-    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+    grid-template-columns: 1fr;
     align-items: start;
   }
   .vm-pipeline {
@@ -389,6 +394,10 @@ hide:
     .vm-results-grid {
       grid-template-columns: 1fr;
     }
+
+    .vm-chart-stack {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
@@ -398,8 +407,15 @@ hide:
       <h2 class="vm-section-title" style="margin:0;">Microscope System</h2>
       <p style="font-size:12px; color:var(--muted); margin:2px 0 0 0;">Select a system to load its physical light path configuration.</p>
     </div>
-    <div class="vm-field" style="margin:0; flex-grow:1; max-width:420px;">
-      <select id="microscopeSelector" style="font-size:14px; padding:10px; font-weight:bold;"></select>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; flex-grow:1; min-width:min(100%, 480px);">
+      <div class="vm-field" style="margin:0; max-width:420px;">
+        <label for="microscopeSelector">System</label>
+        <select id="microscopeSelector" style="font-size:14px; padding:10px; font-weight:bold;"></select>
+      </div>
+      <div id="opticalRouteChooserWrap" class="vm-field vm-route-field" style="display:none; margin:0; max-width:420px;">
+        <label for="opticalRouteSelector">Optical route</label>
+        <select id="opticalRouteSelector" style="font-size:14px; padding:10px; font-weight:bold;"></select>
+      </div>
     </div>
   </header>
 
@@ -491,10 +507,6 @@ hide:
       <div>
         <h2 class="vm-section-title">2. Controlling the Optical Path</h2>
         <p class="vm-panel-copy">Choose the microscope route, then tune the optics and light sources below. The pipe colors visualize how the spectrum evolves along the path.</p>
-      </div>
-      <div id="opticalRouteChooserWrap" class="vm-field vm-route-field" style="display:none;">
-        <label for="opticalRouteSelector">Optical route</label>
-        <select id="opticalRouteSelector"></select>
       </div>
     </div>
     <div class="vm-utility-row">
