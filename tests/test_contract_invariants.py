@@ -69,6 +69,41 @@ def _normalize_contract_path(path: str) -> str:
 
 
 class ContractInvariantTests(unittest.TestCase):
+    def test_virtual_microscope_runtime_parses_cleanly(self) -> None:
+        proc = subprocess.run(
+            ["node", "-c", str(RUNTIME_PATH)],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(
+            proc.returncode,
+            0,
+            msg=f"Runtime parse check failed. stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}",
+        )
+
+    def test_runtime_uses_single_crosstalk_matrix_declaration(self) -> None:
+        runtime_source = RUNTIME_PATH.read_text(encoding="utf-8")
+        self.assertEqual(
+            runtime_source.count("const crosstalkMatrix = computeCrosstalkMatrix(results);"),
+            1,
+            msg="simulateInstrument must declare crosstalkMatrix only once.",
+        )
+
+    def test_evaluate_configuration_score_uses_pairwise_matrix_not_legacy_row_crosstalk(self) -> None:
+        runtime_source = RUNTIME_PATH.read_text(encoding="utf-8")
+        match = re.search(
+            r"function evaluateConfigurationScore\(simulation, fluorophores, tolerance\) \{(?P<body>[\s\S]*?)\n  \}\n\n  function computeCrosstalkMatrix",
+            runtime_source,
+        )
+        self.assertIsNotNone(match, msg="evaluateConfigurationScore function body should be present.")
+        body = match.group("body") if match else ""
+        self.assertIn("pairwiseCrosstalkByTarget", body)
+        self.assertIn("const matrix = simulation.crosstalkMatrix || {};", body)
+        self.assertNotIn("chosenRows.map((row) => row.crosstalkPct || 0)", body)
+        self.assertNotIn("chosenRows.reduce(\n      (product, row)", body)
+
     def test_critical_runtime_and_dto_fields_are_declared_in_schema(self) -> None:
         schema_paths = _schema_paths()
         required_paths = {

@@ -767,6 +767,134 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["missingCount"], 0)
         self.assertGreater(result["explicitCount"], 0)
 
+    def test_route_validation_rejects_wrong_route_stage_optics(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[450, 0], [488, 100], [530, 0]],
+                ex2p: [],
+                em: [[500, 0], [520, 100], [560, 0]]
+              },
+              exMax: 488,
+              emMax: 520
+            };
+            const instrument = {
+              metadata: { simulation_mode: 'strict', wavelength_grid: { min_nm: 450, max_nm: 650, step_nm: 2 } },
+              default_route: 'confocal',
+              available_routes: [{ id: 'confocal', label: 'Confocal' }, { id: 'epi', label: 'Epi' }]
+            };
+            const simulation = rt.simulateInstrument(
+              instrument,
+              {
+                sources: [{ display_label: 'Confocal Laser', path: 'confocal', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                excitation: [{ id: 'epi-ex', display_label: 'Epi EX', path: 'epi', component_type: 'passthrough' }],
+                dichroic: [{ id: 'epi-di', display_label: 'Epi DI', path: 'epi', component_type: 'passthrough' }],
+                emission: [{ id: 'epi-em', display_label: 'Epi EM', path: 'epi', component_type: 'passthrough' }],
+                splitters: [],
+                detectors: [{ id: 'confocal-pmt', display_label: 'Confocal PMT', path: 'confocal', kind: 'pmt' }],
+                selectionMap: {}
+              },
+              [fluor],
+              { currentRoute: 'confocal' }
+            );
+            return {
+              validSelection: simulation.validSelection,
+              routeViolation: simulation.routeViolation,
+              routeViolationDetails: simulation.routeViolationDetails,
+              resultsCount: simulation.results.length,
+              crosstalkKeys: Object.keys(simulation.crosstalkMatrix || {}).length,
+            };
+            """
+        )
+
+        self.assertFalse(result["validSelection"])
+        self.assertTrue(result["routeViolation"])
+        details = " ".join(result["routeViolationDetails"])
+        self.assertIn("Excitation component Epi EX is not on route confocal.", details)
+        self.assertIn("Dichroic Epi DI is not on route confocal.", details)
+        self.assertIn("Emission component Epi EM is not on route confocal.", details)
+        self.assertEqual(result["resultsCount"], 0)
+        self.assertEqual(result["crosstalkKeys"], 0)
+
+    def test_optimizer_current_route_stays_strict(self) -> None:
+        result = self.run_node_json(
+            """
+            const fluor = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: { ex1p: [[450, 0], [488, 100], [530, 0]], ex2p: [], em: [[500, 0], [520, 100], [560, 0]] },
+              exMax: 488,
+              emMax: 520
+            };
+            const instrument = {
+              available_routes: [{ id: 'confocal', label: 'Confocal' }, { id: 'epi', label: 'Epi' }],
+              default_route: 'epi',
+              light_sources: [{
+                id: 'sources',
+                positions: {
+                  1: { slot: 1, display_label: 'Confocal 488', path: 'confocal', kind: 'laser', wavelength_nm: 488 },
+                  2: { slot: 2, display_label: 'Epi 488', path: 'epi', kind: 'laser', wavelength_nm: 488 }
+                }
+              }],
+              detectors: [{
+                id: 'detectors',
+                positions: {
+                  1: { slot: 1, display_label: 'Confocal PMT', path: 'confocal', kind: 'pmt' },
+                  2: { slot: 2, display_label: 'Epi Camera', path: 'epi', kind: 'camera' }
+                }
+              }],
+              stages: { excitation: [], cube: [], dichroic: [], emission: [] },
+              splitters: [],
+              valid_paths: []
+            };
+            const optimized = rt.optimizeLightPath([fluor], instrument, { currentRoute: 'confocal' });
+            return optimized;
+            """
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["route"], "confocal")
+
+    def test_pairwise_crosstalk_annotations_are_added_to_rows(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor(key, exMax, emMax, ex, em) {
+              return { key, name: key, activeStateName: 'Default', spectra: { ex1p: ex, ex2p: [], em }, exMax, emMax };
+            }
+            const green = fluor('green', 488, 520, [[450, 0], [488, 100], [540, 0]], [[500, 0], [520, 100], [560, 0]]);
+            const red = fluor('red', 561, 600, [[530, 0], [561, 100], [600, 0]], [[580, 0], [600, 100], [650, 0]]);
+            const simulation = rt.simulateInstrument(
+              { metadata: { wavelength_grid: { min_nm: 450, max_nm: 700, step_nm: 2 } } },
+              {
+                sources: [
+                  { display_label: '488', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' },
+                  { display_label: '561', kind: 'laser', role: 'excitation', wavelength_nm: 561, spectral_mode: 'line' }
+                ],
+                excitation: [{ component_type: 'passthrough' }],
+                dichroic: [],
+                emission: [{ component_type: 'passthrough' }],
+                splitters: [],
+                detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera' }],
+                selectionMap: {}
+              },
+              [green, red],
+              {}
+            );
+            return {
+              hasPairwise: simulation.results.every((row) => typeof row.pairwiseCrosstalkPct === 'number'),
+              hasLegacyAlias: simulation.results.every((row) => typeof row.crosstalkPct === 'number'),
+            };
+            """
+        )
+
+        self.assertTrue(result["hasPairwise"])
+        self.assertTrue(result["hasLegacyAlias"])
+
     def test_point_detector_collection_window_changes_output(self) -> None:
         result = self.run_node_json(
             """
