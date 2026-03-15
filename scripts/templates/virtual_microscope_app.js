@@ -233,6 +233,27 @@
     return wrap;
   }
 
+  function appendLinkedCubeNotes(panel, kind, titlePrefix, description) {
+    const cubeSelects = Array.from(DOM.graph.querySelectorAll('select[data-stage="cube"]'));
+    cubeSelects.forEach((cubeSelect, index) => {
+      const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
+      const linked = cubeValue && (
+        kind === 'dichroic'
+          ? (cubeValue.dichroic_filter || cubeValue.dichroic || cubeValue.di)
+          : (cubeValue.emission_filter || cubeValue.emission || cubeValue.em)
+      );
+      if (linked) {
+        panel.appendChild(
+          createLinkedStageNote(
+            `${titlePrefix} ${cubeSelects.length > 1 ? index + 1 : ''}`.trim(),
+            description,
+            linked
+          )
+        );
+      }
+    });
+  }
+
   function createPipelineBadge(stageId, label) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -301,6 +322,7 @@
 
     const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
     const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
+    const branchEmission = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'preDetectorSpectrum', grid);
 
     // Find all active pipes currently rendered in the DOM topology
     const pipes = Array.from(DOM.graph.querySelectorAll('.optical-pipe'));
@@ -318,7 +340,7 @@
       else if (fromNode === 'dichroic') spectrum = excitationAtSample;
       else if (fromNode === 'sample') spectrum = generatedEmission;
       else if (fromNode === 'emission') spectrum = postEmission;
-      else if (fromNode === 'splitters') spectrum = postEmission; // Prevents double-counting paths
+      else if (fromNode === 'splitters') spectrum = branchEmission;
 
       setPipeSpectrumColor(key, spectrum, grid);
     });
@@ -818,10 +840,7 @@
           : 'Choose the dichroic that reflects excitation and transmits emission.',
         build(panel) {
           if (cubeMechanisms.length) {
-            const cubeSelect = DOM.graph.querySelector('select[data-stage="cube"]');
-            const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
-            const linked = cubeValue && (cubeValue.dichroic_filter || cubeValue.dichroic || cubeValue.di);
-            panel.appendChild(createLinkedStageNote('Integrated cube dichroic', 'This route uses the cube selector from the Excitation tab.', linked));
+            appendLinkedCubeNotes(panel, 'dichroic', 'Integrated cube dichroic', 'This route uses the cube selector from the Excitation tab.');
           } else {
             dichroicMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('dichroic', mechanism, index)));
           }
@@ -847,12 +866,7 @@
           : 'Choose the emission filters that clean up the fluorescence before detection.',
         build(panel) {
           if (cubeMechanisms.length) {
-            const cubeSelect = DOM.graph.querySelector('select[data-stage="cube"]');
-            const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
-            const linked = cubeValue && (cubeValue.emission_filter || cubeValue.emission || cubeValue.em);
-            if (linked) {
-              panel.appendChild(createLinkedStageNote('Integrated cube emission filter', 'This emission window is currently set by the cube selection.', linked));
-            }
+            appendLinkedCubeNotes(panel, 'emission', 'Integrated cube emission filter', 'This emission window is currently set by the cube selection.');
           }
           emissionMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('emission', mechanism, index)));
         },
@@ -2257,7 +2271,7 @@
             <div class="vm-info-row"><span>Theoretical benchmark</span><strong>${Number(result.theoreticalBenchmarkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Generated → detector</span><strong>${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Excitation</span><strong>${((result.excitationEfficiency || 0) * 100).toFixed(1)}%</strong></div>
-            <div class="vm-info-row"><span>Crosstalk</span><strong>${Number(result.crosstalkPct || 0).toFixed(1)}%</strong></div>
+            <div class="vm-info-row"><span>Crosstalk</span><strong>${Number(result.pairwiseCrosstalkPct || result.crosstalkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Leakage</span><strong>${leakPct}%</strong></div>
             <div class="vm-info-row"><span>Depletion overlap</span><strong>${depletionText}</strong></div>
             <div class="vm-info-row"><span>Score</span><strong>${Number(result.correctnessScore || 0).toFixed(1)}</strong></div>
