@@ -881,6 +881,20 @@
       });
     }
 
+    if (route === 'transmitted' || route === 'brightfield' || route === 'phase') {
+      const warningPanel = document.createElement('div');
+      warningPanel.className = 'vm-info-card';
+      warningPanel.style.borderLeft = '4px solid var(--warning)';
+      warningPanel.style.margin = '10px 0';
+      warningPanel.innerHTML = `
+        <div class="vm-info-card-title" style="color: var(--warning);">Transmitted Light Mode Active</div>
+        <div class="vm-info-card-subtitle">
+          Fluorescence filter cubes and epifluorescence lasers are disabled because transmitted white-light illumination (brightfield/phase) will overpower any fluorescence emission.
+        </div>
+      `;
+      inspector.prepend(warningPanel);
+    }
+
     if (!stages.length) return;
 
     stages.forEach((stage, index) => {
