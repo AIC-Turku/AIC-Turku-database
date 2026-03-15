@@ -210,19 +210,53 @@ hardware:
           name: Celesta-DA/FI/TR/Cy5/Cy7-A
           component_type: multiband_dichroic
           product_code: MXR00543
+          transmission_bands:
+          - center_nm: 441
+            width_nm: 36.1
+          - center_nm: 511
+            width_nm: 34.3
+          - center_nm: 592.5
+            width_nm: 45.2
+          - center_nm: 684
+            width_nm: 44.4
+          - center_nm: 817
+            width_nm: 78.8
+          reflection_bands:
+          - center_nm: 391
+            width_nm: 54.4
+          - center_nm: 477
+            width_nm: 20.4
+          - center_nm: 549
+            width_nm: 25.7
+          - center_nm: 638.5
+            width_nm: 27.6
+          - center_nm: 741
+            width_nm: 45.1
           cutoffs_nm:
           - 421
           - 491
           - 567
           - 659
           - 776
+          notes: Explicit transmission/reflection windows are mapped from the paired Crest emission/excitation optics for runtime use.
         Pos_2:
           name: Celesta CFP-YFP-A
           component_type: multiband_dichroic
           product_code: MXR00544
+          transmission_bands:
+          - center_nm: 484
+            width_nm: 25.9
+          - center_nm: 561
+            width_nm: 38.9
+          reflection_bands:
+          - center_nm: 449
+            width_nm: 26.7
+          - center_nm: 520
+            width_nm: 27.9
           cutoffs_nm:
           - 471
           - 539
+          notes: Explicit transmission/reflection windows are mapped from the paired Crest emission/excitation optics for runtime use.
     emission_mechanisms:
     - name: Crest Emission Wheel
       type: filter_wheel

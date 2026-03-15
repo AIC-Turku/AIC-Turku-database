@@ -166,15 +166,28 @@
     if (Array.isArray(component.cutoffs_nm) && component.cutoffs_nm.length) {
       rows.push(`Cutoffs: ${component.cutoffs_nm.map((value) => formatNumericNm(value)).filter(Boolean).join(', ')}`);
     }
-    if (Array.isArray(component.bands) && component.bands.length) {
-      rows.push(`Bands: ${component.bands.map((band) => {
-        const center = numberOrNull(band && band.center_nm);
-        const width = numberOrNull(band && band.width_nm);
-        if (center === null || width === null) return cleanString(band && band.label) || 'band';
-        const low = Math.round(center - (width / 2));
-        const high = Math.round(center + (width / 2));
-        return `${cleanString(band && band.label) || 'Band'} ${low}-${high} nm`;
-      }).join(' • ')}`);
+    const renderBandList = (bands, defaultLabel) => (Array.isArray(bands) ? bands : []).map((band) => {
+      const center = numberOrNull(band && band.center_nm);
+      const width = numberOrNull(band && band.width_nm);
+      if (center === null || width === null) return cleanString(band && band.label) || defaultLabel;
+      const low = Math.round(center - (width / 2));
+      const high = Math.round(center + (width / 2));
+      return `${cleanString(band && band.label) || defaultLabel} ${low}-${high} nm`;
+    }).filter(Boolean);
+
+    const passBands = renderBandList(component.bands, 'Band');
+    if (passBands.length) {
+      rows.push(`Bands: ${passBands.join(' • ')}`);
+    }
+
+    const transmissionBands = renderBandList(component.transmission_bands, 'Transmission');
+    if (transmissionBands.length) {
+      rows.push(`Transmission bands: ${transmissionBands.join(' • ')}`);
+    }
+
+    const reflectionBands = renderBandList(component.reflection_bands, 'Reflection');
+    if (reflectionBands.length) {
+      rows.push(`Reflection bands: ${reflectionBands.join(' • ')}`);
     }
     if (numberOrNull(component.wavelength_nm) !== null) rows.push(`Wavelength: ${formatNumericNm(component.wavelength_nm)}`);
     if (numberOrNull(component.selected_wavelength_nm) !== null) rows.push(`Selected λ: ${formatNumericNm(component.selected_wavelength_nm)}`);

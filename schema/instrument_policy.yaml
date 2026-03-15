@@ -1244,7 +1244,49 @@ sections:
         item_type: positive_number
         required_if:
           item_field_in:
-            component_type: [dichroic, multiband_dichroic, polychroic]
+            component_type: [dichroic]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands
+        title: Cube excitation transmission bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[].center_nm
+        title: Cube excitation transmission band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[].width_nm
+        title: Cube excitation transmission band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands
+        title: Cube excitation reflection bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[].center_nm
+        title: Cube excitation reflection band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[].width_nm
+        title: Cube excitation reflection band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[]"
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.cutoffs_nm
         title: Cube dichroic cutoffs (nm)
@@ -1253,7 +1295,49 @@ sections:
         item_type: positive_number
         required_if:
           item_field_in:
-            component_type: [dichroic, multiband_dichroic, polychroic]
+            component_type: [dichroic]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands
+        title: Cube dichroic transmission bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[].center_nm
+        title: Cube dichroic transmission band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[].width_nm
+        title: Cube dichroic transmission band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands
+        title: Cube dichroic reflection bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[].center_nm
+        title: Cube dichroic reflection band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[].width_nm
+        title: Cube dichroic reflection band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[]"
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.center_nm
         title: Cube emission center (nm)
@@ -1294,7 +1378,49 @@ sections:
         item_type: positive_number
         required_if:
           item_field_in:
-            component_type: [dichroic, multiband_dichroic, polychroic]
+            component_type: [dichroic]
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands
+        title: Cube emission transmission bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[].center_nm
+        title: Cube emission transmission band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[].width_nm
+        title: Cube emission transmission band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands
+        title: Cube emission reflection bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[].center_nm
+        title: Cube emission reflection band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[]"
+
+      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[].width_nm
+        title: Cube emission reflection band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[]"
 
       - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.center_nm
         title: Cube dichroic center wavelength (nm)
@@ -1328,30 +1454,6 @@ sections:
           item_field_in:
             component_type: [shortpass]
 
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands
-        title: Cube dichroic multiband array
-        status: conditional
-        type: list
-        min_items: 1
-        item_type: object
-        required_if:
-          item_field_in:
-            component_type: [multiband_bandpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[].center_nm
-        title: Cube dichroic band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[].width_nm
-        title: Cube dichroic band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.bands[]"
-        
       - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic
         title: Cube position dichroic
         status: conditional
@@ -1519,31 +1621,49 @@ sections:
         item_type: positive_number
         required_if:
           item_field_in:
-            component_type: [dichroic, multiband_dichroic, polychroic]
+            component_type: [dichroic]
 
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.bands
-        title: Dichroic position multiband array
-        status: conditional
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands
+        title: Excitation position transmission bands
+        status: optional
         type: list
         min_items: 1
         item_type: object
-        required_if:
-          item_field_in:
-            component_type: [multiband_bandpass]
 
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.bands[].center_nm
-        title: Dichroic position band center (nm)
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[].center_nm
+        title: Excitation position transmission band center (nm)
         status: conditional
         type: positive_number
         required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.bands[]"
+          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[]"
 
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.bands[].width_nm
-        title: Dichroic position band width (nm)
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[].width_nm
+        title: Excitation position transmission band width (nm)
         status: conditional
         type: positive_number
         required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.bands[]"
+          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[]"
+
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands
+        title: Excitation position reflection bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[].center_nm
+        title: Excitation position reflection band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[]"
+
+      - path: hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[].width_nm
+        title: Excitation position reflection band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[]"
 
       - path: hardware.light_path.dichroic_mechanisms
         title: Dichroic mechanisms
@@ -1658,7 +1778,49 @@ sections:
         item_type: positive_number
         required_if:
           item_field_in:
-            component_type: [dichroic, multiband_dichroic, polychroic]
+            component_type: [dichroic]
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands
+        title: Dichroic position transmission bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].center_nm
+        title: Dichroic position transmission band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]"
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].width_nm
+        title: Dichroic position transmission band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]"
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands
+        title: Dichroic position reflection bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].center_nm
+        title: Dichroic position reflection band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]"
+
+      - path: hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].width_nm
+        title: Dichroic position reflection band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]"
 
       - path: hardware.light_path.emission_mechanisms
         title: Emission mechanisms
@@ -1797,7 +1959,49 @@ sections:
         item_type: positive_number
         required_if:
           item_field_in:
-            component_type: [dichroic, multiband_dichroic, polychroic]
+            component_type: [dichroic]
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.transmission_bands
+        title: Emission position transmission bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[].center_nm
+        title: Emission position transmission band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[]"
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[].width_nm
+        title: Emission position transmission band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[]"
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.reflection_bands
+        title: Emission position reflection bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[].center_nm
+        title: Emission position reflection band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[]"
+
+      - path: hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[].width_nm
+        title: Emission position reflection band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[]"
 
       - path: hardware.light_path.endpoints
         title: Light path endpoints
@@ -1884,6 +2088,57 @@ sections:
         type: positive_number
         required_if:
           parent_present: "hardware.light_path.splitters[].dichroic"
+
+      - path: hardware.light_path.splitters[].dichroic.cutoffs_nm
+        title: Splitter dichroic multi-cutoff wavelengths (nm)
+        status: conditional
+        type: list
+        item_type: positive_number
+        required_if:
+          item_field_in:
+            component_type: [dichroic]
+
+      - path: hardware.light_path.splitters[].dichroic.transmission_bands
+        title: Splitter dichroic transmission bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.splitters[].dichroic.transmission_bands[].center_nm
+        title: Splitter dichroic transmission band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.splitters[].dichroic.transmission_bands[]"
+
+      - path: hardware.light_path.splitters[].dichroic.transmission_bands[].width_nm
+        title: Splitter dichroic transmission band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.splitters[].dichroic.transmission_bands[]"
+
+      - path: hardware.light_path.splitters[].dichroic.reflection_bands
+        title: Splitter dichroic reflection bands
+        status: optional
+        type: list
+        min_items: 1
+        item_type: object
+
+      - path: hardware.light_path.splitters[].dichroic.reflection_bands[].center_nm
+        title: Splitter dichroic reflection band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.splitters[].dichroic.reflection_bands[]"
+
+      - path: hardware.light_path.splitters[].dichroic.reflection_bands[].width_nm
+        title: Splitter dichroic reflection band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: "hardware.light_path.splitters[].dichroic.reflection_bands[]"
 
       - path: hardware.light_path.splitters[].path_1
         title: Splitter path 1 (transmitted)

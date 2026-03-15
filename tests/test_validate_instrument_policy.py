@@ -1252,7 +1252,13 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                             {'path': 'hardware.light_path.excitation_mechanisms[].positions{}.width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['bandpass', 'notch']}}},
                             {'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}}},
                             {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['longpass']}}},
-                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['dichroic', 'multiband_dichroic', 'polychroic']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['dichroic']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands', 'status': 'optional', 'type': 'list'},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands', 'status': 'optional', 'type': 'list'},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]'}},
                             {'path': 'hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['shortpass']}}},
                         ],
                     }
@@ -1286,7 +1292,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertTrue(any('hardware.light_path.excitation_mechanisms[].positions{}.center_nm' in message for message in missing_messages))
         self.assertTrue(any('hardware.light_path.emission_mechanisms[].positions{}.bands' in message for message in missing_messages))
         self.assertTrue(any('hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm' in message for message in missing_messages))
-        self.assertTrue(any('hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm' in message for message in missing_messages))
+        self.assertFalse(any('hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm' in message for message in missing_messages))
         self.assertTrue(any('hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm' in message for message in missing_messages))
 
     def test_optical_component_discriminator_rules_accept_valid_shape_fields(self) -> None:
@@ -1303,7 +1309,13 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                             {'path': 'hardware.light_path.excitation_mechanisms[].positions{}.width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['bandpass', 'notch']}}},
                             {'path': 'hardware.light_path.emission_mechanisms[].positions{}.bands', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['multiband_bandpass']}}},
                             {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['longpass']}}},
-                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['dichroic', 'multiband_dichroic', 'polychroic']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['dichroic']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands', 'status': 'optional', 'type': 'list'},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands', 'status': 'optional', 'type': 'list'},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]'}},
                             {'path': 'hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'component_type': ['shortpass']}}},
                         ],
                     }
@@ -1318,11 +1330,11 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                     'light_path': {
                         'excitation_mechanisms': [{'positions': {'Pos_1': {'component_type': 'bandpass', 'center_nm': 488, 'width_nm': 20}}}],
                         'emission_mechanisms': [{'positions': {'Pos_1': {'component_type': 'multiband_bandpass', 'bands': [{'center_nm': 525, 'width_nm': 30}]}, 'Pos_2': {'component_type': 'shortpass', 'cut_off_nm': 700}}}],
-                        'dichroic_mechanisms': [{'positions': {'Pos_1': {'component_type': 'longpass', 'cut_on_nm': 560}, 'Pos_2': {'component_type': 'multiband_dichroic', 'cutoffs_nm': [405, 488, 561, 640]}}}],
+                        'dichroic_mechanisms': [{'positions': {'Pos_1': {'component_type': 'longpass', 'cut_on_nm': 560}, 'Pos_2': {'component_type': 'multiband_dichroic', 'transmission_bands': [{'center_nm': 520, 'width_nm': 30}], 'reflection_bands': [{'center_nm': 450, 'width_nm': 40}]}}}],
                         'cube_mechanisms': [
                             {'positions': {'Pos_1': {
                                 'excitation_filter': {'component_type': 'shortpass', 'cut_off_nm': 700},
-                                'dichroic': {'component_type': 'multiband_dichroic', 'cutoffs_nm': [405, 488, 561, 640]},
+                                'dichroic': {'component_type': 'multiband_dichroic', 'transmission_bands': [{'center_nm': 520, 'width_nm': 30}], 'reflection_bands': [{'center_nm': 450, 'width_nm': 40}]},
                                 'emission_filter': {'component_type': 'bandpass', 'center_nm': 525, 'width_nm': 30},
                             }}}
                         ],
@@ -1334,6 +1346,61 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         self.assertEqual(issues, [])
         self.assertNotIn('missing_conditional_field', {warning.code for warning in warnings})
+
+
+    def test_dichroic_schema_accepts_explicit_bands_and_legacy_single_cutoff(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'light-path',
+                        'title': 'Light Path',
+                        'rules': [
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.component_type', 'status': 'conditional', 'type': 'string', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'component_type': ['dichroic']}}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands', 'status': 'optional', 'type': 'list'},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands', 'status': 'optional', 'type': 'list'},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].center_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]'}},
+                            {'path': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].width_nm', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'parent_present': 'hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]'}},
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/valid-dichroics.yaml',
+            {
+                'instrument': {'instrument_id': 'valid-dichroics'},
+                'hardware': {
+                    'light_path': {
+                        'dichroic_mechanisms': [{
+                            'positions': {
+                                'Pos_1': {
+                                    'component_type': 'multiband_dichroic',
+                                    'transmission_bands': [{'center_nm': 521, 'width_nm': 25}],
+                                },
+                                'Pos_2': {
+                                    'component_type': 'multiband_dichroic',
+                                    'reflection_bands': [{'center_nm': 488, 'width_nm': 20}],
+                                },
+                                'Pos_3': {
+                                    'component_type': 'dichroic',
+                                    'cutoffs_nm': [560],
+                                },
+                            }
+                        }]
+                    }
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        self.assertFalse(any(w.code == 'missing_conditional_field' for w in warnings))
 
 if __name__ == '__main__':
     unittest.main()

@@ -114,8 +114,21 @@ hardware:
       positions:
         Pos_1:
           component_type: multiband_dichroic
+          transmission_bands:
+          - {center_nm: 450, width_nm: 50}
+          - {center_nm: 525, width_nm: 50}
+          - {center_nm: 600, width_nm: 50}
+          - {center_nm: 685, width_nm: 50}
+          reflection_bands:
+          - {center_nm: 405, width_nm: 20}
+          - {center_nm: 488, width_nm: 20}
+          - {center_nm: 561, width_nm: 20}
+          - {center_nm: 638, width_nm: 20}
           cutoffs_nm: [405, 488, 561, 638]
-          notes: Built-in multiband dichroic for standard 4-line excitation.
+          notes: >
+            Built-in multiband dichroic for standard 4-line excitation.
+            Explicit transmission windows are aligned to the installed emission channels;
+            reflection-band widths are approximate pending vendor spectral curve export.
 
     emission_mechanisms:
     - name: BC43 Internal Emission Filters

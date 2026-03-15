@@ -146,11 +146,23 @@ hardware:
           Pos_1:
             component_type: multiband_dichroic
             product_code: Di01-T405/488/568/647
+            transmission_bands:
+              - {center_nm: 440, width_nm: 25}
+              - {center_nm: 521, width_nm: 25}
+              - {center_nm: 607, width_nm: 25}
+              - {center_nm: 700, width_nm: 25}
+            reflection_bands:
+              - {center_nm: 405, width_nm: 20}
+              - {center_nm: 488, width_nm: 20}
+              - {center_nm: 568, width_nm: 20}
+              - {center_nm: 647, width_nm: 20}
             cutoffs_nm: [405, 488, 568, 647]
             notes: >
               Yokogawa/CSU-W1-compatible multiband dichroic for 405/488/561/640-class
               excitation and corresponding fluorescence routing. Product code uses
               the vendor's 568 naming convention even though the installed laser line is 561 nm.
+              Explicit transmission/reflection bands are authoritative for runtime use; reflection widths are
+              approximate and derived from the installed line set.
 
     emission_mechanisms:
       - name: CSU-W1 Emission Wheel

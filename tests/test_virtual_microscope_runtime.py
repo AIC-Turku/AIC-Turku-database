@@ -220,6 +220,217 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(matched["cam"]["excitationStrength"], 0)
 
 
+    def test_explicit_multiband_dichroic_prefers_transmission_bands_for_emission(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor(key, emCenter) {
+              return {
+                key,
+                name: key,
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                  ex2p: [],
+                  em: [[emCenter - 25, 0], [emCenter - 10, 40], [emCenter, 100], [emCenter + 12, 50], [emCenter + 28, 0]]
+                },
+                exMax: 488,
+                emMax: emCenter
+              };
+            }
+
+            const instrument = { metadata: { wavelength_grid: { min_nm: 420, max_nm: 760, step_nm: 2 } } };
+            const selection = {
+              sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              excitation: [{ component_type: 'passthrough' }],
+              dichroic: [{
+                component_type: 'multiband_dichroic',
+                transmission_bands: [{ center_nm: 525, width_nm: 50 }],
+                reflection_bands: [
+                  { center_nm: 445, width_nm: 35 },
+                  { center_nm: 488, width_nm: 30 },
+                  { center_nm: 617, width_nm: 60 }
+                ]
+              }],
+              emission: [{ component_type: 'passthrough' }],
+              splitters: [],
+              detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera', qe_peak_pct: 80, user_gain: 1 }],
+              selectionMap: {}
+            };
+
+            const sim = rt.simulateInstrument(instrument, selection, [fluor('blue', 445), fluor('green', 525), fluor('red', 617)], {});
+            return sim.results.map((row) => ({ key: row.fluorophoreKey, intensity: row.detectorWeightedIntensity, throughput: row.emissionPathThroughput }));
+            """
+        )
+
+        rows = {entry["key"]: entry for entry in result}
+        self.assertGreater(rows["green"]["throughput"], rows["blue"]["throughput"])
+        self.assertGreater(rows["green"]["throughput"], rows["red"]["throughput"])
+        self.assertGreater(rows["green"]["intensity"], rows["blue"]["intensity"])
+        self.assertGreater(rows["green"]["intensity"], rows["red"]["intensity"])
+
+
+    def test_csu_w1_green_channel_regression_explicit_bands_vs_legacy_cutoffs(self) -> None:
+        result = self.run_node_json(
+            """
+            const green = {
+              key: 'green',
+              name: 'Green',
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                ex2p: [],
+                em: [[500, 0], [515, 45], [525, 100], [540, 55], [560, 0]]
+              },
+              exMax: 488,
+              emMax: 525
+            };
+
+            const instrument = { metadata: { wavelength_grid: { min_nm: 430, max_nm: 760, step_nm: 2 } } };
+            function simulate(dichroic) {
+              return rt.simulateInstrument(
+                instrument,
+                {
+                  sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                  excitation: [{ component_type: 'passthrough' }],
+                  dichroic: [dichroic],
+                  emission: [{ component_type: 'bandpass', center_nm: 525, width_nm: 30 }],
+                  splitters: [],
+                  detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera', qe_peak_pct: 80, user_gain: 1 }],
+                  selectionMap: {}
+                },
+                [green],
+                {}
+              ).results[0];
+            }
+
+            const explicit = simulate({
+              component_type: 'multiband_dichroic',
+              transmission_bands: [{ center_nm: 521, width_nm: 25 }],
+              reflection_bands: [{ center_nm: 488, width_nm: 20 }],
+              cutoffs_nm: [405, 488, 568, 647]
+            });
+            const legacyOnly = simulate({ component_type: 'multiband_dichroic', cutoffs_nm: [405, 488, 568, 647] });
+            return {
+              explicitThroughput: explicit.emissionPathThroughput,
+              explicitIntensity: explicit.detectorWeightedIntensity,
+              legacyThroughput: legacyOnly.emissionPathThroughput,
+              legacyIntensity: legacyOnly.detectorWeightedIntensity,
+            };
+            """
+        )
+
+        self.assertGreater(result["explicitThroughput"], 0.2)
+        self.assertGreater(result["explicitIntensity"], result["legacyIntensity"])
+        self.assertGreater(result["explicitThroughput"], result["legacyThroughput"])
+
+    def test_single_cutoff_dichroic_with_single_cutoffs_entry_is_preserved(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor(key, emCenter) {
+              return {
+                key,
+                name: key,
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                  ex2p: [],
+                  em: [[emCenter - 20, 0], [emCenter - 8, 45], [emCenter, 100], [emCenter + 10, 40], [emCenter + 24, 0]]
+                },
+                exMax: 488,
+                emMax: emCenter
+              };
+            }
+            const instrument = { metadata: { wavelength_grid: { min_nm: 430, max_nm: 760, step_nm: 2 } } };
+            const selection = {
+              sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              excitation: [{ component_type: 'passthrough' }],
+              dichroic: [{ component_type: 'dichroic', cutoffs_nm: [560] }],
+              emission: [{ component_type: 'passthrough' }],
+              splitters: [],
+              detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera', qe_peak_pct: 80, user_gain: 1 }],
+              selectionMap: {}
+            };
+            const sim = rt.simulateInstrument(instrument, selection, [fluor('below', 525), fluor('above', 617)], {});
+            return sim.results.map((row) => ({ key: row.fluorophoreKey, throughput: row.emissionPathThroughput }));
+            """
+        )
+
+        rows = {entry["key"]: entry for entry in result}
+        self.assertLess(rows["below"]["throughput"], rows["above"]["throughput"])
+
+    def test_single_cutoff_dichroic_behavior_is_preserved(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor(key, emCenter) {
+              return {
+                key,
+                name: key,
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                  ex2p: [],
+                  em: [[emCenter - 20, 0], [emCenter - 8, 45], [emCenter, 100], [emCenter + 10, 40], [emCenter + 24, 0]]
+                },
+                exMax: 488,
+                emMax: emCenter
+              };
+            }
+
+            const instrument = { metadata: { wavelength_grid: { min_nm: 430, max_nm: 760, step_nm: 2 } } };
+            const selection = {
+              sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              excitation: [{ component_type: 'passthrough' }],
+              dichroic: [{ component_type: 'dichroic', cut_on_nm: 560 }],
+              emission: [{ component_type: 'passthrough' }],
+              splitters: [],
+              detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera', qe_peak_pct: 80, user_gain: 1 }],
+              selectionMap: {}
+            };
+            const sim = rt.simulateInstrument(instrument, selection, [fluor('below', 525), fluor('above', 617)], {});
+            return sim.results.map((row) => ({ key: row.fluorophoreKey, throughput: row.emissionPathThroughput }));
+            """
+        )
+
+        rows = {entry["key"]: entry for entry in result}
+        self.assertLess(rows["below"]["throughput"], rows["above"]["throughput"])
+
+    def test_legacy_multicutoff_dichroic_fallback_remains_available(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor(key, emCenter) {
+              return {
+                key,
+                name: key,
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                  ex2p: [],
+                  em: [[emCenter - 15, 0], [emCenter - 6, 40], [emCenter, 100], [emCenter + 7, 35], [emCenter + 18, 0]]
+                },
+                exMax: 488,
+                emMax: emCenter
+              };
+            }
+
+            const instrument = { metadata: { wavelength_grid: { min_nm: 430, max_nm: 760, step_nm: 2 } } };
+            const selection = {
+              sources: [{ display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              excitation: [{ component_type: 'passthrough' }],
+              dichroic: [{ component_type: 'multiband_dichroic', cutoffs_nm: [500, 550, 600, 650] }],
+              emission: [{ component_type: 'passthrough' }],
+              splitters: [],
+              detectors: [{ id: 'cam', display_label: 'Camera', kind: 'camera', qe_peak_pct: 80, user_gain: 1 }],
+              selectionMap: {}
+            };
+            const sim = rt.simulateInstrument(instrument, selection, [fluor('band1', 525), fluor('gap', 575), fluor('band2', 617)], {});
+            return sim.results.map((row) => ({ key: row.fluorophoreKey, throughput: row.emissionPathThroughput }));
+            """
+        )
+
+        rows = {entry["key"]: entry for entry in result}
+        self.assertGreater(rows["band1"]["throughput"], rows["gap"]["throughput"])
+        self.assertGreater(rows["band2"]["throughput"], rows["gap"]["throughput"])
+
     def test_detector_user_gain_no_longer_changes_output(self) -> None:
         result = self.run_node_json(
             """
