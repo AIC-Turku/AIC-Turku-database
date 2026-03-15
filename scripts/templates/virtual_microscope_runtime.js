@@ -1801,6 +1801,12 @@
     const maxCrosstalk = Math.max(0, ...pairwiseCrosstalkByTarget);
     const crosstalkPenalty = pairwiseCrosstalkByTarget.reduce(
       (product, pct) => product * clamp(1 - (pct / 100), 0.01, 1),
+    const maxLeak = Math.max(...simulation.results.map((row) =>
+      Math.max(row.excitationLeakageWeightedIntensity || 0, row.excitationLeakageThroughput || 0)
+    ), 0);
+    const maxCrosstalk = Math.max(...chosenRows.map((row) => row.crosstalkPct || 0), 0);
+    const crosstalkPenalty = chosenRows.reduce(
+      (product, row) => product * clamp(1 - ((row.crosstalkPct || 0) / 100), 0.01, 1),
       1
     );
 
@@ -2341,6 +2347,8 @@
         result.laserLeakageNote = '';
       }
     });
+
+    const crosstalkMatrix = computeCrosstalkMatrix(results);
 
     return {
       grid,
