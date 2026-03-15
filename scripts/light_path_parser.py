@@ -276,6 +276,22 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _band_strings(component: dict[str, Any], key: str) -> list[str]:
+    raw_bands = component.get(key)
+    if not isinstance(raw_bands, list):
+        return []
+    rendered: list[str] = []
+    for band in raw_bands:
+        if not isinstance(band, dict):
+            continue
+        center = _coerce_number(band.get("center_nm"))
+        width = _coerce_number(band.get("width_nm"))
+        if _is_positive_number(center) and _is_positive_number(width):
+            rendered.append(f"{_format_numeric(center)}/{_format_numeric(width)}")
+    return rendered
+
+
+
 def _build_label(component: dict[str, Any]) -> str:
     component_type = component.get("component_type", "unknown")
 
@@ -305,10 +321,31 @@ def _build_label(component: dict[str, Any]) -> str:
         cut_off = component.get("cut_off_nm")
         return f"SP {_format_numeric(cut_off)}" if _is_positive_number(cut_off) else "Shortpass"
     if component_type in DICHROIC_TYPES:
+        if component_type in {"multiband_dichroic", "polychroic"}:
+            transmission = _band_strings(component, "transmission_bands")
+            reflection = _band_strings(component, "reflection_bands")
+            if transmission or reflection:
+                parts: list[str] = []
+                if transmission:
+                    parts.append(f"T[{ ' + '.join(transmission) }]")
+                if reflection:
+                    parts.append(f"R[{ ' + '.join(reflection) }]")
+                return f"Dichroic {' | '.join(parts)}"
+
         cutoffs = component.get("cutoffs_nm")
         if isinstance(cutoffs, list) and cutoffs:
             rendered = ", ".join(_format_numeric(value) for value in cutoffs)
             return f"Dichroic [{rendered}]"
+
+        transmission = _band_strings(component, "transmission_bands")
+        reflection = _band_strings(component, "reflection_bands")
+        if transmission or reflection:
+            parts: list[str] = []
+            if transmission:
+                parts.append(f"T[{ ' + '.join(transmission) }]")
+            if reflection:
+                parts.append(f"R[{ ' + '.join(reflection) }]")
+            return f"Dichroic {' | '.join(parts)}"
         return "Dichroic"
     if component_type in NO_WAVELENGTH_TYPES:
         return str(component_type).title()
@@ -408,6 +445,22 @@ def _normalize_component_numeric_fields(component_payload: dict[str, Any], sourc
                 normalized_bands.append(normalized_band)
         if normalized_bands:
             component_payload["bands"] = normalized_bands
+
+    for band_key in ("transmission_bands", "reflection_bands"):
+        raw_bands = source.get(band_key)
+        if not isinstance(raw_bands, list):
+            continue
+        normalized_bands = []
+        for band in raw_bands:
+            if not isinstance(band, dict):
+                continue
+            center = _coerce_number(band.get("center_nm"))
+            width = _coerce_number(band.get("width_nm"))
+            if center is None or width is None:
+                continue
+            normalized_bands.append({"center_nm": center, "width_nm": width})
+        if normalized_bands:
+            component_payload[band_key] = normalized_bands
 
 
 

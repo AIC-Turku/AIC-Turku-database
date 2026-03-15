@@ -413,6 +413,106 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(cube["dichroic"]["cutoffs_nm"], [570.0])
         self.assertEqual(cube["emission_filter"]["center_nm"], 605.0)
 
+
+    def test_multiband_dichroic_bands_are_normalized_and_labeled(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "dichroic_mechanisms": [
+                            {
+                                "positions": {
+                                    1: {
+                                        "component_type": "multiband_dichroic",
+                                        "transmission_bands": [
+                                            {"center_nm": "520", "width_nm": "30"},
+                                            {"center_nm": "bad", "width_nm": 25},
+                                            {"center_nm": 700, "width_nm": None},
+                                        ],
+                                        "reflection_bands": [
+                                            {"center_nm": 450, "width_nm": "40"},
+                                            {"center_nm": "", "width_nm": "15"},
+                                        ],
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+
+        dichroic = payload["stages"]["dichroic"][0]["options"][0]["value"]
+        self.assertEqual(dichroic["transmission_bands"], [{"center_nm": 520.0, "width_nm": 30.0}])
+        self.assertEqual(dichroic["reflection_bands"], [{"center_nm": 450.0, "width_nm": 40.0}])
+        self.assertEqual(dichroic["label"], "Dichroic T[520/30] | R[450/40]")
+
+    def test_splitter_dichroic_keeps_legacy_cutoff_and_preserves_explicit_bands(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "splitters": [
+                            {
+                                "name": "Legacy Splitter",
+                                "dichroic": {
+                                    "component_type": "dichroic",
+                                    "cut_on_nm": "560",
+                                    "transmission_bands": [{"center_nm": 525, "width_nm": 50}],
+                                    "reflection_bands": [{"center_nm": "700", "width_nm": "75"}],
+                                },
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+
+        dichroic = payload["splitters"][0]["dichroic"]["positions"]["1"]
+        self.assertEqual(dichroic["cutoffs_nm"], [560.0])
+        self.assertEqual(dichroic["label"], "Dichroic [560]")
+        self.assertEqual(dichroic["transmission_bands"], [{"center_nm": 525.0, "width_nm": 50.0}])
+        self.assertEqual(dichroic["reflection_bands"], [{"center_nm": 700.0, "width_nm": 75.0}])
+
+
+    def test_csu_w1_like_multiband_dichroic_keeps_green_transmission_band(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "dichroic_mechanisms": [
+                            {
+                                "name": "CSU-W1 Dichroic Slider",
+                                "positions": {
+                                    "Pos_1": {
+                                        "component_type": "multiband_dichroic",
+                                        "transmission_bands": [
+                                            {"center_nm": 440, "width_nm": 25},
+                                            {"center_nm": 521, "width_nm": 25},
+                                            {"center_nm": 607, "width_nm": 25},
+                                        ],
+                                        "reflection_bands": [{"center_nm": 488, "width_nm": 20}],
+                                    }
+                                },
+                            }
+                        ],
+                        "emission_mechanisms": [
+                            {
+                                "name": "CSU-W1 Emission Wheel",
+                                "positions": {
+                                    "Pos_1": {"component_type": "bandpass", "center_nm": 525, "width_nm": 30}
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        )
+
+        dichroic = payload["stages"]["dichroic"][0]["options"][0]["value"]
+        self.assertIn({"center_nm": 521.0, "width_nm": 25.0}, dichroic["transmission_bands"])
+        self.assertIn("521/25", dichroic["label"])
+
     def test_legacy_position_keys_are_normalized_in_mechanisms(self) -> None:
         payload = generate_virtual_microscope_payload(
             {

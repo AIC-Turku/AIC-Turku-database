@@ -114,6 +114,17 @@ The page now shows:
 - a top-to-bottom propagated-path panel,
 - propagated light beside the reference spectra panel for easier comparison.
 
+### Dichroic spectral windows (preferred model)
+
+For `multiband_dichroic` / `polychroic` components, the preferred representation is explicit
+`transmission_bands` and/or `reflection_bands` (`center_nm` + `width_nm`).
+
+Legacy `cutoffs_nm` remains supported for simple single-edge dichroics and backward-compatible
+fallbacks, but should not be treated as the authoritative model for modern spinning-disk multiband
+dichroics.
+
+See `docs/dichroic_migration_note.md` for migration guidance and compatibility details.
+
 ## Methods generator
 
 The methods generator consumes `dashboard_docs/assets/instruments_data.json` and builds deterministic, reviewable draft text from the exported DTO.

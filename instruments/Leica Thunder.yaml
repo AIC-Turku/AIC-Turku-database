@@ -156,11 +156,30 @@ hardware:
               width_nm: 40
           dichroic:
             component_type: multiband_dichroic
+            transmission_bands:
+            - center_nm: 473
+              width_nm: 22
+            - center_nm: 539
+              width_nm: 24
+            - center_nm: 641
+              width_nm: 78
+            - center_nm: 810
+              width_nm: 80
+            reflection_bands:
+            - center_nm: 436
+              width_nm: 28
+            - center_nm: 506
+              width_nm: 21
+            - center_nm: 578
+              width_nm: 24
+            - center_nm: 730
+              width_nm: 40
             cutoffs_nm:
             - 459
             - 523
             - 598
             - 763
+            notes: Explicit transmission/reflection windows are mapped from this cube's paired excitation/emission filter bands.
           emission_filter:
             component_type: multiband_bandpass
             bands:
@@ -189,11 +208,30 @@ hardware:
               width_nm: 31
           dichroic:
             component_type: multiband_dichroic
+            transmission_bands:
+            - center_nm: 435
+              width_nm: 30
+            - center_nm: 519
+              width_nm: 25
+            - center_nm: 594
+              width_nm: 32
+            - center_nm: 695
+              width_nm: 58
+            reflection_bands:
+            - center_nm: 391
+              width_nm: 32
+            - center_nm: 479
+              width_nm: 33
+            - center_nm: 554
+              width_nm: 24
+            - center_nm: 638
+              width_nm: 31
             cutoffs_nm:
             - 415
             - 500
             - 572
             - 660
+            notes: Explicit transmission/reflection windows are mapped from this cube's paired excitation/emission filter bands.
           emission_filter:
             component_type: multiband_bandpass
             bands:

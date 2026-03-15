@@ -1121,11 +1121,27 @@
     return masks.reduce((accumulator, mask, index) => (index === 0 ? mask : accumulator.map((value, i) => clamp(value + mask[i], 0, 1))), grid.map(() => 0));
   }
 
-  function dichroicTransmitMask(grid, cutoffs) {
-    const ordered = (Array.isArray(cutoffs) ? cutoffs : [])
+  function sortedCutoffs(cutoffs) {
+    return (Array.isArray(cutoffs) ? cutoffs : [])
       .map((cutoff) => numberOrNull(cutoff))
       .filter((cutoff) => cutoff !== null)
       .sort((left, right) => left - right);
+  }
+
+  function normalizedBandMasks(grid, bands) {
+    const rows = Array.isArray(bands) ? bands : [];
+    return rows
+      .map((band) => {
+        const center = numberOrNull(band && band.center_nm);
+        const width = numberOrNull(band && band.width_nm);
+        if (center === null || width === null || width <= 0) return null;
+        return bandMask(grid, center - (width / 2), center + (width / 2), 2);
+      })
+      .filter(Boolean);
+  }
+
+  function legacyAlternatingCutoffTransmitMask(grid, cutoffs) {
+    const ordered = sortedCutoffs(cutoffs);
     if (!ordered.length) return grid.map(() => 1);
     return grid.map((wavelength) => {
       let transmit = false;
@@ -1136,6 +1152,34 @@
       });
       return transmit ? 1 : 0;
     });
+  }
+
+  function simpleDichroicTransmitMask(grid, component) {
+    const cutOn = numberOrNull(component && component.cut_on_nm);
+    if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
+
+    const ordered = sortedCutoffs(component && component.cutoffs_nm);
+    if (ordered.length === 1) {
+      return grid.map((wavelength) => smoothStep(wavelength, ordered[0], 2));
+    }
+    return null;
+  }
+
+  function dichroicTransmitMask(grid, component) {
+    const transmissionMasks = normalizedBandMasks(grid, component && component.transmission_bands);
+    if (transmissionMasks.length) return sumMasks(transmissionMasks, grid);
+
+    const reflectionMasks = normalizedBandMasks(grid, component && component.reflection_bands);
+    if (reflectionMasks.length) {
+      const reflected = sumMasks(reflectionMasks, grid);
+      return reflected.map((value) => 1 - clamp(value, 0, 1));
+    }
+
+    const simpleMask = simpleDichroicTransmitMask(grid, component || {});
+    if (simpleMask) return simpleMask;
+
+    // Legacy/approximate fallback for cutoff-only multiband dichroics.
+    return legacyAlternatingCutoffTransmitMask(grid, component && component.cutoffs_nm);
   }
 
   function componentMask(component, grid, context) {
@@ -1153,16 +1197,7 @@
       return bandMask(grid, center - (width / 2), center + (width / 2), 2);
     }
     if (type === 'multiband_bandpass') {
-      const bands = Array.isArray(component.bands) ? component.bands : [];
-      const masks = bands
-        .map((band) => {
-          const center = numberOrNull(band && band.center_nm);
-          const width = numberOrNull(band && band.width_nm);
-          if (center === null || width === null) return null;
-          return bandMask(grid, center - (width / 2), center + (width / 2), 2);
-        })
-        .filter(Boolean);
-      return sumMasks(masks, grid);
+      return sumMasks(normalizedBandMasks(grid, component.bands), grid);
     }
     if (type === 'longpass') {
       const cutoff = numberOrNull(component.cut_on_nm);
@@ -1186,10 +1221,14 @@
       return bandMask(grid, start, end, 2);
     }
     if (type === 'dichroic' || type === 'multiband_dichroic' || type === 'polychroic') {
-      const transmit = dichroicTransmitMask(grid, component.cutoffs_nm);
+      const transmit = dichroicTransmitMask(grid, component || {});
       const mode = cleanString(context && context.mode).toLowerCase();
       const branchMode = cleanString((context && context.branchMode) || component.branch_mode).toLowerCase();
-      const wantsReflection = mode === 'excitation' || branchMode === 'reflected';
+      const wantsReflection = branchMode === 'reflected'
+        ? true
+        : branchMode === 'transmitted'
+          ? false
+          : mode === 'excitation';
       return wantsReflection ? transmit.map((value) => 1 - value) : transmit;
     }
     return grid.map(() => 1);

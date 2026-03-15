@@ -193,9 +193,21 @@ hardware:
           component_type: multiband_dichroic
           name: Quad-band Dichroic
           product_code: Di01-T405/488/568/647
+          transmission_bands:
+          - {center_nm: 440, width_nm: 25}
+          - {center_nm: 521, width_nm: 25}
+          - {center_nm: 607, width_nm: 25}
+          - {center_nm: 700, width_nm: 25}
+          reflection_bands:
+          - {center_nm: 405, width_nm: 20}
+          - {center_nm: 488, width_nm: 20}
+          - {center_nm: 568, width_nm: 20}
+          - {center_nm: 647, width_nm: 20}
           cutoffs_nm: [405, 488, 568, 647]
           notes: >
             Standard multiband spinning-disk dichroic for 405/488/561/640-class excitation.
+            Explicit transmission/reflection bands are used as the authoritative runtime model;
+            reflection widths are approximate (derived from installed excitation lines and product-code centers).
             Vendor product naming uses 568 even though the installed yellow-green laser line is 561 nm.
         2:
           component_type: empty
@@ -210,7 +222,20 @@ hardware:
         1:
           component_type: multiband_dichroic
           product_code: FF410/504/582/669-Di01-25x36
+          transmission_bands:
+          - {center_nm: 440, width_nm: 25}
+          - {center_nm: 521, width_nm: 25}
+          - {center_nm: 607, width_nm: 25}
+          - {center_nm: 700, width_nm: 25}
+          reflection_bands:
+          - {center_nm: 410, width_nm: 20}
+          - {center_nm: 504, width_nm: 20}
+          - {center_nm: 582, width_nm: 20}
+          - {center_nm: 669, width_nm: 20}
           cutoffs_nm: [410, 504, 582, 669]
+          notes: >
+            Explicit spectral windows are provided for runtime behavior; reflection-band widths are approximate
+            and derived from the legacy cutoff list pending vendor curve import.
 
     emission_mechanisms:
     - name: CSU-W1 Emission Wheel

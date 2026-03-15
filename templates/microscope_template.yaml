@@ -154,6 +154,14 @@ hardware:
               cut_off_nm: ""  # Cube excitation cut-off wavelength (nm)
               cutoffs_nm:  # Cube excitation multi-cutoff wavelengths (nm)
                 - ""
+              transmission_bands:  # Cube excitation transmission bands
+                -
+                  center_nm: ""  # Cube excitation transmission band center (nm)
+                  width_nm: ""  # Cube excitation transmission band width (nm)
+              reflection_bands:  # Cube excitation reflection bands
+                -
+                  center_nm: ""  # Cube excitation reflection band center (nm)
+                  width_nm: ""  # Cube excitation reflection band width (nm)
             emission_filter:  # Cube position emission filter
               bands:  # Cube emission multiband array
                 -
@@ -165,6 +173,14 @@ hardware:
               cut_off_nm: ""  # Cube emission cut-off wavelength (nm)
               cutoffs_nm:  # Cube emission multi-cutoff wavelengths (nm)
                 - ""
+              transmission_bands:  # Cube emission transmission bands
+                -
+                  center_nm: ""  # Cube emission transmission band center (nm)
+                  width_nm: ""  # Cube emission transmission band width (nm)
+              reflection_bands:  # Cube emission reflection bands
+                -
+                  center_nm: ""  # Cube emission reflection band center (nm)
+                  width_nm: ""  # Cube emission reflection band width (nm)
               component_type: ""  # Cube emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             path: ""  # Cube position path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
             name: ""  # Cube name
@@ -174,14 +190,18 @@ hardware:
             dichroic:  # Cube position dichroic
               cutoffs_nm:  # Cube dichroic cutoffs (nm)
                 - ""
+              transmission_bands:  # Cube dichroic transmission bands
+                -
+                  center_nm: ""  # Cube dichroic transmission band center (nm)
+                  width_nm: ""  # Cube dichroic transmission band width (nm)
+              reflection_bands:  # Cube dichroic reflection bands
+                -
+                  center_nm: ""  # Cube dichroic reflection band center (nm)
+                  width_nm: ""  # Cube dichroic reflection band width (nm)
               center_nm: ""  # Cube dichroic center wavelength (nm)
               width_nm: ""  # Cube dichroic bandwidth (nm)
               cut_on_nm: ""  # Cube dichroic cut-on wavelength (nm)
               cut_off_nm: ""  # Cube dichroic cut-off wavelength (nm)
-              bands:  # Cube dichroic multiband array
-                -
-                  center_nm: ""  # Cube dichroic band center (nm)
-                  width_nm: ""  # Cube dichroic band width (nm)
               component_type: ""  # Cube dichroic component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
         path: ""  # Cube mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
         notes: ""  # Cube mechanism notes
@@ -209,14 +229,23 @@ hardware:
             cut_off_nm: ""  # Excitation position cut-off wavelength (nm)
             cutoffs_nm:  # Excitation position multi-cutoff wavelengths (nm)
               - ""
+            transmission_bands:  # Excitation position transmission bands
+              -
+                center_nm: ""  # Excitation position transmission band center (nm)
+                width_nm: ""  # Excitation position transmission band width (nm)
+            reflection_bands:  # Excitation position reflection bands
+              -
+                center_nm: ""  # Excitation position reflection band center (nm)
+                width_nm: ""  # Excitation position reflection band width (nm)
     dichroic_mechanisms:  # Dichroic mechanisms
       -
+        name: ""  # Dichroic mechanism name
+        type: ""  # Dichroic mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
+        path: ""  # Dichroic mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
+        notes: ""  # Dichroic mechanism notes
+        slots: ""  # Dichroic mechanism slots
         positions:  # Dichroic mechanism positions map
           Pos_1:
-            bands:  # Dichroic position multiband array
-              -
-                center_nm: ""  # Dichroic position band center (nm)
-                width_nm: ""  # Dichroic position band width (nm)
             component_type: ""  # Dichroic position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
             manufacturer: ""  # Dichroic position component manufacturer
             model: ""  # Dichroic position component model: Vendor-facing dichroic component model/designation.
@@ -227,11 +256,14 @@ hardware:
             cut_off_nm: ""  # Dichroic position cut-off wavelength (nm)
             cutoffs_nm:  # Dichroic position multi-cutoff wavelengths (nm)
               - ""
-        name: ""  # Dichroic mechanism name
-        type: ""  # Dichroic mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
-        path: ""  # Dichroic mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-        notes: ""  # Dichroic mechanism notes
-        slots: ""  # Dichroic mechanism slots
+            transmission_bands:  # Dichroic position transmission bands
+              -
+                center_nm: ""  # Dichroic position transmission band center (nm)
+                width_nm: ""  # Dichroic position transmission band width (nm)
+            reflection_bands:  # Dichroic position reflection bands
+              -
+                center_nm: ""  # Dichroic position reflection band center (nm)
+                width_nm: ""  # Dichroic position reflection band width (nm)
     emission_mechanisms:  # Emission mechanisms
       -
         name: ""  # Emission mechanism name
@@ -255,6 +287,14 @@ hardware:
             cut_off_nm: ""  # Emission position cut-off wavelength (nm)
             cutoffs_nm:  # Emission position multi-cutoff wavelengths (nm)
               - ""
+            transmission_bands:  # Emission position transmission bands
+              -
+                center_nm: ""  # Emission position transmission band center (nm)
+                width_nm: ""  # Emission position transmission band width (nm)
+            reflection_bands:  # Emission position reflection bands
+              -
+                center_nm: ""  # Emission position reflection band center (nm)
+                width_nm: ""  # Emission position reflection band width (nm)
     endpoints:  # Light path endpoints: Explicit route graph endpoints consumed by light-path parser and virtual microscope runtime.
       -
         id: ""  # Endpoint ID: Stable endpoint key usable as splitter branch target.
@@ -268,6 +308,16 @@ hardware:
         dichroic:  # Splitter dichroic
           component_type: ""  # Splitter dichroic component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
           cut_on_nm: ""  # Splitter dichroic cutoff wavelength (nm)
+          cutoffs_nm:  # Splitter dichroic multi-cutoff wavelengths (nm)
+            - ""
+          transmission_bands:  # Splitter dichroic transmission bands
+            -
+              center_nm: ""  # Splitter dichroic transmission band center (nm)
+              width_nm: ""  # Splitter dichroic transmission band width (nm)
+          reflection_bands:  # Splitter dichroic reflection bands
+            -
+              center_nm: ""  # Splitter dichroic reflection band center (nm)
+              width_nm: ""  # Splitter dichroic reflection band width (nm)
         path_1:  # Splitter path 1 (transmitted)
           emission_filter:
             component_type: ""  # Splitter path 1 emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
