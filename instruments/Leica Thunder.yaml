@@ -7,19 +7,19 @@ instrument:
   funding: ''
   stand_orientation: inverted
   ocular_availability: trinocular
-  location: '' # Flag: Required field. Please provide the physical location.
-  notes: Widefield microscope with Leica Computational Clearing for real-time out-of-focus blur removal in 3D fluorescence imaging; high sensitivity supports low phototoxicity and photobleaching. LAS X raw data is saved separately; processing can be done during acquisition or by post-processing.
+  location: ''
+  notes: Widefield microscope with Leica Computational Clearing for real-time out-of-focus
+    blur removal in 3D fluorescence imaging; high sensitivity supports low phototoxicity
+    and photobleaching. LAS X raw data is saved separately; processing can be done
+    during acquisition or by post-processing.
   url: https://www.leica-microsystems.com/products/thunder-imaging-systems/
-
 modalities:
 - widefield_fluorescence
 - transmitted_brightfield
-
 modules:
 - name: hardware_autofocus
   notes: ''
   url: ''
-
   manufacturer: Leica Microsystems
   model: Adaptive Focus Control
 software:
@@ -32,16 +32,13 @@ hardware:
     temperature_control: true
     co2_control: true
     humidity_control: true
-
   scanner:
     type: none
     notes: ''
     url: ''
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   light_sources:
   - kind: led
     manufacturer: Leica
@@ -50,7 +47,7 @@ hardware:
     wavelength_nm: 395
     width_nm: 25
     power: 200 mW
-    notes: "390 in software"
+    notes: 390 in software
     url: ''
   - kind: led
     manufacturer: Leica
@@ -59,7 +56,7 @@ hardware:
     wavelength_nm: 438
     width_nm: 29
     power: 200 mW
-    notes: "440 in software"
+    notes: 440 in software
     url: ''
   - kind: led
     manufacturer: Leica
@@ -77,7 +74,7 @@ hardware:
     wavelength_nm: 511
     width_nm: 16
     power: 200 mW
-    notes: "510 in software"
+    notes: 510 in software
     url: ''
   - kind: led
     manufacturer: Leica
@@ -113,18 +110,18 @@ hardware:
     wavelength_nm: 730
     width_nm: 40
     power: 200 mW
-    notes: "747 in software"
+    notes: 747 in software
     url: ''
   detectors:
   - kind: scmos
     manufacturer: Leica
     model: K8
     pixel_pitch_um: 6.5
-    sensor_format_px: "2048 x 2048"
+    sensor_format_px: 2048 x 2048
     bit_depth: 12
     qe_peak_pct: 95
     read_noise_e: 1.0
-    notes: "monochrome; 18.8 mm sensor, dark current 1.5 e-/pix/s"
+    notes: monochrome; 18.8 mm sensor, dark current 1.5 e-/pix/s
     url: https://www.leica-microsystems.com/products/microscope-cameras/p/k8/
     id: detector_1
   - kind: cmos
@@ -132,94 +129,116 @@ hardware:
     model: K3C
     pixel_pitch_um: 3.45
     bit_depth: 12
-    notes: "color CMOS; excellent color reproduction; RGB quantifiable images"
+    notes: color CMOS; excellent color reproduction; RGB quantifiable images
     url: https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/
-
     id: detector_2
   light_path:
-    # ---------------------------------------------------------
-    # 1. FILTER CUBES (The physically linked Ex, Di, and Em filters)
-    # ---------------------------------------------------------
     cube_mechanisms:
-    - name: "Filter Turret"
+    - name: Filter Turret
       type: turret
       slots: 6
       path: epi
       positions:
         1:
-          name: "CYR71010"
-          product_code: "11525416"
-          notes: "Quad-band"
+          name: CYR71010
+          product_code: '11525416'
+          notes: Quad-band
           excitation_filter:
             component_type: multiband_bandpass
             bands:
-            - {center_nm: 436, width_nm: 28}
-            - {center_nm: 506, width_nm: 21}
-            - {center_nm: 578, width_nm: 24}
-            - {center_nm: 730, width_nm: 40}
+            - center_nm: 436
+              width_nm: 28
+            - center_nm: 506
+              width_nm: 21
+            - center_nm: 578
+              width_nm: 24
+            - center_nm: 730
+              width_nm: 40
           dichroic:
             component_type: multiband_dichroic
-            cutoffs_nm: [459, 523, 598, 763]
+            cutoffs_nm:
+            - 459
+            - 523
+            - 598
+            - 763
           emission_filter:
             component_type: multiband_bandpass
             bands:
-            - {center_nm: 473, width_nm: 22}
-            - {center_nm: 539, width_nm: 24}
-            - {center_nm: 641, width_nm: 78}
-            - {center_nm: 810, width_nm: 80}
+            - center_nm: 473
+              width_nm: 22
+            - center_nm: 539
+              width_nm: 24
+            - center_nm: 641
+              width_nm: 78
+            - center_nm: 810
+              width_nm: 80
         2:
-          name: "DFT51010"
-          product_code: "11525418"
-          notes: "Quad-band"
+          name: DFT51010
+          product_code: '11525418'
+          notes: Quad-band
           excitation_filter:
             component_type: multiband_bandpass
             bands:
-            - {center_nm: 391, width_nm: 32}
-            - {center_nm: 479, width_nm: 33}
-            - {center_nm: 554, width_nm: 24}
-            - {center_nm: 638, width_nm: 31}
+            - center_nm: 391
+              width_nm: 32
+            - center_nm: 479
+              width_nm: 33
+            - center_nm: 554
+              width_nm: 24
+            - center_nm: 638
+              width_nm: 31
           dichroic:
             component_type: multiband_dichroic
-            cutoffs_nm: [415, 500, 572, 660]
+            cutoffs_nm:
+            - 415
+            - 500
+            - 572
+            - 660
           emission_filter:
             component_type: multiband_bandpass
             bands:
-            - {center_nm: 435, width_nm: 30}
-            - {center_nm: 519, width_nm: 25}
-            - {center_nm: 594, width_nm: 32}
-            - {center_nm: 695, width_nm: 58}
+            - center_nm: 435
+              width_nm: 30
+            - center_nm: 519
+              width_nm: 25
+            - center_nm: 594
+              width_nm: 32
+            - center_nm: 695
+              width_nm: 58
         3:
-          name: "CY3"
-          notes: "LED: 555"
+          name: CY3
+          notes: 'LED: 555'
           excitation_filter:
             component_type: bandpass
             center_nm: 546
             width_nm: 10
           dichroic:
             component_type: dichroic
-            cutoffs_nm: [556]
+            cutoffs_nm:
+            - 556
           emission_filter:
             component_type: bandpass
             center_nm: 572
             width_nm: 23
         4:
-          name: "A594"
-          notes: "LED: 575"
+          name: A594
+          notes: 'LED: 575'
           excitation_filter:
             component_type: bandpass
             center_nm: 592
             width_nm: 21
           dichroic:
             component_type: dichroic
-            cutoffs_nm: [610]
+            cutoffs_nm:
+            - 610
           emission_filter:
             component_type: bandpass
             center_nm: 630
             width_nm: 30
         5:
-          name: "EMP_BF"
-          product_code: "11525000"
-          notes: "Empty position for TL-methods excluding POL, DIC"
+          name: EMP_BF
+          product_code: '11525000'
+          notes: Empty position for TL-methods excluding POL, DIC
           excitation_filter:
             component_type: empty
           dichroic:
@@ -227,43 +246,41 @@ hardware:
           emission_filter:
             component_type: empty
         6:
-          name: "EMP+Pol"
-          product_code: "11525000"
-          notes: "Empty position for TL-methods including POL, DIC, requires external Analyser-slider"
+          name: EMP+Pol
+          product_code: '11525000'
+          notes: Empty position for TL-methods including POL, DIC, requires external
+            Analyser-slider
           excitation_filter:
             component_type: empty
           dichroic:
             component_type: empty
           emission_filter:
             component_type: empty
-
-  # ---------------------------------------------------------
-  # 2. EMISSION (The High-Speed External Wheel)
-  # ---------------------------------------------------------
     emission_mechanisms:
-    - name: "Standalone Emission Wheel"
+    - name: Standalone Emission Wheel
       type: filter_wheel
       slots: 6
       path: epi
-      notes: "External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope turret)"
+      notes: External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope
+        turret)
       positions:
         1:
-          name: "460/80"
+          name: 460/80
           component_type: bandpass
           center_nm: 460
           width_nm: 80
         2:
-          name: "535/70"
+          name: 535/70
           component_type: bandpass
           center_nm: 535
           width_nm: 70
         3:
-          name: "590/50"
+          name: 590/50
           component_type: bandpass
           center_nm: 590
           width_nm: 50
         4:
-          name: "642/80"
+          name: 642/80
           component_type: bandpass
           center_nm: 642
           width_nm: 80
@@ -271,7 +288,6 @@ hardware:
           component_type: empty
         6:
           component_type: empty
-
   objectives:
   - id: 5x_air
     manufacturer: Leica
@@ -284,9 +300,9 @@ hardware:
     correction: plan_achromat
     afc_compatible: false
     specialties:
-    - Phase Contrast (PH 0)
-    - DIC Prism B
-    - "UV ≥365 nm"
+    - phase
+    - dic
+    - uv_transmission
     notes: FN 22
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/
     is_installed: true
@@ -301,8 +317,8 @@ hardware:
     correction: plan_apochromat
     afc_compatible: true
     specialties:
-    - DIC Prism A
-    - "UV ≥340 nm"
+    - dic
+    - uv_transmission
     notes: FN 25
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/
     is_installed: true
@@ -314,12 +330,12 @@ hardware:
     numerical_aperture: 0.4
     working_distance: 7.5 - 6.2 mm
     immersion: air
-    correction: fluorite   # Flag: Make sure 'fluorite' is the exact ID vs 'plan_fluorite'
+    correction: fluorite
     afc_compatible: true
     specialties:
-    - Correction Ring
-    - DIC Prism C
-    - "UV ≥340 nm"
+    - correction_collar
+    - dic
+    - uv_transmission
     notes: FN 25
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/
     is_installed: true
@@ -334,10 +350,10 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties:
-    - Multi-immersion
-    - Correction Ring
-    - DIC Prism C
-    - "UV ≥365 nm"
+    - correction_collar
+    - correction_collar
+    - dic
+    - uv_transmission
     notes: FN 25; W/O/G Immersion
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/
     is_installed: true
@@ -352,8 +368,8 @@ hardware:
     correction: plan_apochromat
     afc_compatible: true
     specialties:
-    - DIC Prism C
-    - "UV ≥365 nm"
+    - dic
+    - uv_transmission
     notes: FN 25
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/
     is_installed: true
@@ -368,8 +384,8 @@ hardware:
     correction: plan_apochromat
     afc_compatible: true
     specialties:
-    - DIC Prism E
-    - "UV ≥340 nm"
+    - dic
+    - uv_transmission
     notes: FN 25
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/
     is_installed: true
@@ -381,14 +397,14 @@ hardware:
     numerical_aperture: 0.6
     working_distance: 2.5 mm
     immersion: multi
-    correction: fluorite   # Flag: Verify 'fluorite' vs 'plan_fluorite'
+    correction: fluorite
     afc_compatible: true
     specialties:
-    - Multi-immersion (BABB/W/Glyc/Sil-Oil)
-    - IR-compatible to 1300 nm
-    - VISIR
-    - Correction Ring
-    - DIC Prism D
+    - correction_collar
+    - ir_transmission
+    - ir_transmission
+    - correction_collar
+    - dic
     notes: FN 20
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/
     is_installed: false
@@ -403,9 +419,9 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties:
-    - Phase Contrast (PH 1)
-    - DIC Prism D
-    - "UV ≥340 nm"
+    - phase
+    - dic
+    - uv_transmission
     notes: FN 25; from SP5?
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/
     is_installed: false
@@ -420,9 +436,9 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties:
-    - STED
-    - DIC Prism D
-    - "UV ≥340 nm"
+    - sted
+    - dic
+    - uv_transmission
     notes: FN 25; from SP5?
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/
     is_installed: false

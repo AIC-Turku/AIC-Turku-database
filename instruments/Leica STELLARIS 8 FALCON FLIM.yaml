@@ -7,32 +7,31 @@ instrument:
   funding: ''
   stand_orientation: inverted
   ocular_availability: trinocular
-  location: '' # Flag: Required field. Please provide the physical location.
-  notes: 'Confocal spectral microscope (inverted). Imaging modes: Confocal spectral imaging (tunable emission), FLIM (fluorescence lifetime imaging), FCS (correlation spectroscopy), High-speed scanning (resonant), Multiplex simultaneous channels.'
+  location: ''
+  notes: 'Confocal spectral microscope (inverted). Imaging modes: Confocal spectral
+    imaging (tunable emission), FLIM (fluorescence lifetime imaging), FCS (correlation
+    spectroscopy), High-speed scanning (resonant), Multiplex simultaneous channels.'
   url: ''
-
 modalities:
 - confocal_point
 - spectral_imaging
 - flim
 - fcs
 - transmitted_brightfield
-
 modules:
-- name: flim   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+- name: flim
   notes: FAST Lifetime Contrast (FALCON) module
   url: ''
   manufacturer: Leica Microsystems
   model: FALCON
-- name: fcs   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+- name: fcs
   notes: Fluorescence correlation spectroscopy module
   url: ''
   manufacturer: Leica Microsystems
   model: FCS Module
-- name: aobs   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+- name: aobs
   notes: Acousto-Optical Beam Splitter (spectral splitter)
   url: ''
-
   manufacturer: Leica Microsystems
   model: AOBS
 software:
@@ -43,10 +42,9 @@ software:
 hardware:
   scanner:
     type: resonant
-    line_rate_hz:      # Flag: Required because scanner type is 'resonant'. Please provide the line rate in Hz (e.g., 8000).
+    line_rate_hz: null
     notes: High-speed resonant scanner
     url: ''
-
   light_sources:
   - kind: white_light_laser
     manufacturer: Leica
@@ -62,22 +60,20 @@ hardware:
     power: ''
     notes: ''
     url: ''
-
   detectors:
   - kind: hyd
     manufacturer: Leica
     model: HyD SP detectors
-    qe_peak_pct:        # Flag: Required conditionally because confocal_point modality is present.
+    qe_peak_pct: null
     notes: 4x detectors (Power HyD S, S Core, X, R)
     url: ''
     id: detector_1
   - kind: pmt
     manufacturer: Leica
     model: Transmitted light detector
-    qe_peak_pct:        # Flag: Required conditionally because confocal_point modality is present.
+    qe_peak_pct: null
     notes: Brightfield PMT
     url: ''
-
     id: detector_2
   objectives:
   - id: 10x_air
@@ -86,7 +82,7 @@ hardware:
     product_code: ''
     magnification: 10.0
     numerical_aperture: 0.4
-    working_distance: ''   # Flag: Required conditionally because confocal_point is present. Please provide a value (e.g., '2.2 mm').
+    working_distance: ''
     immersion: air
     correction: apochromat
     afc_compatible: false
@@ -100,12 +96,12 @@ hardware:
     product_code: ''
     magnification: 20.0
     numerical_aperture: 0.75
-    working_distance: ''   # Flag: Required conditionally because confocal_point is present.
-    immersion: multi   # Flag: Verify 'multi' is a valid canonical ID in vocab/objective_immersion.yaml
+    working_distance: ''
+    immersion: multi
     correction: apochromat
     afc_compatible: false
     specialties:
-    - Correction Ring (CORR)
+    - correction_collar
     notes: ''
     url: ''
     is_installed: true
@@ -115,12 +111,12 @@ hardware:
     product_code: ''
     magnification: 40.0
     numerical_aperture: 1.25
-    working_distance: ''   # Flag: Required conditionally because confocal_point is present.
-    immersion: glycerol   # Flag: Verify 'glycerol' is a valid canonical ID in vocab/objective_immersion.yaml
+    working_distance: ''
+    immersion: glycerol
     correction: apochromat
     afc_compatible: false
     specialties:
-    - Correction Ring (CORR)
+    - correction_collar
     notes: ''
     url: ''
     is_installed: true
@@ -130,7 +126,7 @@ hardware:
     product_code: ''
     magnification: 63.0
     numerical_aperture: 1.4
-    working_distance: ''   # Flag: Required conditionally because confocal_point is present.
+    working_distance: ''
     immersion: oil
     correction: apochromat
     afc_compatible: false
