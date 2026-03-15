@@ -69,9 +69,8 @@ hardware:
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: >
-      Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell spinning-disk
-      confocal imaging; less optimal than a 25 µm disk for low-magnification confocal sectioning.
+    notes: "Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell spinning-disk
+      confocal imaging; less optimal than a 25 µm disk for low-magnification confocal sectioning."
     url: ''
 
   light_sources:
