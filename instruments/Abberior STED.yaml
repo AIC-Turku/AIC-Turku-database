@@ -8,45 +8,45 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, BioPhysics room 5086
-  notes: "Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose."
+  notes: "Abberior STED. Sophisticated and highly flexible open platform that can\
+    \ be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and\
+    \ ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator\
+    \ (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables\
+    \ deep imaging up to 75 \xB5m into cleared tissue with a 100x oil objective. RESCue\
+    \ STED is available for live super-resolution imaging with reduced light dose."
   url: ''
-
 modalities:
 - sted
 - resolft
 - confocal_point
-
 modules:
 - name: easy3d_sted
   manufacturer: Abberior
   model: easy3D STED
   notes: Programmable SLM-based module for 2D/3D STED phase pattern generation.
   url: ''
-
 - name: adaptive_optics
   manufacturer: Abberior
   model: Adaptive Optics
-  notes: Supports deep imaging up to 75 µm into cleared tissue with a 100x oil objective.
+  notes: "Supports deep imaging up to 75 \xB5m into cleared tissue with a 100x oil\
+    \ objective."
   url: ''
-
 - name: rescue_sted
   manufacturer: Abberior
   model: RESCue STED
-  notes: Reduction of state transition cycles mode for super-resolution live imaging with lower light dose.
+  notes: Reduction of state transition cycles mode for super-resolution live imaging
+    with lower light dose.
   url: ''
-
 software:
 - role: acquisition
   name: Abberior Imspector
   version: ''
   url: ''
-
 hardware:
   scanner:
     type: galvo
     notes: STED point scanning configuration.
     url: ''
-
   light_sources:
   - kind: laser
     manufacturer: PicoQuant
@@ -58,7 +58,6 @@ hardware:
     repetition_rate_mhz: 40
     notes: Pulsed excitation source for the 488 nm channel.
     url: ''
-
   - kind: laser
     manufacturer: PicoQuant
     model: PDL-T 561
@@ -69,7 +68,6 @@ hardware:
     repetition_rate_mhz: 40
     notes: Pulsed excitation source for the 561 nm channel.
     url: ''
-
   - kind: laser
     manufacturer: PicoQuant
     model: LDH-D-C-640
@@ -80,7 +78,6 @@ hardware:
     repetition_rate_mhz: 40
     notes: Pulsed excitation source for the 640 nm channel.
     url: ''
-
   - kind: laser
     manufacturer: MPB Communications
     model: VFL-P-1000-580
@@ -91,7 +88,6 @@ hardware:
     - 488
     notes: Continuous-wave STED depletion source for the 488 nm excitation channel.
     url: ''
-
   - kind: laser
     manufacturer: OneFive / NKT Photonics
     model: Katana HP 775
@@ -105,14 +101,12 @@ hardware:
     - 640
     notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation channels.
     url: ''
-
   detectors:
   - kind: pmt
     manufacturer: Hamamatsu Photonics
     model: Photomultiplier Tube
     notes: General confocal detection channel.
     url: ''
-
     id: detector_1
   - kind: apd
     manufacturer: Excelitas Technologies
@@ -122,16 +116,14 @@ hardware:
     default_gate_width_ns: 7.0
     notes: Two APD detectors; timing resolution optimized for time-gated CW-STED.
     url: ''
-
     id: detector_2
   - kind: ccd
     manufacturer: Generic
     model: Monochrome CCD camera
     pixel_pitch_um: 4.65
-    sensor_format_px: "1280 x 960"
+    sensor_format_px: 1280 x 960
     notes: 1/2-inch format camera.
     url: ''
-
     id: detector_3
   objectives:
   - id: 20x_air
@@ -152,7 +144,7 @@ hardware:
     numerical_aperture: 1.2
     working_distance: 0.28 mm
     immersion: water
-    correction: super_apochromat
+    correction: plan_apochromat
     is_installed: true
   - id: 100x_oil
     manufacturer: Olympus
@@ -162,9 +154,8 @@ hardware:
     numerical_aperture: 1.4
     working_distance: 0.13 mm
     immersion: oil
-    correction: super_apochromat
+    correction: plan_apochromat
     is_installed: true
-
   optical_modulators:
   - type: slm
     manufacturer: Abberior
@@ -174,12 +165,11 @@ hardware:
     - bottle
     - 3d_sted
     notes: Used for Easy3D STED phase-pattern generation and adaptive optics workflows.
-
   illumination_logic:
   - method: rescue_sted
     default_enabled: false
-    notes: Real-time adaptive STED decision logic used to reduce photobleaching and light dose during live-cell super-resolution imaging.
-
+    notes: Real-time adaptive STED decision logic used to reduce photobleaching and
+      light dose during live-cell super-resolution imaging.
   light_path:
     emission_mechanisms:
     - name: Emission Filter Wheel
@@ -192,15 +182,13 @@ hardware:
           product_code: FF01-525/25
           center_nm: 525
           width_nm: 25
-
         2:
           component_type: bandpass
           manufacturer: Semrock
           model: BrightLine 615/10
-          product_code: ""
+          product_code: ''
           center_nm: 615
           width_nm: 10
-
         3:
           component_type: bandpass
           manufacturer: Chroma

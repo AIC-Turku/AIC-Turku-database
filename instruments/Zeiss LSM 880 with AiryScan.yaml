@@ -8,17 +8,20 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting standard confocal and super-resolution AiryScan imaging. Dedicated for fast and sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
+  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting
+    standard confocal and super-resolution AiryScan imaging. Dedicated for fast and
+    sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal
+    scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell
+    imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss
+    LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
-
 modalities:
 - confocal_point
 - ism
 - spectral_imaging
 - transmitted_brightfield
-
 modules:
-- name: airyscan   # Verify this matches a canonical ID in vocab/modules.yaml
+- name: airyscan
   notes: 32-channel GaAsP area detector for super-resolution
   url: ''
   manufacturer: Zeiss
@@ -41,7 +44,6 @@ modules:
 - name: workstation
   notes: Image processing workstation (36 TB, 4 GB GPU)
   url: ''
-
   manufacturer: Zeiss
   model: Image Processing Workstation
 software:
@@ -53,101 +55,95 @@ hardware:
   environment:
     temperature_control: true
     notes: Environmental chamber with temperature control and heated stage inserts
-
   hardware_autofocus:
     is_installed: true
-    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
-
+    type: infrared_reflection
   stages:
-  - type: piezo   # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml
+  - type: z_piezo
     notes: Piezo Z-stage
-
   scanner:
     type: resonant
-    line_rate_hz:      # Flag: Required because scanner type is 'resonant'. Please provide the resonant scanner speed in Hz.
+    line_rate_hz: null
     notes: ''
     url: ''
-
   light_sources:
   - kind: laser
-    manufacturer: ''   # Flag: Required field. Needs a manufacturer (e.g., Zeiss, Lasos).
+    manufacturer: ''
     model: 405 nm (Diode)
     wavelength_nm: '405'
     power: ''
     notes: ''
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 458 nm (Argon)
     wavelength_nm: '458'
     power: ''
     notes: ''
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 488 nm (Argon)
     wavelength_nm: '488'
     power: ''
     notes: ''
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 514 nm (Argon)
     wavelength_nm: '514'
     power: ''
     notes: ''
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 543 nm (HeNe)
     wavelength_nm: '543'
     power: ''
     notes: ''
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 633 nm (HeNe)
     wavelength_nm: '633'
     power: ''
     notes: ''
     url: ''
-
   detectors:
   - kind: pmt
-    manufacturer: ''   # Flag: Required field (e.g., Zeiss).
+    manufacturer: ''
     model: PMT (Ch1)
-    qe_peak_pct:        # Flag: Conditionally required because confocal_point modality is present.
+    qe_peak_pct: null
     notes: ''
     url: ''
     id: detector_1
   - kind: pmt
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: Cooled PMT (Ch2)
-    qe_peak_pct:        # Flag: Conditionally required because confocal_point modality is present.
+    qe_peak_pct: null
     notes: ''
     url: ''
     id: detector_2
   - kind: pmt
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: Transmitted light PMT
-    qe_peak_pct:        # Flag: Conditionally required because confocal_point modality is present.
+    qe_peak_pct: null
     notes: ''
     url: ''
     id: detector_3
   - kind: gaasp_pmt
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 32-channel GaAsP spectral array detector
-    qe_peak_pct:        # Flag: Conditionally required because confocal_point modality is present.
+    qe_peak_pct: null
     notes: ''
     url: ''
     id: detector_4
   - kind: gaasp_pmt
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 32-channel AiryScan detector (GaAsP)
-    qe_peak_pct:        # Flag: Conditionally required because confocal_point modality is present.
+    qe_peak_pct: null
     notes: ''
     url: ''
-
     id: detector_5
   filters:
   - name: Continuously tunable emission filters
@@ -206,12 +202,11 @@ hardware:
     emission: BP 570-620 + LP 645
     notes: Preset emission filter
     url: ''
-
   objectives:
   - id: 10x_air
     manufacturer: Zeiss
     model: Plan-APOCHROMAT 10x/0.3
-    product_code: '420640-9800'
+    product_code: 420640-9800
     magnification: 10.0
     numerical_aperture: 0.3
     working_distance: 2.0 mm
@@ -220,12 +215,12 @@ hardware:
     afc_compatible: false
     specialties: []
     notes: ''
-    url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420640-9800-000/Objective-Plan-Apochromat-10x-0.3-M27'
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420640-9800-000/Objective-Plan-Apochromat-10x-0.3-M27
     is_installed: true
   - id: 20x_air
     manufacturer: Zeiss
     model: Plan-APOCHROMAT 20x/0.8
-    product_code: '420650-9901'
+    product_code: 420650-9901
     magnification: 20.0
     numerical_aperture: 0.8
     working_distance: 0.55 mm
@@ -234,12 +229,12 @@ hardware:
     afc_compatible: false
     specialties: []
     notes: ''
-    url: 'https://www.micro-shop.zeiss.com/zh/us/shop/objectives/420650-9901-000/Objective-Plan-Apochromat-20x-0.8-M27'
+    url: https://www.micro-shop.zeiss.com/zh/us/shop/objectives/420650-9901-000/Objective-Plan-Apochromat-20x-0.8-M27
     is_installed: true
   - id: 40x_multi
     manufacturer: Zeiss
     model: LD LCI Plan APOCHROMAT 40x/1.2 Imm Korr DIC (UV)VIS-IR
-    product_code: '420862-9970'
+    product_code: 420862-9970
     magnification: 40.0
     numerical_aperture: 1.2
     working_distance: 0.41 mm
@@ -247,15 +242,15 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties:
-    - DIC
-    - (UV)VIS-IR
-    notes: 'Imm Korr (Multi-immersion, correction collar)'
-    url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27'
+    - dic
+    - ir_transmission
+    notes: Imm Korr (Multi-immersion, correction collar)
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27
     is_installed: true
   - id: 63x_oil
     manufacturer: Zeiss
     model: C-Plan-APOCHROMAT 63x/1.4 Oil DIC UV-VIS-IR
-    product_code: '421782-9900'
+    product_code: 421782-9900
     magnification: 63.0
     numerical_aperture: 1.4
     working_distance: 0.14 mm
@@ -263,39 +258,39 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties:
-    - DIC
-    - UV-VIS-IR
+    - dic
+    - ir_transmission
     notes: ''
-    url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/421782-9900-000/Objective-C-Plan-Apochromat-63x-1.4-Oil-DIC-M27'
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421782-9900-000/Objective-C-Plan-Apochromat-63x-1.4-Oil-DIC-M27
     is_installed: true
   - id: 25x_multi
     manufacturer: Zeiss
     model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
-    product_code: '420852-9871'
+    product_code: 420852-9871
     magnification: 25.0
     numerical_aperture: 0.8
-    working_distance: '0.57 mm at cover glass 0.17'
+    working_distance: 0.57 mm at cover glass 0.17
     immersion: multi
     correction: plan_apochromat
     afc_compatible: false
     specialties:
-    - DIC
-    - (UV)VIS-IR
-    notes: 'Optional objective. Imm Korr (Multi-immersion, correction collar)'
-    url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27'
+    - dic
+    - ir_transmission
+    notes: Optional objective. Imm Korr (Multi-immersion, correction collar)
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27
     is_installed: false
   - id: 63x_water
     manufacturer: Zeiss
     model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
-    product_code: '421787-9970'
+    product_code: 421787-9970
     magnification: 63.0
     numerical_aperture: 1.2
-    working_distance: '0.28 mm at cover glass 0.17'
+    working_distance: 0.28 mm at cover glass 0.17
     immersion: water
     correction: apochromat
     afc_compatible: false
     specialties:
-    - UV-VIS-IR
-    notes: 'Optional objective. W Korr (Water immersion, correction collar)'
-    url: 'https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27'
+    - ir_transmission
+    notes: Optional objective. W Korr (Water immersion, correction collar)
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
     is_installed: false

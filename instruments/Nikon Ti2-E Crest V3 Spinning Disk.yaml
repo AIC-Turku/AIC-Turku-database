@@ -8,17 +8,18 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: High-end spinning disk system with Lumencor Celesta 7-channel laser, dual Photometrics Kinetix cameras, and Dark Enclosure WarmBox.
+  notes: High-end spinning disk system with Lumencor Celesta 7-channel laser, dual
+    Photometrics Kinetix cameras, and Dark Enclosure WarmBox.
   url: https://www.microscope.healthcare.nikon.com/products/inverted-microscopes/eclipse-ti2
-
 modalities:
 - confocal_spinning_disk
 - widefield_fluorescence
 - transmitted_brightfield
-
 modules:
 - name: hardware_autofocus
-  notes: 'Nikon Perfect Focus System (PFS). WARNING: Not compatible with 751 nm excitation. The PFS beamsplitter needs to be taken out from the lightpath in the optical configurations for 749/751nm use.'
+  notes: 'Nikon Perfect Focus System (PFS). WARNING: Not compatible with 751 nm excitation.
+    The PFS beamsplitter needs to be taken out from the lightpath in the optical configurations
+    for 749/751nm use.'
   url: ''
   manufacturer: Nikon
   model: Perfect Focus System
@@ -33,14 +34,14 @@ modules:
   manufacturer: Prior
   model: SP600 piezo kit
 - name: hardware_triggering
-  notes: Crest V3 Triggering Kit (MXCRO057) including NI PCIe-6738, Ubob42 NIDAQ Ultimate Breakout Box, and 9-Channel Trigger Cable for high-speed device synchronization.
+  notes: Crest V3 Triggering Kit (MXCRO057) including NI PCIe-6738, Ubob42 NIDAQ Ultimate
+    Breakout Box, and 9-Channel Trigger Cable for high-speed device synchronization.
   url: ''
   manufacturer: CrestOptics
   model: V3 Triggering Kit MXCRO057
 - name: motorized_stage
   notes: Motorized XY stage for the Nikon Ti2-E.
   url: ''
-
   manufacturer: Nikon
   model: Motorized XY Stage
 software:
@@ -52,28 +53,23 @@ software:
   version: ''
   notes: Includes 6D, JOBS 2.0, 3D Measurement, and RT Acquisition
   url: https://www.microscope.healthcare.nikon.com/products/software/nis-elements
-
 hardware:
   environment:
     temperature_control: true
     notes: Dark Enclosure WarmBox set for Ti2 (TI2WB-SP400NX-G)
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   stages:
-  - type: piezo
+  - type: z_piezo
     manufacturer: Prior
     model: QG/Prior SP600 piezo kit
     notes: QG/Prior SP600 piezo kit with well-plate holder
-
   scanner:
     type: spinning_disk
     pinhole_um: 50
     notes: CrestOptics X-Light V3 HTDS (Laser-SP disk-Throughput-V2&V3 50:250um)
     url: https://crestoptics.com/x-light-v3/
-
   light_sources:
   - kind: laser
     manufacturer: Lumencor
@@ -138,10 +134,9 @@ hardware:
     wavelength_nm: white
     power: ''
     path: shared
-    role: transmitted_illumination    # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
+    role: transmitted_illumination
     notes: For DIA transmitted illumination
     url: ''
-
   detectors:
   - id: detector_1
     kind: scmos
@@ -149,7 +144,7 @@ hardware:
     model: Kinetix
     pixel_pitch_um: 6.5
     qe_peak_pct: 95
-    sensor_format_px: "3200 x 3200"
+    sensor_format_px: 3200 x 3200
     notes: Master Camera (1st F-cam) - GFP/Cy5 in DualCam mode
     url: https://www.photometrics.com/products/kinetix-family/kinetix
   - id: detector_2
@@ -158,10 +153,9 @@ hardware:
     model: Kinetix
     pixel_pitch_um: 6.5
     qe_peak_pct: 95
-    sensor_format_px: "3200 x 3200"
+    sensor_format_px: 3200 x 3200
     notes: Slave Camera (2nd F-cam) - DAPI/Cy3 in DualCam mode
     url: https://www.photometrics.com/products/kinetix-family/kinetix
-
   light_path:
     endpoints:
     - id: detector_1
@@ -172,7 +166,6 @@ hardware:
       endpoint_type: detector
       display_label: Kinetix 2
       path: shared
-
     excitation_mechanisms:
     - name: Crest Excitation Wheel
       type: filter_wheel
@@ -184,23 +177,29 @@ hardware:
           component_type: multiband_bandpass
           product_code: MXR00543
           bands:
-          - {center_nm: 391, width_nm: 54.4}
-          - {center_nm: 477, width_nm: 20.4}
-          - {center_nm: 549, width_nm: 25.7}
-          - {center_nm: 638.5, width_nm: 27.6}
-          - {center_nm: 741, width_nm: 45.1}
+          - center_nm: 391
+            width_nm: 54.4
+          - center_nm: 477
+            width_nm: 20.4
+          - center_nm: 549
+            width_nm: 25.7
+          - center_nm: 638.5
+            width_nm: 27.6
+          - center_nm: 741
+            width_nm: 45.1
         Pos_2:
           name: Celesta CFP-YFP-A
           component_type: multiband_bandpass
           product_code: MXR00544
           bands:
-          - {center_nm: 449, width_nm: 26.7}
-          - {center_nm: 520, width_nm: 27.9}
+          - center_nm: 449
+            width_nm: 26.7
+          - center_nm: 520
+            width_nm: 27.9
         Pos_3:
           name: Neutral Density
           component_type: neutral_density
           notes: ND 1.3-5%T-25mm. 5% transmission to be used with widefield.
-
     dichroic_mechanisms:
     - name: Crest Dichroic Wheel
       type: filter_wheel
@@ -211,13 +210,19 @@ hardware:
           name: Celesta-DA/FI/TR/Cy5/Cy7-A
           component_type: multiband_dichroic
           product_code: MXR00543
-          cutoffs_nm: [421, 491, 567, 659, 776]
+          cutoffs_nm:
+          - 421
+          - 491
+          - 567
+          - 659
+          - 776
         Pos_2:
           name: Celesta CFP-YFP-A
           component_type: multiband_dichroic
           product_code: MXR00544
-          cutoffs_nm: [471, 539]
-
+          cutoffs_nm:
+          - 471
+          - 539
     emission_mechanisms:
     - name: Crest Emission Wheel
       type: filter_wheel
@@ -229,18 +234,25 @@ hardware:
           component_type: multiband_bandpass
           product_code: MXR00541 / MXR00543
           bands:
-          - {center_nm: 441, width_nm: 36.1}
-          - {center_nm: 511, width_nm: 34.3}
-          - {center_nm: 592.5, width_nm: 45.2}
-          - {center_nm: 684, width_nm: 44.4}
-          - {center_nm: 817, width_nm: 78.8}
+          - center_nm: 441
+            width_nm: 36.1
+          - center_nm: 511
+            width_nm: 34.3
+          - center_nm: 592.5
+            width_nm: 45.2
+          - center_nm: 684
+            width_nm: 44.4
+          - center_nm: 817
+            width_nm: 78.8
         Pos_2:
           name: Celesta CFP-YFP-A
           component_type: multiband_bandpass
           product_code: MXR00542 / MXR00544
           bands:
-          - {center_nm: 484, width_nm: 25.9}
-          - {center_nm: 561, width_nm: 38.9}
+          - center_nm: 484
+            width_nm: 25.9
+          - center_nm: 561
+            width_nm: 38.9
         Pos_3:
           component_type: bandpass
           center_nm: 438
@@ -265,7 +277,6 @@ hardware:
           component_type: bandpass
           center_nm: 685
           width_nm: 40
-
     cube_mechanisms:
     - name: Epi Turret
       type: filter_wheel
@@ -281,7 +292,8 @@ hardware:
             width_nm: 50
           dichroic:
             component_type: dichroic
-            cutoffs_nm: [409]
+            cutoffs_nm:
+            - 409
           emission_filter:
             component_type: bandpass
             center_nm: 447
@@ -296,7 +308,8 @@ hardware:
             width_nm: 40
           dichroic:
             component_type: dichroic
-            cutoffs_nm: [495]
+            cutoffs_nm:
+            - 495
           emission_filter:
             component_type: bandpass
             center_nm: 525
@@ -310,7 +323,8 @@ hardware:
             width_nm: 40
           dichroic:
             component_type: dichroic
-            cutoffs_nm: [585]
+            cutoffs_nm:
+            - 585
           emission_filter:
             component_type: bandpass
             center_nm: 630
@@ -324,12 +338,12 @@ hardware:
             width_nm: 60
           dichroic:
             component_type: dichroic
-            cutoffs_nm: [660]
+            cutoffs_nm:
+            - 660
           emission_filter:
             component_type: bandpass
             center_nm: 700
             width_nm: 75
-
     splitters:
     - name: Nikon DIA
       type: emission_splitter
@@ -347,8 +361,12 @@ hardware:
     - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
       type: emission_splitter
       path: confocal
-      cutoffs_nm: [485, 560, 645]
-      notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
+      cutoffs_nm:
+      - 485
+      - 560
+      - 645
+      notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on
+        Slave Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
       branches:
       - id: dualcam_gfpmcherry_primary
         label: Primary Path
@@ -361,7 +379,7 @@ hardware:
     - name: MXR00545 V3 DualCam-CFP/YFP 2 Bands Celesta Set
       type: emission_splitter
       path: confocal
-      notes: 'Additional DualCam Splitter option for CFP/YFP imaging.'
+      notes: Additional DualCam Splitter option for CFP/YFP imaging.
       branches:
       - id: dualcam_cfpyfp_primary
         label: Primary Path
@@ -371,7 +389,6 @@ hardware:
         target_ids:
         - detector_1
         - detector_2
-
   objectives:
   - id: 4x_air
     manufacturer: Nikon
@@ -430,7 +447,8 @@ hardware:
     specialties:
     - long_working_distance
     - dic
-    notes: 'Optical family: Lambda S. Chromatic correction: 405-950nm. Requires DIC-prism N2.'
+    notes: 'Optical family: Lambda S. Chromatic correction: 405-950nm. Requires DIC-prism
+      N2.'
     url: ''
     is_installed: true
   - id: 60x_silicone
@@ -475,6 +493,6 @@ hardware:
     specialties:
     - tirf
     - dic
-    notes: 'Optional objective. Requires DIC-prism N2.'
+    notes: Optional objective. Requires DIC-prism N2.
     url: ''
     is_installed: false

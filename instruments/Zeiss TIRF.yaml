@@ -8,14 +8,15 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2209
-  notes: 'TIRF/widefield microscope (inverted). TIRF imaging enables approximately 70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm in common confocal microscopy). Designed for membrane studies such as endocytosis and integrin trafficking, and also suitable for sensitive widefield imaging.'
+  notes: TIRF/widefield microscope (inverted). TIRF imaging enables approximately
+    70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm
+    in common confocal microscopy). Designed for membrane studies such as endocytosis
+    and integrin trafficking, and also suitable for sensitive widefield imaging.
   url: ''
-
 modalities:
 - widefield_fluorescence
 - transmitted_brightfield
 - tirf
-
 modules:
 - name: incubation
   notes: Heated incubator and sample holder
@@ -27,82 +28,75 @@ modules:
   url: ''
   manufacturer: Zeiss
   model: Definite Focus
-- name: motorized_stage   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+- name: motorized_stage
   notes: Motorized XY stage
   url: ''
-
   manufacturer: Zeiss
   model: Motorized XY Stage
 software:
 - role: acquisition
-  name: Unknown   # Flag: Recommend replacing with actual software name (e.g., Zeiss ZEN blue)
+  name: Unknown
   version: ''
   url: ''
 hardware:
   environment:
-    temperature_control: true # Flag: Conditionally required due to 'incubation' module
+    temperature_control: true
     notes: Heated incubator and sample holder
-
   hardware_autofocus:
     is_installed: true
-    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
-
+    type: infrared_reflection
   stages:
-  - type: xy_motorized   # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml
+  - type: xy_motorized
     notes: Motorized XY stage
-
   scanner:
     type: none
     notes: ''
     url: ''
-
   light_sources:
   - kind: laser
-    manufacturer: ''   # Flag: Required field. Needs a manufacturer.
+    manufacturer: ''
     model: 488 nm
     wavelength_nm: '488'
     power: ''
     notes: ''
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 561 nm
     wavelength_nm: '561'
     power: ''
     notes: ''
     url: ''
   - kind: laser
-    manufacturer: ''   # Flag: Required field.
+    manufacturer: ''
     model: 639 nm
     wavelength_nm: '639'
     power: ''
     notes: ''
     url: ''
-
   detectors:
   - kind: emccd
     manufacturer: Hamamatsu
     model: C9100-13
-    pixel_pitch_um: 16.0   # Flag: Required by schema for emccd. Standard specification for this camera.
-    sensor_format_px: "512 x 512"
-    notes: ""
+    pixel_pitch_um: 16.0
+    sensor_format_px: 512 x 512
+    notes: ''
     url: ''
     id: detector_1
   - kind: scmos
     manufacturer: Hamamatsu
     model: ORCA-Flash4.0 CMOS
-    pixel_pitch_um: 6.5   # Flag: Required by schema for scmos. Standard specification for this camera.
-    sensor_format_px: "2048 x 2048"
-    notes: ""
+    pixel_pitch_um: 6.5
+    sensor_format_px: 2048 x 2048
+    notes: ''
     url: ''
-
     id: detector_2
   filters:
   - name: Filter set 38 HE (GFP)
     location: Filter Turret
     product_code: 38 HE
     excitation: 470/40
-    dichroic: ''   # Flag: Required because widefield_fluorescence/tirf is present. (Usually FT 495)
+    dichroic: ''
     emission: 525/50
     notes: ''
     url: ''
@@ -110,7 +104,7 @@ hardware:
     location: Filter Turret
     product_code: 43 HE
     excitation: 550/25
-    dichroic: ''   # Flag: Required field. (Usually FT 570)
+    dichroic: ''
     emission: 605/70
     notes: ''
     url: ''
@@ -118,7 +112,7 @@ hardware:
     location: Filter Turret
     product_code: 76 HE
     excitation: TBP 406+489+561
-    dichroic: ''   # Flag: Required field.
+    dichroic: ''
     emission: TBP 459+525+608
     notes: ''
     url: ''
@@ -126,11 +120,10 @@ hardware:
     location: Filter Turret
     product_code: 77 HE
     excitation: TBP 483+564+642
-    dichroic: ''   # Flag: Required field.
+    dichroic: ''
     emission: TBP 526+601+688
     notes: ''
     url: ''
-
   objectives:
   - id: 2.5x_air
     manufacturer: Zeiss
@@ -140,7 +133,7 @@ hardware:
     numerical_aperture: 0.06
     working_distance: 15.1 mm
     immersion: air
-    correction: plan_fluorite   # Mapped from EC Epiplan-Neofluar
+    correction: plan_fluorite
     afc_compatible: false
     specialties: []
     notes: ''
@@ -154,7 +147,7 @@ hardware:
     numerical_aperture: 0.3
     working_distance: 5.2 mm
     immersion: air
-    correction: plan_fluorite   # Mapped from EC Epiplan-Neofluar
+    correction: plan_fluorite
     afc_compatible: false
     specialties: []
     notes: ''
@@ -185,7 +178,7 @@ hardware:
     correction: plan_apochromat
     afc_compatible: true
     specialties:
-    - TIRF
+    - tirf
     notes: ''
     url: ''
     is_installed: true
@@ -200,7 +193,7 @@ hardware:
     correction: plan_apochromat
     afc_compatible: true
     specialties:
-    - TIRF
+    - tirf
     notes: ''
     url: ''
     is_installed: true

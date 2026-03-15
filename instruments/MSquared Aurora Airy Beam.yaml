@@ -8,18 +8,19 @@ instrument:
   stand_orientation: other
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation."
+  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term\
+    \ volumetric live imaging with reduced photobleaching and striping artefacts.\
+    \ Approximate performance claims: up to 800 \xB5m FOV (with 15.3x Special Optics),\
+    \ sub-1 \xB5m axial resolution, and lower phototoxic burden due to single exposure\
+    \ per z-slice and self-healing/non-diffractive beam propagation."
   url: ''
-
 modalities:
 - light_sheet
 - widefield_fluorescence
-
 modules:
-- name: environmental_enclosure   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
+- name: environmental_enclosure
   notes: Laser safety enclosure CUBE & BOX
   url: ''
-
   manufacturer: M Squared
   model: CUBE & BOX Laser Safety Enclosure
 software:
@@ -33,15 +34,14 @@ software:
   url: ''
 hardware:
   environment:
-    temperature_control: true # Flag: Conditionally required due to 'environmental_enclosure' module. Verify if this enclosure regulates temperature.
-
+    temperature_control: true
   scanner:
     type: tandem
-    light_sheet_type: airy_beam # Added to satisfy conditional requirement for light_sheet modality
-    line_rate_hz:      # Flag: Strictly required by policy for 'tandem' scanner type. Please specify (e.g., 8000).
-    notes: Galvanometric scanner and remote focusing lenses on illumination/detection; integrated Resonant scanner for beam scanning.
+    light_sheet_type: airy_beam
+    line_rate_hz: null
+    notes: Galvanometric scanner and remote focusing lenses on illumination/detection;
+      integrated Resonant scanner for beam scanning.
     url: ''
-
   light_sources:
   - kind: laser
     manufacturer: Coherent OBIS
@@ -64,43 +64,40 @@ hardware:
     power: 75 mW
     notes: 'FIBER PIGTAIL:UFC: Galaxy'
     url: ''
-
   detectors:
   - kind: scmos
     manufacturer: Hamamatsu
     model: ORCA-Flash4.0 V3 (C11440-22CU)
-    pixel_pitch_um: 6.5   # Flag: Required field for scmos detectors. Added standard spec value.
-    sensor_format_px: "2048 x 2048"
+    pixel_pitch_um: 6.5
+    sensor_format_px: 2048 x 2048
     notes: Supplied with water chiller for camera chip cooling
     url: ''
-
     id: detector_1
   filters:
   - name: GFP filter
     location: Emission Wheel (6-position)
     product_code: ''
-    excitation: ''   # Flag: Conditionally required because widefield_fluorescence is present.
-    dichroic: ''     # Flag: Conditionally required because widefield_fluorescence is present.
+    excitation: ''
+    dichroic: ''
     emission: 520/40
     notes: ''
     url: ''
   - name: GFP longpass
     location: Emission Wheel (6-position)
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: LP 500
     notes: ''
     url: ''
   - name: RFP longpass
     location: Emission Wheel (6-position)
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: LP 570
     notes: ''
     url: ''
-
   objectives:
   - id: 17x_multi
     manufacturer: Special Optics
@@ -109,11 +106,13 @@ hardware:
     magnification: 17.0
     numerical_aperture: 0.4
     working_distance: 12 mm
-    immersion: multi   # Flag: Verify 'multi' is a valid canonical ID in vocab/objective_immersion.yaml
-    correction: ''   # Flag: Required field. Needs to match vocab/objective_corrections.yaml (e.g., plan_fluorite, apochromat)
+    immersion: multi
+    correction: ''
     afc_compatible: false
     specialties:
-    - Cleared Tissue Imaging (CLARITY and TDE)
-    notes: Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI. FOV 1.2 mm diameter.
+    - cleared_tissue_imaging
+    notes: Excitation and detection objectives designed for dipping media with refractive
+      index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across
+      RI. FOV 1.2 mm diameter.
     url: ''
     is_installed: true

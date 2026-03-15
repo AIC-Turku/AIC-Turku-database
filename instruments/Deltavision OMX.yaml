@@ -8,18 +8,19 @@ instrument:
   stand_orientation: inverted
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF for evenly illuminated large fields of view.
+  notes: Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization
+    microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF
+    for evenly illuminated large fields of view.
   url: ''
-
 modalities:
 - widefield_fluorescence
 - tirf
 - sim
 - smlm
-
 modules:
 - name: environmental_enclosure
-  notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system.
+  notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating
+    block, objective lens heater, and gas delivery system.
   url: ''
   manufacturer: GE Healthcare
   model: Onstage Incubator/Heating Assembly
@@ -33,43 +34,42 @@ modules:
   url: ''
   manufacturer: GE Healthcare
   model: Nanomotion Stage with Piezo Z-axis
-- name: 3d_sim   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
-  notes: Proprietary electro-optical high speed structured illumination engine. 110-160 nm lateral and 320-400 nm axial resolution.
+- name: 3d_sim
+  notes: Proprietary electro-optical high speed structured illumination engine. 110-160
+    nm lateral and 320-400 nm axial resolution.
   url: ''
   manufacturer: GE Healthcare
   model: 3D-SIM Illumination Engine
-- name: ring_tirf   # Flag: Verify this matches a canonical ID in vocab/modules.yaml
-  notes: Ring TIRF optics module with integrated PhotoKinetic (PK) optics. Allows rapid wavelength switching and TIRF depth penetration modulation.
+- name: ring_tirf
+  notes: Ring TIRF optics module with integrated PhotoKinetic (PK) optics. Allows
+    rapid wavelength switching and TIRF depth penetration modulation.
   url: ''
-
   manufacturer: GE Healthcare
   model: Ring TIRF with PhotoKinetic Optics
 software:
 - role: acquisition
   name: OMX Acquisition
   version: '3.70'
-  notes: Master Control on Windows. Image processing on CentOS with softWoRx 6.0 or newer for deconvolution/reconstruction.
+  notes: Master Control on Windows. Image processing on CentOS with softWoRx 6.0 or
+    newer for deconvolution/reconstruction.
   url: ''
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
-    notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system.
-
+    notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating
+      block, objective lens heater, and gas delivery system.
   stages:
-  - type: piezo   # Flag: Verify this matches a canonical ID in vocab/stage_types.yaml
+  - type: z_piezo
     notes: X, Y, Z Nanomotion sample stage with fast piezo Z-axis system
-
   hardware_autofocus:
     is_installed: true
-    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
-
+    type: infrared_reflection
   scanner:
-    type: none # Flag: Verify if 'none' is allowed in vocab/scanner_types.yaml
+    type: none
     notes: ''
     url: ''
-
   light_sources:
   - kind: laser
     manufacturer: GE Healthcare
@@ -125,85 +125,87 @@ hardware:
     power: 110 mW
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
-
   detectors:
   - kind: scmos
     manufacturer: PCO
     model: Edge
     pixel_pitch_um: 6.5
-    sensor_format_px: "1024 x 1024"
-    notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam1 DAPI+Cy5/CFP.'
+    sensor_format_px: 1024 x 1024
+    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam1
+      DAPI+Cy5/CFP.
     url: ''
     id: detector_1
   - kind: scmos
     manufacturer: PCO
     model: Edge
     pixel_pitch_um: 6.5
-    sensor_format_px: "1024 x 1024"
-    notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam2 Alexa 488/YFP'
+    sensor_format_px: 1024 x 1024
+    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam2
+      Alexa 488/YFP
     url: ''
     id: detector_2
   - kind: scmos
     manufacturer: PCO
     model: Edge
     pixel_pitch_um: 6.5
-    sensor_format_px: "1024 x 1024"
-    notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam3 Alexa 568.'
+    sensor_format_px: 1024 x 1024
+    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam3
+      Alexa 568.
     url: ''
-
     id: detector_3
   splitters: []
-
   filters:
   - name: DAPI
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Conditionally required because widefield_fluorescence is present.
-    dichroic: ''     # Flag: Conditionally required because widefield_fluorescence is present.
+    excitation: ''
+    dichroic: ''
     emission: 436/31
     notes: ''
     url: ''
   - name: CFP
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 478/35
     notes: ''
     url: ''
   - name: Alexa 488
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 528/45
     notes: ''
     url: ''
   - name: YFP
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 541/22
     notes: ''
     url: ''
   - name: Alexa 568
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 609/37
     notes: ''
     url: ''
   - name: Cy5
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 683/40
     notes: ''
     url: ''
-
   objectives:
   - id: 60x_oil
     manufacturer: Olympus
@@ -216,7 +218,7 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties:
-    - SIM
+    - sim
     notes: ''
     url: ''
     is_installed: false
@@ -231,7 +233,7 @@ hardware:
     correction: apochromat
     afc_compatible: false
     specialties:
-    - TIRF
+    - tirf
     notes: Equipped with correction collar.
     url: ''
     is_installed: true
