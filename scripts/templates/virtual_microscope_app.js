@@ -2271,7 +2271,7 @@
             <div class="vm-info-row"><span>Theoretical benchmark</span><strong>${Number(result.theoreticalBenchmarkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Generated → detector</span><strong>${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Excitation</span><strong>${((result.excitationEfficiency || 0) * 100).toFixed(1)}%</strong></div>
-            <div class="vm-info-row"><span>Crosstalk</span><strong>${Number(result.crosstalkPct || 0).toFixed(1)}%</strong></div>
+            <div class="vm-info-row"><span>Crosstalk</span><strong>${Number(result.pairwiseCrosstalkPct || result.crosstalkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Leakage</span><strong>${leakPct}%</strong></div>
             <div class="vm-info-row"><span>Depletion overlap</span><strong>${depletionText}</strong></div>
             <div class="vm-info-row"><span>Score</span><strong>${Number(result.correctnessScore || 0).toFixed(1)}</strong></div>
