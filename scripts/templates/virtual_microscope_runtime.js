@@ -364,9 +364,32 @@
     return normalizeRouteCatalog(Array.from(tags));
   }
 
+  function terminalsAsDetectorMechanisms(terminals) {
+    return (Array.isArray(terminals) ? terminals : []).map((terminal, index) => {
+      const routes = terminal.__routes || routesFromObject(terminal);
+      const slot = 1;
+      const value = {
+        ...terminal,
+        slot,
+        __routes: routes,
+      };
+
+      return {
+        id: `terminal_mechanism_${cleanString(terminal.id || terminal.terminal_id || index + 1)}`,
+        display_label: terminal.display_label || terminal.name || `Endpoint ${index + 1}`,
+        name: terminal.name || terminal.display_label || `Endpoint ${index + 1}`,
+        __routes: routes,
+        positions: { [slot]: value },
+        options: [{ slot, display_label: value.display_label || value.name || 'Endpoint', value }],
+      };
+    });
+  }
+
   function normalizeInstrumentPayload(rawPayload, options) {
     const payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
     const approximationMode = simulatorApproximationModeEnabled(payload.metadata || {}, options);
+    const normalizedTerminals = normalizeTerminals(payload.terminals || payload.detection_endpoints || []);
+    const normalizedDetectors = normalizeMechanismList(payload.detectors);
     const normalized = {
       metadata: payload.metadata || {},
       lightSources: normalizeMechanismList(payload.light_sources),
@@ -375,8 +398,8 @@
       dichroic: normalizeMechanismList(payload.stages && payload.stages.dichroic),
       emission: normalizeMechanismList(payload.stages && payload.stages.emission),
       splitters: normalizeSplitters(payload.runtime_splitters || payload.splitters, { allowApproximation: approximationMode }),
-      detectors: normalizeMechanismList(payload.detectors),
-      terminals: normalizeTerminals(payload.terminals || payload.detection_endpoints || []),
+      detectors: [...normalizedDetectors, ...terminalsAsDetectorMechanisms(normalizedTerminals)],
+      terminals: normalizedTerminals,
       validPaths: Array.isArray(payload.valid_paths) ? payload.valid_paths : [],
       routeOptions: [],
       defaultRoute: cleanString(payload.default_route).toLowerCase() || null,
@@ -921,16 +944,23 @@
 
   function interpolatePoints(points, wavelength) {
     if (!Array.isArray(points) || points.length === 0) return 0;
-    if (wavelength <= points[0].x) return points[0].y;
-    if (wavelength >= points[points.length - 1].x) return points[points.length - 1].y;
-    for (let index = 0; index < points.length - 1; index += 1) {
-      const left = points[index];
-      const right = points[index + 1];
+    const normalized = normalizePoints(points);
+    if (!normalized.length) return 0;
+
+    if (wavelength < normalized[0].x || wavelength > normalized[normalized.length - 1].x) {
+      return 0;
+    }
+    if (wavelength === normalized[0].x) return normalized[0].y;
+    if (wavelength === normalized[normalized.length - 1].x) return normalized[normalized.length - 1].y;
+
+    for (let index = 0; index < normalized.length - 1; index += 1) {
+      const left = normalized[index];
+      const right = normalized[index + 1];
       if (wavelength < left.x || wavelength > right.x) continue;
       const range = right.x - left.x;
       if (range <= 0) return left.y;
       const ratio = (wavelength - left.x) / range;
-      return left.y + (right.y - left.y) * ratio;
+      return left.y + ((right.y - left.y) * ratio);
     }
     return 0;
   }
@@ -1271,15 +1301,14 @@
     return grid.map((wavelength) => (wavelength >= 350 && wavelength <= 800 ? 0.08 : 0));
   }
 
-  function sourceWeight(source, selectedSources) {
+  function sourceWeight(source) {
     const explicit = numberOrNull(source && source.user_weight);
-    if (explicit !== null) return Math.max(explicit, 0);
-    const allWeights = selectedSources
-      .map((item) => numberOrNull(item && item.power_weight))
-      .filter((item) => item !== null && item > 0);
-    const localWeight = numberOrNull(source && source.power_weight);
-    if (localWeight === null || !allWeights.length) return 1;
-    return clamp(localWeight / Math.max(...allWeights), 0.1, 2);
+    if (explicit !== null) return Math.max(0, explicit);
+
+    const intrinsic = numberOrNull(source && source.power_weight);
+    if (intrinsic !== null) return Math.max(0, intrinsic);
+
+    return 1;
   }
 
   function fluorophoreBrightnessFactor(fluorophore) {
@@ -1724,8 +1753,9 @@
         const response = (bounds.min === null || bounds.max === null)
           ? 1
           : pointMaskScore({ component_type: 'bandpass', center_nm: (bounds.min + bounds.max) / 2, width_nm: Math.max(4, bounds.max - bounds.min) }, emTargets, 'emission');
+        const qe = normalizePercent(detector && detector.qe_peak_pct, 0.5) ?? 0.5;
         const endpointBoost = detectorClass(detector && (detector.kind || detector.endpoint_type)) === 'eyepiece' ? 0.25 : 0;
-        scored.push({ mechanismId: mechanism.id, slot: detector.slot, detector: { ...detector }, score: (coverage * 10) + response + endpointBoost });
+        scored.push({ mechanismId: mechanism.id, slot: detector.slot, detector: { ...detector }, score: (coverage * 10) + response + (qe * 5) + endpointBoost });
       });
     });
     const narrowed = scored.sort((a, b) => b.score - a.score).slice(0, 3);
@@ -1776,8 +1806,10 @@
     const byFluor = new Map();
     leakFree.forEach((row) => {
       const current = byFluor.get(row.fluorophoreKey);
-      const rowScore = row.correctnessScore || row.detectorWeightedIntensity || 0;
-      const currentScore = current ? (current.correctnessScore || current.detectorWeightedIntensity || 0) : -Infinity;
+      const rowScore = row.detectorEfficiencyFraction || row.detectorWeightedIntensity || row.benchmarkFraction || 0;
+      const currentScore = current
+        ? (current.detectorEfficiencyFraction || current.detectorWeightedIntensity || current.benchmarkFraction || 0)
+        : -Infinity;
       if (!current || rowScore > currentScore) {
         byFluor.set(row.fluorophoreKey, row);
       }
@@ -1786,7 +1818,7 @@
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
     const chosenRows = Array.from(byFluor.values());
     const strict = fluorList.every((fluor) => byFluor.has(fluor.key));
-    const captureScore = chosenRows.reduce((sum, row) => sum + (row.benchmarkFraction || 0), 0);
+    const captureScore = chosenRows.reduce((sum, row) => sum + (row.detectorEfficiencyFraction || row.benchmarkFraction || 0), 0);
 
     const matrix = simulation.crosstalkMatrix || {};
     const pairwiseCrosstalkByTarget = chosenRows.map((targetRow) => chosenRows.reduce((sum, sourceRow) => {
@@ -1800,7 +1832,7 @@
 
     const maxCrosstalk = Math.max(0, ...pairwiseCrosstalkByTarget);
     const crosstalkPenalty = pairwiseCrosstalkByTarget.reduce(
-      (product, pct) => product * clamp(1 - (pct / 100), 0.01, 1),
+      (product, pct) => product * clamp(1 - (pct / 100), 0.001, 1),
       1
     );
 
@@ -1857,7 +1889,8 @@
           normalizedInstrument.defaultRoute,
           ...((normalizedInstrument.routeOptions || []).map((entry) => entry.id)),
         ].filter(Boolean)));
-    const tolerance = 1e-9;
+    const tolerance = numberOrNull(options && options.leakageTolerance) ?? 0.005;
+    const EPS = 1e-9;
     let bestStrict = null;
     let bestFallback = null;
 
@@ -1941,8 +1974,19 @@
                   };
                     if (evaluated.strict) {
                       if (!bestStrict || descriptor.score > bestStrict.score) bestStrict = descriptor;
-                    } else if (!bestFallback || descriptor.maxLeakage < bestFallback.maxLeakage || (descriptor.maxLeakage === bestFallback.maxLeakage && descriptor.score > bestFallback.score)) {
-                      bestFallback = descriptor;
+                    } else {
+                      const isBetterFallback = !bestFallback
+                        || descriptor.maxCrosstalk < (bestFallback.maxCrosstalk - EPS)
+                        || (
+                          Math.abs(descriptor.maxCrosstalk - bestFallback.maxCrosstalk) <= EPS
+                          && descriptor.maxLeakage < (bestFallback.maxLeakage - EPS)
+                        )
+                        || (
+                          Math.abs(descriptor.maxCrosstalk - bestFallback.maxCrosstalk) <= EPS
+                          && Math.abs(descriptor.maxLeakage - bestFallback.maxLeakage) <= EPS
+                          && descriptor.score > bestFallback.score
+                        );
+                      if (isBetterFallback) bestFallback = descriptor;
                     }
                   });
                 });
@@ -2131,7 +2175,7 @@
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
 
     const propagatedExcitationSources = excitationSources.map((source) => {
-      const weightedSpectrum = scaleArray(sourceSpectrum(source, grid), sourceWeight(source, excitationSources));
+      const weightedSpectrum = scaleArray(sourceSpectrum(source, grid), sourceWeight(source));
       const atSample = applyComponentSeries(
         applyComponentSeries(weightedSpectrum, excitationComponents, grid, { mode: 'excitation' }),
         dichroicComponents,
@@ -2310,12 +2354,17 @@
       }
     });
 
-    results.forEach((result) => {
-      const targetRow = bestChannelByFluor.get(result.fluorophoreKey) || result;
-      const totalPairwise = Array.from(bestChannelByFluor.values()).reduce((sum, sourceRow) => {
-        if (sourceRow.fluorophoreKey === targetRow.fluorophoreKey) return sum;
-        return sum + ((((crosstalkMatrix[sourceRow.fluorophoreKey] || {})[targetRow.fluorophoreKey] || {}).percentOfTargetChannel) || 0);
+    const pairwiseCrosstalkForTargetRow = (targetRow) => {
+      const targetSignal = Math.max((targetRow && targetRow.detectorWeightedIntensity) || 0, 1e-12);
+      return results.reduce((sum, sourceRow) => {
+        if (!sourceRow || sourceRow.fluorophoreKey === targetRow.fluorophoreKey) return sum;
+        if (sourceRow.pathKey !== targetRow.pathKey) return sum;
+        return sum + (((sourceRow.detectorWeightedIntensity || 0) / targetSignal) * 100);
       }, 0);
+    };
+
+    results.forEach((result) => {
+      const totalPairwise = pairwiseCrosstalkForTargetRow(result);
       result.pairwiseCrosstalkPct = totalPairwise;
       result.crosstalkPct = totalPairwise;
       result.bleedThrough = ((result.detectorWeightedIntensity || 0) * totalPairwise) / 100;

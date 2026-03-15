@@ -890,7 +890,9 @@
         label: 'Detectors & Endpoints',
         subtitle: 'Enable digital detectors, camera ports, or eyepieces. When splitter targets are defined, each endpoint gets its own full routed path automatically.',
         build(panel) {
-          detectorMechanisms.forEach((mechanism) => panel.appendChild(createDetectorControl(mechanism)));
+          detectorMechanisms.forEach((mechanism) => {
+            createDetectorControls(mechanism).forEach((block) => panel.appendChild(block));
+          });
         },
       });
     }
@@ -1382,8 +1384,13 @@
   }
 
 
-  function createDetectorControl(mechanism) {
-    const detector = Object.values(positionsForRoute(mechanism, state.activeRoute))[0];
+  function createDetectorControls(mechanism) {
+    return Object.values(positionsForRoute(mechanism, state.activeRoute)).map((detector) =>
+      createDetectorControl(mechanism, detector)
+    );
+  }
+
+  function createDetectorControl(mechanism, detector) {
     if (!detector) return document.createElement('div');
     const setting = ensureDetectorSetting(mechanism, detector);
     const detectorClass = detector.detector_class || VM.detectorClass(detector.kind || detector.endpoint_type);
@@ -1988,29 +1995,20 @@
 
   function currentSourceSpectrum(grid) {
     const spectra = [];
-    const activeSettings = [];
 
-    // Collect all enabled sources
     mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, state.activeRoute).forEach((mechanism) => {
       Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
         const setting = ensureSourceSetting(source);
         if (!setting.enabled) return;
-        activeSettings.push({ source, setting });
+
+        const raw = VM.sourceSpectrum({
+          ...source,
+          selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+        }, grid);
+
+        const weight = Math.max(0, numberOrNull(setting.user_weight) ?? numberOrNull(source.power_weight) ?? 1);
+        spectra.push({ values: raw.map((value) => value * weight) });
       });
-    });
-
-    // Calculate maximum weight to normalize against (matches simulator logic)
-    const maxWeight = Math.max(1e-9, ...activeSettings.map((entry) => numberOrNull(entry.setting.user_weight) ?? 1));
-
-    // Scale each spectrum by its relative power weight
-    activeSettings.forEach(({ source, setting }) => {
-      const raw = VM.sourceSpectrum({
-        ...source,
-        selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
-      }, grid);
-
-      const weight = Math.max(0.1, Math.min(2, (numberOrNull(setting.user_weight) ?? 1) / maxWeight));
-      spectra.push({ values: raw.map((value) => value * weight) });
     });
 
     return sumSpectra(spectra, 'values', grid);
@@ -2299,12 +2297,14 @@
     const fluorophores = mapToArray(state.loadedProteins);
     let simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
       preferTwoPhoton: state.preferTwoPhoton,
+      currentRoute: state.activeRoute,
     });
     if (!strictHardwareTruthMode() && autoRepairBlockedPath(selection, simulation)) {
       enforceValidStageOptions();
       const repairedSelection = collectRuntimeSelection();
       simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {
         preferTwoPhoton: state.preferTwoPhoton,
+        currentRoute: state.activeRoute,
       });
       state.lastSelection = repairedSelection;
       state.lastSimulation = simulation;
