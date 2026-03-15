@@ -1801,12 +1801,6 @@
     const maxCrosstalk = Math.max(0, ...pairwiseCrosstalkByTarget);
     const crosstalkPenalty = pairwiseCrosstalkByTarget.reduce(
       (product, pct) => product * clamp(1 - (pct / 100), 0.01, 1),
-    const maxLeak = Math.max(...simulation.results.map((row) =>
-      Math.max(row.excitationLeakageWeightedIntensity || 0, row.excitationLeakageThroughput || 0)
-    ), 0);
-    const maxCrosstalk = Math.max(...chosenRows.map((row) => row.crosstalkPct || 0), 0);
-    const crosstalkPenalty = chosenRows.reduce(
-      (product, row) => product * clamp(1 - ((row.crosstalkPct || 0) / 100), 0.01, 1),
       1
     );
 
@@ -2095,6 +2089,21 @@
         routeViolations.push(`Splitter ${splitter.display_label || splitter.name || splitter.id || 'Splitter'} is not on route ${activeRoute}.`);
       }
     });
+    const excitationComponents = Array.isArray(selected.excitation) ? selected.excitation : [];
+    const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];
+    const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
+
+    [
+      ['Excitation component', excitationComponents],
+      ['Dichroic', dichroicComponents],
+      ['Emission component', emissionComponents],
+    ].forEach(([label, components]) => {
+      components.forEach((component) => {
+        if (!componentMatchesActiveRoute(component, activeRoute)) {
+          routeViolations.push(`${label} ${component.display_label || component.name || component.id || ''}`.trim() + ` is not on route ${activeRoute}.`);
+        }
+      });
+    });
 
     if (routeViolations.length) {
       return {
@@ -2117,9 +2126,6 @@
       return role !== 'depletion' && role !== 'transmitted_illumination';
     });
     const depletionSources = selectedSources.filter((source) => cleanString(source.role).toLowerCase() === 'depletion');
-    const excitationComponents = Array.isArray(selected.excitation) ? selected.excitation : [];
-    const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];
-    const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
     const resolvedDetectors = (explicitDetectorSelections.length ? explicitDetectorSelections : inferredDetectorTargets(normalizedInstrument, { allowApproximation }))
       .map((detector) => hydrateDetectorSelection(detector, normalizedInstrument));
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
@@ -2347,8 +2353,6 @@
         result.laserLeakageNote = '';
       }
     });
-
-    const crosstalkMatrix = computeCrosstalkMatrix(results);
 
     return {
       grid,
