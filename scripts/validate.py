@@ -247,6 +247,8 @@ def _is_descriptive_wavelength(value: Any) -> bool:
 
 
 _NAME_MODEL_REDUNDANCY_PATHS: tuple[str, ...] = (
+    'hardware.sources',
+    'hardware.sources',
     'hardware.light_sources',
     'hardware.detectors',
     'hardware.objectives',
@@ -254,8 +256,11 @@ _NAME_MODEL_REDUNDANCY_PATHS: tuple[str, ...] = (
     'hardware.illumination_logic',
     'hardware.magnification_changers',
     'hardware.stages',
+    'hardware.endpoints',
+    'hardware.optical_path_elements',
     'hardware.light_path.endpoints',
     'hardware.light_path.splitters',
+    'hardware.optical_path_elements',
     'hardware.light_path.cube_mechanisms',
     'hardware.light_path.excitation_mechanisms',
     'hardware.light_path.dichroic_mechanisms',
@@ -304,9 +309,11 @@ def _append_name_model_redundancy_warnings(
 
 
 _PRODUCT_CODE_REDUNDANCY_PATHS: tuple[str, ...] = (
+    'hardware.sources',
     'hardware.light_sources',
     'hardware.detectors',
     'hardware.objectives',
+    'hardware.optical_path_elements',
     'hardware.light_path.cube_mechanisms',
     'hardware.light_path.excitation_mechanisms',
     'hardware.light_path.dichroic_mechanisms',
@@ -1564,7 +1571,7 @@ def validate_instrument_ledgers(
             }
 
         if 'sted' in canonical_modalities and not is_retired_instrument:
-            light_sources_nodes = _resolve_path_nodes(payload, 'hardware.light_sources[]')
+            light_sources_nodes = _resolve_path_nodes(payload, 'hardware.sources[]') or _resolve_path_nodes(payload, 'hardware.light_sources[]')
             depletion_sources = [
                 node.value
                 for node in light_sources_nodes

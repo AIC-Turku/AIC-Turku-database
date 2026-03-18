@@ -244,7 +244,7 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                 ]
             )
 
-    light_sources = hardware.get("light_sources")
+    light_sources = hardware.get("sources") or hardware.get("light_sources")
     light_source_entries: list[dict[str, Any]] = []
     if not isinstance(light_sources, list) or len(light_sources) == 0:
         light_source_entries.append(_entry("Light Sources", light_sources if light_sources is not None else [], True))

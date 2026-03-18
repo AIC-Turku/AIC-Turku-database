@@ -29,7 +29,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.dashboard_builder import YamlLoadError, load_instruments, validated_instrument_selection
-from scripts.light_path_parser import generate_virtual_microscope_payload, infer_light_source_role
+from scripts.light_path_parser import canonicalize_light_path_model, generate_virtual_microscope_payload, infer_light_source_role
 from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     build_instrument_completeness_report,
@@ -170,19 +170,21 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
     hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
     light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
     payload = generate_virtual_microscope_payload(canonical)
+    canonical_model = canonicalize_light_path_model(canonical)
 
-    source_count = len(_coerce_component_list(hardware.get("light_sources")))
+    source_rows = _coerce_component_list(hardware.get("sources")) or _coerce_component_list(hardware.get("light_sources"))
+    source_count = len(source_rows)
     detector_count = len(_coerce_component_list(hardware.get("detectors")))
     payload_source_count = sum(len(group.get("positions", {})) for group in payload.get("light_sources", []) if isinstance(group, dict))
-    payload_detector_count = len(payload.get("detectors", []))
-    raw_splitters = _splitter_count(hardware, light_path)
+    payload_detector_count = len([item for item in payload.get("detectors", []) if isinstance(item, dict)])
+    raw_splitters = {"total_distinct_entries": len([item for item in canonical_model.get("optical_path_elements", []) if item.get("stage_role") == "splitter"])}
     payload_splitter_count = len(payload.get("splitters", []))
 
     issues: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     infos: list[dict[str, str]] = []
 
-    for index, source in enumerate(_coerce_component_list(hardware.get("light_sources"))):
+    for index, source in enumerate(source_rows):
         for issue in _source_readiness_issue(index, source):
             if issue["severity"] == "warning":
                 warnings.append(issue)
@@ -224,17 +226,14 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             }
         )
 
-    stage_counts = {
-        "excitation": len(_coerce_mechanism_list(light_path, "excitation_mechanisms")),
-        "dichroic": len(_coerce_mechanism_list(light_path, "dichroic_mechanisms")),
-        "emission": len(_coerce_mechanism_list(light_path, "emission_mechanisms")),
-        "cube": len(_coerce_mechanism_list(light_path, "cube_mechanisms")),
-    }
+    stage_counts = Counter(item.get("stage_role") for item in canonical_model.get("optical_path_elements", []) if isinstance(item, dict))
     payload_stage_counts = {
         stage_name: len(items) if isinstance(items, list) else 0
         for stage_name, items in (payload.get("stages") or {}).items()
     }
     for stage_name, count in stage_counts.items():
+        if stage_name == "splitter":
+            continue
         if payload_stage_counts.get(stage_name, 0) != count:
             issues.append(
                 {
