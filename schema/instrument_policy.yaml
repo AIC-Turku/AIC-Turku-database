@@ -2514,3 +2514,249 @@ sections:
         type: text
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Free-text notes for synchronization, timing, or external trigger details.
+
+  - id: canonical_light_paths_v2
+    title: Canonical YAML-first light path topology
+    rules:
+      - path: hardware.sources
+        title: Sources
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Installed illumination sources referenced by light_paths illumination_sequence.
+
+      - path: hardware.sources[].id
+        title: Source ID
+        status: conditional
+        type: slug
+        required_if:
+          parent_present: hardware.sources[]
+        used_by: [dashboard, method_generator]
+        rationale: Stable source identifier referenced by light_paths illumination_sequence.
+
+      - path: hardware.sources[].manufacturer
+        title: Source manufacturer
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Structured provenance for installed sources.
+
+      - path: hardware.sources[].product_code
+        title: Source product code
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Explicit source SKU/catalog code when known.
+
+      - path: hardware.sources[].tunable_min_nm
+        title: Source tunable minimum wavelength
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Lower tunable wavelength bound for tunable or white-light sources.
+
+      - path: hardware.sources[].tunable_max_nm
+        title: Source tunable maximum wavelength
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Upper tunable wavelength bound for tunable or white-light sources.
+
+      - path: hardware.sources[].simultaneous_lines_max
+        title: Source simultaneous line count
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Maximum simultaneously active lines for multi-line sources.
+
+      - path: hardware.sources[].modalities
+        title: Source modalities
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Validation-only modality guards for installed sources.
+
+      - path: hardware.optical_path_elements
+        title: Optical path elements
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Installed optical mechanisms referenced by light_paths sequences.
+
+      - path: hardware.optical_path_elements[].id
+        title: Optical path element ID
+        status: conditional
+        type: slug
+        required_if:
+          parent_present: hardware.optical_path_elements[]
+        used_by: [dashboard, method_generator]
+        rationale: Stable identifier referenced by light_paths sequences.
+
+      - path: hardware.optical_path_elements[].element_type
+        title: Optical path element type
+        status: conditional
+        type: string
+        required_if:
+          parent_present: hardware.optical_path_elements[]
+        used_by: [dashboard, method_generator]
+        rationale: Installed mechanism class for simulator and graph rendering.
+
+      - path: hardware.optical_path_elements[].modalities
+        title: Optical path element modalities
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Validation-only modality guards for optical path elements.
+
+      - path: hardware.optical_path_elements[].positions
+        title: Optical path element positions
+        status: optional
+        type: object
+        used_by: [dashboard, method_generator]
+        rationale: Position map for installed filter wheels, turrets, sliders, or cubes.
+
+      - path: hardware.optical_path_elements[].branches
+        title: Optical path element branches
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Explicit selector/splitter branch definitions.
+
+      - path: hardware.optical_path_elements[].branches[].id
+        title: Branch ID
+        status: conditional
+        type: slug
+        required_if:
+          parent_present: hardware.optical_path_elements[].branches[]
+        used_by: [dashboard, method_generator]
+        rationale: Stable branch key nested under the splitter/selector element.
+
+      - path: hardware.optical_path_elements[].branches[].target_ids
+        title: Branch target endpoint IDs
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Explicit branch endpoint targets used by validator, simulator, and static graph rendering.
+
+      - path: hardware.endpoints
+        title: Endpoints
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Explicit terminal detectors, camera ports, and eyepieces.
+
+      - path: hardware.endpoints[].id
+        title: Endpoint ID
+        status: conditional
+        type: slug
+        required_if:
+          parent_present: hardware.endpoints[]
+        used_by: [dashboard, method_generator]
+        rationale: Stable endpoint identifier referenced by splitters and detection sequences.
+
+      - path: hardware.endpoints[].endpoint_type
+        title: Endpoint type
+        status: conditional
+        type: string
+        vocab: endpoint_types
+        required_if:
+          parent_present: hardware.endpoints[]
+        used_by: [dashboard, method_generator]
+        rationale: Endpoint class used by runtime for detector, camera-port, or eyepiece handling.
+
+      - path: hardware.endpoints[].modalities
+        title: Endpoint modalities
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Validation-only modality guards for endpoints.
+
+      - path: hardware.detectors[].collection_min_nm
+        title: Detector collection minimum wavelength
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Lower detector collection bound for spectral simulation.
+
+      - path: hardware.detectors[].collection_max_nm
+        title: Detector collection maximum wavelength
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Upper detector collection bound for spectral simulation.
+
+      - path: hardware.detectors[].collection_center_nm
+        title: Detector collection center wavelength
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Detector collection center for derived passband modeling.
+
+      - path: hardware.detectors[].collection_width_nm
+        title: Detector collection width
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Detector collection bandwidth for derived passband modeling.
+
+      - path: light_paths
+        title: Light paths
+        status: optional
+        type: list
+        used_by: [dashboard, method_generator]
+        rationale: Canonical ordered YAML-first traversal definitions.
+
+      - path: light_paths[].id
+        title: Light path ID
+        status: conditional
+        type: slug
+        required_if:
+          parent_present: light_paths[]
+        used_by: [dashboard, method_generator]
+        rationale: Stable route identifier used by simulator, UI, and graph rendering.
+
+      - path: light_paths[].illumination_sequence
+        title: Illumination sequence
+        status: conditional
+        type: list
+        required_if:
+          parent_present: light_paths[]
+        used_by: [dashboard, method_generator]
+        rationale: Ordered sequence of source and optical-path-element references used before the sample plane.
+
+      - path: light_paths[].illumination_sequence[].source_id
+        title: Illumination source reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable source reference in the illumination sequence.
+
+      - path: light_paths[].illumination_sequence[].optical_path_element_id
+        title: Illumination optical path element reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable optical-path-element reference in the illumination sequence.
+
+      - path: light_paths[].detection_sequence
+        title: Detection sequence
+        status: conditional
+        type: list
+        required_if:
+          parent_present: light_paths[]
+        used_by: [dashboard, method_generator]
+        rationale: Ordered sequence of optical-path-element and endpoint references used after the sample plane.
+
+      - path: light_paths[].detection_sequence[].optical_path_element_id
+        title: Detection optical path element reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable optical-path-element reference in the detection sequence.
+
+      - path: light_paths[].detection_sequence[].endpoint_id
+        title: Detection endpoint reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable endpoint reference for direct unbranched detection terminals.
