@@ -1498,7 +1498,7 @@ def slugify(value: str) -> str:
     return s
 
 
-INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
 
 
 def is_valid_instrument_id(value: str) -> bool:
