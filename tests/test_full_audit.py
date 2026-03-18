@@ -1,13 +1,47 @@
 import json
+import importlib.util
 import shutil
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+
+yaml_stub = types.ModuleType("yaml")
+
+
+class _YamlError(Exception):
+    pass
+
+
+def _safe_load(value):
+    return json.loads(value)
+
+
+yaml_stub.safe_load = _safe_load
+yaml_stub.YAMLError = _YamlError
+sys.modules.setdefault("yaml", yaml_stub)
+
+jinja2_stub = types.ModuleType("jinja2")
+
+
+class _DummyEnvironment:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+class _DummyLoader:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+jinja2_stub.Environment = _DummyEnvironment
+jinja2_stub.FileSystemLoader = _DummyLoader
+sys.modules.setdefault("jinja2", jinja2_stub)
 
 from scripts.full_audit import (
     audit_fpbase_runtime_contract,
@@ -25,31 +59,58 @@ class FullAuditScriptTests(unittest.TestCase):
             "display_name": "Test Scope",
             "canonical": {
                 "hardware": {
-                    "light_sources": [
-                        {"kind": "laser", "role": "excitation", "wavelength_nm": 488},
-                        {"kind": "laser", "role": "depletion", "wavelength_nm": 775, "depletion_targets_nm": [640]},
+                    "sources": [
+                        {"id": "src_488", "kind": "laser", "role": "excitation", "wavelength_nm": 488},
+                        {"id": "src_775", "kind": "laser", "role": "depletion", "wavelength_nm": 775, "depletion_targets_nm": [640]},
                     ],
-                    "detectors": [
-                        {"kind": "camera", "channel_name": "Cam A", "path": "widefield"},
-                        {"kind": "pmt", "channel_name": "PMT A", "path": "confocal", "supports_time_gating": True},
-                    ],
-                    "splitters": [
+                    "optical_path_elements": [
                         {
-                            "name": "Top-level splitter",
+                            "id": "exc_filter",
+                            "stage_role": "excitation",
+                            "element_type": "filter_wheel",
+                            "positions": {1: {"type": "bandpass", "center_nm": 488, "width_nm": 10}},
+                        },
+                        {
+                            "id": "main_dichroic",
+                            "stage_role": "dichroic",
+                            "element_type": "dichroic",
+                            "positions": {1: {"type": "dichroic", "cutoffs_nm": [560]}},
+                        },
+                        {
+                            "id": "em_filter",
+                            "stage_role": "emission",
+                            "element_type": "filter_wheel",
+                            "positions": {1: {"type": "bandpass", "center_nm": 525, "width_nm": 50}},
+                        },
+                        {
+                            "id": "det_splitter",
+                            "stage_role": "splitter",
+                            "element_type": "splitter",
                             "dichroic": {"type": "dichroic", "cutoffs_nm": [560]},
                             "branches": [
-                                {"label": "Green", "mode": "reflected", "component": {"type": "bandpass", "center_nm": 525, "width_nm": 50}},
-                                {"label": "Red", "mode": "transmitted", "component": {"type": "bandpass", "center_nm": 700, "width_nm": 75}},
+                                {"id": "green", "label": "Green", "mode": "reflected", "target_ids": ["cam_a"], "component": {"type": "bandpass", "center_nm": 525, "width_nm": 50}},
+                                {"id": "red", "label": "Red", "mode": "transmitted", "target_ids": ["pmt_a"], "component": {"type": "bandpass", "center_nm": 700, "width_nm": 75}},
                             ],
-                        }
+                        },
                     ],
-                    "light_path": {
-                        "excitation_mechanisms": [{"positions": {1: {"type": "bandpass", "center_nm": 488, "width_nm": 10}}}],
-                        "dichroic_mechanisms": [{"positions": {1: {"type": "dichroic", "cutoffs_nm": [560]}}}],
-                        "emission_mechanisms": [{"positions": {1: {"type": "bandpass", "center_nm": 525, "width_nm": 50}}}],
-                        "splitters": [],
-                    },
-                }
+                    "endpoints": [
+                        {"id": "cam_a", "kind": "camera", "channel_name": "Cam A", "endpoint_type": "camera"},
+                        {"id": "pmt_a", "kind": "pmt", "channel_name": "PMT A", "endpoint_type": "detector", "supports_time_gating": True},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "exc_filter"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "main_dichroic"},
+                            {"optical_path_element_id": "em_filter"},
+                            {"optical_path_element_id": "det_splitter"},
+                            {"endpoint_id": "cam_a"},
+                            {"endpoint_id": "pmt_a"},
+                        ],
+                    }
+                ],
             },
         }
 
@@ -107,12 +168,13 @@ class FullAuditScriptTests(unittest.TestCase):
             "display_name": "Test Scope",
             "canonical": {
                 "hardware": {
-                    "light_sources": [
-                        {"kind": "halogen_lamp", "path": "transmitted", "notes": "Brightfield lamp"}
+                    "sources": [
+                        {"id": "lamp", "kind": "halogen_lamp", "path": "transmitted", "notes": "Brightfield lamp"}
                     ],
-                    "detectors": [],
-                    "light_path": {},
-                }
+                    "optical_path_elements": [],
+                    "endpoints": [],
+                },
+                "light_paths": [{"id": "transmitted", "illumination_sequence": [{"source_id": "lamp"}], "detection_sequence": []}],
             },
         }
 
@@ -136,6 +198,15 @@ class FullAuditScriptTests(unittest.TestCase):
             self.assertGreater(result["result"]["emPoints"], 0)
 
     def test_cli_writes_outputs(self) -> None:
+        dependency_check = subprocess.run(
+            [sys.executable, "-c", "import yaml"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if dependency_check.returncode != 0:
+            self.skipTest("PyYAML is required to execute scripts/full_audit.py in a subprocess.")
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = Path(tmpdir) / "audit.json"
             md_path = Path(tmpdir) / "audit.md"

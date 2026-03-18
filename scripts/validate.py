@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import re
 import sys
@@ -10,7 +11,7 @@ from typing import Any, Iterable
 
 import yaml
 
-from scripts.light_path_parser import validate_light_path
+from scripts.light_path_parser import canonicalize_light_path_model, validate_light_path
 
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
@@ -248,8 +249,6 @@ def _is_descriptive_wavelength(value: Any) -> bool:
 
 _NAME_MODEL_REDUNDANCY_PATHS: tuple[str, ...] = (
     'hardware.sources',
-    'hardware.sources',
-    'hardware.light_sources',
     'hardware.detectors',
     'hardware.objectives',
     'hardware.optical_modulators',
@@ -258,13 +257,6 @@ _NAME_MODEL_REDUNDANCY_PATHS: tuple[str, ...] = (
     'hardware.stages',
     'hardware.endpoints',
     'hardware.optical_path_elements',
-    'hardware.light_path.endpoints',
-    'hardware.light_path.splitters',
-    'hardware.optical_path_elements',
-    'hardware.light_path.cube_mechanisms',
-    'hardware.light_path.excitation_mechanisms',
-    'hardware.light_path.dichroic_mechanisms',
-    'hardware.light_path.emission_mechanisms',
 )
 
 
@@ -310,15 +302,37 @@ def _append_name_model_redundancy_warnings(
 
 _PRODUCT_CODE_REDUNDANCY_PATHS: tuple[str, ...] = (
     'hardware.sources',
-    'hardware.light_sources',
     'hardware.detectors',
     'hardware.objectives',
     'hardware.optical_path_elements',
+)
+
+
+_LEGACY_INSTRUMENT_TOPOLOGY_PATHS: tuple[str, ...] = (
+    'hardware.light_sources',
+    'hardware.light_path.endpoints',
+    'hardware.light_path.splitters',
     'hardware.light_path.cube_mechanisms',
     'hardware.light_path.excitation_mechanisms',
     'hardware.light_path.dichroic_mechanisms',
     'hardware.light_path.emission_mechanisms',
 )
+
+
+def _build_canonical_instrument_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Overlay canonical v2 topology onto an instrument payload for cross-field checks."""
+    canonical_model = canonicalize_light_path_model(payload if isinstance(payload, dict) else {})
+    normalized = json.loads(json.dumps(payload))
+    hardware = normalized.setdefault('hardware', {})
+    hardware['sources'] = canonical_model['sources']
+    hardware['optical_path_elements'] = canonical_model['optical_path_elements']
+    hardware['endpoints'] = canonical_model['endpoints']
+    normalized['light_paths'] = canonical_model['light_paths']
+    return normalized
+
+
+def _legacy_instrument_topology_paths(payload: dict[str, Any]) -> list[str]:
+    return [path for path in _LEGACY_INSTRUMENT_TOPOLOGY_PATHS if _resolve_path_nodes(payload, path)]
 
 
 def _append_product_code_redundancy_warnings(
@@ -1337,8 +1351,24 @@ def validate_instrument_ledgers(
         if payload is None:
             continue
 
-        _append_name_model_redundancy_warnings(warnings, payload, instrument_file)
-        _append_product_code_redundancy_warnings(warnings, payload, instrument_file)
+        canonical_payload = _build_canonical_instrument_payload(payload)
+        legacy_topology_paths = _legacy_instrument_topology_paths(payload)
+
+        for legacy_path in legacy_topology_paths:
+            warnings.append(
+                ValidationIssue(
+                    code='legacy_topology_present',
+                    path=f"{instrument_file.as_posix()}:{legacy_path}",
+                    message=(
+                        f"Legacy topology field '{legacy_path}' is migration-only. "
+                        "Migrate to canonical 'hardware.sources', "
+                        "'hardware.optical_path_elements', 'hardware.endpoints', and 'light_paths'."
+                    ),
+                )
+            )
+
+        _append_name_model_redundancy_warnings(warnings, canonical_payload, instrument_file)
+        _append_product_code_redundancy_warnings(warnings, canonical_payload, instrument_file)
 
         for rule in policy.rules:
             resolved = _resolve_rule_nodes(payload, rule.path)
@@ -1512,7 +1542,7 @@ def validate_instrument_ledgers(
                             )
 
 
-        for light_path_error in validate_light_path(payload):
+        for light_path_error in validate_light_path(canonical_payload):
             issues.append(
                 ValidationIssue(
                     code='invalid_light_path',
@@ -1521,7 +1551,7 @@ def validate_instrument_ledgers(
                 )
             )
 
-        detector_nodes = _resolve_path_nodes(payload, 'hardware.detectors')
+        detector_nodes = _resolve_path_nodes(canonical_payload, 'hardware.detectors')
         detector_kinds: set[str] = set()
         if detector_nodes and isinstance(detector_nodes[0].value, list):
             detector_kinds = {
@@ -1539,7 +1569,7 @@ def validate_instrument_ledgers(
         digital_detector_kinds = {'scmos', 'cmos', 'ccd', 'emccd', 'pmt', 'gaasp_pmt', 'hyd', 'apd', 'spad'}
         has_digital_detector = bool(detector_kinds & digital_detector_kinds)
 
-        software_roles = _get_software_roles(payload)
+        software_roles = _get_software_roles(canonical_payload)
 
         has_acquisition_role = 'acquisition' in software_roles
         if has_digital_detector and not has_acquisition_role:
@@ -1556,7 +1586,7 @@ def validate_instrument_ledgers(
                     )
                 )
 
-        modality_nodes = _resolve_path_nodes(payload, 'modalities')
+        modality_nodes = _resolve_path_nodes(canonical_payload, 'modalities')
         canonical_modalities: set[str] = set()
         if modality_nodes and isinstance(modality_nodes[0].value, list):
             canonical_modalities = {
@@ -1571,10 +1601,10 @@ def validate_instrument_ledgers(
             }
 
         if 'sted' in canonical_modalities and not is_retired_instrument:
-            light_sources_nodes = _resolve_path_nodes(payload, 'hardware.sources[]') or _resolve_path_nodes(payload, 'hardware.light_sources[]')
+            source_nodes = _resolve_path_nodes(canonical_payload, 'hardware.sources[]')
             depletion_sources = [
                 node.value
-                for node in light_sources_nodes
+                for node in source_nodes
                 if isinstance(node.value, dict)
                 and str(node.value.get('role', '')).strip().casefold() == 'depletion'
             ]
@@ -1583,7 +1613,7 @@ def validate_instrument_ledgers(
                     ValidationIssue(
                         code='sted_completeness_gap',
                         path=instrument_file.as_posix(),
-                        message="STED completeness check: expected at least one light source with role='depletion'.",
+                        message="STED completeness check: expected at least one canonical source with role='depletion'.",
                     )
                 )
             if depletion_sources and not any(_is_non_empty_string(source.get('timing_mode')) for source in depletion_sources):
@@ -1591,7 +1621,7 @@ def validate_instrument_ledgers(
                     ValidationIssue(
                         code='sted_completeness_gap',
                         path=instrument_file.as_posix(),
-                        message="STED completeness check: expected depletion source timing_mode metadata.",
+                        message="STED completeness check: expected depletion source timing_mode metadata on canonical hardware.sources[].",
                     )
                 )
             if not any(

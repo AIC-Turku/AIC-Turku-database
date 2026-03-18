@@ -1,0 +1,13 @@
+terms:
+  - id: transmitted
+    label: "Transmitted"
+    description: "Branch follows the transmitted path of a selector or splitter."
+  - id: reflected
+    label: "Reflected"
+    description: "Branch follows the reflected path of a selector or splitter."
+  - id: selected
+    label: "Selected"
+    description: "Branch is selected by state rather than by transmitted/reflected optics."
+  - id: passthrough
+    label: "Passthrough"
+    description: "Branch does not materially alter routing beyond target selection."

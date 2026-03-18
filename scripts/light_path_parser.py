@@ -206,10 +206,7 @@ def _copy_mapping(value: Any) -> dict[str, Any]:
 
 
 
-def _canonicalize_source_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]:
-    raw_sources = hardware.get("sources")
-    if not isinstance(raw_sources, list):
-        raw_sources = hardware.get("light_sources")
+def _normalize_canonical_source_rows(raw_sources: Any) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     for index, source in enumerate(raw_sources or [], start=1):
@@ -241,10 +238,23 @@ def _canonicalize_source_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 
-def _canonicalize_endpoint_rows(hardware: dict[str, Any], legacy_light_path: dict[str, Any]) -> list[dict[str, Any]]:
-    raw_endpoints = hardware.get("endpoints")
-    if not isinstance(raw_endpoints, list):
-        raw_endpoints = _collect_endpoint_rows(hardware, legacy_light_path)
+def _parse_canonical_source_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_sources = hardware.get("sources")
+    if not isinstance(raw_sources, list):
+        return []
+    return _normalize_canonical_source_rows(raw_sources)
+
+
+
+def _import_legacy_source_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_sources = hardware.get("light_sources")
+    if not isinstance(raw_sources, list):
+        return []
+    return _normalize_canonical_source_rows(raw_sources)
+
+
+
+def _normalize_canonical_endpoint_rows(raw_endpoints: Any) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for index, endpoint in enumerate(raw_endpoints or [], start=1):
@@ -269,6 +279,19 @@ def _canonicalize_endpoint_rows(hardware: dict[str, Any], legacy_light_path: dic
             entry["path"] = modalities[0]
         rows.append(entry)
     return rows
+
+
+
+def _parse_canonical_endpoint_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_endpoints = hardware.get("endpoints")
+    if not isinstance(raw_endpoints, list):
+        return []
+    return _normalize_canonical_endpoint_rows(raw_endpoints)
+
+
+
+def _import_legacy_endpoint_rows(hardware: dict[str, Any], legacy_light_path: dict[str, Any]) -> list[dict[str, Any]]:
+    return _normalize_canonical_endpoint_rows(_collect_endpoint_rows(hardware, legacy_light_path))
 
 
 
@@ -305,29 +328,7 @@ def _stage_role_from_element(entry: dict[str, Any]) -> str:
 
 
 
-def _canonicalize_optical_path_elements(hardware: dict[str, Any], legacy_light_path: dict[str, Any]) -> list[dict[str, Any]]:
-    if isinstance(hardware.get("optical_path_elements"), list):
-        raw_elements = hardware.get("optical_path_elements")
-    else:
-        raw_elements = []
-        stage_sources = [
-            ("cube", legacy_light_path.get("cube_mechanisms")),
-            ("excitation", legacy_light_path.get("excitation_mechanisms")),
-            ("dichroic", legacy_light_path.get("dichroic_mechanisms")),
-            ("emission", legacy_light_path.get("emission_mechanisms")),
-        ]
-        for stage_role, collection in stage_sources:
-            for entry in collection or []:
-                if not isinstance(entry, dict):
-                    continue
-                cloned = dict(entry)
-                cloned.setdefault("stage_role", stage_role)
-                raw_elements.append(cloned)
-        for splitter in _collect_splitters(hardware, legacy_light_path):
-            if isinstance(splitter, dict):
-                cloned = dict(splitter)
-                cloned.setdefault("stage_role", "splitter")
-                raw_elements.append(cloned)
+def _normalize_canonical_optical_path_elements(raw_elements: Any) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for index, element in enumerate(raw_elements or [], start=1):
@@ -359,6 +360,38 @@ def _canonicalize_optical_path_elements(hardware: dict[str, Any], legacy_light_p
             entry.setdefault("selection_mode", entry.get("selection_mode") or ("fixed" if len(entry["branches"]) <= 1 else "multiple"))
         rows.append(entry)
     return rows
+
+
+
+def _parse_canonical_optical_path_elements(hardware: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_elements = hardware.get("optical_path_elements")
+    if not isinstance(raw_elements, list):
+        return []
+    return _normalize_canonical_optical_path_elements(raw_elements)
+
+
+
+def _import_legacy_optical_path_elements(hardware: dict[str, Any], legacy_light_path: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_elements: list[dict[str, Any]] = []
+    stage_sources = [
+        ("cube", legacy_light_path.get("cube_mechanisms")),
+        ("excitation", legacy_light_path.get("excitation_mechanisms")),
+        ("dichroic", legacy_light_path.get("dichroic_mechanisms")),
+        ("emission", legacy_light_path.get("emission_mechanisms")),
+    ]
+    for stage_role, collection in stage_sources:
+        for entry in collection or []:
+            if not isinstance(entry, dict):
+                continue
+            cloned = dict(entry)
+            cloned.setdefault("stage_role", stage_role)
+            raw_elements.append(cloned)
+    for splitter in _collect_splitters(hardware, legacy_light_path):
+        if isinstance(splitter, dict):
+            cloned = dict(splitter)
+            cloned.setdefault("stage_role", "splitter")
+            raw_elements.append(cloned)
+    return _normalize_canonical_optical_path_elements(raw_elements)
 
 
 
@@ -394,7 +427,7 @@ def _canonicalize_sequence_item(item: Any, sources: list[dict[str, Any]], elemen
 
 
 
-def _build_light_paths_from_sequences(raw_light_paths: list[dict[str, Any]], sources: list[dict[str, Any]], elements: list[dict[str, Any]], endpoints: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _parse_canonical_light_paths(raw_light_paths: list[dict[str, Any]], sources: list[dict[str, Any]], elements: list[dict[str, Any]], endpoints: list[dict[str, Any]]) -> list[dict[str, Any]]:
     routes: list[dict[str, Any]] = []
     for index, route in enumerate(raw_light_paths, start=1):
         if not isinstance(route, dict):
@@ -428,7 +461,7 @@ def _build_light_paths_from_sequences(raw_light_paths: list[dict[str, Any]], sou
 
 
 
-def _build_light_paths_from_legacy(sources: list[dict[str, Any]], elements: list[dict[str, Any]], endpoints: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _import_legacy_light_paths(sources: list[dict[str, Any]], elements: list[dict[str, Any]], endpoints: list[dict[str, Any]]) -> list[dict[str, Any]]:
     route_ids: set[str] = set()
     for collection in (sources, elements, endpoints):
         for row in collection:
@@ -471,19 +504,13 @@ def _build_light_paths_from_legacy(sources: list[dict[str, Any]], elements: list
 
 
 
-def canonicalize_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, Any]:
-    hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
-    legacy_light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
-    sources = _canonicalize_source_rows(hardware)
-    elements = _canonicalize_optical_path_elements(hardware, legacy_light_path)
-    endpoints = _canonicalize_endpoint_rows(hardware, legacy_light_path)
-    raw_light_paths = instrument_dict.get("light_paths") if isinstance(instrument_dict.get("light_paths"), list) else []
-    light_paths = (
-        _build_light_paths_from_sequences(raw_light_paths, sources, elements, endpoints)
-        if raw_light_paths
-        else _build_light_paths_from_legacy(sources, elements, endpoints)
-    )
-
+def _apply_route_modalities_from_sequences(
+    *,
+    sources: list[dict[str, Any]],
+    elements: list[dict[str, Any]],
+    endpoints: list[dict[str, Any]],
+    light_paths: list[dict[str, Any]],
+) -> None:
     element_by_id = {entry.get("id"): entry for entry in elements}
     for route in light_paths:
         for sequence_key in ("illumination_sequence", "detection_sequence"):
@@ -514,13 +541,101 @@ def canonicalize_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, 
                                 endpoint["modalities"] = modalities + [route["id"]] if modalities else [route["id"]]
                                 endpoint["path"] = endpoint["modalities"][0]
 
+
+
+def _canonical_light_path_model(
+    *,
+    sources: list[dict[str, Any]],
+    optical_path_elements: list[dict[str, Any]],
+    endpoints: list[dict[str, Any]],
+    light_paths: list[dict[str, Any]],
+) -> dict[str, Any]:
+    _apply_route_modalities_from_sequences(
+        sources=sources,
+        elements=optical_path_elements,
+        endpoints=endpoints,
+        light_paths=light_paths,
+    )
     return {
         "sources": sources,
-        "optical_path_elements": elements,
+        "optical_path_elements": optical_path_elements,
         "endpoints": endpoints,
         "light_paths": light_paths,
     }
 
+
+
+def _has_canonical_light_path_input(instrument_dict: dict[str, Any]) -> bool:
+    hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
+    return any(
+        (
+            isinstance(hardware.get("sources"), list),
+            isinstance(hardware.get("optical_path_elements"), list),
+            isinstance(hardware.get("endpoints"), list),
+            isinstance(instrument_dict.get("light_paths"), list),
+        )
+    )
+
+
+
+def parse_canonical_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, Any]:
+    """Parse the explicit canonical v2 authoring contract only.
+
+    This parser consumes:
+    - hardware.sources[]
+    - hardware.optical_path_elements[]
+    - hardware.endpoints[]
+    - light_paths[].illumination_sequence[]
+    - light_paths[].detection_sequence[]
+
+    It intentionally does not inspect or synthesize from legacy light-path structures.
+    """
+    hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
+    sources = _parse_canonical_source_rows(hardware)
+    elements = _parse_canonical_optical_path_elements(hardware)
+    endpoints = _parse_canonical_endpoint_rows(hardware)
+    raw_light_paths = instrument_dict.get("light_paths") if isinstance(instrument_dict.get("light_paths"), list) else []
+    light_paths = _parse_canonical_light_paths(raw_light_paths, sources, elements, endpoints)
+    return _canonical_light_path_model(
+        sources=sources,
+        optical_path_elements=elements,
+        endpoints=endpoints,
+        light_paths=light_paths,
+    )
+
+
+
+def import_legacy_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, Any]:
+    """Import legacy light-path topology into the canonical v2 shape.
+
+    This adapter is the only place where legacy `hardware.light_path` and
+    `hardware.light_sources` structures are converted into canonical v2 data.
+    """
+    hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
+    legacy_light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
+    sources = _import_legacy_source_rows(hardware)
+    elements = _import_legacy_optical_path_elements(hardware, legacy_light_path)
+    endpoints = _import_legacy_endpoint_rows(hardware, legacy_light_path)
+    light_paths = _import_legacy_light_paths(sources, elements, endpoints)
+    return _canonical_light_path_model(
+        sources=sources,
+        optical_path_elements=elements,
+        endpoints=endpoints,
+        light_paths=light_paths,
+    )
+
+
+
+def canonicalize_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, Any]:
+    """Return canonical v2 light-path data for downstream consumers.
+
+    Canonical v2 input is structurally primary. Legacy support is retained only
+    via the explicit import adapter.
+    """
+    payload = instrument_dict if isinstance(instrument_dict, dict) else {}
+    if _has_canonical_light_path_input(payload):
+        return parse_canonical_light_path_model(payload)
+    return import_legacy_light_path_model(payload)
 
 
 def migrate_instrument_to_light_path_v2(instrument_dict: dict[str, Any]) -> dict[str, Any]:
@@ -1568,6 +1683,9 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
         if branch_label:
             display_parts.append(f"{branch.get('label')}: {branch_label}")
 
+    # `path1` / `path2` remain in the derived splitter payload only as an explicit
+    # compatibility adapter for older runtime/app consumers. Canonical authoring truth
+    # lives in `branches` plus the ordered `light_paths` sequences.
     path1_pos = branches[0].get("component") if branches else {}
     path2_pos = branches[1].get("component") if len(branches) > 1 else {}
 
@@ -1617,7 +1735,18 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
 
 
 def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferred_terminals: bool = False) -> dict:
-    """Build a frontend-friendly DTO from canonical YAML light-path definitions."""
+    """Build the authoritative canonical DTO plus explicit downstream projections.
+
+    Top-level DTO fields are the canonical contract consumed across the repository:
+    - sources
+    - optical_path_elements
+    - endpoints
+    - light_paths
+
+    Runtime/UI convenience structures remain available only under
+    ``projections.virtual_microscope`` so legacy-style stage buckets and splitter
+    renderables are clearly derived adapters rather than co-equal topology truth.
+    """
     canonical = canonicalize_light_path_model(instrument_dict if isinstance(instrument_dict, dict) else {})
     hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
     sources = canonical["sources"]
@@ -1633,7 +1762,9 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         "metadata": {
             "wavelength_grid": {"min_nm": 350, "max_nm": 1700, "step_nm": 2},
             "yaml_source_of_truth": True,
-            "topology_contract": "schema -> validator -> dto -> consumers",
+            "topology_contract": "schema -> validator -> canonical dto -> derived adapters -> consumers",
+            "authoritative_contract": "canonical_v2_only",
+            "topology_truth": "light_paths",
             "graph_incomplete": False,
         },
         "sources": json.loads(json.dumps(sources)),
@@ -1765,4 +1896,37 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         stage_indices[stage_role] += 1
     payload["stages"] = stage_mappings
     payload["valid_paths"] = calculate_valid_paths(payload)
-    return json.loads(json.dumps(payload))
+
+    runtime_projection = {
+        "light_sources": json.loads(json.dumps(payload["light_sources"])),
+        "detectors": json.loads(json.dumps(payload["detectors"])),
+        "terminals": json.loads(json.dumps(payload["terminals"])),
+        "stages": json.loads(json.dumps(payload["stages"])),
+        "splitters": json.loads(json.dumps(payload["splitters"])),
+        "valid_paths": json.loads(json.dumps(payload["valid_paths"])),
+        "available_routes": json.loads(json.dumps(payload["available_routes"])),
+        "default_route": payload["default_route"],
+    }
+
+    canonical_payload = {
+        "dto_schema": payload["dto_schema"],
+        "metadata": {
+            **json.loads(json.dumps(payload["metadata"])),
+            "derived_adapters": ["virtual_microscope"],
+        },
+        "simulation": {
+            "wavelength_grid": json.loads(json.dumps(payload["metadata"]["wavelength_grid"])),
+            "graph_incomplete": payload["metadata"].get("graph_incomplete", False),
+            "uses_inferred_terminals": payload["metadata"].get("uses_inferred_terminals", False),
+            "default_route": payload["default_route"],
+            "route_catalog": json.loads(json.dumps(payload["available_routes"])),
+        },
+        "sources": json.loads(json.dumps(payload["sources"])),
+        "optical_path_elements": json.loads(json.dumps(payload["optical_path_elements"])),
+        "endpoints": json.loads(json.dumps(payload["endpoints"])),
+        "light_paths": json.loads(json.dumps(payload["light_paths"])),
+        "projections": {
+            "virtual_microscope": runtime_projection,
+        },
+    }
+    return json.loads(json.dumps(canonical_payload))

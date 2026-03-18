@@ -1,0 +1,10 @@
+terms:
+  - id: fixed
+    label: "Fixed"
+    description: "No user branch selection is required; the branch state is fixed."
+  - id: exclusive
+    label: "Exclusive"
+    description: "Exactly one branch should be selected at a time."
+  - id: multiple
+    label: "Multiple"
+    description: "More than one branch may be active simultaneously."

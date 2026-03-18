@@ -107,14 +107,19 @@ class ContractInvariantTests(unittest.TestCase):
     def test_critical_runtime_and_dto_fields_are_declared_in_schema(self) -> None:
         schema_paths = _schema_paths()
         required_paths = {
-            "hardware.light_path.endpoints[].id",
-            "hardware.light_path.endpoints[].endpoint_type",
-            "hardware.light_path.splitters[].branches[].target_ids",
-            "hardware.light_sources[].manufacturer",
-            "hardware.light_sources[].product_code",
-            "hardware.light_sources[].tunable_min_nm",
-            "hardware.light_sources[].tunable_max_nm",
-            "hardware.light_sources[].simultaneous_lines_max",
+            "hardware.sources[].manufacturer",
+            "hardware.sources[].product_code",
+            "hardware.sources[].tunable_min_nm",
+            "hardware.sources[].tunable_max_nm",
+            "hardware.sources[].simultaneous_lines_max",
+            "hardware.optical_path_elements[].stage_role",
+            "hardware.optical_path_elements[].element_type",
+            "hardware.optical_path_elements[].branches[].target_ids",
+            "hardware.endpoints[].id",
+            "hardware.endpoints[].endpoint_type",
+            "light_paths[].id",
+            "light_paths[].illumination_sequence[].source_id",
+            "light_paths[].detection_sequence[].endpoint_id",
             "hardware.detectors[].manufacturer",
             "hardware.detectors[].collection_min_nm",
             "hardware.detectors[].collection_max_nm",
@@ -136,6 +141,15 @@ class ContractInvariantTests(unittest.TestCase):
         normalized_schema = {_normalize_contract_path(path) for path in schema_paths}
         source = VALIDATE_PATH.read_text(encoding="utf-8")
         tree = ast.parse(source)
+        migration_only_validate_paths = {
+            "hardware.light_path.endpoints",
+            "hardware.light_path.splitters",
+            "hardware.light_path.cube_mechanisms",
+            "hardware.light_path.excitation_mechanisms",
+            "hardware.light_path.dichroic_mechanisms",
+            "hardware.light_path.emission_mechanisms",
+            "hardware.light_sources",
+        }
 
         literals = set()
         for node in ast.walk(tree):
@@ -147,6 +161,8 @@ class ContractInvariantTests(unittest.TestCase):
         unresolved = []
         for token in sorted(literals):
             normalized = _normalize_contract_path(token)
+            if normalized in migration_only_validate_paths:
+                continue
             if normalized in normalized_schema:
                 continue
             if any(candidate.startswith(normalized + ".") for candidate in normalized_schema):
@@ -176,7 +192,7 @@ class ContractInvariantTests(unittest.TestCase):
             msg=f"Template freshness check failed. stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}",
         )
 
-    def test_strict_payload_does_not_parse_notes_into_graph_contract(self) -> None:
+    def test_migration_compatibility_strict_payload_does_not_parse_notes_into_graph_contract(self) -> None:
         payload = generate_virtual_microscope_payload(
             {
                 "instrument": {"ocular_availability": "trinocular"},
@@ -201,8 +217,9 @@ class ContractInvariantTests(unittest.TestCase):
             include_inferred_terminals=False,
         )
 
-        self.assertEqual(payload.get("terminals"), [])
-        self.assertEqual(payload.get("splitters", [])[0].get("branches", [])[0].get("target_ids"), [])
+        runtime = ((payload.get("projections") or {}).get("virtual_microscope") or {})
+        self.assertEqual(runtime.get("terminals"), [])
+        self.assertEqual(runtime.get("splitters", [])[0].get("branches", [])[0].get("target_ids"), [])
         self.assertTrue(payload.get("metadata", {}).get("graph_incomplete"))
 
     def test_methods_and_llm_exports_use_dto_contract_not_raw_yaml_fields(self) -> None:

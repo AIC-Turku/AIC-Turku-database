@@ -1,0 +1,16 @@
+terms:
+  - id: excitation
+    label: "Excitation"
+    description: "Element participates in the illumination path before the sample plane."
+  - id: cube
+    label: "Cube"
+    description: "Element represents a linked cube/filter-set assembly."
+  - id: dichroic
+    label: "Dichroic"
+    description: "Element participates in dichroic routing around the sample plane."
+  - id: emission
+    label: "Emission"
+    description: "Element participates in the detection path after the sample plane."
+  - id: splitter
+    label: "Splitter"
+    description: "Element explicitly branches or selects downstream routes/endpoints."

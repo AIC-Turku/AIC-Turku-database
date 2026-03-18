@@ -30,6 +30,7 @@ Avoid hardcoding facility names, URLs, acknowledgements, and branding in scripts
 - `vocab/` — controlled terminology source of truth.
 - `templates/` — record starter YAML templates.
 - `docs/dichroic_migration_note.md` — preferred dichroic encoding (`transmission_bands` / `reflection_bands`) and legacy fallback behavior.
+- `docs/light_path_v2_migration.md` — canonical v2 light-path architecture and migration boundary.
 - `scripts/`
   - `scripts/dashboard_builder.py` — site and JSON generator.
   - `scripts/validate.py` — ledger/schema validation.
@@ -56,6 +57,49 @@ When instructions conflict, prefer:
 5. template structures in `templates/`
 6. `README.md`
 7. this context file (orientation only)
+
+## 6) Canonical light-path architecture
+
+The repository must treat instrument YAML as the authoritative light-path source of truth.
+
+Canonical topology authoring model:
+
+- `hardware.sources`
+- `hardware.optical_path_elements`
+- `hardware.endpoints`
+- `light_paths[]`
+  - `id`
+  - `name`
+  - `illumination_sequence[]`
+  - `detection_sequence[]`
+
+Interpretation rules:
+
+- Ordered `light_paths[]` sequences are the primary source of truth for route traversal.
+- `modalities` declared on `hardware.sources`, `hardware.optical_path_elements`, and `hardware.endpoints` are validation aids only. They may constrain or sanity-check route membership, but they do not override the ordered sequences.
+- Branching and selector/splitter behavior must remain explicit from YAML through validation, DTO generation, and UI/runtime consumers.
+- Branch identity must be stable.
+- Branch targets/endpoints must be explicit.
+- Branch-specific optics must remain representable when the schema supports them.
+
+Canonical data flow:
+
+`YAML -> schema/validator -> DTO -> consumers`
+
+Layer responsibilities:
+
+- YAML authoring declares the hardware inventory and ordered path traversal.
+- `schema/instrument_policy.yaml` defines the canonical field vocabulary and structural contract.
+- `scripts/validate.py` enforces that contract and reports migration/deprecation issues.
+- `scripts/light_path_parser.py` builds the consumer DTO from canonical YAML.
+- The authoritative light-path DTO is canonical v2 at the top level (`sources`, `optical_path_elements`, `endpoints`, `light_paths`). Any runtime/UI convenience payloads must be exposed only as explicit derived adapters, currently `projections.virtual_microscope`.
+- Consumer layers (`dashboard_builder.py`, methods generator, instrument spec pages, virtual microscope runtime/app, audit tooling) must treat the DTO as their contract rather than re-infering topology from raw YAML.
+
+Legacy boundary:
+
+- legacy `hardware.light_path.*`, flat filter/splitter encodings, and other compatibility spellings are migration-only structures.
+- Legacy structures may be normalized for transition tooling, but they are not canonical authoring targets.
+- New tests, documentation, and implementation cleanup should be written against the canonical v2 model first.
 
 ### Non-Blocking Validation Philosophy
 

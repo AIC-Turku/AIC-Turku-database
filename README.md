@@ -23,6 +23,7 @@ The generated site is built from repository data. The browser UI does not invent
 - `scripts/validate.py` — schema + vocabulary validation and completeness auditing.
 - `scripts/light_path_parser.py` — normalized light-path to virtual-microscope payload builder.
 - `scripts/dashboard_builder.py` — site builder and JSON export generator.
+- `docs/light_path_v2_migration.md` — canonical v2 light-path architecture and migration contract.
 - `scripts/templates/virtual_microscope.html.j2` — virtual microscope page shell.
 - `scripts/templates/virtual_microscope_app.js` — browser app logic.
 - `scripts/templates/virtual_microscope_runtime.js` — route normalization, spectra handling, and propagation model.
@@ -43,6 +44,28 @@ Important consequences:
 - methods-generator blockers are derived from policy-driven completeness metadata,
 - LLM planning exports include explicit known-vs-missing inventory metadata,
 - vocabularies live in `vocab/*.yaml` and are referenced from policy rather than duplicated in multiple places.
+
+### Canonical light-path architecture
+
+The repository's canonical light-path authoring model is now documented in `docs/light_path_v2_migration.md`.
+
+Canonical authoring structure:
+
+- `hardware.sources`
+- `hardware.optical_path_elements`
+- `hardware.endpoints`
+- `light_paths[]`
+  - `id`
+  - `name`
+  - `illumination_sequence[]`
+  - `detection_sequence[]`
+
+Interpretation rules:
+
+- ordered sequences are the primary topology source of truth,
+- `modalities` on sources/elements/endpoints are validation aids only,
+- branching/selectors/splitters must remain explicitly representable through `YAML -> schema/validator -> DTO -> consumers`,
+- legacy `hardware.light_path.*` structures are migration-only compatibility layers, not canonical authoring targets.
 
 ## Virtual microscope
 
