@@ -8,15 +8,15 @@ instrument:
   stand_orientation: benchtop
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage drive.
+  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and
+    ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage
+    drive.
   url: https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope
-
 modalities:
 - confocal_spinning_disk
 - widefield_fluorescence
 - transmitted_brightfield
 - phase_contrast
-
 modules:
 - name: hardware_autofocus
   notes: Dual function Focus Seek and Lock
@@ -26,138 +26,45 @@ modules:
 - name: incubation
   notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
   url: ''
-
   manufacturer: Andor
   model: TOPSTAGE-ANDOR-BL3 Incubator Bundle
 software:
 - role: acquisition
   name: Fusion BC43
-  version: '2.7.0'
+  version: 2.7.0
   developer: Andor
   url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
 - role: analysis
   name: Imaris Quant
   version: ''
   developer: Oxford Instruments / Andor
-  notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
+  notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions,
+    and traditional intensity-based/AI metric characterization.
   url: ''
-
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
     notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with optimized spacing for deep tissue imaging.
+    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with
+      optimized spacing for deep tissue imaging.
     url: ''
-
-  light_sources:
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: 405
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: 488
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: 561
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
-  - kind: laser
-    manufacturer: Andor
-    model: Borealis Illumination
-    wavelength_nm: 638
-    power: ''
-    notes: Part of BC43 excitation lines
-    url: ''
-  - kind: led
-    manufacturer: Andor
-    model: Transmitted Light Illuminator
-    wavelength_nm: broadband
-    path: shared
-    role: transmitted_illumination    # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
-    notes: Used for Brightfield and Differential Phase Contrast (DPC).
-    url: ''
-
   detectors:
   - kind: scmos
     manufacturer: Andor
     model: 4.1 MP sCMOS
     pixel_pitch_um: 6.5
     qe_peak_pct: 82
-    notes: "16-bit. 18.4 mm field of view."
+    notes: 16-bit. 18.4 mm field of view.
     url: ''
-
     id: detector_1
-  light_path:
-    dichroic_mechanisms:
-    - name: BC43 Internal Dichroic
-      type: fixed
-      positions:
-        Pos_1:
-          component_type: multiband_dichroic
-          transmission_bands:
-          - {center_nm: 450, width_nm: 50}
-          - {center_nm: 525, width_nm: 50}
-          - {center_nm: 600, width_nm: 50}
-          - {center_nm: 685, width_nm: 50}
-          reflection_bands:
-          - {center_nm: 405, width_nm: 20}
-          - {center_nm: 488, width_nm: 20}
-          - {center_nm: 561, width_nm: 20}
-          - {center_nm: 638, width_nm: 20}
-          cutoffs_nm: [405, 488, 561, 638]
-          notes: >
-            Built-in multiband dichroic for standard 4-line excitation.
-            Explicit transmission windows are aligned to the installed emission channels;
-            reflection-band widths are approximate pending vendor spectral curve export.
-
-    emission_mechanisms:
-    - name: BC43 Internal Emission Filters
-      type: filter_wheel
-      slots: 4
-      positions:
-        Pos_1:
-          name: DAPI
-          component_type: bandpass
-          center_nm: 450
-          width_nm: 50
-        Pos_2:
-          name: GFP
-          component_type: bandpass
-          center_nm: 525
-          width_nm: 50
-        Pos_3:
-          name: mCherry
-          component_type: bandpass
-          center_nm: 600
-          width_nm: 50
-        Pos_4:
-          name: CY5
-          component_type: bandpass
-          center_nm: 685
-          width_nm: 50
-
-    splitters: []
-
   objectives:
   - id: 10x_air
     manufacturer: Nikon
@@ -243,3 +150,143 @@ hardware:
     notes: 'Optical family: Lambda D.'
     url: ''
     is_installed: true
+  sources:
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 405
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 488
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination_2
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 561
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination_3
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 638
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination_4
+    modalities:
+    - epi
+    path: epi
+  - kind: led
+    manufacturer: Andor
+    model: Transmitted Light Illuminator
+    wavelength_nm: broadband
+    path: epi
+    role: transmitted_illumination
+    notes: Used for Brightfield and Differential Phase Contrast (DPC).
+    url: ''
+    id: transmitted_light_illuminator
+    modalities:
+    - epi
+  optical_path_elements:
+  - name: BC43 Internal Dichroic
+    type: fixed
+    positions:
+      Pos_1:
+        component_type: multiband_dichroic
+        transmission_bands:
+        - center_nm: 450
+          width_nm: 50
+        - center_nm: 525
+          width_nm: 50
+        - center_nm: 600
+          width_nm: 50
+        - center_nm: 685
+          width_nm: 50
+        reflection_bands:
+        - center_nm: 405
+          width_nm: 20
+        - center_nm: 488
+          width_nm: 20
+        - center_nm: 561
+          width_nm: 20
+        - center_nm: 638
+          width_nm: 20
+        cutoffs_nm:
+        - 405
+        - 488
+        - 561
+        - 638
+        notes: 'Built-in multiband dichroic for standard 4-line excitation. Explicit
+          transmission windows are aligned to the installed emission channels; reflection-band
+          widths are approximate pending vendor spectral curve export.
+
+          '
+    stage_role: dichroic
+    id: bc43_internal_dichroic
+    element_type: fixed
+    modalities:
+    - epi
+    path: epi
+  - name: BC43 Internal Emission Filters
+    type: filter_wheel
+    slots: 4
+    positions:
+      Pos_1:
+        name: DAPI
+        component_type: bandpass
+        center_nm: 450
+        width_nm: 50
+      Pos_2:
+        name: GFP
+        component_type: bandpass
+        center_nm: 525
+        width_nm: 50
+      Pos_3:
+        name: mCherry
+        component_type: bandpass
+        center_nm: 600
+        width_nm: 50
+      Pos_4:
+        name: CY5
+        component_type: bandpass
+        center_nm: 685
+        width_nm: 50
+    stage_role: emission
+    id: bc43_internal_emission_filters
+    element_type: filter_wheel
+    modalities:
+    - epi
+    path: epi
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: borealis_illumination
+  - source_id: borealis_illumination_2
+  - source_id: borealis_illumination_3
+  - source_id: borealis_illumination_4
+  - source_id: transmitted_light_illuminator
+  - optical_path_element_id: bc43_internal_dichroic
+  detection_sequence:
+  - optical_path_element_id: bc43_internal_dichroic
+  - optical_path_element_id: bc43_internal_emission_filters

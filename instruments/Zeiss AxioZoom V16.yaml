@@ -8,19 +8,19 @@ instrument:
   stand_orientation: stereo
   ocular_availability: trinocular
   location: BioCity, 5th floor, room Dunkel
-  notes: 'Fluorescence stereo zoom microscope with dual-camera detection (color + monochrome). Imaging modes: Brightfield (top/bottom illumination), Fluorescence, Optical sectioning (ApoTome.2 structured illumination SIM). Reservation system: Zeiss AxioZoom.V16. Fluorophore selection guide available for users.'
+  notes: 'Fluorescence stereo zoom microscope with dual-camera detection (color +
+    monochrome). Imaging modes: Brightfield (top/bottom illumination), Fluorescence,
+    Optical sectioning (ApoTome.2 structured illumination SIM). Reservation system:
+    Zeiss AxioZoom.V16. Fluorophore selection guide available for users.'
   url: ''
-
 modalities:
 - transmitted_brightfield
 - optical_sectioning
 - widefield_fluorescence
-
 modules:
-- name: sim_module   # Flag: Verify this matches a canonical ID in vocab/modules.yaml (often 'apotome')
+- name: sim_module
   notes: Zeiss ApoTome.2 module (structured illumination for optical sectioning)
   url: ''
-
   manufacturer: Zeiss
   model: ApoTome.2
 software:
@@ -33,54 +33,29 @@ hardware:
     type: none
     notes: ''
     url: ''
-
-  light_sources:
-  - kind: led
-    manufacturer: Zeiss
-    model: CL 9000 LED CAN ring light
-    wavelength_nm: ''   # Flag: Required field for 'led' kind. (e.g., 'broadband' or 'white')
-    power: ''
-    notes: top illumination
-    url: ''
-  - kind: led
-    manufacturer: VisiLED
-    model: MC1000 LED base light
-    wavelength_nm: ''   # Flag: Required field for 'led' kind.
-    power: ''
-    notes: bottom illumination
-    url: ''
-  - kind: arc_lamp
-    manufacturer: Zeiss
-    model: HXP 200C
-    wavelength_nm: ''
-    power: ''
-    notes: Mercury lamp
-    url: ''
-
   detectors:
   - kind: scmos
     manufacturer: Hamamatsu
     model: ORCA-Flash4.0 LT+ sCMOS
-    pixel_pitch_um: 6.5   # Flag: Required by schema for scmos. Standard specification for this camera.
-    sensor_format_px: "2048 x 2048"
+    pixel_pitch_um: 6.5
+    sensor_format_px: 2048 x 2048
     notes: mono
     url: ''
     id: detector_1
   - kind: cmos
     manufacturer: Zeiss
     model: AxioCam 105 Color
-    pixel_pitch_um:        # Flag: Required field for cmos detectors. Please add physical pixel size (usually 2.2).
-    sensor_format_px: "2560 x 1920"
+    pixel_pitch_um: null
+    sensor_format_px: 2560 x 1920
     notes: color
     url: ''
-
     id: detector_2
   filters:
   - name: DAPI (Filter set 49)
     location: Internal Turret
     product_code: '49'
     excitation: G365
-    dichroic: ''   # Flag: Required because widefield_fluorescence is present. (Usually FT 395 for Set 49)
+    dichroic: ''
     emission: BP 445/50
     notes: ''
     url: ''
@@ -88,7 +63,7 @@ hardware:
     location: Internal Turret
     product_code: 38 HE
     excitation: BP 470/40
-    dichroic: ''   # Flag: Required field. (Usually FT 495)
+    dichroic: ''
     emission: BP 525/50
     notes: ''
     url: ''
@@ -96,7 +71,7 @@ hardware:
     location: Internal Turret
     product_code: '45'
     excitation: BP 560/40
-    dichroic: ''   # Flag: Required field. (Usually FT 580)
+    dichroic: ''
     emission: BP 630/75
     notes: ''
     url: ''
@@ -104,11 +79,10 @@ hardware:
     location: Internal Turret
     product_code: '50'
     excitation: BP 640/30
-    dichroic: ''   # Flag: Required field. (Usually FT 660)
+    dichroic: ''
     emission: BP 690/50
     notes: ''
     url: ''
-
   objectives:
   - id: 0.5x_air
     manufacturer: Zeiss
@@ -118,10 +92,11 @@ hardware:
     numerical_aperture: 0.125
     working_distance: 114 mm
     immersion: air
-    correction: plan_apochromat   # Mapped from vocab/objective_corrections.yaml based on 'PlanApo' model
+    correction: plan_apochromat
     afc_compatible: false
     specialties: []
-    notes: 'System magnification range 3.5x-56x. Field of view range 66-4 mm. ApoTome compatible: No.'
+    notes: 'System magnification range 3.5x-56x. Field of view range 66-4 mm. ApoTome
+      compatible: No.'
     url: ''
     is_installed: true
   - id: 1x_air
@@ -132,9 +107,54 @@ hardware:
     numerical_aperture: 0.125
     working_distance: 56 mm
     immersion: air
-    correction: plan_apochromat   # Mapped from vocab/objective_corrections.yaml
+    correction: plan_apochromat
     afc_compatible: false
     specialties: []
-    notes: System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome compatible from 40x-112x.
+    notes: System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome
+      compatible from 40x-112x.
     url: ''
     is_installed: true
+  sources:
+  - kind: led
+    manufacturer: Zeiss
+    model: CL 9000 LED CAN ring light
+    wavelength_nm: ''
+    power: ''
+    notes: top illumination
+    url: ''
+    id: cl_9000_led_can_ring_light
+    modalities:
+    - epi
+    path: epi
+  - kind: led
+    manufacturer: VisiLED
+    model: MC1000 LED base light
+    wavelength_nm: ''
+    power: ''
+    notes: bottom illumination
+    url: ''
+    id: mc1000_led_base_light
+    modalities:
+    - epi
+    path: epi
+  - kind: arc_lamp
+    manufacturer: Zeiss
+    model: HXP 200C
+    wavelength_nm: ''
+    power: ''
+    notes: Mercury lamp
+    url: ''
+    id: hxp_200c
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: cl_9000_led_can_ring_light
+  - source_id: mc1000_led_base_light
+  - source_id: hxp_200c
+  detection_sequence: []

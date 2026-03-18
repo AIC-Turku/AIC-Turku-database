@@ -45,21 +45,6 @@ hardware:
     line_rate_hz: null
     notes: High-speed resonant scanner
     url: ''
-  light_sources:
-  - kind: white_light_laser
-    manufacturer: Leica
-    model: White Light Laser (WLL)
-    wavelength_nm: tunable
-    power: ''
-    notes: continuous, up to 8 simultaneous lines via AOBS
-    url: ''
-  - kind: laser
-    manufacturer: Leica
-    model: 405 nm diode laser
-    wavelength_nm: '405'
-    power: ''
-    notes: ''
-    url: ''
   detectors:
   - kind: hyd
     manufacturer: Leica
@@ -134,3 +119,35 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
+  sources:
+  - kind: white_light_laser
+    manufacturer: Leica
+    model: White Light Laser (WLL)
+    wavelength_nm: tunable
+    power: ''
+    notes: continuous, up to 8 simultaneous lines via AOBS
+    url: ''
+    id: white_light_laser_wll
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: Leica
+    model: 405 nm diode laser
+    wavelength_nm: '405'
+    power: ''
+    notes: ''
+    url: ''
+    id: 405_nm_diode_laser
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: white_light_laser_wll
+  - source_id: 405_nm_diode_laser
+  detection_sequence: []

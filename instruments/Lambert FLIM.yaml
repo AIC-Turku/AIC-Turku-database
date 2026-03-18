@@ -38,28 +38,6 @@ hardware:
     type: none
     notes: ''
     url: ''
-  light_sources:
-  - kind: led
-    manufacturer: null
-    model: Multi-LED excitation
-    wavelength_nm: '406'
-    power: ''
-    notes: Excitation line
-    url: ''
-  - kind: led
-    manufacturer: null
-    model: Multi-LED excitation
-    wavelength_nm: '469'
-    power: ''
-    notes: Excitation line
-    url: ''
-  - kind: led
-    manufacturer: Unknown
-    model: Multi-LED excitation
-    wavelength_nm: '533'
-    power: ''
-    notes: Excitation line
-    url: ''
   detectors: []
   splitters: []
   filters:
@@ -116,3 +94,47 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
+  sources:
+  - kind: led
+    manufacturer: null
+    model: Multi-LED excitation
+    wavelength_nm: '406'
+    power: ''
+    notes: Excitation line
+    url: ''
+    id: multi_led_excitation
+    modalities:
+    - epi
+    path: epi
+  - kind: led
+    manufacturer: null
+    model: Multi-LED excitation
+    wavelength_nm: '469'
+    power: ''
+    notes: Excitation line
+    url: ''
+    id: multi_led_excitation_2
+    modalities:
+    - epi
+    path: epi
+  - kind: led
+    manufacturer: Unknown
+    model: Multi-LED excitation
+    wavelength_nm: '533'
+    power: ''
+    notes: Excitation line
+    url: ''
+    id: multi_led_excitation_3
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: multi_led_excitation
+  - source_id: multi_led_excitation_2
+  - source_id: multi_led_excitation_3
+  detection_sequence: []

@@ -70,61 +70,6 @@ hardware:
     type: none
     notes: ''
     url: ''
-  light_sources:
-  - kind: laser
-    manufacturer: GE Healthcare
-    model: 405 nm
-    role: excitation
-    technology: diode
-    wavelength_nm: '405'
-    power: 100 mW
-    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-    url: ''
-  - kind: laser
-    manufacturer: GE Healthcare
-    model: 445 nm
-    role: excitation
-    technology: diode
-    wavelength_nm: '445'
-    power: 100 mW
-    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-    url: ''
-  - kind: laser
-    manufacturer: GE Healthcare
-    model: 488 nm
-    role: excitation
-    technology: dpss
-    wavelength_nm: '488'
-    power: 100 mW
-    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-    url: ''
-  - kind: laser
-    manufacturer: GE Healthcare
-    model: 514 nm
-    role: excitation
-    technology: dpss
-    wavelength_nm: '514'
-    power: 100 mW
-    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-    url: ''
-  - kind: laser
-    manufacturer: GE Healthcare
-    model: 568 nm
-    role: excitation
-    technology: dpss
-    wavelength_nm: '568'
-    power: 100 mW
-    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-    url: ''
-  - kind: laser
-    manufacturer: GE Healthcare
-    model: 642 nm
-    role: excitation
-    technology: diode
-    wavelength_nm: '642'
-    power: 110 mW
-    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-    url: ''
   detectors:
   - kind: scmos
     manufacturer: PCO
@@ -237,3 +182,95 @@ hardware:
     notes: Equipped with correction collar.
     url: ''
     is_installed: true
+  sources:
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 405 nm
+    role: excitation
+    technology: diode
+    wavelength_nm: '405'
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 405_nm
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 445 nm
+    role: excitation
+    technology: diode
+    wavelength_nm: '445'
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 445_nm
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 488 nm
+    role: excitation
+    technology: dpss
+    wavelength_nm: '488'
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 488_nm
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 514 nm
+    role: excitation
+    technology: dpss
+    wavelength_nm: '514'
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 514_nm
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 568 nm
+    role: excitation
+    technology: dpss
+    wavelength_nm: '568'
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 568_nm
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 642 nm
+    role: excitation
+    technology: diode
+    wavelength_nm: '642'
+    power: 110 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 642_nm
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: 405_nm
+  - source_id: 445_nm
+  - source_id: 488_nm
+  - source_id: 514_nm
+  - source_id: 568_nm
+  - source_id: 642_nm
+  detection_sequence: []

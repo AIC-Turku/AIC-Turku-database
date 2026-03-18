@@ -7,125 +7,34 @@ instrument:
   funding: ''
   stand_orientation: upright
   ocular_availability: trinocular
-  # MISSING REQUIRED: Please provide the physical location.
   location: ''
-  notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast.'
+  notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence
+    (epifluorescence), Phase contrast.'
   url: ''
-
 modalities:
 - widefield_fluorescence
 - transmitted_brightfield
 - phase_contrast
-
 modules: []
-
 software:
 - role: acquisition
   name: Olympus Cell^D
   version: ''
   url: ''
-
 hardware:
   scanner:
     type: none
     notes: ''
     url: ''
-
-  light_sources:
-  - kind: halogen_lamp
-    manufacturer: Olympus
-    model: 12V 100W halogen bulb
-    wavelength_nm: broadband
-    power: 100 W
-    path: transmitted
-    role: transmitted_illumination    # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
-    notes: Transmitted brightfield and phase contrast source
-    url: ''
-  - kind: arc_lamp
-    manufacturer: Osram
-    model: HBO 103W short arc bulb
-    wavelength_nm: broadband
-    power: 103 W
-    path: epi
-    notes: Fluorescence excitation source
-    url: ''
-
   detectors:
   - kind: ccd
     manufacturer: Olympus
     model: DP71
-      # FLAG FIXED: Physical pixel size of the DP71 sensor is 6.45um
     pixel_pitch_um: 6.45
-    sensor_format_px: "4080 x 3072"
-    notes: '1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel resolution.'
+    sensor_format_px: 4080 x 3072
+    notes: 1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel resolution.
     url: ''
-
     id: detector_1
-  light_path:
-    cube_mechanisms:
-    - name: Fluorescence Turret
-      type: turret
-      path: epi
-      slots: 4
-      positions:
-        Pos_1:
-          name: U-MWU (DAPI)
-          product_code: U-MWU
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 355
-            width_nm: 50
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm: [400]
-          emission_filter:
-            component_type: longpass
-            cut_on_nm: 420
-        Pos_2:
-          name: U-MWIB (GFP wide)
-          product_code: U-MWIB
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 475
-            width_nm: 30
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm: [505]
-          emission_filter:
-            component_type: longpass
-            cut_on_nm: 515
-        Pos_3:
-          name: U-MWIG (Alexa 546 / TRITC)
-          product_code: U-MWIG
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 535
-            width_nm: 30
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm: [565]
-          emission_filter:
-            component_type: longpass
-            cut_on_nm: 580
-        Pos_4:
-          name: U-MNIBA2 (GFP narrow)
-          product_code: U-MNIBA2
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 480
-            width_nm: 20
-          dichroic:
-            component_type: dichroic
-              # Fixed typo from '5056' to '505'
-            cutoffs_nm: [505]
-          emission_filter:
-            component_type: bandpass
-            center_nm: 530
-            width_nm: 40
-          notes: Optional filter cube
-
-    splitters: []
-
   objectives:
   - id: 4x_air
     manufacturer: Olympus
@@ -135,7 +44,6 @@ hardware:
     numerical_aperture: 0.1
     working_distance: 18.5 mm
     immersion: air
-      # VOCAB FIXED: PlanC maps to plan_achromat
     correction: plan_achromat
     afc_compatible: false
     specialties: []
@@ -147,10 +55,9 @@ hardware:
     model: UPlanFl 10x/0.30 Ph1
     product_code: ''
     magnification: 10.0
-    numerical_aperture: 0.30
+    numerical_aperture: 0.3
     working_distance: 10.0 mm
     immersion: air
-      # VOCAB FIXED: UPlanFl maps to plan_fluorite
     correction: plan_fluorite
     afc_compatible: false
     specialties:
@@ -163,7 +70,7 @@ hardware:
     model: UPlanFl 20x/0.50 Ph1
     product_code: ''
     magnification: 20.0
-    numerical_aperture: 0.50
+    numerical_aperture: 0.5
     working_distance: 2.1 mm
     immersion: air
     correction: plan_fluorite
@@ -196,12 +103,11 @@ hardware:
     numerical_aperture: 1.35
     working_distance: 0.17 mm
     immersion: oil
-      # VOCAB FIXED: UPlanApo maps to plan_apochromat
     correction: plan_apochromat
     afc_compatible: false
     specialties:
     - phase
-    notes: 'Includes adjustable iris'
+    notes: Includes adjustable iris
     url: ''
     is_installed: true
   - id: 60x_oil
@@ -216,6 +122,113 @@ hardware:
     afc_compatible: false
     specialties:
     - phase
-    notes: 'Optional objective. Includes adjustable iris.'
+    notes: Optional objective. Includes adjustable iris.
     url: ''
     is_installed: false
+  sources:
+  - kind: halogen_lamp
+    manufacturer: Olympus
+    model: 12V 100W halogen bulb
+    wavelength_nm: broadband
+    power: 100 W
+    path: transmitted
+    role: transmitted_illumination
+    notes: Transmitted brightfield and phase contrast source
+    url: ''
+    id: 12v_100w_halogen_bulb
+    modalities:
+    - transmitted
+  - kind: arc_lamp
+    manufacturer: Osram
+    model: HBO 103W short arc bulb
+    wavelength_nm: broadband
+    power: 103 W
+    path: epi
+    notes: Fluorescence excitation source
+    url: ''
+    id: hbo_103w_short_arc_bulb
+    modalities:
+    - epi
+  optical_path_elements:
+  - name: Fluorescence Turret
+    type: turret
+    path: epi
+    slots: 4
+    positions:
+      Pos_1:
+        name: U-MWU (DAPI)
+        product_code: U-MWU
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 355
+          width_nm: 50
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 400
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 420
+      Pos_2:
+        name: U-MWIB (GFP wide)
+        product_code: U-MWIB
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 475
+          width_nm: 30
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 505
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 515
+      Pos_3:
+        name: U-MWIG (Alexa 546 / TRITC)
+        product_code: U-MWIG
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 535
+          width_nm: 30
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 565
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 580
+      Pos_4:
+        name: U-MNIBA2 (GFP narrow)
+        product_code: U-MNIBA2
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 480
+          width_nm: 20
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 505
+        emission_filter:
+          component_type: bandpass
+          center_nm: 530
+          width_nm: 40
+        notes: Optional filter cube
+    stage_role: cube
+    id: fluorescence_turret
+    element_type: turret
+    modalities:
+    - epi
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: hbo_103w_short_arc_bulb
+  - optical_path_element_id: fluorescence_turret
+  detection_sequence:
+  - optical_path_element_id: fluorescence_turret
+- id: transmitted
+  name: Transmitted light
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence: []

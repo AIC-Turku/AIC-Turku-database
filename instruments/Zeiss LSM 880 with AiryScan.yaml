@@ -66,49 +66,6 @@ hardware:
     line_rate_hz: null
     notes: ''
     url: ''
-  light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 405 nm (Diode)
-    wavelength_nm: '405'
-    power: ''
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 458 nm (Argon)
-    wavelength_nm: '458'
-    power: ''
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm (Argon)
-    wavelength_nm: '488'
-    power: ''
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 514 nm (Argon)
-    wavelength_nm: '514'
-    power: ''
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 543 nm (HeNe)
-    wavelength_nm: '543'
-    power: ''
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 633 nm (HeNe)
-    wavelength_nm: '633'
-    power: ''
-    notes: ''
-    url: ''
   detectors:
   - kind: pmt
     manufacturer: ''
@@ -294,3 +251,83 @@ hardware:
     notes: Optional objective. W Korr (Water immersion, correction collar)
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
     is_installed: false
+  sources:
+  - kind: laser
+    manufacturer: ''
+    model: 405 nm (Diode)
+    wavelength_nm: '405'
+    power: ''
+    notes: ''
+    url: ''
+    id: 405_nm_diode
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ''
+    model: 458 nm (Argon)
+    wavelength_nm: '458'
+    power: ''
+    notes: ''
+    url: ''
+    id: 458_nm_argon
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ''
+    model: 488 nm (Argon)
+    wavelength_nm: '488'
+    power: ''
+    notes: ''
+    url: ''
+    id: 488_nm_argon
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ''
+    model: 514 nm (Argon)
+    wavelength_nm: '514'
+    power: ''
+    notes: ''
+    url: ''
+    id: 514_nm_argon
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ''
+    model: 543 nm (HeNe)
+    wavelength_nm: '543'
+    power: ''
+    notes: ''
+    url: ''
+    id: 543_nm_hene
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ''
+    model: 633 nm (HeNe)
+    wavelength_nm: '633'
+    power: ''
+    notes: ''
+    url: ''
+    id: 633_nm_hene
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: 405_nm_diode
+  - source_id: 458_nm_argon
+  - source_id: 488_nm_argon
+  - source_id: 514_nm_argon
+  - source_id: 543_nm_hene
+  - source_id: 633_nm_hene
+  detection_sequence: []

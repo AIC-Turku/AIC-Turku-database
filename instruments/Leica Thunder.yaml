@@ -39,79 +39,6 @@ hardware:
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-  light_sources:
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 395
-    width_nm: 25
-    power: 200 mW
-    notes: 390 in software
-    url: ''
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 438
-    width_nm: 29
-    power: 200 mW
-    notes: 440 in software
-    url: ''
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 475
-    width_nm: 28
-    power: 200 mW
-    notes: ''
-    url: ''
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 511
-    width_nm: 16
-    power: 200 mW
-    notes: 510 in software
-    url: ''
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 555
-    width_nm: 28
-    power: 200 mW
-    notes: ''
-    url: ''
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 575
-    width_nm: 25
-    power: 200 mW
-    notes: ''
-    url: ''
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 635
-    width_nm: 22
-    power: 200 mW
-    notes: ''
-    url: ''
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 730
-    width_nm: 40
-    power: 200 mW
-    notes: 747 in software
-    url: ''
   detectors:
   - kind: scmos
     manufacturer: Leica
@@ -132,200 +59,6 @@ hardware:
     notes: color CMOS; excellent color reproduction; RGB quantifiable images
     url: https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/
     id: detector_2
-  light_path:
-    cube_mechanisms:
-    - name: Filter Turret
-      type: turret
-      slots: 6
-      path: epi
-      positions:
-        1:
-          name: CYR71010
-          product_code: '11525416'
-          notes: Quad-band
-          excitation_filter:
-            component_type: multiband_bandpass
-            bands:
-            - center_nm: 436
-              width_nm: 28
-            - center_nm: 506
-              width_nm: 21
-            - center_nm: 578
-              width_nm: 24
-            - center_nm: 730
-              width_nm: 40
-          dichroic:
-            component_type: multiband_dichroic
-            transmission_bands:
-            - center_nm: 473
-              width_nm: 22
-            - center_nm: 539
-              width_nm: 24
-            - center_nm: 641
-              width_nm: 78
-            - center_nm: 810
-              width_nm: 80
-            reflection_bands:
-            - center_nm: 436
-              width_nm: 28
-            - center_nm: 506
-              width_nm: 21
-            - center_nm: 578
-              width_nm: 24
-            - center_nm: 730
-              width_nm: 40
-            cutoffs_nm:
-            - 459
-            - 523
-            - 598
-            - 763
-            notes: Explicit transmission/reflection windows are mapped from this cube's paired excitation/emission filter bands.
-          emission_filter:
-            component_type: multiband_bandpass
-            bands:
-            - center_nm: 473
-              width_nm: 22
-            - center_nm: 539
-              width_nm: 24
-            - center_nm: 641
-              width_nm: 78
-            - center_nm: 810
-              width_nm: 80
-        2:
-          name: DFT51010
-          product_code: '11525418'
-          notes: Quad-band
-          excitation_filter:
-            component_type: multiband_bandpass
-            bands:
-            - center_nm: 391
-              width_nm: 32
-            - center_nm: 479
-              width_nm: 33
-            - center_nm: 554
-              width_nm: 24
-            - center_nm: 638
-              width_nm: 31
-          dichroic:
-            component_type: multiband_dichroic
-            transmission_bands:
-            - center_nm: 435
-              width_nm: 30
-            - center_nm: 519
-              width_nm: 25
-            - center_nm: 594
-              width_nm: 32
-            - center_nm: 695
-              width_nm: 58
-            reflection_bands:
-            - center_nm: 391
-              width_nm: 32
-            - center_nm: 479
-              width_nm: 33
-            - center_nm: 554
-              width_nm: 24
-            - center_nm: 638
-              width_nm: 31
-            cutoffs_nm:
-            - 415
-            - 500
-            - 572
-            - 660
-            notes: Explicit transmission/reflection windows are mapped from this cube's paired excitation/emission filter bands.
-          emission_filter:
-            component_type: multiband_bandpass
-            bands:
-            - center_nm: 435
-              width_nm: 30
-            - center_nm: 519
-              width_nm: 25
-            - center_nm: 594
-              width_nm: 32
-            - center_nm: 695
-              width_nm: 58
-        3:
-          name: CY3
-          notes: 'LED: 555'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 546
-            width_nm: 10
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm:
-            - 556
-          emission_filter:
-            component_type: bandpass
-            center_nm: 572
-            width_nm: 23
-        4:
-          name: A594
-          notes: 'LED: 575'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 592
-            width_nm: 21
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm:
-            - 610
-          emission_filter:
-            component_type: bandpass
-            center_nm: 630
-            width_nm: 30
-        5:
-          name: EMP_BF
-          product_code: '11525000'
-          notes: Empty position for TL-methods excluding POL, DIC
-          excitation_filter:
-            component_type: empty
-          dichroic:
-            component_type: empty
-          emission_filter:
-            component_type: empty
-        6:
-          name: EMP+Pol
-          product_code: '11525000'
-          notes: Empty position for TL-methods including POL, DIC, requires external
-            Analyser-slider
-          excitation_filter:
-            component_type: empty
-          dichroic:
-            component_type: empty
-          emission_filter:
-            component_type: empty
-    emission_mechanisms:
-    - name: Standalone Emission Wheel
-      type: filter_wheel
-      slots: 6
-      path: epi
-      notes: External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope
-        turret)
-      positions:
-        1:
-          name: 460/80
-          component_type: bandpass
-          center_nm: 460
-          width_nm: 80
-        2:
-          name: 535/70
-          component_type: bandpass
-          center_nm: 535
-          width_nm: 70
-        3:
-          name: 590/50
-          component_type: bandpass
-          center_nm: 590
-          width_nm: 50
-        4:
-          name: 642/80
-          component_type: bandpass
-          center_nm: 642
-          width_nm: 80
-        5:
-          component_type: empty
-        6:
-          component_type: empty
   objectives:
   - id: 5x_air
     manufacturer: Leica
@@ -480,3 +213,321 @@ hardware:
     notes: FN 25; from SP5?
     url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/
     is_installed: false
+  sources:
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 395
+    width_nm: 25
+    power: 200 mW
+    notes: 390 in software
+    url: ''
+    id: led_8
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 438
+    width_nm: 29
+    power: 200 mW
+    notes: 440 in software
+    url: ''
+    id: led_8_2
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 475
+    width_nm: 28
+    power: 200 mW
+    notes: ''
+    url: ''
+    id: led_8_3
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 511
+    width_nm: 16
+    power: 200 mW
+    notes: 510 in software
+    url: ''
+    id: led_8_4
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 555
+    width_nm: 28
+    power: 200 mW
+    notes: ''
+    url: ''
+    id: led_8_5
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 575
+    width_nm: 25
+    power: 200 mW
+    notes: ''
+    url: ''
+    id: led_8_6
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 635
+    width_nm: 22
+    power: 200 mW
+    notes: ''
+    url: ''
+    id: led_8_7
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Leica
+    model: LED 8
+    path: epi
+    wavelength_nm: 730
+    width_nm: 40
+    power: 200 mW
+    notes: 747 in software
+    url: ''
+    id: led_8_8
+    modalities:
+    - epi
+  optical_path_elements:
+  - name: Filter Turret
+    type: turret
+    slots: 6
+    path: epi
+    positions:
+      1:
+        name: CYR71010
+        product_code: '11525416'
+        notes: Quad-band
+        excitation_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 436
+            width_nm: 28
+          - center_nm: 506
+            width_nm: 21
+          - center_nm: 578
+            width_nm: 24
+          - center_nm: 730
+            width_nm: 40
+        dichroic:
+          component_type: multiband_dichroic
+          transmission_bands:
+          - center_nm: 473
+            width_nm: 22
+          - center_nm: 539
+            width_nm: 24
+          - center_nm: 641
+            width_nm: 78
+          - center_nm: 810
+            width_nm: 80
+          reflection_bands:
+          - center_nm: 436
+            width_nm: 28
+          - center_nm: 506
+            width_nm: 21
+          - center_nm: 578
+            width_nm: 24
+          - center_nm: 730
+            width_nm: 40
+          cutoffs_nm:
+          - 459
+          - 523
+          - 598
+          - 763
+          notes: Explicit transmission/reflection windows are mapped from this cube's
+            paired excitation/emission filter bands.
+        emission_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 473
+            width_nm: 22
+          - center_nm: 539
+            width_nm: 24
+          - center_nm: 641
+            width_nm: 78
+          - center_nm: 810
+            width_nm: 80
+      2:
+        name: DFT51010
+        product_code: '11525418'
+        notes: Quad-band
+        excitation_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 391
+            width_nm: 32
+          - center_nm: 479
+            width_nm: 33
+          - center_nm: 554
+            width_nm: 24
+          - center_nm: 638
+            width_nm: 31
+        dichroic:
+          component_type: multiband_dichroic
+          transmission_bands:
+          - center_nm: 435
+            width_nm: 30
+          - center_nm: 519
+            width_nm: 25
+          - center_nm: 594
+            width_nm: 32
+          - center_nm: 695
+            width_nm: 58
+          reflection_bands:
+          - center_nm: 391
+            width_nm: 32
+          - center_nm: 479
+            width_nm: 33
+          - center_nm: 554
+            width_nm: 24
+          - center_nm: 638
+            width_nm: 31
+          cutoffs_nm:
+          - 415
+          - 500
+          - 572
+          - 660
+          notes: Explicit transmission/reflection windows are mapped from this cube's
+            paired excitation/emission filter bands.
+        emission_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 435
+            width_nm: 30
+          - center_nm: 519
+            width_nm: 25
+          - center_nm: 594
+            width_nm: 32
+          - center_nm: 695
+            width_nm: 58
+      3:
+        name: CY3
+        notes: 'LED: 555'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 546
+          width_nm: 10
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 556
+        emission_filter:
+          component_type: bandpass
+          center_nm: 572
+          width_nm: 23
+      4:
+        name: A594
+        notes: 'LED: 575'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 592
+          width_nm: 21
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 610
+        emission_filter:
+          component_type: bandpass
+          center_nm: 630
+          width_nm: 30
+      5:
+        name: EMP_BF
+        product_code: '11525000'
+        notes: Empty position for TL-methods excluding POL, DIC
+        excitation_filter:
+          component_type: empty
+        dichroic:
+          component_type: empty
+        emission_filter:
+          component_type: empty
+      6:
+        name: EMP+Pol
+        product_code: '11525000'
+        notes: Empty position for TL-methods including POL, DIC, requires external
+          Analyser-slider
+        excitation_filter:
+          component_type: empty
+        dichroic:
+          component_type: empty
+        emission_filter:
+          component_type: empty
+    stage_role: cube
+    id: filter_turret
+    element_type: turret
+    modalities:
+    - epi
+  - name: Standalone Emission Wheel
+    type: filter_wheel
+    slots: 6
+    path: epi
+    notes: External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope
+      turret)
+    positions:
+      1:
+        name: 460/80
+        component_type: bandpass
+        center_nm: 460
+        width_nm: 80
+      2:
+        name: 535/70
+        component_type: bandpass
+        center_nm: 535
+        width_nm: 70
+      3:
+        name: 590/50
+        component_type: bandpass
+        center_nm: 590
+        width_nm: 50
+      4:
+        name: 642/80
+        component_type: bandpass
+        center_nm: 642
+        width_nm: 80
+      5:
+        component_type: empty
+      6:
+        component_type: empty
+    stage_role: emission
+    id: standalone_emission_wheel
+    element_type: filter_wheel
+    modalities:
+    - epi
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: led_8
+  - source_id: led_8_2
+  - source_id: led_8_3
+  - source_id: led_8_4
+  - source_id: led_8_5
+  - source_id: led_8_6
+  - source_id: led_8_7
+  - source_id: led_8_8
+  - optical_path_element_id: filter_turret
+  detection_sequence:
+  - optical_path_element_id: filter_turret
+  - optical_path_element_id: standalone_emission_wheel

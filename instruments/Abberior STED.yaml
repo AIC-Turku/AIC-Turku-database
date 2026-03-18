@@ -8,12 +8,12 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, BioPhysics room 5086
-  notes: "Abberior STED. Sophisticated and highly flexible open platform that can\
-    \ be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and\
-    \ ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator\
-    \ (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables\
-    \ deep imaging up to 75 \xB5m into cleared tissue with a 100x oil objective. RESCue\
-    \ STED is available for live super-resolution imaging with reduced light dose."
+  notes: Abberior STED. Sophisticated and highly flexible open platform that can be
+    modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150
+    nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator
+    (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables
+    deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue
+    STED is available for live super-resolution imaging with reduced light dose.
   url: ''
 modalities:
 - sted
@@ -28,8 +28,7 @@ modules:
 - name: adaptive_optics
   manufacturer: Abberior
   model: Adaptive Optics
-  notes: "Supports deep imaging up to 75 \xB5m into cleared tissue with a 100x oil\
-    \ objective."
+  notes: Supports deep imaging up to 75 µm into cleared tissue with a 100x oil objective.
   url: ''
 - name: rescue_sted
   manufacturer: Abberior
@@ -46,60 +45,6 @@ hardware:
   scanner:
     type: galvo
     notes: STED point scanning configuration.
-    url: ''
-  light_sources:
-  - kind: laser
-    manufacturer: PicoQuant
-    model: LDH-D-C-485
-    role: excitation
-    timing_mode: pulsed
-    wavelength_nm: 485
-    pulse_width_ps: 80
-    repetition_rate_mhz: 40
-    notes: Pulsed excitation source for the 488 nm channel.
-    url: ''
-  - kind: laser
-    manufacturer: PicoQuant
-    model: PDL-T 561
-    role: excitation
-    timing_mode: pulsed
-    wavelength_nm: 561
-    pulse_width_ps: 80
-    repetition_rate_mhz: 40
-    notes: Pulsed excitation source for the 561 nm channel.
-    url: ''
-  - kind: laser
-    manufacturer: PicoQuant
-    model: LDH-D-C-640
-    role: excitation
-    timing_mode: pulsed
-    wavelength_nm: 640
-    pulse_width_ps: 80
-    repetition_rate_mhz: 40
-    notes: Pulsed excitation source for the 640 nm channel.
-    url: ''
-  - kind: laser
-    manufacturer: MPB Communications
-    model: VFL-P-1000-580
-    role: depletion
-    timing_mode: cw
-    wavelength_nm: 580
-    depletion_targets_nm:
-    - 488
-    notes: Continuous-wave STED depletion source for the 488 nm excitation channel.
-    url: ''
-  - kind: laser
-    manufacturer: OneFive / NKT Photonics
-    model: Katana HP 775
-    role: depletion
-    timing_mode: pulsed
-    wavelength_nm: 775
-    pulse_width_ps: 600
-    repetition_rate_mhz: 40
-    depletion_targets_nm:
-    - 561
-    - 640
-    notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation channels.
     url: ''
   detectors:
   - kind: pmt
@@ -170,28 +115,119 @@ hardware:
     default_enabled: false
     notes: Real-time adaptive STED decision logic used to reduce photobleaching and
       light dose during live-cell super-resolution imaging.
-  light_path:
-    emission_mechanisms:
-    - name: Emission Filter Wheel
-      type: filter_wheel
-      slots: 3
-      positions:
-        1:
-          component_type: bandpass
-          manufacturer: Semrock
-          product_code: FF01-525/25
-          center_nm: 525
-          width_nm: 25
-        2:
-          component_type: bandpass
-          manufacturer: Semrock
-          model: BrightLine 615/10
-          product_code: ''
-          center_nm: 615
-          width_nm: 10
-        3:
-          component_type: bandpass
-          manufacturer: Chroma
-          product_code: ET685/35
-          center_nm: 685
-          width_nm: 35
+  sources:
+  - kind: laser
+    manufacturer: PicoQuant
+    model: LDH-D-C-485
+    role: excitation
+    timing_mode: pulsed
+    wavelength_nm: 485
+    pulse_width_ps: 80
+    repetition_rate_mhz: 40
+    notes: Pulsed excitation source for the 488 nm channel.
+    url: ''
+    id: ldh_d_c_485
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: PicoQuant
+    model: PDL-T 561
+    role: excitation
+    timing_mode: pulsed
+    wavelength_nm: 561
+    pulse_width_ps: 80
+    repetition_rate_mhz: 40
+    notes: Pulsed excitation source for the 561 nm channel.
+    url: ''
+    id: pdl_t_561
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: PicoQuant
+    model: LDH-D-C-640
+    role: excitation
+    timing_mode: pulsed
+    wavelength_nm: 640
+    pulse_width_ps: 80
+    repetition_rate_mhz: 40
+    notes: Pulsed excitation source for the 640 nm channel.
+    url: ''
+    id: ldh_d_c_640
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: MPB Communications
+    model: VFL-P-1000-580
+    role: depletion
+    timing_mode: cw
+    wavelength_nm: 580
+    depletion_targets_nm:
+    - 488
+    notes: Continuous-wave STED depletion source for the 488 nm excitation channel.
+    url: ''
+    id: vfl_p_1000_580
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: OneFive / NKT Photonics
+    model: Katana HP 775
+    role: depletion
+    timing_mode: pulsed
+    wavelength_nm: 775
+    pulse_width_ps: 600
+    repetition_rate_mhz: 40
+    depletion_targets_nm:
+    - 561
+    - 640
+    notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation channels.
+    url: ''
+    id: katana_hp_775
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements:
+  - name: Emission Filter Wheel
+    type: filter_wheel
+    slots: 3
+    positions:
+      1:
+        component_type: bandpass
+        manufacturer: Semrock
+        product_code: FF01-525/25
+        center_nm: 525
+        width_nm: 25
+      2:
+        component_type: bandpass
+        manufacturer: Semrock
+        model: BrightLine 615/10
+        product_code: ''
+        center_nm: 615
+        width_nm: 10
+      3:
+        component_type: bandpass
+        manufacturer: Chroma
+        product_code: ET685/35
+        center_nm: 685
+        width_nm: 35
+    stage_role: emission
+    id: emission_filter_wheel
+    element_type: filter_wheel
+    modalities:
+    - epi
+    path: epi
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: ldh_d_c_485
+  - source_id: pdl_t_561
+  - source_id: ldh_d_c_640
+  - source_id: vfl_p_1000_580
+  - source_id: katana_hp_775
+  detection_sequence:
+  - optical_path_element_id: emission_filter_wheel

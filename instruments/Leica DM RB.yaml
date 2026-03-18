@@ -8,185 +8,203 @@ instrument:
   stand_orientation: upright
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: 'Widefield microscope (upright) with camera port. Imaging modes: Fluorescence (epifluorescence), Brightfield (transmitted light), Darkfield.'
+  notes: 'Widefield microscope (upright) with camera port. Imaging modes: Fluorescence
+    (epifluorescence), Brightfield (transmitted light), Darkfield.'
   url: ''
-
 modalities:
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - darkfield
-
+- widefield_fluorescence
+- transmitted_brightfield
+- darkfield
 modules: []
-
 software: []
-
 hardware:
-  scanner:    
+  scanner:
     type: none
     notes: ''
     url: ''
-
-  light_sources:
-    - kind: halogen_lamp
-      manufacturer: Leica 
-      model: 12V 100W halogen bulb
-      wavelength_nm: broadband
-      power: 100 W
-      path: transmitted
-      role: transmitted_illumination  # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
-      notes: Transmitted light source for Brightfield and Darkfield
-      url: ''
-    - kind: arc_lamp
-      manufacturer: Osram 
-      model: 50W HBO short arc bulb
-      wavelength_nm: broadband
-      power: 50 W
-      path: epi
-      notes: Fluorescence excitation source
-      url: ''
-  
-  light_path:
-    cube_mechanisms:
-      - name: Fluorescence Turret
-        type: turret
-        path: epi
-        slots: 3
-        positions:
-          Pos_1:
-            name: Filter Cube A (DAPI/Hoechst)
-            # Calculated from text: ex 340-380 nm -> center 360, width 40
-            excitation_filter:
-              component_type: bandpass
-              center_nm: 360
-              width_nm: 40
-            dichroic:
-              component_type: dichroic
-              cutoffs_nm: [400]
-            # Calculated from text: em >425 nm -> longpass cut-on 425
-            emission_filter:
-              component_type: longpass
-              cut_on_nm: 425
-          Pos_2:
-            name: Filter Cube EGFP
-            # Calculated from text: ex 450-490 nm -> center 470, width 40
-            excitation_filter:
-              component_type: bandpass
-              center_nm: 470
-              width_nm: 40
-            dichroic:
-              component_type: dichroic
-              cutoffs_nm: [495]
-            # Calculated from text: em 500-550 nm -> center 525, width 50
-            emission_filter:
-              component_type: bandpass
-              center_nm: 525
-              width_nm: 50
-          Pos_3:
-            name: Filter Cube CY3 (TRITC/RFP)
-            # Calculated from text: ex 533-558 nm -> center 545.5, width 25
-            excitation_filter:
-              component_type: bandpass
-              center_nm: 545.5
-              width_nm: 25
-            dichroic:
-              component_type: dichroic
-              cutoffs_nm: [565]
-            # Calculated from text: em 570-640 nm -> center 605, width 70
-            emission_filter:
-              component_type: bandpass
-              center_nm: 605
-              width_nm: 70
-
-    endpoints:
-      - id: camera_port_main
-        endpoint_type: camera_port
-        display_label: Camera Port
-        path: transmitted
-
-    splitters:
-      - name: Camera Port
-        type: emission_splitter
-        path: transmitted
-        notes: Camera port for optional detector.
-        branches:
-          - id: camera_port_primary
-            label: Camera Port Path
-            mode: transmitted
-            component:
-              component_type: passthrough
-            target_ids:
-              - camera_port_main
-
   objectives:
-    - id: 10x_air
-      manufacturer: Leica
-      model: PL FLUOTAR 10x/0.30
-      product_code: '506000'
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: ''
-      immersion: air
-      # VOCAB FIXED: 'PL FLUOTAR' maps to 'plan_fluorite'
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties: []
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Leica
-      model: HC PL APO 20x/0.70 CS
-      product_code: '506513'
-      magnification: 20.0
-      numerical_aperture: 0.7
-      working_distance: ''
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties: []
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 40x_oil
-      manufacturer: Leica
-      model: PL FLUOTAR 40x/1.00-0.50 OIL
-      product_code: '506007'
-      magnification: 40.0
-      numerical_aperture: 1.0
-      working_distance: ''
-      immersion: oil
-      # VOCAB FIXED: 'PL FLUOTAR' maps to 'plan_fluorite'
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties: []
-      notes: NA range 1.00-0.50. Note that this has an adjustable iris diaphragm.
-      url: ''
-      is_installed: true
-    - id: 63x_oil
-      manufacturer: Leica
-      model: HCX PL APO 63x/1.32-0.6 OIL
-      product_code: '506180'
-      magnification: 63.0
-      numerical_aperture: 1.32
-      working_distance: ''
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties: []
-      notes: NA range 1.32-0.6. Has an adjustable iris diaphragm for darkfield.
-      url: ''
-      is_installed: true
-    - id: 100x_oil
-      manufacturer: Leica
-      model: PL APO 100x/1.40-0.7 OIL
-      product_code: '506038'
-      magnification: 100.0
-      numerical_aperture: 1.4
-      working_distance: ''
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties: []
-      notes: NA range 1.40-0.7. Has an adjustable iris diaphragm for darkfield.
-      url: ''
-      is_installed: true
+  - id: 10x_air
+    manufacturer: Leica
+    model: PL FLUOTAR 10x/0.30
+    product_code: '506000'
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Leica
+    model: HC PL APO 20x/0.70 CS
+    product_code: '506513'
+    magnification: 20.0
+    numerical_aperture: 0.7
+    working_distance: ''
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 40x_oil
+    manufacturer: Leica
+    model: PL FLUOTAR 40x/1.00-0.50 OIL
+    product_code: '506007'
+    magnification: 40.0
+    numerical_aperture: 1.0
+    working_distance: ''
+    immersion: oil
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: NA range 1.00-0.50. Note that this has an adjustable iris diaphragm.
+    url: ''
+    is_installed: true
+  - id: 63x_oil
+    manufacturer: Leica
+    model: HCX PL APO 63x/1.32-0.6 OIL
+    product_code: '506180'
+    magnification: 63.0
+    numerical_aperture: 1.32
+    working_distance: ''
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: NA range 1.32-0.6. Has an adjustable iris diaphragm for darkfield.
+    url: ''
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Leica
+    model: PL APO 100x/1.40-0.7 OIL
+    product_code: '506038'
+    magnification: 100.0
+    numerical_aperture: 1.4
+    working_distance: ''
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: NA range 1.40-0.7. Has an adjustable iris diaphragm for darkfield.
+    url: ''
+    is_installed: true
+  sources:
+  - kind: halogen_lamp
+    manufacturer: Leica
+    model: 12V 100W halogen bulb
+    wavelength_nm: broadband
+    power: 100 W
+    path: transmitted
+    role: transmitted_illumination
+    notes: Transmitted light source for Brightfield and Darkfield
+    url: ''
+    id: 12v_100w_halogen_bulb
+    modalities:
+    - transmitted
+  - kind: arc_lamp
+    manufacturer: Osram
+    model: 50W HBO short arc bulb
+    wavelength_nm: broadband
+    power: 50 W
+    path: epi
+    notes: Fluorescence excitation source
+    url: ''
+    id: 50w_hbo_short_arc_bulb
+    modalities:
+    - epi
+  optical_path_elements:
+  - name: Fluorescence Turret
+    type: turret
+    path: epi
+    slots: 3
+    positions:
+      Pos_1:
+        name: Filter Cube A (DAPI/Hoechst)
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 360
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 400
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 425
+      Pos_2:
+        name: Filter Cube EGFP
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 470
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 495
+        emission_filter:
+          component_type: bandpass
+          center_nm: 525
+          width_nm: 50
+      Pos_3:
+        name: Filter Cube CY3 (TRITC/RFP)
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 545.5
+          width_nm: 25
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 565
+        emission_filter:
+          component_type: bandpass
+          center_nm: 605
+          width_nm: 70
+    stage_role: cube
+    id: fluorescence_turret
+    element_type: turret
+    modalities:
+    - epi
+  - name: Camera Port
+    type: emission_splitter
+    path: transmitted
+    notes: Camera port for optional detector.
+    branches:
+    - id: camera_port_primary
+      label: Camera Port Path
+      mode: transmitted
+      component:
+        component_type: passthrough
+      target_ids:
+      - camera_port_main
+    stage_role: splitter
+    id: camera_port
+    element_type: emission_splitter
+    modalities:
+    - transmitted
+    selection_mode: fixed
+  endpoints:
+  - id: camera_port_main
+    endpoint_type: camera_port
+    display_label: Camera Port
+    path: transmitted
+    modalities:
+    - transmitted
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: 50w_hbo_short_arc_bulb
+  - optical_path_element_id: fluorescence_turret
+  detection_sequence:
+  - optical_path_element_id: fluorescence_turret
+- id: transmitted
+  name: Transmitted light
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port

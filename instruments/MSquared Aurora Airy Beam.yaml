@@ -8,11 +8,11 @@ instrument:
   stand_orientation: other
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: "Light-sheet fluorescence microscope using Airy-beam illumination for long-term\
-    \ volumetric live imaging with reduced photobleaching and striping artefacts.\
-    \ Approximate performance claims: up to 800 \xB5m FOV (with 15.3x Special Optics),\
-    \ sub-1 \xB5m axial resolution, and lower phototoxic burden due to single exposure\
-    \ per z-slice and self-healing/non-diffractive beam propagation."
+  notes: 'Light-sheet fluorescence microscope using Airy-beam illumination for long-term
+    volumetric live imaging with reduced photobleaching and striping artefacts. Approximate
+    performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial
+    resolution, and lower phototoxic burden due to single exposure per z-slice and
+    self-healing/non-diffractive beam propagation.'
   url: ''
 modalities:
 - light_sheet
@@ -41,28 +41,6 @@ hardware:
     line_rate_hz: null
     notes: Galvanometric scanner and remote focusing lenses on illumination/detection;
       integrated Resonant scanner for beam scanning.
-    url: ''
-  light_sources:
-  - kind: laser
-    manufacturer: Coherent OBIS
-    model: 488 nm laser
-    wavelength_nm: '488'
-    power: 100 mW
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: Coherent OBIS
-    model: 561 nm laser
-    wavelength_nm: '561'
-    power: 80 mW
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: Coherent OBIS
-    model: 640 nm laser (LX)
-    wavelength_nm: '640'
-    power: 75 mW
-    notes: 'FIBER PIGTAIL:UFC: Galaxy'
     url: ''
   detectors:
   - kind: scmos
@@ -116,3 +94,47 @@ hardware:
       RI. FOV 1.2 mm diameter.
     url: ''
     is_installed: true
+  sources:
+  - kind: laser
+    manufacturer: Coherent OBIS
+    model: 488 nm laser
+    wavelength_nm: '488'
+    power: 100 mW
+    notes: ''
+    url: ''
+    id: 488_nm_laser
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: Coherent OBIS
+    model: 561 nm laser
+    wavelength_nm: '561'
+    power: 80 mW
+    notes: ''
+    url: ''
+    id: 561_nm_laser
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: Coherent OBIS
+    model: 640 nm laser (LX)
+    wavelength_nm: '640'
+    power: 75 mW
+    notes: 'FIBER PIGTAIL:UFC: Galaxy'
+    url: ''
+    id: 640_nm_laser_lx
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: 488_nm_laser
+  - source_id: 561_nm_laser
+  - source_id: 640_nm_laser_lx
+  detection_sequence: []

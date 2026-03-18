@@ -8,11 +8,11 @@ instrument:
   stand_orientation: other
   ocular_availability: camera_only
   location: ''
-  notes: "Super-resolution microscope (compact). Imaging modes: Single-molecule localization\
-    \ microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging,\
-    \ FRET imaging. Field of view: 50 \u03BCm x 80 \u03BCm per channel. Simultaneous\
-    \ 2-channel imaging (<10 nm mapping accuracy). Equipped with a closed-loop piezo\
-    \ stage (20/20/10 mm XYZ travel, 1 nm resolution) and continuous/one-shot autofocus."
+  notes: 'Super-resolution microscope (compact). Imaging modes: Single-molecule localization
+    microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET
+    imaging. Field of view: 50 μm x 80 μm per channel. Simultaneous 2-channel imaging
+    (<10 nm mapping accuracy). Equipped with a closed-loop piezo stage (20/20/10 mm
+    XYZ travel, 1 nm resolution) and continuous/one-shot autofocus.'
   url: https://oni.bio/nanoimager
 modalities:
 - tirf
@@ -21,8 +21,8 @@ modalities:
 - fret
 modules:
 - name: environmental_enclosure
-  notes: "Resistive heating without active cooling. Suitable for live cell imaging\
-    \ at 37\xB0C."
+  notes: Resistive heating without active cooling. Suitable for live cell imaging
+    at 37°C.
   url: ''
   manufacturer: ONI
   model: Environmental Enclosure
@@ -48,8 +48,8 @@ software:
 hardware:
   environment:
     temperature_control: true
-    notes: "Resistive heating without active cooling. Suitable for live cell imaging\
-      \ at 37\xB0C."
+    notes: Resistive heating without active cooling. Suitable for live cell imaging
+      at 37°C.
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
@@ -59,40 +59,6 @@ hardware:
   scanner:
     type: none
     notes: ''
-    url: ''
-  light_sources:
-  - kind: laser
-    manufacturer: ONI
-    model: 405 nm violet
-    technology: diode
-    wavelength_nm: '405'
-    power: 70 mW
-    notes: Power measured at the objective.
-    url: ''
-  - kind: laser
-    manufacturer: ONI
-    model: 488 nm blue
-    technology: diode
-    wavelength_nm: '488'
-    power: 250 mW
-    notes: Power measured at the objective.
-    url: ''
-  - kind: laser
-    manufacturer: ONI
-    model: 561 nm green
-    technology: dpss
-    wavelength_nm: '561'
-    power: 250 mW
-    notes: Power measured at the objective. DPSS technology inherently takes ~30 sec
-      to stabilize.
-    url: ''
-  - kind: laser
-    manufacturer: ONI
-    model: 640 nm red
-    technology: diode
-    wavelength_nm: '640'
-    power: 220 mW
-    notes: Power measured at the objective.
     url: ''
   detectors:
   - kind: scmos
@@ -141,3 +107,64 @@ hardware:
     notes: Custom tube lens provides 110x total magnification with the 100x objective.
       Combined with 2x2 binning, this yields a pixel size of ~117 nm.
     url: ''
+  sources:
+  - kind: laser
+    manufacturer: ONI
+    model: 405 nm violet
+    technology: diode
+    wavelength_nm: '405'
+    power: 70 mW
+    notes: Power measured at the objective.
+    url: ''
+    id: 405_nm_violet
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ONI
+    model: 488 nm blue
+    technology: diode
+    wavelength_nm: '488'
+    power: 250 mW
+    notes: Power measured at the objective.
+    url: ''
+    id: 488_nm_blue
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ONI
+    model: 561 nm green
+    technology: dpss
+    wavelength_nm: '561'
+    power: 250 mW
+    notes: Power measured at the objective. DPSS technology inherently takes ~30 sec
+      to stabilize.
+    url: ''
+    id: 561_nm_green
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ONI
+    model: 640 nm red
+    technology: diode
+    wavelength_nm: '640'
+    power: 220 mW
+    notes: Power measured at the objective.
+    url: ''
+    id: 640_nm_red
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: 405_nm_violet
+  - source_id: 488_nm_blue
+  - source_id: 561_nm_green
+  - source_id: 640_nm_red
+  detection_sequence: []

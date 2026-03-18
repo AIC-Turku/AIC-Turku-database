@@ -52,28 +52,6 @@ hardware:
     type: none
     notes: ''
     url: ''
-  light_sources:
-  - kind: laser
-    manufacturer: ''
-    model: 488 nm
-    wavelength_nm: '488'
-    power: ''
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 561 nm
-    wavelength_nm: '561'
-    power: ''
-    notes: ''
-    url: ''
-  - kind: laser
-    manufacturer: ''
-    model: 639 nm
-    wavelength_nm: '639'
-    power: ''
-    notes: ''
-    url: ''
   detectors:
   - kind: emccd
     manufacturer: Hamamatsu
@@ -197,3 +175,47 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
+  sources:
+  - kind: laser
+    manufacturer: ''
+    model: 488 nm
+    wavelength_nm: '488'
+    power: ''
+    notes: ''
+    url: ''
+    id: 488_nm
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ''
+    model: 561 nm
+    wavelength_nm: '561'
+    power: ''
+    notes: ''
+    url: ''
+    id: 561_nm
+    modalities:
+    - epi
+    path: epi
+  - kind: laser
+    manufacturer: ''
+    model: 639 nm
+    wavelength_nm: '639'
+    power: ''
+    notes: ''
+    url: ''
+    id: 639_nm
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: 488_nm
+  - source_id: 561_nm
+  - source_id: 639_nm
+  detection_sequence: []

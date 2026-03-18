@@ -7,15 +7,15 @@ instrument:
   funding: ''
   stand_orientation: inverted
   ocular_availability: trinocular
-  location: '' # Flag: Required field. Please provide the physical location.
-  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning).'
+  location: ''
+  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence
+    (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging
+    (with autofocus), High-content screening (multi-well scanning).'
   url: ''
-
 modalities:
 - widefield_fluorescence
 - transmitted_brightfield
 - dic
-
 modules:
 - name: incubation
   notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
@@ -25,7 +25,6 @@ modules:
 - name: hardware_autofocus
   notes: Nikon Perfect Focus System (autofocus)
   url: ''
-
   manufacturer: Nikon
   model: Perfect Focus System
 software:
@@ -39,141 +38,127 @@ hardware:
     co2_control: true
     humidity_control: true
     notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
-
   hardware_autofocus:
     is_installed: true
-    type: infrared_reflection # Flag: Verify this matches a canonical ID in vocab/autofocus_types.yaml
-
+    type: infrared_reflection
   scanner:
     type: none
     notes: ''
     url: ''
-
-  light_sources:
-  - kind: led
-    manufacturer: Lumencor
-    model: Spectra X LED system
-    wavelength_nm: 395/25; 440/20; 475/28; 550/15; 575/35; 640/30; 730/40   # Flag: Verify if your schema validation accepts semicolon-separated values for spectral_descriptor
-    power: ''
-    notes: 550 nm module available by request
-    url: ''
-
   detectors:
   - kind: scmos
     manufacturer: Hamamatsu
     model: Orca Flash4.0 V3
-    pixel_pitch_um:        # Flag: Required field for scmos. Please add physical pixel size (e.g., 6.5).
-    sensor_format_px: "2048 x 2044"
+    pixel_pitch_um: null
+    sensor_format_px: 2048 x 2044
     notes: sCMOS
     url: ''
     id: detector_1
-  - kind: cmos   # Changed from scmos to cmos based on notes
+  - kind: cmos
     manufacturer: Nikon
     model: DS-Fi3
-    pixel_pitch_um:        # Flag: Required field for cmos. Please add physical pixel size.
-    sensor_format_px: "2880 x 2048"
+    pixel_pitch_um: null
+    sensor_format_px: 2880 x 2048
     notes: Color CMOS
     url: ''
-
     id: detector_2
   filters:
   - name: Chroma 89403bs
     location: Filter Turret
     product_code: 89403bs
-    excitation: ''   # Flag: Required because widefield_fluorescence is present.
-    dichroic: ''     # Flag: Required because widefield_fluorescence is present.
-    emission: ''     # Flag: Required because widefield_fluorescence is present.
+    excitation: ''
+    dichroic: ''
+    emission: ''
     notes: Dichroic for CFP/YFP/mCherry/Cy7
     url: ''
   - name: Chroma 84000v2
     location: Filter Turret
     product_code: 84000v2
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
-    emission: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
+    emission: ''
     notes: Quad-band for DAPI/FITC/TRITC/Cy5
     url: ''
   - name: Chroma 96377
     location: Filter Turret
     product_code: '96377'
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 809/81
     notes: Cy7 emission filter
     url: ''
   - name: DAPI Emission
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 435/26
     notes: ''
     url: ''
   - name: CFP Emission
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 475/20
     notes: ''
     url: ''
   - name: GFP Emission
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 515/30
     notes: ''
     url: ''
   - name: YFP Emission
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 540/21
     notes: ''
     url: ''
   - name: TRITC Emission
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 595/40
     notes: Additional optional emission
     url: ''
   - name: mCherry Emission
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 632/60
     notes: Additional optional emission
     url: ''
   - name: Cy5 Emission
     location: Emission Wheel
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
     emission: 705/71
     notes: Additional optional emission
     url: ''
   - name: Lamp Filter Cubes
     location: Epi Turret
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
-    emission: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
+    emission: ''
     notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
     url: ''
   - name: DIC Fixed Analyzer
     location: Analyzer Slider
     product_code: ''
-    excitation: ''   # Flag: Required field.
-    dichroic: ''     # Flag: Required field.
-    emission: ''     # Flag: Required field.
+    excitation: ''
+    dichroic: ''
+    emission: ''
     notes: For DIC imaging
     url: ''
-
   objectives:
   - id: 2x_air
     manufacturer: Nikon
@@ -202,12 +187,13 @@ hardware:
     afc_compatible: false
     specialties:
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended;
+      polarization possible.'
     url: ''
     is_installed: true
   - id: 4x_air_2
     manufacturer: Nikon
-    model: "Plan Apo λD 4x/0.20"
+    model: Plan Apo λD 4x/0.20
     product_code: MRD70040
     magnification: 4.0
     numerical_aperture: 0.2
@@ -216,7 +202,8 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties: []
-    notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended.'
+    notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS)
+      recommended; FLUO (NIR) recommended.'
     url: ''
     is_installed: true
   - id: 10x_air
@@ -231,7 +218,8 @@ hardware:
     afc_compatible: true
     specialties:
     - phase
-    notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
+    notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV)
+      suitable.'
     url: ''
     is_installed: true
   - id: 20x_air
@@ -248,12 +236,13 @@ hardware:
     - long_working_distance
     - dic
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended;
+      polarization suitable.'
     url: ''
     is_installed: true
   - id: 20x_air_2
     manufacturer: Nikon
-    model: "Plan Apo λ 20x/0.75 OFN25 DIC N2"
+    model: Plan Apo λ 20x/0.75 OFN25 DIC N2
     product_code: MRD00205
     magnification: 20.0
     numerical_aperture: 0.75
@@ -264,7 +253,8 @@ hardware:
     specialties:
     - dic
     - polarization
-    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
+    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO
+      (VIS) recommended; FLUO (UV) recommended; polarization possible.'
     url: ''
     is_installed: true
   - id: 40x_air
@@ -280,12 +270,13 @@ hardware:
     specialties:
     - long_working_distance
     - phase
-    notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
+    notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV)
+      suitable.'
     url: ''
     is_installed: true
   - id: 60x_oil
     manufacturer: Nikon
-    model: "Plan Apo λ 60x/1.40 Oil OFN25 DIC N2"
+    model: Plan Apo λ 60x/1.40 Oil OFN25 DIC N2
     product_code: MRD01605
     magnification: 60.0
     numerical_aperture: 1.4
@@ -296,7 +287,8 @@ hardware:
     specialties:
     - dic
     - polarization
-    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
+    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO
+      (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
     url: ''
     is_installed: true
   - id: 100x_oil
@@ -314,6 +306,27 @@ hardware:
     - phase
     - dic
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible;
+      polarization suitable.'
     url: ''
     is_installed: true
+  sources:
+  - kind: led
+    manufacturer: Lumencor
+    model: Spectra X LED system
+    wavelength_nm: 395/25; 440/20; 475/28; 550/15; 575/35; 640/30; 730/40
+    power: ''
+    notes: 550 nm module available by request
+    url: ''
+    id: spectra_x_led_system
+    modalities:
+    - epi
+    path: epi
+  optical_path_elements: []
+  endpoints: []
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: spectra_x_led_system
+  detection_sequence: []

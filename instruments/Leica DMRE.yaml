@@ -8,132 +8,143 @@ instrument:
   stand_orientation: upright
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: "Upright microscope with camera port in microscope body. Current imaging modes are transmitted brightfield and differential interference contrast (DIC). Fluorescence excitation is currently unavailable but can be attached."
+  notes: Upright microscope with camera port in microscope body. Current imaging modes
+    are transmitted brightfield and differential interference contrast (DIC). Fluorescence
+    excitation is currently unavailable but can be attached.
   url: ''
-
 modalities:
-  - transmitted_brightfield
-  - dic
-
+- transmitted_brightfield
+- dic
 modules: []
-
 software: []
-
 hardware:
   scanner:
     type: none
     notes: ''
     url: ''
-
-  light_sources:
-    - kind: halogen_lamp
-      manufacturer: Leica
-      model: 12V 100W halogen bulb
-      wavelength_nm: broadband
-      power: 100 W
-      path: transmitted
-      role: transmitted_illumination  # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
-      notes: Transmitted light source for TL and DIC
-      url: ''
-  
-  light_path:
-    endpoints:
-      - id: camera_port_main
-        endpoint_type: camera_port
-        display_label: Camera Port
-        path: transmitted
-    splitters:
-      - name: Camera Port
-        # VOCAB VERIFIED: 'emission_splitter' is canonical
-        type: emission_splitter
-        path: transmitted
-        notes: Camera port in microscope body.
-        branches:
-          - id: camera_port_primary
-            label: Camera Port Path
-            mode: transmitted
-            component:
-              component_type: passthrough
-            target_ids:
-              - camera_port_main
-
   objectives:
-    - id: 10x_air
-      manufacturer: Leica
-      model: HCX PL FLUOTAR 10x/0.30
-      product_code: '506505'
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: ''
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:       
-        - dic
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Leica
-      model: HC PL FLUOTAR 20x/0.50 PH2
-      product_code: '506506'
-      magnification: 20.0
-      numerical_aperture: 0.5
-      working_distance: ''
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:        
-        - phase
-        - dic
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 40x_air
-      manufacturer: Leica
-      model: PL FLUOTAR 40x/0.70 PH2
-      product_code: '506014'
-      magnification: 40.0
-      numerical_aperture: 0.7
-      working_distance: ''
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - phase
-        - dic
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 63x_oil
-      manufacturer: Leica
-      model: PL APO 63x/1.32 OIL PH3
-      product_code: '506082'
-      magnification: 63.0
-      numerical_aperture: 1.32
-      working_distance: ''
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - phase
-        - dic
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 100x_oil
-      manufacturer: Leica
-      model: PL FLUOTAR 100x/1.30 OIL PH3
-      product_code: '506017'
-      magnification: 100.0
-      numerical_aperture: 1.3
-      working_distance: ''
-      immersion: oil
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - phase
-        - dic
-      notes: ''
-      url: ''
-      is_installed: true
+  - id: 10x_air
+    manufacturer: Leica
+    model: HCX PL FLUOTAR 10x/0.30
+    product_code: '506505'
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - dic
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Leica
+    model: HC PL FLUOTAR 20x/0.50 PH2
+    product_code: '506506'
+    magnification: 20.0
+    numerical_aperture: 0.5
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    - dic
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: Leica
+    model: PL FLUOTAR 40x/0.70 PH2
+    product_code: '506014'
+    magnification: 40.0
+    numerical_aperture: 0.7
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    - dic
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 63x_oil
+    manufacturer: Leica
+    model: PL APO 63x/1.32 OIL PH3
+    product_code: '506082'
+    magnification: 63.0
+    numerical_aperture: 1.32
+    working_distance: ''
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties:
+    - phase
+    - dic
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Leica
+    model: PL FLUOTAR 100x/1.30 OIL PH3
+    product_code: '506017'
+    magnification: 100.0
+    numerical_aperture: 1.3
+    working_distance: ''
+    immersion: oil
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    - dic
+    notes: ''
+    url: ''
+    is_installed: true
+  sources:
+  - kind: halogen_lamp
+    manufacturer: Leica
+    model: 12V 100W halogen bulb
+    wavelength_nm: broadband
+    power: 100 W
+    path: transmitted
+    role: transmitted_illumination
+    notes: Transmitted light source for TL and DIC
+    url: ''
+    id: 12v_100w_halogen_bulb
+    modalities:
+    - transmitted
+  optical_path_elements:
+  - name: Camera Port
+    type: emission_splitter
+    path: transmitted
+    notes: Camera port in microscope body.
+    branches:
+    - id: camera_port_primary
+      label: Camera Port Path
+      mode: transmitted
+      component:
+        component_type: passthrough
+      target_ids:
+      - camera_port_main
+    stage_role: splitter
+    id: camera_port
+    element_type: emission_splitter
+    modalities:
+    - transmitted
+    selection_mode: fixed
+  endpoints:
+  - id: camera_port_main
+    endpoint_type: camera_port
+    display_label: Camera Port
+    path: transmitted
+    modalities:
+    - transmitted
+light_paths:
+- id: transmitted
+  name: Transmitted light
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port

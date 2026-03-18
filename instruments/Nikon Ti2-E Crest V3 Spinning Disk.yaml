@@ -70,73 +70,6 @@ hardware:
     pinhole_um: 50
     notes: CrestOptics X-Light V3 HTDS (Laser-SP disk-Throughput-V2&V3 50:250um)
     url: https://crestoptics.com/x-light-v3/
-  light_sources:
-  - kind: laser
-    manufacturer: Lumencor
-    model: Celesta 7ch with Despeckler
-    wavelength_nm: 406
-    power: 288 mW
-    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 405/12'
-    url: https://lumencor.com/products/celesta-light-engine
-  - kind: laser
-    manufacturer: Lumencor
-    model: Celesta 7ch
-    wavelength_nm: 444
-    power: 344 mW
-    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 446/12'
-    url: ''
-  - kind: laser
-    manufacturer: Lumencor
-    model: Celesta 7ch
-    wavelength_nm: 476
-    power: 405 mW
-    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 476/12'
-    url: ''
-  - kind: laser
-    manufacturer: Lumencor
-    model: Celesta 7ch
-    wavelength_nm: 520
-    power: 410 mW
-    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 518/12'
-    url: ''
-  - kind: laser
-    manufacturer: Lumencor
-    model: Celesta 7ch
-    wavelength_nm: 545
-    power: 433 mW
-    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 545/12'
-    url: ''
-  - kind: laser
-    manufacturer: Lumencor
-    model: Celesta 7ch
-    wavelength_nm: 636
-    power: 539 mW
-    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 637/12'
-    url: ''
-  - kind: laser
-    manufacturer: Lumencor
-    model: Celesta 7ch
-    wavelength_nm: 746
-    power: 522 mW
-    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 748/12'
-    url: ''
-  - kind: led
-    manufacturer: Nikon
-    model: D-LEDI Fluorescence LED Illumination System
-    wavelength_nm: broadband
-    power: ''
-    path: epi
-    notes: For widefield epifluorescence
-    url: ''
-  - kind: led
-    manufacturer: Nikon
-    model: T12-D-LHLED LED Lamp House
-    wavelength_nm: white
-    power: ''
-    path: shared
-    role: transmitted_illumination
-    notes: For DIA transmitted illumination
-    url: ''
   detectors:
   - id: detector_1
     kind: scmos
@@ -156,273 +89,6 @@ hardware:
     sensor_format_px: 3200 x 3200
     notes: Slave Camera (2nd F-cam) - DAPI/Cy3 in DualCam mode
     url: https://www.photometrics.com/products/kinetix-family/kinetix
-  light_path:
-    endpoints:
-    - id: detector_1
-      endpoint_type: detector
-      display_label: Kinetix 1
-      path: shared
-    - id: detector_2
-      endpoint_type: detector
-      display_label: Kinetix 2
-      path: shared
-    excitation_mechanisms:
-    - name: Crest Excitation Wheel
-      type: filter_wheel
-      path: confocal
-      slots: 3
-      positions:
-        Pos_1:
-          name: Celesta-DA/FI/TR/Cy5/Cy7-A
-          component_type: multiband_bandpass
-          product_code: MXR00543
-          bands:
-          - center_nm: 391
-            width_nm: 54.4
-          - center_nm: 477
-            width_nm: 20.4
-          - center_nm: 549
-            width_nm: 25.7
-          - center_nm: 638.5
-            width_nm: 27.6
-          - center_nm: 741
-            width_nm: 45.1
-        Pos_2:
-          name: Celesta CFP-YFP-A
-          component_type: multiband_bandpass
-          product_code: MXR00544
-          bands:
-          - center_nm: 449
-            width_nm: 26.7
-          - center_nm: 520
-            width_nm: 27.9
-        Pos_3:
-          name: Neutral Density
-          component_type: neutral_density
-          notes: ND 1.3-5%T-25mm. 5% transmission to be used with widefield.
-    dichroic_mechanisms:
-    - name: Crest Dichroic Wheel
-      type: filter_wheel
-      path: confocal
-      slots: 2
-      positions:
-        Pos_1:
-          name: Celesta-DA/FI/TR/Cy5/Cy7-A
-          component_type: multiband_dichroic
-          product_code: MXR00543
-          transmission_bands:
-          - center_nm: 441
-            width_nm: 36.1
-          - center_nm: 511
-            width_nm: 34.3
-          - center_nm: 592.5
-            width_nm: 45.2
-          - center_nm: 684
-            width_nm: 44.4
-          - center_nm: 817
-            width_nm: 78.8
-          reflection_bands:
-          - center_nm: 391
-            width_nm: 54.4
-          - center_nm: 477
-            width_nm: 20.4
-          - center_nm: 549
-            width_nm: 25.7
-          - center_nm: 638.5
-            width_nm: 27.6
-          - center_nm: 741
-            width_nm: 45.1
-          cutoffs_nm:
-          - 421
-          - 491
-          - 567
-          - 659
-          - 776
-          notes: Explicit transmission/reflection windows are mapped from the paired Crest emission/excitation optics for runtime use.
-        Pos_2:
-          name: Celesta CFP-YFP-A
-          component_type: multiband_dichroic
-          product_code: MXR00544
-          transmission_bands:
-          - center_nm: 484
-            width_nm: 25.9
-          - center_nm: 561
-            width_nm: 38.9
-          reflection_bands:
-          - center_nm: 449
-            width_nm: 26.7
-          - center_nm: 520
-            width_nm: 27.9
-          cutoffs_nm:
-          - 471
-          - 539
-          notes: Explicit transmission/reflection windows are mapped from the paired Crest emission/excitation optics for runtime use.
-    emission_mechanisms:
-    - name: Crest Emission Wheel
-      type: filter_wheel
-      path: confocal
-      slots: 8
-      positions:
-        Pos_1:
-          name: Celesta-DA/FI/TR/Cy5/Cy7-A
-          component_type: multiband_bandpass
-          product_code: MXR00541 / MXR00543
-          bands:
-          - center_nm: 441
-            width_nm: 36.1
-          - center_nm: 511
-            width_nm: 34.3
-          - center_nm: 592.5
-            width_nm: 45.2
-          - center_nm: 684
-            width_nm: 44.4
-          - center_nm: 817
-            width_nm: 78.8
-        Pos_2:
-          name: Celesta CFP-YFP-A
-          component_type: multiband_bandpass
-          product_code: MXR00542 / MXR00544
-          bands:
-          - center_nm: 484
-            width_nm: 25.9
-          - center_nm: 561
-            width_nm: 38.9
-        Pos_3:
-          component_type: bandpass
-          center_nm: 438
-          width_nm: 24
-        Pos_4:
-          component_type: bandpass
-          center_nm: 485
-          width_nm: 20
-        Pos_5:
-          component_type: bandpass
-          center_nm: 511
-          width_nm: 20
-        Pos_6:
-          component_type: bandpass
-          center_nm: 560
-          width_nm: 25
-        Pos_7:
-          component_type: bandpass
-          center_nm: 595
-          width_nm: 31
-        Pos_8:
-          component_type: bandpass
-          center_nm: 685
-          width_nm: 40
-    cube_mechanisms:
-    - name: Epi Turret
-      type: filter_wheel
-      path: epi
-      slots: 4
-      positions:
-        Pos_1:
-          name: DAPI Ti2 32mm Cube SB LFOV
-          product_code: MXR00714
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 377
-            width_nm: 50
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm:
-            - 409
-          emission_filter:
-            component_type: bandpass
-            center_nm: 447
-            width_nm: 60
-          notes: For widefield imaging with D-LEDI
-        Pos_2:
-          name: FITC Ti2 32mm Cube SB LFOV
-          product_code: MXR00716
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 470
-            width_nm: 40
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm:
-            - 495
-          emission_filter:
-            component_type: bandpass
-            center_nm: 525
-            width_nm: 50
-        Pos_3:
-          name: mCherry Ti2 32mm Cube SB LFOV
-          product_code: MXR00719
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 560
-            width_nm: 40
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm:
-            - 585
-          emission_filter:
-            component_type: bandpass
-            center_nm: 630
-            width_nm: 75
-        Pos_4:
-          name: Cy5 Ti2 32mm Cube SB LFOV
-          product_code: MXR00720
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 620
-            width_nm: 60
-          dichroic:
-            component_type: dichroic
-            cutoffs_nm:
-            - 660
-          emission_filter:
-            component_type: bandpass
-            center_nm: 700
-            width_nm: 75
-    splitters:
-    - name: Nikon DIA
-      type: emission_splitter
-      path: transmitted
-      notes: Neutral filter for assigning the light path to single camera
-      branches:
-      - id: nikon_dia_primary
-        label: Primary Path
-        mode: transmitted
-        component:
-          component_type: passthrough
-        target_ids:
-        - detector_1
-        - detector_2
-    - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
-      type: emission_splitter
-      path: confocal
-      cutoffs_nm:
-      - 485
-      - 560
-      - 645
-      notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on
-        Slave Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
-      branches:
-      - id: dualcam_gfpmcherry_primary
-        label: Primary Path
-        mode: transmitted
-        component:
-          component_type: passthrough
-        target_ids:
-        - detector_1
-        - detector_2
-    - name: MXR00545 V3 DualCam-CFP/YFP 2 Bands Celesta Set
-      type: emission_splitter
-      path: confocal
-      notes: Additional DualCam Splitter option for CFP/YFP imaging.
-      branches:
-      - id: dualcam_cfpyfp_primary
-        label: Primary Path
-        mode: transmitted
-        component:
-          component_type: passthrough
-        target_ids:
-        - detector_1
-        - detector_2
   objectives:
   - id: 4x_air
     manufacturer: Nikon
@@ -530,3 +196,475 @@ hardware:
     notes: Optional objective. Requires DIC-prism N2.
     url: ''
     is_installed: false
+  sources:
+  - kind: laser
+    manufacturer: Lumencor
+    model: Celesta 7ch with Despeckler
+    wavelength_nm: 406
+    power: 288 mW
+    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 405/12'
+    url: https://lumencor.com/products/celesta-light-engine
+    id: celesta_7ch_with_despeckler
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+    path: confocal
+  - kind: laser
+    manufacturer: Lumencor
+    model: Celesta 7ch
+    wavelength_nm: 444
+    power: 344 mW
+    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 446/12'
+    url: ''
+    id: celesta_7ch
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+    path: confocal
+  - kind: laser
+    manufacturer: Lumencor
+    model: Celesta 7ch
+    wavelength_nm: 476
+    power: 405 mW
+    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 476/12'
+    url: ''
+    id: celesta_7ch_3
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+    path: confocal
+  - kind: laser
+    manufacturer: Lumencor
+    model: Celesta 7ch
+    wavelength_nm: 520
+    power: 410 mW
+    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 518/12'
+    url: ''
+    id: celesta_7ch_4
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+    path: confocal
+  - kind: laser
+    manufacturer: Lumencor
+    model: Celesta 7ch
+    wavelength_nm: 545
+    power: 433 mW
+    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 545/12'
+    url: ''
+    id: celesta_7ch_5
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+    path: confocal
+  - kind: laser
+    manufacturer: Lumencor
+    model: Celesta 7ch
+    wavelength_nm: 636
+    power: 539 mW
+    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 637/12'
+    url: ''
+    id: celesta_7ch_6
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+    path: confocal
+  - kind: laser
+    manufacturer: Lumencor
+    model: Celesta 7ch
+    wavelength_nm: 746
+    power: 522 mW
+    notes: 'Measured Disk OUT (Dec 2025). Integral filter: 748/12'
+    url: ''
+    id: celesta_7ch_7
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+    path: confocal
+  - kind: led
+    manufacturer: Nikon
+    model: D-LEDI Fluorescence LED Illumination System
+    wavelength_nm: broadband
+    power: ''
+    path: epi
+    notes: For widefield epifluorescence
+    url: ''
+    id: d_ledi_fluorescence_led_illumination_system
+    modalities:
+    - epi
+  - kind: led
+    manufacturer: Nikon
+    model: T12-D-LHLED LED Lamp House
+    wavelength_nm: white
+    power: ''
+    path: confocal
+    role: transmitted_illumination
+    notes: For DIA transmitted illumination
+    url: ''
+    id: t12_d_lhled_led_lamp_house
+    modalities:
+    - confocal
+    - epi
+    - transmitted
+  optical_path_elements:
+  - name: Epi Turret
+    type: filter_wheel
+    path: epi
+    slots: 4
+    positions:
+      Pos_1:
+        name: DAPI Ti2 32mm Cube SB LFOV
+        product_code: MXR00714
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 377
+          width_nm: 50
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 409
+        emission_filter:
+          component_type: bandpass
+          center_nm: 447
+          width_nm: 60
+        notes: For widefield imaging with D-LEDI
+      Pos_2:
+        name: FITC Ti2 32mm Cube SB LFOV
+        product_code: MXR00716
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 470
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 495
+        emission_filter:
+          component_type: bandpass
+          center_nm: 525
+          width_nm: 50
+      Pos_3:
+        name: mCherry Ti2 32mm Cube SB LFOV
+        product_code: MXR00719
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 560
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 585
+        emission_filter:
+          component_type: bandpass
+          center_nm: 630
+          width_nm: 75
+      Pos_4:
+        name: Cy5 Ti2 32mm Cube SB LFOV
+        product_code: MXR00720
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 620
+          width_nm: 60
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 660
+        emission_filter:
+          component_type: bandpass
+          center_nm: 700
+          width_nm: 75
+    stage_role: cube
+    id: epi_turret
+    element_type: filter_wheel
+    modalities:
+    - epi
+  - name: Crest Excitation Wheel
+    type: filter_wheel
+    path: confocal
+    slots: 3
+    positions:
+      Pos_1:
+        name: Celesta-DA/FI/TR/Cy5/Cy7-A
+        component_type: multiband_bandpass
+        product_code: MXR00543
+        bands:
+        - center_nm: 391
+          width_nm: 54.4
+        - center_nm: 477
+          width_nm: 20.4
+        - center_nm: 549
+          width_nm: 25.7
+        - center_nm: 638.5
+          width_nm: 27.6
+        - center_nm: 741
+          width_nm: 45.1
+      Pos_2:
+        name: Celesta CFP-YFP-A
+        component_type: multiband_bandpass
+        product_code: MXR00544
+        bands:
+        - center_nm: 449
+          width_nm: 26.7
+        - center_nm: 520
+          width_nm: 27.9
+      Pos_3:
+        name: Neutral Density
+        component_type: neutral_density
+        notes: ND 1.3-5%T-25mm. 5% transmission to be used with widefield.
+    stage_role: excitation
+    id: crest_excitation_wheel
+    element_type: filter_wheel
+    modalities:
+    - confocal
+  - name: Crest Dichroic Wheel
+    type: filter_wheel
+    path: confocal
+    slots: 2
+    positions:
+      Pos_1:
+        name: Celesta-DA/FI/TR/Cy5/Cy7-A
+        component_type: multiband_dichroic
+        product_code: MXR00543
+        transmission_bands:
+        - center_nm: 441
+          width_nm: 36.1
+        - center_nm: 511
+          width_nm: 34.3
+        - center_nm: 592.5
+          width_nm: 45.2
+        - center_nm: 684
+          width_nm: 44.4
+        - center_nm: 817
+          width_nm: 78.8
+        reflection_bands:
+        - center_nm: 391
+          width_nm: 54.4
+        - center_nm: 477
+          width_nm: 20.4
+        - center_nm: 549
+          width_nm: 25.7
+        - center_nm: 638.5
+          width_nm: 27.6
+        - center_nm: 741
+          width_nm: 45.1
+        cutoffs_nm:
+        - 421
+        - 491
+        - 567
+        - 659
+        - 776
+        notes: Explicit transmission/reflection windows are mapped from the paired
+          Crest emission/excitation optics for runtime use.
+      Pos_2:
+        name: Celesta CFP-YFP-A
+        component_type: multiband_dichroic
+        product_code: MXR00544
+        transmission_bands:
+        - center_nm: 484
+          width_nm: 25.9
+        - center_nm: 561
+          width_nm: 38.9
+        reflection_bands:
+        - center_nm: 449
+          width_nm: 26.7
+        - center_nm: 520
+          width_nm: 27.9
+        cutoffs_nm:
+        - 471
+        - 539
+        notes: Explicit transmission/reflection windows are mapped from the paired
+          Crest emission/excitation optics for runtime use.
+    stage_role: dichroic
+    id: crest_dichroic_wheel
+    element_type: filter_wheel
+    modalities:
+    - confocal
+  - name: Crest Emission Wheel
+    type: filter_wheel
+    path: confocal
+    slots: 8
+    positions:
+      Pos_1:
+        name: Celesta-DA/FI/TR/Cy5/Cy7-A
+        component_type: multiband_bandpass
+        product_code: MXR00541 / MXR00543
+        bands:
+        - center_nm: 441
+          width_nm: 36.1
+        - center_nm: 511
+          width_nm: 34.3
+        - center_nm: 592.5
+          width_nm: 45.2
+        - center_nm: 684
+          width_nm: 44.4
+        - center_nm: 817
+          width_nm: 78.8
+      Pos_2:
+        name: Celesta CFP-YFP-A
+        component_type: multiband_bandpass
+        product_code: MXR00542 / MXR00544
+        bands:
+        - center_nm: 484
+          width_nm: 25.9
+        - center_nm: 561
+          width_nm: 38.9
+      Pos_3:
+        component_type: bandpass
+        center_nm: 438
+        width_nm: 24
+      Pos_4:
+        component_type: bandpass
+        center_nm: 485
+        width_nm: 20
+      Pos_5:
+        component_type: bandpass
+        center_nm: 511
+        width_nm: 20
+      Pos_6:
+        component_type: bandpass
+        center_nm: 560
+        width_nm: 25
+      Pos_7:
+        component_type: bandpass
+        center_nm: 595
+        width_nm: 31
+      Pos_8:
+        component_type: bandpass
+        center_nm: 685
+        width_nm: 40
+    stage_role: emission
+    id: crest_emission_wheel
+    element_type: filter_wheel
+    modalities:
+    - confocal
+  - name: Nikon DIA
+    type: emission_splitter
+    path: transmitted
+    notes: Neutral filter for assigning the light path to single camera
+    branches:
+    - id: nikon_dia_primary
+      label: Primary Path
+      mode: transmitted
+      component:
+        component_type: passthrough
+      target_ids:
+      - detector_1
+      - detector_2
+    stage_role: splitter
+    id: nikon_dia
+    element_type: emission_splitter
+    modalities:
+    - transmitted
+    selection_mode: fixed
+  - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
+    type: emission_splitter
+    path: confocal
+    cutoffs_nm:
+    - 485
+    - 560
+    - 645
+    notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave
+      Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
+    branches:
+    - id: dualcam_gfpmcherry_primary
+      label: Primary Path
+      mode: transmitted
+      component:
+        component_type: passthrough
+      target_ids:
+      - detector_1
+      - detector_2
+    stage_role: splitter
+    id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
+    element_type: emission_splitter
+    modalities:
+    - confocal
+    selection_mode: fixed
+  - name: MXR00545 V3 DualCam-CFP/YFP 2 Bands Celesta Set
+    type: emission_splitter
+    path: confocal
+    notes: Additional DualCam Splitter option for CFP/YFP imaging.
+    branches:
+    - id: dualcam_cfpyfp_primary
+      label: Primary Path
+      mode: transmitted
+      component:
+        component_type: passthrough
+      target_ids:
+      - detector_1
+      - detector_2
+    stage_role: splitter
+    id: mxr00545_v3_dualcam_cfp_yfp_2_bands_celesta_set
+    element_type: emission_splitter
+    modalities:
+    - confocal
+    selection_mode: fixed
+  endpoints:
+  - id: detector_1
+    endpoint_type: detector
+    display_label: Kinetix 1
+    path: epi
+    modalities:
+    - epi
+  - id: detector_2
+    endpoint_type: detector
+    display_label: Kinetix 2
+    path: epi
+    modalities:
+    - epi
+light_paths:
+- id: confocal
+  name: Confocal
+  illumination_sequence:
+  - source_id: celesta_7ch_with_despeckler
+  - source_id: celesta_7ch
+  - source_id: celesta_7ch_3
+  - source_id: celesta_7ch_4
+  - source_id: celesta_7ch_5
+  - source_id: celesta_7ch_6
+  - source_id: celesta_7ch_7
+  - source_id: t12_d_lhled_led_lamp_house
+  - optical_path_element_id: crest_excitation_wheel
+  - optical_path_element_id: crest_dichroic_wheel
+  detection_sequence:
+  - optical_path_element_id: crest_dichroic_wheel
+  - optical_path_element_id: crest_emission_wheel
+  - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
+  - optical_path_element_id: mxr00545_v3_dualcam_cfp_yfp_2_bands_celesta_set
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: celesta_7ch_with_despeckler
+  - source_id: celesta_7ch
+  - source_id: celesta_7ch_3
+  - source_id: celesta_7ch_4
+  - source_id: celesta_7ch_5
+  - source_id: celesta_7ch_6
+  - source_id: celesta_7ch_7
+  - source_id: d_ledi_fluorescence_led_illumination_system
+  - source_id: t12_d_lhled_led_lamp_house
+  - optical_path_element_id: epi_turret
+  detection_sequence:
+  - optical_path_element_id: epi_turret
+  - endpoint_id: detector_1
+  - endpoint_id: detector_2
+- id: transmitted
+  name: Transmitted light
+  illumination_sequence:
+  - source_id: celesta_7ch_with_despeckler
+  - source_id: celesta_7ch
+  - source_id: celesta_7ch_3
+  - source_id: celesta_7ch_4
+  - source_id: celesta_7ch_5
+  - source_id: celesta_7ch_6
+  - source_id: celesta_7ch_7
+  - source_id: t12_d_lhled_led_lamp_house
+  detection_sequence:
+  - optical_path_element_id: nikon_dia

@@ -8,178 +8,203 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: Inverted microscope with camera port. Current imaging modes are widefield fluorescence, transmitted brightfield, darkfield, and phase contrast. Optional 1.6x auxiliary lens in microscope body.
+  notes: Inverted microscope with camera port. Current imaging modes are widefield
+    fluorescence, transmitted brightfield, darkfield, and phase contrast. Optional
+    1.6x auxiliary lens in microscope body.
   url: ''
-
 modalities:
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - phase_contrast
-  - darkfield
-
+- widefield_fluorescence
+- transmitted_brightfield
+- phase_contrast
+- darkfield
 modules: []
-
 software: []
-
 hardware:
   scanner:
-    
     type: none
     notes: ''
     url: ''
-
-  light_sources:
-    - kind: halogen_lamp
-      manufacturer: Leica
-      model: 12V 100W halogen bulb
-      wavelength_nm: broadband
-      power: 100 W
-      path: transmitted
-      role: transmitted_illumination  # Explicitly marked so planning/runtime treats this as transmitted illumination rather than fluorescence excitation.
-      notes: Transmitted light source for BF, DF, and PH
-      url: ''
-    - kind: arc_lamp
-      manufacturer: Leica
-      model: 50W HBO short arc bulb
-      wavelength_nm: broadband
-      power: 50 W
-      path: epi
-      notes: Fluorescence excitation source
-      url: ''
-
-  
-  light_path:
-    cube_mechanisms:
-      - name: Fluorescence Turret
-        type: turret
-        path: epi
-        slots: 3
-        positions:
-          Pos_1:
-            name: Filter Cube A (DAPI/Hoechst)
-            excitation_filter:
-              component_type: bandpass
-              center_nm: 360
-              width_nm: 40
-            dichroic:
-              component_type: dichroic
-              cutoffs_nm: [400]
-            emission_filter:
-              component_type: longpass
-              cut_on_nm: 425
-          Pos_2:
-            name: Filter Cube EGFP
-            excitation_filter:
-              component_type: bandpass
-              center_nm: 470
-              width_nm: 40
-            dichroic:
-              component_type: dichroic
-              cutoffs_nm: [495]
-            emission_filter:
-              component_type: bandpass
-              center_nm: 525
-              width_nm: 50
-          Pos_3:
-            name: Filter Cube CY3 (TRITC/RFP)
-            excitation_filter:
-              component_type: bandpass
-              center_nm: 545.5
-              width_nm: 25
-            dichroic:
-              component_type: dichroic
-              cutoffs_nm: [565]
-            emission_filter:
-              component_type: bandpass
-              center_nm: 605
-              width_nm: 70
-
-    endpoints:
-      - id: camera_port_main
-        endpoint_type: camera_port
-        display_label: Camera Port
-        path: shared
-
-    splitters:
-      - name: Camera Port
-        type: emission_splitter
-        path: shared
-        notes: Port for standalone camera system (no computer required); image storage via USB memory device.
-        branches:
-          - id: camera_port_primary
-            label: Camera Port Path
-            mode: transmitted
-            component:
-              component_type: passthrough
-            target_ids:
-              - camera_port_main
-
   objectives:
-    - id: 10x_air
-      manufacturer: Leica
-      model: PL FLUOTAR 10x/0.30 PH1
-      product_code: '506010'
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: ''
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:        
-        - phase
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Leica
-      model: PL FLUOTAR 20x/0.50 PH2
-      product_code: '506013'
-      magnification: 20.0
-      numerical_aperture: 0.5
-      working_distance: ''
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:        
-        - phase
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 40x_air
-      manufacturer: Leica
-      model: PL FLUOTAR 40x/0.70 PH2
-      product_code: '506014'
-      magnification: 40.0
-      numerical_aperture: 0.7
-      working_distance: ''
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:        
-        - phase
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 63x_air
-      manufacturer: Leica
-      model: PL FLUOTAR 63x/0.70 CORR PH2
-      product_code: '506062'
-      magnification: 63.0
-      numerical_aperture: 0.7
-      working_distance: ''
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:        
-        - phase
-        - correction_collar
-      notes: ''
-      url: ''
-      is_installed: true
-
+  - id: 10x_air
+    manufacturer: Leica
+    model: PL FLUOTAR 10x/0.30 PH1
+    product_code: '506010'
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Leica
+    model: PL FLUOTAR 20x/0.50 PH2
+    product_code: '506013'
+    magnification: 20.0
+    numerical_aperture: 0.5
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: Leica
+    model: PL FLUOTAR 40x/0.70 PH2
+    product_code: '506014'
+    magnification: 40.0
+    numerical_aperture: 0.7
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 63x_air
+    manufacturer: Leica
+    model: PL FLUOTAR 63x/0.70 CORR PH2
+    product_code: '506062'
+    magnification: 63.0
+    numerical_aperture: 0.7
+    working_distance: ''
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    - correction_collar
+    notes: ''
+    url: ''
+    is_installed: true
   magnification_changers:
-    - manufacturer: Leica
-      model: 1.6x Auxiliary Lens
-      magnification: 1.6
-      notes: Optional 1.6x auxiliary lens in microscope body.
-      url: ''
+  - manufacturer: Leica
+    model: 1.6x Auxiliary Lens
+    magnification: 1.6
+    notes: Optional 1.6x auxiliary lens in microscope body.
+    url: ''
+  sources:
+  - kind: halogen_lamp
+    manufacturer: Leica
+    model: 12V 100W halogen bulb
+    wavelength_nm: broadband
+    power: 100 W
+    path: transmitted
+    role: transmitted_illumination
+    notes: Transmitted light source for BF, DF, and PH
+    url: ''
+    id: 12v_100w_halogen_bulb
+    modalities:
+    - transmitted
+  - kind: arc_lamp
+    manufacturer: Leica
+    model: 50W HBO short arc bulb
+    wavelength_nm: broadband
+    power: 50 W
+    path: epi
+    notes: Fluorescence excitation source
+    url: ''
+    id: 50w_hbo_short_arc_bulb
+    modalities:
+    - epi
+  optical_path_elements:
+  - name: Fluorescence Turret
+    type: turret
+    path: epi
+    slots: 3
+    positions:
+      Pos_1:
+        name: Filter Cube A (DAPI/Hoechst)
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 360
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 400
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 425
+      Pos_2:
+        name: Filter Cube EGFP
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 470
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 495
+        emission_filter:
+          component_type: bandpass
+          center_nm: 525
+          width_nm: 50
+      Pos_3:
+        name: Filter Cube CY3 (TRITC/RFP)
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 545.5
+          width_nm: 25
+        dichroic:
+          component_type: dichroic
+          cutoffs_nm:
+          - 565
+        emission_filter:
+          component_type: bandpass
+          center_nm: 605
+          width_nm: 70
+    stage_role: cube
+    id: fluorescence_turret
+    element_type: turret
+    modalities:
+    - epi
+  - name: Camera Port
+    type: emission_splitter
+    path: epi
+    notes: Port for standalone camera system (no computer required); image storage
+      via USB memory device.
+    branches:
+    - id: camera_port_primary
+      label: Camera Port Path
+      mode: transmitted
+      component:
+        component_type: passthrough
+      target_ids:
+      - camera_port_main
+    stage_role: splitter
+    id: camera_port
+    element_type: emission_splitter
+    selection_mode: fixed
+    modalities:
+    - epi
+    - transmitted
+  endpoints:
+  - id: camera_port_main
+    endpoint_type: camera_port
+    display_label: Camera Port
+    path: shared
+light_paths:
+- id: epi
+  name: Epi-fluorescence
+  illumination_sequence:
+  - source_id: 50w_hbo_short_arc_bulb
+  - optical_path_element_id: fluorescence_turret
+  detection_sequence:
+  - optical_path_element_id: fluorescence_turret
+  - optical_path_element_id: camera_port
+- id: transmitted
+  name: Transmitted light
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port
