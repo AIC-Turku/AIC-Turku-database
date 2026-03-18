@@ -25,6 +25,7 @@ sys.modules.setdefault('yaml', yaml_stub)
 
 from scripts.validate import (
     _evaluate_required_if,
+    _is_valid_instrument_id,
     _resolve_rule_nodes,
     Vocabulary,
     build_instrument_completeness_report,
@@ -77,6 +78,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(nodes[0].path, 'software')
         self.assertIsInstance(nodes[0].value, list)
         self.assertEqual(len(nodes[0].value), 1)
+
+    def test_slug_validation_accepts_underscore_separated_light_path_ids(self) -> None:
+        self.assertTrue(_is_valid_instrument_id('laserstack_v4'))
+        self.assertTrue(_is_valid_instrument_id('405_nm'))
+        self.assertTrue(_is_valid_instrument_id('camera_port'))
+        self.assertTrue(_is_valid_instrument_id('scope-1'))
+        self.assertFalse(_is_valid_instrument_id('invalid slug'))
+        self.assertFalse(_is_valid_instrument_id('UPPER'))
 
     def test_evaluate_required_if_supports_compound_all_of_any_of(self) -> None:
         vocabulary = Vocabulary(vocab_registry={'modalities': {'source': 'inline', 'allowed_values': ['flim', 'sim']}})
