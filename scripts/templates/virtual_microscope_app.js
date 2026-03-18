@@ -27,6 +27,7 @@
     lastSelection: null,
     lastSimulation: null,
     activeInspectorStage: null,
+    routeTopology: null,
   };
 
   let currentInstrumentId = null;
@@ -349,11 +350,14 @@
       let spectrum = grid.map(() => 0);
 
       if (fromNode === 'sources') spectrum = sourceMixed;
+      else if (fromNode === 'illumination') spectrum = excitationAtSample;
       else if (fromNode === 'excitation') spectrum = excitationFiltered;
       else if (fromNode === 'dichroic') spectrum = excitationAtSample;
       else if (fromNode === 'sample') spectrum = generatedEmission;
+      else if (fromNode === 'detection') spectrum = branchEmission.some((value) => value > 1e-9) ? branchEmission : postEmission;
       else if (fromNode === 'emission') spectrum = postEmission;
       else if (fromNode === 'splitters') spectrum = branchEmission;
+      else if (fromNode === 'detectors') spectrum = branchEmission.some((value) => value > 1e-9) ? branchEmission : postEmission;
 
       setPipeSpectrumColor(key, spectrum, grid);
     });
@@ -602,6 +606,101 @@
     );
   }
 
+  function routeRecordForInstrument(instrument, route) {
+    const routeId = cleanString(route).toLowerCase();
+    const routes = Array.isArray(instrument && instrument.lightPaths) ? instrument.lightPaths : [];
+    if (routeId) {
+      const explicit = routes.find((entry) => cleanString(entry && entry.id).toLowerCase() === routeId);
+      if (explicit) return explicit;
+    }
+    const fallbackId = cleanString(instrument && instrument.defaultRoute).toLowerCase();
+    if (fallbackId) {
+      const fallback = routes.find((entry) => cleanString(entry && entry.id).toLowerCase() === fallbackId);
+      if (fallback) return fallback;
+    }
+    return routes[0] || null;
+  }
+
+  function detectorMechanismsForEndpointIds(instrument, endpointIds, route) {
+    const wanted = new Set((Array.isArray(endpointIds) ? endpointIds : []).map((value) => cleanString(value).toLowerCase()).filter(Boolean));
+    const mechanisms = mechanismsForRoute(instrument && instrument.detectors, route);
+    if (!wanted.size) return mechanisms;
+    return mechanisms.filter((mechanism) => Object.values(positionsForRoute(mechanism, route)).some((detector) => wanted.has(cleanString(detector && (detector.id || detector.terminal_id)).toLowerCase())));
+  }
+
+  function sourceMechanismsForSourceIds(instrument, sourceIds, route) {
+    const wanted = new Set((Array.isArray(sourceIds) ? sourceIds : []).map((value) => cleanString(value).toLowerCase()).filter(Boolean));
+    const mechanisms = mechanismsForRoute(instrument && instrument.lightSources, route);
+    if (!wanted.size) return mechanisms;
+    return mechanisms.filter((mechanism) => Object.values(positionsForRoute(mechanism, route)).some((source) => wanted.has(cleanString(source && source.id).toLowerCase())));
+  }
+
+  function opticalMechanismCatalog(instrument, route) {
+    const catalog = new Map();
+    ['cube', 'excitation', 'dichroic', 'emission', 'splitters'].forEach((key) => {
+      mechanismsForRoute(instrument && instrument[key], route).forEach((mechanism) => {
+        const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
+        if (!mechanismId) return;
+        catalog.set(mechanismId, { stageKey: key, mechanism });
+      });
+    });
+    return catalog;
+  }
+
+  function buildRouteTraversalEntries(instrument, routeRecord, route) {
+    const catalog = opticalMechanismCatalog(instrument, route);
+    const seenControlIds = new Set();
+    const buildPhase = (steps, phase) => (Array.isArray(steps) ? steps : []).map((step, index) => {
+      const elementId = cleanString(step && step.optical_path_element_id).toLowerCase();
+      if (!elementId) return null;
+      const match = catalog.get(elementId);
+      if (!match) {
+        return {
+          kind: 'missing',
+          key: `${phase}:${elementId}:${index}`,
+          title: step.optical_path_element_id,
+          message: `This canonical route references optical path element "${step.optical_path_element_id}", but no interactive UI control was derived for it.`,
+        };
+      }
+      const firstUse = !seenControlIds.has(elementId);
+      seenControlIds.add(elementId);
+      return {
+        kind: firstUse ? 'control' : 'linked',
+        key: `${phase}:${elementId}:${index}`,
+        stageKey: match.stageKey,
+        mechanism: match.mechanism,
+        phase,
+        title: match.mechanism.display_label || match.mechanism.name || step.optical_path_element_id,
+        message: firstUse
+          ? ''
+          : `This route reuses the same ${match.stageKey.replace(/_/g, ' ')} selector later in the traversal; the active selection above is applied here as well.`,
+      };
+    }).filter(Boolean);
+
+    return {
+      illumination: buildPhase(routeRecord && routeRecord.illumination_sequence, 'illumination'),
+      detection: buildPhase(routeRecord && routeRecord.detection_sequence, 'detection'),
+    };
+  }
+
+  function deriveRouteTopology(instrument, route) {
+    const routeRecord = routeRecordForInstrument(instrument, route);
+    const sourceIds = (Array.isArray(routeRecord && routeRecord.illumination_sequence) ? routeRecord.illumination_sequence : [])
+      .map((step) => step && step.source_id)
+      .filter(Boolean);
+    const endpointIds = (Array.isArray(routeRecord && routeRecord.detection_sequence) ? routeRecord.detection_sequence : [])
+      .map((step) => step && step.endpoint_id)
+      .filter(Boolean);
+    return {
+      route: cleanString(routeRecord && routeRecord.id).toLowerCase() || cleanString(route).toLowerCase() || null,
+      routeRecord,
+      sourceMechanisms: sourceMechanismsForSourceIds(instrument, sourceIds, route),
+      traversal: buildRouteTraversalEntries(instrument, routeRecord, route),
+      endpointMechanisms: detectorMechanismsForEndpointIds(instrument, endpointIds, route),
+      endpointIds,
+    };
+  }
+
   function activeRouteOrder() {
     return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
   }
@@ -677,6 +776,7 @@
     });
     DOM.routeSel.addEventListener('change', (event) => {
       state.activeRoute = cleanString(event.target.value).toLowerCase() || null;
+      state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
       renderGraphFlow();
       refreshOutputs();
     });
@@ -716,6 +816,7 @@
     state.activeInstrumentRaw = state.allInstruments[currentInstrumentId] || {};
     state.activeInstrument = VM.normalizeInstrumentPayload(state.activeInstrumentRaw);
     state.activeRoute = state.activeInstrument.defaultRoute || null;
+    state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
     state.spectralBandsByMechanism.clear();
     seedSettingsFromInstrument();
     renderRouteSelector();
@@ -733,6 +834,7 @@
       DOM.routeWrap.style.display = 'none';
       const singleRoute = options[0] ? cleanString(options[0].id).toLowerCase() : null;
       state.activeRoute = singleRoute || state.activeRoute || state.activeInstrument.defaultRoute || null;
+      state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
       return;
     }
 
@@ -746,6 +848,7 @@
     const selectedRoute = state.activeRoute || state.activeInstrument.defaultRoute || (strictHardwareTruthMode() ? '' : ((options[0] && options[0].id) || ''));
     DOM.routeSel.value = selectedRoute;
     state.activeRoute = cleanString(DOM.routeSel.value).toLowerCase() || null;
+    state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
     DOM.routeWrap.style.display = 'flex';
   }
 
@@ -789,6 +892,17 @@
     });
   }
 
+  function appendTraversalEntries(panel, entries) {
+    (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+      if (entry.kind === 'control') {
+        if (entry.stageKey === 'splitters') panel.appendChild(createSplitterControl(entry.mechanism));
+        else panel.appendChild(createMechanismControl(entry.stageKey, entry.mechanism, index));
+        return;
+      }
+      panel.appendChild(createLinkedStageNote(entry.title, entry.message, entry.mechanism));
+    });
+  }
+
   function renderGraphFlow() {
     const snapshot = snapshotStageSelections();
     DOM.graph.innerHTML = '';
@@ -796,13 +910,12 @@
 
     const inst = state.activeInstrument;
     const route = state.activeRoute;
-    const lightSourceMechanisms = mechanismsForRoute(inst.lightSources, route);
-    const cubeMechanisms = mechanismsForRoute(inst.cube, route);
-    const excitationMechanisms = mechanismsForRoute(inst.excitation, route);
-    const dichroicMechanisms = mechanismsForRoute(inst.dichroic, route);
-    const emissionMechanisms = mechanismsForRoute(inst.emission, route);
-    const splitterMechanisms = mechanismsForRoute(inst.splitters, route);
-    const detectorMechanisms = mechanismsForRoute(inst.detectors, route);
+    state.routeTopology = deriveRouteTopology(inst, route);
+    const topology = state.routeTopology;
+    const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : mechanismsForRoute(inst.lightSources, route);
+    const illuminationEntries = topology && topology.traversal ? topology.traversal.illumination : [];
+    const detectionEntries = topology && topology.traversal ? topology.traversal.detection : [];
+    const detectorMechanisms = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : mechanismsForRoute(inst.detectors, route);
 
     const shell = document.createElement('div');
     shell.className = 'vm-pipeline-shell';
@@ -827,36 +940,13 @@
       });
     }
 
-    if (cubeMechanisms.length || excitationMechanisms.length) {
+    if (illuminationEntries.length) {
       stages.push({
-        id: 'excitation',
-        label: 'Excitation',
-        subtitle: cubeMechanisms.length
-          ? 'Filter-cube selections drive the excitation, dichroic, and emission path together.'
-          : 'Choose the excitation filter path that reaches the sample.',
+        id: 'illumination',
+        label: 'Illumination Path',
+        subtitle: 'Derived from the canonical illumination_sequence for the active route.',
         build(panel) {
-          if (cubeMechanisms.length) {
-            cubeMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('cube', mechanism, index)));
-          } else {
-            excitationMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('excitation', mechanism, index)));
-          }
-        },
-      });
-    }
-
-    if (cubeMechanisms.length || dichroicMechanisms.length) {
-      stages.push({
-        id: 'dichroic',
-        label: 'Dichroic',
-        subtitle: cubeMechanisms.length
-          ? 'The dichroic is integrated inside the selected cube.'
-          : 'Choose the dichroic that reflects excitation and transmits emission.',
-        build(panel) {
-          if (cubeMechanisms.length) {
-            appendLinkedCubeNotes(panel, 'dichroic', 'Integrated cube dichroic', 'This route uses the cube selector from the Excitation tab.');
-          } else {
-            dichroicMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('dichroic', mechanism, index)));
-          }
+          appendTraversalEntries(panel, illuminationEntries);
         },
       });
     }
@@ -870,29 +960,13 @@
       },
     });
 
-    if (emissionMechanisms.length || cubeMechanisms.length) {
+    if (detectionEntries.length) {
       stages.push({
-        id: 'emission',
-        label: 'Emission',
-        subtitle: cubeMechanisms.length
-          ? 'Emission filtering may be partly integrated inside the selected cube.'
-          : 'Choose the emission filters that clean up the fluorescence before detection.',
+        id: 'detection',
+        label: 'Detection Path',
+        subtitle: 'Derived from the canonical detection_sequence for the active route, including explicit selector and branch semantics.',
         build(panel) {
-          if (cubeMechanisms.length) {
-            appendLinkedCubeNotes(panel, 'emission', 'Integrated cube emission filter', 'This emission window is currently set by the cube selection.');
-          }
-          emissionMechanisms.forEach((mechanism, index) => panel.appendChild(createMechanismControl('emission', mechanism, index)));
-        },
-      });
-    }
-
-    if (splitterMechanisms.length) {
-      stages.push({
-        id: 'splitters',
-        label: 'Splitters',
-        subtitle: 'Mechanical splitters are rendered explicitly. Auto-routed branches already know their endpoints; manual branches can be toggled here.',
-        build(panel) {
-          splitterMechanisms.forEach((mechanism) => panel.appendChild(createSplitterControl(mechanism)));
+          appendTraversalEntries(panel, detectionEntries);
         },
       });
     }
@@ -1597,6 +1671,7 @@
   }
 
   function collectRuntimeSelection() {
+    const topology = state.routeTopology || deriveRouteTopology(state.activeInstrument, state.activeRoute);
     const selection = {
       sources: [],
       excitation: [],
@@ -1608,7 +1683,10 @@
       debugSelections: [],
     };
 
-    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, state.activeRoute).forEach((mechanism) => {
+    const sourceMechanisms = topology && Array.isArray(topology.sourceMechanisms)
+      ? topology.sourceMechanisms
+      : mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, state.activeRoute);
+    sourceMechanisms.forEach((mechanism) => {
       Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
         const setting = ensureSourceSetting(source);
         if (!setting.enabled) return;
@@ -1680,14 +1758,15 @@
     });
 
 
-    mechanismsForRoute(state.activeInstrument && state.activeInstrument.splitters, state.activeRoute).forEach((mechanism) => {
+    const splitterMechanisms = ((topology && topology.traversal ? topology.traversal.detection : []) || [])
+      .filter((entry) => entry && entry.kind === 'control' && entry.stageKey === 'splitters' && entry.mechanism)
+      .map((entry) => entry.mechanism);
+    splitterMechanisms.forEach((mechanism) => {
       const selectedBranchIds = ensureSplitterBranchSelection(mechanism);
       selection.splitters.push({
         id: mechanism.id,
         label: mechanism.display_label || mechanism.name || 'Splitter',
         dichroic: mechanism.dichroic,
-        path1: mechanism.path1,
-        path2: mechanism.path2,
         branches: Array.isArray(mechanism.branches) ? mechanism.branches.map((branch) => ({ ...branch })) : [],
         branch_selection_required: Boolean(mechanism.branch_selection_required),
         selected_branch_ids: Array.isArray(selectedBranchIds) ? selectedBranchIds.slice() : [],
@@ -1695,7 +1774,10 @@
       selection.debugSelections.push({ stage: 'splitters', name: mechanism.name || mechanism.display_label || 'Splitter', component: mechanism });
     });
 
-    mechanismsForRoute(state.activeInstrument && state.activeInstrument.detectors, state.activeRoute).forEach((mechanism) => {
+    const detectorMechanisms = topology && Array.isArray(topology.endpointMechanisms)
+      ? topology.endpointMechanisms
+      : mechanismsForRoute(state.activeInstrument && state.activeInstrument.detectors, state.activeRoute);
+    detectorMechanisms.forEach((mechanism) => {
       Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((detector) => {
         const setting = ensureDetectorSetting(mechanism, detector);
         if (!setting.enabled) return;

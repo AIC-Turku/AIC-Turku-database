@@ -1,0 +1,40 @@
+terms:
+  - id: filter_wheel
+    label: "Filter Wheel"
+    description: "Discrete wheel or carousel that selects one optical position at a time."
+  - id: slider
+    label: "Slider"
+    description: "Linear slider with one active position at a time."
+  - id: turret
+    label: "Turret"
+    description: "Rotary turret or cube carousel."
+  - id: fixed
+    label: "Fixed"
+    description: "Fixed optical element with no active selection mechanism."
+  - id: tunable
+    label: "Tunable"
+    description: "Continuously tunable optical element such as an AOTF or spectral selector."
+  - id: spectral_slider
+    label: "Spectral Slider"
+    description: "Spectral slit/slider mechanism used to define wavelength windows."
+  - id: spectral_array
+    label: "Spectral Array"
+    description: "Multi-band or array-based spectral selection element."
+  - id: selector
+    label: "Selector"
+    description: "Selection element that routes light into one or more explicit branches."
+  - id: splitter
+    label: "Splitter"
+    description: "Optical splitter with explicit branch definitions and endpoint targets."
+  - id: emission_splitter
+    label: "Emission Splitter"
+    description: "Emission-path splitter that routes detected light into explicit branches."
+  - id: image_splitter
+    label: "Image Splitter"
+    description: "Image-splitting element such as a dual-view or quad-view splitter."
+  - id: dual_view
+    label: "Dual View"
+    description: "Two-way image splitter with explicit branch targets."
+  - id: quad_view
+    label: "Quad View"
+    description: "Four-way image splitter with explicit branch targets."

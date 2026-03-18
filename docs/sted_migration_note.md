@@ -4,12 +4,12 @@ This update introduces structured STED-oriented instrument inventory fields and 
 
 ## What changed
 
-- Added structured light-source metadata for role/timing and pulsed-laser defaults:
-  - `hardware.light_sources[].role`
-  - `hardware.light_sources[].timing_mode`
-  - `hardware.light_sources[].pulse_width_ps`
-  - `hardware.light_sources[].repetition_rate_mhz`
-  - `hardware.light_sources[].depletion_targets_nm`
+- Added structured source metadata for role/timing and pulsed-laser defaults:
+  - `hardware.sources[].role`
+  - `hardware.sources[].timing_mode`
+  - `hardware.sources[].pulse_width_ps`
+  - `hardware.sources[].repetition_rate_mhz`
+  - `hardware.sources[].depletion_targets_nm`
 - Added detector facility-default gating capability/settings:
   - `hardware.detectors[].supports_time_gating`
   - `hardware.detectors[].default_gating_delay_ns`

@@ -48,21 +48,31 @@ hardware:
     notes: Single-mirror galvo path for confocal test acquisitions.
     url: ''
 
-  light_sources:
+  sources:
     - kind: laser
       manufacturer: Custom Photonics
       model: Sapphire 488
       wavelength_nm: '488'
       power: 50 mW
+      role: excitation
+      path: confocal
       notes: Pulsed mode active
       url: ''
+      id: sapphire_488
+      modalities:
+        - confocal
     - kind: led
       manufacturer: CoolLED
       model: pE-300
       wavelength_nm: multi-band # Flag: Verify if 'multi-band' passes your spectral_descriptor validation.
       power: 25 mW
+      role: excitation
+      path: epi
       notes: "Software alias: 'CoolLED_Main'"
       url: https://www.coolled.com/products/pe-300-series/
+      id: pe_300
+      modalities:
+        - epi
 
   detectors:
     - kind: scmos
@@ -77,12 +87,6 @@ hardware:
       model: PMT-R928
       qe_peak_pct: null # Flag: Conditionally required because confocal_point modality is present.
       notes: Confocal channel A
-      url: ''
-
-  splitters:
-    - name: Custom 50/50
-      type: emission_splitter
-      notes: Even split for dual-camera testing
       url: ''
 
   filters:
@@ -124,3 +128,55 @@ hardware:
       specialties: []
       notes: High-NA test
       url: ''
+
+  optical_path_elements:
+    - id: custom_50_50
+      name: Custom 50/50
+      type: emission_splitter
+      element_type: emission_splitter
+      stage_role: splitter
+      path: epi
+      modalities:
+        - epi
+      selection_mode: fixed
+      notes: Even split for dual-camera testing
+      url: ''
+      branches:
+        - id: camera_branch
+          label: Camera path
+          mode: transmitted
+          component:
+            component_type: passthrough
+          target_ids:
+            - camera_main
+
+  endpoints:
+    - id: camera_main
+      endpoint_type: detector
+      display_label: Master detector
+      kind: scmos
+      path: epi
+      modalities:
+        - epi
+    - id: confocal_channel_a
+      endpoint_type: detector
+      display_label: Confocal channel A
+      kind: pmt
+      path: confocal
+      modalities:
+        - confocal
+
+light_paths:
+  - id: epi
+    name: Epi-fluorescence
+    illumination_sequence:
+      - source_id: pe_300
+    detection_sequence:
+      - optical_path_element_id: custom_50_50
+      - endpoint_id: camera_main
+  - id: confocal
+    name: Confocal
+    illumination_sequence:
+      - source_id: sapphire_488
+    detection_sequence:
+      - endpoint_id: confocal_channel_a

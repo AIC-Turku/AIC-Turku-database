@@ -394,7 +394,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         rows = {entry["key"]: entry for entry in result}
         self.assertLess(rows["below"]["throughput"], rows["above"]["throughput"])
 
-    def test_legacy_multicutoff_dichroic_fallback_remains_available(self) -> None:
+    def test_migration_compatibility_legacy_multicutoff_dichroic_fallback_remains_available(self) -> None:
         result = self.run_node_json(
             """
             function fluor(key, emCenter) {
@@ -777,7 +777,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(result["excitationOnly"], result["excitationPlusTransmitted"], places=9)
         self.assertEqual(result["transmittedOnly"], 0)
 
-    def test_instrument_route_catalog_is_normalized_from_payload(self) -> None:
+    def test_migration_compatibility_instrument_route_catalog_is_normalized_from_legacy_payload(self) -> None:
         result = self.run_node_json(
             """
             const instrument = rt.normalizeInstrumentPayload({
@@ -826,7 +826,108 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["routeIds"], ["confocal", "epi"])
         self.assertEqual(result["routeLabels"], ["Confocal route", "Epi route"])
 
-    def test_strict_mode_does_not_fallback_route_catalog_from_component_tags(self) -> None:
+    def test_canonical_dto_is_authoritative_runtime_input(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'epi' },
+              sources: [
+                { id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }
+              ],
+              optical_path_elements: [
+                { id: 'ex_1', stage_role: 'excitation', element_type: 'filter_wheel', display_label: 'EX', component_type: 'bandpass', center_nm: 488, width_nm: 10 },
+                { id: 'di_1', stage_role: 'dichroic', element_type: 'dichroic', display_label: 'DI', component_type: 'dichroic', cutoffs_nm: [505] },
+                { id: 'em_1', stage_role: 'emission', element_type: 'filter_wheel', display_label: 'EM', component_type: 'bandpass', center_nm: 525, width_nm: 50 }
+              ],
+              endpoints: [
+                { id: 'cam_1', display_label: 'Camera', endpoint_type: 'camera', qe_peak_pct: 82 }
+              ],
+              light_paths: [
+                {
+                  id: 'epi',
+                  name: 'Epi route',
+                  illumination_sequence: [
+                    { source_id: 'src_488' },
+                    { optical_path_element_id: 'ex_1' }
+                  ],
+                  detection_sequence: [
+                    { optical_path_element_id: 'di_1' },
+                    { optical_path_element_id: 'em_1' },
+                    { endpoint_id: 'cam_1' }
+                  ]
+                }
+              ],
+              projections: {
+                virtual_microscope: {
+                  light_sources: [{ id: 'legacy_sources', positions: { 1: { display_label: 'Wrong 561', wavelength_nm: 561, kind: 'laser' } } }],
+                  stages: {
+                    excitation: [{ id: 'legacy_ex', positions: { 1: { component_type: 'bandpass', center_nm: 561, width_nm: 10 } } }],
+                    dichroic: [],
+                    emission: [],
+                    cube: []
+                  },
+                  splitters: []
+                }
+              }
+            });
+            return {
+              defaultRoute: instrument.defaultRoute,
+              routeIds: instrument.routeOptions.map((entry) => entry.id),
+              sourceLabels: instrument.lightSources.flatMap((mechanism) => Object.values(mechanism.positions || {}).map((value) => value.display_label)),
+              excitationLabels: instrument.excitation.map((mechanism) => mechanism.display_label || mechanism.name),
+              detectorLabels: instrument.detectors.flatMap((mechanism) => Object.values(mechanism.positions || {}).map((value) => value.display_label)),
+            };
+            """
+        )
+
+        self.assertEqual(result["defaultRoute"], "epi")
+        self.assertEqual(result["routeIds"], ["epi"])
+        self.assertEqual(result["sourceLabels"], ["488 laser"])
+        self.assertEqual(result["excitationLabels"], ["EX"])
+        self.assertEqual(result["detectorLabels"], ["Camera"])
+
+    def test_reused_canonical_optical_path_element_keeps_route_bindings_when_seen_in_both_sequences(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'strict' },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [
+                { id: 'shared_di', stage_role: 'dichroic', element_type: 'dichroic', display_label: 'Main DI', component_type: 'dichroic', cutoffs_nm: [505] }
+              ],
+              endpoints: [{ id: 'cam_1', display_label: 'Camera', endpoint_type: 'camera' }],
+              light_paths: [
+                {
+                  id: 'epi',
+                  name: 'Epi route',
+                  illumination_sequence: [
+                    { source_id: 'src_488' },
+                    { optical_path_element_id: 'shared_di' }
+                  ],
+                  detection_sequence: [
+                    { optical_path_element_id: 'shared_di' },
+                    { endpoint_id: 'cam_1' }
+                  ]
+                }
+              ]
+            });
+            const mechanism = instrument.dichroic[0];
+            return {
+              routeIds: instrument.routeOptions.map((entry) => entry.id),
+              mechanismRoutes: mechanism.__routes,
+              illumRefs: mechanism.__sequence_use.illumination.length,
+              detectRefs: mechanism.__sequence_use.detection.length,
+            };
+            """
+        )
+
+        self.assertEqual(result["routeIds"], ["epi"])
+        self.assertEqual(result["mechanismRoutes"], ["epi"])
+        self.assertEqual(result["illumRefs"], 1)
+        self.assertEqual(result["detectRefs"], 1)
+
+    def test_migration_compatibility_strict_mode_does_not_fallback_route_catalog_from_component_tags(self) -> None:
         result = self.run_node_json(
             """
             const instrument = rt.normalizeInstrumentPayload({
@@ -856,7 +957,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["routeIds"], [])
         self.assertIsNone(result["defaultRoute"])
 
-    def test_approximation_mode_keeps_route_catalog_fallback(self) -> None:
+    def test_migration_compatibility_approximation_mode_keeps_route_catalog_fallback(self) -> None:
         result = self.run_node_json(
             """
             const instrument = rt.normalizeInstrumentPayload({

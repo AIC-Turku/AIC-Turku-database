@@ -170,15 +170,20 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
     hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
     light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
     payload = generate_virtual_microscope_payload(canonical)
+    runtime_projection = (
+        ((payload.get("projections") or {}).get("virtual_microscope") or {})
+        if isinstance(payload, dict)
+        else {}
+    )
     canonical_model = canonicalize_light_path_model(canonical)
 
     source_rows = _coerce_component_list(hardware.get("sources")) or _coerce_component_list(hardware.get("light_sources"))
     source_count = len(source_rows)
     detector_count = len(_coerce_component_list(hardware.get("detectors")))
-    payload_source_count = sum(len(group.get("positions", {})) for group in payload.get("light_sources", []) if isinstance(group, dict))
-    payload_detector_count = len([item for item in payload.get("detectors", []) if isinstance(item, dict)])
+    payload_source_count = sum(len(group.get("positions", {})) for group in runtime_projection.get("light_sources", []) if isinstance(group, dict))
+    payload_detector_count = len([item for item in runtime_projection.get("detectors", []) if isinstance(item, dict)])
     raw_splitters = {"total_distinct_entries": len([item for item in canonical_model.get("optical_path_elements", []) if item.get("stage_role") == "splitter"])}
-    payload_splitter_count = len(payload.get("splitters", []))
+    payload_splitter_count = len(runtime_projection.get("splitters", []))
 
     issues: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -229,7 +234,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
     stage_counts = Counter(item.get("stage_role") for item in canonical_model.get("optical_path_elements", []) if isinstance(item, dict))
     payload_stage_counts = {
         stage_name: len(items) if isinstance(items, list) else 0
-        for stage_name, items in (payload.get("stages") or {}).items()
+        for stage_name, items in (runtime_projection.get("stages") or {}).items()
     }
     for stage_name, count in stage_counts.items():
         if stage_name == "splitter":
@@ -247,7 +252,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             )
 
     mechanism_total = sum(stage_counts.values())
-    if mechanism_total and not payload.get("valid_paths"):
+    if mechanism_total and not runtime_projection.get("valid_paths"):
         warnings.append(
             {
                 "severity": "warning",
@@ -277,7 +282,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             "payload_splitters": payload_splitter_count,
             "hardware_stage_mechanisms": stage_counts,
             "payload_stage_mechanisms": payload_stage_counts,
-            "valid_paths": len(payload.get("valid_paths", [])),
+            "valid_paths": len(runtime_projection.get("valid_paths", [])),
         },
         "issues": issues,
         "warnings": warnings,

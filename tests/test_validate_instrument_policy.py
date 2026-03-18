@@ -239,10 +239,10 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                         'id': 'hardware',
                         'title': 'Hardware',
                         'rules': [
-                            {'path': 'hardware.light_sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
-                            {'path': 'hardware.light_sources[].model', 'status': 'optional', 'type': 'string'},
-                            {'path': 'hardware.light_sources[].name', 'status': 'optional', 'type': 'string'},
-                            {'path': 'hardware.light_sources[].product_code', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'hardware.sources[].model', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.sources[].name', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.sources[].product_code', 'status': 'optional', 'type': 'string'},
                         ],
                     }
                 ],
@@ -253,12 +253,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             {
                 'instrument': {'instrument_id': 'scope-1', 'display_name': 'Scope 1'},
                 'hardware': {
-                    'light_sources': [
-                        {'model': 'OBIS 488', 'product_code': 'OBIS 488'},
-                        {'name': 'Blue laser', 'product_code': 'Blue laser'},
-                        {'name': 'Blue laser', 'model': 'OBIS 488', 'product_code': 'SKU-001'},
-                    ]
+                    'sources': [
+                        {'id': 'src_1', 'model': 'OBIS 488', 'product_code': 'OBIS 488'},
+                        {'id': 'src_2', 'name': 'Blue laser', 'product_code': 'Blue laser'},
+                        {'id': 'src_3', 'name': 'Blue laser', 'model': 'OBIS 488', 'product_code': 'SKU-001'},
+                    ],
+                    'endpoints': [{'id': 'cam_main', 'endpoint_type': 'camera'}],
                 },
+                'light_paths': [{'id': 'epi', 'illumination_sequence': [{'source_id': 'src_1'}], 'detection_sequence': [{'endpoint_id': 'cam_main'}]}],
             },
         )
 
@@ -278,9 +280,9 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                         'id': 'hardware',
                         'title': 'Hardware',
                         'rules': [
-                            {'path': 'hardware.light_sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
-                            {'path': 'hardware.light_sources[].model', 'status': 'optional', 'type': 'string'},
-                            {'path': 'hardware.light_sources[].name', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'hardware.sources[].model', 'status': 'optional', 'type': 'string'},
+                            {'path': 'hardware.sources[].name', 'status': 'optional', 'type': 'string'},
                         ],
                     }
                 ],
@@ -291,11 +293,13 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             {
                 'instrument': {'instrument_id': 'scope-1', 'display_name': 'Scope 1'},
                 'hardware': {
-                    'light_sources': [
-                        {'name': 'OBIS 488', 'model': 'OBIS 488'},
-                        {'name': 'Blue laser', 'model': 'OBIS 488'},
-                    ]
+                    'sources': [
+                        {'id': 'src_a', 'name': 'OBIS 488', 'model': 'OBIS 488'},
+                        {'id': 'src_b', 'name': 'Blue laser', 'model': 'OBIS 488'},
+                    ],
+                    'endpoints': [{'id': 'cam_main', 'endpoint_type': 'camera'}],
                 },
+                'light_paths': [{'id': 'epi', 'illumination_sequence': [{'source_id': 'src_a'}], 'detection_sequence': [{'endpoint_id': 'cam_main'}]}],
             },
         )
 
@@ -305,6 +309,45 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         redundant = [w for w in warnings if w.code == 'redundant_name_model']
         self.assertEqual(len(redundant), 1)
         self.assertIn('name', redundant[0].message)
+
+    def test_validate_instrument_ledgers_reports_legacy_topology_as_migration_only(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {},
+                'sections': [
+                    {
+                        'id': 'hardware',
+                        'title': 'Hardware',
+                        'rules': [
+                            {'path': 'hardware.sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'hardware.optical_path_elements', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'hardware.endpoints', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'light_paths', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/example.yaml',
+            {
+                'instrument': {'instrument_id': 'scope-1', 'display_name': 'Scope 1'},
+                'hardware': {
+                    'light_sources': [{'kind': 'laser', 'wavelength_nm': 488, 'path': 'epi'}],
+                    'light_path': {
+                        'excitation_mechanisms': [{'positions': {1: {'component_type': 'bandpass', 'center_nm': 488, 'width_nm': 10}}}],
+                    },
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual(issues, [])
+        legacy_messages = [w.message for w in warnings if w.code == 'legacy_topology_present']
+        self.assertTrue(any("hardware.light_sources" in msg for msg in legacy_messages))
+        self.assertTrue(any("hardware.light_path.excitation_mechanisms" in msg for msg in legacy_messages))
 
     def test_completeness_report_preserves_used_by_and_flags_missing_item_leaf(self) -> None:
         self._write_json_yaml(
@@ -490,7 +533,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
-    def test_object_map_wildcard_item_field_in_reports_missing_bands(self) -> None:
+    def test_migration_compatibility_object_map_wildcard_item_field_in_reports_missing_bands(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -539,7 +582,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
-    def test_object_map_wildcard_item_field_in_passes_when_bands_present(self) -> None:
+    def test_migration_compatibility_object_map_wildcard_item_field_in_passes_when_bands_present(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -589,7 +632,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertNotIn('missing_conditional_field', {w.code for w in warnings})
 
 
-    def test_schema_requires_multiband_bands_for_excitation_and_emission_positions(self) -> None:
+    def test_migration_compatibility_schema_requires_multiband_bands_for_excitation_and_emission_positions(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -672,7 +715,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             )
         )
 
-    def test_schema_accepts_multiband_bands_with_required_fields_for_positions(self) -> None:
+    def test_migration_compatibility_schema_accepts_multiband_bands_with_required_fields_for_positions(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -764,7 +807,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
 
 
-    def test_required_if_field_equals_any_is_enforced_for_conditional_slots(self) -> None:
+    def test_migration_compatibility_required_if_field_equals_any_is_enforced_for_conditional_slots(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -811,7 +854,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertIn('missing_required_field', {warning.code for warning in warnings})
         self.assertTrue(any('excitation_mechanisms[].slots' in warning.message for warning in warnings if warning.code == 'missing_required_field'))
 
-    def test_required_if_field_equals_any_not_triggered_when_values_do_not_match(self) -> None:
+    def test_migration_compatibility_required_if_field_equals_any_not_triggered_when_values_do_not_match(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -857,7 +900,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
         self.assertNotIn('missing_conditional_field', {warning.code for warning in warnings})
 
-    def test_validator_does_not_infer_tunable_requirements_from_notes(self) -> None:
+    def test_validator_v2_sources_do_not_infer_tunable_requirements_from_notes(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -867,7 +910,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                         'id': 'ls',
                         'title': 'Light Sources',
                         'rules': [
-                            {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.sources', 'status': 'required', 'type': 'list', 'min_items': 1},
                         ],
                     }
                 ],
@@ -878,10 +921,12 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             {
                 'instrument': {'instrument_id': 'tunable-notes-only'},
                 'hardware': {
-                    'light_sources': [
-                        {'kind': 'laser', 'notes': 'Tunable range 440-790 nm'},
-                    ]
+                    'sources': [
+                        {'id': 'src_tunable', 'kind': 'laser', 'notes': 'Tunable range 440-790 nm'},
+                    ],
+                    'endpoints': [{'id': 'cam_main', 'endpoint_type': 'camera'}],
                 },
+                'light_paths': [{'id': 'epi', 'illumination_sequence': [{'source_id': 'src_tunable'}], 'detection_sequence': [{'endpoint_id': 'cam_main'}]}],
             },
         )
 
@@ -920,7 +965,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         vocabulary = Vocabulary(vocab_registry={})
         payload = {
             'hardware': {
-                'light_sources': [
+                'sources': [
                     {'role': 'excitation', 'timing_mode': 'pulsed'},
                     {'role': 'depletion', 'timing_mode': 'continuous'},
                 ]
@@ -929,7 +974,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
         self.assertTrue(
             _evaluate_required_if(
-                {'any_item_field_in': {'path': 'hardware.light_sources[]', 'field': 'role', 'values': ['depletion']}},
+                {'any_item_field_in': {'path': 'hardware.sources[]', 'field': 'role', 'values': ['depletion']}},
                 payload=payload,
                 item_context=None,
                 vocabulary=vocabulary,
@@ -937,7 +982,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
         self.assertTrue(
             _evaluate_required_if(
-                {'any_item_matches': {'path': 'hardware.light_sources[]', 'field_in': {'role': ['depletion'], 'timing_mode': ['continuous']}}},
+                {'any_item_matches': {'path': 'hardware.sources[]', 'field_in': {'role': ['depletion'], 'timing_mode': ['continuous']}}},
                 payload=payload,
                 item_context=None,
                 vocabulary=vocabulary,
@@ -945,14 +990,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
         self.assertFalse(
             _evaluate_required_if(
-                {'any_item_matches': {'path': 'hardware.light_sources[]', 'field_in': {'role': ['depletion'], 'timing_mode': ['pulsed']}}},
+                {'any_item_matches': {'path': 'hardware.sources[]', 'field_in': {'role': ['depletion'], 'timing_mode': ['pulsed']}}},
                 payload=payload,
                 item_context=None,
                 vocabulary=vocabulary,
             )
         )
 
-    def test_valid_sted_instrument_example(self) -> None:
+    def test_valid_sted_instrument_example_uses_v2_sources(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -968,12 +1013,12 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 'sections': [
                     {'id': 'm', 'title': 'M', 'rules': [{'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'}]},
                     {'id': 'ls', 'title': 'LS', 'rules': [
-                        {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
-                        {'path': 'hardware.light_sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
-                        {'path': 'hardware.light_sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
-                        {'path': 'hardware.light_sources[].pulse_width_ps', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
-                        {'path': 'hardware.light_sources[].repetition_rate_mhz', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
-                        {'path': 'hardware.light_sources[].depletion_targets_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'role': ['depletion']}}},
+                        {'path': 'hardware.sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                        {'path': 'hardware.sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
+                        {'path': 'hardware.sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
+                        {'path': 'hardware.sources[].pulse_width_ps', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
+                        {'path': 'hardware.sources[].repetition_rate_mhz', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
+                        {'path': 'hardware.sources[].depletion_targets_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'role': ['depletion']}}},
                     ]},
                     {'id': 'd', 'title': 'D', 'rules': [
                         {'path': 'hardware.detectors', 'status': 'optional', 'type': 'list'},
@@ -1002,14 +1047,16 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 'modalities': ['sted'],
                 'software': [{'role': 'acquisition', 'name': 'Control SW'}],
                 'hardware': {
-                    'light_sources': [
-                        {'role': 'excitation', 'timing_mode': 'cw'},
-                        {'role': 'depletion', 'timing_mode': 'pulsed', 'pulse_width_ps': 600, 'repetition_rate_mhz': 80, 'depletion_targets_nm': [775]},
+                    'sources': [
+                        {'id': 'src_exc', 'role': 'excitation', 'timing_mode': 'cw'},
+                        {'id': 'src_dep', 'role': 'depletion', 'timing_mode': 'pulsed', 'pulse_width_ps': 600, 'repetition_rate_mhz': 80, 'depletion_targets_nm': [775]},
                     ],
                     'detectors': [{'kind': 'pmt', 'supports_time_gating': True, 'default_gating_delay_ns': 0.2, 'default_gate_width_ns': 5.0}],
+                    'endpoints': [{'id': 'hyd_ep', 'endpoint_type': 'detector'}],
                     'optical_modulators': [{'type': 'slm', 'supported_phase_masks': ['vortex']}],
                     'illumination_logic': [{'method': 'rescue_sted', 'default_enabled': True}],
                 },
+                'light_paths': [{'id': 'sted', 'illumination_sequence': [{'source_id': 'src_exc'}, {'source_id': 'src_dep'}], 'detection_sequence': [{'endpoint_id': 'hyd_ep'}]}],
             },
         )
 
@@ -1017,7 +1064,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(issues, [])
         self.assertEqual(warnings, [])
 
-    def test_invalid_sted_instrument_example(self) -> None:
+    def test_invalid_sted_instrument_example_uses_v2_sources(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -1029,11 +1076,11 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 'sections': [
                     {'id': 'm', 'title': 'M', 'rules': [{'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'}]},
                     {'id': 'ls', 'title': 'LS', 'rules': [
-                        {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
-                        {'path': 'hardware.light_sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
-                        {'path': 'hardware.light_sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
-                        {'path': 'hardware.light_sources[].pulse_width_ps', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
-                        {'path': 'hardware.light_sources[].depletion_targets_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'role': ['depletion']}}},
+                        {'path': 'hardware.sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                        {'path': 'hardware.sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
+                        {'path': 'hardware.sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
+                        {'path': 'hardware.sources[].pulse_width_ps', 'status': 'conditional', 'type': 'positive_number', 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}}},
+                        {'path': 'hardware.sources[].depletion_targets_nm', 'status': 'conditional', 'type': 'list', 'required_if': {'item_field_in': {'role': ['depletion']}}},
                     ]},
                 ],
             },
@@ -1043,7 +1090,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             {
                 'instrument': {'instrument_id': 'sted-test-invalid'},
                 'modalities': ['sted'],
-                'hardware': {'light_sources': [{'role': 'depletion', 'timing_mode': 'pulsed'}]},
+                'hardware': {'sources': [{'role': 'depletion', 'timing_mode': 'pulsed'}]},
             },
         )
 
@@ -1052,7 +1099,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertIn('missing_conditional_field', warning_codes)
 
 
-    def test_list_item_type_validation_for_depletion_targets(self) -> None:
+    def test_list_item_type_validation_for_depletion_targets_on_v2_sources(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -1063,9 +1110,9 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                         'title': 'LS',
                         'rules': [
                             {'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'},
-                            {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.sources', 'status': 'required', 'type': 'list', 'min_items': 1},
                             {
-                                'path': 'hardware.light_sources[].depletion_targets_nm',
+                                'path': 'hardware.sources[].depletion_targets_nm',
                                 'status': 'optional',
                                 'type': 'list',
                                 'item_type': 'positive_number',
@@ -1081,7 +1128,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 'instrument': {'instrument_id': 'sted-list-items'},
                 'modalities': ['sted'],
                 'hardware': {
-                    'light_sources': [
+                    'sources': [
                         {'depletion_targets_nm': [561, 'foo']},
                     ]
                 },
@@ -1091,7 +1138,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         self.assertIn('invalid_list_item_type', {issue.code for issue in issues})
 
-    def test_conditional_depletion_targets_enforce_numeric_item_type(self) -> None:
+    def test_conditional_depletion_targets_enforce_numeric_item_type_on_v2_sources(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -1103,15 +1150,15 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                         'id': 'ls',
                         'title': 'LS',
                         'rules': [
-                            {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.sources', 'status': 'required', 'type': 'list', 'min_items': 1},
                             {
-                                'path': 'hardware.light_sources[].role',
+                                'path': 'hardware.sources[].role',
                                 'status': 'optional',
                                 'type': 'string',
                                 'vocab': 'light_source_roles',
                             },
                             {
-                                'path': 'hardware.light_sources[].depletion_targets_nm',
+                                'path': 'hardware.sources[].depletion_targets_nm',
                                 'status': 'conditional',
                                 'type': 'list',
                                 'item_type': 'positive_number',
@@ -1135,7 +1182,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             {
                 'instrument': {'instrument_id': 'sted-conditional-list-items'},
                 'hardware': {
-                    'light_sources': [
+                    'sources': [
                         {'role': 'depletion', 'depletion_targets_nm': [775, 'foo']},
                     ]
                 },
@@ -1145,7 +1192,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         self.assertIn('invalid_list_item_type', {issue.code for issue in issues})
 
-    def test_item_field_in_conditions_apply_for_vocab_synonyms_in_validator(self) -> None:
+    def test_item_field_in_conditions_apply_for_vocab_synonyms_in_validator_on_v2_sources(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -1158,17 +1205,17 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                         'id': 'ls',
                         'title': 'LS',
                         'rules': [
-                            {'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1},
-                            {'path': 'hardware.light_sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
-                            {'path': 'hardware.light_sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
+                            {'path': 'hardware.sources', 'status': 'required', 'type': 'list', 'min_items': 1},
+                            {'path': 'hardware.sources[].role', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_roles'},
+                            {'path': 'hardware.sources[].timing_mode', 'status': 'optional', 'type': 'string', 'vocab': 'light_source_timing_modes'},
                             {
-                                'path': 'hardware.light_sources[].pulse_width_ps',
+                                'path': 'hardware.sources[].pulse_width_ps',
                                 'status': 'conditional',
                                 'type': 'positive_number',
                                 'required_if': {'item_field_in': {'timing_mode': ['pulsed']}},
                             },
                             {
-                                'path': 'hardware.light_sources[].depletion_targets_nm',
+                                'path': 'hardware.sources[].depletion_targets_nm',
                                 'status': 'conditional',
                                 'type': 'list',
                                 'item_type': 'positive_number',
@@ -1200,7 +1247,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             {
                 'instrument': {'instrument_id': 'sted-synonym-conditions'},
                 'hardware': {
-                    'light_sources': [
+                    'sources': [
                         {'role': 'sted_depletion', 'timing_mode': 'pulse'},
                     ]
                 },
@@ -1209,10 +1256,10 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
         _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         missing_conditional_messages = [w.message for w in warnings if w.code == 'missing_conditional_field']
-        self.assertTrue(any('hardware.light_sources[].pulse_width_ps' in msg for msg in missing_conditional_messages))
-        self.assertTrue(any('hardware.light_sources[].depletion_targets_nm' in msg for msg in missing_conditional_messages))
+        self.assertTrue(any('hardware.sources[].pulse_width_ps' in msg for msg in missing_conditional_messages))
+        self.assertTrue(any('hardware.sources[].depletion_targets_nm' in msg for msg in missing_conditional_messages))
 
-    def test_sted_completeness_audit_warns_for_missing_depletion_and_time_gating(self) -> None:
+    def test_sted_completeness_audit_warns_for_missing_depletion_and_time_gating_on_v2_sources(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -1222,7 +1269,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 },
                 'sections': [
                     {'id': 'm', 'title': 'M', 'rules': [{'path': 'modalities', 'status': 'required', 'type': 'list', 'vocab': 'modalities'}]},
-                    {'id': 'ls', 'title': 'LS', 'rules': [{'path': 'hardware.light_sources', 'status': 'required', 'type': 'list', 'min_items': 1}]},
+                    {'id': 'ls', 'title': 'LS', 'rules': [{'path': 'hardware.sources', 'status': 'required', 'type': 'list', 'min_items': 1}]},
                     {'id': 'd', 'title': 'D', 'rules': [{'path': 'hardware.detectors', 'status': 'optional', 'type': 'list'}, {'path': 'hardware.detectors[].kind', 'status': 'optional', 'type': 'string', 'vocab': 'detector_kinds'}]},
                 ],
             },
@@ -1234,7 +1281,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 'modalities': ['sted'],
                 'software': [{'role': 'acquisition', 'name': 'Control SW'}],
                 'hardware': {
-                    'light_sources': [{'kind': 'laser', 'role': 'excitation'}],
+                    'sources': [{'kind': 'laser', 'role': 'excitation'}],
                     'detectors': [{'kind': 'pmt'}],
                 },
             },
@@ -1242,11 +1289,11 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
         _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         gap_messages = [w.message for w in warnings if w.code == 'sted_completeness_gap']
-        self.assertTrue(any("role='depletion'" in msg for msg in gap_messages))
+        self.assertTrue(any("canonical source" in msg for msg in gap_messages))
         self.assertTrue(any('supports_time_gating=true' in msg for msg in gap_messages))
 
 
-    def test_optical_component_discriminator_rules_fail_when_required_shape_fields_missing(self) -> None:
+    def test_migration_compatibility_optical_component_discriminator_rules_fail_when_required_shape_fields_missing(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -1304,7 +1351,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertFalse(any('hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm' in message for message in missing_messages))
         self.assertTrue(any('hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm' in message for message in missing_messages))
 
-    def test_optical_component_discriminator_rules_accept_valid_shape_fields(self) -> None:
+    def test_migration_compatibility_optical_component_discriminator_rules_accept_valid_shape_fields(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
@@ -1357,7 +1404,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertNotIn('missing_conditional_field', {warning.code for warning in warnings})
 
 
-    def test_dichroic_schema_accepts_explicit_bands_and_legacy_single_cutoff(self) -> None:
+    def test_migration_compatibility_dichroic_schema_accepts_explicit_bands_and_legacy_single_cutoff(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {

@@ -58,28 +58,6 @@ hardware:
     light_sheet_type: ""  # Light Sheet Architecture: Clarifies the specific illumination geometry for light sheet systems. | Allowed values (canonical IDs): standard_spim, lattice, single_objective, di_spim, scape, airy_beam, other
     notes: ""  # Scanner notes: Useful for mode-specific caveats.
     url: ""  # Scanner URL: Reference only.
-  light_sources:  # Light sources: Each instrument needs at least one declared excitation source.
-    -
-      kind: ""  # Light source kind: Core excitation-source class. | Allowed values (canonical IDs): laser, white_light_laser, led, arc_lamp, metal_halide, halogen_lamp, multiphoton_laser, supercontinuum
-      manufacturer: ""  # Light source manufacturer: Company/vendor/brand that makes the declared light source component.
-      model: ""  # Light source model: Vendor-facing hardware model/designation used as the primary structured identity field for the component.
-      product_code: ""  # Light source product code: Explicit catalog/order/SKU/reference code only when separately known from the model; leave missing when unknown.
-      technology: ""  # Light source technology subtype: Helpful subtype information for lasers or LED engines. | Allowed values (canonical IDs): diode, dpss, led_array, supercontinuum, ti_sapphire, other
-      path: ""  # Light source path tag: Optional path tag to associate a source with specific illumination routes. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-      role: ""  # Light source role: Structured role assignment separates excitation and STED depletion lasers without relying on free-text notes. | Allowed values (canonical IDs): excitation, depletion, activation, alignment, transmitted_illumination
-      timing_mode: ""  # Light source timing mode: Declares whether the source is operated in continuous-wave or pulsed timing mode. | Allowed values (canonical IDs): cw, pulsed
-      wavelength_nm: ""  # Peak Wavelength (nm): Peak wavelength value for discrete or center-defined excitation sources.
-      width_nm: ""  # Bandwidth / FWHM (nm): Optional spectral width for LEDs and broad-spectrum excitation sources.
-      power: ""  # Light source nominal power: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
-      pulse_width_ps: ""  # Light source pulse width (ps): Pulse width is required for pulsed sources to capture STED-relevant timing characteristics.
-      repetition_rate_mhz: ""  # Light source repetition rate (MHz): Repetition rate is required for pulsed sources to support timing-aware method reporting.
-      depletion_targets_nm:  # Depletion target wavelengths (nm): Structured STED depletion target wavelengths for depletion-designated sources.
-        - ""
-      tunable_min_nm: ""  # Light source tunable minimum wavelength (nm): Explicit lower bound for tunable sources used by virtual microscope spectral simulations.
-      tunable_max_nm: ""  # Light source tunable maximum wavelength (nm): Explicit upper bound for tunable sources used by virtual microscope spectral simulations.
-      simultaneous_lines_max: ""  # Light source maximum simultaneous lines: Declares how many laser lines can be active simultaneously for planning UI summaries.
-      notes: ""  # Light source notes: Useful for software aliases and caveats.
-      url: ""  # Light source URL: Reference only.
   detectors:  # Detectors: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
     -
       id: ""  # Detector ID: Stable graph target ID for virtual microscope routing and splitter branch targets.
@@ -119,217 +97,6 @@ hardware:
       method: ""  # Illumination logic method: Structured adaptive illumination method identifier. | Allowed values (canonical IDs): rescue_sted, confocal_sted_switching, roi_adaptive_illumination, patterned_depletion_control
       default_enabled: false  # Illumination logic default enabled: Facility default state for each illumination logic entry.
       notes: ""  # Illumination logic notes: Additional context for adaptive illumination behavior and constraints.
-  filters:  # Installed filters or filter sets: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-    -
-      name: ""  # Filter or filter-set name: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-      location: ""  # Filter location: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-      product_code: ""  # Filter product code: Helpful for staff verification.
-      excitation: ""  # Filter excitation band: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-      dichroic: ""  # Filter dichroic: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-      emission: ""  # Filter emission band: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-      notes: ""  # Filter notes: Useful for operational nuance.
-      url: ""  # Filter URL: Reference only.
-  splitters:  # Installed splitters: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-    -
-      name: ""  # Splitter name: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-      type: ""  # Splitter type: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model. | Allowed values (canonical IDs): emission_splitter, image_splitter, dual_view, quad_view, other
-      notes: ""  # Splitter notes: Useful operational nuance.
-      url: ""  # Splitter URL: Reference only.
-  light_path:  # Light path topology: Topological graph model for modern virtual microscope UI and Tier 3 reporting.
-    cube_mechanisms:  # Cube mechanisms
-      -
-        name: ""  # Cube mechanism name
-        type: ""  # Cube mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
-        positions:  # Cube mechanism positions map
-          Pos_1:
-            excitation_filter:  # Cube position excitation filter
-              bands:  # Cube excitation multiband array
-                -
-                  center_nm: ""  # Excitation band center (nm)
-                  width_nm: ""  # Excitation band width (nm)
-              component_type: ""  # Cube excitation filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-              center_nm: ""  # Cube excitation center (nm)
-              width_nm: ""  # Cube excitation width (nm)
-              cut_on_nm: ""  # Cube excitation cut-on wavelength (nm)
-              cut_off_nm: ""  # Cube excitation cut-off wavelength (nm)
-              cutoffs_nm:  # Cube excitation multi-cutoff wavelengths (nm)
-                - ""
-              transmission_bands:  # Cube excitation transmission bands
-                -
-                  center_nm: ""  # Cube excitation transmission band center (nm)
-                  width_nm: ""  # Cube excitation transmission band width (nm)
-              reflection_bands:  # Cube excitation reflection bands
-                -
-                  center_nm: ""  # Cube excitation reflection band center (nm)
-                  width_nm: ""  # Cube excitation reflection band width (nm)
-            emission_filter:  # Cube position emission filter
-              bands:  # Cube emission multiband array
-                -
-                  center_nm: ""  # Emission band center (nm)
-                  width_nm: ""  # Emission band width (nm)
-              center_nm: ""  # Cube emission center (nm)
-              width_nm: ""  # Cube emission width (nm)
-              cut_on_nm: ""  # Cube emission cut-on wavelength (nm)
-              cut_off_nm: ""  # Cube emission cut-off wavelength (nm)
-              cutoffs_nm:  # Cube emission multi-cutoff wavelengths (nm)
-                - ""
-              transmission_bands:  # Cube emission transmission bands
-                -
-                  center_nm: ""  # Cube emission transmission band center (nm)
-                  width_nm: ""  # Cube emission transmission band width (nm)
-              reflection_bands:  # Cube emission reflection bands
-                -
-                  center_nm: ""  # Cube emission reflection band center (nm)
-                  width_nm: ""  # Cube emission reflection band width (nm)
-              component_type: ""  # Cube emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-            path: ""  # Cube position path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-            name: ""  # Cube name
-            model: ""  # Cube model: Vendor-facing cube model/designation.
-            product_code: ""  # Cube product code: Explicit catalog/order/SKU/reference code for the cube only when separately known from its model/designation.
-            notes: ""  # Cube notes
-            dichroic:  # Cube position dichroic
-              cutoffs_nm:  # Cube dichroic cutoffs (nm)
-                - ""
-              transmission_bands:  # Cube dichroic transmission bands
-                -
-                  center_nm: ""  # Cube dichroic transmission band center (nm)
-                  width_nm: ""  # Cube dichroic transmission band width (nm)
-              reflection_bands:  # Cube dichroic reflection bands
-                -
-                  center_nm: ""  # Cube dichroic reflection band center (nm)
-                  width_nm: ""  # Cube dichroic reflection band width (nm)
-              center_nm: ""  # Cube dichroic center wavelength (nm)
-              width_nm: ""  # Cube dichroic bandwidth (nm)
-              cut_on_nm: ""  # Cube dichroic cut-on wavelength (nm)
-              cut_off_nm: ""  # Cube dichroic cut-off wavelength (nm)
-              component_type: ""  # Cube dichroic component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-        path: ""  # Cube mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-        notes: ""  # Cube mechanism notes
-        slots: ""  # Cube mechanism slots
-    excitation_mechanisms:  # Excitation mechanisms
-      -
-        name: ""  # Excitation mechanism name
-        type: ""  # Excitation mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
-        path: ""  # Excitation mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-        notes: ""  # Excitation mechanism notes
-        slots: ""  # Excitation mechanism slots
-        positions:  # Excitation mechanism positions map
-          Pos_1:
-            component_type: ""  # Excitation position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-            manufacturer: ""  # Excitation position component manufacturer
-            model: ""  # Excitation position component model: Vendor-facing excitation component model/designation.
-            product_code: ""  # Excitation position component product code: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
-            bands:  # Excitation position multiband array
-              -
-                center_nm: ""  # Excitation position band center (nm)
-                width_nm: ""  # Excitation position band width (nm)
-            center_nm: ""  # Excitation position center wavelength (nm)
-            width_nm: ""  # Excitation position bandwidth (nm)
-            cut_on_nm: ""  # Excitation position cut-on wavelength (nm)
-            cut_off_nm: ""  # Excitation position cut-off wavelength (nm)
-            cutoffs_nm:  # Excitation position multi-cutoff wavelengths (nm)
-              - ""
-            transmission_bands:  # Excitation position transmission bands
-              -
-                center_nm: ""  # Excitation position transmission band center (nm)
-                width_nm: ""  # Excitation position transmission band width (nm)
-            reflection_bands:  # Excitation position reflection bands
-              -
-                center_nm: ""  # Excitation position reflection band center (nm)
-                width_nm: ""  # Excitation position reflection band width (nm)
-    dichroic_mechanisms:  # Dichroic mechanisms
-      -
-        name: ""  # Dichroic mechanism name
-        type: ""  # Dichroic mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
-        path: ""  # Dichroic mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-        notes: ""  # Dichroic mechanism notes
-        slots: ""  # Dichroic mechanism slots
-        positions:  # Dichroic mechanism positions map
-          Pos_1:
-            component_type: ""  # Dichroic position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-            manufacturer: ""  # Dichroic position component manufacturer
-            model: ""  # Dichroic position component model: Vendor-facing dichroic component model/designation.
-            product_code: ""  # Dichroic position component product code: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
-            center_nm: ""  # Dichroic position center wavelength (nm)
-            width_nm: ""  # Dichroic position bandwidth (nm)
-            cut_on_nm: ""  # Dichroic position cut-on wavelength (nm)
-            cut_off_nm: ""  # Dichroic position cut-off wavelength (nm)
-            cutoffs_nm:  # Dichroic position multi-cutoff wavelengths (nm)
-              - ""
-            transmission_bands:  # Dichroic position transmission bands
-              -
-                center_nm: ""  # Dichroic position transmission band center (nm)
-                width_nm: ""  # Dichroic position transmission band width (nm)
-            reflection_bands:  # Dichroic position reflection bands
-              -
-                center_nm: ""  # Dichroic position reflection band center (nm)
-                width_nm: ""  # Dichroic position reflection band width (nm)
-    emission_mechanisms:  # Emission mechanisms
-      -
-        name: ""  # Emission mechanism name
-        type: ""  # Emission mechanism type | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array
-        path: ""  # Emission mechanism path tag | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-        notes: ""  # Emission mechanism notes
-        slots: ""  # Emission mechanism slots
-        positions:  # Emission mechanism positions map
-          Pos_1:
-            component_type: ""  # Emission position component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-            manufacturer: ""  # Emission position component manufacturer
-            model: ""  # Emission position component model: Vendor-facing emission component model/designation.
-            product_code: ""  # Emission position component product code: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
-            bands:  # Emission position multiband array
-              -
-                center_nm: ""  # Emission position band center (nm)
-                width_nm: ""  # Emission position band width (nm)
-            center_nm: ""  # Emission position center wavelength (nm)
-            width_nm: ""  # Emission position bandwidth (nm)
-            cut_on_nm: ""  # Emission position cut-on wavelength (nm)
-            cut_off_nm: ""  # Emission position cut-off wavelength (nm)
-            cutoffs_nm:  # Emission position multi-cutoff wavelengths (nm)
-              - ""
-            transmission_bands:  # Emission position transmission bands
-              -
-                center_nm: ""  # Emission position transmission band center (nm)
-                width_nm: ""  # Emission position transmission band width (nm)
-            reflection_bands:  # Emission position reflection bands
-              -
-                center_nm: ""  # Emission position reflection band center (nm)
-                width_nm: ""  # Emission position reflection band width (nm)
-    endpoints:  # Light path endpoints: Explicit route graph endpoints consumed by light-path parser and virtual microscope runtime.
-      -
-        id: ""  # Endpoint ID: Stable endpoint key usable as splitter branch target.
-        endpoint_type: ""  # Endpoint type: Endpoint class used by runtime for detector/eyepiece/camera-port behavior. | Allowed values (canonical IDs): detector, camera_port, eyepiece
-        display_label: ""  # Endpoint display label: Local/display endpoint label for UI selection; not a replacement for structured model or product_code fields.
-        path: ""  # Endpoint optical route: Optional route tag for endpoint-specific graph wiring. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-    splitters:  # Light path splitters
-      -
-        name: ""  # Splitter name
-        type: ""  # Splitter type | Allowed values (canonical IDs): emission_splitter, image_splitter, dual_view, quad_view, other
-        dichroic:  # Splitter dichroic
-          component_type: ""  # Splitter dichroic component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-          cut_on_nm: ""  # Splitter dichroic cutoff wavelength (nm)
-          cutoffs_nm:  # Splitter dichroic multi-cutoff wavelengths (nm)
-            - ""
-          transmission_bands:  # Splitter dichroic transmission bands
-            -
-              center_nm: ""  # Splitter dichroic transmission band center (nm)
-              width_nm: ""  # Splitter dichroic transmission band width (nm)
-          reflection_bands:  # Splitter dichroic reflection bands
-            -
-              center_nm: ""  # Splitter dichroic reflection band center (nm)
-              width_nm: ""  # Splitter dichroic reflection band width (nm)
-        path_1:  # Splitter path 1 (transmitted)
-          emission_filter:
-            component_type: ""  # Splitter path 1 emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-        path_2:  # Splitter path 2 (reflected)
-          emission_filter:
-            component_type: ""  # Splitter path 2 emission filter component type | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-        branches:  # Splitter branches: Explicit branch list consumed directly by virtual microscope runtime.
-          -
-            id: ""  # Splitter branch ID: Stable branch key used by runtime branch propagation.
-            mode: "transmitted"  # Splitter branch mode: Branch mode labels for transmitted/reflected semantics in runtime visualization. | Allowed values: transmitted, reflected
-            target_ids:  # Splitter branch target endpoint IDs: Explicit branch target IDs consumed by parser/runtime without fallback reconstruction.
-              - ""
   objectives:  # Objectives: Objective inventory is central to instrument completeness and QC mapping.
     -
       id: ""  # Objective ID: Stable per-objective key used for QC mapping.
@@ -375,3 +142,80 @@ hardware:
   triggering:
     primary_mode: ""  # Triggering primary mode: Indicates whether synchronization is primarily hardware-triggered, software-triggered, or mixed. | Allowed values (canonical IDs): hardware, software, mixed
     notes: ""  # Triggering notes: Free-text notes for synchronization, timing, or external trigger details.
+  sources:  # Sources: Canonical illumination-source inventory referenced by ordered light_paths illumination_sequence entries.
+    -
+      id: ""  # Source ID: Stable source identifier referenced by light_paths illumination_sequence.
+      name: ""  # Source display name: Optional display label for the installed source when it differs from the vendor model/designation.
+      kind: ""  # Source kind: Canonical source classifier used for inventory reporting and light-path DTO generation. | Allowed values (canonical IDs): laser, white_light_laser, led, arc_lamp, metal_halide, halogen_lamp, multiphoton_laser, supercontinuum
+      manufacturer: ""  # Source manufacturer: Structured provenance for installed sources.
+      model: ""  # Source model: Vendor-facing source model/designation.
+      product_code: ""  # Source product code: Explicit source SKU/catalog code when known.
+      technology: ""  # Source technology subtype: Helpful subtype metadata for lasers, LED engines, and tunable sources. | Allowed values (canonical IDs): diode, dpss, led_array, supercontinuum, ti_sapphire, other
+      role: ""  # Source role: Declares the source role without relying on notes-based inference. | Allowed values (canonical IDs): excitation, depletion, activation, alignment, transmitted_illumination
+      timing_mode: ""  # Source timing mode: Declares whether the source is continuous-wave or pulsed. | Allowed values (canonical IDs): cw, pulsed
+      wavelength_nm: ""  # Source wavelength (nm): Peak or representative wavelength for discrete excitation sources.
+      width_nm: ""  # Source bandwidth / FWHM (nm): Optional spectral width for broad-spectrum or band-defined sources.
+      power: ""  # Source nominal power: Nominal source power metadata; not experiment-level truth.
+      pulse_width_ps: ""  # Source pulse width (ps): Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
+      repetition_rate_mhz: ""  # Source repetition rate (MHz): Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
+      depletion_targets_nm:  # Source depletion target wavelengths (nm): Required when the source is used as a depletion source.
+        - ""
+      tunable_min_nm: ""  # Source tunable minimum wavelength: Lower tunable wavelength bound for tunable or white-light sources.
+      tunable_max_nm: ""  # Source tunable maximum wavelength: Upper tunable wavelength bound for tunable or white-light sources.
+      simultaneous_lines_max: ""  # Source simultaneous line count: Maximum simultaneously active lines for multi-line sources.
+      modalities:  # Source modalities: Validation-only route guards for installed sources. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
+        - ""
+      notes: ""  # Source notes: Free-text source notes for operational caveats.
+      url: ""  # Source URL: Reference link only.
+  optical_path_elements:  # Optical path elements: Canonical optical mechanisms/components referenced by ordered light_paths traversal sequences.
+    -
+      id: ""  # Optical path element ID: Stable identifier referenced by light_paths sequences.
+      name: ""  # Optical path element name: Human-readable element label for authoring clarity and consumer display.
+      display_label: ""  # Optical path element display label: Optional alternate display label for UI-facing consumers.
+      stage_role: ""  # Optical path element stage role: Canonical stage-role classifier used to preserve route semantics in the DTO and consumers. | Allowed values (canonical IDs): excitation, cube, dichroic, emission, splitter
+      element_type: ""  # Optical path element type: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling. | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array, selector, splitter, emission_splitter, image_splitter, dual_view, quad_view
+      selection_mode: ""  # Optical path element selection mode: Selector/splitter selection semantics for explicit branch handling. | Allowed values (canonical IDs): fixed, exclusive, multiple
+      modalities:  # Optical path element modalities: Validation-only route guards for optical path elements. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
+        - ""
+      positions:  # Optical path element positions: Position map for installed filter wheels, turrets, sliders, or cubes.
+        Pos_1:
+          component_type: ""  # Optical path position component type: Canonical optical component classifier for direct position payloads. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
+          manufacturer: ""  # Optical path position manufacturer: Structured provenance for direct position payloads.
+          model: ""  # Optical path position model: Vendor-facing model/designation for direct position payloads.
+          product_code: ""  # Optical path position product code: Explicit catalog/SKU/reference code for direct position payloads when known.
+          bands:  # Optical path position multiband array: Explicit multiband pass windows for direct position payloads.
+            -
+              center_nm: ""  # Optical path position band center (nm): Band center for direct multiband position payloads.
+              width_nm: ""  # Optical path position band width (nm): Band width for direct multiband position payloads.
+      branches:  # Optical path element branches: Explicit selector/splitter branch definitions with stable identity and explicit endpoint targets.
+        -
+          id: ""  # Branch ID: Stable branch key nested under the splitter/selector element.
+          label: ""  # Branch label: Human-readable branch label for UI/runtime presentation.
+          mode: ""  # Branch mode: Canonical branch-mode metadata for transmitted/reflected-style splitters. | Allowed values (canonical IDs): transmitted, reflected, selected, passthrough
+          target_ids:  # Branch target endpoint IDs: Explicit branch endpoint targets used by validator, simulator, and static graph rendering.
+            - ""
+          component:  # Branch-specific optical component: Branch-specific optical component payload preserved through DTO generation when a selector/splitter branch carries its own optics.
+            component_type: ""  # Branch-specific optical component type: Canonical component classifier for a branch-specific optical payload. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
+  endpoints:  # Endpoints: Explicit terminal detectors, camera ports, and eyepieces.
+    -
+      id: ""  # Endpoint ID: Stable endpoint identifier referenced by splitters and detection sequences.
+      endpoint_type: ""  # Endpoint type: Endpoint class used by runtime for detector, camera-port, or eyepiece handling. | Allowed values (canonical IDs): detector, camera_port, eyepiece
+      display_label: ""  # Endpoint display label: Optional UI/display label for the endpoint.
+      modalities:  # Endpoint modalities: Validation-only route guards for endpoints. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
+        - ""
+
+# -----------------------------------------------------------------------------
+# LIGHT PATHS
+# -----------------------------------------------------------------------------
+light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions. These sequences are the authoritative topology contract.
+  -
+    id: ""  # Light path ID: Stable route identifier used by simulator, UI, and graph rendering.
+    name: ""  # Light path name: Human-readable route label shown in UI and exported DTO route catalogs.
+    illumination_sequence:  # Illumination sequence: Ordered sequence of source and optical-path-element references used before the sample plane.
+      -
+        source_id: ""  # Illumination source reference: Stable source reference in the illumination sequence.
+        optical_path_element_id: ""  # Illumination optical path element reference: Stable optical-path-element reference in the illumination sequence.
+    detection_sequence:  # Detection sequence: Ordered sequence of optical-path-element and endpoint references used after the sample plane.
+      -
+        optical_path_element_id: ""  # Detection optical path element reference: Stable optical-path-element reference in the detection sequence.
+        endpoint_id: ""  # Detection endpoint reference: Stable endpoint reference for direct unbranched detection terminals.

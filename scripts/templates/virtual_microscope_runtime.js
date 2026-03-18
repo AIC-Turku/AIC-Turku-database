@@ -280,6 +280,9 @@
       .filter((row) => row && typeof row === 'object')
       .map((splitter, index) => {
         const routes = routesFromObject(splitter);
+        // `path1` / `path2` are legacy compatibility fields only. Canonical v2 splitters
+        // should arrive with explicit `branches`; approximation mode may still read these
+        // fields when normalizing older derived payloads.
         const legacyPath1 = (splitter.path1 && splitter.path1.positions ? splitter.path1.positions[1] || splitter.path1.positions['1'] : null)
           || (splitter.path_1 && splitter.path_1.emission_filter ? splitter.path_1.emission_filter : null);
         const legacyPath2 = (splitter.path2 && splitter.path2.positions ? splitter.path2.positions[1] || splitter.path2.positions['1'] : null)
@@ -368,31 +371,188 @@
     return (Array.isArray(rows) ? rows : []).filter((row) => row && typeof row === 'object');
   }
 
-  function canonicalElementRoutes(element) {
+  function hasCanonicalDtoContract(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+    return Array.isArray(payload.sources)
+      || Array.isArray(payload.optical_path_elements)
+      || Array.isArray(payload.endpoints)
+      || Array.isArray(payload.light_paths);
+  }
+
+  function canonicalTopologyBindings(payload) {
+    const sourceRoutes = new Map();
+    const elementBindings = new Map();
+    const endpointRoutes = new Map();
+    const routeCatalog = [];
+
+    const addRoute = (map, id, routeId) => {
+      const normalizedId = normalizeIdentifier(id);
+      const normalizedRoute = normalizeIdentifier(routeId);
+      if (!normalizedId || !normalizedRoute) return;
+      if (!map.has(normalizedId)) map.set(normalizedId, new Set());
+      map.get(normalizedId).add(normalizedRoute);
+    };
+
+    const ensureElementBinding = (id) => {
+      const normalizedId = normalizeIdentifier(id);
+      if (!normalizedId) return null;
+      if (!elementBindings.has(normalizedId)) {
+        elementBindings.set(normalizedId, {
+          routes: new Set(),
+          illumination: [],
+          detection: [],
+        });
+      }
+      return elementBindings.get(normalizedId);
+    };
+
+    (Array.isArray(payload && payload.light_paths) ? payload.light_paths : []).forEach((route, routeIndex) => {
+      const routeId = normalizeIdentifier(route && (route.id || route.route || route.name));
+      if (!routeId) return;
+      routeCatalog.push({
+        id: routeId,
+        label: cleanString(route && route.name) || routeLabel(routeId),
+        order: routeIndex,
+      });
+
+      (Array.isArray(route && route.illumination_sequence) ? route.illumination_sequence : []).forEach((step, stepIndex) => {
+        if (step && typeof step === 'object') {
+          addRoute(sourceRoutes, step.source_id, routeId);
+          const binding = ensureElementBinding(step.optical_path_element_id);
+          if (binding) {
+            binding.routes.add(routeId);
+            binding.illumination.push({ route: routeId, index: stepIndex });
+          }
+        }
+      });
+
+      (Array.isArray(route && route.detection_sequence) ? route.detection_sequence : []).forEach((step, stepIndex) => {
+        if (step && typeof step === 'object') {
+          addRoute(endpointRoutes, step.endpoint_id, routeId);
+          const binding = ensureElementBinding(step.optical_path_element_id);
+          if (binding) {
+            binding.routes.add(routeId);
+            binding.detection.push({ route: routeId, index: stepIndex });
+          }
+        }
+      });
+    });
+
+    return { sourceRoutes, elementBindings, endpointRoutes, routeCatalog };
+  }
+
+  function orderedRoutesFromSet(routeSet, fallbackValue) {
+    const routes = normalizeRouteTags(Array.from(routeSet || []));
+    if (routes.length) return routes;
+    return normalizeRouteTags(fallbackValue || []);
+  }
+
+  function canonicalElementRoutes(element, topologyBindings, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
+    const binding = topologyBindings && topologyBindings.elementBindings
+      ? topologyBindings.elementBindings.get(normalizeIdentifier(element && element.id))
+      : null;
+    const boundRoutes = orderedRoutesFromSet(binding && binding.routes);
+    if (boundRoutes.length) return boundRoutes;
+    if (!allowApproximation) return [];
     return normalizeRouteTags((element && (element.modalities || element.routes || element.path || element.route)) || []);
   }
 
-  function canonicalStagePayload(payload) {
+  function sortByRouteOccurrence(left, right) {
+    const leftValue = Number.isFinite(left) ? left : Number.MAX_SAFE_INTEGER;
+    const rightValue = Number.isFinite(right) ? right : Number.MAX_SAFE_INTEGER;
+    return leftValue - rightValue;
+  }
+
+  function canonicalStagePayload(payload, topologyBindings, options) {
     const out = { cube: [], excitation: [], dichroic: [], emission: [] };
     canonicalElements(payload && payload.optical_path_elements).forEach((element) => {
       const stageRole = cleanString(element && element.stage_role).toLowerCase();
       if (!['cube', 'excitation', 'dichroic', 'emission'].includes(stageRole)) return;
       const mechanism = { ...element, type: element.element_type || element.type || 'mechanism' };
-      const routes = canonicalElementRoutes(element);
+      const routes = canonicalElementRoutes(element, topologyBindings, options);
+      const binding = topologyBindings && topologyBindings.elementBindings
+        ? topologyBindings.elementBindings.get(normalizeIdentifier(element && element.id))
+        : null;
       if (routes.length) {
         mechanism.routes = routes;
         mechanism.path = routes[0];
       }
+      mechanism.__sequence_use = {
+        illumination: Array.isArray(binding && binding.illumination) ? binding.illumination.map((entry) => ({ ...entry })) : [],
+        detection: Array.isArray(binding && binding.detection) ? binding.detection.map((entry) => ({ ...entry })) : [],
+      };
       out[stageRole].push(mechanism);
+    });
+    Object.keys(out).forEach((stageRole) => {
+      out[stageRole].sort((left, right) => {
+        const leftUse = left && left.__sequence_use;
+        const rightUse = right && right.__sequence_use;
+        const leftIllum = Array.isArray(leftUse && leftUse.illumination) && leftUse.illumination.length
+          ? Math.min(...leftUse.illumination.map((entry) => entry.index))
+          : null;
+        const rightIllum = Array.isArray(rightUse && rightUse.illumination) && rightUse.illumination.length
+          ? Math.min(...rightUse.illumination.map((entry) => entry.index))
+          : null;
+        const leftDetect = Array.isArray(leftUse && leftUse.detection) && leftUse.detection.length
+          ? Math.min(...leftUse.detection.map((entry) => entry.index))
+          : null;
+        const rightDetect = Array.isArray(rightUse && rightUse.detection) && rightUse.detection.length
+          ? Math.min(...rightUse.detection.map((entry) => entry.index))
+          : null;
+        const illumOrder = sortByRouteOccurrence(leftIllum, rightIllum);
+        if (illumOrder !== 0) return illumOrder;
+        const detectOrder = sortByRouteOccurrence(leftDetect, rightDetect);
+        if (detectOrder !== 0) return detectOrder;
+        return cleanString(left && (left.display_label || left.name || left.id)).localeCompare(cleanString(right && (right.display_label || right.name || right.id)));
+      });
     });
     return out;
   }
 
-  function canonicalSplitterPayload(payload) {
+  function canonicalSourceMechanisms(payload, topologyBindings, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
+    return canonicalElements(payload && payload.sources).map((source, index) => {
+      const routes = orderedRoutesFromSet(
+        topologyBindings && topologyBindings.sourceRoutes
+          ? topologyBindings.sourceRoutes.get(normalizeIdentifier(source && source.id))
+          : null,
+        allowApproximation ? (source && (source.modalities || source.routes || source.path || source.route)) : []
+      );
+      const value = {
+        ...(source || {}),
+        slot: 1,
+        __routes: routes,
+      };
+      return {
+        id: cleanString(source && source.id) || `source_${index + 1}`,
+        name: cleanString(source && (source.name || source.display_label)) || `Source ${index + 1}`,
+        display_label: cleanString(source && (source.display_label || source.name)) || `Source ${index + 1}`,
+        __routes: routes,
+        positions: { 1: value },
+        options: [{ slot: 1, display_label: value.display_label || value.name || `Source ${index + 1}`, value }],
+      };
+    });
+  }
+
+  function canonicalEndpointPayload(payload, topologyBindings, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
+    return canonicalElements(payload && payload.endpoints).map((endpoint) => {
+      const routes = orderedRoutesFromSet(
+        topologyBindings && topologyBindings.endpointRoutes
+          ? topologyBindings.endpointRoutes.get(normalizeIdentifier(endpoint && endpoint.id))
+          : null,
+        allowApproximation ? (endpoint && (endpoint.modalities || endpoint.routes || endpoint.path || endpoint.route)) : []
+      );
+      return { ...(endpoint || {}), __routes: routes };
+    });
+  }
+
+  function canonicalSplitterPayload(payload, topologyBindings, options) {
     return canonicalElements(payload && payload.optical_path_elements)
       .filter((element) => cleanString(element && element.stage_role).toLowerCase() === 'splitter' || Array.isArray(element && element.branches))
       .map((element, index) => {
-        const routes = canonicalElementRoutes(element);
+        const routes = canonicalElementRoutes(element, topologyBindings, options);
         const branches = (Array.isArray(element && element.branches) ? element.branches : []).map((branch, branchIndex) => {
           const component = branch && branch.component && typeof branch.component === 'object'
             ? { ...branch.component }
@@ -426,6 +586,105 @@
       });
   }
 
+  function collectLegacyRouteCatalog(payload, runtimeProjection, allowApproximation) {
+    const explicitRoutes = normalizeRouteCatalog(
+      payload.available_routes
+      || payload.route_options
+      || (payload.simulation && payload.simulation.route_catalog)
+      || runtimeProjection.available_routes
+      || []
+    );
+    if (explicitRoutes.length) return explicitRoutes;
+    if (!allowApproximation) return [];
+
+    const normalizedPayload = {
+      lightSources: normalizeMechanismList(runtimeProjection.light_sources || payload.light_sources),
+      cube: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).cube)),
+      excitation: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).excitation)),
+      dichroic: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).dichroic)),
+      emission: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).emission)),
+      splitters: normalizeSplitters(runtimeProjection.runtime_splitters || runtimeProjection.splitters || payload.runtime_splitters || payload.splitters, { allowApproximation: true }),
+      detectors: normalizeMechanismList(runtimeProjection.detectors || payload.detectors),
+      terminals: normalizeTerminals(runtimeProjection.terminals || payload.terminals || payload.detection_endpoints || []),
+    };
+    return collectRouteCatalogFallback(normalizedPayload);
+  }
+
+  function adaptLegacyPayloadToCanonicalDto(rawPayload, options) {
+    const payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+    const projections = payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
+    const runtimeProjection = projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
+      ? projections.virtual_microscope
+      : {};
+    const allowApproximation = Boolean(options && options.allowApproximation);
+
+    const sources = [];
+    normalizeMechanismList(runtimeProjection.light_sources || payload.light_sources).forEach((mechanism, mechanismIndex) => {
+      positionValuesForRoute(mechanism, null).forEach((source, sourceIndex) => {
+        sources.push({
+          ...(source || {}),
+          id: cleanString(source && source.id) || `${cleanString(mechanism && mechanism.id) || `legacy_source_${mechanismIndex + 1}`}_${sourceIndex + 1}`,
+        });
+      });
+    });
+
+    const opticalPathElements = [];
+    ['cube', 'excitation', 'dichroic', 'emission'].forEach((stageRole) => {
+      normalizeMechanismList(((runtimeProjection.stages || payload.stages || {})[stageRole])).forEach((mechanism, mechanismIndex) => {
+        opticalPathElements.push({
+          ...(mechanism || {}),
+          id: cleanString(mechanism && mechanism.id) || `${stageRole}_${mechanismIndex + 1}`,
+          stage_role: stageRole,
+          element_type: cleanString(mechanism && (mechanism.element_type || mechanism.type)) || 'mechanism',
+        });
+      });
+    });
+    normalizeSplitters(runtimeProjection.runtime_splitters || runtimeProjection.splitters || payload.runtime_splitters || payload.splitters, { allowApproximation }).forEach((splitter, splitterIndex) => {
+      opticalPathElements.push({
+        ...(splitter || {}),
+        id: cleanString(splitter && splitter.id) || `splitter_${splitterIndex + 1}`,
+        stage_role: 'splitter',
+        element_type: cleanString(splitter && splitter.element_type) || 'splitter',
+      });
+    });
+
+    const endpoints = normalizeTerminals(runtimeProjection.terminals || payload.terminals || payload.detection_endpoints || []).map((endpoint, index) => ({
+      ...(endpoint || {}),
+      id: cleanString(endpoint && endpoint.id) || `endpoint_${index + 1}`,
+    }));
+    normalizeMechanismList(runtimeProjection.detectors || payload.detectors).forEach((mechanism, mechanismIndex) => {
+      positionValuesForRoute(mechanism, null).forEach((detector, detectorIndex) => {
+        endpoints.push({
+          ...(detector || {}),
+          id: cleanString(detector && detector.id) || `${cleanString(mechanism && mechanism.id) || `detector_${mechanismIndex + 1}`}_${detectorIndex + 1}`,
+          endpoint_type: detector.endpoint_type || detector.kind || 'detector',
+        });
+      });
+    });
+
+    const routeCatalog = collectLegacyRouteCatalog(payload, runtimeProjection, allowApproximation);
+    const lightPaths = routeCatalog.map((route) => ({ id: route.id, name: route.label, illumination_sequence: [], detection_sequence: [] }));
+    const simulationMeta = payload.simulation && typeof payload.simulation === 'object' ? payload.simulation : {};
+
+    return {
+      metadata: payload.metadata || {},
+      simulation: {
+        ...simulationMeta,
+        default_route: cleanString(payload.default_route || simulationMeta.default_route || runtimeProjection.default_route).toLowerCase() || null,
+        route_catalog: routeCatalog,
+      },
+      sources,
+      optical_path_elements: opticalPathElements,
+      endpoints,
+      light_paths: lightPaths,
+      projections: {
+        virtual_microscope: {
+          valid_paths: Array.isArray(runtimeProjection.valid_paths || payload.valid_paths) ? (runtimeProjection.valid_paths || payload.valid_paths) : [],
+        },
+      },
+    };
+  }
+
   function terminalsAsDetectorMechanisms(terminals) {
     return (Array.isArray(terminals) ? terminals : []).map((terminal, index) => {
       const routes = terminal.__routes || routesFromObject(terminal);
@@ -448,33 +707,42 @@
   }
 
   function normalizeInstrumentPayload(rawPayload, options) {
-    const payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
-    const approximationMode = simulatorApproximationModeEnabled(payload.metadata || {}, options);
-    const normalizedTerminals = normalizeTerminals(payload.terminals || payload.detection_endpoints || []);
-    const normalizedDetectors = normalizeMechanismList(payload.detectors);
-    const stageSource = (payload.stages && typeof payload.stages === 'object' && Object.keys(payload.stages).length) ? payload.stages : canonicalStagePayload(payload);
-    const splitterSource = (Array.isArray(payload.runtime_splitters) && payload.runtime_splitters.length) || (Array.isArray(payload.splitters) && payload.splitters.length)
-      ? (payload.runtime_splitters || payload.splitters)
-      : canonicalSplitterPayload(payload);
+    const inputPayload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+    const approximationMode = simulatorApproximationModeEnabled(inputPayload.metadata || {}, options);
+    const payload = hasCanonicalDtoContract(inputPayload)
+      ? inputPayload
+      : adaptLegacyPayloadToCanonicalDto(inputPayload, { allowApproximation: approximationMode });
+    const projections = payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
+    const runtimeProjection = projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
+      ? projections.virtual_microscope
+      : {};
+    const simulationMeta = payload.simulation && typeof payload.simulation === 'object' ? payload.simulation : {};
+    const topologyBindings = canonicalTopologyBindings(payload);
+    const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings, { allowApproximation: approximationMode }));
+    const stageSource = canonicalStagePayload(payload, topologyBindings, { allowApproximation: approximationMode });
+    const splitterSource = canonicalSplitterPayload(payload, topologyBindings, { allowApproximation: approximationMode });
     const normalized = {
       metadata: payload.metadata || {},
       lightPaths: Array.isArray(payload.light_paths) ? payload.light_paths : [],
       opticalPathElements: canonicalElements(payload.optical_path_elements),
-      lightSources: normalizeMechanismList(payload.light_sources),
+      lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings, { allowApproximation: approximationMode })),
       cube: normalizeMechanismList(stageSource && stageSource.cube),
       excitation: normalizeMechanismList(stageSource && stageSource.excitation),
       dichroic: normalizeMechanismList(stageSource && stageSource.dichroic),
       emission: normalizeMechanismList(stageSource && stageSource.emission),
       splitters: normalizeSplitters(splitterSource, { allowApproximation: approximationMode }),
-      detectors: [...normalizedDetectors, ...terminalsAsDetectorMechanisms(normalizedTerminals)],
+      detectors: terminalsAsDetectorMechanisms(normalizedTerminals),
       terminals: normalizedTerminals,
-      validPaths: Array.isArray(payload.valid_paths) ? payload.valid_paths : [],
+      validPaths: Array.isArray(runtimeProjection.valid_paths || payload.valid_paths) ? (runtimeProjection.valid_paths || payload.valid_paths) : [],
       routeOptions: [],
-      defaultRoute: cleanString(payload.default_route).toLowerCase() || null,
+      defaultRoute: cleanString(simulationMeta.default_route || payload.default_route || (topologyBindings.routeCatalog[0] && topologyBindings.routeCatalog[0].id)).toLowerCase() || null,
       strictHardwareTruth: !approximationMode,
       simulationMode: approximationMode ? 'approximate' : 'strict',
     };
-    const explicitRouteOptions = normalizeRouteCatalog(payload.available_routes || payload.route_options || (Array.isArray(payload.light_paths) ? payload.light_paths.map((route) => ({ id: route.id, label: route.name })) : []));
+    const explicitRouteOptions = normalizeRouteCatalog(
+      simulationMeta.route_catalog
+      || (Array.isArray(payload.light_paths) ? payload.light_paths.map((route) => ({ id: route.id, label: route.name })) : [])
+    );
     normalized.routeOptions = explicitRouteOptions.length
       ? explicitRouteOptions
       : (approximationMode ? collectRouteCatalogFallback(normalized) : []);

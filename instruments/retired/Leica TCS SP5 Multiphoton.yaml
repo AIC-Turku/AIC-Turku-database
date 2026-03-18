@@ -28,28 +28,43 @@ hardware:
     notes: ''
     url: ''
 
-  light_sources:
+  sources:
     - kind: multiphoton_laser
       manufacturer: Coherent # Extracted from model string
       model: Chameleon Ultra II
       wavelength_nm: tunable
       power: ''
+      role: excitation
+      path: multiphoton
       notes: 'tunable 690-1040 nm'
       url: ''
+      id: chameleon_ultra_ii
+      modalities:
+        - multiphoton
     - kind: multiphoton_laser
       manufacturer: Coherent # Extracted from model string
       model: Compact OPO
       wavelength_nm: tunable
       power: ''
+      role: excitation
+      path: multiphoton
       notes: 'extends tunable range to 1600 nm'
       url: ''
+      id: compact_opo
+      modalities:
+        - multiphoton
     - kind: multiphoton_laser
       manufacturer: Coherent # Extracted from model string
       model: Chameleon Vision II
       wavelength_nm: tunable
       power: ''
+      role: excitation
+      path: multiphoton
       notes: 'tunable 690-1040 nm'
       url: ''
+      id: chameleon_vision_ii
+      modalities:
+        - multiphoton
 
   detectors:
     - kind: pmt
@@ -146,3 +161,24 @@ hardware:
       notes: ''
       url: ''
       is_installed: true # Flag: Required field.
+
+  optical_path_elements: []
+
+  endpoints:
+    - id: ndd_pmt
+      endpoint_type: detector
+      display_label: NDD PMT
+      kind: pmt
+      path: multiphoton
+      modalities:
+        - multiphoton
+
+light_paths:
+  - id: multiphoton
+    name: Multiphoton
+    illumination_sequence:
+      - source_id: chameleon_ultra_ii
+      - source_id: compact_opo
+      - source_id: chameleon_vision_ii
+    detection_sequence:
+      - endpoint_id: ndd_pmt

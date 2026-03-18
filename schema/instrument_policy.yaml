@@ -181,6 +181,26 @@ vocab_registry:
     path: vocab/endpoint_types.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  optical_path_element_types:
+    source: file
+    path: vocab/optical_path_element_types.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  optical_path_stage_roles:
+    source: file
+    path: vocab/optical_path_stage_roles.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  selection_modes:
+    source: file
+    path: vocab/selection_modes.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  branch_modes:
+    source: file
+    path: vocab/branch_modes.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
   splitter_types:
     source: file
     path: vocab/splitter_types.yaml
@@ -475,174 +495,6 @@ sections:
 
       - path: hardware.scanner.url
         title: Scanner URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference only.
-
-  - id: light_sources
-    title: Light sources
-    rules:
-      - path: hardware.light_sources
-        title: Light sources
-        status: required
-        type: list
-        item_type: object
-        min_items: 1
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Each instrument needs at least one declared excitation source.
-
-      - path: hardware.light_sources[].kind
-        title: Light source kind
-        status: required
-        type: string
-        vocab: light_source_kinds
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Core excitation-source class.
-
-      - path: hardware.light_sources[].manufacturer
-        title: Light source manufacturer
-        status: required
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Company/vendor/brand that makes the declared light source component.
-
-      - path: hardware.light_sources[].model
-        title: Light source model
-        status: required
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Vendor-facing hardware model/designation used as the primary structured identity field for the component.
-
-      - path: hardware.light_sources[].product_code
-        title: Light source product code
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Explicit catalog/order/SKU/reference code only when separately known from the model; leave missing when unknown.
-
-      - path: hardware.light_sources[].technology
-        title: Light source technology subtype
-        status: optional
-        type: string
-        vocab: light_source_technologies
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Helpful subtype information for lasers or LED engines.
-
-      - path: hardware.light_sources[].path
-        title: Light source path tag
-        status: optional
-        type: string
-        vocab: optical_routes
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Optional path tag to associate a source with specific illumination routes.
-
-      - path: hardware.light_sources[].role
-        title: Light source role
-        status: conditional
-        type: string
-        vocab: light_source_roles
-        required_if:
-          any_of:
-            - item_field_in:
-                kind: [laser]
-            - item_field_in:
-                type: [laser]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Structured role assignment separates excitation and STED depletion lasers without relying on free-text notes.
-
-      - path: hardware.light_sources[].timing_mode
-        title: Light source timing mode
-        status: optional
-        type: string
-        vocab: light_source_timing_modes
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Declares whether the source is operated in continuous-wave or pulsed timing mode.
-
-      - path: hardware.light_sources[].wavelength_nm
-        title: Peak Wavelength (nm)
-        status: conditional
-        type: spectral_descriptor
-        required_if:
-          item_kind_in: [laser, led]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Peak wavelength value for discrete or center-defined excitation sources.
-
-      - path: hardware.light_sources[].width_nm
-        title: Bandwidth / FWHM (nm)
-        status: optional
-        type: positive_number
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Optional spectral width for LEDs and broad-spectrum excitation sources.
-
-      - path: hardware.light_sources[].power
-        title: Light source nominal power
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Nominal source power is useful hardware metadata, but actual acquisition power is experiment-level.
-
-      - path: hardware.light_sources[].pulse_width_ps
-        title: Light source pulse width (ps)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            timing_mode: [pulsed]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Pulse width is required for pulsed sources to capture STED-relevant timing characteristics.
-
-      - path: hardware.light_sources[].repetition_rate_mhz
-        title: Light source repetition rate (MHz)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            timing_mode: [pulsed]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Repetition rate is required for pulsed sources to support timing-aware method reporting.
-
-      - path: hardware.light_sources[].depletion_targets_nm
-        title: Depletion target wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            role: [depletion]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Structured STED depletion target wavelengths for depletion-designated sources.
-
-      - path: hardware.light_sources[].tunable_min_nm
-        title: Light source tunable minimum wavelength (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard]
-        rationale: Explicit lower bound for tunable sources used by virtual microscope spectral simulations.
-
-      - path: hardware.light_sources[].tunable_max_nm
-        title: Light source tunable maximum wavelength (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard]
-        rationale: Explicit upper bound for tunable sources used by virtual microscope spectral simulations.
-
-      - path: hardware.light_sources[].simultaneous_lines_max
-        title: Light source maximum simultaneous lines
-        status: optional
-        type: positive_number
-        used_by: [dashboard]
-        rationale: Declares how many laser lines can be active simultaneously for planning UI summaries.
-
-      - path: hardware.light_sources[].notes
-        title: Light source notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful for software aliases and caveats.
-
-      - path: hardware.light_sources[].url
-        title: Light source URL
         status: optional
         type: url
         used_by: [audit_pdf, dashboard]
@@ -949,1259 +801,6 @@ sections:
         type: text
         used_by: [audit_pdf, dashboard]
         rationale: Additional context for adaptive illumination behavior and constraints.
-
-  - id: filters_and_splitters
-    title: Filters and splitters (deprecated)
-    rules:
-      - path: hardware.filters
-        title: Installed filters or filter sets
-        status: optional
-        type: list
-        item_type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.filters[].name
-        title: Filter or filter-set name
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.filters[].location
-        title: Filter location
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.filters[].product_code
-        title: Filter product code
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Helpful for staff verification.
-
-      - path: hardware.filters[].excitation
-        title: Filter excitation band
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.filters[].dichroic
-        title: Filter dichroic
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.filters[].emission
-        title: Filter emission band
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.filters[].notes
-        title: Filter notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful for operational nuance.
-
-      - path: hardware.filters[].url
-        title: Filter URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference only.
-
-      - path: hardware.splitters
-        title: Installed splitters
-        status: optional
-        type: list
-        item_type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.splitters[].name
-        title: Splitter name
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.splitters[].type
-        title: Splitter type
-        status: optional
-        type: string
-        vocab: splitter_types
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Deprecated flat path retained for backward compatibility; prefer hardware.light_path graph model.
-
-      - path: hardware.splitters[].notes
-        title: Splitter notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful operational nuance.
-
-      - path: hardware.splitters[].url
-        title: Splitter URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference only.
-
-  - id: light_path_graph
-    title: Light path topology graph (mechanisms and optical components)
-    rules:
-      - path: hardware.light_path
-        title: Light path topology
-        status: optional
-        type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Topological graph model for modern virtual microscope UI and Tier 3 reporting.
-
-      - path: hardware.light_path.cube_mechanisms
-        title: Cube mechanisms
-        status: optional
-        type: list
-        item_type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-
-      - path: hardware.light_path.cube_mechanisms[].name
-        title: Cube mechanism name
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[]"
-
-      - path: hardware.light_path.cube_mechanisms[].type
-        title: Cube mechanism type
-        status: conditional
-        type: string
-        vocab: mechanism_types
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands
-        title: Cube excitation multiband array
-        status: conditional
-        type: list
-        min_items: 1
-        item_type: object
-        required_if:
-          item_field_in:
-            component_type: [multiband_bandpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[].center_nm
-        title: Excitation band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[]"
-        
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[].width_nm
-        title: Excitation band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands
-        title: Cube emission multiband array
-        status: conditional
-        type: list
-        min_items: 1
-        item_type: object
-        required_if:
-          item_field_in:
-            component_type: [multiband_bandpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[].center_nm
-        title: Emission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[]"
-        
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[].width_nm
-        title: Emission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.bands[]"
-        
-      - path: hardware.light_path.cube_mechanisms[].path
-        title: Cube mechanism path tag
-        status: optional
-        type: string
-        vocab: optical_routes
-
-      - path: hardware.light_path.cube_mechanisms[].notes
-        title: Cube mechanism notes
-        status: optional
-        type: text
-
-      - path: hardware.light_path.cube_mechanisms[].slots
-        title: Cube mechanism slots
-        status: conditional
-        type: positive_number
-        required_if:
-          all_of:
-            - parent_present: "hardware.light_path.cube_mechanisms[]"
-            - field_equals_any:
-                field: "hardware.light_path.cube_mechanisms[].type"
-                values: [filter_wheel, slider, turret]
-
-      - path: hardware.light_path.cube_mechanisms[].positions
-        title: Cube mechanism positions map
-        status: optional
-        type: object
-        example_key: Pos_1
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.path
-        title: Cube position path tag
-        status: optional
-        type: string
-        vocab: optical_routes
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.name
-        title: Cube name
-        status: optional
-        type: string
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.model
-        title: Cube model
-        status: optional
-        type: string
-        rationale: Vendor-facing cube model/designation.
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.product_code
-        title: Cube product code
-        status: optional
-        type: string
-        rationale: Explicit catalog/order/SKU/reference code for the cube only when separately known from its model/designation.
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.notes
-        title: Cube notes
-        status: optional
-        type: text
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter
-        title: Cube position excitation filter
-        status: conditional
-        type: object
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.component_type
-        title: Cube excitation filter component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.center_nm
-        title: Cube excitation center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.width_nm
-        title: Cube excitation width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.cut_on_nm
-        title: Cube excitation cut-on wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [longpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.cut_off_nm
-        title: Cube excitation cut-off wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [shortpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.cutoffs_nm
-        title: Cube excitation multi-cutoff wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [dichroic]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands
-        title: Cube excitation transmission bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[].center_nm
-        title: Cube excitation transmission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[].width_nm
-        title: Cube excitation transmission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.transmission_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands
-        title: Cube excitation reflection bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[].center_nm
-        title: Cube excitation reflection band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[].width_nm
-        title: Cube excitation reflection band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.excitation_filter.reflection_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.cutoffs_nm
-        title: Cube dichroic cutoffs (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [dichroic]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands
-        title: Cube dichroic transmission bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[].center_nm
-        title: Cube dichroic transmission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[].width_nm
-        title: Cube dichroic transmission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.transmission_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands
-        title: Cube dichroic reflection bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[].center_nm
-        title: Cube dichroic reflection band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[].width_nm
-        title: Cube dichroic reflection band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic.reflection_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.center_nm
-        title: Cube emission center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.width_nm
-        title: Cube emission width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.cut_on_nm
-        title: Cube emission cut-on wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [longpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.cut_off_nm
-        title: Cube emission cut-off wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [shortpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.cutoffs_nm
-        title: Cube emission multi-cutoff wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [dichroic]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands
-        title: Cube emission transmission bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[].center_nm
-        title: Cube emission transmission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[].width_nm
-        title: Cube emission transmission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.transmission_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands
-        title: Cube emission reflection bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[].center_nm
-        title: Cube emission reflection band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[].width_nm
-        title: Cube emission reflection band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter.reflection_bands[]"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.center_nm
-        title: Cube dichroic center wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.width_nm
-        title: Cube dichroic bandwidth (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.cut_on_nm
-        title: Cube dichroic cut-on wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [longpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.cut_off_nm
-        title: Cube dichroic cut-off wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [shortpass]
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic
-        title: Cube position dichroic
-        status: conditional
-        type: object
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.dichroic.component_type
-        title: Cube dichroic component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.dichroic"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter
-        title: Cube position emission filter
-        status: conditional
-        type: object
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}"
-
-      - path: hardware.light_path.cube_mechanisms[].positions{}.emission_filter.component_type
-        title: Cube emission filter component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.cube_mechanisms[].positions{}.emission_filter"
-
-      - path: hardware.light_path.excitation_mechanisms
-        title: Excitation mechanisms
-        status: optional
-        type: list
-        item_type: object
-
-      - path: hardware.light_path.excitation_mechanisms[].name
-        title: Excitation mechanism name
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[]"
-
-      - path: hardware.light_path.excitation_mechanisms[].type
-        title: Excitation mechanism type
-        status: conditional
-        type: string
-        vocab: mechanism_types
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[]"
-
-      - path: hardware.light_path.excitation_mechanisms[].path
-        title: Excitation mechanism path tag
-        status: optional
-        type: string
-        vocab: optical_routes
-
-      - path: hardware.light_path.excitation_mechanisms[].notes
-        title: Excitation mechanism notes
-        status: optional
-        type: text
-
-      - path: hardware.light_path.excitation_mechanisms[].slots
-        title: Excitation mechanism slots
-        status: conditional
-        type: positive_number
-        required_if:
-          all_of:
-            - parent_present: "hardware.light_path.excitation_mechanisms[]"
-            - field_equals_any:
-                field: "hardware.light_path.excitation_mechanisms[].type"
-                values: [filter_wheel, slider, turret]
-
-      - path: hardware.light_path.excitation_mechanisms[].positions
-        title: Excitation mechanism positions map
-        status: optional
-        type: object
-        example_key: Pos_1
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.component_type
-        title: Excitation position component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}"
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.manufacturer
-        title: Excitation position component manufacturer
-        status: optional
-        type: string
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.model
-        title: Excitation position component model
-        status: optional
-        type: string
-        rationale: Vendor-facing excitation component model/designation.
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.product_code
-        title: Excitation position component product code
-        status: optional
-        type: string
-        rationale: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.bands
-        title: Excitation position multiband array
-        status: conditional
-        type: list
-        min_items: 1
-        item_type: object
-        required_if:
-          item_field_in:
-            component_type: [multiband_bandpass]
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.bands[].center_nm
-        title: Excitation position band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.bands[]"
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.bands[].width_nm
-        title: Excitation position band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.bands[]"
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.center_nm
-        title: Excitation position center wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.width_nm
-        title: Excitation position bandwidth (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.cut_on_nm
-        title: Excitation position cut-on wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [longpass]
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.cut_off_nm
-        title: Excitation position cut-off wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [shortpass]
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.cutoffs_nm
-        title: Excitation position multi-cutoff wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [dichroic]
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands
-        title: Excitation position transmission bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[].center_nm
-        title: Excitation position transmission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[]"
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[].width_nm
-        title: Excitation position transmission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.transmission_bands[]"
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands
-        title: Excitation position reflection bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[].center_nm
-        title: Excitation position reflection band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[]"
-
-      - path: hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[].width_nm
-        title: Excitation position reflection band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.excitation_mechanisms[].positions{}.reflection_bands[]"
-
-      - path: hardware.light_path.dichroic_mechanisms
-        title: Dichroic mechanisms
-        status: optional
-        type: list
-        item_type: object
-
-      - path: hardware.light_path.dichroic_mechanisms[].name
-        title: Dichroic mechanism name
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[]"
-
-      - path: hardware.light_path.dichroic_mechanisms[].type
-        title: Dichroic mechanism type
-        status: conditional
-        type: string
-        vocab: mechanism_types
-        required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[]"
-
-      - path: hardware.light_path.dichroic_mechanisms[].path
-        title: Dichroic mechanism path tag
-        status: optional
-        type: string
-        vocab: optical_routes
-
-      - path: hardware.light_path.dichroic_mechanisms[].notes
-        title: Dichroic mechanism notes
-        status: optional
-        type: text
-
-      - path: hardware.light_path.dichroic_mechanisms[].slots
-        title: Dichroic mechanism slots
-        status: conditional
-        type: positive_number
-        required_if:
-          all_of:
-            - parent_present: "hardware.light_path.dichroic_mechanisms[]"
-            - field_equals_any:
-                field: "hardware.light_path.dichroic_mechanisms[].type"
-                values: [filter_wheel, slider, turret]
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions
-        title: Dichroic mechanism positions map
-        status: optional
-        type: object
-        example_key: Pos_1
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.component_type
-        title: Dichroic position component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}"
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.manufacturer
-        title: Dichroic position component manufacturer
-        status: optional
-        type: string
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.model
-        title: Dichroic position component model
-        status: optional
-        type: string
-        rationale: Vendor-facing dichroic component model/designation.
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.product_code
-        title: Dichroic position component product code
-        status: optional
-        type: string
-        rationale: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.center_nm
-        title: Dichroic position center wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.width_nm
-        title: Dichroic position bandwidth (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.cut_on_nm
-        title: Dichroic position cut-on wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [longpass]
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.cut_off_nm
-        title: Dichroic position cut-off wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [shortpass]
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.cutoffs_nm
-        title: Dichroic position multi-cutoff wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [dichroic]
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands
-        title: Dichroic position transmission bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].center_nm
-        title: Dichroic position transmission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]"
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[].width_nm
-        title: Dichroic position transmission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.transmission_bands[]"
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands
-        title: Dichroic position reflection bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].center_nm
-        title: Dichroic position reflection band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]"
-
-      - path: hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[].width_nm
-        title: Dichroic position reflection band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.dichroic_mechanisms[].positions{}.reflection_bands[]"
-
-      - path: hardware.light_path.emission_mechanisms
-        title: Emission mechanisms
-        status: optional
-        type: list
-        item_type: object
-      
-      - path: hardware.light_path.emission_mechanisms[].name
-        title: Emission mechanism name
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[]"
-
-      - path: hardware.light_path.emission_mechanisms[].type
-        title: Emission mechanism type
-        status: conditional
-        type: string
-        vocab: mechanism_types
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[]"
-
-      - path: hardware.light_path.emission_mechanisms[].path
-        title: Emission mechanism path tag
-        status: optional
-        type: string
-        vocab: optical_routes
-
-      - path: hardware.light_path.emission_mechanisms[].notes
-        title: Emission mechanism notes
-        status: optional
-        type: text
-
-      - path: hardware.light_path.emission_mechanisms[].slots
-        title: Emission mechanism slots
-        status: conditional
-        type: positive_number
-        required_if:
-          all_of:
-            - parent_present: "hardware.light_path.emission_mechanisms[]"
-            - field_equals_any:
-                field: "hardware.light_path.emission_mechanisms[].type"
-                values: [filter_wheel, slider, turret]
-
-      - path: hardware.light_path.emission_mechanisms[].positions
-        title: Emission mechanism positions map
-        status: optional
-        type: object
-        example_key: Pos_1
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.component_type
-        title: Emission position component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[].positions{}"
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.manufacturer
-        title: Emission position component manufacturer
-        status: optional
-        type: string
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.model
-        title: Emission position component model
-        status: optional
-        type: string
-        rationale: Vendor-facing emission component model/designation.
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.product_code
-        title: Emission position component product code
-        status: optional
-        type: string
-        rationale: Explicit catalog/order/SKU/reference code only when separately known from model/designation.
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.bands
-        title: Emission position multiband array
-        status: conditional
-        type: list
-        min_items: 1
-        item_type: object
-        required_if:
-          item_field_in:
-            component_type: [multiband_bandpass]
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.bands[].center_nm
-        title: Emission position band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.bands[]"
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.bands[].width_nm
-        title: Emission position band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.bands[]"
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.center_nm
-        title: Emission position center wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.width_nm
-        title: Emission position bandwidth (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [bandpass, notch]
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.cut_on_nm
-        title: Emission position cut-on wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [longpass]
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.cut_off_nm
-        title: Emission position cut-off wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [shortpass]
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.cutoffs_nm
-        title: Emission position multi-cutoff wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [dichroic]
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.transmission_bands
-        title: Emission position transmission bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[].center_nm
-        title: Emission position transmission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[]"
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[].width_nm
-        title: Emission position transmission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.transmission_bands[]"
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.reflection_bands
-        title: Emission position reflection bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[].center_nm
-        title: Emission position reflection band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[]"
-
-      - path: hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[].width_nm
-        title: Emission position reflection band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.emission_mechanisms[].positions{}.reflection_bands[]"
-
-      - path: hardware.light_path.endpoints
-        title: Light path endpoints
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard]
-        rationale: Explicit route graph endpoints consumed by light-path parser and virtual microscope runtime.
-
-      - path: hardware.light_path.endpoints[].id
-        title: Endpoint ID
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.light_path.endpoints[]"
-        used_by: [dashboard]
-        rationale: Stable endpoint key usable as splitter branch target.
-
-      - path: hardware.light_path.endpoints[].endpoint_type
-        title: Endpoint type
-        status: conditional
-        type: string
-        vocab: endpoint_types
-        required_if:
-          parent_present: "hardware.light_path.endpoints[]"
-        used_by: [dashboard]
-        rationale: Endpoint class used by runtime for detector/eyepiece/camera-port behavior.
-
-      - path: hardware.light_path.endpoints[].display_label
-        title: Endpoint display label
-        status: optional
-        type: string
-        used_by: [dashboard]
-        rationale: Local/display endpoint label for UI selection; not a replacement for structured model or product_code fields.
-
-      - path: hardware.light_path.endpoints[].path
-        title: Endpoint optical route
-        status: optional
-        type: string
-        vocab: optical_routes
-        used_by: [dashboard]
-        rationale: Optional route tag for endpoint-specific graph wiring.
-
-      - path: hardware.light_path.splitters
-        title: Light path splitters
-        status: optional
-        type: list
-        item_type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-
-      - path: hardware.light_path.splitters[].name
-        title: Splitter name
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.light_path.splitters[]"
-
-      - path: hardware.light_path.splitters[].type
-        title: Splitter type
-        status: conditional
-        type: string
-        vocab: splitter_types
-        required_if:
-          parent_present: "hardware.light_path.splitters[]"
-
-      - path: hardware.light_path.splitters[].dichroic
-        title: Splitter dichroic
-        status: conditional
-        type: object
-        required_if:
-          parent_present: "hardware.light_path.splitters[]"
-
-      - path: hardware.light_path.splitters[].dichroic.component_type
-        title: Splitter dichroic component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.splitters[].dichroic"
-
-      - path: hardware.light_path.splitters[].dichroic.cut_on_nm
-        title: Splitter dichroic cutoff wavelength (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.splitters[].dichroic"
-
-      - path: hardware.light_path.splitters[].dichroic.cutoffs_nm
-        title: Splitter dichroic multi-cutoff wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            component_type: [dichroic]
-
-      - path: hardware.light_path.splitters[].dichroic.transmission_bands
-        title: Splitter dichroic transmission bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.splitters[].dichroic.transmission_bands[].center_nm
-        title: Splitter dichroic transmission band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.splitters[].dichroic.transmission_bands[]"
-
-      - path: hardware.light_path.splitters[].dichroic.transmission_bands[].width_nm
-        title: Splitter dichroic transmission band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.splitters[].dichroic.transmission_bands[]"
-
-      - path: hardware.light_path.splitters[].dichroic.reflection_bands
-        title: Splitter dichroic reflection bands
-        status: optional
-        type: list
-        min_items: 1
-        item_type: object
-
-      - path: hardware.light_path.splitters[].dichroic.reflection_bands[].center_nm
-        title: Splitter dichroic reflection band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.splitters[].dichroic.reflection_bands[]"
-
-      - path: hardware.light_path.splitters[].dichroic.reflection_bands[].width_nm
-        title: Splitter dichroic reflection band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.light_path.splitters[].dichroic.reflection_bands[]"
-
-      - path: hardware.light_path.splitters[].path_1
-        title: Splitter path 1 (transmitted)
-        status: conditional
-        type: object
-        required_if:
-          parent_present: "hardware.light_path.splitters[]"
-
-      - path: hardware.light_path.splitters[].path_1.emission_filter.component_type
-        title: Splitter path 1 emission filter component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.splitters[].path_1.emission_filter"
-
-      - path: hardware.light_path.splitters[].path_2
-        title: Splitter path 2 (reflected)
-        status: conditional
-        type: object
-        required_if:
-          parent_present: "hardware.light_path.splitters[]"
-
-      - path: hardware.light_path.splitters[].path_2.emission_filter.component_type
-        title: Splitter path 2 emission filter component type
-        status: conditional
-        type: string
-        vocab: optical_component_types
-        required_if:
-          parent_present: "hardware.light_path.splitters[].path_2.emission_filter"
-
-      - path: hardware.light_path.splitters[].branches
-        title: Splitter branches
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard]
-        rationale: Explicit branch list consumed directly by virtual microscope runtime.
-
-      - path: hardware.light_path.splitters[].branches[].id
-        title: Splitter branch ID
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.light_path.splitters[].branches[]"
-        used_by: [dashboard]
-        rationale: Stable branch key used by runtime branch propagation.
-
-      - path: hardware.light_path.splitters[].branches[].mode
-        title: Splitter branch mode
-        status: optional
-        type: string
-        allowed_values: [transmitted, reflected]
-        used_by: [dashboard]
-        rationale: Branch mode labels for transmitted/reflected semantics in runtime visualization.
-
-      - path: hardware.light_path.splitters[].branches[].target_ids
-        title: Splitter branch target endpoint IDs
-        status: optional
-        type: list
-        item_type: string
-        used_by: [dashboard]
-        rationale: Explicit branch target IDs consumed by parser/runtime without fallback reconstruction.
 
   - id: objectives
     title: Objectives
@@ -2520,19 +1119,37 @@ sections:
     rules:
       - path: hardware.sources
         title: Sources
-        status: optional
+        status: required
         type: list
+        item_type: object
+        min_items: 1
         used_by: [dashboard, method_generator]
-        rationale: Installed illumination sources referenced by light_paths illumination_sequence.
+        rationale: Canonical illumination-source inventory referenced by ordered light_paths illumination_sequence entries.
 
       - path: hardware.sources[].id
         title: Source ID
-        status: conditional
+        status: required
         type: slug
-        required_if:
-          parent_present: hardware.sources[]
         used_by: [dashboard, method_generator]
         rationale: Stable source identifier referenced by light_paths illumination_sequence.
+        aliases: ["hardware.light_sources[].id", "hardware.light_sources[].source_id", "hardware.light_sources[].channel_name"]
+
+      - path: hardware.sources[].name
+        title: Source display name
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Optional display label for the installed source when it differs from the vendor model/designation.
+        aliases: ["hardware.light_sources[].name"]
+
+      - path: hardware.sources[].kind
+        title: Source kind
+        status: required
+        type: string
+        vocab: light_source_kinds
+        used_by: [dashboard, method_generator]
+        rationale: Canonical source classifier used for inventory reporting and light-path DTO generation.
+        aliases: ["hardware.light_sources[].kind", "hardware.light_sources[].type"]
 
       - path: hardware.sources[].manufacturer
         title: Source manufacturer
@@ -2540,6 +1157,15 @@ sections:
         type: string
         used_by: [dashboard, method_generator]
         rationale: Structured provenance for installed sources.
+        aliases: ["hardware.light_sources[].manufacturer"]
+
+      - path: hardware.sources[].model
+        title: Source model
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Vendor-facing source model/designation.
+        aliases: ["hardware.light_sources[].model"]
 
       - path: hardware.sources[].product_code
         title: Source product code
@@ -2547,6 +1173,92 @@ sections:
         type: string
         used_by: [dashboard, method_generator]
         rationale: Explicit source SKU/catalog code when known.
+        aliases: ["hardware.light_sources[].product_code"]
+
+      - path: hardware.sources[].technology
+        title: Source technology subtype
+        status: optional
+        type: string
+        vocab: light_source_technologies
+        used_by: [dashboard, method_generator]
+        rationale: Helpful subtype metadata for lasers, LED engines, and tunable sources.
+        aliases: ["hardware.light_sources[].technology"]
+
+      - path: hardware.sources[].role
+        title: Source role
+        status: optional
+        type: string
+        vocab: light_source_roles
+        used_by: [dashboard, method_generator]
+        rationale: Declares the source role without relying on notes-based inference.
+        aliases: ["hardware.light_sources[].role"]
+
+      - path: hardware.sources[].timing_mode
+        title: Source timing mode
+        status: optional
+        type: string
+        vocab: light_source_timing_modes
+        used_by: [dashboard, method_generator]
+        rationale: Declares whether the source is continuous-wave or pulsed.
+        aliases: ["hardware.light_sources[].timing_mode"]
+
+      - path: hardware.sources[].wavelength_nm
+        title: Source wavelength (nm)
+        status: optional
+        type: spectral_descriptor
+        used_by: [dashboard, method_generator]
+        rationale: Peak or representative wavelength for discrete excitation sources.
+        aliases: ["hardware.light_sources[].wavelength_nm"]
+
+      - path: hardware.sources[].width_nm
+        title: Source bandwidth / FWHM (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Optional spectral width for broad-spectrum or band-defined sources.
+        aliases: ["hardware.light_sources[].width_nm"]
+
+      - path: hardware.sources[].power
+        title: Source nominal power
+        status: optional
+        type: string
+        used_by: [dashboard]
+        rationale: Nominal source power metadata; not experiment-level truth.
+        aliases: ["hardware.light_sources[].power"]
+
+      - path: hardware.sources[].pulse_width_ps
+        title: Source pulse width (ps)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            timing_mode: [pulsed]
+        used_by: [dashboard, method_generator]
+        rationale: Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
+        aliases: ["hardware.light_sources[].pulse_width_ps"]
+
+      - path: hardware.sources[].repetition_rate_mhz
+        title: Source repetition rate (MHz)
+        status: conditional
+        type: positive_number
+        required_if:
+          item_field_in:
+            timing_mode: [pulsed]
+        used_by: [dashboard, method_generator]
+        rationale: Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
+        aliases: ["hardware.light_sources[].repetition_rate_mhz"]
+
+      - path: hardware.sources[].depletion_targets_nm
+        title: Source depletion target wavelengths (nm)
+        status: conditional
+        type: list
+        item_type: positive_number
+        required_if:
+          item_field_in:
+            role: [depletion]
+        used_by: [dashboard, method_generator]
+        rationale: Required when the source is used as a depletion source.
+        aliases: ["hardware.light_sources[].depletion_targets_nm"]
 
       - path: hardware.sources[].tunable_min_nm
         title: Source tunable minimum wavelength
@@ -2554,6 +1266,7 @@ sections:
         type: positive_number
         used_by: [dashboard, method_generator]
         rationale: Lower tunable wavelength bound for tunable or white-light sources.
+        aliases: ["hardware.light_sources[].tunable_min_nm"]
 
       - path: hardware.sources[].tunable_max_nm
         title: Source tunable maximum wavelength
@@ -2561,6 +1274,7 @@ sections:
         type: positive_number
         used_by: [dashboard, method_generator]
         rationale: Upper tunable wavelength bound for tunable or white-light sources.
+        aliases: ["hardware.light_sources[].tunable_max_nm"]
 
       - path: hardware.sources[].simultaneous_lines_max
         title: Source simultaneous line count
@@ -2568,108 +1282,252 @@ sections:
         type: positive_number
         used_by: [dashboard, method_generator]
         rationale: Maximum simultaneously active lines for multi-line sources.
+        aliases: ["hardware.light_sources[].simultaneous_lines_max"]
 
       - path: hardware.sources[].modalities
         title: Source modalities
         status: optional
         type: list
+        item_type: string
+        vocab: optical_routes
         used_by: [dashboard, method_generator]
-        rationale: Validation-only modality guards for installed sources.
+        rationale: Validation-only route guards for installed sources. Ordered light_paths sequences remain authoritative.
+        aliases: ["hardware.light_sources[].modalities", "hardware.light_sources[].path", "hardware.light_sources[].paths", "hardware.light_sources[].route", "hardware.light_sources[].routes"]
+
+      - path: hardware.sources[].notes
+        title: Source notes
+        status: optional
+        type: text
+        used_by: [dashboard]
+        rationale: Free-text source notes for operational caveats.
+        aliases: ["hardware.light_sources[].notes"]
+
+      - path: hardware.sources[].url
+        title: Source URL
+        status: optional
+        type: url
+        used_by: [dashboard]
+        rationale: Reference link only.
+        aliases: ["hardware.light_sources[].url"]
 
       - path: hardware.optical_path_elements
         title: Optical path elements
         status: optional
         type: list
+        item_type: object
         used_by: [dashboard, method_generator]
-        rationale: Installed optical mechanisms referenced by light_paths sequences.
+        rationale: Canonical optical mechanisms/components referenced by ordered light_paths traversal sequences.
 
       - path: hardware.optical_path_elements[].id
         title: Optical path element ID
-        status: conditional
+        status: required
         type: slug
-        required_if:
-          parent_present: hardware.optical_path_elements[]
         used_by: [dashboard, method_generator]
         rationale: Stable identifier referenced by light_paths sequences.
 
+      - path: hardware.optical_path_elements[].name
+        title: Optical path element name
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Human-readable element label for authoring clarity and consumer display.
+
+      - path: hardware.optical_path_elements[].display_label
+        title: Optical path element display label
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Optional alternate display label for UI-facing consumers.
+
+      - path: hardware.optical_path_elements[].stage_role
+        title: Optical path element stage role
+        status: required
+        type: string
+        vocab: optical_path_stage_roles
+        used_by: [dashboard, method_generator]
+        rationale: Canonical stage-role classifier used to preserve route semantics in the DTO and consumers.
+
       - path: hardware.optical_path_elements[].element_type
         title: Optical path element type
-        status: conditional
+        status: required
         type: string
-        required_if:
-          parent_present: hardware.optical_path_elements[]
+        vocab: optical_path_element_types
         used_by: [dashboard, method_generator]
-        rationale: Installed mechanism class for simulator and graph rendering.
+        rationale: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling.
+
+      - path: hardware.optical_path_elements[].selection_mode
+        title: Optical path element selection mode
+        status: optional
+        type: string
+        vocab: selection_modes
+        used_by: [dashboard, method_generator]
+        rationale: Selector/splitter selection semantics for explicit branch handling.
 
       - path: hardware.optical_path_elements[].modalities
         title: Optical path element modalities
         status: optional
         type: list
+        item_type: string
+        vocab: optical_routes
         used_by: [dashboard, method_generator]
-        rationale: Validation-only modality guards for optical path elements.
+        rationale: Validation-only route guards for optical path elements. Ordered light_paths sequences remain authoritative.
 
       - path: hardware.optical_path_elements[].positions
         title: Optical path element positions
         status: optional
         type: object
+        example_key: Pos_1
         used_by: [dashboard, method_generator]
         rationale: Position map for installed filter wheels, turrets, sliders, or cubes.
+
+      - path: hardware.optical_path_elements[].positions{}.component_type
+        title: Optical path position component type
+        status: optional
+        type: string
+        vocab: optical_component_types
+        used_by: [dashboard, method_generator]
+        rationale: Canonical optical component classifier for direct position payloads.
+
+      - path: hardware.optical_path_elements[].positions{}.manufacturer
+        title: Optical path position manufacturer
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Structured provenance for direct position payloads.
+
+      - path: hardware.optical_path_elements[].positions{}.model
+        title: Optical path position model
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Vendor-facing model/designation for direct position payloads.
+
+      - path: hardware.optical_path_elements[].positions{}.product_code
+        title: Optical path position product code
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Explicit catalog/SKU/reference code for direct position payloads when known.
+
+      - path: hardware.optical_path_elements[].positions{}.bands
+        title: Optical path position multiband array
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit multiband pass windows for direct position payloads.
+
+      - path: hardware.optical_path_elements[].positions{}.bands[].center_nm
+        title: Optical path position band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: hardware.optical_path_elements[].positions{}.bands[]
+        used_by: [dashboard, method_generator]
+        rationale: Band center for direct multiband position payloads.
+
+      - path: hardware.optical_path_elements[].positions{}.bands[].width_nm
+        title: Optical path position band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: hardware.optical_path_elements[].positions{}.bands[]
+        used_by: [dashboard, method_generator]
+        rationale: Band width for direct multiband position payloads.
 
       - path: hardware.optical_path_elements[].branches
         title: Optical path element branches
         status: optional
         type: list
+        item_type: object
         used_by: [dashboard, method_generator]
-        rationale: Explicit selector/splitter branch definitions.
+        rationale: Explicit selector/splitter branch definitions with stable identity and explicit endpoint targets.
 
       - path: hardware.optical_path_elements[].branches[].id
         title: Branch ID
-        status: conditional
+        status: required
         type: slug
-        required_if:
-          parent_present: hardware.optical_path_elements[].branches[]
         used_by: [dashboard, method_generator]
         rationale: Stable branch key nested under the splitter/selector element.
 
+      - path: hardware.optical_path_elements[].branches[].label
+        title: Branch label
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Human-readable branch label for UI/runtime presentation.
+
+      - path: hardware.optical_path_elements[].branches[].mode
+        title: Branch mode
+        status: optional
+        type: string
+        vocab: branch_modes
+        used_by: [dashboard, method_generator]
+        rationale: Canonical branch-mode metadata for transmitted/reflected-style splitters.
+
       - path: hardware.optical_path_elements[].branches[].target_ids
         title: Branch target endpoint IDs
-        status: optional
+        status: required
         type: list
+        item_type: slug
         used_by: [dashboard, method_generator]
         rationale: Explicit branch endpoint targets used by validator, simulator, and static graph rendering.
+
+      - path: hardware.optical_path_elements[].branches[].component
+        title: Branch-specific optical component
+        status: optional
+        type: object
+        used_by: [dashboard, method_generator]
+        rationale: Branch-specific optical component payload preserved through DTO generation when a selector/splitter branch carries its own optics.
+
+      - path: hardware.optical_path_elements[].branches[].component.component_type
+        title: Branch-specific optical component type
+        status: conditional
+        type: string
+        vocab: optical_component_types
+        required_if:
+          parent_present: hardware.optical_path_elements[].branches[].component
+        used_by: [dashboard, method_generator]
+        rationale: Canonical component classifier for a branch-specific optical payload.
 
       - path: hardware.endpoints
         title: Endpoints
         status: optional
         type: list
+        item_type: object
         used_by: [dashboard, method_generator]
         rationale: Explicit terminal detectors, camera ports, and eyepieces.
 
       - path: hardware.endpoints[].id
         title: Endpoint ID
-        status: conditional
+        status: required
         type: slug
-        required_if:
-          parent_present: hardware.endpoints[]
         used_by: [dashboard, method_generator]
         rationale: Stable endpoint identifier referenced by splitters and detection sequences.
 
       - path: hardware.endpoints[].endpoint_type
         title: Endpoint type
-        status: conditional
+        status: required
         type: string
         vocab: endpoint_types
-        required_if:
-          parent_present: hardware.endpoints[]
         used_by: [dashboard, method_generator]
         rationale: Endpoint class used by runtime for detector, camera-port, or eyepiece handling.
+
+      - path: hardware.endpoints[].display_label
+        title: Endpoint display label
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Optional UI/display label for the endpoint.
 
       - path: hardware.endpoints[].modalities
         title: Endpoint modalities
         status: optional
         type: list
+        item_type: string
+        vocab: optical_routes
         used_by: [dashboard, method_generator]
-        rationale: Validation-only modality guards for endpoints.
+        rationale: Validation-only route guards for endpoints. Ordered light_paths sequences remain authoritative.
 
       - path: hardware.detectors[].collection_min_nm
         title: Detector collection minimum wavelength
@@ -2701,26 +1559,32 @@ sections:
 
       - path: light_paths
         title: Light paths
-        status: optional
+        status: required
         type: list
+        item_type: object
+        min_items: 1
         used_by: [dashboard, method_generator]
-        rationale: Canonical ordered YAML-first traversal definitions.
+        rationale: Canonical ordered YAML-first traversal definitions. These sequences are the authoritative topology contract.
 
       - path: light_paths[].id
         title: Light path ID
-        status: conditional
+        status: required
         type: slug
-        required_if:
-          parent_present: light_paths[]
         used_by: [dashboard, method_generator]
         rationale: Stable route identifier used by simulator, UI, and graph rendering.
 
+      - path: light_paths[].name
+        title: Light path name
+        status: required
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Human-readable route label shown in UI and exported DTO route catalogs.
+
       - path: light_paths[].illumination_sequence
         title: Illumination sequence
-        status: conditional
+        status: required
         type: list
-        required_if:
-          parent_present: light_paths[]
+        item_type: object
         used_by: [dashboard, method_generator]
         rationale: Ordered sequence of source and optical-path-element references used before the sample plane.
 
@@ -2740,10 +1604,9 @@ sections:
 
       - path: light_paths[].detection_sequence
         title: Detection sequence
-        status: conditional
+        status: required
         type: list
-        required_if:
-          parent_present: light_paths[]
+        item_type: object
         used_by: [dashboard, method_generator]
         rationale: Ordered sequence of optical-path-element and endpoint references used after the sample plane.
 

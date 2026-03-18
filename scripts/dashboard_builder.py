@@ -1238,7 +1238,12 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
     optical_elements = [item for item in (lightpath_dto.get("optical_path_elements") or []) if isinstance(item, dict)] if isinstance(lightpath_dto, dict) else []
     endpoints_raw = [item for item in (lightpath_dto.get("endpoints") or []) if isinstance(item, dict)] if isinstance(lightpath_dto, dict) else []
     light_paths = [item for item in (lightpath_dto.get("light_paths") or []) if isinstance(item, dict)] if isinstance(lightpath_dto, dict) else []
-    legacy_splitters = [item for item in (lightpath_dto.get("splitters") or []) if isinstance(item, dict)] if isinstance(lightpath_dto, dict) else []
+    projection_root = (
+        ((lightpath_dto.get("projections") or {}).get("virtual_microscope") or {})
+        if isinstance(lightpath_dto, dict)
+        else {}
+    )
+    legacy_splitters = [item for item in (projection_root.get("splitters") or lightpath_dto.get("splitters") or []) if isinstance(item, dict)] if isinstance(lightpath_dto, dict) else []
 
     filters: list[dict[str, Any]] = []
     splitters: list[dict[str, Any]] = []
@@ -1312,7 +1317,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
     sections.append({"id": "terminals", "display_label": "Detection Endpoints", "items": terminals or [{"id": "no_explicit_terminals", "display_label": "No explicit detection endpoints declared", "display_subtitle": "Structured topology incomplete", "spec_lines": ["**Action needed:** add hardware.endpoints[] entries to YAML."], "method_sentence": ""}]})
 
     renderables = [*route_items, *filters, *splitters, *terminals]
-    runtime_splitters = copy.deepcopy(lightpath_dto.get("splitters", [])) if isinstance(lightpath_dto, dict) else []
+    runtime_splitters = copy.deepcopy(projection_root.get("splitters", lightpath_dto.get("splitters", []))) if isinstance(lightpath_dto, dict) else []
     static_graph = _build_static_light_path_graph(lightpath_dto, raw_hardware=raw_hardware)
 
     return {
