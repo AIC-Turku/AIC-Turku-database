@@ -336,27 +336,6 @@
         <div>• <strong>{{ branch.label or branch.branch_id }}</strong>{% if branch.mode %} ({{ branch.mode }}){% endif %}{% if branch.endpoint_inventory_ids %} → {{ branch.endpoint_inventory_ids | join(', ') }}{% endif %}</div>
         {% endfor %}
       </div>
-      {% if route.route_local_hardware_usage and route.route_local_hardware_usage["items"] %}
-      <div class="aic-lightpath-callout">
-        <strong>Route-local hardware usage</strong>
-        <div>
-          {% for item in route.route_local_hardware_usage["items"] %}
-            {% if not loop.first %} • {% endif %}#{{ item.display_number or ((hardware_index_map.by_inventory_id or {}).get(item.id)) or '—' }} {{ item.display_label }}
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-    </div>
-    {% elif route.route_local_hardware_usage and route.route_local_hardware_usage["items"] %}
-    <div class="aic-lightpath-notes">
-      <div class="aic-lightpath-callout">
-        <strong>Route-local hardware usage</strong>
-        <div>
-          {% for item in route.route_local_hardware_usage["items"] %}
-            {% if not loop.first %} • {% endif %}#{{ item.display_number or ((hardware_index_map.by_inventory_id or {}).get(item.id)) or '—' }} {{ item.display_label }}
-          {% endfor %}
-        </div>
-      </div>
     </div>
     {% endif %}
   </div>

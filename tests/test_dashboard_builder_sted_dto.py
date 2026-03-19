@@ -437,6 +437,32 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         )
         self.assertEqual(optical_path["route_renderables"], optical_path["light_paths"])
 
+    def test_static_graph_uses_route_graph_numbers_and_branch_ids_when_inventory_metadata_is_partial(self) -> None:
+        lightpath_dto = {
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "name": "Epi",
+                    "graph_nodes": [
+                        {"id": "n1", "component_kind": "source", "label": "488 Laser", "inventory_display_number": 7, "column": 0, "lane": 0},
+                        {"id": "n2", "component_kind": "endpoint", "label": "Camera A", "display_number": 8, "column": 1, "lane": 0, "endpoint_type": "camera_port"},
+                    ],
+                    "graph_edges": [
+                        {"source": "n1", "target": "n2", "branch_id": "camera_branch"},
+                    ],
+                }
+            ],
+        }
+
+        optical_path = build_optical_path_dto(lightpath_dto)
+        static_graph = optical_path["static_graphs"][0]
+
+        self.assertEqual(static_graph["ordered_nodes"][0]["number"], 7)
+        self.assertEqual(static_graph["ordered_nodes"][1]["number"], 8)
+        self.assertEqual(static_graph["svg"]["edges"][0]["label"], "camera_branch")
+        self.assertEqual(static_graph["nodes"][0]["downstream"], "Camera A [camera_branch]")
+        self.assertIn("camera_branch", static_graph["svg_markup"])
+
 
     def test_normalize_hardware_preserves_tunable_source_and_detector_path_metadata(self) -> None:
         hardware = normalize_hardware(
