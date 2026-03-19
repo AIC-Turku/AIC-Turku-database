@@ -8,490 +8,487 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'Confocal spinning-disk microscope (inverted) based on a Zeiss stand with
-    a Yokogawa CSU-W1. Optimized for fast, gentle imaging of live samples and large
-    fields of view. Imaging modes: confocal spinning disk, live-cell time-lapse, FRAP,
-    photoactivation. Uses a 50 µm pinhole disk; this is well suited to standard spinning-disk
-    imaging but is not ideal for low-magnification confocal sectioning compared with
-    a 25 µm disk.
+  notes: 'Confocal spinning-disk microscope (inverted) based on a Zeiss stand with a Yokogawa CSU-W1. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: confocal spinning disk, live-cell time-lapse, FRAP, photoactivation. Uses a 50 µm pinhole disk; this is well suited to standard spinning-disk imaging but is not ideal for low-magnification confocal sectioning compared with a 25 µm disk.'
+  url: ''
 
-    '
-  url: ''
 modalities:
-- confocal_spinning_disk
-- frap
-- photoactivation
+  - confocal_spinning_disk
+  - frap
+  - photoactivation
+  - transmitted_brightfield # ADDED: Included to reflect the new transmitted light path
+
 modules:
-- name: frap
-  manufacturer: 3i
-  model: Vector
-  notes: FRAP/photoactivation laser module for bleaching and activation
-  url: ''
-- name: piezo_z_stage
-  manufacturer: ASI
-  model: PZ-2000
-  notes: ASI piezo stage (300 µm travel)
-  url: ''
-- name: hardware_autofocus
-  manufacturer: Zeiss
-  model: Definite Focus
-  notes: Zeiss Definite Focus hardware autofocus
-  url: ''
-- name: incubation
-  manufacturer: Okolab
-  model: Full Enclosure
-  notes: Okolab environment chamber with temperature and gas control
-  url: ''
+  - type: frap
+    manufacturer: 3i
+    model: Vector
+    notes: FRAP/photoactivation laser module for bleaching and activation
+    url: ''
+  - type: piezo_z_stage
+    manufacturer: ASI
+    model: PZ-2000
+    notes: ASI piezo stage (300 µm travel)
+    url: ''
+  - type: hardware_autofocus
+    manufacturer: Zeiss
+    model: Definite Focus
+    notes: Zeiss Definite Focus hardware autofocus
+    url: ''
+  - type: incubation
+    manufacturer: Okolab
+    model: Full Enclosure
+    notes: Okolab environment chamber with temperature and gas control
+    url: ''
+
 software:
-- role: acquisition
-  name: 3i SlideBook
-  version: '6'
-  url: ''
+  - role: acquisition
+    name: 3i SlideBook
+    version: '6'
+    url: ''
+
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     o2_control: false
     notes: Okolab Full Enclosure Incubator with temperature and digital CO2 control
+    
   stages:
-  - type: z_piezo
-    manufacturer: ASI
-    model: PZ-2000
-    notes: ASI piezo stage (300 µm travel)
+    - type: piezo_z_stage
+      manufacturer: ASI
+      model: PZ-2000
+      notes: ASI piezo stage (300 µm travel)
+      
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
+    
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell
-      spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification
-      confocal sectioning.
+    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification confocal sectioning.
     url: ''
+    
   detectors:
-  - kind: scmos
-    manufacturer: Hamamatsu
-    model: ORCA-Flash4.0
-    pixel_pitch_um: 6.5
-    qe_peak_pct: 82
-    sensor_format_px: 2048 x 2048
-    notes: ''
-    url: ''
-    id: detector_1
-  - kind: emccd
-    manufacturer: Photometrics
-    model: Evolve
-    pixel_pitch_um: 16.0
-    qe_peak_pct: 95
-    sensor_format_px: 512 x 512
-    notes: 10 MHz back-illuminated EMCCD
-    url: ''
-    id: detector_2
+    - kind: scmos
+      manufacturer: Hamamatsu
+      model: ORCA-Flash4.0
+      pixel_pitch_um: 6.5
+      qe_peak_pct: 82
+      sensor_format_px: 2048 x 2048
+      notes: ''
+      url: ''
+      id: detector_1
+    - kind: emccd
+      manufacturer: Photometrics
+      model: Evolve
+      pixel_pitch_um: 16.0
+      qe_peak_pct: 95
+      sensor_format_px: 512 x 512
+      notes: 10 MHz back-illuminated EMCCD
+      url: ''
+      id: detector_2
+
+  eyepieces: # ADDED: Must be declared to serve as a valid routing endpoint
+    - id: eyepieces
+      notes: 'Binocular Eyepieces'
+      
   objectives:
-  - id: 10x_air
-    manufacturer: Zeiss
-    model: Plan-Apochromat 10x/0.45 Ph1 M27
-    product_code: 420641-9910
-    magnification: 10.0
-    numerical_aperture: 0.45
-    working_distance: 2.0 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-    - phase
-    notes: ''
-    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27
-    is_installed: true
-  - id: 20x_air
-    manufacturer: Zeiss
-    model: Plan-Apochromat 20x/0.8
-    product_code: 440640-9903-000
-    magnification: 20.0
-    numerical_aperture: 0.8
-    working_distance: 0.55 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8
-    is_installed: true
-  - id: 40x_water
-    manufacturer: Zeiss
-    model: LD C-APOCHROMAT 40x/1.1 W M27
-    product_code: 421867-9970
-    magnification: 40.0
-    numerical_aperture: 1.1
-    working_distance: 0.62 mm
-    immersion: water
-    correction: apochromat
-    afc_compatible: false
-    specialties:
-    - coverslip_correction
-    - ir_transmission
-    notes: ''
-    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27
-    is_installed: true
-  - id: 63x_oil
-    manufacturer: Zeiss
-    model: Plan-Apochromat 63x/1.4 Oil DIC M27
-    product_code: 420782-9900
-    magnification: 63.0
-    numerical_aperture: 1.4
-    working_distance: 0.19 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-    - dic
-    notes: ''
-    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27
-    is_installed: true
-  - id: 100x_oil
-    manufacturer: Zeiss
-    model: Plan-Apochromat 100x/1.4 Oil DIC M27
-    product_code: 420792-9901
-    magnification: 100.0
-    numerical_aperture: 1.4
-    working_distance: 0.17 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-    - dic
-    notes: ''
-    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9901-000/Objective-Plan-Apochromat-100x-1.4-Oil-DIC-M27
-    is_installed: true
-  - id: 25x_multi
-    manufacturer: Zeiss
-    model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
-    product_code: 420852-9871
-    magnification: 25.0
-    numerical_aperture: 0.8
-    working_distance: 0.57 mm at cover glass 0.17
-    immersion: multi
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-    - dic
-    - ir_transmission
-    - correction_collar
-    notes: Optional objective. Multi-immersion correction-collar objective.
-    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27
-    is_installed: false
-  - id: 63x_water_c_apo
-    manufacturer: Zeiss
-    model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
-    product_code: 421787-9970
-    magnification: 63.0
-    numerical_aperture: 1.2
-    working_distance: 0.28 mm at cover glass 0.17
-    immersion: water
-    correction: apochromat
-    afc_compatible: false
-    specialties:
-    - ir_transmission
-    - correction_collar
-    notes: Optional objective. Water-immersion correction-collar objective.
-    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
-    is_installed: false
+    - id: 10x_air
+      manufacturer: Zeiss
+      model: Plan-Apochromat 10x/0.45 Ph1 M27
+      product_code: 420641-9910
+      magnification: 10.0
+      numerical_aperture: 0.45
+      working_distance: 2.0 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - phase
+      notes: ''
+      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27
+      is_installed: true
+    - id: 20x_air
+      manufacturer: Zeiss
+      model: Plan-Apochromat 20x/0.8
+      product_code: 440640-9903-000
+      magnification: 20.0
+      numerical_aperture: 0.8
+      working_distance: 0.55 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8
+      is_installed: true
+    - id: 40x_water
+      manufacturer: Zeiss
+      model: LD C-APOCHROMAT 40x/1.1 W M27
+      product_code: 421867-9970
+      magnification: 40.0
+      numerical_aperture: 1.1
+      working_distance: 0.62 mm
+      immersion: water
+      correction: apochromat
+      afc_compatible: false
+      specialties:
+        - coverslip_correction
+        - ir_transmission
+      notes: ''
+      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27
+      is_installed: true
+    - id: 63x_oil
+      manufacturer: Zeiss
+      model: Plan-Apochromat 63x/1.4 Oil DIC M27
+      product_code: 420782-9900
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: 0.19 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - dic
+      notes: ''
+      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27
+      is_installed: true
+    - id: 100x_oil
+      manufacturer: Zeiss
+      model: Plan-Apochromat 100x/1.4 Oil DIC M27
+      product_code: 420792-9901
+      magnification: 100.0
+      numerical_aperture: 1.4
+      working_distance: 0.17 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - dic
+      notes: ''
+      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9901-000/Objective-Plan-Apochromat-100x-1.4-Oil-DIC-M27
+      is_installed: true
+    - id: 25x_multi
+      manufacturer: Zeiss
+      model: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)VIS-IR
+      product_code: 420852-9871
+      magnification: 25.0
+      numerical_aperture: 0.8
+      working_distance: 0.57 mm at cover glass 0.17
+      immersion: multi
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - dic
+        - ir_transmission
+        - correction_collar
+      notes: Optional objective. Multi-immersion correction-collar objective.
+      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27
+      is_installed: false
+    - id: 63x_water_c_apo
+      manufacturer: Zeiss
+      model: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
+      product_code: 421787-9970
+      magnification: 63.0
+      numerical_aperture: 1.2
+      working_distance: 0.28 mm at cover glass 0.17
+      immersion: water
+      correction: apochromat
+      afc_compatible: false
+      specialties:
+        - ir_transmission
+        - correction_collar
+      notes: Optional objective. Water-immersion correction-collar objective.
+      url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
+      is_installed: false
+      
   sources:
-  - kind: laser
-    manufacturer: 3i
-    model: LaserStack v4
-    wavelength_nm: 405
-    power: 100 mW
-    role: excitation
-    path: confocal
-    notes: ''
-    url: ''
-    id: laserstack_v4
-    modalities:
-    - confocal
-  - kind: laser
-    manufacturer: 3i
-    model: LaserStack v4
-    wavelength_nm: 488
-    power: 150 mW
-    role: excitation
-    path: confocal
-    notes: ''
-    url: ''
-    id: laserstack_v4_2
-    modalities:
-    - confocal
-  - kind: laser
-    manufacturer: 3i
-    model: LaserStack v4
-    wavelength_nm: 561
-    power: 100 mW
-    role: excitation
-    path: confocal
-    notes: ''
-    url: ''
-    id: laserstack_v4_3
-    modalities:
-    - confocal
-  - kind: laser
-    manufacturer: 3i
-    model: LaserStack v4
-    wavelength_nm: 640
-    power: 100 mW
-    role: excitation
-    path: confocal
-    notes: ''
-    url: ''
-    id: laserstack_v4_4
-    modalities:
-    - confocal
-  - kind: laser
-    manufacturer: 3i
-    model: SingleLine 730nm Laser Launch
-    wavelength_nm: 730
-    power: 30 mW
-    role: excitation
-    path: confocal
-    notes: 'Near-IR excitation line delivered via the CSU-W1 near-IR illumination
-      port. Requires the installed IR/VIS combining dichroic, disk dichroic, and IR
-      emitter to be documented explicitly in the light path.
-
-      '
-    url: ''
-    id: singleline_730nm_laser_launch
-    modalities:
-    - confocal
-  - kind: led
-    manufacturer: Excelitas
-    model: X-Cite XLED1
-    wavelength_nm: broadband
-    path: epi
-    notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class
-      widefield fluorescence
-    url: ''
-    id: x_cite_xled1
-    modalities:
-    - epi
+    - kind: laser
+      manufacturer: 3i
+      model: LaserStack v4
+      wavelength_nm: 405
+      power: 100 mW
+      role: excitation
+      notes: ''
+      url: ''
+      id: laserstack_v4
+      modalities:
+        - confocal
+    - kind: laser
+      manufacturer: 3i
+      model: LaserStack v4
+      wavelength_nm: 488
+      power: 150 mW
+      role: excitation
+      notes: ''
+      url: ''
+      id: laserstack_v4_2
+      modalities:
+        - confocal
+    - kind: laser
+      manufacturer: 3i
+      model: LaserStack v4
+      wavelength_nm: 561
+      power: 100 mW
+      role: excitation
+      notes: ''
+      url: ''
+      id: laserstack_v4_3
+      modalities:
+        - confocal
+    - kind: laser
+      manufacturer: 3i
+      model: LaserStack v4
+      wavelength_nm: 640
+      power: 100 mW
+      role: excitation
+      notes: ''
+      url: ''
+      id: laserstack_v4_4
+      modalities:
+        - confocal
+    - kind: laser
+      manufacturer: 3i
+      model: SingleLine 730nm Laser Launch
+      wavelength_nm: 730
+      power: 30 mW
+      role: excitation
+      notes: 'Near-IR excitation line delivered via the CSU-W1 near-IR illumination port. Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter to be documented explicitly in the light path.'
+      url: ''
+      id: singleline_730nm_laser_launch
+      modalities:
+        - confocal
+    - kind: led
+      manufacturer: Excelitas
+      model: X-Cite XLED1
+      notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class widefield fluorescence
+      url: ''
+      id: x_cite_xled1
+      modalities:
+        - epi
+        
   optical_path_elements:
-  - name: XLED Excitation Filters
-    type: filter_wheel
-    path: epi
-    slots: 4
-    positions:
-      1:
-        component_type: bandpass
-        product_code: FF01-387/11-25
-        center_nm: 387
-        width_nm: 11
-      2:
-        component_type: bandpass
-        product_code: FF02-485/20-25
-        center_nm: 485
-        width_nm: 20
-      3:
-        component_type: bandpass
-        product_code: FF01-560/25-25
-        center_nm: 560
-        width_nm: 25
-      4:
-        component_type: bandpass
-        product_code: FF01-650/13-25
-        center_nm: 650
-        width_nm: 13
-    stage_role: excitation
-    id: xled_excitation_filters
-    element_type: filter_wheel
-    modalities:
-    - epi
-  - name: CSU-W1 Dichroic Slider
-    type: slider
-    path: confocal
-    slots: 3
-    positions:
-      1:
-        component_type: multiband_dichroic
-        name: Quad-band Dichroic
-        product_code: Di01-T405/488/568/647
-        transmission_bands:
-        - center_nm: 440
-          width_nm: 25
-        - center_nm: 521
-          width_nm: 25
-        - center_nm: 607
-          width_nm: 25
-        - center_nm: 700
-          width_nm: 25
-        reflection_bands:
-        - center_nm: 405
-          width_nm: 20
-        - center_nm: 488
-          width_nm: 20
-        - center_nm: 568
-          width_nm: 20
-        - center_nm: 647
-          width_nm: 20
-        cutoffs_nm:
-        - 405
-        - 488
-        - 568
-        - 647
-        notes: 'Standard multiband spinning-disk dichroic for 405/488/561/640-class
-          excitation. Explicit transmission/reflection bands are used as the authoritative
-          runtime model; reflection widths are approximate (derived from installed
-          excitation lines and product-code centers). Vendor product naming uses 568
-          even though the installed yellow-green laser line is 561 nm.
-
-          '
-      2:
-        component_type: empty
-        name: NIR dichroic position
-        notes: 'Placeholder for the installed NIR dichroic used with the 730 nm excitation
-          / 809 nm emission route. Populate when the actual part number and cutoff
-          are confirmed.
-
-          '
-    stage_role: dichroic
-    id: csu_w1_dichroic_slider
-    element_type: slider
-    modalities:
-    - confocal
-  - name: Widefield Dichroic
-    type: fixed
-    path: epi
-    positions:
-      1:
-        component_type: multiband_dichroic
-        product_code: FF410/504/582/669-Di01-25x36
-        transmission_bands:
-        - center_nm: 440
-          width_nm: 25
-        - center_nm: 521
-          width_nm: 25
-        - center_nm: 607
-          width_nm: 25
-        - center_nm: 700
-          width_nm: 25
-        reflection_bands:
-        - center_nm: 410
-          width_nm: 20
-        - center_nm: 504
-          width_nm: 20
-        - center_nm: 582
-          width_nm: 20
-        - center_nm: 669
-          width_nm: 20
-        cutoffs_nm:
-        - 410
-        - 504
-        - 582
-        - 669
-        notes: 'Explicit spectral windows are provided for runtime behavior; reflection-band
-          widths are approximate and derived from the legacy cutoff list pending vendor
-          curve import.
-
-          '
-    stage_role: dichroic
-    id: widefield_dichroic
-    element_type: fixed
-    modalities:
-    - epi
-  - name: CSU-W1 Emission Wheel
-    type: filter_wheel
-    path: confocal
-    slots: 10
-    positions:
-      1:
-        component_type: multiband_bandpass
-        name: Quad-band emitter
-        product_code: FF01-440/521/607/700-25
-        bands:
-        - center_nm: 440
-          width_nm: 25
-        - center_nm: 521
-          width_nm: 25
-        - center_nm: 607
-          width_nm: 25
-        - center_nm: 700
-          width_nm: 25
-        notes: Quad-band emitter for multicolor spinning-disk imaging
-      2:
-        component_type: bandpass
-        name: DAPI
-        product_code: FF01-445/45-25
-        center_nm: 445
-        width_nm: 45
-      3:
-        component_type: bandpass
-        name: GFP
-        center_nm: 525
-        width_nm: 50
-        notes: Previously 525/30 (FF01-525/30-25 in the old PDF) before 2021-08-18.
-      4:
-        component_type: bandpass
-        name: Cy3 / Alexa 568
-        product_code: FF01-617/73-25
-        center_nm: 617
-        width_nm: 73
-      5:
-        component_type: bandpass
-        name: Cy5 / Alexa 647
-        product_code: FF01-692/40-25
-        center_nm: 692
-        width_nm: 40
-      6:
-        component_type: bandpass
-        name: Alexa 750
-        product_code: FF02-809/81-25
-        center_nm: 809
-        width_nm: 81
-    stage_role: emission
-    id: csu_w1_emission_wheel
-    element_type: filter_wheel
-    modalities:
-    - confocal
-  - name: Widefield Emission
-    type: fixed
-    path: epi
-    positions:
-      1:
-        component_type: multiband_bandpass
-        product_code: FF01-440/521/607/700-25
-        bands:
-        - center_nm: 440
-          width_nm: 25
-        - center_nm: 521
-          width_nm: 25
-        - center_nm: 607
-          width_nm: 25
-        - center_nm: 700
-          width_nm: 25
-    stage_role: emission
-    id: widefield_emission
-    element_type: fixed
-    modalities:
-    - epi
-  endpoints: []
+    - name: XLED Excitation Filters
+      stage_role: excitation
+      id: xled_excitation_filters
+      element_type: filter_wheel
+      modalities:
+        - epi
+      positions:
+        Pos_1:
+          component_type: bandpass
+          product_code: FF01-387/11-25
+          bands:
+            - center_nm: 387
+              width_nm: 11
+        Pos_2:
+          component_type: bandpass
+          product_code: FF02-485/20-25
+          bands:
+            - center_nm: 485
+              width_nm: 20
+        Pos_3:
+          component_type: bandpass
+          product_code: FF01-560/25-25
+          bands:
+            - center_nm: 560
+              width_nm: 25
+        Pos_4:
+          component_type: bandpass
+          product_code: FF01-650/13-25
+          bands:
+            - center_nm: 650
+              width_nm: 13
+              
+    - name: CSU-W1 Dichroic Slider
+      stage_role: dichroic
+      id: csu_w1_dichroic_slider
+      element_type: slider
+      modalities:
+        - confocal
+      positions:
+        Pos_1:
+          component_type: multiband_dichroic
+          name: Quad-band Dichroic
+          product_code: Di01-T405/488/568/647
+          bands:
+            - center_nm: 440
+              width_nm: 25
+            - center_nm: 521
+              width_nm: 25
+            - center_nm: 607
+              width_nm: 25
+            - center_nm: 700
+              width_nm: 25
+          notes: 'Standard multiband spinning-disk dichroic for 405/488/561/640-class excitation.'
+        Pos_2:
+          component_type: empty
+          name: NIR dichroic position
+          notes: 'Placeholder for the installed NIR dichroic used with the 730 nm excitation / 809 nm emission route.'
+          
+    - name: Widefield Dichroic
+      stage_role: dichroic
+      id: widefield_dichroic
+      element_type: fixed
+      modalities:
+        - epi
+      positions:
+        Pos_1:
+          component_type: multiband_dichroic
+          product_code: FF410/504/582/669-Di01-25x36
+          bands:
+            - center_nm: 440
+              width_nm: 25
+            - center_nm: 521
+              width_nm: 25
+            - center_nm: 607
+              width_nm: 25
+            - center_nm: 700
+              width_nm: 25
+              
+    - name: CSU-W1 Emission Wheel
+      stage_role: emission
+      id: csu_w1_emission_wheel
+      element_type: filter_wheel
+      modalities:
+        - confocal
+      positions:
+        Pos_1:
+          component_type: multiband_bandpass
+          name: Quad-band emitter
+          product_code: FF01-440/521/607/700-25
+          bands:
+            - center_nm: 440
+              width_nm: 25
+            - center_nm: 521
+              width_nm: 25
+            - center_nm: 607
+              width_nm: 25
+            - center_nm: 700
+              width_nm: 25
+          notes: Quad-band emitter for multicolor spinning-disk imaging
+        Pos_2:
+          component_type: bandpass
+          name: DAPI
+          product_code: FF01-445/45-25
+          bands:
+            - center_nm: 445
+              width_nm: 45
+        Pos_3:
+          component_type: bandpass
+          name: GFP
+          bands:
+            - center_nm: 525
+              width_nm: 50
+          notes: Previously 525/30 (FF01-525/30-25 in the old PDF) before 2021-08-18.
+        Pos_4:
+          component_type: bandpass
+          name: Cy3 / Alexa 568
+          product_code: FF01-617/73-25
+          bands:
+            - center_nm: 617
+              width_nm: 73
+        Pos_5:
+          component_type: bandpass
+          name: Cy5 / Alexa 647
+          product_code: FF01-692/40-25
+          bands:
+            - center_nm: 692
+              width_nm: 40
+        Pos_6:
+          component_type: bandpass
+          name: Alexa 750
+          product_code: FF02-809/81-25
+          bands:
+            - center_nm: 809
+              width_nm: 81
+              
+    - name: Widefield Emission
+      stage_role: emission
+      id: widefield_emission
+      element_type: fixed
+      modalities:
+        - epi
+      positions:
+        Pos_1:
+          component_type: multiband_bandpass
+          product_code: FF01-440/521/607/700-25
+          bands:
+            - center_nm: 440
+              width_nm: 25
+            - center_nm: 521
+              width_nm: 25
+            - center_nm: 607
+              width_nm: 25
+            - center_nm: 700
+              width_nm: 25
 
 light_paths:
-- id: confocal
-  name: Confocal
-  illumination_sequence:
-  - source_id: laserstack_v4
-  - source_id: laserstack_v4_2
-  - source_id: laserstack_v4_3
-  - source_id: laserstack_v4_4
-  - source_id: singleline_730nm_laser_launch
-  - optical_path_element_id: csu_w1_dichroic_slider
-  detection_sequence:
-  - optical_path_element_id: csu_w1_dichroic_slider
-  - optical_path_element_id: csu_w1_emission_wheel
-  
-- id: epi
-  name: Epi-fluorescence
-  illumination_sequence:
-  - source_id: x_cite_xled1
-  - optical_path_element_id: xled_excitation_filters
-  - optical_path_element_id: widefield_dichroic
-  detection_sequence:
-  - optical_path_element_id: widefield_dichroic
-  - optical_path_element_id: widefield_emission
+  - id: confocal
+    name: Confocal
+    illumination_sequence:
+      - source_id: laserstack_v4
+      - source_id: laserstack_v4_2
+      - source_id: laserstack_v4_3
+      - source_id: laserstack_v4_4
+      - source_id: singleline_730nm_laser_launch
+      - optical_path_element_id: csu_w1_dichroic_slider
+    detection_sequence:
+      - optical_path_element_id: csu_w1_dichroic_slider
+      - optical_path_element_id: csu_w1_emission_wheel
+      - branches: # ADDED: Splitting logic for Confocal
+          selection_mode: exclusive
+          items:
+            - branch_id: to_camera_1
+              label: "To ORCA-Flash4.0"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_camera_2
+              label: "To Evolve EMCCD"
+              sequence:
+                - endpoint_id: detector_2
+                
+  - id: epi
+    name: Epi-fluorescence
+    illumination_sequence:
+      - source_id: x_cite_xled1
+      - optical_path_element_id: xled_excitation_filters
+      - optical_path_element_id: widefield_dichroic
+    detection_sequence:
+      - optical_path_element_id: widefield_dichroic
+      - optical_path_element_id: widefield_emission
+      - branches: # ADDED: 3-way split logic for Epi
+          selection_mode: exclusive
+          items:
+            - branch_id: to_camera_1
+              label: "To ORCA-Flash4.0"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_camera_2
+              label: "To Evolve EMCCD"
+              sequence:
+                - endpoint_id: detector_2
+            - branch_id: to_eyepieces
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
+
+  - id: transmitted # ADDED: New Transmitted Brightfield route
+    name: Transmitted Light
+    illumination_sequence: [] # Intentionally left empty since no specific brightfield source is declared
+    detection_sequence:
+      - branches:
+          selection_mode: exclusive
+          items:
+            - branch_id: to_camera_1
+              label: "To ORCA-Flash4.0"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_camera_2
+              label: "To Evolve EMCCD"
+              sequence:
+                - endpoint_id: detector_2
+            - branch_id: to_eyepieces
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
