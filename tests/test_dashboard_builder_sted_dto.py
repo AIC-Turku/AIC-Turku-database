@@ -312,10 +312,123 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         optical_path = build_optical_path_dto(lightpath_dto)
 
         self.assertEqual(optical_path["hardware_inventory_renderables"][0]["display_number"], 1)
+        self.assertEqual(optical_path["hardware_index_map"]["by_inventory_id"]["source:src_488"], 1)
+        self.assertEqual(optical_path["primary_rendering_contract"]["routes"], "route_renderables")
+        self.assertEqual(len(optical_path["route_renderables"]), 1)
+        self.assertEqual(optical_path["route_renderables"][0]["id"], "epi")
+        self.assertEqual(optical_path["route_renderables"][0]["graph_nodes"][0]["display_number"], 1)
+        self.assertEqual(optical_path["route_renderables"][0]["graph_nodes"][0]["inventory_display_number"], 1)
+        self.assertEqual(
+            optical_path["route_renderables"][0]["graph_nodes"][0]["inventory_identity"]["inventory_id"],
+            "source:src_488",
+        )
+        self.assertEqual(
+            optical_path["route_renderables"][0]["graph_nodes"][0]["graph_occurrence"]["node_id"],
+            "n1",
+        )
+        self.assertEqual(
+            optical_path["route_renderables"][0]["endpoint_summary"]["inventory_ids"],
+            ["endpoint:cam"],
+        )
+        self.assertEqual(
+            optical_path["route_renderables"][0]["route_local_hardware_usage"]["inventory_ids"],
+            ["source:src_488", "optical_path_element:ex_488", "endpoint:cam"],
+        )
         self.assertEqual(optical_path["methods_route_options"], [{"id": "epi", "label": "Epi"}])
         self.assertEqual(optical_path["methods_route_views"][0]["light_sources"][0]["display_label"], "488 Laser")
         self.assertEqual(optical_path["methods_route_views"][0]["filters"][0]["display_label"], "EX 488")
+        self.assertEqual(optical_path["authoritative_route_contract"]["available_routes"][0]["id"], "epi")
+        self.assertEqual(
+            optical_path["authoritative_route_contract"]["routes"][0]["relevant_hardware"]["sources"][0]["id"],
+            "source:src_488",
+        )
+        self.assertEqual(
+            optical_path["authoritative_route_contract"]["routes"][0]["relevant_hardware"]["endpoints"][0]["id"],
+            "endpoint:cam",
+        )
+        self.assertEqual(
+            optical_path["authoritative_route_contract"]["routes"][0]["topology"]["graph_nodes"][0]["hardware_inventory_id"],
+            "source:src_488",
+        )
         self.assertIn("<svg", optical_path["static_graphs"][0]["svg_markup"])
+
+    def test_optical_path_dto_keeps_one_graph_per_route_with_stable_deduplicated_inventory(self) -> None:
+        lightpath_dto = {
+            "hardware_inventory": [
+                {"id": "source:src_488", "display_label": "488 Laser", "display_number": 1, "inventory_class": "light_source", "route_usage_summary": ["epi"]},
+                {"id": "source:src_561", "display_label": "561 Laser", "display_number": 2, "inventory_class": "light_source", "route_usage_summary": ["confocal"]},
+                {"id": "optical_path_element:shared_di", "display_label": "Shared DI", "display_number": 3, "inventory_class": "optical_element", "route_usage_summary": ["epi", "confocal"]},
+                {"id": "endpoint:cam_a", "display_label": "Camera A", "display_number": 4, "inventory_class": "endpoint", "route_usage_summary": ["epi"]},
+                {"id": "endpoint:pmt_1", "display_label": "PMT 1", "display_number": 5, "inventory_class": "endpoint", "route_usage_summary": ["confocal"]},
+            ],
+            "normalized_endpoints": [
+                {"id": "cam_a", "display_label": "Camera A", "endpoint_type": "camera_port"},
+                {"id": "pmt_1", "display_label": "PMT 1", "endpoint_type": "detector"},
+            ],
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "name": "Epi",
+                    "graph_nodes": [
+                        {"id": "epi_src", "component_kind": "source", "hardware_inventory_id": "source:src_488", "label": "488 Laser", "inventory_display_number": 1, "column": 0, "lane": 0, "graph_occurrence": {"node_id": "epi_src"}},
+                        {"id": "epi_di_i", "component_kind": "optical_path_element", "hardware_inventory_id": "optical_path_element:shared_di", "label": "Shared DI", "inventory_display_number": 3, "column": 1, "lane": 0, "graph_occurrence": {"node_id": "epi_di_i"}},
+                        {"id": "epi_sample", "component_kind": "sample", "label": "Sample", "column": 2, "lane": 0},
+                        {"id": "epi_di_d", "component_kind": "optical_path_element", "hardware_inventory_id": "optical_path_element:shared_di", "label": "Shared DI", "inventory_display_number": 3, "column": 3, "lane": 0, "graph_occurrence": {"node_id": "epi_di_d"}},
+                        {"id": "epi_cam", "component_kind": "endpoint", "hardware_inventory_id": "endpoint:cam_a", "label": "Camera A", "inventory_display_number": 4, "column": 4, "lane": 0},
+                    ],
+                    "graph_edges": [
+                        {"source": "epi_src", "target": "epi_di_i"},
+                        {"source": "epi_di_i", "target": "epi_sample"},
+                        {"source": "epi_sample", "target": "epi_di_d"},
+                        {"source": "epi_di_d", "target": "epi_cam"},
+                    ],
+                },
+                {
+                    "id": "confocal",
+                    "name": "Confocal",
+                    "graph_nodes": [
+                        {"id": "conf_src", "component_kind": "source", "hardware_inventory_id": "source:src_561", "label": "561 Laser", "inventory_display_number": 2, "column": 0, "lane": 0},
+                        {"id": "conf_di", "component_kind": "optical_path_element", "hardware_inventory_id": "optical_path_element:shared_di", "label": "Shared DI", "inventory_display_number": 3, "column": 1, "lane": 0, "graph_occurrence": {"node_id": "conf_di"}},
+                        {"id": "conf_pmt", "component_kind": "endpoint", "hardware_inventory_id": "endpoint:pmt_1", "label": "PMT 1", "inventory_display_number": 5, "column": 2, "lane": 0},
+                    ],
+                    "graph_edges": [
+                        {"source": "conf_src", "target": "conf_di"},
+                        {"source": "conf_di", "target": "conf_pmt"},
+                    ],
+                },
+            ],
+            "route_hardware_usage": [
+                {"route_id": "epi", "hardware_inventory_ids": ["source:src_488", "optical_path_element:shared_di", "endpoint:cam_a"], "endpoint_inventory_ids": ["endpoint:cam_a"]},
+                {"route_id": "confocal", "hardware_inventory_ids": ["source:src_561", "optical_path_element:shared_di", "endpoint:pmt_1"], "endpoint_inventory_ids": ["endpoint:pmt_1"]},
+            ],
+        }
+
+        optical_path = build_optical_path_dto(lightpath_dto)
+
+        self.assertEqual([route["id"] for route in optical_path["route_renderables"]], ["epi", "confocal"])
+        self.assertTrue(all(route["graph_nodes"] for route in optical_path["route_renderables"]))
+        self.assertTrue(all(route["graph_edges"] for route in optical_path["route_renderables"]))
+        self.assertEqual(
+            [item["id"] for item in optical_path["hardware_inventory"]],
+            ["source:src_488", "source:src_561", "optical_path_element:shared_di", "endpoint:cam_a", "endpoint:pmt_1"],
+        )
+        self.assertEqual(optical_path["hardware_index_map"]["by_inventory_id"]["optical_path_element:shared_di"], 3)
+        repeated_shared_nodes = [
+            node
+            for route in optical_path["route_renderables"]
+            for node in route["graph_nodes"]
+            if node.get("hardware_inventory_id") == "optical_path_element:shared_di"
+        ]
+        self.assertEqual(len(repeated_shared_nodes), 3)
+        self.assertEqual({node["inventory_display_number"] for node in repeated_shared_nodes}, {3})
+        self.assertEqual({node["inventory_identity"]["inventory_id"] for node in repeated_shared_nodes}, {"optical_path_element:shared_di"})
+        self.assertEqual(
+            [route["route_hardware_usage"]["hardware_inventory_ids"] for route in optical_path["authoritative_route_contract"]["routes"]],
+            [
+                ["source:src_488", "optical_path_element:shared_di", "endpoint:cam_a"],
+                ["source:src_561", "optical_path_element:shared_di", "endpoint:pmt_1"],
+            ],
+        )
 
 
     def test_normalize_hardware_preserves_tunable_source_and_detector_path_metadata(self) -> None:
@@ -399,7 +512,18 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
     def test_methods_generator_export_carries_blockers_without_changing_main_dto(self) -> None:
         instrument = {
-            "dto": {"id": "scope-1", "display_name": "Scope 1"},
+            "dto": {
+                "id": "scope-1",
+                "display_name": "Scope 1",
+                "hardware": {
+                    "optical_path": {
+                        "authoritative_route_contract": {
+                            "available_routes": [{"id": "epi", "display_label": "Epi"}],
+                            "routes": [{"id": "epi", "display_label": "Epi"}],
+                        }
+                    }
+                },
+            },
             "methods_generation": {"is_blocked": True, "blockers": [{"path": "software[0].version"}]},
         }
 
@@ -408,6 +532,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(exported["id"], "scope-1")
         self.assertIn("methods_generation", exported)
         self.assertTrue(exported["methods_generation"]["is_blocked"])
+        self.assertEqual(
+            exported["hardware"]["optical_path"]["authoritative_route_contract"]["available_routes"][0]["id"],
+            "epi",
+        )
 
     def test_llm_inventory_payload_includes_policy_grounding_metadata(self) -> None:
         payload = build_llm_inventory_payload(
@@ -448,7 +576,28 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                             "detectors": [{"display_label": "HyD"}],
                             "optical_modulators": [{"display_label": "SLM"}],
                             "illumination_logic": [{"display_label": "Adaptive illumination"}],
-                            "optical_path": {"available_routes": [{"label": "Confocal route"}]},
+                            "optical_path": {
+                                "available_routes": [{"label": "Confocal route"}],
+                                "authoritative_route_contract": {
+                                    "available_routes": [{"id": "confocal", "display_label": "Confocal route"}],
+                                    "routes": [
+                                        {
+                                            "id": "confocal",
+                                            "display_label": "Confocal route",
+                                            "illumination_mode": "confocal",
+                                            "relevant_hardware": {
+                                                "sources": [{"id": "source:488", "display_label": "488 nm laser"}],
+                                                "filters": [{"id": "optical_path_element:pinhole", "display_label": "Pinhole"}],
+                                                "splitters": [],
+                                                "endpoints": [{"id": "endpoint:hyd", "display_label": "HyD"}],
+                                            },
+                                            "endpoint_summary": {"inventory_ids": ["endpoint:hyd"]},
+                                            "branch_summary": {"branches": []},
+                                            "topology": {"graph_nodes": [], "graph_edges": []},
+                                        }
+                                    ],
+                                },
+                            },
                         },
                     },
                     "canonical": {"policy": {}},
@@ -463,6 +612,14 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(summary["detector_labels"], ["HyD"])
         self.assertIn("adaptive illumination", summary["supporting_feature_labels"])
         self.assertIn("optical modulation", summary["supporting_feature_labels"])
+        self.assertEqual(
+            payload["active_microscopes"][0]["llm_context"]["authoritative_route_contract"]["routes"][0]["illumination_mode"],
+            "confocal",
+        )
+        self.assertEqual(
+            payload["active_microscopes"][0]["llm_context"]["authoritative_route_contract"]["routes"][0]["relevant_hardware"]["filters"][0]["display_label"],
+            "Pinhole",
+        )
 
     def test_json_script_data_escapes_script_terminators_and_round_trips(self) -> None:
         payload = {"text": 'Quote "line"\n</script><script>alert(1)</script>'}
@@ -512,6 +669,13 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
         self.assertEqual(json.loads(match), config)
         self.assertNotIn("</script>", match)
+
+    def test_methods_and_plan_templates_reference_authoritative_route_contract(self) -> None:
+        methods_template = Path("scripts/templates/methods_generator.md.j2").read_text(encoding="utf-8")
+        plan_template = Path("scripts/templates/plan_experiments.md.j2").read_text(encoding="utf-8")
+
+        self.assertIn("authoritative_route_contract", methods_template)
+        self.assertIn("llm_context.authoritative_route_contract", plan_template)
 
     def test_optical_path_dto_marks_missing_explicit_terminals_as_incomplete(self) -> None:
         dto = build_optical_path_dto({"stages": {}, "splitters": [], "terminals": []})

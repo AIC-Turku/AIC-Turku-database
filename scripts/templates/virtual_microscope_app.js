@@ -809,6 +809,243 @@
     };
   }
 
+  function routeGraphNodeNumber(node) {
+    const direct = numberOrNull(node && (node.inventory_display_number ?? node.display_number));
+    return direct === null ? null : Math.round(direct);
+  }
+
+  function routeGraphNodeLabel(node) {
+    return cleanString(node && (node.label || node.display_label || node.id)) || 'Route node';
+  }
+
+  function buildAuthoritativeRouteGraph(topology) {
+    const routeRecord = topology && topology.routeRecord ? topology.routeRecord : {};
+    const rawNodes = Array.isArray(topology && topology.graphNodes) ? topology.graphNodes : [];
+    const rawEdges = Array.isArray(topology && topology.graphEdges) ? topology.graphEdges : [];
+    const nodeLookup = new Map(rawNodes.map((node) => [cleanString(node && node.id), node]).filter((entry) => entry[0]));
+    const edgeLookup = new Map();
+
+    rawEdges.forEach((edge) => {
+      const sourceId = cleanString(edge && edge.source);
+      if (!sourceId) return;
+      if (!edgeLookup.has(sourceId)) edgeLookup.set(sourceId, []);
+      edgeLookup.get(sourceId).push({ ...edge });
+    });
+
+    const nodes = rawNodes
+      .filter((node) => node && typeof node === 'object')
+      .map((node) => {
+        const nodeId = cleanString(node.id);
+        const downstream = (edgeLookup.get(nodeId) || []).map((edge) => {
+          const target = nodeLookup.get(cleanString(edge.target)) || {};
+          const targetNumber = routeGraphNodeNumber(target);
+          const targetPrefix = targetNumber === null ? '' : `${targetNumber} — `;
+          return {
+            edge: { ...edge },
+            targetId: cleanString(edge.target),
+            targetLabel: `${targetPrefix}${routeGraphNodeLabel(target)}`,
+            branchLabel: cleanString(edge.label || edge.branch_id),
+          };
+        });
+        return {
+          ...node,
+          number: routeGraphNodeNumber(node),
+          title: routeGraphNodeLabel(node),
+          kindLabel: cleanString(node.component_kind || node.stage_role || node.endpoint_type || node.phase || 'route node'),
+          inventoryId: cleanString(node.hardware_inventory_id),
+          downstream,
+        };
+      })
+      .sort((left, right) => {
+        const leftColumn = Number.isFinite(left.column) ? left.column : 0;
+        const rightColumn = Number.isFinite(right.column) ? right.column : 0;
+        if (leftColumn !== rightColumn) return leftColumn - rightColumn;
+        const leftLane = Number.isFinite(left.lane) ? left.lane : 0;
+        const rightLane = Number.isFinite(right.lane) ? right.lane : 0;
+        return leftLane - rightLane;
+      });
+
+    return {
+      routeId: cleanString(routeRecord && routeRecord.id) || cleanString(topology && topology.route) || null,
+      routeLabel: cleanString(routeRecord && (routeRecord.name || routeRecord.id)) || normalizeRouteLabel(topology && topology.route),
+      nodes,
+      edges: rawEdges.map((edge) => ({ ...edge })),
+      branchBlocks: Array.isArray(routeRecord && routeRecord.branch_blocks) ? routeRecord.branch_blocks.map((block) => ({ ...block })) : [],
+      endpointIds: Array.isArray(topology && topology.endpointIds) ? topology.endpointIds.slice() : [],
+      sourceIds: Array.isArray(topology && topology.sourceMechanisms)
+        ? topology.sourceMechanisms.flatMap((mechanism) => Object.values(positionsForRoute(mechanism, topology.route)).map((source) => cleanString(source && source.id)).filter(Boolean))
+        : [],
+      maxColumn: nodes.reduce((value, node) => Math.max(value, Number.isFinite(node.column) ? node.column : 0), 0),
+      maxLane: nodes.reduce((value, node) => Math.max(value, Number.isFinite(node.lane) ? node.lane : 0), 0),
+    };
+  }
+
+  function renderAuthoritativeRouteGraph(host, graphModel) {
+    if (!host || !graphModel) return;
+
+    const section = document.createElement('div');
+    section.className = 'vm-info-card';
+    section.style.marginBottom = '14px';
+    section.style.padding = '14px 16px';
+
+    const title = document.createElement('div');
+    title.className = 'vm-info-card-title';
+    title.textContent = graphModel.routeLabel || 'Route graph';
+    section.appendChild(title);
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'vm-info-card-subtitle';
+    subtitle.textContent = 'Authoritative route graph rendered directly from canonical graph_nodes / graph_edges. Control widgets below are derived adapters.';
+    section.appendChild(subtitle);
+
+    const meta = document.createElement('div');
+    meta.className = 'vm-mini';
+    meta.style.marginTop = '8px';
+    meta.textContent = `Nodes: ${graphModel.nodes.length} • Edges: ${graphModel.edges.length} • Endpoints: ${graphModel.endpointIds.length}`;
+    section.appendChild(meta);
+
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = `repeat(${Math.max(1, graphModel.maxColumn + 1)}, minmax(160px, 1fr))`;
+    grid.style.gap = '10px';
+    grid.style.marginTop = '12px';
+
+    graphModel.nodes.forEach((node) => {
+      const card = document.createElement('div');
+      card.className = 'vm-info-card';
+      card.style.margin = '0';
+      card.style.padding = '10px 12px';
+      card.style.gridColumn = String((Number.isFinite(node.column) ? node.column : 0) + 1);
+      card.style.gridRow = String((Number.isFinite(node.lane) ? node.lane : 0) + 1);
+      card.dataset.nodeId = node.id || '';
+
+      const heading = document.createElement('div');
+      heading.className = 'vm-info-row';
+      heading.style.alignItems = 'center';
+      const bubble = document.createElement('span');
+      bubble.style.display = 'inline-flex';
+      bubble.style.width = '24px';
+      bubble.style.height = '24px';
+      bubble.style.borderRadius = '999px';
+      bubble.style.alignItems = 'center';
+      bubble.style.justifyContent = 'center';
+      bubble.style.background = 'var(--accent)';
+      bubble.style.color = '#fff';
+      bubble.style.fontWeight = '700';
+      bubble.style.fontSize = '12px';
+      bubble.textContent = node.number === null ? '•' : String(node.number);
+      heading.appendChild(bubble);
+
+      const titleWrap = document.createElement('div');
+      titleWrap.style.display = 'grid';
+      titleWrap.style.marginLeft = '8px';
+      const label = document.createElement('strong');
+      label.textContent = node.title;
+      titleWrap.appendChild(label);
+      const kind = document.createElement('span');
+      kind.className = 'vm-mini';
+      kind.textContent = node.kindLabel.replace(/_/g, ' ');
+      titleWrap.appendChild(kind);
+      heading.appendChild(titleWrap);
+      card.appendChild(heading);
+
+      const inventory = document.createElement('div');
+      inventory.className = 'vm-mini';
+      inventory.style.marginTop = '8px';
+      inventory.textContent = node.inventoryId ? `Inventory: ${node.inventoryId}` : 'Route-local node';
+      card.appendChild(inventory);
+
+      const downstream = document.createElement('div');
+      downstream.className = 'vm-mini';
+      downstream.style.marginTop = '8px';
+      downstream.textContent = node.downstream.length
+        ? `Downstream: ${node.downstream.map((entry) => entry.branchLabel ? `${entry.targetLabel} [${entry.branchLabel}]` : entry.targetLabel).join(' • ')}`
+        : 'Downstream: terminal node';
+      card.appendChild(downstream);
+
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+
+    if (graphModel.branchBlocks.length) {
+      const branchWrap = document.createElement('div');
+      branchWrap.className = 'vm-mini';
+      branchWrap.style.marginTop = '12px';
+      branchWrap.textContent = `Branch blocks: ${graphModel.branchBlocks.length}. Explicit branch-local traversal remains authoritative for this route.`;
+      section.appendChild(branchWrap);
+    }
+
+    host.appendChild(section);
+  }
+
+  function buildDerivedControlGroups(inst, topology, route) {
+    // UI-only compatibility layer: these groups are projections/adapters derived
+    // from the already-selected authoritative route graph and traversal payload.
+    const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : mechanismsForRoute(inst.lightSources, route);
+    const illuminationEntries = topology && topology.traversal ? topology.traversal.illumination : [];
+    const detectionEntries = topology && topology.traversal ? topology.traversal.detection : [];
+    const detectorMechanisms = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : mechanismsForRoute(inst.detectors, route);
+
+    const groups = [];
+
+    if (lightSourceMechanisms.length) {
+      groups.push({
+        id: 'sources',
+        label: 'Sources',
+        subtitle: 'Derived control group layered on top of the active route graph.',
+        build(panel) {
+          lightSourceMechanisms.forEach((mechanism) => panel.appendChild(createLightSourceControl(mechanism)));
+        },
+      });
+    }
+
+    if (illuminationEntries.length) {
+      groups.push({
+        id: 'illumination-controls',
+        label: 'Illumination Controls',
+        subtitle: 'Derived selectors aligned to route-local illumination traversal.',
+        build(panel) {
+          appendTraversalEntries(panel, illuminationEntries);
+        },
+      });
+    }
+
+    groups.push({
+      id: 'sample',
+      label: 'Sample',
+      subtitle: 'Emission generation remains between illumination and detection traversal.',
+      build(panel) {
+        panel.appendChild(createLinkedStageNote('Emission generation', 'Loaded fluorophores absorb the excitation spectrum here and emit according to their reference spectra.'));
+      },
+    });
+
+    if (detectionEntries.length) {
+      groups.push({
+        id: 'detection-controls',
+        label: 'Detection Controls',
+        subtitle: 'Derived selectors aligned to route-local detection traversal and explicit branch semantics.',
+        build(panel) {
+          appendTraversalEntries(panel, detectionEntries);
+        },
+      });
+    }
+
+    if (detectorMechanisms.length) {
+      groups.push({
+        id: 'detectors',
+        label: 'Detectors & Endpoints',
+        subtitle: 'Derived control widgets for explicit route endpoints.',
+        build(panel) {
+          detectorMechanisms.forEach((mechanism) => {
+            createDetectorControls(mechanism).forEach((block) => panel.appendChild(block));
+          });
+        },
+      });
+    }
+
+    return groups;
+  }
+
   function activeRouteOrder() {
     return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
   }
@@ -1034,77 +1271,25 @@
     const route = state.activeRoute;
     state.routeTopology = deriveRouteTopology(inst, route);
     const topology = state.routeTopology;
-    const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : mechanismsForRoute(inst.lightSources, route);
-    const illuminationEntries = topology && topology.traversal ? topology.traversal.illumination : [];
-    const detectionEntries = topology && topology.traversal ? topology.traversal.detection : [];
-    const detectorMechanisms = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : mechanismsForRoute(inst.detectors, route);
+    const authoritativeGraph = buildAuthoritativeRouteGraph(topology);
+    const derivedControlGroups = buildDerivedControlGroups(inst, topology, route);
 
     const shell = document.createElement('div');
     shell.className = 'vm-pipeline-shell';
+    const topologyWrap = document.createElement('div');
+    topologyWrap.className = 'vm-route-topology';
     const pipeline = document.createElement('div');
     pipeline.className = 'vm-pipeline';
     const inspector = document.createElement('div');
     inspector.className = 'vm-inspector';
+    shell.appendChild(topologyWrap);
     shell.appendChild(pipeline);
     shell.appendChild(inspector);
     DOM.graph.appendChild(shell);
 
-    const stages = [];
-
-    if (lightSourceMechanisms.length) {
-      stages.push({
-        id: 'sources',
-        label: 'Sources',
-        subtitle: 'Enable sources, tune wavelengths, and set relative power.',
-        build(panel) {
-          lightSourceMechanisms.forEach((mechanism) => panel.appendChild(createLightSourceControl(mechanism)));
-        },
-      });
-    }
-
-    if (illuminationEntries.length) {
-      stages.push({
-        id: 'illumination',
-        label: 'Illumination Path',
-        subtitle: 'Derived from the canonical illumination_sequence for the active route.',
-        build(panel) {
-          appendTraversalEntries(panel, illuminationEntries);
-        },
-      });
-    }
-
-    stages.push({
-      id: 'sample',
-      label: 'Sample',
-      subtitle: 'The selected excitation drives fluorophore emission at the specimen plane.',
-      build(panel) {
-        panel.appendChild(createLinkedStageNote('Emission generation', 'Loaded fluorophores absorb the excitation spectrum here and emit according to their reference spectra.'));
-      },
-    });
-
-    if (detectionEntries.length) {
-      stages.push({
-        id: 'detection',
-        label: 'Detection Path',
-        subtitle: 'Derived from the canonical detection_sequence for the active route, including explicit selector and branch semantics.',
-        build(panel) {
-          appendTraversalEntries(panel, detectionEntries);
-        },
-      });
-    }
-
-    if (detectorMechanisms.length) {
-      stages.push({
-        id: 'detectors',
-        label: 'Detectors & Endpoints',
-        subtitle: 'Enable digital detectors, camera ports, or eyepieces. When splitter targets are defined, each endpoint gets its own full routed path automatically.',
-        build(panel) {
-          detectorMechanisms.forEach((mechanism) => {
-            createDetectorControls(mechanism).forEach((block) => panel.appendChild(block));
-          });
-        },
-      });
-    }
+    // Always render canonical route topology first; pipeline badges/panels below
+    // are derived interaction helpers layered on top of that graph.
+    renderAuthoritativeRouteGraph(topologyWrap, authoritativeGraph);
 
     if (route === 'transmitted' || route === 'brightfield' || route === 'phase') {
       const warningPanel = document.createElement('div');
@@ -1120,21 +1305,21 @@
       inspector.prepend(warningPanel);
     }
 
-    if (!stages.length) return;
+    if (!derivedControlGroups.length) return;
 
-    stages.forEach((stage, index) => {
-      if (index > 0) pipeline.appendChild(createPipeSegment(stagePipeKey(stages[index - 1].id, stage.id)));
-      pipeline.appendChild(createPipelineBadge(stage.id, stage.label));
-      const panel = createInspectorPanel(stage.id, stage.label, stage.subtitle);
-      stage.build(panel);
+    derivedControlGroups.forEach((group, index) => {
+      if (index > 0) pipeline.appendChild(createPipeSegment(stagePipeKey(derivedControlGroups[index - 1].id, group.id)));
+      pipeline.appendChild(createPipelineBadge(group.id, group.label));
+      const panel = createInspectorPanel(group.id, group.label, group.subtitle);
+      group.build(panel);
       inspector.appendChild(panel);
     });
 
     restoreStageSelections(snapshot);
     enforceValidStageOptions();
-    const availableStageIds = stages.map((stage) => stage.id);
-    const preferredStage = availableStageIds.includes(state.activeInspectorStage) ? state.activeInspectorStage : availableStageIds[0];
-    setInspectorStage(preferredStage);
+    const availableDerivedGroupIds = derivedControlGroups.map((group) => group.id);
+    const preferredDerivedGroup = availableDerivedGroupIds.includes(state.activeInspectorStage) ? state.activeInspectorStage : availableDerivedGroupIds[0];
+    setInspectorStage(preferredDerivedGroup);
   }
 
   function createLightSourceControl(mechanism) {

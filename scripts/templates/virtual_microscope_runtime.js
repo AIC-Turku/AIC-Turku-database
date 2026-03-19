@@ -531,6 +531,104 @@
     return leftValue - rightValue;
   }
 
+  function sequenceStepIds(sequence, key) {
+    const ids = [];
+    (Array.isArray(sequence) ? sequence : []).forEach((step) => {
+      if (!(step && typeof step === 'object')) return;
+      if (step[key]) {
+        const normalized = normalizeIdentifier(step[key]);
+        if (normalized && !ids.includes(normalized)) ids.push(normalized);
+      }
+      const branchBlock = step.branches && typeof step.branches === 'object' ? step.branches : null;
+      if (branchBlock) {
+        (Array.isArray(branchBlock.items) ? branchBlock.items : []).forEach((branch) => {
+          ids.push(...sequenceStepIds(branch && branch.sequence, key));
+        });
+      }
+    });
+    return ids.filter((id, index) => ids.indexOf(id) === index);
+  }
+
+  function sequenceBranchBlocks(sequence) {
+    const blocks = [];
+    (Array.isArray(sequence) ? sequence : []).forEach((step) => {
+      if (!(step && typeof step === 'object')) return;
+      const branchBlock = step.branches && typeof step.branches === 'object' ? step.branches : null;
+      if (!branchBlock) return;
+      blocks.push({
+        selection_mode: cleanString(branchBlock.selection_mode).toLowerCase() || 'exclusive',
+        items: (Array.isArray(branchBlock.items) ? branchBlock.items : []).map((branch) => ({
+          ...branch,
+          sequence: Array.isArray(branch && branch.sequence) ? branch.sequence.map((branchStep) => ({ ...branchStep })) : [],
+        })),
+      });
+    });
+    return blocks;
+  }
+
+  function canonicalRouteTopology(payload, topologyBindings) {
+    const routeUsageById = new Map(
+      (Array.isArray(payload && payload.route_hardware_usage) ? payload.route_hardware_usage : [])
+        .filter((entry) => entry && typeof entry === 'object')
+        .map((entry) => [normalizeIdentifier(entry.route_id), { ...entry }])
+    );
+
+    const routes = (Array.isArray(payload && payload.light_paths) ? payload.light_paths : [])
+      .filter((route) => route && typeof route === 'object')
+      .map((route, routeIndex) => {
+        const routeId = normalizeIdentifier(route.id || route.route || route.name) || `route_${routeIndex + 1}`;
+        const graphNodes = Array.isArray(route.graph_nodes) ? route.graph_nodes.map((node) => ({ ...node })) : [];
+        const graphEdges = Array.isArray(route.graph_edges) ? route.graph_edges.map((edge) => ({ ...edge })) : [];
+        const routeUsage = routeUsageById.get(routeId) || null;
+        const explicitSourceIds = sequenceStepIds(route.illumination_sequence, 'source_id');
+        const explicitEndpointIds = sequenceStepIds(route.detection_sequence, 'endpoint_id');
+        const explicitElementIds = [
+          ...sequenceStepIds(route.illumination_sequence, 'optical_path_element_id'),
+          ...sequenceStepIds(route.detection_sequence, 'optical_path_element_id'),
+        ].filter((value, index, items) => items.indexOf(value) === index);
+        return {
+          id: routeId,
+          label: cleanString(route.name) || routeLabel(routeId),
+          order: routeIndex,
+          record: { ...route },
+          graphNodes,
+          graphEdges,
+          routeHardwareUsage: routeUsage ? { ...routeUsage } : null,
+          routeLocalHardwareUsage: routeUsage
+            ? {
+                hardware_inventory_ids: Array.isArray(routeUsage.hardware_inventory_ids) ? routeUsage.hardware_inventory_ids.slice() : [],
+                endpoint_inventory_ids: Array.isArray(routeUsage.endpoint_inventory_ids) ? routeUsage.endpoint_inventory_ids.slice() : [],
+              }
+            : { hardware_inventory_ids: [], endpoint_inventory_ids: [] },
+          branchBlocks: (
+            Array.isArray(route.branch_blocks) && route.branch_blocks.length
+              ? route.branch_blocks
+              : [
+                  ...sequenceBranchBlocks(route.illumination_sequence),
+                  ...sequenceBranchBlocks(route.detection_sequence),
+                ]
+          ).map((block) => ({ ...block })),
+          explicitSourceIds,
+          explicitEndpointIds,
+          explicitElementIds,
+          illuminationTraversal: Array.isArray(route.illumination_traversal) ? route.illumination_traversal.map((step) => ({ ...step })) : [],
+          detectionTraversal: Array.isArray(route.detection_traversal) ? route.detection_traversal.map((step) => ({ ...step })) : [],
+        };
+      });
+
+    return {
+      routeCatalog: Array.isArray(topologyBindings && topologyBindings.routeCatalog)
+        ? topologyBindings.routeCatalog.map((entry) => ({ ...entry }))
+        : routes.map((route) => ({ id: route.id, label: route.label, order: route.order })),
+      routes,
+      routeUsageById: Object.fromEntries(
+        routes.map((route) => [route.id, route.routeHardwareUsage ? { ...route.routeHardwareUsage } : null])
+      ),
+      graphNodesByRoute: Object.fromEntries(routes.map((route) => [route.id, route.graphNodes.map((node) => ({ ...node }))])),
+      graphEdgesByRoute: Object.fromEntries(routes.map((route) => [route.id, route.graphEdges.map((edge) => ({ ...edge }))])),
+    };
+  }
+
   function canonicalStagePayload(payload, topologyBindings, options) {
     const out = { cube: [], excitation: [], dichroic: [], emission: [] };
     canonicalElements(payload && payload.optical_path_elements).forEach((element) => {
@@ -780,6 +878,28 @@
     });
   }
 
+  function deriveStageGroupAdapters(payload, topologyBindings, options) {
+    const allowApproximation = Boolean(options && options.allowApproximation);
+    const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings, { allowApproximation }));
+    const stageSource = canonicalStagePayload(payload, topologyBindings, { allowApproximation });
+    const splitterSource = canonicalSplitterPayload(payload, topologyBindings, { allowApproximation });
+    // These are compatibility/UI adapters only. They are reconstructed from the
+    // authoritative canonical payload so older stage/group-based consumers can
+    // keep working, but routeTopology + hardwareInventory remain the topology truth.
+    return {
+      lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings, { allowApproximation })),
+      stages: {
+        cube: normalizeMechanismList(stageSource && stageSource.cube),
+        excitation: normalizeMechanismList(stageSource && stageSource.excitation),
+        dichroic: normalizeMechanismList(stageSource && stageSource.dichroic),
+        emission: normalizeMechanismList(stageSource && stageSource.emission),
+      },
+      splitters: normalizeSplitters(splitterSource, { allowApproximation }),
+      terminals: normalizedTerminals,
+      detectors: terminalsAsDetectorMechanisms(normalizedTerminals),
+    };
+  }
+
   function normalizeInstrumentPayload(rawPayload, options) {
     const inputPayload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
     const approximationMode = simulatorApproximationModeEnabled(inputPayload.metadata || {}, options);
@@ -792,24 +912,28 @@
       : {};
     const simulationMeta = payload.simulation && typeof payload.simulation === 'object' ? payload.simulation : {};
     const topologyBindings = canonicalTopologyBindings(payload);
-    const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings, { allowApproximation: approximationMode }));
-    const stageSource = canonicalStagePayload(payload, topologyBindings, { allowApproximation: approximationMode });
-    const splitterSource = canonicalSplitterPayload(payload, topologyBindings, { allowApproximation: approximationMode });
+    const routeTopology = canonicalRouteTopology(payload, topologyBindings);
+    const derivedStageAdapters = deriveStageGroupAdapters(payload, topologyBindings, { allowApproximation: approximationMode });
     const normalized = {
       metadata: payload.metadata || {},
       lightPaths: Array.isArray(payload.light_paths) ? payload.light_paths : [],
+      // Authoritative downstream DTO surfaces.
+      routeTopology,
       hardwareInventory: Array.isArray(payload.hardware_inventory) ? payload.hardware_inventory : [],
       routeHardwareUsage: Array.isArray(payload.route_hardware_usage) ? payload.route_hardware_usage : [],
       normalizedEndpoints: Array.isArray(payload.normalized_endpoints || payload.endpoints) ? (payload.normalized_endpoints || payload.endpoints) : [],
       opticalPathElements: canonicalElements(payload.optical_path_elements),
-      lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings, { allowApproximation: approximationMode })),
-      cube: normalizeMechanismList(stageSource && stageSource.cube),
-      excitation: normalizeMechanismList(stageSource && stageSource.excitation),
-      dichroic: normalizeMechanismList(stageSource && stageSource.dichroic),
-      emission: normalizeMechanismList(stageSource && stageSource.emission),
-      splitters: normalizeSplitters(splitterSource, { allowApproximation: approximationMode }),
-      detectors: terminalsAsDetectorMechanisms(normalizedTerminals),
-      terminals: normalizedTerminals,
+      // Derived compatibility adapters reconstructed from the authoritative payload.
+      stageAdapters: derivedStageAdapters,
+      derivedStageAdapters,
+      lightSources: derivedStageAdapters.lightSources,
+      cube: derivedStageAdapters.stages.cube,
+      excitation: derivedStageAdapters.stages.excitation,
+      dichroic: derivedStageAdapters.stages.dichroic,
+      emission: derivedStageAdapters.stages.emission,
+      splitters: derivedStageAdapters.splitters,
+      detectors: derivedStageAdapters.detectors,
+      terminals: derivedStageAdapters.terminals,
       validPaths: Array.isArray(runtimeProjection.valid_paths || payload.valid_paths) ? (runtimeProjection.valid_paths || payload.valid_paths) : [],
       routeOptions: [],
       defaultRoute: cleanString(simulationMeta.default_route || payload.default_route || (topologyBindings.routeCatalog[0] && topologyBindings.routeCatalog[0].id)).toLowerCase() || null,

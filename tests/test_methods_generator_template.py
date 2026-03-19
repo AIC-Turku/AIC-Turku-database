@@ -419,38 +419,48 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             "hardware": {
                 "scanner": {"present": False},
                 "objectives": [],
-                "light_sources": [
-                    {"id": "source:laser_488", "display_label": "488 Laser", "display_subtitle": "Light Source"},
-                    {"id": "source:laser_561", "display_label": "561 Laser", "display_subtitle": "Light Source"},
-                ],
-                "detectors": [
-                    {"id": "endpoint:cam", "display_label": "Main Camera", "display_subtitle": "Endpoint"},
-                    {"id": "endpoint:hyd", "display_label": "HyD", "display_subtitle": "Endpoint"},
-                ],
+                "light_sources": [],
+                "detectors": [],
                 "magnification_changers": [],
                 "optical_modulators": [],
                 "illumination_logic": [],
                 "optical_path": {
-                    "filters": [],
-                    "splitters": [],
-                    "methods_route_views": [
+                    "hardware_inventory_renderables": [
+                        {"id": "source:laser_488", "inventory_class": "light_source", "display_label": "488 Laser", "display_subtitle": "Light Source", "method_sentence": "488 sentence."},
+                        {"id": "source:laser_561", "inventory_class": "light_source", "display_label": "561 Laser", "display_subtitle": "Light Source", "method_sentence": "561 sentence."},
+                        {"id": "optical_path_element:ex_488", "inventory_class": "optical_element", "display_label": "EX 488", "display_subtitle": "Optical Element", "method_sentence": "EX sentence."},
+                        {"id": "optical_path_element:pinhole", "inventory_class": "optical_element", "display_label": "Pinhole", "display_subtitle": "Optical Element", "method_sentence": "Pinhole sentence."},
+                        {"id": "endpoint:cam", "inventory_class": "endpoint", "display_label": "Main Camera", "display_subtitle": "Endpoint", "method_sentence": "Cam sentence."},
+                        {"id": "endpoint:hyd", "inventory_class": "endpoint", "display_label": "HyD", "display_subtitle": "Endpoint", "method_sentence": "HyD sentence."},
+                    ],
+                    "authoritative_route_contract": {
+                        "routes": [
                         {
                             "id": "epi",
                             "display_label": "Epi",
-                            "light_sources": [{"id": "source:laser_488", "display_label": "488 Laser", "display_subtitle": "Light Source"}],
-                            "filters": [{"id": "optical_path_element:ex_488", "display_label": "EX 488", "display_subtitle": "Optical Element"}],
-                            "splitters": [],
-                            "detectors": [{"id": "endpoint:cam", "display_label": "Main Camera", "display_subtitle": "Endpoint"}],
+                            "illumination_mode": "epi",
+                            "method_sentence": "The Epi illumination mode / route was used.",
+                            "relevant_hardware": {
+                                "sources": [{"id": "source:laser_488", "display_label": "488 Laser", "display_subtitle": "Light Source"}],
+                                "filters": [{"id": "optical_path_element:ex_488", "display_label": "EX 488", "display_subtitle": "Optical Element"}],
+                                "splitters": [],
+                                "endpoints": [{"id": "endpoint:cam", "display_label": "Main Camera", "display_subtitle": "Endpoint"}],
+                            },
                         },
                         {
                             "id": "confocal",
                             "display_label": "Confocal",
-                            "light_sources": [{"id": "source:laser_561", "display_label": "561 Laser", "display_subtitle": "Light Source"}],
-                            "filters": [{"id": "optical_path_element:pinhole", "display_label": "Pinhole", "display_subtitle": "Optical Element"}],
-                            "splitters": [],
-                            "detectors": [{"id": "endpoint:hyd", "display_label": "HyD", "display_subtitle": "Endpoint"}],
+                            "illumination_mode": "confocal",
+                            "method_sentence": "The Confocal illumination mode / route was used.",
+                            "relevant_hardware": {
+                                "sources": [{"id": "source:laser_561", "display_label": "561 Laser", "display_subtitle": "Light Source"}],
+                                "filters": [{"id": "optical_path_element:pinhole", "display_label": "Pinhole", "display_subtitle": "Optical Element"}],
+                                "splitters": [],
+                                "endpoints": [{"id": "endpoint:hyd", "display_label": "HyD", "display_subtitle": "Endpoint"}],
+                            },
                         },
                     ],
+                    },
                 },
             },
             "modalities": [],
@@ -465,12 +475,14 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const routeSelect = document.getElementById('route-select');
             routeSelect.value = 'confocal';
             routeSelect.listeners.change({ target: routeSelect });
+            document.getElementById('add-btn').listeners.click();
             return {
               routeVisible: document.getElementById('section-route').style.display,
               lightCount: document.getElementById('light-list').children.length,
               lightLabel: document.getElementById('light-list').children[0].children[1].children[0].textContent,
               filterLabel: document.getElementById('filter-list').children[0].children[1].children[0].textContent,
               detectorLabel: document.getElementById('det-list').children[0].children[1].children[0].textContent,
+              output: document.getElementById('output-text').value,
             };
             """,
         )
@@ -480,6 +492,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("561 Laser", result["lightLabel"])
         self.assertIn("Pinhole", result["filterLabel"])
         self.assertIn("HyD", result["detectorLabel"])
+        self.assertIn("Confocal illumination mode / route was used.", result["output"])
 
 
 if __name__ == "__main__":

@@ -874,7 +874,9 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             return {
               defaultRoute: instrument.defaultRoute,
               routeIds: instrument.routeOptions.map((entry) => entry.id),
+              topologyRouteIds: instrument.routeTopology.routes.map((route) => route.id),
               sourceLabels: instrument.lightSources.flatMap((mechanism) => Object.values(mechanism.positions || {}).map((value) => value.display_label)),
+              stageAdapterSourceLabels: instrument.stageAdapters.lightSources.flatMap((mechanism) => Object.values(mechanism.positions || {}).map((value) => value.display_label)),
               excitationLabels: instrument.excitation.map((mechanism) => mechanism.display_label || mechanism.name),
               detectorLabels: instrument.detectors.flatMap((mechanism) => Object.values(mechanism.positions || {}).map((value) => value.display_label)),
             };
@@ -883,7 +885,9 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
 
         self.assertEqual(result["defaultRoute"], "epi")
         self.assertEqual(result["routeIds"], ["epi"])
+        self.assertEqual(result["topologyRouteIds"], ["epi"])
         self.assertEqual(result["sourceLabels"], ["488 laser"])
+        self.assertEqual(result["stageAdapterSourceLabels"], ["488 laser"])
         self.assertEqual(result["excitationLabels"], ["EX"])
         self.assertEqual(result["detectorLabels"], ["Camera"])
 
@@ -962,6 +966,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             });
             return {
               splitterCount: instrument.splitters.length,
+              topologyBranchBlockCount: instrument.routeTopology.routes[0].branchBlocks.length,
               branchIds: instrument.splitters[0].branches.map((branch) => branch.id),
               branchTargets: instrument.splitters[0].branches.map((branch) => branch.target_ids.join(',')),
               branchSequenceKinds: instrument.splitters[0].branches[0].sequence.map((step) => Object.keys(step)[0]),
@@ -971,6 +976,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         )
 
         self.assertEqual(result["splitterCount"], 1)
+        self.assertEqual(result["topologyBranchBlockCount"], 1)
         self.assertEqual(result["branchIds"], ["camera_route", "eyepiece_route"])
         self.assertEqual(result["branchTargets"], ["cam", "eye"])
         self.assertEqual(result["branchSequenceKinds"], ["optical_path_element_id", "endpoint_id"])
@@ -1003,6 +1009,113 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["hardwareInventoryCount"], 2)
         self.assertEqual(result["routeUsageCount"], 1)
         self.assertEqual(result["endpointInventoryId"], "endpoint:cam")
+
+    def test_route_topology_keeps_one_graph_per_route_and_multi_detector_bindings(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'epi' },
+              hardware_inventory: [
+                { id: 'source:src_488', display_number: 1, display_label: '488 laser' },
+                { id: 'source:src_561', display_number: 2, display_label: '561 laser' },
+                { id: 'optical_path_element:shared_di', display_number: 3, display_label: 'Shared DI' },
+                { id: 'endpoint:cam_a', display_number: 4, display_label: 'Camera A' },
+                { id: 'endpoint:cam_b', display_number: 5, display_label: 'Camera B' },
+                { id: 'endpoint:pmt_1', display_number: 6, display_label: 'PMT 1' }
+              ],
+              route_hardware_usage: [
+                { route_id: 'epi', hardware_inventory_ids: ['source:src_488', 'optical_path_element:shared_di', 'endpoint:cam_a', 'endpoint:cam_b'], endpoint_inventory_ids: ['endpoint:cam_a', 'endpoint:cam_b'] },
+                { route_id: 'confocal', hardware_inventory_ids: ['source:src_561', 'optical_path_element:shared_di', 'endpoint:pmt_1'], endpoint_inventory_ids: ['endpoint:pmt_1'] }
+              ],
+              sources: [
+                { id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' },
+                { id: 'src_561', display_label: '561 laser', kind: 'laser', role: 'excitation', wavelength_nm: 561, spectral_mode: 'line' }
+              ],
+              optical_path_elements: [
+                { id: 'shared_di', stage_role: 'dichroic', element_type: 'dichroic', display_label: 'Shared DI' },
+                { id: 'epi_splitter', stage_role: 'splitter', element_type: 'splitter', display_label: 'Epi splitter', selection_mode: 'exclusive' }
+              ],
+              endpoints: [
+                { id: 'cam_a', display_label: 'Camera A', endpoint_type: 'camera' },
+                { id: 'cam_b', display_label: 'Camera B', endpoint_type: 'camera' },
+                { id: 'pmt_1', display_label: 'PMT 1', endpoint_type: 'detector' }
+              ],
+              light_paths: [
+                {
+                  id: 'epi',
+                  name: 'Epi route',
+                  graph_nodes: [
+                    { id: 'epi_src', hardware_inventory_id: 'source:src_488', label: '488 laser', component_kind: 'source', inventory_display_number: 1, column: 0, lane: 0 },
+                    { id: 'epi_di', hardware_inventory_id: 'optical_path_element:shared_di', label: 'Shared DI', component_kind: 'optical_path_element', inventory_display_number: 3, column: 1, lane: 0 },
+                    { id: 'epi_split', label: 'Epi splitter', component_kind: 'optical_path_element', column: 2, lane: 0 },
+                    { id: 'epi_cam_a', hardware_inventory_id: 'endpoint:cam_a', label: 'Camera A', component_kind: 'endpoint', inventory_display_number: 4, column: 3, lane: 0 },
+                    { id: 'epi_cam_b', hardware_inventory_id: 'endpoint:cam_b', label: 'Camera B', component_kind: 'endpoint', inventory_display_number: 5, column: 3, lane: 1 }
+                  ],
+                  graph_edges: [
+                    { source: 'epi_src', target: 'epi_di' },
+                    { source: 'epi_di', target: 'epi_split' },
+                    { source: 'epi_split', target: 'epi_cam_a', branch_id: 'cam_a_branch' },
+                    { source: 'epi_split', target: 'epi_cam_b', branch_id: 'cam_b_branch' }
+                  ],
+                  illumination_sequence: [{ source_id: 'src_488' }],
+                  detection_sequence: [
+                    { optical_path_element_id: 'shared_di' },
+                    { optical_path_element_id: 'epi_splitter' },
+                    { branches: { selection_mode: 'exclusive', items: [
+                      { branch_id: 'cam_a_branch', sequence: [{ endpoint_id: 'cam_a' }] },
+                      { branch_id: 'cam_b_branch', sequence: [{ endpoint_id: 'cam_b' }] }
+                    ] } }
+                  ]
+                },
+                {
+                  id: 'confocal',
+                  name: 'Confocal route',
+                  graph_nodes: [
+                    { id: 'conf_src', hardware_inventory_id: 'source:src_561', label: '561 laser', component_kind: 'source', inventory_display_number: 2, column: 0, lane: 0 },
+                    { id: 'conf_di', hardware_inventory_id: 'optical_path_element:shared_di', label: 'Shared DI', component_kind: 'optical_path_element', inventory_display_number: 3, column: 1, lane: 0 },
+                    { id: 'conf_pmt', hardware_inventory_id: 'endpoint:pmt_1', label: 'PMT 1', component_kind: 'endpoint', inventory_display_number: 6, column: 2, lane: 0 }
+                  ],
+                  graph_edges: [
+                    { source: 'conf_src', target: 'conf_di' },
+                    { source: 'conf_di', target: 'conf_pmt' }
+                  ],
+                  illumination_sequence: [{ source_id: 'src_561' }],
+                  detection_sequence: [{ optical_path_element_id: 'shared_di' }, { endpoint_id: 'pmt_1' }]
+                }
+              ]
+            });
+            return {
+              routeIds: instrument.routeTopology.routes.map((route) => route.id),
+              graphSizes: instrument.routeTopology.routes.map((route) => ({ id: route.id, nodes: route.graphNodes.length, edges: route.graphEdges.length })),
+              branchCounts: instrument.routeTopology.routes.map((route) => ({ id: route.id, branches: route.branchBlocks.length })),
+              terminalRoutes: instrument.terminals.map((terminal) => ({ id: terminal.id, routes: terminal.__routes })),
+              detectorRoutes: instrument.detectors.map((mechanism) => ({ id: mechanism.id, routes: mechanism.__routes })),
+            };
+            """
+        )
+
+        self.assertEqual(sorted(result["routeIds"]), ["confocal", "epi"])
+        self.assertEqual(
+            sorted(result["graphSizes"], key=lambda item: item["id"]),
+            [{"id": "confocal", "nodes": 3, "edges": 2}, {"id": "epi", "nodes": 5, "edges": 4}],
+        )
+        self.assertEqual(
+            sorted(result["branchCounts"], key=lambda item: item["id"]),
+            [{"id": "confocal", "branches": 0}, {"id": "epi", "branches": 1}],
+        )
+        self.assertEqual(
+            sorted(result["terminalRoutes"], key=lambda item: item["id"]),
+            [
+                {"id": "cam_a", "routes": ["epi"]},
+                {"id": "cam_b", "routes": ["epi"]},
+                {"id": "pmt_1", "routes": ["confocal"]},
+            ],
+        )
+        detector_routes = {item["id"]: item["routes"] for item in result["detectorRoutes"]}
+        self.assertEqual(detector_routes["terminal_mechanism_cam_a"], ["epi"])
+        self.assertEqual(detector_routes["terminal_mechanism_cam_b"], ["epi"])
+        self.assertEqual(detector_routes["terminal_mechanism_pmt_1"], ["confocal"])
 
     def test_migration_compatibility_strict_mode_does_not_fallback_route_catalog_from_component_tags(self) -> None:
         result = self.run_node_json(

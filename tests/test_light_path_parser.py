@@ -284,6 +284,48 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(payload["light_paths"][0]["graph_nodes"][0]["display_number"], 1)
         self.assertEqual(payload["light_paths"][0]["graph_nodes"][1]["display_number"], 2)
 
+    def test_inventory_numbering_reuses_identity_across_routes_and_phases(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "manufacturer": "LaserCo", "model": "488"}],
+                    "optical_path_elements": [{"id": "shared_filter", "stage_role": "excitation", "element_type": "filter_wheel", "display_label": "Shared filter"}],
+                    "endpoints": [
+                        {"id": "cam_a", "endpoint_type": "camera_port", "display_label": "Camera A"},
+                        {"id": "cam_b", "endpoint_type": "camera_port", "display_label": "Camera B"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "shared_filter"}],
+                        "detection_sequence": [{"optical_path_element_id": "shared_filter"}, {"endpoint_id": "cam_a"}],
+                    },
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [{"optical_path_element_id": "shared_filter"}, {"endpoint_id": "cam_b"}],
+                    },
+                ],
+            }
+        )
+
+        inventory_item = next(item for item in payload["hardware_inventory"] if item["id"] == "optical_path_element:shared_filter")
+        self.assertEqual(inventory_item["display_number"], 2)
+        self.assertEqual(inventory_item["inventory_identity"]["inventory_id"], "optical_path_element:shared_filter")
+
+        shared_nodes = [
+            node
+            for route in payload["light_paths"]
+            for node in route["graph_nodes"]
+            if node.get("hardware_inventory_id") == "optical_path_element:shared_filter"
+        ]
+        self.assertGreaterEqual(len(shared_nodes), 3)
+        self.assertTrue(all(node["display_number"] == 2 for node in shared_nodes))
+        self.assertTrue(all(node["inventory_display_number"] == 2 for node in shared_nodes))
+        self.assertTrue(all(node["inventory_identity"]["inventory_id"] == "optical_path_element:shared_filter" for node in shared_nodes))
+        self.assertTrue(all(node["graph_occurrence"]["node_id"] == node["id"] for node in shared_nodes))
+
     def test_details_include_notes_with_pipe_separator(self) -> None:
         payload = generate_virtual_microscope_payload(
             {

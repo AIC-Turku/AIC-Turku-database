@@ -50,6 +50,8 @@ TEMPLATE_PATH = REPO_ROOT / "templates" / "microscope_template.yaml"
 VALIDATE_PATH = REPO_ROOT / "scripts" / "validate.py"
 RUNTIME_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_runtime.js"
 APP_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_app.js"
+METHODS_TEMPLATE_PATH = REPO_ROOT / "scripts" / "templates" / "methods_generator.md.j2"
+PLAN_TEMPLATE_PATH = REPO_ROOT / "scripts" / "templates" / "plan_experiments.md.j2"
 
 
 def _schema_paths() -> set[str]:
@@ -333,6 +335,16 @@ class ContractInvariantTests(unittest.TestCase):
             r"if \(!strictHardwareTruthMode\(\) && autoRepairBlockedPath\(selection, simulation\)\)",
             msg="App must gate blocked-path auto-repair behind non-strict simulator mode.",
         )
+
+    def test_methods_and_plan_consumers_keep_authoritative_route_contract_as_primary_input(self) -> None:
+        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+        plan_source = PLAN_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+        self.assertIn("authoritative_route_contract?.routes", methods_source)
+        self.assertIn("hardware_inventory_renderables", methods_source)
+        self.assertNotIn("methods_route_views", methods_source)
+        self.assertIn("llm_context.authoritative_route_contract", plan_source)
+        self.assertNotIn("hardware.light_path", plan_source)
 
 
 if __name__ == "__main__":
