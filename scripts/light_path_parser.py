@@ -2339,6 +2339,11 @@ def _build_hardware_inventory(
             "display_number": display_number,
             "modalities": modalities,
             "source_ref": {"component_type": component_type, "id": component_id},
+            "inventory_identity": {
+                "inventory_id": inventory_id,
+                "hardware_id": component_id,
+                "component_type": component_type,
+            },
         }
         item.update(_inventory_metadata(component_type, row))
         if _clean_string(row.get("name")):
@@ -2377,6 +2382,8 @@ def _resolve_graph_component(
         "hardware_inventory_id": inventory_id if inventory_item else "",
         "display_label": inventory_item.get("display_label") or _component_display_label(component_type, row) or ref_id,
         "display_number": inventory_item.get("display_number"),
+        "inventory_display_number": inventory_item.get("display_number"),
+        "inventory_identity": json.loads(json.dumps(inventory_item.get("inventory_identity") or {})),
         "modalities": inventory_item.get("modalities") or _normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes")),
     }
     if component_type == "optical_path_element":
@@ -2441,6 +2448,15 @@ def _build_route_sequences_and_graph(
                 "hardware_id": resolved.get("id"),
                 "label": resolved.get("display_label"),
                 "display_number": resolved.get("display_number"),
+                "inventory_display_number": resolved.get("inventory_display_number"),
+                "inventory_identity": json.loads(json.dumps(resolved.get("inventory_identity") or {})),
+                "graph_occurrence": {
+                    "node_id": node_id,
+                    "route_id": route["id"],
+                    "phase": phase,
+                    "column": column,
+                    "lane": lane,
+                },
                 "stage_role": resolved.get("stage_role"),
                 "endpoint_type": resolved.get("endpoint_type"),
                 "column": column,

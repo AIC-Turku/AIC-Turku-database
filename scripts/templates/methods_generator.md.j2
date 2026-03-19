@@ -300,9 +300,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function routeViewsForInstrument(dto) {
-        return Array.isArray(dto?.hardware?.optical_path?.methods_route_views)
-            ? dto.hardware.optical_path.methods_route_views
+        return Array.isArray(dto?.hardware?.optical_path?.authoritative_route_contract?.routes)
+            ? dto.hardware.optical_path.authoritative_route_contract.routes
             : [];
+    }
+
+    function opticalPathInventory(dto) {
+        return Array.isArray(dto?.hardware?.optical_path?.hardware_inventory_renderables)
+            ? dto.hardware.optical_path.hardware_inventory_renderables
+            : [];
+    }
+
+    function inventoryItemsForClasses(dto, classes) {
+        const wanted = new Set((Array.isArray(classes) ? classes : []).map(cleanText).filter(Boolean));
+        return opticalPathInventory(dto).filter(item => wanted.has(cleanText(item?.inventory_class)));
     }
 
     function populateRouteSelector(dto) {
@@ -312,7 +323,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         routeViews.forEach((routeView) => {
             const option = document.createElement("option");
             option.value = routeView.id || "";
-            option.textContent = routeView.display_label || routeView.id || "Route";
+            const routeLabel = cleanText(routeView.display_label || routeView.id || "Route");
+            const illuminationMode = cleanText(routeView.illumination_mode);
+            option.textContent = illuminationMode && illuminationMode.toLowerCase() !== routeLabel.toLowerCase()
+                ? `${routeLabel} (${illuminationMode})`
+                : routeLabel;
             routeSelect.appendChild(option);
         });
         routeSelect.value = "";
@@ -330,14 +345,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     function refreshOpticalPathSelections(dto) {
         const opticalPath = dto?.hardware?.optical_path || {};
         const routeView = activeRouteView(dto);
-        const lightItems = routeView?.light_sources || dto.hardware?.light_sources || [];
-        const detItems = routeView?.detectors || dto.hardware?.detectors || [];
-        const filterItems = routeView?.filters || opticalPath.filters || [];
-        const splitterItems = routeView?.splitters || opticalPath.splitters || [];
+        const relevantHardware = routeView?.relevant_hardware || {};
+        const lightItems = Array.isArray(relevantHardware?.sources) && relevantHardware.sources.length
+            ? relevantHardware.sources
+            : inventoryItemsForClasses(dto, ["light_source"]);
+        const detItems = Array.isArray(relevantHardware?.endpoints) && relevantHardware.endpoints.length
+            ? relevantHardware.endpoints
+            : inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
+        const filterItems = Array.isArray(relevantHardware?.filters) && relevantHardware.filters.length
+            ? relevantHardware.filters
+            : inventoryItemsForClasses(dto, ["optical_element"]);
+        const splitterItems = Array.isArray(relevantHardware?.splitters) && relevantHardware.splitters.length
+            ? relevantHardware.splitters
+            : inventoryItemsForClasses(dto, ["splitter"]);
         toggleSectionVisibility("section-light", bindCheckboxes("light-list", lightItems, "light") > 0);
         toggleSectionVisibility("section-det", bindCheckboxes("det-list", detItems, "det") > 0);
         toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterItems, "filter") > 0);
         toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", splitterItems, "splitter") > 0);
+    }
+
+    function selectedRouteSentence(dto) {
+        const routeView = activeRouteView(dto);
+        if (!routeView) return "";
+        return cleanText(routeView.method_sentence)
+            || `The ${cleanText(routeView.display_label || routeView.id || "selected")} illumination mode / route was used.`;
     }
 
     function getCheckedSelections(prefix) {
@@ -549,6 +580,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ]).join(" ");
 
         const paragraphLightPath = dedupeSentences([
+            selectedRouteSentence(dto),
             groupedSelections.filter,
             ...specialistSelections,
             dto.methods?.quarep_light_path_recommendation,

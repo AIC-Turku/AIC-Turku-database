@@ -73,11 +73,11 @@ class TemplateGenerationTests(unittest.TestCase):
     def test_plan_experiments_prompt_uses_canonical_v2_route_language(self) -> None:
         rendered = Path('scripts/templates/plan_experiments.md.j2').read_text(encoding='utf-8')
 
-        self.assertIn('hardware.sources', rendered)
-        self.assertIn('hardware.optical_path_elements', rendered)
-        self.assertIn('hardware.endpoints', rendered)
-        self.assertIn('light_paths', rendered)
-        self.assertIn('branches', rendered)
+        self.assertIn('llm_context.authoritative_route_contract', rendered)
+        self.assertIn('hardware.optical_path.primary_rendering_contract', rendered)
+        self.assertIn('branch_summary', rendered)
+        self.assertIn('graph_nodes', rendered)
+        self.assertIn('graph_edges', rendered)
         self.assertNotIn('Using the \\`hardware.light_path\\` topological data', rendered)
         self.assertNotIn('\\`excitation_mechanisms\\`', rendered)
         self.assertNotIn('Path 1 vs Path 2', rendered)
