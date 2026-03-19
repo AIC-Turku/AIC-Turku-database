@@ -777,6 +777,31 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertIsNone(light.get("product_code"))
         self.assertIsNone(detector.get("product_code"))
 
+    def test_build_hardware_dto_exposes_unified_normalized_endpoint_inventory(self) -> None:
+        inst = {
+            "canonical": {
+                "hardware": {
+                    "detectors": [{"id": "detector_1", "kind": "hybrid", "model": "HyD"}],
+                    "eyepieces": [{"id": "eyepieces", "name": "Eyepieces"}],
+                }
+            }
+        }
+        lightpath_dto = {
+            "endpoints": [
+                {"id": "detector_1", "endpoint_type": "detector", "source_section": "detectors", "display_label": "HyD"},
+                {"id": "eyepieces", "endpoint_type": "eyepiece", "source_section": "eyepieces", "display_label": "Eyepieces"},
+            ],
+            "filters": [],
+            "splitters": [],
+            "sections": [],
+            "renderables": [],
+        }
+
+        hardware = build_hardware_dto(self.vocabulary, inst, lightpath_dto=lightpath_dto)
+
+        self.assertEqual([row["id"] for row in hardware["endpoints"]], ["detector_1", "eyepieces"])
+        self.assertIn("Source section", "\n".join(hardware["endpoints"][0]["spec_lines"]))
+
 
 if __name__ == "__main__":
     unittest.main()

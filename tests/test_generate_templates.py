@@ -54,8 +54,6 @@ class TemplateGenerationTests(unittest.TestCase):
         self.assertIn('stage_role: ""', rendered)
         self.assertIn('element_type: ""', rendered)
         self.assertIn('selection_mode: ""', rendered)
-        self.assertIn('mode: ""', rendered)
-        self.assertIn('target_ids:', rendered)
         self.assertIn('branch_id: ""', rendered)
         self.assertIn('sequence:', rendered)
         self.assertIn('supported_branch_count: ""', rendered)

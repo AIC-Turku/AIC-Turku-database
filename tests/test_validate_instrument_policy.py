@@ -1458,5 +1458,326 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(issues, [])
         self.assertFalse(any(w.code == 'missing_conditional_field' for w in warnings))
 
+    def test_light_path_validator_warns_when_detection_route_lacks_explicit_endpoint(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/missing-route-endpoint.yaml',
+            {
+                'instrument': {'instrument_id': 'missing-route-endpoint'},
+                'hardware': {
+                    'optical_path_elements': [
+                        {'id': 'emission_filter', 'stage_role': 'emission', 'element_type': 'filter_wheel'}
+                    ]
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [{'optical_path_element_id': 'emission_filter'}],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual(issues, [])
+        self.assertTrue(any(w.code == 'light_path_endpoint_warning' for w in warnings))
+        self.assertTrue(any('route does not terminate in a clear explicit endpoint_id' in w.message for w in warnings))
+
+    def test_schema_allows_optical_path_elements_without_stage_role(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'optical_path_stage_roles': {
+                        'source': 'inline',
+                        'allowed_values': ['excitation', 'dichroic', 'emission', 'cube', 'splitter'],
+                    },
+                    'optical_path_element_types': {
+                        'source': 'inline',
+                        'allowed_values': ['filter_wheel', 'splitter'],
+                    },
+                },
+                'sections': [
+                    {
+                        'path': 'hardware.optical_path_elements[].stage_role',
+                        'title': 'Optical path element stage role',
+                        'status': 'optional',
+                        'type': 'string',
+                        'vocab': 'optical_path_stage_roles',
+                    },
+                    {
+                        'path': 'hardware.optical_path_elements[].element_type',
+                        'title': 'Optical path element type',
+                        'status': 'required',
+                        'type': 'string',
+                        'vocab': 'optical_path_element_types',
+                    },
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/stage-role-optional.yaml',
+            {
+                'instrument': {'instrument_id': 'stage-role-optional'},
+                'hardware': {
+                    'endpoints': [{'id': 'camera_port_1', 'endpoint_type': 'camera_port'}],
+                    'optical_path_elements': [
+                        {'id': 'generic_filter', 'element_type': 'filter_wheel'}
+                    ],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [
+                            {'optical_path_element_id': 'generic_filter'},
+                            {'endpoint_id': 'camera_port_1'},
+                        ],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual(issues, [])
+        self.assertEqual(warnings, [])
+
+    def test_light_path_validator_warns_when_branch_lacks_explicit_endpoint(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/missing-branch-endpoint.yaml',
+            {
+                'instrument': {'instrument_id': 'missing-branch-endpoint'},
+                'hardware': {
+                    'optical_path_elements': [
+                        {'id': 'splitter_1', 'stage_role': 'splitter', 'element_type': 'splitter'},
+                        {'id': 'green_filter', 'stage_role': 'emission', 'element_type': 'filter_wheel'},
+                    ],
+                    'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [
+                            {'optical_path_element_id': 'splitter_1'},
+                            {
+                                'branches': {
+                                    'selection_mode': 'exclusive',
+                                    'items': [
+                                        {'branch_id': 'good', 'sequence': [{'endpoint_id': 'detector_1'}]},
+                                        {'branch_id': 'bad', 'sequence': [{'optical_path_element_id': 'green_filter'}]},
+                                    ],
+                                }
+                            },
+                        ],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual(issues, [])
+        self.assertTrue(any(w.code == 'light_path_endpoint_warning' for w in warnings))
+        self.assertTrue(any('.branches.items[1].sequence: branch does not terminate' in w.message for w in warnings))
+
+    def test_light_path_validator_accepts_endpoint_ids_normalized_from_detector_inventory(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/normalized-detector-endpoint.yaml',
+            {
+                'instrument': {'instrument_id': 'normalized-detector-endpoint'},
+                'hardware': {
+                    'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [{'endpoint_id': 'detector_1'}],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual(issues, [])
+        self.assertEqual(warnings, [])
+
+    def test_light_path_validator_errors_on_duplicate_endpoint_ids_across_endpoint_capable_sections(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/duplicate-endpoint-id.yaml',
+            {
+                'instrument': {'instrument_id': 'duplicate-endpoint-id'},
+                'hardware': {
+                    'detectors': [{'id': 'shared_endpoint', 'kind': 'camera'}],
+                    'eyepieces': [{'id': 'shared_endpoint'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [{'endpoint_id': 'shared_endpoint'}],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertFalse(warnings)
+        self.assertTrue(any(issue.code == 'invalid_light_path' for issue in issues))
+        self.assertTrue(any('normalized endpoint id `shared_endpoint`' in issue.message for issue in issues))
+
+    def test_light_path_validator_rejects_mixed_topology_keys_in_sequence_items(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/mixed-sequence-item.yaml',
+            {
+                'instrument': {'instrument_id': 'mixed-sequence-item'},
+                'hardware': {
+                    'sources': [{'id': 'src_488', 'kind': 'laser'}],
+                    'optical_path_elements': [{'id': 'exc_filter', 'stage_role': 'excitation', 'element_type': 'filter_wheel'}],
+                    'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [{'source_id': 'src_488', 'optical_path_element_id': 'exc_filter'}],
+                        'detection_sequence': [{'endpoint_id': 'detector_1'}],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertFalse(warnings)
+        self.assertTrue(any(issue.code == 'invalid_light_path' for issue in issues))
+        self.assertTrue(any('illumination sequence item must declare exactly one of source_id, or optical_path_element_id.' in issue.message for issue in issues))
+
+    def test_light_path_validator_rejects_illumination_branch_blocks_in_v1(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/illumination-branch-block.yaml',
+            {
+                'instrument': {'instrument_id': 'illumination-branch-block'},
+                'hardware': {
+                    'sources': [{'id': 'src_488', 'kind': 'laser'}],
+                    'optical_path_elements': [{'id': 'exc_filter', 'element_type': 'filter_wheel'}],
+                    'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [
+                            {'source_id': 'src_488'},
+                            {'branches': {'selection_mode': 'exclusive', 'items': [{'branch_id': 'alt', 'sequence': [{'optical_path_element_id': 'exc_filter'}]}]}},
+                        ],
+                        'detection_sequence': [{'endpoint_id': 'detector_1'}],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertFalse(warnings)
+        self.assertTrue(any(issue.code == 'invalid_light_path' for issue in issues))
+        self.assertTrue(any('illumination sequence item must declare exactly one of source_id, or optical_path_element_id.' in issue.message for issue in issues))
+
+    def test_light_path_validator_rejects_branch_blocks_missing_required_fields(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/missing-branch-fields.yaml',
+            {
+                'instrument': {'instrument_id': 'missing-branch-fields'},
+                'hardware': {
+                    'optical_path_elements': [{'id': 'det_splitter', 'stage_role': 'splitter', 'element_type': 'splitter'}],
+                    'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [
+                            {'optical_path_element_id': 'det_splitter'},
+                            {'branches': {'items': [{'sequence': [{'endpoint_id': 'detector_1'}]}]}},
+                        ],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertFalse(warnings)
+        self.assertTrue(any(issue.code == 'invalid_light_path' for issue in issues))
+        self.assertTrue(any('branches.selection_mode: must be one of fixed, exclusive, multiple.' in issue.message for issue in issues))
+        self.assertTrue(any('.branch_id: is required.' in issue.message for issue in issues))
+
+    def test_light_path_validator_rejects_deprecated_hardware_owned_branch_routing(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {'vocab_registry': {}, 'sections': []},
+        )
+        self._write_json_yaml(
+            'instruments/deprecated-hardware-branch-routing.yaml',
+            {
+                'instrument': {'instrument_id': 'deprecated-hardware-branch-routing'},
+                'hardware': {
+                    'optical_path_elements': [
+                        {
+                            'id': 'legacy_splitter',
+                            'stage_role': 'splitter',
+                            'element_type': 'splitter',
+                            'branches': [{'id': 'path_a', 'target_ids': ['detector_1']}],
+                        }
+                    ],
+                    'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [{'optical_path_element_id': 'legacy_splitter'}, {'endpoint_id': 'detector_1'}],
+                    }
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertFalse(warnings)
+        self.assertTrue(any(issue.code == 'invalid_light_path' for issue in issues))
+        self.assertTrue(any('deprecated hardware-owned routing metadata is not allowed in canonical topology' in issue.message for issue in issues))
+
 if __name__ == '__main__':
     unittest.main()

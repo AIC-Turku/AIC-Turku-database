@@ -76,6 +76,7 @@ Canonical role in topology:
 
 - target inventory for `detection_sequence[]`
 - explicit route terminals referenced directly from branch-local sequences
+- normalized together with endpoint-capable inventories (for example `hardware.detectors[]` and `hardware.eyepieces[]`) before DTO/runtime consumption
 
 ### `light_paths`
 
@@ -125,12 +126,18 @@ Branching remains explicitly representable in canonical YAML, but the route fork
 
 Canonical v1 branch model:
 
-- sequence items can carry a tagged `branches` block
+- only `light_paths[].detection_sequence[]` items can carry a tagged `branches` block
 - each branch block declares `selection_mode`
 - each branch block declares `items[]`
 - each branch item declares `branch_id`, optional `label`, and a linear `sequence[]`
 - branch-local sequences may include additional `optical_path_element_id` entries before the final `endpoint_id`
+- branch-local sequences are strict tagged unions and must terminate at explicit `endpoint_id` values when the downstream endpoint is known
 - nested branch blocks inside branch-local sequences are intentionally out of scope in v1
+
+Validation behavior:
+
+- route and branch-local endpoint termination is checked, and ambiguous termination is surfaced as a warning
+- deprecated hardware-owned routing such as `hardware.optical_path_elements[].branches[].target_ids` must not be treated as canonical topology
 
 Example:
 

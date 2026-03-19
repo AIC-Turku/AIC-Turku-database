@@ -7,6 +7,7 @@ from scripts.light_path_parser import (
     infer_light_source_role,
     parse_canonical_light_path_model,
     validate_light_path,
+    validate_light_path_warnings,
 )
 
 
@@ -76,6 +77,134 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual([row["id"] for row in canonical["endpoints"]], ["canonical_endpoint"])
         self.assertEqual(canonical["light_paths"][0]["illumination_sequence"], [{"source_id": "canonical_source"}])
         self.assertEqual(canonical["light_paths"][0]["detection_sequence"], [{"endpoint_id": "canonical_endpoint"}])
+
+    def test_stage_role_is_not_synthesized_for_generic_canonical_optical_elements(self) -> None:
+        canonical = parse_canonical_light_path_model(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {"id": "generic_filter", "element_type": "filter_wheel"},
+                        {"id": "route_splitter", "element_type": "splitter"},
+                    ]
+                }
+            }
+        )
+
+        generic_filter = next(row for row in canonical["optical_path_elements"] if row["id"] == "generic_filter")
+        route_splitter = next(row for row in canonical["optical_path_elements"] if row["id"] == "route_splitter")
+
+        self.assertNotIn("stage_role", generic_filter)
+        self.assertEqual(route_splitter.get("stage_role"), "splitter")
+
+    def test_canonical_endpoint_inventory_is_auto_created_from_detectors_and_eyepieces(self) -> None:
+        canonical = canonicalize_light_path_model(
+            {
+                "hardware": {
+                    "detectors": [
+                        {"id": "detector_1", "kind": "scmos", "channel_name": "Camera 1", "path": "epi"}
+                    ],
+                    "eyepieces": [
+                        {"id": "eyepieces", "name": "Binocular Eyepieces", "path": "epi"}
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"endpoint_id": "detector_1"},
+                            {"endpoint_id": "eyepieces"},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual([row["id"] for row in canonical["endpoints"]], ["detector_1", "eyepieces"])
+        self.assertEqual(canonical["endpoints"][0]["source_section"], "detectors")
+        self.assertEqual(canonical["endpoints"][0]["endpoint_type"], "detector")
+        self.assertEqual(canonical["endpoints"][1]["source_section"], "eyepieces")
+        self.assertEqual(canonical["endpoints"][1]["endpoint_type"], "eyepiece")
+
+    def test_canonical_parser_accepts_valid_illumination_sequence_item_kinds(self) -> None:
+        canonical = parse_canonical_light_path_model(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [
+                        {"id": "exc_filter", "stage_role": "excitation", "element_type": "filter_wheel"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [
+                            {"source_id": "src_488"},
+                            {"optical_path_element_id": "exc_filter"},
+                        ],
+                        "detection_sequence": [],
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(canonical["light_paths"][0]["illumination_sequence"][0], {"source_id": "src_488"})
+        self.assertEqual(canonical["light_paths"][0]["illumination_sequence"][1], {"optical_path_element_id": "exc_filter"})
+
+    def test_canonical_parser_accepts_valid_detection_sequence_item_kinds(self) -> None:
+        canonical = parse_canonical_light_path_model(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {"id": "em_filter", "stage_role": "emission", "element_type": "filter_wheel"},
+                        {"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"},
+                    ],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "em_filter"},
+                            {"endpoint_id": "detector_1"},
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "cam", "sequence": [{"endpoint_id": "detector_1"}]}]}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(canonical["light_paths"][0]["detection_sequence"][0], {"optical_path_element_id": "em_filter"})
+        self.assertEqual(canonical["light_paths"][0]["detection_sequence"][1], {"endpoint_id": "detector_1"})
+        self.assertIn("branches", canonical["light_paths"][0]["detection_sequence"][2])
+
+    def test_canonical_parser_keeps_valid_branch_block_without_defaulting_fields(self) -> None:
+        canonical = parse_canonical_light_path_model(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"},
+                    ],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "cam_a", "sequence": [{"endpoint_id": "detector_1"}]}]}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        branch_block = canonical["light_paths"][0]["detection_sequence"][1]["branches"]
+        self.assertEqual(branch_block["selection_mode"], "exclusive")
+        self.assertEqual(branch_block["items"][0]["branch_id"], "cam_a")
+        self.assertEqual(branch_block["items"][0]["sequence"], [{"endpoint_id": "detector_1"}])
 
     def test_migration_compatibility_legacy_import_adapter_remains_explicit_and_available(self) -> None:
         canonical = import_legacy_light_path_model(
@@ -441,6 +570,323 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(detector["bandwidth_nm"], 50.0)
         self.assertNotIn("default_gain", detector)
 
+    def test_runtime_projection_uses_unified_endpoint_inventory_for_terminals_and_detectors(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "detectors": [
+                        {"id": "detector_1", "kind": "hyd", "channel_name": "HyD1", "path": "confocal"}
+                    ],
+                    "eyepieces": [
+                        {"id": "eyepieces", "name": "Eyepieces", "path": "confocal"}
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [],
+                        "detection_sequence": [{"endpoint_id": "detector_1"}],
+                    }
+                ],
+            }
+        )
+
+        runtime = _runtime_projection(payload)
+        self.assertEqual([row["id"] for row in payload["endpoints"]], ["detector_1", "eyepieces"])
+        self.assertEqual([row["terminal_id"] for row in runtime["terminals"]], ["detector_1", "eyepieces"])
+        self.assertEqual(runtime["detectors"][0]["id"], "detector_1")
+
+    def test_duplicate_endpoint_ids_across_endpoint_capable_inventories_raise_validation_error(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "detectors": [{"id": "shared_endpoint", "kind": "camera"}],
+                    "eyepieces": [{"id": "shared_endpoint"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [{"endpoint_id": "shared_endpoint"}],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("normalized endpoint id `shared_endpoint`" in error for error in errors))
+
+    def test_invalid_mixed_illumination_sequence_item_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [{"id": "exc_filter", "stage_role": "excitation", "element_type": "filter_wheel"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488", "optical_path_element_id": "exc_filter"}],
+                        "detection_sequence": [],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("illumination sequence item must declare exactly one of source_id, or optical_path_element_id." in error for error in errors))
+
+    def test_invalid_mixed_detection_sequence_item_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "em_filter", "stage_role": "emission", "element_type": "filter_wheel"}],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [{"optical_path_element_id": "em_filter", "endpoint_id": "detector_1"}],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("detection sequence item must declare exactly one of optical_path_element_id, endpoint_id, or branches" in error for error in errors))
+
+    def test_empty_sequence_item_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{}],
+                        "detection_sequence": [],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("illumination sequence item must declare exactly one of source_id, or optical_path_element_id." in error for error in errors))
+
+    def test_illumination_branch_blocks_are_rejected_and_detection_branch_locals_stay_strict(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [
+                        {"id": "illum_splitter", "stage_role": "splitter", "element_type": "splitter"},
+                        {"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"},
+                    ],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [
+                            {"optical_path_element_id": "illum_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "bad_illum", "sequence": [{"endpoint_id": "detector_1"}]}]}},
+                        ],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "bad_detect", "sequence": [{"source_id": "src_488"}]}]}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("illumination sequence item must declare exactly one of source_id, or optical_path_element_id." in error for error in errors))
+        self.assertTrue(any("branch-local detection sequence item must declare exactly one of optical_path_element_id, or endpoint_id." in error for error in errors))
+
+    def test_missing_branch_selection_mode_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"}],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"items": [{"branch_id": "cam_a", "sequence": [{"endpoint_id": "detector_1"}]}]}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("branches.selection_mode: must be one of fixed, exclusive, multiple." in error for error in errors))
+
+    def test_missing_branch_items_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"selection_mode": "exclusive"}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("branches.items: must be a non-empty list." in error for error in errors))
+
+    def test_empty_branch_items_list_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": []}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("branches.items: must be a non-empty list." in error for error in errors))
+
+    def test_missing_branch_id_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"}],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": [{"sequence": [{"endpoint_id": "detector_1"}]}]}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any(".branch_id: is required." in error for error in errors))
+
+    def test_missing_branch_sequence_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "cam_a"}]}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any(".sequence: must be a non-empty list." in error for error in errors))
+
+    def test_deprecated_hardware_owned_branch_routing_is_rejected_in_canonical_mode(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "legacy_splitter",
+                            "stage_role": "splitter",
+                            "element_type": "splitter",
+                            "branches": [{"id": "path_a", "target_ids": ["detector_1"]}],
+                        }
+                    ],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [{"optical_path_element_id": "legacy_splitter"}, {"endpoint_id": "detector_1"}],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("deprecated hardware-owned routing metadata is not allowed in canonical topology" in error for error in errors))
+
+    def test_warning_when_detection_path_lacks_clear_endpoint_termination(self) -> None:
+        warnings = validate_light_path_warnings(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {"id": "emission_wheel", "stage_role": "emission", "element_type": "filter_wheel"}
+                    ]
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [{"optical_path_element_id": "emission_wheel"}],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("route does not terminate in a clear explicit endpoint_id" in warning for warning in warnings))
+
+    def test_warning_when_branch_lacks_clear_endpoint_termination(self) -> None:
+        warnings = validate_light_path_warnings(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {"id": "splitter_1", "stage_role": "splitter", "element_type": "splitter"},
+                        {"id": "green_filter", "stage_role": "emission", "element_type": "filter_wheel"},
+                    ],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "splitter_1"},
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {"branch_id": "good", "sequence": [{"endpoint_id": "detector_1"}]},
+                                        {"branch_id": "bad", "sequence": [{"optical_path_element_id": "green_filter"}]},
+                                    ],
+                                }
+                            },
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any(".branches.items[1].sequence: branch does not terminate" in warning for warning in warnings))
+
     def test_route_owned_branches_drive_runtime_splitter_metadata(self) -> None:
         payload = generate_virtual_microscope_payload(
             {
@@ -549,9 +995,27 @@ class LightPathParserTests(unittest.TestCase):
                 ],
             }
         )
+        warnings = validate_light_path_warnings(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [{"id": "split_1", "stage_role": "splitter", "element_type": "splitter"}],
+                    "endpoints": [{"id": "cam_a", "endpoint_type": "detector"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "broken", "sequence": [{"optical_path_element_id": "split_1"}]}]}}
+                        ],
+                    }
+                ],
+            }
+        )
 
         self.assertTrue(any("branches must follow an optical_path_element_id" in error for error in errors))
-        self.assertTrue(any("must terminate explicitly at one or more endpoint_id items" in error for error in errors))
+        self.assertTrue(any("branch does not terminate in a clear explicit endpoint_id" in warning for warning in warnings))
 
     def test_cube_payload_exposes_direct_component_aliases(self) -> None:
         payload = generate_virtual_microscope_payload(

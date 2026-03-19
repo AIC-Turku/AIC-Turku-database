@@ -34,6 +34,9 @@ CUBE_LINK_KEYS = ("excitation_filter", "dichroic", "emission_filter")
 CAMERA_DETECTOR_KINDS = {"camera", "scmos", "cmos", "ccd", "emccd"}
 POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}
 POWER_VALUE_RE = re.compile(r"(\d+(?:\.\d+)?)")
+CANONICAL_ENDPOINT_COLLECTION_KEYS = ("endpoints", "terminals", "detection_endpoints")
+ENDPOINT_CAPABLE_INVENTORY_KEYS = ("detectors", "eyepieces")
+SEQUENCE_TOPOLOGY_KEYS = ("source_id", "optical_path_element_id", "endpoint_id", "branches")
 
 def _is_positive_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
@@ -131,6 +134,110 @@ def _collect_endpoint_rows(hardware: dict[str, Any], light_path: dict[str, Any])
             if isinstance(entry, dict):
                 endpoints.append(entry)
     return endpoints
+
+
+def _endpoint_capable_row_id(entry: dict[str, Any], source_section: str, index: int) -> str:
+    return (
+        _clean_identifier(
+            entry.get("id")
+            or entry.get("terminal_id")
+            or entry.get("channel_name")
+            or entry.get("display_label")
+            or entry.get("name")
+            or entry.get("model")
+        )
+        or f"{source_section.rstrip('s')}_{index}"
+    )
+
+
+def _normalize_endpoint_capable_row(
+    endpoint: dict[str, Any],
+    *,
+    source_section: str,
+    index: int,
+) -> dict[str, Any]:
+    entry = dict(endpoint)
+    entry_id = _endpoint_capable_row_id(entry, source_section, index)
+    entry["id"] = entry_id
+    entry["source_section"] = source_section
+    entry["endpoint_origin"] = "inventory" if source_section in ENDPOINT_CAPABLE_INVENTORY_KEYS else "explicit"
+    entry["endpoint_type"] = _normalize_endpoint_type(
+        entry.get("endpoint_type")
+        or ("detector" if source_section == "detectors" else "eyepiece" if source_section == "eyepieces" else "")
+        or entry.get("type")
+        or entry.get("kind")
+        or source_section
+    )
+    display_label = _clean_string(
+        entry.get("display_label")
+        or entry.get("channel_name")
+        or entry.get("name")
+        or entry.get("model")
+        or entry.get("id")
+    )
+    if display_label:
+        entry["display_label"] = display_label
+    modalities = _normalize_modalities(
+        entry.get("modalities")
+        or entry.get("path")
+        or entry.get("paths")
+        or entry.get("route")
+        or entry.get("routes")
+    )
+    if modalities:
+        entry["modalities"] = modalities
+        entry["path"] = modalities[0]
+    return entry
+
+
+def _normalized_endpoint_inventory(
+    hardware: dict[str, Any],
+    legacy_light_path: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    rows: list[dict[str, Any]] = []
+    seen: dict[str, str] = {}
+    collisions: list[str] = []
+    sources: list[tuple[str, list[dict[str, Any]]]] = []
+
+    for key in CANONICAL_ENDPOINT_COLLECTION_KEYS:
+        raw_rows = hardware.get(key)
+        if isinstance(raw_rows, list):
+            sources.append((key, [row for row in raw_rows if isinstance(row, dict)]))
+
+    endpoints_already_normalized = any(
+        isinstance(row, dict) and (
+            isinstance(row.get("source_section"), str)
+            or isinstance(row.get("endpoint_origin"), str)
+        )
+        for row in (hardware.get("endpoints") or [])
+    )
+
+    if not endpoints_already_normalized:
+        for key in ENDPOINT_CAPABLE_INVENTORY_KEYS:
+            raw_rows = hardware.get(key)
+            if isinstance(raw_rows, list):
+                sources.append((key, [row for row in raw_rows if isinstance(row, dict)]))
+
+    if legacy_light_path is not None:
+        sources.extend(
+            (key, [row for row in legacy_light_path.get(key, []) if isinstance(row, dict)])
+            for key in CANONICAL_ENDPOINT_COLLECTION_KEYS
+            if isinstance(legacy_light_path.get(key), list)
+        )
+
+    for source_section, collection in sources:
+        for index, endpoint in enumerate(collection, start=1):
+            entry = _normalize_endpoint_capable_row(endpoint, source_section=source_section, index=index)
+            entry_id = entry["id"]
+            previous_source = seen.get(entry_id)
+            if previous_source is not None:
+                collisions.append(
+                    f"normalized endpoint id `{entry_id}` is declared in both `{previous_source}` and `{source_section}`."
+                )
+                continue
+            seen[entry_id] = source_section
+            rows.append(entry)
+    return rows, collisions
 
 
 
@@ -254,44 +361,15 @@ def _import_legacy_source_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]
 
 
 
-def _normalize_canonical_endpoint_rows(raw_endpoints: Any) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for index, endpoint in enumerate(raw_endpoints or [], start=1):
-        if not isinstance(endpoint, dict):
-            continue
-        entry = dict(endpoint)
-        entry_id = _clean_identifier(entry.get("id") or entry.get("terminal_id") or entry.get("name") or entry.get("display_label")) or f"endpoint_{index}"
-        if entry_id in seen:
-            continue
-        seen.add(entry_id)
-        entry["id"] = entry_id
-        entry["endpoint_type"] = _normalize_endpoint_type(entry.get("endpoint_type") or entry.get("type") or entry.get("kind"))
-        modalities = _normalize_modalities(
-            entry.get("modalities")
-            or entry.get("path")
-            or entry.get("paths")
-            or entry.get("route")
-            or entry.get("routes")
-        )
-        if modalities:
-            entry["modalities"] = modalities
-            entry["path"] = modalities[0]
-        rows.append(entry)
+def _parse_canonical_endpoint_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]:
+    rows, _ = _normalized_endpoint_inventory(hardware)
     return rows
 
 
 
-def _parse_canonical_endpoint_rows(hardware: dict[str, Any]) -> list[dict[str, Any]]:
-    raw_endpoints = hardware.get("endpoints")
-    if not isinstance(raw_endpoints, list):
-        return []
-    return _normalize_canonical_endpoint_rows(raw_endpoints)
-
-
-
 def _import_legacy_endpoint_rows(hardware: dict[str, Any], legacy_light_path: dict[str, Any]) -> list[dict[str, Any]]:
-    return _normalize_canonical_endpoint_rows(_collect_endpoint_rows(hardware, legacy_light_path))
+    rows, _ = _normalized_endpoint_inventory(hardware, legacy_light_path)
+    return rows
 
 
 
@@ -309,12 +387,10 @@ def _normalize_splitter_branch(branch: dict[str, Any], *, fallback_id: str) -> d
 
 
 
-def _stage_role_from_element(entry: dict[str, Any]) -> str:
+def _stage_role_from_element(entry: dict[str, Any]) -> str | None:
     stage_role = _clean_string(entry.get("stage_role") or entry.get("role")).lower()
-    if stage_role in {"excitation", "dichroic", "emission", "cube", "splitter"}:
+    if stage_role:
         return stage_role
-    if isinstance(entry.get("branches"), list):
-        return "splitter"
     if any(isinstance(entry.get(key), dict) for key in CUBE_LINK_KEYS):
         return "cube"
     positions = entry.get("positions") if isinstance(entry.get("positions"), dict) else {}
@@ -324,7 +400,7 @@ def _stage_role_from_element(entry: dict[str, Any]) -> str:
     element_type = _clean_string(entry.get("element_type") or entry.get("type")).lower()
     if element_type in {"selector", "splitter", "emission_splitter", "image_splitter", "dual_view", "quad_view"}:
         return "splitter"
-    return "emission"
+    return None
 
 
 
@@ -350,14 +426,11 @@ def _normalize_canonical_optical_path_elements(raw_elements: Any) -> list[dict[s
         if modalities:
             entry["modalities"] = modalities
             entry["path"] = modalities[0]
-        entry["stage_role"] = _stage_role_from_element(entry)
-        if isinstance(entry.get("branches"), list):
-            entry["branches"] = [
-                _normalize_splitter_branch(branch, fallback_id=f"{entry['id']}_branch_{branch_index}")
-                for branch_index, branch in enumerate(entry.get("branches") or [], start=1)
-                if isinstance(branch, dict)
-            ]
-            entry.setdefault("selection_mode", entry.get("selection_mode") or ("fixed" if len(entry["branches"]) <= 1 else "multiple"))
+        inferred_stage_role = _stage_role_from_element(entry)
+        if inferred_stage_role:
+            entry["stage_role"] = inferred_stage_role
+        else:
+            entry.pop("stage_role", None)
         rows.append(entry)
     return rows
 
@@ -406,38 +479,52 @@ def _canonicalize_sequence_item(
     elements: list[dict[str, Any]],
     endpoints: list[dict[str, Any]],
     *,
+    sequence_key: str,
     allow_branches: bool = True,
 ) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
     source_ids = {row.get("id") for row in sources}
     element_ids = {row.get("id") for row in elements}
     endpoint_ids = {row.get("id") for row in endpoints}
-    if isinstance(item, str):
-        ref = _clean_identifier(item)
-        if ref in source_ids:
-            return {"source_id": ref}
-        if ref in element_ids:
-            return {"optical_path_element_id": ref}
-        if ref in endpoint_ids:
-            return {"endpoint_id": ref}
-        return None
-    if not isinstance(item, dict):
-        return None
+    allowed_ref_keys = ("source_id", "optical_path_element_id") if sequence_key.startswith("illumination_sequence") else ("optical_path_element_id", "endpoint_id")
     raw_branches = item.get("branches")
     if allow_branches and isinstance(raw_branches, dict):
+        if any(item.get(key) for key in SEQUENCE_TOPOLOGY_KEYS if key != "branches"):
+            return None
         selection_mode = _clean_string(raw_branches.get("selection_mode")).lower()
+        if selection_mode not in {"fixed", "exclusive", "multiple"}:
+            return None
+        raw_items = raw_branches.get("items")
+        if not isinstance(raw_items, list) or not raw_items:
+            return None
         normalized_items: list[dict[str, Any]] = []
-        for branch_index, branch in enumerate(raw_branches.get("items") or [], start=1):
+        for branch_index, branch in enumerate(raw_items, start=1):
             if not isinstance(branch, dict):
-                continue
-            branch_id = _clean_identifier(branch.get("branch_id") or branch.get("id")) or f"branch_{branch_index}"
+                return None
+            branch_id = _clean_identifier(branch.get("branch_id"))
+            if not branch_id:
+                return None
+            raw_sequence = branch.get("sequence")
+            if not isinstance(raw_sequence, list) or not raw_sequence:
+                return None
             normalized_sequence = [
                 normalized
                 for normalized in (
-                    _canonicalize_sequence_item(sequence_item, sources, elements, endpoints, allow_branches=False)
-                    for sequence_item in _as_list(branch.get("sequence"))
+                    _canonicalize_sequence_item(
+                        sequence_item,
+                        sources,
+                        elements,
+                        endpoints,
+                        sequence_key=sequence_key,
+                        allow_branches=False,
+                    )
+                    for sequence_item in raw_sequence
                 )
                 if normalized
             ]
+            if len(normalized_sequence) != len(raw_sequence):
+                return None
             branch_payload = {
                 "branch_id": branch_id,
                 "label": _clean_string(branch.get("label")) or branch_id.replace("_", " ").title(),
@@ -448,19 +535,26 @@ def _canonicalize_sequence_item(
             normalized_items.append(branch_payload)
         return {
             "branches": {
-                "selection_mode": selection_mode or "exclusive",
+                "selection_mode": selection_mode,
                 "items": normalized_items,
             }
         }
-    if item.get("source_id"):
-        return {"source_id": _clean_identifier(item.get("source_id"))}
-    if item.get("optical_path_element_id"):
-        return {"optical_path_element_id": _clean_identifier(item.get("optical_path_element_id"))}
-    if item.get("endpoint_id"):
-        return {"endpoint_id": _clean_identifier(item.get("endpoint_id"))}
-    if item.get("id"):
-        return _canonicalize_sequence_item(item.get("id"), sources, elements, endpoints, allow_branches=allow_branches)
-    return None
+    populated_ref_keys = [key for key in allowed_ref_keys if item.get(key)]
+    if len(populated_ref_keys) != 1:
+        return None
+    selected_key = populated_ref_keys[0]
+    if any(item.get(key) for key in SEQUENCE_TOPOLOGY_KEYS if key != selected_key):
+        return None
+    normalized_value = _clean_identifier(item.get(selected_key))
+    if not normalized_value:
+        return None
+    if selected_key == "source_id" and normalized_value not in source_ids:
+        return None
+    if selected_key == "optical_path_element_id" and normalized_value not in element_ids:
+        return None
+    if selected_key == "endpoint_id" and normalized_value not in endpoint_ids:
+        return None
+    return {selected_key: normalized_value}
 
 
 
@@ -475,7 +569,14 @@ def _parse_canonical_light_paths(raw_light_paths: list[dict[str, Any]], sources:
         illumination_sequence = [
             normalized
             for normalized in (
-                _canonicalize_sequence_item(item, sources, elements, endpoints)
+                _canonicalize_sequence_item(
+                    item,
+                    sources,
+                    elements,
+                    endpoints,
+                    sequence_key="illumination_sequence",
+                    allow_branches=False,
+                )
                 for item in _as_list(route.get("illumination_sequence"))
             )
             if normalized
@@ -483,7 +584,7 @@ def _parse_canonical_light_paths(raw_light_paths: list[dict[str, Any]], sources:
         detection_sequence = [
             normalized
             for normalized in (
-                _canonicalize_sequence_item(item, sources, elements, endpoints)
+                _canonicalize_sequence_item(item, sources, elements, endpoints, sequence_key="detection_sequence")
                 for item in _as_list(route.get("detection_sequence"))
             )
             if normalized
@@ -615,6 +716,8 @@ def _has_canonical_light_path_input(instrument_dict: dict[str, Any]) -> bool:
             isinstance(hardware.get("sources"), list),
             isinstance(hardware.get("optical_path_elements"), list),
             isinstance(hardware.get("endpoints"), list),
+            isinstance(hardware.get("terminals"), list),
+            isinstance(hardware.get("detection_endpoints"), list),
             isinstance(instrument_dict.get("light_paths"), list),
         )
     )
@@ -627,7 +730,7 @@ def parse_canonical_light_path_model(instrument_dict: dict[str, Any]) -> dict[st
     This parser consumes:
     - hardware.sources[]
     - hardware.optical_path_elements[]
-    - hardware.endpoints[]
+    - normalized hardware endpoints synthesized from hardware.endpoints[] and endpoint-capable inventories
     - light_paths[].illumination_sequence[]
     - light_paths[].detection_sequence[]
 
@@ -697,23 +800,71 @@ def migrate_instrument_to_light_path_v2(instrument_dict: dict[str, Any]) -> dict
 
 
 def validate_light_path(instrument_dict: dict) -> list[str]:
+    errors, _ = validate_light_path_diagnostics(instrument_dict)
+    return errors
+
+
+def validate_light_path_warnings(instrument_dict: dict) -> list[str]:
+    _, warnings = validate_light_path_diagnostics(instrument_dict)
+    return warnings
+
+
+def _sequence_terminates_with_explicit_endpoint(sequence: Any) -> bool:
+    if not isinstance(sequence, list):
+        return False
+    for item in reversed(sequence):
+        if not isinstance(item, dict):
+            continue
+        branch_block = item.get("branches")
+        if isinstance(branch_block, dict):
+            branches = [branch for branch in branch_block.get("items") or [] if isinstance(branch, dict)]
+            return bool(branches) and all(_sequence_terminates_with_explicit_endpoint(branch.get("sequence")) for branch in branches)
+        if _clean_identifier(item.get("endpoint_id")):
+            return True
+        if _clean_identifier(item.get("optical_path_element_id")) or _clean_identifier(item.get("source_id")):
+            return False
+    return False
+
+
+def _sequence_item_allowed_keys(sequence_key: str, *, allow_branches: bool) -> tuple[str, ...]:
+    reference_keys = ("source_id", "optical_path_element_id") if sequence_key.startswith("illumination_sequence") else ("optical_path_element_id", "endpoint_id")
+    return reference_keys + (("branches",) if allow_branches else ())
+
+
+def _sequence_item_union_message(sequence_key: str, *, allow_branches: bool) -> str:
+    allowed_keys = _sequence_item_allowed_keys(sequence_key, allow_branches=allow_branches)
+    if sequence_key.startswith("illumination_sequence"):
+        context = "illumination sequence item"
+    elif sequence_key.startswith("detection_sequence"):
+        context = "detection sequence item" if allow_branches else "branch-local detection sequence item"
+    else:
+        context = "sequence item"
+    if sequence_key.startswith("illumination_sequence") and ".branches.items[" in sequence_key:
+        context = "branch-local illumination sequence item"
+    return f"{context} must declare exactly one of {', '.join(allowed_keys[:-1])}, or {allowed_keys[-1]}." if len(allowed_keys) > 1 else f"{context} must declare {allowed_keys[0]}."
+
+
+def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], list[str]]:
     """Validate canonical YAML-first light-path definitions.
 
     Canonical schema:
     - hardware.sources[]
     - hardware.optical_path_elements[]
-    - hardware.endpoints[]
+    - unified hardware endpoints normalized from endpoint-capable inventories
     - light_paths[] with illumination_sequence / detection_sequence
 
     Legacy hardware.light_path structures are normalized through the migration layer
     so validation remains centralized here.
     """
     errors: list[str] = []
+    warnings: list[str] = []
     canonical = canonicalize_light_path_model(instrument_dict if isinstance(instrument_dict, dict) else {})
     sources = canonical["sources"]
     elements = canonical["optical_path_elements"]
     endpoints = canonical["endpoints"]
     light_paths = canonical["light_paths"]
+    raw_light_paths = instrument_dict.get("light_paths") if isinstance(instrument_dict.get("light_paths"), list) else []
+    light_paths_for_validation = raw_light_paths if (_has_canonical_light_path_input(instrument_dict) and raw_light_paths) else light_paths
 
     source_ids = {entry.get("id") for entry in sources}
     element_ids = {entry.get("id") for entry in elements}
@@ -721,9 +872,23 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
 
     has_topology = bool(sources or elements or endpoints or light_paths or _collect_splitters((instrument_dict.get("hardware") or {}), ((instrument_dict.get("hardware") or {}).get("light_path") or {})))
     if not has_topology:
-        return []
-    if not light_paths:
+        return [], []
+    if not light_paths_for_validation:
         errors.append("light_paths must declare at least one route with illumination_sequence and detection_sequence.")
+
+    hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
+    legacy_light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
+    _, endpoint_collisions = _normalized_endpoint_inventory(hardware, legacy_light_path)
+    errors.extend(endpoint_collisions)
+    raw_elements = hardware.get("optical_path_elements") if isinstance(hardware.get("optical_path_elements"), list) else []
+    for element_index, element in enumerate(raw_elements):
+        if not isinstance(element, dict):
+            continue
+        if not isinstance(element.get("branches"), list):
+            continue
+        errors.append(
+            f"hardware.optical_path_elements[{element_index}].branches: deprecated hardware-owned routing metadata is not allowed in canonical topology; move branch routing into light_paths[].detection_sequence[].branches."
+        )
 
     seen_route_ids: set[str] = set()
 
@@ -742,13 +907,25 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
             local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: sequence item must be an object.")
             return previous_element_id, local_errors
 
+        allowed_keys = _sequence_item_allowed_keys(sequence_key, allow_branches=allow_branches)
+        populated_keys = [
+            key
+            for key in SEQUENCE_TOPOLOGY_KEYS
+            if (
+                isinstance(item.get("branches"), dict) if key == "branches" else bool(_clean_identifier(item.get(key)))
+            )
+        ]
+        if len(populated_keys) != 1 or populated_keys[0] not in allowed_keys:
+            local_errors.append(
+                f"{route_context}.{sequence_key}[{item_index}]: {_sequence_item_union_message(sequence_key, allow_branches=allow_branches)}"
+            )
+            return previous_element_id, local_errors
+
         branch_block = item.get("branches")
         if isinstance(branch_block, dict):
             if not allow_branches:
                 local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: nested branches are not supported in branch-local sequences.")
                 return previous_element_id, local_errors
-            if any(item.get(key) for key in ("source_id", "optical_path_element_id", "endpoint_id")):
-                local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: branch block items may not also declare source_id, optical_path_element_id, or endpoint_id.")
             if not previous_element_id:
                 local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: branches must follow an optical_path_element_id so the route fork is explicit.")
             selection_mode = _clean_string(branch_block.get("selection_mode")).lower()
@@ -775,7 +952,6 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                     local_errors.append(f"{branch_context}.sequence: must be a non-empty list.")
                     continue
                 branch_previous = ""
-                branch_has_endpoint = False
                 for sequence_index, sequence_item in enumerate(branch_sequence):
                     branch_previous, branch_errors = validate_sequence_item(
                         sequence_item,
@@ -787,19 +963,11 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                         previous_element_id=branch_previous,
                     )
                     local_errors.extend(branch_errors)
-                    if isinstance(sequence_item, dict) and _clean_identifier(sequence_item.get("endpoint_id")):
-                        branch_has_endpoint = True
-                if sequence_key == "detection_sequence" and not branch_has_endpoint:
-                    local_errors.append(f"{branch_context}.sequence: detection branches must terminate explicitly at one or more endpoint_id items.")
             return previous_element_id, local_errors
 
         source_id = _clean_identifier(item.get("source_id"))
         element_id = _clean_identifier(item.get("optical_path_element_id"))
         endpoint_id = _clean_identifier(item.get("endpoint_id"))
-        populated = [bool(source_id), bool(element_id), bool(endpoint_id)]
-        if sum(populated) != 1:
-            local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: item must declare exactly one of source_id, optical_path_element_id, endpoint_id, or branches.")
-            return previous_element_id, local_errors
         if source_id:
             if source_id not in source_ids:
                 local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: unknown source_id `{source_id}`.")
@@ -821,7 +989,7 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                 )
         return previous_element_id, local_errors
 
-    for route_index, route in enumerate(light_paths):
+    for route_index, route in enumerate(light_paths_for_validation):
         route_id = _clean_identifier(route.get("id"))
         context = f"light_paths[{route_index}]"
         if not route_id:
@@ -836,6 +1004,7 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                 errors.append(f"{context}.{sequence_key}: sequence must be a list.")
                 continue
             previous_element_id = ""
+            sequence_error_count = len(errors)
             for item_index, item in enumerate(sequence):
                 previous_element_id, item_errors = validate_sequence_item(
                     item,
@@ -843,13 +1012,30 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
                     route_id=route_id,
                     sequence_key=sequence_key,
                     item_index=item_index,
-                    allow_branches=True,
+                    allow_branches=sequence_key == "detection_sequence",
                     previous_element_id=previous_element_id,
                 )
                 errors.extend(item_errors)
+            if sequence_key == "detection_sequence":
+                for item_index, item in enumerate(sequence):
+                    branch_block = item.get("branches") if isinstance(item, dict) else None
+                    if not isinstance(branch_block, dict):
+                        continue
+                    for branch_index, branch in enumerate(branch_block.get("items") or []):
+                        if not isinstance(branch, dict):
+                            continue
+                        branch_sequence = branch.get("sequence") or []
+                        if _sequence_terminates_with_explicit_endpoint(branch_sequence):
+                            continue
+                        warnings.append(
+                            f"{context}.{sequence_key}[{item_index}].branches.items[{branch_index}].sequence: branch does not terminate in a clear explicit endpoint_id."
+                        )
+                if len(errors) == sequence_error_count and not _sequence_terminates_with_explicit_endpoint(sequence):
+                    warnings.append(
+                        f"{context}.{sequence_key}: route does not terminate in a clear explicit endpoint_id; add an endpoint_id or explicit branch endpoints."
+                    )
 
-    legacy_hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
-    legacy_light_path = legacy_hardware.get("light_path") if isinstance(legacy_hardware.get("light_path"), dict) else {}
+    legacy_hardware = hardware
     known_target_ids = {endpoint.get("id") for endpoint in endpoints if endpoint.get("id")}
     known_target_ids.update(
         _clean_identifier(detector.get("id") or detector.get("channel_name") or detector.get("display_label") or detector.get("name"))
@@ -879,7 +1065,7 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
         if selection_mode and selection_mode not in {"fixed", "exclusive", "multiple"}:
             errors.append(f"{context}: selection_mode must be one of fixed, exclusive, multiple.")
 
-    return errors
+    return errors, warnings
 
 # ---------------------------------------------------------------------------
 # Payload serialization helpers
@@ -1299,8 +1485,15 @@ def _terminal_payload_from_endpoint(index: int, endpoint: dict[str, Any], *, def
         "manufacturer": endpoint.get("manufacturer"),
         "product_code": endpoint.get("product_code"),
         "model": endpoint.get("model"),
+        "pixel_pitch_um": endpoint.get("pixel_pitch_um") or endpoint.get("pixel_size_um"),
+        "sensor_format_px": endpoint.get("sensor_format_px"),
+        "binning": endpoint.get("binning"),
+        "bit_depth": endpoint.get("bit_depth"),
         "qe_peak_pct": endpoint.get("qe_peak_pct"),
         "read_noise_e": endpoint.get("read_noise_e"),
+        "supports_time_gating": endpoint.get("supports_time_gating"),
+        "default_gating_delay_ns": endpoint.get("default_gating_delay_ns"),
+        "default_gate_width_ns": endpoint.get("default_gate_width_ns"),
         "collection_min_nm": endpoint.get("collection_min_nm") or endpoint.get("min_nm"),
         "collection_max_nm": endpoint.get("collection_max_nm") or endpoint.get("max_nm"),
         "collection_center_nm": endpoint.get("collection_center_nm") or endpoint.get("channel_center_nm"),
@@ -1975,7 +2168,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
     Top-level DTO fields are the canonical contract consumed across the repository:
     - sources
     - optical_path_elements
-    - endpoints
+    - endpoints (unified normalized endpoint registry)
     - light_paths
 
     Runtime/UI convenience structures remain available only under
@@ -2043,38 +2236,27 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
             payload_row["path"] = modalities[0]
         return payload_row
 
-    raw_detectors = hardware.get("detectors", []) if isinstance(hardware.get("detectors"), list) else []
     explicit_endpoints = endpoints
-    for idx, det in enumerate(raw_detectors, start=1):
-        if not isinstance(det, dict):
+    for idx, endpoint in enumerate(explicit_endpoints, start=1):
+        terminal = terminal_from_endpoint(endpoint, idx)
+        payload["terminals"].append(terminal)
+        if _normalize_endpoint_type(endpoint.get("endpoint_type") or endpoint.get("type") or endpoint.get("kind")) != "detector":
             continue
-        detector_id = _clean_identifier(det.get("id"))
-        matched_endpoint = next((endpoint for endpoint in explicit_endpoints if _clean_identifier(endpoint.get("id")) == detector_id), None)
-        det_row = dict(det)
-        if isinstance(matched_endpoint, dict):
-            if matched_endpoint.get("modalities"):
-                det_row["modalities"] = matched_endpoint.get("modalities")
-                det_row["path"] = matched_endpoint.get("modalities")[0]
-        mechanism_id = f"detector_{idx}"
-        position = _detector_position(idx, det_row, mechanism_id=mechanism_id)
-        payload["terminals"].append(dict(position))
+        mechanism_id = _clean_identifier(endpoint.get("id")) or f"detector_{idx}"
         detector_group = {
             "id": mechanism_id,
-            "name": position.get("channel_name") or position.get("display_label"),
-            "display_label": position.get("display_label"),
+            "name": terminal.get("channel_name") or terminal.get("display_label"),
+            "display_label": terminal.get("display_label"),
             "type": "detector_group",
             "control_kind": "detector_toggle",
             "selection_mode": "multi",
-            "positions": {1: position},
-            "options": [{"slot": 1, "display_label": position.get("display_label"), "value": position}],
+            "positions": {1: dict(terminal)},
+            "options": [{"slot": 1, "display_label": terminal.get("display_label"), "value": dict(terminal)}],
         }
-        if position.get("routes"):
-            detector_group["routes"] = position.get("routes")
-            detector_group["path"] = position.get("path")
+        if terminal.get("routes"):
+            detector_group["routes"] = terminal.get("routes")
+            detector_group["path"] = terminal.get("path")
         payload["detectors"].append(detector_group)
-
-    for idx, endpoint in enumerate(explicit_endpoints, start=1):
-        payload["terminals"].append(terminal_from_endpoint(endpoint, idx))
 
     if include_inferred_terminals:
         payload["metadata"]["uses_inferred_terminals"] = True
