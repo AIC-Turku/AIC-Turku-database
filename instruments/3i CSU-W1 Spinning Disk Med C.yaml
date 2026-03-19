@@ -44,6 +44,13 @@ hardware:
     co2_control: true
     o2_control: true
     notes: 'Okolab full enclosure with Bold Line temperature controller, heater, and digital CO2/O2 gas mixer.'
+  stages:
+    - type: xy_motorized
+      manufacturer: ASI
+      notes: 'Linear encoded motorized X/Y stage with 0.1 µm encoders.'
+    - type: z_piezo
+      manufacturer: ASI
+      notes: '300 µm piezo Z axis.'
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
