@@ -10,6 +10,7 @@ instrument:
   location: Medisiina C, 2nd floor, room C242
   notes: 'System 2032. Confocal spinning-disk microscope based on a Zeiss Axio Observer 7 Advanced Marianas base. Includes Mesa Illumination Enhancement and Field Flattening.'
   url: ''
+
 modalities:
   - confocal_spinning_disk
   - widefield_fluorescence
@@ -27,9 +28,11 @@ modules:
   - type: motorized_stage
     notes: 'Linear Encoded Motorized X,Y Stage with 0.1um encoders.'
     manufacturer: ASI
+    model: '' # MISSING: 'model' is required for all defined modules
   - type: piezo_z_stage
     notes: '300µm Piezo Z axis.'
     manufacturer: ASI
+    model: '' # MISSING: 'model' is required for all defined modules
 
 software:
   - role: acquisition
@@ -44,16 +47,20 @@ hardware:
     co2_control: true
     o2_control: true
     notes: 'Okolab full enclosure with Bold Line temperature controller, heater, and digital CO2/O2 gas mixer.'
-  stages:
-    - type: xy_motorized
+    
+  # MISSING: The 'hardware.stages' array is required because 'motorized_stage' and 'piezo_z_stage' are defined in modules
+  stages: 
+    - type: motorized_stage # Conditional requirement
       manufacturer: ASI
-      notes: 'Linear encoded motorized X/Y stage with 0.1 µm encoders.'
-    - type: z_piezo
+      model: ''
+    - type: piezo_z_stage # Conditional requirement
       manufacturer: ASI
-      notes: '300 µm piezo Z axis.'
+      model: ''
+      
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
+    
   scanner:
     type: spinning_disk
     pinhole_um: 50
@@ -330,8 +337,8 @@ hardware:
       stage_role: splitter
 
 light_paths:
-  - id: confocal
-    name: Confocal
+  - id: confocal_spinning_disk
+    name: Confocal spinning disk
     illumination_sequence:
       - source_id: laserstack_405
       - source_id: laserstack_488
@@ -343,8 +350,8 @@ light_paths:
       - optical_path_element_id: csu_w1_emission_wheel
       - endpoint_id: detector_1
       
-  - id: epi
-    name: Epi-fluorescence
+  - id: widefield_fluorescence
+    name: Widefield fluorescence
     illumination_sequence:
       - source_id: pe_300
       - optical_path_element_id: zeiss_widefield_fluorescence_positions
@@ -363,8 +370,8 @@ light_paths:
               sequence:
                 - endpoint_id: eyepieces
                 
-  - id: transmitted
-    name: Transmitted light
+  - id: transmitted_brightfield
+    name: Transmitted brightfield
     illumination_sequence: []
     detection_sequence:
       - optical_path_element_id: trinocular_port_selector
