@@ -991,6 +991,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
                 { id: 'source:src_488', display_number: 1, display_label: '488 laser' },
                 { id: 'endpoint:cam', display_number: 2, display_label: 'Camera' }
               ],
+              hardware_index_map: { by_inventory_id: { 'source:src_488': 1, 'endpoint:cam': 2 } },
               route_hardware_usage: [
                 { route_id: 'epi', hardware_inventory_ids: ['source:src_488', 'endpoint:cam'], endpoint_inventory_ids: ['endpoint:cam'] }
               ],
@@ -1000,15 +1001,19 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             });
             return {
               hardwareInventoryCount: instrument.hardwareInventory.length,
+              hardwareIndexMap: instrument.hardwareIndexMap.by_inventory_id,
               routeUsageCount: instrument.routeHardwareUsage.length,
               endpointInventoryId: instrument.routeHardwareUsage[0].endpoint_inventory_ids[0],
+              topologyContractRoutes: instrument.authoritativeTopologyContract.routes,
             };
             """
         )
 
         self.assertEqual(result["hardwareInventoryCount"], 2)
+        self.assertEqual(result["hardwareIndexMap"], {"source:src_488": 1, "endpoint:cam": 2})
         self.assertEqual(result["routeUsageCount"], 1)
         self.assertEqual(result["endpointInventoryId"], "endpoint:cam")
+        self.assertEqual(result["topologyContractRoutes"], "routeTopology.routes")
 
     def test_route_topology_keeps_one_graph_per_route_and_multi_detector_bindings(self) -> None:
         result = self.run_node_json(
@@ -1089,6 +1094,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
               routeIds: instrument.routeTopology.routes.map((route) => route.id),
               graphSizes: instrument.routeTopology.routes.map((route) => ({ id: route.id, nodes: route.graphNodes.length, edges: route.graphEdges.length })),
               branchCounts: instrument.routeTopology.routes.map((route) => ({ id: route.id, branches: route.branchBlocks.length })),
+              routeUsageIds: instrument.routeTopology.routes.map((route) => ({ id: route.id, inventoryIds: route.routeLocalHardwareUsage.hardware_inventory_ids })),
               terminalRoutes: instrument.terminals.map((terminal) => ({ id: terminal.id, routes: terminal.__routes })),
               detectorRoutes: instrument.detectors.map((mechanism) => ({ id: mechanism.id, routes: mechanism.__routes })),
             };
@@ -1103,6 +1109,13 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(
             sorted(result["branchCounts"], key=lambda item: item["id"]),
             [{"id": "confocal", "branches": 0}, {"id": "epi", "branches": 1}],
+        )
+        self.assertEqual(
+            sorted(result["routeUsageIds"], key=lambda item: item["id"]),
+            [
+                {"id": "confocal", "inventoryIds": ["source:src_561", "optical_path_element:shared_di", "endpoint:pmt_1"]},
+                {"id": "epi", "inventoryIds": ["source:src_488", "optical_path_element:shared_di", "endpoint:cam_a", "endpoint:cam_b"]},
+            ],
         )
         self.assertEqual(
             sorted(result["terminalRoutes"], key=lambda item: item["id"]),

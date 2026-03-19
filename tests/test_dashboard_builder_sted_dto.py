@@ -313,7 +313,9 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
         self.assertEqual(optical_path["hardware_inventory_renderables"][0]["display_number"], 1)
         self.assertEqual(optical_path["hardware_index_map"]["by_inventory_id"]["source:src_488"], 1)
-        self.assertEqual(optical_path["primary_rendering_contract"]["routes"], "route_renderables")
+        self.assertEqual(optical_path["primary_rendering_contract"]["routes"], "light_paths")
+        self.assertEqual(len(optical_path["light_paths"]), 1)
+        self.assertEqual(optical_path["light_paths"][0]["id"], "epi")
         self.assertEqual(len(optical_path["route_renderables"]), 1)
         self.assertEqual(optical_path["route_renderables"][0]["id"], "epi")
         self.assertEqual(optical_path["route_renderables"][0]["graph_nodes"][0]["display_number"], 1)
@@ -350,6 +352,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             optical_path["authoritative_route_contract"]["routes"][0]["topology"]["graph_nodes"][0]["hardware_inventory_id"],
             "source:src_488",
         )
+        self.assertEqual(optical_path["authoritative_route_contract"]["primary_rendering_contract"]["routes"], "light_paths")
         self.assertIn("<svg", optical_path["static_graphs"][0]["svg_markup"])
 
     def test_optical_path_dto_keeps_one_graph_per_route_with_stable_deduplicated_inventory(self) -> None:
@@ -405,7 +408,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
         optical_path = build_optical_path_dto(lightpath_dto)
 
+        self.assertEqual([route["id"] for route in optical_path["light_paths"]], ["epi", "confocal"])
         self.assertEqual([route["id"] for route in optical_path["route_renderables"]], ["epi", "confocal"])
+        self.assertTrue(all(route["graph_nodes"] for route in optical_path["light_paths"]))
+        self.assertTrue(all(route["graph_edges"] for route in optical_path["light_paths"]))
         self.assertTrue(all(route["graph_nodes"] for route in optical_path["route_renderables"]))
         self.assertTrue(all(route["graph_edges"] for route in optical_path["route_renderables"]))
         self.assertEqual(
@@ -429,6 +435,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                 ["source:src_561", "optical_path_element:shared_di", "endpoint:pmt_1"],
             ],
         )
+        self.assertEqual(optical_path["route_renderables"], optical_path["light_paths"])
 
 
     def test_normalize_hardware_preserves_tunable_source_and_detector_path_metadata(self) -> None:

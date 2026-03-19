@@ -1365,7 +1365,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
 
     Authoritative downstream contract:
     - hardware_inventory / hardware_index_map
-    - route_renderables (one canonical graph per route)
+    - light_paths (one canonical graph-backed route record per route)
     - authoritative_route_contract (compact route-planning contract for UIs/LLMs)
 
     Derived-only compatibility helpers:
@@ -1487,7 +1487,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
     derived_static_graph_summary = derived_static_graph_summaries[0] if derived_static_graph_summaries else _build_static_light_path_graph(lightpath_dto, raw_hardware=raw_hardware)
     derived_static_graph_map = {clean_text(item.get("route_id")): copy.deepcopy(item) for item in derived_static_graph_summaries if clean_text(item.get("route_id"))}
 
-    route_renderables: list[dict[str, Any]] = []
+    canonical_light_paths: list[dict[str, Any]] = []
     derived_route_summary_cards: list[dict[str, Any]] = []
     derived_methods_route_views = []
     derived_branch_summary_cards: list[dict[str, Any]] = []
@@ -1540,7 +1540,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             for edge in graph_edges
         ]
 
-        route_renderable = {
+        canonical_route = {
             "id": route_id,
             "name": clean_text(route.get("name") or route.get("id")),
             "route_identity": copy.deepcopy(route.get("route_identity") or {}),
@@ -1555,12 +1555,12 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "branch_summary": branch_summary,
             "static_graph": copy.deepcopy(derived_static_graph_map.get(route_id) or {}),
         }
-        route_renderables.append(route_renderable)
+        canonical_light_paths.append(canonical_route)
 
         hardware_labels = [clean_text(item.get("display_label") or item.get("id")) for item in route_hardware_items if clean_text(item.get("display_label") or item.get("id"))]
         derived_route_summary_cards.append({
             "id": route_id,
-            "display_label": route_renderable["name"],
+            "display_label": canonical_route["name"],
             "display_subtitle": "Route-owned DTO graph",
             "spec_lines": _spec_lines(
                 ("Graph nodes", len(graph_nodes)),
@@ -1569,11 +1569,11 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
                 ("Endpoints", _human_list(endpoint_summary.get("labels") or [])),
                 ("Branching", f"{branch_summary['count']} branch path(s) across {len(branch_summary['branch_blocks'])} block(s)" if branch_summary.get("has_branches") else "No explicit branch blocks"),
             ),
-            "method_sentence": f"The {route_renderable['name']} route is rendered directly from DTO graph nodes and edges.",
+            "method_sentence": f"The {canonical_route['name']} route is rendered directly from DTO graph nodes and edges.",
         })
         derived_methods_route_views.append({
             "id": route_id,
-            "display_label": route_renderable["name"],
+            "display_label": canonical_route["name"],
             "light_sources": [item for item in hardware_renderables_from_inventory(derived_inventory_cards, set(hardware_ids), "light_source")],
             "filters": [item for item in hardware_renderables_from_inventory(derived_inventory_cards, set(hardware_ids), "optical_element")],
             "splitters": [item for item in hardware_renderables_from_inventory(derived_inventory_cards, set(hardware_ids), "splitter")],
@@ -1587,14 +1587,14 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         if branch_summary.get("has_branches"):
             derived_branch_summary_cards.append({
                 "id": route_id,
-                "display_label": route_renderable["name"],
+                "display_label": canonical_route["name"],
                 "display_subtitle": "Route-owned branch summary",
                 "spec_lines": _spec_lines(
                     ("Selection modes", ", ".join(branch_summary.get("selection_modes") or [])),
                     ("Branches", " • ".join(branch.get("label") or branch.get("branch_id") for branch in branch_summary.get("branches") or [] if clean_text(branch.get("label") or branch.get("branch_id")))),
                     ("Endpoints", _human_list(endpoint_summary.get("labels") or [])),
                 ),
-                "method_sentence": f"Explicit route traversal branches are declared directly on the {route_renderable['name']} route.",
+                "method_sentence": f"Explicit route traversal branches are declared directly on the {canonical_route['name']} route.",
             })
 
     if derived_route_summary_cards:
@@ -1631,7 +1631,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         if isinstance(endpoint, dict)
     ]
 
-    for route_renderable in route_renderables:
+    for route_renderable in canonical_light_paths:
         route_id = clean_text(route_renderable.get("id"))
         route_usage = route_renderable.get("route_hardware_usage") if isinstance(route_renderable.get("route_hardware_usage"), dict) else {}
         route_inventory_ids = [
@@ -1727,8 +1727,9 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         "runtime_splitters": runtime_splitters,
         "hardware_inventory": copy.deepcopy(hardware_inventory),
         "hardware_index_map": copy.deepcopy(hardware_index_map),
-        "route_renderables": route_renderables,
-        "routes": route_renderables,
+        "light_paths": canonical_light_paths,
+        "route_renderables": canonical_light_paths,
+        "routes": canonical_light_paths,
         "filters": derived_optical_element_cards,
         "splitters": derived_splitter_cards,
         "terminal_renderables": derived_endpoint_cards,
@@ -1738,7 +1739,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         "sections": derived_sections,
         "renderables": derived_renderables,
         "primary_rendering_contract": {
-            "routes": "route_renderables",
+            "routes": "light_paths",
             "hardware_inventory": "hardware_inventory",
             "hardware_index_map": "hardware_index_map",
             "graph_fields": ["graph_nodes", "graph_edges"],
@@ -1754,7 +1755,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         "authoritative_route_contract": {
             "contract_version": "authoritative_route_contract.v1",
             "primary_rendering_contract": {
-                "routes": "route_renderables",
+                "routes": "light_paths",
                 "hardware_inventory": "hardware_inventory",
                 "route_hardware_usage": "route_hardware_usage",
                 "normalized_endpoints": "normalized_endpoints",

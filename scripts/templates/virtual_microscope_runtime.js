@@ -591,6 +591,10 @@
           label: cleanString(route.name) || routeLabel(routeId),
           order: routeIndex,
           record: { ...route },
+          topology: {
+            graph_nodes: graphNodes.map((node) => ({ ...node })),
+            graph_edges: graphEdges.map((edge) => ({ ...edge })),
+          },
           graphNodes,
           graphEdges,
           routeHardwareUsage: routeUsage ? { ...routeUsage } : null,
@@ -920,9 +924,20 @@
       // Authoritative downstream DTO surfaces.
       routeTopology,
       hardwareInventory: Array.isArray(payload.hardware_inventory) ? payload.hardware_inventory : [],
+      hardwareIndexMap: payload.hardware_index_map && typeof payload.hardware_index_map === 'object'
+        ? payload.hardware_index_map
+        : {},
       routeHardwareUsage: Array.isArray(payload.route_hardware_usage) ? payload.route_hardware_usage : [],
       normalizedEndpoints: Array.isArray(payload.normalized_endpoints || payload.endpoints) ? (payload.normalized_endpoints || payload.endpoints) : [],
       opticalPathElements: canonicalElements(payload.optical_path_elements),
+      authoritativeTopologyContract: {
+        routes: 'routeTopology.routes',
+        hardwareInventory: 'hardwareInventory',
+        hardwareIndexMap: 'hardwareIndexMap',
+        routeHardwareUsage: 'routeHardwareUsage',
+        normalizedEndpoints: 'normalizedEndpoints',
+        graphFields: ['graphNodes', 'graphEdges'],
+      },
       // Derived compatibility adapters reconstructed from the authoritative payload.
       stageAdapters: derivedStageAdapters,
       derivedStageAdapters,
