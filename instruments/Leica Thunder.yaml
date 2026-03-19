@@ -8,526 +8,451 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: ''
-  notes: Widefield microscope with Leica Computational Clearing for real-time out-of-focus
-    blur removal in 3D fluorescence imaging; high sensitivity supports low phototoxicity
-    and photobleaching. LAS X raw data is saved separately; processing can be done
-    during acquisition or by post-processing.
+  notes: 'Widefield microscope with Leica Computational Clearing for real-time out-of-focus blur removal in 3D fluorescence imaging; high sensitivity supports low phototoxicity and photobleaching. LAS X raw data is saved separately; processing can be done during acquisition or by post-processing.'
   url: https://www.leica-microsystems.com/products/thunder-imaging-systems/
+
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
+  - widefield_fluorescence
+  - transmitted_brightfield
+
 modules:
-- name: hardware_autofocus
-  notes: ''
-  url: ''
-  manufacturer: Leica Microsystems
-  model: Adaptive Focus Control
+  - type: hardware_autofocus # CORRECTED: Changed from 'name' to the canonical 'type'
+    notes: ''
+    url: ''
+    manufacturer: Leica Microsystems
+    model: Adaptive Focus Control
+
 software:
-- role: acquisition
-  name: LAS X with Navigator
-  version: ''
-  url: https://www.leica-microsystems.com/products/microscope-software/p/leica-las-x-ls/
+  - role: acquisition
+    name: LAS X with Navigator
+    version: ''
+    url: https://www.leica-microsystems.com/products/microscope-software/p/leica-las-x-ls/
+
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
+    
   scanner:
     type: none
     notes: ''
     url: ''
+    
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
+    
   detectors:
-  - kind: scmos
-    manufacturer: Leica
-    model: K8
-    pixel_pitch_um: 6.5
-    sensor_format_px: 2048 x 2048
-    bit_depth: 12
-    qe_peak_pct: 95
-    read_noise_e: 1.0
-    notes: monochrome; 18.8 mm sensor, dark current 1.5 e-/pix/s
-    url: https://www.leica-microsystems.com/products/microscope-cameras/p/k8/
-    id: detector_1
-  - kind: cmos
-    manufacturer: Leica
-    model: K3C
-    pixel_pitch_um: 3.45
-    bit_depth: 12
-    notes: color CMOS; excellent color reproduction; RGB quantifiable images
-    url: https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/
-    id: detector_2
+    - kind: scmos
+      manufacturer: Leica
+      model: K8
+      pixel_pitch_um: 6.5
+      sensor_format_px: 2048 x 2048
+      bit_depth: 12
+      qe_peak_pct: 95
+      read_noise_e: 1.0
+      notes: monochrome; 18.8 mm sensor, dark current 1.5 e-/pix/s
+      url: https://www.leica-microsystems.com/products/microscope-cameras/p/k8/
+      id: detector_1
+    - kind: cmos
+      manufacturer: Leica
+      model: K3C
+      pixel_pitch_um: 3.45
+      bit_depth: 12
+      notes: color CMOS; excellent color reproduction; RGB quantifiable images
+      url: https://www.leica-microsystems.com/products/microscope-cameras/p/k3-c/
+      id: detector_2
+
+  eyepieces: # ADDED: Required for trinocular routing
+    - id: eyepieces
+      notes: 'Binocular Eyepieces'
+      
   objectives:
-  - id: 5x_air
-    manufacturer: Leica
-    model: N PLAN 5x/0.12 PH 0
-    product_code: '11506303'
-    magnification: 5.0
-    numerical_aperture: 0.12
-    working_distance: 14.0 mm
-    immersion: air
-    correction: plan_achromat
-    afc_compatible: false
-    specialties:
-    - phase
-    - dic
-    - uv_transmission
-    notes: FN 22
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/
-    is_installed: true
-  - id: 10x_air
-    manufacturer: Leica
-    model: HC PL APO 10x/0.45
-    product_code: '11506410'
-    magnification: 10.0
-    numerical_aperture: 0.45
-    working_distance: 2.8 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - dic
-    - uv_transmission
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/
-    is_installed: true
-  - id: 20x_air
-    manufacturer: Leica
-    model: HC PL FLUOTAR L 20x/0.40 CORR
-    product_code: '11506242'
-    magnification: 20.0
-    numerical_aperture: 0.4
-    working_distance: 7.5 - 6.2 mm
-    immersion: air
-    correction: fluorite
-    afc_compatible: true
-    specialties:
-    - correction_collar
-    - dic
-    - uv_transmission
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/
-    is_installed: true
-  - id: 20x_multi
-    manufacturer: Leica
-    model: HC PL APO 20x/0.70 IMM CORR
-    product_code: '11506326'
-    magnification: 20.0
-    numerical_aperture: 0.7
-    working_distance: 0.66 mm
-    immersion: multi
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-    - correction_collar
-    - correction_collar
-    - dic
-    - uv_transmission
-    notes: FN 25; W/O/G Immersion
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/
-    is_installed: true
-  - id: 20x_air_2
-    manufacturer: Leica
-    model: HC PL APO 20x/0.80
-    product_code: '11506529'
-    magnification: 20.0
-    numerical_aperture: 0.8
-    working_distance: 0.4 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - dic
-    - uv_transmission
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/
-    is_installed: true
-  - id: 63x_oil
-    manufacturer: Leica
-    model: HC PL APO 63x/1.40 OIL CS2
-    product_code: '11506350'
-    magnification: 63.0
-    numerical_aperture: 1.4
-    working_distance: 0.14 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - dic
-    - uv_transmission
-    notes: FN 25
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/
-    is_installed: true
-  - id: 16x_multi
-    manufacturer: Leica
-    model: HC FLUOTAR L 16x/0.60 IMM CORR VISIR
-    product_code: '506533'
-    magnification: 16.0
-    numerical_aperture: 0.6
-    working_distance: 2.5 mm
-    immersion: multi
-    correction: fluorite
-    afc_compatible: true
-    specialties:
-    - correction_collar
-    - ir_transmission
-    - ir_transmission
-    - correction_collar
-    - dic
-    notes: FN 20
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/
-    is_installed: false
-  - id: 10x_air_2
-    manufacturer: Leica
-    model: HC PL APO FLUOTAR 10x/0.30 PH 1
-    product_code: '11506507'
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: 11.0 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-    - phase
-    - dic
-    - uv_transmission
-    notes: FN 25; from SP5?
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/
-    is_installed: false
-  - id: 100x_oil
-    manufacturer: Leica
-    model: HC PL APO 100x/1.40 OIL STED
-    product_code: '11506316'
-    magnification: 100.0
-    numerical_aperture: 1.4
-    working_distance: 0.13 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties:
-    - sted
-    - dic
-    - uv_transmission
-    notes: FN 25; from SP5?
-    url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/
-    is_installed: false
+    - id: 5x_air
+      manufacturer: Leica
+      model: N PLAN 5x/0.12 PH 0
+      product_code: '11506303'
+      magnification: 5.0
+      numerical_aperture: 0.12
+      working_distance: 14.0 mm
+      immersion: air
+      correction: plan_achromat
+      afc_compatible: false
+      specialties:
+        - phase
+        - dic
+        - uv_transmission
+      notes: FN 22
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506303/
+      is_installed: true
+    - id: 10x_air
+      manufacturer: Leica
+      model: HC PL APO 10x/0.45
+      product_code: '11506410'
+      magnification: 10.0
+      numerical_aperture: 0.45
+      working_distance: 2.8 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - dic
+        - uv_transmission
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506410/
+      is_installed: true
+    - id: 20x_air
+      manufacturer: Leica
+      model: HC PL FLUOTAR L 20x/0.40 CORR
+      product_code: '11506242'
+      magnification: 20.0
+      numerical_aperture: 0.4
+      working_distance: 7.5 - 6.2 mm
+      immersion: air
+      correction: fluorite
+      afc_compatible: true
+      specialties:
+        - correction_collar
+        - dic
+        - uv_transmission
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506242/
+      is_installed: true
+    - id: 20x_multi
+      manufacturer: Leica
+      model: HC PL APO 20x/0.70 IMM CORR
+      product_code: '11506326'
+      magnification: 20.0
+      numerical_aperture: 0.7
+      working_distance: 0.66 mm
+      immersion: multi
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - correction_collar
+        - dic
+        - uv_transmission
+      notes: FN 25; W/O/G Immersion
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506326/
+      is_installed: true
+    - id: 20x_air_2
+      manufacturer: Leica
+      model: HC PL APO 20x/0.80
+      product_code: '11506529'
+      magnification: 20.0
+      numerical_aperture: 0.8
+      working_distance: 0.4 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - dic
+        - uv_transmission
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506529/
+      is_installed: true
+    - id: 63x_oil
+      manufacturer: Leica
+      model: HC PL APO 63x/1.40 OIL CS2
+      product_code: '11506350'
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: 0.14 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - dic
+        - uv_transmission
+      notes: FN 25
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506350/
+      is_installed: true
+    - id: 16x_multi
+      manufacturer: Leica
+      model: HC FLUOTAR L 16x/0.60 IMM CORR VISIR
+      product_code: '506533'
+      magnification: 16.0
+      numerical_aperture: 0.6
+      working_distance: 2.5 mm
+      immersion: multi
+      correction: fluorite
+      afc_compatible: true
+      specialties:
+        - correction_collar
+        - ir_transmission
+        - dic
+      notes: FN 20
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506533/
+      is_installed: false
+    - id: 10x_air_2
+      manufacturer: Leica
+      model: HC PL APO FLUOTAR 10x/0.30 PH 1
+      product_code: '11506507'
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: 11.0 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - phase
+        - dic
+        - uv_transmission
+      notes: FN 25; from SP5?
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506507/
+      is_installed: false
+    - id: 100x_oil
+      manufacturer: Leica
+      model: HC PL APO 100x/1.40 OIL STED
+      product_code: '11506316'
+      magnification: 100.0
+      numerical_aperture: 1.4
+      working_distance: 0.13 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties:
+        - sted
+        - dic
+        - uv_transmission
+      notes: FN 25; from SP5?
+      url: https://www.leica-microsystems.com/objectivefinder/detail/objective/506316/
+      is_installed: false
+      
   sources:
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 395
-    width_nm: 25
-    power: 200 mW
-    notes: 390 in software
-    url: ''
-    id: led_8
-    modalities:
-    - epi
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 438
-    width_nm: 29
-    power: 200 mW
-    notes: 440 in software
-    url: ''
-    id: led_8_2
-    modalities:
-    - epi
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 475
-    width_nm: 28
-    power: 200 mW
-    notes: ''
-    url: ''
-    id: led_8_3
-    modalities:
-    - epi
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 511
-    width_nm: 16
-    power: 200 mW
-    notes: 510 in software
-    url: ''
-    id: led_8_4
-    modalities:
-    - epi
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 555
-    width_nm: 28
-    power: 200 mW
-    notes: ''
-    url: ''
-    id: led_8_5
-    modalities:
-    - epi
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 575
-    width_nm: 25
-    power: 200 mW
-    notes: ''
-    url: ''
-    id: led_8_6
-    modalities:
-    - epi
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 635
-    width_nm: 22
-    power: 200 mW
-    notes: ''
-    url: ''
-    id: led_8_7
-    modalities:
-    - epi
-  - kind: led
-    manufacturer: Leica
-    model: LED 8
-    path: epi
-    wavelength_nm: 730
-    width_nm: 40
-    power: 200 mW
-    notes: 747 in software
-    url: ''
-    id: led_8_8
-    modalities:
-    - epi
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      # CORRECTED: Removed legacy 'path' alias
+      wavelength_nm: 395
+      width_nm: 25
+      power: 200 mW
+      notes: 390 in software
+      url: ''
+      id: led_8
+      modalities:
+        - widefield_fluorescence # CORRECTED: Aligned with standard modalities
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      wavelength_nm: 438
+      width_nm: 29
+      power: 200 mW
+      notes: 440 in software
+      url: ''
+      id: led_8_2
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      wavelength_nm: 475
+      width_nm: 28
+      power: 200 mW
+      notes: ''
+      url: ''
+      id: led_8_3
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      wavelength_nm: 511
+      width_nm: 16
+      power: 200 mW
+      notes: 510 in software
+      url: ''
+      id: led_8_4
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      wavelength_nm: 555
+      width_nm: 28
+      power: 200 mW
+      notes: ''
+      url: ''
+      id: led_8_5
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      wavelength_nm: 575
+      width_nm: 25
+      power: 200 mW
+      notes: ''
+      url: ''
+      id: led_8_6
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      wavelength_nm: 635
+      width_nm: 22
+      power: 200 mW
+      notes: ''
+      url: ''
+      id: led_8_7
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Leica
+      model: LED 8
+      wavelength_nm: 730
+      width_nm: 40
+      power: 200 mW
+      notes: 747 in software
+      url: ''
+      id: led_8_8
+      modalities:
+        - widefield_fluorescence
+        
   optical_path_elements:
-  - name: Filter Turret
-    type: turret
-    slots: 6
-    path: epi
-    positions:
-      1:
-        name: CYR71010
-        product_code: '11525416'
-        notes: Quad-band
-        excitation_filter:
-          component_type: multiband_bandpass
+    - name: Filter Turret
+      # CORRECTED: Removed legacy 'type' and 'path' aliases
+      stage_role: cube
+      id: filter_turret
+      element_type: turret
+      modalities:
+        - widefield_fluorescence
+      positions:
+        Pos_1: # CORRECTED: Changed integer keys to string format
+          name: CYR71010
+          product_code: '11525416'
+          component_type: filter_cube # CORRECTED: Converted to canonical component type
+          bands: # CORRECTED: Flattened nested filters and mapped to canonical bands array
+            - center_nm: 473
+              width_nm: 22
+            - center_nm: 539
+              width_nm: 24
+            - center_nm: 641
+              width_nm: 78
+            - center_nm: 810
+              width_nm: 80
+          notes: 'Quad-band. Excitation: 436/28, 506/21, 578/24, 730/40 nm. Dichroic Cutoffs: 459, 523, 598, 763 nm.'
+        Pos_2:
+          name: DFT51010
+          product_code: '11525418'
+          component_type: filter_cube
           bands:
-          - center_nm: 436
-            width_nm: 28
-          - center_nm: 506
-            width_nm: 21
-          - center_nm: 578
-            width_nm: 24
-          - center_nm: 730
-            width_nm: 40
-        dichroic:
-          component_type: multiband_dichroic
-          transmission_bands:
-          - center_nm: 473
-            width_nm: 22
-          - center_nm: 539
-            width_nm: 24
-          - center_nm: 641
-            width_nm: 78
-          - center_nm: 810
-            width_nm: 80
-          reflection_bands:
-          - center_nm: 436
-            width_nm: 28
-          - center_nm: 506
-            width_nm: 21
-          - center_nm: 578
-            width_nm: 24
-          - center_nm: 730
-            width_nm: 40
-          cutoffs_nm:
-          - 459
-          - 523
-          - 598
-          - 763
-          notes: Explicit transmission/reflection windows are mapped from this cube's
-            paired excitation/emission filter bands.
-        emission_filter:
-          component_type: multiband_bandpass
+            - center_nm: 435
+              width_nm: 30
+            - center_nm: 519
+              width_nm: 25
+            - center_nm: 594
+              width_nm: 32
+            - center_nm: 695
+              width_nm: 58
+          notes: 'Quad-band. Excitation: 391/32, 479/33, 554/24, 638/31 nm. Dichroic Cutoffs: 415, 500, 572, 660 nm.'
+        Pos_3:
+          name: CY3
+          component_type: filter_cube
           bands:
-          - center_nm: 473
-            width_nm: 22
-          - center_nm: 539
-            width_nm: 24
-          - center_nm: 641
-            width_nm: 78
-          - center_nm: 810
-            width_nm: 80
-      2:
-        name: DFT51010
-        product_code: '11525418'
-        notes: Quad-band
-        excitation_filter:
-          component_type: multiband_bandpass
+            - center_nm: 572
+              width_nm: 23
+          notes: 'LED: 555. Excitation: 546/10 nm. Dichroic Cutoff: 556 nm.'
+        Pos_4:
+          name: A594
+          component_type: filter_cube
           bands:
-          - center_nm: 391
-            width_nm: 32
-          - center_nm: 479
-            width_nm: 33
-          - center_nm: 554
-            width_nm: 24
-          - center_nm: 638
-            width_nm: 31
-        dichroic:
-          component_type: multiband_dichroic
-          transmission_bands:
-          - center_nm: 435
-            width_nm: 30
-          - center_nm: 519
-            width_nm: 25
-          - center_nm: 594
-            width_nm: 32
-          - center_nm: 695
-            width_nm: 58
-          reflection_bands:
-          - center_nm: 391
-            width_nm: 32
-          - center_nm: 479
-            width_nm: 33
-          - center_nm: 554
-            width_nm: 24
-          - center_nm: 638
-            width_nm: 31
-          cutoffs_nm:
-          - 415
-          - 500
-          - 572
-          - 660
-          notes: Explicit transmission/reflection windows are mapped from this cube's
-            paired excitation/emission filter bands.
-        emission_filter:
-          component_type: multiband_bandpass
+            - center_nm: 630
+              width_nm: 30
+          notes: 'LED: 575. Excitation: 592/21 nm. Dichroic Cutoff: 610 nm.'
+        Pos_5:
+          name: EMP_BF
+          product_code: '11525000'
+          component_type: empty
+          notes: Empty position for TL-methods excluding POL, DIC
+        Pos_6:
+          name: EMP+Pol
+          product_code: '11525000'
+          component_type: empty
+          notes: Empty position for TL-methods including POL, DIC, requires external Analyser-slider
+          
+    - name: Standalone Emission Wheel
+      # CORRECTED: Removed legacy 'type' and 'path' aliases
+      stage_role: emission
+      id: standalone_emission_wheel
+      element_type: filter_wheel
+      modalities:
+        - widefield_fluorescence
+      notes: External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope turret)
+      positions:
+        Pos_1:
+          name: 460/80
+          component_type: bandpass
+          bands: # CORRECTED: Nested isolated parameters into the required 'bands' array
+            - center_nm: 460
+              width_nm: 80
+        Pos_2:
+          name: 535/70
+          component_type: bandpass
           bands:
-          - center_nm: 435
-            width_nm: 30
-          - center_nm: 519
-            width_nm: 25
-          - center_nm: 594
-            width_nm: 32
-          - center_nm: 695
-            width_nm: 58
-      3:
-        name: CY3
-        notes: 'LED: 555'
-        excitation_filter:
+            - center_nm: 535
+              width_nm: 70
+        Pos_3:
+          name: 590/50
           component_type: bandpass
-          center_nm: 546
-          width_nm: 10
-        dichroic:
-          component_type: dichroic
-          cutoffs_nm:
-          - 556
-        emission_filter:
+          bands:
+            - center_nm: 590
+              width_nm: 50
+        Pos_4:
+          name: 642/80
           component_type: bandpass
-          center_nm: 572
-          width_nm: 23
-      4:
-        name: A594
-        notes: 'LED: 575'
-        excitation_filter:
-          component_type: bandpass
-          center_nm: 592
-          width_nm: 21
-        dichroic:
-          component_type: dichroic
-          cutoffs_nm:
-          - 610
-        emission_filter:
-          component_type: bandpass
-          center_nm: 630
-          width_nm: 30
-      5:
-        name: EMP_BF
-        product_code: '11525000'
-        notes: Empty position for TL-methods excluding POL, DIC
-        excitation_filter:
+          bands:
+            - center_nm: 642
+              width_nm: 80
+        Pos_5:
           component_type: empty
-        dichroic:
+        Pos_6:
           component_type: empty
-        emission_filter:
-          component_type: empty
-      6:
-        name: EMP+Pol
-        product_code: '11525000'
-        notes: Empty position for TL-methods including POL, DIC, requires external
-          Analyser-slider
-        excitation_filter:
-          component_type: empty
-        dichroic:
-          component_type: empty
-        emission_filter:
-          component_type: empty
-    stage_role: cube
-    id: filter_turret
-    element_type: turret
-    modalities:
-    - epi
-  - name: Standalone Emission Wheel
-    type: filter_wheel
-    slots: 6
-    path: epi
-    notes: External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope
-      turret)
-    positions:
-      1:
-        name: 460/80
-        component_type: bandpass
-        center_nm: 460
-        width_nm: 80
-      2:
-        name: 535/70
-        component_type: bandpass
-        center_nm: 535
-        width_nm: 70
-      3:
-        name: 590/50
-        component_type: bandpass
-        center_nm: 590
-        width_nm: 50
-      4:
-        name: 642/80
-        component_type: bandpass
-        center_nm: 642
-        width_nm: 80
-      5:
-        component_type: empty
-      6:
-        component_type: empty
-    stage_role: emission
-    id: standalone_emission_wheel
-    element_type: filter_wheel
-    modalities:
-    - epi
-  endpoints: []
+
+  # CORRECTED: Removed the deprecated hardware.endpoints block.
+
 light_paths:
-- id: epi
-  name: Epi-fluorescence
-  illumination_sequence:
-  - source_id: led_8
-  - source_id: led_8_2
-  - source_id: led_8_3
-  - source_id: led_8_4
-  - source_id: led_8_5
-  - source_id: led_8_6
-  - source_id: led_8_7
-  - source_id: led_8_8
-  - optical_path_element_id: filter_turret
-  detection_sequence:
-  - optical_path_element_id: filter_turret
-  - optical_path_element_id: standalone_emission_wheel
+  - id: widefield_fluorescence # CORRECTED: Aligned ID with standard modalities
+    name: Epi-fluorescence
+    illumination_sequence:
+      - source_id: led_8
+      - source_id: led_8_2
+      - source_id: led_8_3
+      - source_id: led_8_4
+      - source_id: led_8_5
+      - source_id: led_8_6
+      - source_id: led_8_7
+      - source_id: led_8_8
+      - optical_path_element_id: filter_turret
+    detection_sequence:
+      - optical_path_element_id: filter_turret
+      - optical_path_element_id: standalone_emission_wheel
+      - branches: # ADDED: Required detection routing to valid endpoints
+          selection_mode: exclusive 
+          items:
+            - branch_id: to_k8
+              label: "To K8 sCMOS"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_eyepieces 
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
+                
+  - id: transmitted_brightfield # ADDED: Routing for declared modality
+    name: Transmitted Brightfield
+    illumination_sequence: [] # Intentionally empty as no specific transmitted source is documented
+    detection_sequence:
+      - branches:
+          selection_mode: exclusive
+          items:
+            - branch_id: to_k3c
+              label: "To K3C CMOS"
+              sequence:
+                - endpoint_id: detector_2
+            - branch_id: to_eyepieces 
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
