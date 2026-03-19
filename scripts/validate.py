@@ -11,7 +11,7 @@ from typing import Any, Iterable
 
 import yaml
 
-from scripts.light_path_parser import canonicalize_light_path_model, validate_light_path
+from scripts.light_path_parser import canonicalize_light_path_model, validate_light_path, validate_light_path_warnings
 
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
@@ -1542,12 +1542,20 @@ def validate_instrument_ledgers(
                             )
 
 
-        for light_path_error in validate_light_path(canonical_payload):
+        for light_path_error in validate_light_path(payload):
             issues.append(
                 ValidationIssue(
                     code='invalid_light_path',
                     path=instrument_file.as_posix(),
                     message=light_path_error,
+                )
+            )
+        for light_path_warning in validate_light_path_warnings(payload):
+            warnings.append(
+                ValidationIssue(
+                    code='light_path_endpoint_warning',
+                    path=instrument_file.as_posix(),
+                    message=light_path_warning,
                 )
             )
 

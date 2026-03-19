@@ -60,7 +60,7 @@ hardware:
     url: ""  # Scanner URL: Reference only.
   detectors:  # Detectors: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
     -
-      id: ""  # Detector ID: Stable graph target ID for virtual microscope routing and splitter branch targets.
+      id: ""  # Detector ID: Stable graph target ID for light path routing, virtual microscope traversal, and splitter branch targets.
       kind: ""  # Detector kind: Core detector class. | Allowed values (canonical IDs): pmt, gaasp_pmt, hyd, scmos, cmos, emccd, ccd, apd, spad
       manufacturer: ""  # Detector manufacturer: Needed for hardware identification.
       model: ""  # Detector model: Needed for hardware identification.
@@ -172,7 +172,7 @@ hardware:
       id: ""  # Optical path element ID: Stable identifier referenced by light_paths sequences.
       name: ""  # Optical path element name: Human-readable element label for authoring clarity and consumer display.
       display_label: ""  # Optical path element display label: Optional alternate display label for UI-facing consumers.
-      stage_role: ""  # Optical path element stage role: Canonical stage-role classifier used to preserve route semantics in the DTO and consumers. | Allowed values (canonical IDs): excitation, cube, dichroic, emission, splitter
+      stage_role: ""  # Optical path element stage role: Descriptive grouping metadata for UI/runtime consumers. `light_paths` remain the sole canonical source of route topology, so stage_role should only be supplied when a stable stage grouping is genuinely useful. | Allowed values (canonical IDs): excitation, cube, dichroic, emission, splitter
       element_type: ""  # Optical path element type: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling. | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array, selector, splitter, emission_splitter, image_splitter, dual_view, quad_view
       selection_mode: ""  # Optical path element selection mode: Inventory-level selector/splitter capability metadata. Canonical route branching now lives in light_paths sequence branch blocks. | Allowed values (canonical IDs): fixed, exclusive, multiple
       supported_branch_modes:  # Supported branch modes: Inventory-level capability metadata describing which branch modes a selector/splitter can support. | Allowed values (canonical IDs): transmitted, reflected, selected, passthrough
@@ -190,22 +190,16 @@ hardware:
             -
               center_nm: ""  # Optical path position band center (nm): Band center for direct multiband position payloads.
               width_nm: ""  # Optical path position band width (nm): Band width for direct multiband position payloads.
-      branches:  # Optical path element branches: Deprecated migration-only hardware branch metadata. Canonical routing truth now belongs in light_paths sequence branch blocks.
-        -
-          id: ""  # Branch ID: Stable branch key nested under the splitter/selector element.
-          label: ""  # Branch label: Human-readable branch label for UI/runtime presentation.
-          mode: ""  # Branch mode: Canonical branch-mode metadata for transmitted/reflected-style splitters. | Allowed values (canonical IDs): transmitted, reflected, selected, passthrough
-          target_ids:  # Branch target endpoint IDs: Deprecated migration-only hardware branch target metadata. Canonical branch endpoint routing must be declared in light_paths branch sequences.
-            - ""
-          component:  # Branch-specific optical component: Branch-specific optical component payload preserved through DTO generation when a selector/splitter branch carries its own optics.
-            component_type: ""  # Branch-specific optical component type: Canonical component classifier for a branch-specific optical payload. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
-  endpoints:  # Endpoints: Explicit terminal detectors, camera ports, and eyepieces.
+  eyepieces:  # Eyepieces: Explicit terminal eyepieces addressed directly by light path routing.
     -
-      id: ""  # Endpoint ID: Stable endpoint identifier referenced by light_paths detection sequences and branch-local sequences.
-      endpoint_type: ""  # Endpoint type: Endpoint class used by runtime for detector, camera-port, or eyepiece handling. | Allowed values (canonical IDs): detector, camera_port, eyepiece
-      display_label: ""  # Endpoint display label: Optional UI/display label for the endpoint.
-      modalities:  # Endpoint modalities: Validation-only route guards for endpoints. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
-        - ""
+      id: ""  # Eyepiece ID: Stable identifier referenced by light_paths.
+      magnification: ""  # Eyepiece magnification: Optional magnification value for the eyepiece.
+      field_number: ""  # Eyepiece field number: Optional field number value for the eyepiece.
+      notes: ""  # Eyepiece notes: Useful for documenting eyepiece-specific caveats or labels.
+  endpoints:  # Explicit detection endpoints: Optional explicit endpoint inventory; canonical normalization merges these rows with endpoint-capable inventories into the unified endpoint registry.
+    -
+      id: ""  # Explicit endpoint ID: Stable identifier for the explicit endpoint row.
+      endpoint_type: ""  # Explicit endpoint type: Canonical endpoint classifier for an explicit endpoint row. | Allowed values (canonical IDs): detector, camera_port, eyepiece
 
 # -----------------------------------------------------------------------------
 # LIGHT PATHS
@@ -214,33 +208,21 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
   -
     id: ""  # Light path ID: Stable route identifier used by simulator, UI, and graph rendering.
     name: ""  # Light path name: Human-readable route label shown in UI and exported DTO route catalogs.
-    illumination_sequence:  # Illumination sequence: Ordered sequence of source and optical-path-element references used before the sample plane.
+    illumination_sequence:  # Illumination sequence: Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id.
       -
-        source_id: ""  # Illumination source reference: Stable source reference in the illumination sequence.
-        optical_path_element_id: ""  # Illumination optical path element reference: Stable optical-path-element reference in the illumination sequence.
-        branches:  # Illumination branch block: Explicit route-owned one-level branch block for illumination traversal when a route forks before the sample plane.
-          selection_mode: ""  # Illumination branch selection mode: Branch selection mode for an explicit illumination route fork. | Allowed values (canonical IDs): fixed, exclusive, multiple
-          items:  # Illumination branch items: Explicit route-owned branch definitions nested under an illumination sequence item.
-            -
-              branch_id: ""  # Illumination branch ID: Stable branch identifier scoped to the branch block.
-              label: ""  # Illumination branch label: Human-readable label for an illumination branch.
-              sequence:  # Illumination branch sequence: Linear branch-local traversal sequence for an illumination route fork.
-                -
-                  source_id: ""  # Illumination branch source reference: Optional source reference inside a branch-local sequence.
-                  optical_path_element_id: ""  # Illumination branch optical path element reference: Stable optical-path-element reference inside a branch-local sequence.
-                  endpoint_id: ""  # Illumination branch endpoint reference: Optional explicit endpoint reference inside a branch-local sequence.
-    detection_sequence:  # Detection sequence: Ordered sequence of optical-path-element and endpoint references used after the sample plane.
+        source_id: ""  # Illumination source reference: Stable source reference for the source_id variant of an illumination sequence tagged union item.
+        optical_path_element_id: ""  # Illumination optical path element reference: Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item.
+    detection_sequence:  # Detection sequence: Ordered sequence of strict tagged-union items used after the sample plane; each item must declare exactly one of optical_path_element_id, endpoint_id, or branches.
       -
-        optical_path_element_id: ""  # Detection optical path element reference: Stable optical-path-element reference in the detection sequence.
-        endpoint_id: ""  # Detection endpoint reference: Stable endpoint reference for direct unbranched detection terminals.
-        branches:  # Detection branch block: Explicit route-owned one-level branch block for detection traversal after a splitter/selector element.
+        optical_path_element_id: ""  # Detection optical path element reference: Stable optical-path-element reference for the optical_path_element_id variant of a detection sequence tagged union item.
+        endpoint_id: ""  # Detection endpoint reference: Stable endpoint reference for the endpoint_id variant of a detection sequence tagged union item.
+        branches:  # Detection branch block: Explicit route-owned one-level branch block for the branches variant of a detection sequence tagged union item.
           selection_mode: ""  # Detection branch selection mode: Branch selection mode for an explicit detection route fork. | Allowed values (canonical IDs): fixed, exclusive, multiple
           items:  # Detection branch items: Explicit route-owned branch definitions nested under a detection sequence item.
             -
               branch_id: ""  # Detection branch ID: Stable branch identifier scoped to the branch block.
               label: ""  # Detection branch label: Human-readable label for a detection branch.
-              sequence:  # Detection branch sequence: Linear branch-local traversal sequence for a detection route fork.
+              sequence:  # Detection branch sequence: Linear branch-local traversal sequence for a detection route fork; each branch-local item must declare exactly one of optical_path_element_id or endpoint_id.
                 -
-                  source_id: ""  # Detection branch source reference: Optional source reference inside a branch-local sequence.
-                  optical_path_element_id: ""  # Detection branch optical path element reference: Stable optical-path-element reference inside a branch-local detection sequence.
-                  endpoint_id: ""  # Detection branch endpoint reference: Explicit branch endpoint reference used by validator, graph rendering, and simulation.
+                  optical_path_element_id: ""  # Detection branch optical path element reference: Stable optical-path-element reference for the optical_path_element_id variant of a detection branch-local tagged union item.
+                  endpoint_id: ""  # Detection branch endpoint reference: Stable endpoint reference for the endpoint_id variant of a detection branch-local tagged union item.

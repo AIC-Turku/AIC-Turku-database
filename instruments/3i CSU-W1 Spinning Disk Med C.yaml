@@ -13,7 +13,7 @@ instrument:
 modalities:
   - confocal_spinning_disk
   - widefield_fluorescence
-  - transmitted
+  - transmitted_brightfield
 
 modules:
   - type: incubation
@@ -234,21 +234,18 @@ hardware:
       positions:
         Pos_1:
           product_code: LED-DAPI-A-ZHE-Zero
-          component_type: filter_cube
           notes: 'DAPI Filter Cube. Nominal DAPI band 445/45nm.'
           bands:
             - center_nm: 445
               width_nm: 45
         Pos_2:
           product_code: LED-FITC-A-ZHE-Zero
-          component_type: filter_cube
           notes: 'FITC Filter Cube. Nominal GFP band 525/30nm.'
           bands:
             - center_nm: 525
               width_nm: 30
         Pos_3:
           product_code: LED-TRITC-A-ZHE-Zero
-          component_type: filter_cube
           notes: 'TRITC Filter Cube. Nominal Cy3/Alexa 568 band 617/73nm.'
           bands:
             - center_nm: 617
@@ -323,7 +320,7 @@ hardware:
     - id: trinocular_port_selector
       name: Trinocular Head Port Selector
       element_type: splitter
-      stage_role: distribution
+      stage_role: splitter
 
 light_paths:
   - id: confocal
@@ -348,7 +345,7 @@ light_paths:
       - optical_path_element_id: zeiss_widefield_fluorescence_positions
       - optical_path_element_id: trinocular_port_selector
       - branches:
-          selection_mode: selectable
+          selection_mode: exclusive
           items:
             - branch_id: to_camera
               label: "To Camera"
@@ -365,7 +362,7 @@ light_paths:
     detection_sequence:
       - optical_path_element_id: trinocular_port_selector
       - branches:
-          selection_mode: selectable
+          selection_mode: exclusive
           items:
             - branch_id: to_camera
               label: "To Camera"

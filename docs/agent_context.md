@@ -75,13 +75,14 @@ Canonical topology authoring model:
 
 Interpretation rules:
 
-- Ordered `light_paths[]` sequences are the primary source of truth for route traversal.
-- `modalities` declared on `hardware.sources`, `hardware.optical_path_elements`, and `hardware.endpoints` are validation aids only. They may constrain or sanity-check route membership, but they do not override the ordered sequences.
-- Branching and selector/splitter behavior must remain explicit from YAML through validation, DTO generation, and UI/runtime consumers.
-- Canonical branch routing now lives inside `light_paths[].illumination_sequence[]` / `light_paths[].detection_sequence[]` via a `branches` block with `selection_mode`, `items[]`, `branch_id`, and linear branch-local `sequence[]`.
-- Branch identity must be stable.
-- Branch targets/endpoints must be explicit.
-- Branch-specific optics must remain representable when the schema supports them.
+- `hardware.*` declares installed inventory and capability metadata; it is not a second topology language.
+- Ordered `light_paths[]` sequences are the sole source of truth for route traversal.
+- `hardware.endpoints` is only one endpoint-capable input collection. Before DTO/runtime consumption, canonical parsing normalizes explicit endpoints together with endpoint-capable inventories such as detectors and eyepieces into a unified endpoint registry.
+- `modalities` declared on `hardware.sources`, `hardware.optical_path_elements`, and normalized endpoints remain validation aids only. They may constrain or sanity-check route membership, but they do not override the ordered sequences.
+- Canonical v1 branch routing is detection-side only and must live inside `light_paths[].detection_sequence[]` via a strict `branches` block with `selection_mode`, `items[]`, stable `branch_id`, and linear branch-local `sequence[]`.
+- Branch-local sequences are strict tagged unions as well: each item must declare exactly one allowed reference kind, and nested branch blocks are out of scope in v1.
+- Detection routes and branch-local sequences are expected to terminate at explicit `endpoint_id` values; the validator emits warnings when termination is ambiguous.
+- Deprecated hardware-owned routing metadata such as `hardware.optical_path_elements[].branches` is migration-only and must not be treated as canonical topology truth.
 
 Canonical data flow:
 
@@ -89,7 +90,7 @@ Canonical data flow:
 
 Layer responsibilities:
 
-- YAML authoring declares the hardware inventory and ordered path traversal.
+- YAML authoring declares the hardware inventory/capabilities plus the ordered path traversal.
 - `schema/instrument_policy.yaml` defines the canonical field vocabulary and structural contract.
 - `scripts/validate.py` enforces that contract and reports migration/deprecation issues.
 - `scripts/light_path_parser.py` builds the consumer DTO from canonical YAML.

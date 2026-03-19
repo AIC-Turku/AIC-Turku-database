@@ -1407,7 +1407,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "spec_lines": _spec_lines(("Endpoint type", endpoint_type), ("Modalities", ", ".join(terminal.get("modalities") or [])), ("Details", clean_text(terminal.get("details") or terminal.get("notes")))),
             "method_sentence": f"Detected or observed light can terminate at {display_label}.",
         })
-    sections.append({"id": "terminals", "display_label": "Detection Endpoints", "items": terminals or [{"id": "no_explicit_terminals", "display_label": "No explicit detection endpoints declared", "display_subtitle": "Structured topology incomplete", "spec_lines": ["**Action needed:** add hardware.endpoints[] entries to YAML."], "method_sentence": ""}]})
+    sections.append({"id": "terminals", "display_label": "Detection Endpoints", "items": terminals or [{"id": "no_explicit_terminals", "display_label": "No normalized detection endpoints available", "display_subtitle": "Structured topology incomplete", "spec_lines": ["**Action needed:** add endpoint-capable inventory rows (for example hardware.detectors[], hardware.eyepieces[], or hardware.endpoints[]) and terminate routes with explicit endpoint_id values."], "method_sentence": ""}]})
 
     renderables = [*route_items, *filters, *splitters, *terminals]
     runtime_splitters = copy.deepcopy(projection_root.get("splitters", lightpath_dto.get("splitters", []))) if isinstance(lightpath_dto, dict) else []
@@ -1445,10 +1445,33 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
     elif triggering_label:
         triggering_sentence = f"Acquisition used {triggering_label.lower()} triggering."
 
+    endpoint_rows = [item for item in (lightpath_dto.get("endpoints") or []) if isinstance(item, dict)] if isinstance(lightpath_dto, dict) else []
+    endpoint_renderables = [
+        {
+            **copy.deepcopy(endpoint),
+            "display_label": clean_text(endpoint.get("display_label") or endpoint.get("channel_name") or endpoint.get("name") or endpoint.get("id")) or "Endpoint",
+            "display_subtitle": clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).replace("_", " ").title() or "Endpoint",
+            "spec_lines": _spec_lines(
+                ("Endpoint type", clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).replace("_", " ").title()),
+                ("Source section", clean_text(endpoint.get("source_section"))),
+                ("Modalities", ", ".join(endpoint.get("modalities") or [])),
+                ("Model", clean_text(endpoint.get("model"))),
+                ("Notes", clean_text(endpoint.get("notes"))),
+            ),
+            "method_sentence": (
+                f"Detected or observed light can terminate at {clean_text(endpoint.get('display_label') or endpoint.get('channel_name') or endpoint.get('name') or endpoint.get('id'))}."
+                if clean_text(endpoint.get("display_label") or endpoint.get("channel_name") or endpoint.get("name") or endpoint.get("id"))
+                else ""
+            ),
+        }
+        for endpoint in endpoint_rows
+    ]
+
     return {
         "light_sources": [build_light_source_dto(vocabulary, src) for src in (canonical_hardware.get("sources") or canonical_hardware.get("light_sources") or []) if isinstance(src, dict)],
         "scanner": build_scanner_dto(vocabulary, scanner),
         "detectors": [build_detector_dto(vocabulary, det) for det in canonical_hardware.get("detectors", []) if isinstance(det, dict)],
+        "endpoints": endpoint_renderables,
         "optical_modulators": [build_optical_modulator_dto(vocabulary, mod) for mod in canonical_hardware.get("optical_modulators", []) if isinstance(mod, dict)],
         "illumination_logic": [build_illumination_logic_dto(vocabulary, logic) for logic in canonical_hardware.get("illumination_logic", []) if isinstance(logic, dict)],
         "objectives": [build_objective_dto(vocabulary, obj) for obj in canonical_hardware.get("objectives", []) if isinstance(obj, dict)],
@@ -1744,6 +1767,15 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
             for detector in detectors_raw
             if isinstance(detector, dict)
         ]
+
+    eyepieces_raw = raw.get("eyepieces")
+    if isinstance(eyepieces_raw, list):
+        hw["eyepieces"] = [copy.deepcopy(eyepiece) for eyepiece in eyepieces_raw if isinstance(eyepiece, dict)]
+
+    for endpoint_key in ("endpoints", "terminals", "detection_endpoints"):
+        endpoint_rows = raw.get(endpoint_key)
+        if isinstance(endpoint_rows, list):
+            hw[endpoint_key] = [copy.deepcopy(endpoint) for endpoint in endpoint_rows if isinstance(endpoint, dict)]
 
     objectives_raw = raw.get("objectives")
     if isinstance(objectives_raw, list):

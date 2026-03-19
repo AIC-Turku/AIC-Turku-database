@@ -42,14 +42,14 @@ hardware:
     pixel_pitch_um: 6.45
     notes: Integrated color camera for brightfield (1.4 Megapixels).
     url: ''
-    id: detector_1
+    id: integrated_color_camera
   - kind: ccd
     manufacturer: AMG (Thermo Fisher)
     model: AMF-4302 (Sony ICX285AL Monochrome CCD)
     pixel_pitch_um: 6.45
     notes: Integrated monochrome camera for fluorescence (1.4 Megapixels).
     url: ''
-    id: detector_2
+    id: integrated_fluorescence_camera
   objectives:
   - id: 4x_air
     manufacturer: Olympus

@@ -112,14 +112,17 @@ class ContractInvariantTests(unittest.TestCase):
             "hardware.sources[].tunable_min_nm",
             "hardware.sources[].tunable_max_nm",
             "hardware.sources[].simultaneous_lines_max",
-            "hardware.optical_path_elements[].stage_role",
             "hardware.optical_path_elements[].element_type",
             "hardware.optical_path_elements[].supported_branch_count",
             "hardware.endpoints[].id",
             "hardware.endpoints[].endpoint_type",
             "light_paths[].id",
             "light_paths[].illumination_sequence[].source_id",
+            "light_paths[].illumination_sequence[].optical_path_element_id",
             "light_paths[].detection_sequence[].endpoint_id",
+            "light_paths[].detection_sequence[].branches.selection_mode",
+            "light_paths[].detection_sequence[].branches.items[].branch_id",
+            "light_paths[].detection_sequence[].branches.items[].sequence[].optical_path_element_id",
             "light_paths[].detection_sequence[].branches.items[].sequence[].endpoint_id",
             "hardware.detectors[].manufacturer",
             "hardware.detectors[].collection_min_nm",
@@ -134,6 +137,24 @@ class ContractInvariantTests(unittest.TestCase):
             msg=(
                 "Critical downstream contract fields are missing from schema/instrument_policy.yaml: "
                 + ", ".join(missing)
+            ),
+        )
+
+    def test_removed_topology_paths_stay_out_of_canonical_schema(self) -> None:
+        schema_paths = _schema_paths()
+        removed_paths = {
+            "light_paths[].illumination_sequence[].branches",
+            "light_paths[].illumination_sequence[].branches.items[].sequence[].source_id",
+            "hardware.optical_path_elements[].branches",
+            "hardware.optical_path_elements[].branches[].target_ids",
+        }
+        lingering = sorted(path for path in removed_paths if path in schema_paths)
+        self.assertEqual(
+            lingering,
+            [],
+            msg=(
+                "Removed topology paths unexpectedly remain in the canonical schema contract: "
+                + ", ".join(lingering)
             ),
         )
 
