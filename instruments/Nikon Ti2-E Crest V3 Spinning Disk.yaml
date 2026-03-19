@@ -548,15 +548,9 @@ hardware:
     type: emission_splitter
     path: transmitted
     notes: Neutral filter for assigning the light path to single camera
-    branches:
-    - id: nikon_dia_primary
-      label: Primary Path
-      mode: transmitted
-      component:
-        component_type: passthrough
-      target_ids:
-      - detector_1
-      - detector_2
+    supported_branch_modes:
+    - transmitted
+    supported_branch_count: 1
     stage_role: splitter
     id: nikon_dia
     element_type: emission_splitter
@@ -572,15 +566,9 @@ hardware:
     - 645
     notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave
       Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
-    branches:
-    - id: dualcam_gfpmcherry_primary
-      label: Primary Path
-      mode: transmitted
-      component:
-        component_type: passthrough
-      target_ids:
-      - detector_1
-      - detector_2
+    supported_branch_modes:
+    - transmitted
+    supported_branch_count: 1
     stage_role: splitter
     id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
     element_type: emission_splitter
@@ -591,15 +579,9 @@ hardware:
     type: emission_splitter
     path: confocal
     notes: Additional DualCam Splitter option for CFP/YFP imaging.
-    branches:
-    - id: dualcam_cfpyfp_primary
-      label: Primary Path
-      mode: transmitted
-      component:
-        component_type: passthrough
-      target_ids:
-      - detector_1
-      - detector_2
+    supported_branch_modes:
+    - transmitted
+    supported_branch_count: 1
     stage_role: splitter
     id: mxr00545_v3_dualcam_cfp_yfp_2_bands_celesta_set
     element_type: emission_splitter
@@ -637,7 +619,15 @@ light_paths:
   - optical_path_element_id: crest_dichroic_wheel
   - optical_path_element_id: crest_emission_wheel
   - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
-  - optical_path_element_id: mxr00545_v3_dualcam_cfp_yfp_2_bands_celesta_set
+  - branches:
+      selection_mode: fixed
+      items:
+      - branch_id: dualcam_gfpmcherry_primary
+        label: Primary Path
+        sequence:
+        - optical_path_element_id: mxr00545_v3_dualcam_cfp_yfp_2_bands_celesta_set
+        - endpoint_id: detector_1
+        - endpoint_id: detector_2
 - id: epi
   name: Epi-fluorescence
   illumination_sequence:
@@ -653,8 +643,14 @@ light_paths:
   - optical_path_element_id: epi_turret
   detection_sequence:
   - optical_path_element_id: epi_turret
-  - endpoint_id: detector_1
-  - endpoint_id: detector_2
+  - branches:
+      selection_mode: fixed
+      items:
+      - branch_id: epi_camera_path
+        label: Camera Path
+        sequence:
+        - endpoint_id: detector_1
+        - endpoint_id: detector_2
 - id: transmitted
   name: Transmitted light
   illumination_sequence:
@@ -668,3 +664,11 @@ light_paths:
   - source_id: t12_d_lhled_led_lamp_house
   detection_sequence:
   - optical_path_element_id: nikon_dia
+  - branches:
+      selection_mode: fixed
+      items:
+      - branch_id: nikon_dia_primary
+        label: Primary Path
+        sequence:
+        - endpoint_id: detector_1
+        - endpoint_id: detector_2

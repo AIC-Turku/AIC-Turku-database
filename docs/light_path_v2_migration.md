@@ -59,7 +59,8 @@ Examples include:
 Canonical role in topology:
 
 - reusable node inventory referenced by ordered route sequences
-- carrier for explicit selector/splitter branch definitions where needed
+- inventory/capability metadata only for selectors/splitters
+- may advertise supported branch modes/counts, but not canonical downstream routing truth
 
 ### `hardware.endpoints`
 
@@ -74,7 +75,7 @@ Examples include:
 Canonical role in topology:
 
 - target inventory for `detection_sequence[]`
-- explicit branch targets for splitter/selector definitions
+- explicit route terminals referenced directly from branch-local sequences
 
 ### `light_paths`
 
@@ -120,21 +121,45 @@ If sequence ordering and modality hints disagree, the ordered route declarations
 
 ### `branches` / selectors / splitters
 
-Branching must remain explicitly representable in canonical YAML.
+Branching remains explicitly representable in canonical YAML, but the route fork now belongs to `light_paths`, not to `hardware`.
 
-Canonical requirements:
+Canonical v1 branch model:
 
-- selector/splitter semantics must survive `YAML -> schema/validator -> DTO -> consumers`
-- branch identity must be stable
-- branch endpoints must be explicit
-- branch-specific optics must remain possible where already supported or where the schema can represent them cleanly
+- sequence items can carry a tagged `branches` block
+- each branch block declares `selection_mode`
+- each branch block declares `items[]`
+- each branch item declares `branch_id`, optional `label`, and a linear `sequence[]`
+- branch-local sequences may include additional `optical_path_element_id` entries before the final `endpoint_id`
+- nested branch blocks inside branch-local sequences are intentionally out of scope in v1
 
-Implications:
+Example:
 
-- selector/splitter behavior belongs on the relevant `hardware.optical_path_elements[]` entry
-- branches must carry stable IDs
-- branches should reference explicit endpoint IDs rather than relying on inferred terminals
-- where a branch contains its own optical component payload, that payload must remain preserved through normalization and DTO export
+```yaml
+light_paths:
+  - id: epi
+    detection_sequence:
+      - optical_path_element_id: trinocular_port_selector
+      - branches:
+          selection_mode: exclusive
+          items:
+            - branch_id: camera_route
+              label: To Camera
+              sequence:
+                - optical_path_element_id: optovar_1p5x
+                - endpoint_id: detector_1
+            - branch_id: eyepiece_route
+              label: To Eyepieces
+              sequence:
+                - endpoint_id: eyepieces
+```
+
+Hardware splitters/selectors still exist as inventory entries under `hardware.optical_path_elements[]`, but their canonical role is limited to:
+
+- identifying the installed selector/splitter element
+- advertising capability metadata such as `selection_mode`, `supported_branch_modes`, and `supported_branch_count`
+- providing optional optical/component metadata for the installed part itself
+
+Canonical downstream routing truth must no longer be authored as `hardware.optical_path_elements[].branches[].target_ids`.
 
 ## 3) Data flow contract
 
@@ -194,8 +219,7 @@ Responsibilities:
 
 - preserve canonical route ordering
 - preserve explicit endpoints
-- preserve selector/splitter semantics
-- preserve stable branch IDs and branch targets
+- preserve route-owned branch blocks, stable branch IDs, and branch-local sequences
 - preserve branch-specific optics where modeled
 - keep `sources`, `optical_path_elements`, `endpoints`, and `light_paths` as the only authoritative topology contract
 - keep runtime/UI convenience structures under explicit derived adapters such as `projections.virtual_microscope`

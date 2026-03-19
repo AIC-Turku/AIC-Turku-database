@@ -383,6 +383,7 @@
     const sourceRoutes = new Map();
     const elementBindings = new Map();
     const endpointRoutes = new Map();
+    const splitterBranches = new Map();
     const routeCatalog = [];
 
     const addRoute = (map, id, routeId) => {
@@ -406,6 +407,82 @@
       return elementBindings.get(normalizedId);
     };
 
+    const ensureSplitterBinding = (elementId, selectionMode, routeId) => {
+      const normalizedId = normalizeIdentifier(elementId);
+      if (!normalizedId) return null;
+      if (!splitterBranches.has(normalizedId)) {
+        splitterBranches.set(normalizedId, {
+          selection_mode: cleanString(selectionMode).toLowerCase() || 'exclusive',
+          routes: new Set(),
+          branches: [],
+          branchIndex: new Map(),
+        });
+      }
+      const binding = splitterBranches.get(normalizedId);
+      if (routeId) binding.routes.add(routeId);
+      if (cleanString(selectionMode)) binding.selection_mode = cleanString(selectionMode).toLowerCase();
+      return binding;
+    };
+
+    const walkSequence = (sequence, routeId, phase, trail) => {
+      let previousElementId = normalizeIdentifier(trail);
+      (Array.isArray(sequence) ? sequence : []).forEach((step, stepIndex) => {
+        if (!(step && typeof step === 'object')) return;
+        const branchBlock = step.branches && typeof step.branches === 'object' ? step.branches : null;
+        if (branchBlock) {
+          const splitterBinding = ensureSplitterBinding(previousElementId, branchBlock.selection_mode, routeId);
+          (Array.isArray(branchBlock.items) ? branchBlock.items : []).forEach((branch, branchIndex) => {
+            if (!(branch && typeof branch === 'object')) return;
+            const branchId = normalizeIdentifier(branch.branch_id || branch.id) || `branch_${branchIndex + 1}`;
+            const dedupeKey = `${routeId}::${branchId}`;
+            if (!splitterBinding) {
+              walkSequence(branch.sequence, routeId, phase, previousElementId);
+              return;
+            }
+            if (!splitterBinding.branchIndex.has(dedupeKey)) {
+              splitterBinding.branchIndex.set(dedupeKey, splitterBinding.branches.length);
+              splitterBinding.branches.push({
+                id: branchId,
+                label: cleanString(branch.label) || routeLabel(branchId),
+                mode: cleanString(branch.mode).toLowerCase() || '',
+                sequence: Array.isArray(branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [],
+                target_ids: [],
+                __routes: new Set(routeId ? [routeId] : []),
+              });
+            }
+            const entry = splitterBinding.branches[splitterBinding.branchIndex.get(dedupeKey)];
+            entry.sequence = Array.isArray(branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [];
+            entry.__routes.add(routeId);
+            const endpointIds = [];
+            (Array.isArray(branch.sequence) ? branch.sequence : []).forEach((branchStep, branchStepIndex) => {
+              if (!(branchStep && typeof branchStep === 'object')) return;
+              if (branchStep.endpoint_id) {
+                addRoute(endpointRoutes, branchStep.endpoint_id, routeId);
+                const endpointId = normalizeIdentifier(branchStep.endpoint_id);
+                if (endpointId && !endpointIds.includes(endpointId)) endpointIds.push(endpointId);
+              }
+              const branchElementBinding = ensureElementBinding(branchStep.optical_path_element_id);
+              if (branchElementBinding) {
+                branchElementBinding.routes.add(routeId);
+                branchElementBinding[phase].push({ route: routeId, index: `${stepIndex}.${branchIndex}.${branchStepIndex}` });
+              }
+            });
+            entry.target_ids = endpointIds.slice();
+            walkSequence(branch.sequence, routeId, phase, previousElementId);
+          });
+          return;
+        }
+        addRoute(sourceRoutes, step.source_id, routeId);
+        addRoute(endpointRoutes, step.endpoint_id, routeId);
+        const binding = ensureElementBinding(step.optical_path_element_id);
+        if (binding) {
+          binding.routes.add(routeId);
+          binding[phase].push({ route: routeId, index: stepIndex });
+        }
+        if (step.optical_path_element_id) previousElementId = normalizeIdentifier(step.optical_path_element_id);
+      });
+    };
+
     (Array.isArray(payload && payload.light_paths) ? payload.light_paths : []).forEach((route, routeIndex) => {
       const routeId = normalizeIdentifier(route && (route.id || route.route || route.name));
       if (!routeId) return;
@@ -415,30 +492,20 @@
         order: routeIndex,
       });
 
-      (Array.isArray(route && route.illumination_sequence) ? route.illumination_sequence : []).forEach((step, stepIndex) => {
-        if (step && typeof step === 'object') {
-          addRoute(sourceRoutes, step.source_id, routeId);
-          const binding = ensureElementBinding(step.optical_path_element_id);
-          if (binding) {
-            binding.routes.add(routeId);
-            binding.illumination.push({ route: routeId, index: stepIndex });
-          }
-        }
-      });
-
-      (Array.isArray(route && route.detection_sequence) ? route.detection_sequence : []).forEach((step, stepIndex) => {
-        if (step && typeof step === 'object') {
-          addRoute(endpointRoutes, step.endpoint_id, routeId);
-          const binding = ensureElementBinding(step.optical_path_element_id);
-          if (binding) {
-            binding.routes.add(routeId);
-            binding.detection.push({ route: routeId, index: stepIndex });
-          }
-        }
-      });
+      walkSequence(route && route.illumination_sequence, routeId, 'illumination', null);
+      walkSequence(route && route.detection_sequence, routeId, 'detection', null);
     });
 
-    return { sourceRoutes, elementBindings, endpointRoutes, routeCatalog };
+    splitterBranches.forEach((value) => {
+      value.routes = Array.from(value.routes);
+      value.branches = value.branches.map((branch) => ({
+        ...branch,
+        __routes: Array.from(branch.__routes || []),
+      }));
+      value.branchIndex = undefined;
+    });
+
+    return { sourceRoutes, elementBindings, endpointRoutes, splitterBranches, routeCatalog };
   }
 
   function orderedRoutesFromSet(routeSet, fallbackValue) {
@@ -550,23 +617,30 @@
 
   function canonicalSplitterPayload(payload, topologyBindings, options) {
     return canonicalElements(payload && payload.optical_path_elements)
-      .filter((element) => cleanString(element && element.stage_role).toLowerCase() === 'splitter' || Array.isArray(element && element.branches))
+      .filter((element) => cleanString(element && element.stage_role).toLowerCase() === 'splitter')
       .map((element, index) => {
         const routes = canonicalElementRoutes(element, topologyBindings, options);
-        const branches = (Array.isArray(element && element.branches) ? element.branches : []).map((branch, branchIndex) => {
-          const component = branch && branch.component && typeof branch.component === 'object'
-            ? { ...branch.component }
-            : (Array.isArray(branch && branch.components) && branch.components[0] && typeof branch.components[0] === 'object' ? { ...branch.components[0] } : {});
+        const routeBranchBinding = topologyBindings && topologyBindings.splitterBranches
+          ? topologyBindings.splitterBranches.get(normalizeIdentifier(element && element.id))
+          : null;
+        const branchSource = Array.isArray(routeBranchBinding && routeBranchBinding.branches) && routeBranchBinding.branches.length
+          ? routeBranchBinding.branches
+          : (Array.isArray(element && element.branches) ? element.branches : []);
+        const branches = branchSource.map((branch, branchIndex) => {
+          const component = branch && branch.component && typeof branch.component === 'object' ? { ...branch.component } : {};
           const payloadBranch = {
             id: cleanString(branch && branch.id) || `${cleanString(element && element.id) || 'splitter'}_branch_${branchIndex + 1}`,
             label: cleanString(branch && (branch.label || branch.name)) || `Branch ${branchIndex + 1}`,
             mode: cleanString(branch && branch.mode).toLowerCase() || (branchIndex === 0 ? 'transmitted' : 'reflected'),
             component,
             target_ids: normalizeTargetIds(branch && (branch.target_ids || branch.targets || branch.endpoint_id || branch.endpoint_ids || [])),
+            sequence: Array.isArray(branch && branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [],
+            __routes: normalizeRouteTags(branch && (branch.__routes || branch.routes || branch.path || branch.route)),
           };
-          if (routes.length) {
-            payloadBranch.routes = routes;
-            payloadBranch.path = routes[0];
+          const branchRoutes = payloadBranch.__routes.length ? payloadBranch.__routes : routes;
+          if (branchRoutes.length) {
+            payloadBranch.routes = branchRoutes;
+            payloadBranch.path = branchRoutes[0];
           }
           return payloadBranch;
         });
@@ -575,8 +649,8 @@
           name: cleanString(element && (element.name || element.display_label)) || `Splitter ${index + 1}`,
           display_label: cleanString(element && (element.display_label || element.name)) || `Splitter ${index + 1}`,
           branches,
-          selection_mode: cleanString(element && element.selection_mode).toLowerCase() || (branches.length <= 1 ? 'fixed' : 'multiple'),
-          branch_selection_required: cleanString(element && element.selection_mode).toLowerCase() === 'exclusive' && branches.length > 1,
+          selection_mode: cleanString(routeBranchBinding && routeBranchBinding.selection_mode).toLowerCase() || cleanString(element && element.selection_mode).toLowerCase() || (branches.length <= 1 ? 'fixed' : 'multiple'),
+          branch_selection_required: (cleanString(routeBranchBinding && routeBranchBinding.selection_mode).toLowerCase() || cleanString(element && element.selection_mode).toLowerCase()) === 'exclusive' && branches.length > 1,
         };
         if (routes.length) {
           row.routes = routes;
@@ -1867,7 +1941,29 @@
     return selected;
   }
 
-  function propagateSplitters(inputSpectrum, splitters, grid, options) {
+  function elementLookupById(normalizedInstrument) {
+    const lookup = new Map();
+    canonicalElements(normalizedInstrument && normalizedInstrument.opticalPathElements).forEach((element) => {
+      const id = normalizeIdentifier(element && element.id);
+      if (id) lookup.set(id, element);
+    });
+    return lookup;
+  }
+
+  function applyBranchSequenceSpectrum(inputSpectrum, branchDef, normalizedInstrument, grid) {
+    const lookup = elementLookupById(normalizedInstrument);
+    return applyComponentSeries(inputSpectrum, (Array.isArray(branchDef && branchDef.sequence) ? branchDef.sequence : []).map((step) => {
+      if (!(step && typeof step === 'object')) return null;
+      const elementId = normalizeIdentifier(step.optical_path_element_id);
+      if (!elementId || !lookup.has(elementId)) return null;
+      const element = lookup.get(elementId);
+      if (element && element.component && typeof element.component === 'object') return element.component;
+      if (element && element.dichroic && typeof element.dichroic === 'object') return element.dichroic;
+      return element;
+    }).filter(Boolean), grid, { mode: 'emission' });
+  }
+
+  function propagateSplitters(inputSpectrum, splitters, normalizedInstrument, grid, options) {
     const allowApproximation = Boolean(options && options.allowApproximation);
     let branches = [{ id: 'main', label: 'Main Path', spectrum: inputSpectrum.slice(), targetIds: [] }];
     (Array.isArray(splitters) ? splitters : []).forEach((splitter, splitterIndex) => {
@@ -1891,7 +1987,8 @@
           const baseSpectrum = splitterDichroic
             ? applyMask(branch.spectrum, componentMask(splitterDichroic, grid, { mode: 'emission', branchMode: mode }))
             : branch.spectrum.slice();
-          const branchSpectrum = applyMask(baseSpectrum, componentMask((branchDef && branchDef.component) || {}, grid, { mode: 'emission', branchMode: mode }));
+          const afterBranchComponent = applyMask(baseSpectrum, componentMask((branchDef && branchDef.component) || {}, grid, { mode: 'emission', branchMode: mode }));
+          const branchSpectrum = applyBranchSequenceSpectrum(afterBranchComponent, branchDef, normalizedInstrument, grid);
           const localTargets = branchTargetIds(branchDef, options);
           const inheritedTargets = Array.isArray(branch.targetIds) ? branch.targetIds : [];
           const mergedTargets = inheritedTargets.length && localTargets.length
@@ -2572,7 +2669,7 @@
       const afterDichroic = applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' });
       const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid, { allowApproximation })
+        ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
       return {
         sourceLabel: entry.source.display_label || entry.source.name || 'Source',
@@ -2605,7 +2702,7 @@
       const afterDichroic = applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' });
       const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterEmissionFilters, selectedSplitters, grid, { allowApproximation })
+        ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
       const emissionArea = integrateSpectrum(generatedEmission, grid);
       const theoreticalBestArea = integrateSpectrum(theoreticalBestEmission, grid);

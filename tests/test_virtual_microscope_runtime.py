@@ -927,6 +927,55 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["illumRefs"], 1)
         self.assertEqual(result["detectRefs"], 1)
 
+    def test_canonical_branch_blocks_drive_runtime_splitters_and_branch_endpoints(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'epi' },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [
+                { id: 'main_splitter', stage_role: 'splitter', element_type: 'splitter', display_label: 'Main splitter', selection_mode: 'exclusive' },
+                { id: 'green_filter', stage_role: 'emission', element_type: 'filter_wheel', display_label: 'Green filter', component: { component_type: 'bandpass', center_nm: 525, width_nm: 50 } },
+              ],
+              endpoints: [
+                { id: 'cam', display_label: 'Camera', endpoint_type: 'camera' },
+                { id: 'eye', display_label: 'Eyepieces', endpoint_type: 'eyepiece' },
+              ],
+              light_paths: [
+                {
+                  id: 'epi',
+                  name: 'Epi route',
+                  illumination_sequence: [{ source_id: 'src_488' }],
+                  detection_sequence: [
+                    { optical_path_element_id: 'main_splitter' },
+                    { branches: {
+                      selection_mode: 'exclusive',
+                      items: [
+                        { branch_id: 'camera_route', label: 'To camera', sequence: [{ optical_path_element_id: 'green_filter' }, { endpoint_id: 'cam' }] },
+                        { branch_id: 'eyepiece_route', label: 'To eyepieces', sequence: [{ endpoint_id: 'eye' }] }
+                      ]
+                    } }
+                  ]
+                }
+              ]
+            });
+            return {
+              splitterCount: instrument.splitters.length,
+              branchIds: instrument.splitters[0].branches.map((branch) => branch.id),
+              branchTargets: instrument.splitters[0].branches.map((branch) => branch.target_ids.join(',')),
+              branchSequenceKinds: instrument.splitters[0].branches[0].sequence.map((step) => Object.keys(step)[0]),
+              endpointRoutes: instrument.terminals.map((terminal) => ({ id: terminal.id, routes: terminal.__routes })),
+            };
+            """
+        )
+
+        self.assertEqual(result["splitterCount"], 1)
+        self.assertEqual(result["branchIds"], ["camera_route", "eyepiece_route"])
+        self.assertEqual(result["branchTargets"], ["cam", "eye"])
+        self.assertEqual(result["branchSequenceKinds"], ["optical_path_element_id", "endpoint_id"])
+        self.assertEqual(result["endpointRoutes"], [{"id": "cam", "routes": ["epi"]}, {"id": "eye", "routes": ["epi"]}])
+
     def test_migration_compatibility_strict_mode_does_not_fallback_route_catalog_from_component_tags(self) -> None:
         result = self.run_node_json(
             """

@@ -173,14 +173,9 @@ hardware:
     type: emission_splitter
     path: transmitted
     notes: Camera port for optional detector.
-    branches:
-    - id: camera_port_primary
-      label: Camera Port Path
-      mode: transmitted
-      component:
-        component_type: passthrough
-      target_ids:
-      - camera_port_main
+    supported_branch_modes:
+    - transmitted
+    supported_branch_count: 1
     stage_role: splitter
     id: camera_port
     element_type: emission_splitter
@@ -208,3 +203,10 @@ light_paths:
   - source_id: 12v_100w_halogen_bulb
   detection_sequence:
   - optical_path_element_id: camera_port
+  - branches:
+      selection_mode: fixed
+      items:
+      - branch_id: camera_port_primary
+        label: Camera Port Path
+        sequence:
+        - endpoint_id: camera_port_main

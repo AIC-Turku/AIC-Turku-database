@@ -400,7 +400,14 @@ def _modality_match(modalities: list[str], route_id: str) -> bool:
 
 
 
-def _canonicalize_sequence_item(item: Any, sources: list[dict[str, Any]], elements: list[dict[str, Any]], endpoints: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _canonicalize_sequence_item(
+    item: Any,
+    sources: list[dict[str, Any]],
+    elements: list[dict[str, Any]],
+    endpoints: list[dict[str, Any]],
+    *,
+    allow_branches: bool = True,
+) -> dict[str, Any] | None:
     source_ids = {row.get("id") for row in sources}
     element_ids = {row.get("id") for row in elements}
     endpoint_ids = {row.get("id") for row in endpoints}
@@ -415,6 +422,36 @@ def _canonicalize_sequence_item(item: Any, sources: list[dict[str, Any]], elemen
         return None
     if not isinstance(item, dict):
         return None
+    raw_branches = item.get("branches")
+    if allow_branches and isinstance(raw_branches, dict):
+        selection_mode = _clean_string(raw_branches.get("selection_mode")).lower()
+        normalized_items: list[dict[str, Any]] = []
+        for branch_index, branch in enumerate(raw_branches.get("items") or [], start=1):
+            if not isinstance(branch, dict):
+                continue
+            branch_id = _clean_identifier(branch.get("branch_id") or branch.get("id")) or f"branch_{branch_index}"
+            normalized_sequence = [
+                normalized
+                for normalized in (
+                    _canonicalize_sequence_item(sequence_item, sources, elements, endpoints, allow_branches=False)
+                    for sequence_item in _as_list(branch.get("sequence"))
+                )
+                if normalized
+            ]
+            branch_payload = {
+                "branch_id": branch_id,
+                "label": _clean_string(branch.get("label")) or branch_id.replace("_", " ").title(),
+                "sequence": normalized_sequence,
+            }
+            if branch.get("mode"):
+                branch_payload["mode"] = _clean_string(branch.get("mode")).lower()
+            normalized_items.append(branch_payload)
+        return {
+            "branches": {
+                "selection_mode": selection_mode or "exclusive",
+                "items": normalized_items,
+            }
+        }
     if item.get("source_id"):
         return {"source_id": _clean_identifier(item.get("source_id"))}
     if item.get("optical_path_element_id"):
@@ -422,7 +459,7 @@ def _canonicalize_sequence_item(item: Any, sources: list[dict[str, Any]], elemen
     if item.get("endpoint_id"):
         return {"endpoint_id": _clean_identifier(item.get("endpoint_id"))}
     if item.get("id"):
-        return _canonicalize_sequence_item(item.get("id"), sources, elements, endpoints)
+        return _canonicalize_sequence_item(item.get("id"), sources, elements, endpoints, allow_branches=allow_branches)
     return None
 
 
@@ -511,35 +548,41 @@ def _apply_route_modalities_from_sequences(
     endpoints: list[dict[str, Any]],
     light_paths: list[dict[str, Any]],
 ) -> None:
+    source_by_id = {entry.get("id"): entry for entry in sources}
     element_by_id = {entry.get("id"): entry for entry in elements}
+    endpoint_by_id = {entry.get("id"): entry for entry in endpoints}
+
+    def apply_to_ref(ref_key: str, ref_id: str, route_id: str) -> None:
+        if ref_key == "source_id":
+            row = source_by_id.get(ref_id)
+        elif ref_key == "optical_path_element_id":
+            row = element_by_id.get(ref_id)
+        else:
+            row = endpoint_by_id.get(ref_id)
+        if not row:
+            return
+        modalities = _normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes"))
+        if route_id not in modalities:
+            row["modalities"] = modalities + [route_id] if modalities else [route_id]
+            row["path"] = row["modalities"][0]
+
+    def walk_sequence(sequence: list[dict[str, Any]], route_id: str) -> None:
+        for item in sequence:
+            if not isinstance(item, dict):
+                continue
+            if isinstance(item.get("branches"), dict):
+                for branch in item["branches"].get("items") or []:
+                    if isinstance(branch, dict):
+                        walk_sequence(branch.get("sequence") or [], route_id)
+                continue
+            for ref_key in ("source_id", "optical_path_element_id", "endpoint_id"):
+                ref_id = _clean_identifier(item.get(ref_key))
+                if ref_id:
+                    apply_to_ref(ref_key, ref_id, route_id)
+
     for route in light_paths:
         for sequence_key in ("illumination_sequence", "detection_sequence"):
-            for item in route.get(sequence_key, []):
-                if not isinstance(item, dict):
-                    continue
-                ref_id = _clean_identifier(item.get("optical_path_element_id"))
-                if ref_id and ref_id in element_by_id:
-                    element = element_by_id[ref_id]
-                    modalities = _normalize_modalities(element.get("modalities") or element.get("path") or element.get("routes"))
-                    if route["id"] not in modalities:
-                        element["modalities"] = modalities + [route["id"]] if modalities else [route["id"]]
-                        element["path"] = element["modalities"][0]
-                ref_id = _clean_identifier(item.get("source_id"))
-                if ref_id:
-                    for source in sources:
-                        if source.get("id") == ref_id:
-                            modalities = _normalize_modalities(source.get("modalities") or source.get("path") or source.get("routes"))
-                            if route["id"] not in modalities:
-                                source["modalities"] = modalities + [route["id"]] if modalities else [route["id"]]
-                                source["path"] = source["modalities"][0]
-                ref_id = _clean_identifier(item.get("endpoint_id"))
-                if ref_id:
-                    for endpoint in endpoints:
-                        if endpoint.get("id") == ref_id:
-                            modalities = _normalize_modalities(endpoint.get("modalities") or endpoint.get("path") or endpoint.get("routes"))
-                            if route["id"] not in modalities:
-                                endpoint["modalities"] = modalities + [route["id"]] if modalities else [route["id"]]
-                                endpoint["path"] = endpoint["modalities"][0]
+            walk_sequence(route.get(sequence_key, []), route["id"])
 
 
 
@@ -683,6 +726,101 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
         errors.append("light_paths must declare at least one route with illumination_sequence and detection_sequence.")
 
     seen_route_ids: set[str] = set()
+
+    def validate_sequence_item(
+        item: Any,
+        *,
+        route_context: str,
+        route_id: str,
+        sequence_key: str,
+        item_index: int,
+        allow_branches: bool,
+        previous_element_id: str,
+    ) -> tuple[str, list[str]]:
+        local_errors: list[str] = []
+        if not isinstance(item, dict):
+            local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: sequence item must be an object.")
+            return previous_element_id, local_errors
+
+        branch_block = item.get("branches")
+        if isinstance(branch_block, dict):
+            if not allow_branches:
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: nested branches are not supported in branch-local sequences.")
+                return previous_element_id, local_errors
+            if any(item.get(key) for key in ("source_id", "optical_path_element_id", "endpoint_id")):
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: branch block items may not also declare source_id, optical_path_element_id, or endpoint_id.")
+            if not previous_element_id:
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: branches must follow an optical_path_element_id so the route fork is explicit.")
+            selection_mode = _clean_string(branch_block.get("selection_mode")).lower()
+            if selection_mode not in {"fixed", "exclusive", "multiple"}:
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}].branches.selection_mode: must be one of fixed, exclusive, multiple.")
+            items = branch_block.get("items")
+            if not isinstance(items, list) or not items:
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}].branches.items: must be a non-empty list.")
+                return previous_element_id, local_errors
+            seen_branch_ids: set[str] = set()
+            for branch_index, branch in enumerate(items):
+                branch_context = f"{route_context}.{sequence_key}[{item_index}].branches.items[{branch_index}]"
+                if not isinstance(branch, dict):
+                    local_errors.append(f"{branch_context}: branch item must be an object.")
+                    continue
+                branch_id = _clean_identifier(branch.get("branch_id") or branch.get("id"))
+                if not branch_id:
+                    local_errors.append(f"{branch_context}.branch_id: is required.")
+                elif branch_id in seen_branch_ids:
+                    local_errors.append(f"{branch_context}.branch_id: duplicate branch id `{branch_id}` within the same branch block.")
+                seen_branch_ids.add(branch_id)
+                branch_sequence = branch.get("sequence")
+                if not isinstance(branch_sequence, list) or not branch_sequence:
+                    local_errors.append(f"{branch_context}.sequence: must be a non-empty list.")
+                    continue
+                branch_previous = ""
+                branch_has_endpoint = False
+                for sequence_index, sequence_item in enumerate(branch_sequence):
+                    branch_previous, branch_errors = validate_sequence_item(
+                        sequence_item,
+                        route_context=route_context,
+                        route_id=route_id,
+                        sequence_key=f"{sequence_key}[{item_index}].branches.items[{branch_index}].sequence",
+                        item_index=sequence_index,
+                        allow_branches=False,
+                        previous_element_id=branch_previous,
+                    )
+                    local_errors.extend(branch_errors)
+                    if isinstance(sequence_item, dict) and _clean_identifier(sequence_item.get("endpoint_id")):
+                        branch_has_endpoint = True
+                if sequence_key == "detection_sequence" and not branch_has_endpoint:
+                    local_errors.append(f"{branch_context}.sequence: detection branches must terminate explicitly at one or more endpoint_id items.")
+            return previous_element_id, local_errors
+
+        source_id = _clean_identifier(item.get("source_id"))
+        element_id = _clean_identifier(item.get("optical_path_element_id"))
+        endpoint_id = _clean_identifier(item.get("endpoint_id"))
+        populated = [bool(source_id), bool(element_id), bool(endpoint_id)]
+        if sum(populated) != 1:
+            local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: item must declare exactly one of source_id, optical_path_element_id, endpoint_id, or branches.")
+            return previous_element_id, local_errors
+        if source_id:
+            if source_id not in source_ids:
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: unknown source_id `{source_id}`.")
+            row = next((candidate for candidate in sources if candidate.get("id") == source_id), None)
+        elif element_id:
+            if element_id not in element_ids:
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: unknown optical_path_element_id `{element_id}`.")
+            row = next((candidate for candidate in elements if candidate.get("id") == element_id), None)
+            previous_element_id = element_id
+        else:
+            if endpoint_id not in endpoint_ids:
+                local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: unknown endpoint_id `{endpoint_id}`.")
+            row = next((candidate for candidate in endpoints if candidate.get("id") == endpoint_id), None)
+        if row:
+            modalities = _normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes"))
+            if modalities and route_id not in modalities:
+                local_errors.append(
+                    f"{route_context}.{sequence_key}[{item_index}]: `{source_id or element_id or endpoint_id}` is declared for modalities {modalities} and does not permit route `{route_id}`."
+                )
+        return previous_element_id, local_errors
+
     for route_index, route in enumerate(light_paths):
         route_id = _clean_identifier(route.get("id"))
         context = f"light_paths[{route_index}]"
@@ -697,38 +835,18 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
             if not isinstance(sequence, list):
                 errors.append(f"{context}.{sequence_key}: sequence must be a list.")
                 continue
+            previous_element_id = ""
             for item_index, item in enumerate(sequence):
-                if not isinstance(item, dict):
-                    errors.append(f"{context}.{sequence_key}[{item_index}]: sequence item must be an object.")
-                    continue
-                source_id = _clean_identifier(item.get("source_id"))
-                element_id = _clean_identifier(item.get("optical_path_element_id"))
-                endpoint_id = _clean_identifier(item.get("endpoint_id"))
-                populated = [bool(source_id), bool(element_id), bool(endpoint_id)]
-                if sum(populated) != 1:
-                    errors.append(f"{context}.{sequence_key}[{item_index}]: item must declare exactly one of source_id, optical_path_element_id, or endpoint_id.")
-                    continue
-                if source_id and source_id not in source_ids:
-                    errors.append(f"{context}.{sequence_key}[{item_index}]: unknown source_id `{source_id}`.")
-                if element_id and element_id not in element_ids:
-                    errors.append(f"{context}.{sequence_key}[{item_index}]: unknown optical_path_element_id `{element_id}`.")
-                if endpoint_id and endpoint_id not in endpoint_ids:
-                    errors.append(f"{context}.{sequence_key}[{item_index}]: unknown endpoint_id `{endpoint_id}`.")
-        for sequence_key in ("illumination_sequence", "detection_sequence"):
-            sequence = route.get(sequence_key) or []
-            for item_index, item in enumerate(sequence):
-                if not isinstance(item, dict):
-                    continue
-                for ref_key, rows in (("source_id", sources), ("optical_path_element_id", elements), ("endpoint_id", endpoints)):
-                    ref_id = _clean_identifier(item.get(ref_key))
-                    if not ref_id:
-                        continue
-                    row = next((candidate for candidate in rows if candidate.get("id") == ref_id), None)
-                    if not row:
-                        continue
-                    modalities = _normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes"))
-                    if modalities and route_id not in modalities:
-                        errors.append(f"{context}.{sequence_key}[{item_index}]: `{ref_id}` is declared for modalities {modalities} and does not permit route `{route_id}`.")
+                previous_element_id, item_errors = validate_sequence_item(
+                    item,
+                    route_context=context,
+                    route_id=route_id,
+                    sequence_key=sequence_key,
+                    item_index=item_index,
+                    allow_branches=True,
+                    previous_element_id=previous_element_id,
+                )
+                errors.extend(item_errors)
 
     legacy_hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
     legacy_light_path = legacy_hardware.get("light_path") if isinstance(legacy_hardware.get("light_path"), dict) else {}
@@ -757,25 +875,9 @@ def validate_light_path(instrument_dict: dict) -> list[str]:
         if element_id in seen_element_ids:
             errors.append(f"{context}: duplicate optical_path_element id `{element_id}`.")
         seen_element_ids.add(element_id)
-        if isinstance(element.get("branches"), list):
-            branch_ids: set[str] = set()
-            for branch_index, branch in enumerate(element.get("branches") or []):
-                if not isinstance(branch, dict):
-                    errors.append(f"{context}.branches[{branch_index}]: branch entry must be an object.")
-                    continue
-                branch_id = _clean_identifier(branch.get("id"))
-                if not branch_id:
-                    errors.append(f"{context}.branches[{branch_index}]: id is required.")
-                elif branch_id in branch_ids:
-                    errors.append(f"{context}.branches[{branch_index}]: duplicate branch id `{branch_id}` within `{element_id}`.")
-                branch_ids.add(branch_id)
-                _validate_splitter_branch(branch, errors, f"{context}.branches[{branch_index}]")
-                for target_id in branch.get("target_ids") or []:
-                    if target_id not in endpoint_ids and target_id not in {_clean_identifier(det.get("id")) for det in instrument_dict.get("hardware", {}).get("detectors", []) if isinstance(det, dict)}:
-                        errors.append(f"{context}.branches[{branch_index}]: target `{target_id}` does not match any declared endpoint or detector.")
-                selection_mode = _clean_string(element.get("selection_mode")).lower()
-                if selection_mode and selection_mode not in {"fixed", "exclusive", "multiple"}:
-                    errors.append(f"{context}: selection_mode must be one of fixed, exclusive, multiple.")
+        selection_mode = _clean_string(element.get("selection_mode")).lower()
+        if selection_mode and selection_mode not in {"fixed", "exclusive", "multiple"}:
+            errors.append(f"{context}: selection_mode must be one of fixed, exclusive, multiple.")
 
     return errors
 
@@ -1522,6 +1624,139 @@ def _route_sort_key(route_id: str) -> tuple[int, str]:
         return len(ROUTE_SORT_ORDER), route_id
 
 
+def _endpoint_ids_in_sequence(sequence: list[dict[str, Any]]) -> list[str]:
+    endpoint_ids: list[str] = []
+    for item in sequence:
+        if not isinstance(item, dict):
+            continue
+        if isinstance(item.get("branches"), dict):
+            for branch in item["branches"].get("items") or []:
+                if isinstance(branch, dict):
+                    for endpoint_id in _endpoint_ids_in_sequence(branch.get("sequence") or []):
+                        if endpoint_id not in endpoint_ids:
+                            endpoint_ids.append(endpoint_id)
+            continue
+        endpoint_id = _clean_identifier(item.get("endpoint_id"))
+        if endpoint_id and endpoint_id not in endpoint_ids:
+            endpoint_ids.append(endpoint_id)
+    return endpoint_ids
+
+
+def _component_payload_from_element_reference(
+    element_id: str,
+    optical_path_elements: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    element = optical_path_elements.get(element_id) or {}
+    if isinstance(element.get("component"), dict):
+        return _component_payload(element.get("component"), default_name=element.get("name") or element_id)
+    if isinstance(element.get("dichroic"), dict):
+        return _component_payload(element.get("dichroic"), default_name=element.get("name") or element_id)
+    positions = element.get("positions")
+    if isinstance(positions, dict):
+        first_position = next((value for _, value in sorted(positions.items(), key=lambda item: str(item[0])) if isinstance(value, dict)), None)
+        if isinstance(first_position, dict):
+            if isinstance(first_position.get("component"), dict):
+                return _component_payload(first_position["component"], default_name=element.get("name") or element_id)
+            linked = first_position.get("emission_filter") or first_position.get("dichroic") or first_position.get("excitation_filter")
+            if isinstance(linked, dict):
+                return _component_payload(linked, default_name=element.get("name") or element_id)
+    return {}
+
+
+def _collect_route_owned_splitters(
+    light_paths: list[dict[str, Any]],
+    elements: list[dict[str, Any]],
+    endpoints: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    element_lookup = {entry.get("id"): entry for entry in elements if isinstance(entry, dict) and entry.get("id")}
+    endpoint_lookup = {entry.get("id"): entry for entry in endpoints if isinstance(entry, dict) and entry.get("id")}
+    splitters: dict[str, dict[str, Any]] = {}
+
+    def ensure_splitter(element_id: str, selection_mode: str, route_id: str) -> dict[str, Any]:
+        element = element_lookup.get(element_id) or {}
+        splitter = splitters.setdefault(
+            element_id,
+            {
+                "id": element_id,
+                "name": element.get("name") or element.get("display_label") or element_id,
+                "display_label": element.get("display_label") or element.get("name") or element_id,
+                "selection_mode": selection_mode or _clean_string(element.get("selection_mode")).lower() or "exclusive",
+                "branch_selection_required": (selection_mode or _clean_string(element.get("selection_mode")).lower() or "exclusive") == "exclusive",
+                "branches": [],
+                "__branch_index": {},
+                "routes": [],
+                "path": route_id,
+            },
+        )
+        if route_id and route_id not in splitter["routes"]:
+            splitter["routes"].append(route_id)
+        if not splitter.get("path") and route_id:
+            splitter["path"] = route_id
+        return splitter
+
+    def attach_sequence(sequence: list[dict[str, Any]], route_id: str) -> None:
+        last_element_id = ""
+        for item in sequence:
+            if not isinstance(item, dict):
+                continue
+            element_id = _clean_identifier(item.get("optical_path_element_id"))
+            if element_id:
+                last_element_id = element_id
+                continue
+            branch_block = item.get("branches")
+            if not isinstance(branch_block, dict) or not last_element_id:
+                continue
+            splitter = ensure_splitter(last_element_id, _clean_string(branch_block.get("selection_mode")).lower(), route_id)
+            branch_index: dict[tuple[str, str], int] = splitter["__branch_index"]
+            for branch_position, branch in enumerate(branch_block.get("items") or [], start=1):
+                if not isinstance(branch, dict):
+                    continue
+                branch_id = _clean_identifier(branch.get("branch_id")) or f"branch_{branch_position}"
+                dedupe_key = (route_id, branch_id)
+                if dedupe_key in branch_index:
+                    branch_payload = splitter["branches"][branch_index[dedupe_key]]
+                else:
+                    branch_payload = {
+                        "id": branch_id,
+                        "label": branch.get("label") or branch_id.replace("_", " ").title(),
+                        "target_ids": [],
+                        "sequence": json.loads(json.dumps(branch.get("sequence") or [])),
+                        "__routes": [route_id] if route_id else [],
+                    }
+                    if branch.get("mode"):
+                        branch_payload["mode"] = branch.get("mode")
+                    component = next(
+                        (
+                            _component_payload_from_element_reference(_clean_identifier(step.get("optical_path_element_id")), element_lookup)
+                            for step in branch.get("sequence") or []
+                            if isinstance(step, dict) and step.get("optical_path_element_id")
+                        ),
+                        {},
+                    )
+                    if component:
+                        branch_payload["component"] = component
+                    splitter["branches"].append(branch_payload)
+                    branch_index[dedupe_key] = len(splitter["branches"]) - 1
+                for endpoint_id in _endpoint_ids_in_sequence(branch.get("sequence") or []):
+                    if endpoint_id in endpoint_lookup and endpoint_id not in branch_payload["target_ids"]:
+                        branch_payload["target_ids"].append(endpoint_id)
+                if route_id and route_id not in branch_payload["__routes"]:
+                    branch_payload["__routes"].append(route_id)
+
+    for route in light_paths:
+        if not isinstance(route, dict):
+            continue
+        route_id = _clean_identifier(route.get("id"))
+        attach_sequence(route.get("illumination_sequence") or [], route_id)
+        attach_sequence(route.get("detection_sequence") or [], route_id)
+
+    ordered: list[dict[str, Any]] = []
+    for splitter in splitters.values():
+        splitter.pop("__branch_index", None)
+        ordered.append(splitter)
+    return ordered
+
+
 def _route_catalog_entries(payload: dict[str, Any]) -> list[dict[str, str]]:
     constrained_routes: set[str] = set()
 
@@ -1846,7 +2081,9 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
 
     payload["metadata"]["graph_incomplete"] = len(payload["terminals"]) == 0
 
-    def splitter_payload_from_element(element: dict[str, Any], index: int) -> dict[str, Any]:
+    derived_route_splitters = _collect_route_owned_splitters(light_paths, elements, endpoints)
+
+    def splitter_payload_from_legacy_element(element: dict[str, Any], index: int) -> dict[str, Any]:
         routes = _normalize_modalities(element.get("modalities") or element.get("path") or element.get("routes"))
         candidate_terminals = _candidate_terminals_for_routes(payload["terminals"], routes)
         raw_splitter = {
@@ -1860,14 +2097,12 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         for branch in element.get("branches") or []:
             if not isinstance(branch, dict):
                 continue
-            raw_targets = branch.get("target_ids") or branch.get("targets") or branch.get("endpoint_ids") or branch.get("endpoint_id")
-            component = branch.get("component") if isinstance(branch.get("component"), dict) else (branch.get("components")[0] if isinstance(branch.get("components"), list) and branch.get("components") and isinstance(branch.get("components")[0], dict) else {})
             raw_splitter["branches"].append({
                 "id": branch.get("id"),
                 "label": branch.get("label") or branch.get("name"),
                 "mode": branch.get("mode"),
-                "component": component,
-                "target_ids": _resolve_target_ids(raw_targets, candidate_terminals or payload["terminals"]),
+                "component": branch.get("component") if isinstance(branch.get("component"), dict) else {},
+                "target_ids": _resolve_target_ids(branch.get("target_ids") or [], candidate_terminals or payload["terminals"]),
             })
         splitter_payload = _splitter_payload(index, raw_splitter, payload["terminals"])
         splitter_payload["id"] = element.get("id") or splitter_payload.get("id")
@@ -1878,13 +2113,48 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
             payload["metadata"]["graph_incomplete"] = True
         return splitter_payload
 
+    def splitter_payload_from_route_splitter(splitter: dict[str, Any], index: int) -> dict[str, Any]:
+        routes = _normalize_modalities(splitter.get("routes") or splitter.get("__routes") or splitter.get("path"))
+        candidate_terminals = _candidate_terminals_for_routes(payload["terminals"], routes)
+        raw_splitter = {
+            "name": splitter.get("name") or splitter.get("display_label") or f"Splitter {index + 1}",
+            "path": routes[0] if routes else splitter.get("path"),
+            "routes": routes,
+            "selection_mode": splitter.get("selection_mode"),
+            "branches": [],
+        }
+        for branch in splitter.get("branches") or []:
+            if not isinstance(branch, dict):
+                continue
+            raw_splitter["branches"].append({
+                "id": branch.get("id"),
+                "label": branch.get("label") or branch.get("name"),
+                "mode": branch.get("mode"),
+                "component": branch.get("component") if isinstance(branch.get("component"), dict) else {},
+                "sequence": json.loads(json.dumps(branch.get("sequence") or [])),
+                "target_ids": _resolve_target_ids(branch.get("target_ids") or [], candidate_terminals or payload["terminals"]),
+                "__routes": list(branch.get("__routes") or []),
+            })
+        splitter_payload = _splitter_payload(index, raw_splitter, payload["terminals"])
+        splitter_payload["id"] = splitter.get("id") or splitter_payload.get("id")
+        splitter_payload["branch_selection_required"] = splitter.get("selection_mode") == "exclusive" and len(splitter_payload.get("branches", [])) > 1
+        for branch_index, branch in enumerate(splitter_payload.get("branches", [])):
+            source_branch = (splitter.get("branches") or [])[branch_index] if branch_index < len(splitter.get("branches") or []) else {}
+            if isinstance(source_branch, dict):
+                branch["sequence"] = json.loads(json.dumps(source_branch.get("sequence") or []))
+                if source_branch.get("__routes"):
+                    branch["__routes"] = list(source_branch.get("__routes") or [])
+        if routes:
+            splitter_payload["routes"] = routes
+            splitter_payload["path"] = routes[0]
+        if any(not branch.get("target_ids") for branch in splitter_payload.get("branches", [])):
+            payload["metadata"]["graph_incomplete"] = True
+        return splitter_payload
+
     stage_indices = {"excitation": 0, "dichroic": 0, "emission": 0, "cube": 0}
-    splitter_index = 0
     for element in elements:
         stage_role = element.get("stage_role")
         if stage_role == "splitter":
-            payload["splitters"].append(splitter_payload_from_element(element, splitter_index))
-            splitter_index += 1
             continue
         if stage_role not in stage_mappings:
             continue
@@ -1894,6 +2164,15 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         else:
             stage_mappings[stage_role].append(_mechanism_payload(prefix_mappings[stage_role], index, element))
         stage_indices[stage_role] += 1
+    for splitter_index, splitter in enumerate(derived_route_splitters):
+        payload["splitters"].append(splitter_payload_from_route_splitter(splitter, splitter_index))
+    represented_splitter_ids = {splitter.get("id") for splitter in derived_route_splitters if splitter.get("id")}
+    for element in elements:
+        if element.get("stage_role") != "splitter":
+            continue
+        if element.get("id") in represented_splitter_ids:
+            continue
+        payload["splitters"].append(splitter_payload_from_legacy_element(element, len(payload["splitters"])))
     payload["stages"] = stage_mappings
     payload["valid_paths"] = calculate_valid_paths(payload)
 
