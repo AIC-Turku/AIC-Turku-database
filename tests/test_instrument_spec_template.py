@@ -19,7 +19,7 @@ class InstrumentSpecTemplateTests(unittest.TestCase):
         self.assertIn("route.endpoint_summary.labels", template)
         self.assertIn("route.branch_summary and route.branch_summary.has_branches", template)
         self.assertIn("route.branch_summary.branches", template)
-        self.assertIn("route.route_local_hardware_usage.items", template)
+        self.assertIn('route.route_local_hardware_usage["items"]', template)
         self.assertIn("Inventory usage:", template)
         self.assertIn("item.display_number or '—'", template)
         self.assertIn("Route graphs below may show the same numbered component multiple times", template)
