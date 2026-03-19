@@ -8,7 +8,7 @@
 {%- set hw = dto.hardware -%}
 {%- set identity = dto.identity if dto.identity else {} -%}
 {%- set optical_path = hw.optical_path if hw.optical_path else {} -%}
-{%- set route_graphs = optical_path.route_renderables or optical_path.routes or optical_path.light_paths or [] -%}
+{%- set route_graphs = optical_path.light_paths or optical_path.route_renderables or optical_path.routes or [] -%}
 {%- set hardware_inventory = optical_path.hardware_inventory or [] -%}
 {%- set hardware_index_map = optical_path.hardware_index_map if optical_path.hardware_index_map else {} -%}
 
@@ -275,12 +275,13 @@
 <div class="aic-lightpath-panel">
   <div class="aic-lightpath-panel__header">
     <div class="aic-lightpath-panel__title">{{ route_name or 'Logical light-path graph' }}</div>
-    <p class="aic-lightpath-panel__subtitle">This route is rendered from canonical DTO graph data (`light_paths[*].graph_nodes` / `graph_edges`) and numbered against the shared hardware inventory above.</p>
+    <p class="aic-lightpath-panel__subtitle">This route is rendered from canonical DTO graph data (`light_paths[*].graph_nodes` / `graph_edges`) and numbered against the shared `hardware_inventory` / `hardware_index_map` contract above.</p>
     <div class="aic-lightpath-route-meta">
       <span><strong>Nodes:</strong> {{ (route.graph_nodes or []) | length }}</span>
       <span><strong>Edges:</strong> {{ (route.graph_edges or []) | length }}</span>
       <span><strong>Endpoints:</strong> {{ (route.endpoint_summary.labels or []) | join(', ') or '—' }}</span>
       <span><strong>Branches:</strong> {% if route.branch_summary and route.branch_summary.has_branches %}{{ route.branch_summary.count }} path(s){% else %}None{% endif %}</span>
+      <span><strong>Inventory usage:</strong> {{ ((route.route_local_hardware_usage or {}).inventory_ids or []) | length }}</span>
     </div>
   </div>
   {% if route.static_graph and route.static_graph.svg_markup %}
@@ -298,11 +299,11 @@
       </thead>
       <tbody>
         {% for node in route.graph_nodes or [] %}
-        {% set node_number = node.inventory_display_number or node.display_number %}
+        {% set node_number = node.inventory_display_number or node.display_number or ((hardware_index_map.by_inventory_id or {}).get(node.hardware_inventory_id) if node.hardware_inventory_id else none) %}
         {% set downstream = [] %}
         {% for edge in route.graph_edges or [] if edge.source == node.id %}
           {% for target in route.graph_nodes or [] if target.id == edge.target %}
-            {% set target_number = target.inventory_display_number or target.display_number %}
+            {% set target_number = target.inventory_display_number or target.display_number or ((hardware_index_map.by_inventory_id or {}).get(target.hardware_inventory_id) if target.hardware_inventory_id else none) %}
             {% set target_label = ((target_number ~ ' — ') if target_number else '') ~ (target.label or target.id) %}
             {% if edge.branch_id or edge.label %}
               {% set target_label = target_label ~ ' [' ~ (edge.label or edge.branch_id) ~ ']' %}
@@ -334,6 +335,27 @@
         {% for branch in route.branch_summary.branches or [] %}
         <div>• <strong>{{ branch.label or branch.branch_id }}</strong>{% if branch.mode %} ({{ branch.mode }}){% endif %}{% if branch.endpoint_inventory_ids %} → {{ branch.endpoint_inventory_ids | join(', ') }}{% endif %}</div>
         {% endfor %}
+      </div>
+      {% if route.route_local_hardware_usage and route.route_local_hardware_usage.items %}
+      <div class="aic-lightpath-callout">
+        <strong>Route-local hardware usage</strong>
+        <div>
+          {% for item in route.route_local_hardware_usage.items %}
+            {% if not loop.first %} • {% endif %}#{{ item.display_number or ((hardware_index_map.by_inventory_id or {}).get(item.id)) or '—' }} {{ item.display_label }}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% elif route.route_local_hardware_usage and route.route_local_hardware_usage.items %}
+    <div class="aic-lightpath-notes">
+      <div class="aic-lightpath-callout">
+        <strong>Route-local hardware usage</strong>
+        <div>
+          {% for item in route.route_local_hardware_usage.items %}
+            {% if not loop.first %} • {% endif %}#{{ item.display_number or ((hardware_index_map.by_inventory_id or {}).get(item.id)) or '—' }} {{ item.display_label }}
+          {% endfor %}
+        </div>
       </div>
     </div>
     {% endif %}

@@ -12,6 +12,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("const authoritativeGraph = buildAuthoritativeRouteGraph(topology);", source)
         self.assertIn("const derivedControlGroups = buildDerivedControlGroups(inst, topology, route);", source)
         self.assertIn("renderAuthoritativeRouteGraph(topologyWrap, authoritativeGraph);", source)
+        self.assertIn("instrument.routeTopology && Array.isArray(instrument.routeTopology.routes)", source)
         self.assertNotIn("const stages = [];", source)
 
     def test_app_keeps_route_graph_primary_and_stage_groups_derived_only(self) -> None:
@@ -20,6 +21,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("Authoritative route graph rendered directly from canonical graph_nodes / graph_edges", source)
         self.assertIn("Downstream: ${node.downstream.map", source)
         self.assertIn("Branch blocks:", source)
+        self.assertIn("routeRecord.routeHardwareUsage", source)
         self.assertIn("Derived control group layered on top of the active route graph.", source)
         self.assertIn("Derived selectors aligned to route-local detection traversal and explicit branch semantics.", source)
         self.assertIn("Derived control widgets for explicit route endpoints.", source)

@@ -280,6 +280,7 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertTrue(payload["light_paths"][0]["graph_nodes"])
         self.assertTrue(payload["light_paths"][0]["graph_edges"])
         self.assertTrue(payload["light_paths"][0]["branch_blocks"])
+        self.assertEqual(payload["metadata"]["primary_rendering_contract"]["routes"], "light_paths")
 
     def test_methods_and_llm_exports_use_dto_contract_not_raw_yaml_fields(self) -> None:
         inst = {
@@ -324,6 +325,16 @@ class ContractInvariantTests(unittest.TestCase):
             "normalized.routeOptions = explicitRouteOptions.length\n      ? explicitRouteOptions\n      : (approximationMode ? collectRouteCatalogFallback(normalized) : []);",
             runtime_source,
             msg="Strict runtime must not use inferred route catalog fallback when approximation mode is off.",
+        )
+        self.assertIn(
+            "authoritativeTopologyContract",
+            runtime_source,
+            msg="Runtime should declare the authoritative topology contract separately from derived stage adapters.",
+        )
+        self.assertIn(
+            "hardwareIndexMap",
+            runtime_source,
+            msg="Runtime should preserve the canonical hardware index map for downstream numbering.",
         )
         self.assertIn(
             "if (!allowApproximation) return [];",

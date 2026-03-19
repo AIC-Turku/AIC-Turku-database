@@ -608,7 +608,12 @@
 
   function routeRecordForInstrument(instrument, route) {
     const routeId = cleanString(route).toLowerCase();
-    const routes = Array.isArray(instrument && instrument.lightPaths) ? instrument.lightPaths : [];
+    const authoritativeRoutes = instrument && instrument.routeTopology && Array.isArray(instrument.routeTopology.routes)
+      ? instrument.routeTopology.routes
+      : [];
+    const routes = authoritativeRoutes.length
+      ? authoritativeRoutes
+      : (Array.isArray(instrument && instrument.lightPaths) ? instrument.lightPaths : []);
     if (routeId) {
       const explicit = routes.find((entry) => cleanString(entry && entry.id).toLowerCase() === routeId);
       if (explicit) return explicit;
@@ -760,12 +765,16 @@
     });
 
     return {
-      illumination: Array.isArray(routeRecord && routeRecord.illumination_traversal)
-        ? buildResolvedTraversal(routeRecord.illumination_traversal, 'illumination', 'illumination')
-        : buildPhase(routeRecord && routeRecord.illumination_sequence, 'illumination', 'illumination'),
-      detection: Array.isArray(routeRecord && routeRecord.detection_traversal)
-        ? buildResolvedTraversal(routeRecord.detection_traversal, 'detection', 'detection')
-        : buildPhase(routeRecord && routeRecord.detection_sequence, 'detection', 'detection'),
+      illumination: Array.isArray(routeRecord && routeRecord.illuminationTraversal)
+        ? buildResolvedTraversal(routeRecord.illuminationTraversal, 'illumination', 'illumination')
+        : Array.isArray(routeRecord && routeRecord.illumination_traversal)
+          ? buildResolvedTraversal(routeRecord.illumination_traversal, 'illumination', 'illumination')
+          : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence)) || (routeRecord && routeRecord.illumination_sequence), 'illumination', 'illumination'),
+      detection: Array.isArray(routeRecord && routeRecord.detectionTraversal)
+        ? buildResolvedTraversal(routeRecord.detectionTraversal, 'detection', 'detection')
+        : Array.isArray(routeRecord && routeRecord.detection_traversal)
+          ? buildResolvedTraversal(routeRecord.detection_traversal, 'detection', 'detection')
+          : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence)) || (routeRecord && routeRecord.detection_sequence), 'detection', 'detection'),
     };
   }
 
@@ -785,27 +794,39 @@
 
   function deriveRouteTopology(instrument, route) {
     const routeRecord = routeRecordForInstrument(instrument, route);
-    const sourceIds = (Array.isArray(routeRecord && (routeRecord.illumination_traversal || routeRecord.illumination_sequence))
-      ? (routeRecord.illumination_traversal || routeRecord.illumination_sequence)
-      : [])
-      .filter((step) => cleanString(step && (step.kind || (step.source_id ? 'source' : ''))).toLowerCase() === 'source' || Boolean(step && step.source_id))
-      .map((step) => step && (step.id || step.source_id))
-      .filter(Boolean);
-    const usage = (Array.isArray(instrument && instrument.routeHardwareUsage) ? instrument.routeHardwareUsage : [])
-      .find((entry) => cleanString(entry && entry.route_id).toLowerCase() === cleanString(routeRecord && routeRecord.id).toLowerCase()) || null;
-    const endpointIds = usage && Array.isArray(usage.endpoint_inventory_ids)
+    const sourceIds = Array.isArray(routeRecord && routeRecord.explicitSourceIds) && routeRecord.explicitSourceIds.length
+      ? routeRecord.explicitSourceIds.slice()
+      : (Array.isArray(routeRecord && (routeRecord.illumination_traversal || routeRecord.illumination_sequence))
+        ? (routeRecord.illumination_traversal || routeRecord.illumination_sequence)
+        : [])
+        .filter((step) => cleanString(step && (step.kind || (step.source_id ? 'source' : ''))).toLowerCase() === 'source' || Boolean(step && step.source_id))
+        .map((step) => step && (step.id || step.source_id))
+        .filter(Boolean);
+    const usage = (routeRecord && routeRecord.routeHardwareUsage)
+      || (Array.isArray(instrument && instrument.routeHardwareUsage) ? instrument.routeHardwareUsage : [])
+        .find((entry) => cleanString(entry && entry.route_id).toLowerCase() === cleanString(routeRecord && routeRecord.id).toLowerCase())
+      || null;
+    const endpointIds = Array.isArray(routeRecord && routeRecord.explicitEndpointIds) && routeRecord.explicitEndpointIds.length
+      ? routeRecord.explicitEndpointIds.slice()
+      : usage && Array.isArray(usage.endpoint_inventory_ids)
       ? usage.endpoint_inventory_ids.map((value) => cleanString(value).split(':').pop()).filter(Boolean)
-      : endpointIdsFromSequence(routeRecord && routeRecord.detection_sequence);
+      : endpointIdsFromSequence((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence)) || (routeRecord && routeRecord.detection_sequence));
     return {
       route: cleanString(routeRecord && routeRecord.id).toLowerCase() || cleanString(route).toLowerCase() || null,
       routeRecord,
       routeUsage: usage,
+      routeLocalHardwareUsage: routeRecord && routeRecord.routeLocalHardwareUsage ? routeRecord.routeLocalHardwareUsage : { hardware_inventory_ids: [], endpoint_inventory_ids: [] },
       sourceMechanisms: sourceMechanismsForSourceIds(instrument, sourceIds, route),
       traversal: buildRouteTraversalEntries(instrument, routeRecord, route),
       endpointMechanisms: detectorMechanismsForEndpointIds(instrument, endpointIds, route),
       endpointIds,
-      graphNodes: Array.isArray(routeRecord && routeRecord.graph_nodes) ? routeRecord.graph_nodes : [],
-      graphEdges: Array.isArray(routeRecord && routeRecord.graph_edges) ? routeRecord.graph_edges : [],
+      graphNodes: Array.isArray(routeRecord && routeRecord.graphNodes)
+        ? routeRecord.graphNodes
+        : (Array.isArray(routeRecord && routeRecord.graph_nodes) ? routeRecord.graph_nodes : []),
+      graphEdges: Array.isArray(routeRecord && routeRecord.graphEdges)
+        ? routeRecord.graphEdges
+        : (Array.isArray(routeRecord && routeRecord.graph_edges) ? routeRecord.graph_edges : []),
+      branchBlocks: Array.isArray(routeRecord && routeRecord.branchBlocks) ? routeRecord.branchBlocks : [],
     };
   }
 
@@ -867,11 +888,14 @@
 
     return {
       routeId: cleanString(routeRecord && routeRecord.id) || cleanString(topology && topology.route) || null,
-      routeLabel: cleanString(routeRecord && (routeRecord.name || routeRecord.id)) || normalizeRouteLabel(topology && topology.route),
+      routeLabel: cleanString(routeRecord && (routeRecord.label || routeRecord.name || routeRecord.id)) || normalizeRouteLabel(topology && topology.route),
       nodes,
       edges: rawEdges.map((edge) => ({ ...edge })),
-      branchBlocks: Array.isArray(routeRecord && routeRecord.branch_blocks) ? routeRecord.branch_blocks.map((block) => ({ ...block })) : [],
+      branchBlocks: Array.isArray(topology && topology.branchBlocks)
+        ? topology.branchBlocks.map((block) => ({ ...block }))
+        : (Array.isArray(routeRecord && routeRecord.branch_blocks) ? routeRecord.branch_blocks.map((block) => ({ ...block })) : []),
       endpointIds: Array.isArray(topology && topology.endpointIds) ? topology.endpointIds.slice() : [],
+      routeLocalHardwareUsage: topology && topology.routeLocalHardwareUsage ? { ...topology.routeLocalHardwareUsage } : { hardware_inventory_ids: [], endpoint_inventory_ids: [] },
       sourceIds: Array.isArray(topology && topology.sourceMechanisms)
         ? topology.sourceMechanisms.flatMap((mechanism) => Object.values(positionsForRoute(mechanism, topology.route)).map((source) => cleanString(source && source.id)).filter(Boolean))
         : [],
@@ -901,7 +925,7 @@
     const meta = document.createElement('div');
     meta.className = 'vm-mini';
     meta.style.marginTop = '8px';
-    meta.textContent = `Nodes: ${graphModel.nodes.length} • Edges: ${graphModel.edges.length} • Endpoints: ${graphModel.endpointIds.length}`;
+    meta.textContent = `Nodes: ${graphModel.nodes.length} • Edges: ${graphModel.edges.length} • Endpoints: ${graphModel.endpointIds.length} • Inventory items: ${(graphModel.routeLocalHardwareUsage && graphModel.routeLocalHardwareUsage.hardware_inventory_ids || []).length}`;
     section.appendChild(meta);
 
     const grid = document.createElement('div');
