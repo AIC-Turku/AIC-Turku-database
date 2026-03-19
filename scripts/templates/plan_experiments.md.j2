@@ -99,7 +99,7 @@ Please:
 - Explain why each recommended system fits the experiment.
 - Mention the relevant modality, route, objective(s), excitation light source(s), and detector(s).
 - **Provide a precise optical configuration:** Using the canonical v2 light-path data (\`hardware.sources\`, \`hardware.optical_path_elements\`, \`hardware.endpoints\`, and \`light_paths\`), identify the exact recommended route and name the source(s), ordered illumination-path element(s), ordered detection-path element(s), and endpoint(s) that should be used to capture my fluorophores.
-- **Handle selectors and splitters explicitly:** If the recommended system uses branching elements, explain which \`branches\` or target endpoints are selected, what signal each branch carries, and which endpoint or detector receives each signal.
+- **Handle selectors and splitters explicitly:** If the recommended system uses branching elements, read the explicit \`branches\` blocks embedded in \`light_paths\`, explain which branch is selected, describe any branch-local optics, and identify the final endpoint or detector reached by each branch sequence.
 - Mention useful supporting features such as incubation, autofocus, detector type, adaptive illumination, or piezo only when they are explicitly present in the inventory.
 - For every key requirement, label evidence as known vs unknown based on inventory completeness metadata.
 - Keep the recommendation hardware focused and concise; do not add generic microscopy background unless it directly affects the route or hardware choice.

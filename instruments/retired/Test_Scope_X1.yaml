@@ -141,14 +141,9 @@ hardware:
       selection_mode: fixed
       notes: Even split for dual-camera testing
       url: ''
-      branches:
-        - id: camera_branch
-          label: Camera path
-          mode: transmitted
-          component:
-            component_type: passthrough
-          target_ids:
-            - camera_main
+      supported_branch_modes:
+        - transmitted
+      supported_branch_count: 1
 
   endpoints:
     - id: camera_main
@@ -173,7 +168,13 @@ light_paths:
       - source_id: pe_300
     detection_sequence:
       - optical_path_element_id: custom_50_50
-      - endpoint_id: camera_main
+      - branches:
+          selection_mode: fixed
+          items:
+            - branch_id: camera_branch
+              label: Camera path
+              sequence:
+                - endpoint_id: camera_main
   - id: confocal
     name: Confocal
     illumination_sequence:

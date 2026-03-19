@@ -78,6 +78,7 @@ Interpretation rules:
 - Ordered `light_paths[]` sequences are the primary source of truth for route traversal.
 - `modalities` declared on `hardware.sources`, `hardware.optical_path_elements`, and `hardware.endpoints` are validation aids only. They may constrain or sanity-check route membership, but they do not override the ordered sequences.
 - Branching and selector/splitter behavior must remain explicit from YAML through validation, DTO generation, and UI/runtime consumers.
+- Canonical branch routing now lives inside `light_paths[].illumination_sequence[]` / `light_paths[].detection_sequence[]` via a `branches` block with `selection_mode`, `items[]`, `branch_id`, and linear branch-local `sequence[]`.
 - Branch identity must be stable.
 - Branch targets/endpoints must be explicit.
 - Branch-specific optics must remain representable when the schema supports them.
@@ -93,6 +94,7 @@ Layer responsibilities:
 - `scripts/validate.py` enforces that contract and reports migration/deprecation issues.
 - `scripts/light_path_parser.py` builds the consumer DTO from canonical YAML.
 - The authoritative light-path DTO is canonical v2 at the top level (`sources`, `optical_path_elements`, `endpoints`, `light_paths`). Any runtime/UI convenience payloads must be exposed only as explicit derived adapters, currently `projections.virtual_microscope`.
+- Runtime/UI splitters, stage groups, and graph-friendly branch targets are derived projections computed from canonical `light_paths` branch blocks; they are not separate topology truth.
 - Consumer layers (`dashboard_builder.py`, methods generator, instrument spec pages, virtual microscope runtime/app, audit tooling) must treat the DTO as their contract rather than re-infering topology from raw YAML.
 
 Legacy boundary:

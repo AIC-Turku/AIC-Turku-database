@@ -1361,7 +1361,23 @@ sections:
         type: string
         vocab: selection_modes
         used_by: [dashboard, method_generator]
-        rationale: Selector/splitter selection semantics for explicit branch handling.
+        rationale: Inventory-level selector/splitter capability metadata. Canonical route branching now lives in light_paths sequence branch blocks.
+
+      - path: hardware.optical_path_elements[].supported_branch_modes
+        title: Supported branch modes
+        status: optional
+        type: list
+        item_type: string
+        vocab: branch_modes
+        used_by: [dashboard, method_generator]
+        rationale: Inventory-level capability metadata describing which branch modes a selector/splitter can support.
+
+      - path: hardware.optical_path_elements[].supported_branch_count
+        title: Supported branch count
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Inventory-level capability metadata describing how many branches a selector/splitter can support.
 
       - path: hardware.optical_path_elements[].modalities
         title: Optical path element modalities
@@ -1441,7 +1457,7 @@ sections:
         type: list
         item_type: object
         used_by: [dashboard, method_generator]
-        rationale: Explicit selector/splitter branch definitions with stable identity and explicit endpoint targets.
+        rationale: Deprecated migration-only hardware branch metadata. Canonical routing truth now belongs in light_paths sequence branch blocks.
 
       - path: hardware.optical_path_elements[].branches[].id
         title: Branch ID
@@ -1467,11 +1483,11 @@ sections:
 
       - path: hardware.optical_path_elements[].branches[].target_ids
         title: Branch target endpoint IDs
-        status: required
+        status: optional
         type: list
         item_type: slug
         used_by: [dashboard, method_generator]
-        rationale: Explicit branch endpoint targets used by validator, simulator, and static graph rendering.
+        rationale: Deprecated migration-only hardware branch target metadata. Canonical branch endpoint routing must be declared in light_paths branch sequences.
 
       - path: hardware.optical_path_elements[].branches[].component
         title: Branch-specific optical component
@@ -1503,7 +1519,7 @@ sections:
         status: required
         type: slug
         used_by: [dashboard, method_generator]
-        rationale: Stable endpoint identifier referenced by splitters and detection sequences.
+        rationale: Stable endpoint identifier referenced by light_paths detection sequences and branch-local sequences.
 
       - path: hardware.endpoints[].endpoint_type
         title: Endpoint type
@@ -1602,6 +1618,72 @@ sections:
         used_by: [dashboard, method_generator]
         rationale: Stable optical-path-element reference in the illumination sequence.
 
+      - path: light_paths[].illumination_sequence[].branches
+        title: Illumination branch block
+        status: optional
+        type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit route-owned one-level branch block for illumination traversal when a route forks before the sample plane.
+
+      - path: light_paths[].illumination_sequence[].branches.selection_mode
+        title: Illumination branch selection mode
+        status: optional
+        type: string
+        vocab: selection_modes
+        used_by: [dashboard, method_generator]
+        rationale: Branch selection mode for an explicit illumination route fork.
+
+      - path: light_paths[].illumination_sequence[].branches.items
+        title: Illumination branch items
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit route-owned branch definitions nested under an illumination sequence item.
+
+      - path: light_paths[].illumination_sequence[].branches.items[].branch_id
+        title: Illumination branch ID
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable branch identifier scoped to the branch block.
+
+      - path: light_paths[].illumination_sequence[].branches.items[].label
+        title: Illumination branch label
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Human-readable label for an illumination branch.
+
+      - path: light_paths[].illumination_sequence[].branches.items[].sequence
+        title: Illumination branch sequence
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard, method_generator]
+        rationale: Linear branch-local traversal sequence for an illumination route fork.
+
+      - path: light_paths[].illumination_sequence[].branches.items[].sequence[].source_id
+        title: Illumination branch source reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Optional source reference inside a branch-local sequence.
+
+      - path: light_paths[].illumination_sequence[].branches.items[].sequence[].optical_path_element_id
+        title: Illumination branch optical path element reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable optical-path-element reference inside a branch-local sequence.
+
+      - path: light_paths[].illumination_sequence[].branches.items[].sequence[].endpoint_id
+        title: Illumination branch endpoint reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Optional explicit endpoint reference inside a branch-local sequence.
+
       - path: light_paths[].detection_sequence
         title: Detection sequence
         status: required
@@ -1623,3 +1705,69 @@ sections:
         type: slug
         used_by: [dashboard, method_generator]
         rationale: Stable endpoint reference for direct unbranched detection terminals.
+
+      - path: light_paths[].detection_sequence[].branches
+        title: Detection branch block
+        status: optional
+        type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit route-owned one-level branch block for detection traversal after a splitter/selector element.
+
+      - path: light_paths[].detection_sequence[].branches.selection_mode
+        title: Detection branch selection mode
+        status: optional
+        type: string
+        vocab: selection_modes
+        used_by: [dashboard, method_generator]
+        rationale: Branch selection mode for an explicit detection route fork.
+
+      - path: light_paths[].detection_sequence[].branches.items
+        title: Detection branch items
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit route-owned branch definitions nested under a detection sequence item.
+
+      - path: light_paths[].detection_sequence[].branches.items[].branch_id
+        title: Detection branch ID
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable branch identifier scoped to the branch block.
+
+      - path: light_paths[].detection_sequence[].branches.items[].label
+        title: Detection branch label
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Human-readable label for a detection branch.
+
+      - path: light_paths[].detection_sequence[].branches.items[].sequence
+        title: Detection branch sequence
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard, method_generator]
+        rationale: Linear branch-local traversal sequence for a detection route fork.
+
+      - path: light_paths[].detection_sequence[].branches.items[].sequence[].source_id
+        title: Detection branch source reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Optional source reference inside a branch-local sequence.
+
+      - path: light_paths[].detection_sequence[].branches.items[].sequence[].optical_path_element_id
+        title: Detection branch optical path element reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Stable optical-path-element reference inside a branch-local detection sequence.
+
+      - path: light_paths[].detection_sequence[].branches.items[].sequence[].endpoint_id
+        title: Detection branch endpoint reference
+        status: optional
+        type: slug
+        used_by: [dashboard, method_generator]
+        rationale: Explicit branch endpoint reference used by validator, graph rendering, and simulation.

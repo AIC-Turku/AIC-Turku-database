@@ -650,23 +650,51 @@
   function buildRouteTraversalEntries(instrument, routeRecord, route) {
     const catalog = opticalMechanismCatalog(instrument, route);
     const seenControlIds = new Set();
-    const buildPhase = (steps, phase) => (Array.isArray(steps) ? steps : []).map((step, index) => {
+    const buildPhase = (steps, phase, prefix) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
+      const branchBlock = step && step.branches && typeof step.branches === 'object' ? step.branches : null;
+      if (branchBlock) {
+        return [{
+          kind: 'branch-block',
+          key: `${prefix}:${phase}:branches:${index}`,
+          phase,
+          title: `Branches (${branchBlock.selection_mode || 'exclusive'})`,
+          selectionMode: branchBlock.selection_mode || 'exclusive',
+          branches: (Array.isArray(branchBlock.items) ? branchBlock.items : []).map((branch, branchIndex) => ({
+            key: `${prefix}:${phase}:branch:${index}:${branchIndex}`,
+            title: cleanString(branch && (branch.label || branch.branch_id)) || `Branch ${branchIndex + 1}`,
+            sequence: buildPhase(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`),
+          })),
+          message: 'This route forks explicitly here; each branch sequence is declared in light_paths.',
+        }];
+      }
       const elementId = cleanString(step && step.optical_path_element_id).toLowerCase();
-      if (!elementId) return null;
+      if (!elementId) {
+        if (step && step.endpoint_id) {
+          return [{
+            kind: 'endpoint',
+            key: `${prefix}:${phase}:endpoint:${index}`,
+            phase,
+            endpointId: step.endpoint_id,
+            title: endpointLabelForTargetId(step.endpoint_id),
+            message: '',
+          }];
+        }
+        return [];
+      }
       const match = catalog.get(elementId);
       if (!match) {
-        return {
+        return [{
           kind: 'missing',
-          key: `${phase}:${elementId}:${index}`,
+          key: `${prefix}:${phase}:${elementId}:${index}`,
           title: step.optical_path_element_id,
           message: `This canonical route references optical path element "${step.optical_path_element_id}", but no interactive UI control was derived for it.`,
-        };
+        }];
       }
       const firstUse = !seenControlIds.has(elementId);
       seenControlIds.add(elementId);
-      return {
+      return [{
         kind: firstUse ? 'control' : 'linked',
-        key: `${phase}:${elementId}:${index}`,
+        key: `${prefix}:${phase}:${elementId}:${index}`,
         stageKey: match.stageKey,
         mechanism: match.mechanism,
         phase,
@@ -674,13 +702,27 @@
         message: firstUse
           ? ''
           : `This route reuses the same ${match.stageKey.replace(/_/g, ' ')} selector later in the traversal; the active selection above is applied here as well.`,
-      };
-    }).filter(Boolean);
+      }];
+    });
 
     return {
-      illumination: buildPhase(routeRecord && routeRecord.illumination_sequence, 'illumination'),
-      detection: buildPhase(routeRecord && routeRecord.detection_sequence, 'detection'),
+      illumination: buildPhase(routeRecord && routeRecord.illumination_sequence, 'illumination', 'illumination'),
+      detection: buildPhase(routeRecord && routeRecord.detection_sequence, 'detection', 'detection'),
     };
+  }
+
+  function endpointIdsFromSequence(sequence) {
+    const ids = [];
+    (Array.isArray(sequence) ? sequence : []).forEach((step) => {
+      if (!(step && typeof step === 'object')) return;
+      if (step.endpoint_id) ids.push(step.endpoint_id);
+      if (step.branches && typeof step.branches === 'object') {
+        (Array.isArray(step.branches.items) ? step.branches.items : []).forEach((branch) => {
+          ids.push(...endpointIdsFromSequence(branch && branch.sequence));
+        });
+      }
+    });
+    return ids;
   }
 
   function deriveRouteTopology(instrument, route) {
@@ -688,9 +730,7 @@
     const sourceIds = (Array.isArray(routeRecord && routeRecord.illumination_sequence) ? routeRecord.illumination_sequence : [])
       .map((step) => step && step.source_id)
       .filter(Boolean);
-    const endpointIds = (Array.isArray(routeRecord && routeRecord.detection_sequence) ? routeRecord.detection_sequence : [])
-      .map((step) => step && step.endpoint_id)
-      .filter(Boolean);
+    const endpointIds = endpointIdsFromSequence(routeRecord && routeRecord.detection_sequence);
     return {
       route: cleanString(routeRecord && routeRecord.id).toLowerCase() || cleanString(route).toLowerCase() || null,
       routeRecord,
@@ -897,6 +937,20 @@
       if (entry.kind === 'control') {
         if (entry.stageKey === 'splitters') panel.appendChild(createSplitterControl(entry.mechanism));
         else panel.appendChild(createMechanismControl(entry.stageKey, entry.mechanism, index));
+        return;
+      }
+      if (entry.kind === 'branch-block') {
+        const container = document.createElement('div');
+        container.className = 'vm-branch-block';
+        container.appendChild(createLinkedStageNote(entry.title, entry.message));
+        (Array.isArray(entry.branches) ? entry.branches : []).forEach((branch) => {
+          const branchPanel = document.createElement('div');
+          branchPanel.className = 'vm-branch-sequence';
+          branchPanel.appendChild(createLinkedStageNote(branch.title, 'Branch-local optics and endpoint(s) declared directly in light_paths.'));
+          appendTraversalEntries(branchPanel, branch.sequence || []);
+          container.appendChild(branchPanel);
+        });
+        panel.appendChild(container);
         return;
       }
       panel.appendChild(createLinkedStageNote(entry.title, entry.message, entry.mechanism));

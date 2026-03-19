@@ -1084,6 +1084,117 @@ def _build_static_light_path_graph(lightpath_dto: dict[str, Any], raw_hardware: 
         column = 0
         illumination = route.get("illumination_sequence") if isinstance(route.get("illumination_sequence"), list) else []
         detection = route.get("detection_sequence") if isinstance(route.get("detection_sequence"), list) else []
+
+        def render_branch_sequence(
+            sequence: list[dict[str, Any]],
+            *,
+            start_key: str,
+            start_column: int,
+            branch_label: str,
+            sequence_index: int,
+        ) -> int:
+            branch_prev = start_key
+            local_column = start_column
+            local_endpoint_counter = 0
+            for branch_step in sequence:
+                if not isinstance(branch_step, dict):
+                    continue
+                if branch_step.get("optical_path_element_id"):
+                    element_id = branch_step.get("optical_path_element_id")
+                    element = elements.get(element_id) or {}
+                    node_key = f"branch_{sequence_index}_{branch_label}_{element_id}_{local_column}"
+                    stage_role = clean_text(element.get("stage_role") or element.get("element_type")).lower() or "stage"
+                    add_node(
+                        node_key,
+                        clean_text(element.get("name") or element.get("display_label") or element_id),
+                        "splitter" if stage_role == "splitter" else "stage",
+                        f"hardware.optical_path_elements[{element_id}]",
+                        items=[stage_role] if stage_role else [],
+                        notes=clean_text(element.get("notes")),
+                        xcol=local_column,
+                    )
+                    edges.append({"from": branch_prev, "to": node_key, "label": branch_label})
+                    branch_prev = node_key
+                    local_column += 1
+                elif branch_step.get("endpoint_id"):
+                    endpoint_id = branch_step.get("endpoint_id")
+                    endpoint = endpoints.get(endpoint_id) or {}
+                    endpoint_type = clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).lower()
+                    endpoint_key = f"{endpoint_id}_{branch_label}_{local_endpoint_counter}"
+                    local_endpoint_counter += 1
+                    add_node(
+                        endpoint_key,
+                        clean_text(endpoint.get("display_label") or endpoint.get("name") or endpoint_id),
+                        "endpoint-visual" if endpoint_type == "eyepiece" else "endpoint-camera" if endpoint_type == "camera_port" else "endpoint-detector",
+                        f"hardware.endpoints[{endpoint_id}]",
+                        notes=_terminal_summary(endpoint),
+                        xcol=local_column,
+                        y=120 + (local_endpoint_counter - 1) * 100,
+                    )
+                    edges.append({"from": branch_prev, "to": endpoint_key, "label": branch_label})
+                    branch_prev = endpoint_key
+                    local_column += 1
+            return local_column
+
+        def render_linear_sequence(
+            sequence: list[dict[str, Any]],
+            *,
+            start_prev_key: str | None,
+            start_column: int,
+            phase: str,
+            sequence_index_seed: int,
+        ) -> tuple[str | None, int, int]:
+            prev_key = start_prev_key
+            local_column = start_column
+            sequence_index = sequence_index_seed
+            for item in sequence:
+                if not isinstance(item, dict):
+                    continue
+                branch_block = item.get("branches")
+                if isinstance(branch_block, dict):
+                    branch_columns: list[int] = []
+                    for branch in branch_block.get("items") or []:
+                        if not isinstance(branch, dict):
+                            continue
+                        branch_columns.append(
+                            render_branch_sequence(
+                                branch.get("sequence") or [],
+                                start_key=prev_key or "sample",
+                                start_column=local_column + 1,
+                                branch_label=clean_text(branch.get("label") or branch.get("branch_id")),
+                                sequence_index=sequence_index,
+                            )
+                        )
+                    local_column = max([local_column, *branch_columns]) if branch_columns else local_column
+                    sequence_index += 1
+                    continue
+                if item.get("source_id"):
+                    continue
+                if item.get("optical_path_element_id"):
+                    element_id = item.get("optical_path_element_id")
+                    element = elements.get(element_id) or {}
+                    node_key = f"{phase}_{sequence_index}_{element_id}"
+                    stage_role = clean_text(element.get("stage_role") or element.get("element_type")).lower() or "stage"
+                    add_node(node_key, clean_text(element.get("name") or element.get("display_label") or element_id), "splitter" if stage_role == "splitter" else "stage", f"hardware.optical_path_elements[{element_id}]", items=[stage_role] if stage_role else [], notes=clean_text(element.get("notes")), xcol=local_column)
+                    if prev_key:
+                        edges.append({"from": prev_key, "to": node_key, "label": ""})
+                    prev_key = node_key
+                    local_column += 1
+                    sequence_index += 1
+                    continue
+                if item.get("endpoint_id"):
+                    endpoint_id = item.get("endpoint_id")
+                    endpoint = endpoints.get(endpoint_id) or {}
+                    endpoint_type = clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).lower()
+                    endpoint_key = f"{phase}_{sequence_index}_{endpoint_id}"
+                    add_node(endpoint_key, clean_text(endpoint.get("display_label") or endpoint.get("name") or endpoint_id), "endpoint-visual" if endpoint_type == "eyepiece" else "endpoint-camera" if endpoint_type == "camera_port" else "endpoint-detector", f"hardware.endpoints[{endpoint_id}]", notes=_terminal_summary(endpoint), xcol=local_column)
+                    if prev_key:
+                        edges.append({"from": prev_key, "to": endpoint_key, "label": ""})
+                    prev_key = endpoint_key
+                    local_column += 1
+                    sequence_index += 1
+            return prev_key, local_column, sequence_index
+
         if any(isinstance(item, dict) and item.get("source_id") for item in illumination):
             source_items = []
             for item in illumination:
@@ -1097,19 +1208,13 @@ def _build_static_light_path_graph(lightpath_dto: dict[str, Any], raw_hardware: 
             column += 1
 
         prev_key = "sources" if ordered_nodes and ordered_nodes[-1]["key"] == "sources" else None
-        sequence_index = 0
-        for item in illumination:
-            if not isinstance(item, dict) or not item.get("optical_path_element_id"):
-                continue
-            element = elements.get(item.get("optical_path_element_id")) or {}
-            node_key = f"illum_{sequence_index}_{item.get('optical_path_element_id')}"
-            stage_role = clean_text(element.get("stage_role") or element.get("element_type")).lower() or "stage"
-            node = add_node(node_key, clean_text(element.get("name") or element.get("display_label") or item.get("optical_path_element_id")), "splitter" if stage_role == "splitter" else "stage", f"hardware.optical_path_elements[{item.get('optical_path_element_id')}]", items=[stage_role] if stage_role else [], notes=clean_text(element.get("notes")), xcol=column)
-            if prev_key:
-                edges.append({"from": prev_key, "to": node_key, "label": ""})
-            prev_key = node_key
-            column += 1
-            sequence_index += 1
+        prev_key, column, sequence_index = render_linear_sequence(
+            illumination,
+            start_prev_key=prev_key,
+            start_column=column,
+            phase="illum",
+            sequence_index_seed=0,
+        )
 
         add_node("sample", "Objective / Sample Plane", "sample", "light_paths", notes="Boundary between illumination delivery and detected light.", xcol=column)
         if prev_key:
@@ -1117,47 +1222,13 @@ def _build_static_light_path_graph(lightpath_dto: dict[str, Any], raw_hardware: 
         prev_key = "sample"
         column += 1
 
-        endpoint_nodes: dict[str, str] = {}
-        endpoint_counter = 0
-        for item in detection:
-            if not isinstance(item, dict):
-                continue
-            if item.get("optical_path_element_id"):
-                element_id = item.get("optical_path_element_id")
-                element = elements.get(element_id) or {}
-                node_key = f"detect_{sequence_index}_{element_id}"
-                stage_role = clean_text(element.get("stage_role") or element.get("element_type")).lower() or "stage"
-                add_node(node_key, clean_text(element.get("name") or element.get("display_label") or element_id), "splitter" if stage_role == "splitter" else "stage", f"hardware.optical_path_elements[{element_id}]", items=[stage_role] if stage_role else [], notes=clean_text(element.get("notes")), xcol=column)
-                if prev_key:
-                    edges.append({"from": prev_key, "to": node_key, "label": ""})
-                if stage_role == "splitter":
-                    for branch in element.get("branches") or []:
-                        if not isinstance(branch, dict):
-                            continue
-                        targets = branch.get("target_ids") or []
-                        for target_id in targets:
-                            endpoint = endpoints.get(target_id) or {}
-                            if target_id not in endpoint_nodes:
-                                endpoint_counter += 1
-                                endpoint_key = target_id
-                                endpoint_nodes[target_id] = endpoint_key
-                                endpoint_type = clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).lower()
-                                add_node(endpoint_key, clean_text(endpoint.get("display_label") or endpoint.get("name") or target_id), "endpoint-visual" if endpoint_type == "eyepiece" else "endpoint-camera" if endpoint_type == "camera_port" else "endpoint-detector", f"hardware.endpoints[{target_id}]", notes=_terminal_summary(endpoint), xcol=column + 1, y=120 + (endpoint_counter - 1) * 100)
-                            edges.append({"from": node_key, "to": endpoint_nodes[target_id], "label": clean_text(branch.get("label") or branch.get("id"))})
-                prev_key = node_key
-                column += 1
-                sequence_index += 1
-            elif item.get("endpoint_id"):
-                endpoint_id = item.get("endpoint_id")
-                endpoint = endpoints.get(endpoint_id) or {}
-                endpoint_type = clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).lower()
-                endpoint_key = endpoint_id
-                add_node(endpoint_key, clean_text(endpoint.get("display_label") or endpoint.get("name") or endpoint_id), "endpoint-visual" if endpoint_type == "eyepiece" else "endpoint-camera" if endpoint_type == "camera_port" else "endpoint-detector", f"hardware.endpoints[{endpoint_id}]", notes=_terminal_summary(endpoint), xcol=column)
-                if prev_key:
-                    edges.append({"from": prev_key, "to": endpoint_key, "label": ""})
-                prev_key = endpoint_key
-                column += 1
-                sequence_index += 1
+        prev_key, column, sequence_index = render_linear_sequence(
+            detection,
+            start_prev_key=prev_key,
+            start_column=column,
+            phase="detect",
+            sequence_index_seed=sequence_index,
+        )
 
     graph_nodes: list[dict[str, Any]] = []
     for index, node in enumerate(ordered_nodes, start=1):
@@ -1251,15 +1322,34 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
     sections: list[dict[str, Any]] = []
 
     route_items: list[dict[str, Any]] = []
+    def render_sequence_values(sequence: list[dict[str, Any]]) -> list[str]:
+        values: list[str] = []
+        for item in sequence:
+            if not isinstance(item, dict):
+                continue
+            branch_block = item.get("branches")
+            if isinstance(branch_block, dict):
+                branch_descriptions = []
+                for branch in branch_block.get("items") or []:
+                    if not isinstance(branch, dict):
+                        continue
+                    branch_sequence = " → ".join(
+                        clean_text(next(iter(step.values()), ""))
+                        for step in branch.get("sequence") or []
+                        if isinstance(step, dict) and clean_text(next(iter(step.values()), ""))
+                    )
+                    branch_descriptions.append(f"{clean_text(branch.get('label') or branch.get('branch_id'))}: {branch_sequence}".strip(": "))
+                if branch_descriptions:
+                    values.append(f"branches[{'; '.join(branch_descriptions)}]")
+                continue
+            scalar = clean_text(next(iter(item.values()), "")) if item else ""
+            if scalar:
+                values.append(scalar)
+        return values
+
     for route in light_paths:
-        illum = []
-        for item in route.get("illumination_sequence") or []:
-            if isinstance(item, dict):
-                illum.append(next(iter(item.values()), ""))
-        detect = []
-        for item in route.get("detection_sequence") or []:
-            if isinstance(item, dict):
-                detect.append(next(iter(item.values()), ""))
+        illum = render_sequence_values(route.get("illumination_sequence") or [])
+        detect = render_sequence_values(route.get("detection_sequence") or [])
         route_items.append({
             "id": clean_text(route.get("id")),
             "display_label": clean_text(route.get("name") or route.get("id")),
@@ -1273,13 +1363,13 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
     element_items: list[dict[str, Any]] = []
     for element in optical_elements:
         stage_role = clean_text(element.get("stage_role") or element.get("element_type") or element.get("type")).replace("_", " ").title()
-        if element.get("branches"):
+        if clean_text(element.get("stage_role")).lower() == "splitter":
             splitters.append({
                 "id": clean_text(element.get("id")),
                 "display_label": clean_text(element.get("name") or element.get("display_label") or element.get("id")),
                 "display_subtitle": stage_role or "Splitter",
-                "spec_lines": _spec_lines(("Selection mode", clean_text(element.get("selection_mode"))), ("Branches", " • ".join(clean_text(branch.get("label") or branch.get("id")) for branch in element.get("branches") if isinstance(branch, dict)))),
-                "method_sentence": f"Downstream routing can pass through {clean_text(element.get('name') or element.get('id'))}.",
+                "spec_lines": _spec_lines(("Selection mode", clean_text(element.get("selection_mode"))), ("Supported branch modes", ", ".join(element.get("supported_branch_modes") or [])), ("Supported branch count", clean_text(element.get("supported_branch_count")))),
+                "method_sentence": f"Downstream routing may traverse {clean_text(element.get('name') or element.get('id'))}; explicit branch truth is declared on route-owned branch blocks.",
             })
         else:
             element_items.append({
@@ -1292,15 +1382,18 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
     if element_items:
         filters.extend(element_items)
         sections.append({"id": "optical_path_elements", "display_label": "Optical Path Elements", "items": element_items})
-    if not splitters:
-        for splitter in legacy_splitters:
-            splitters.append({
+    route_splitters = [item for item in legacy_splitters if isinstance(item, dict)]
+    if route_splitters:
+        splitters = [
+            {
                 "id": clean_text(splitter.get("id") or splitter.get("name")),
                 "display_label": clean_text(splitter.get("display_label") or splitter.get("name")),
-                "display_subtitle": "Splitter / Selector",
-                "spec_lines": _spec_lines(("Branches", " • ".join(clean_text(branch.get("label") or branch.get("id")) for branch in splitter.get("branches", []) if isinstance(branch, dict)))),
-                "method_sentence": f"Downstream routing can pass through {clean_text(splitter.get('name') or splitter.get('display_label'))}.",
-            })
+                "display_subtitle": "Route-owned branch block",
+                "spec_lines": _spec_lines(("Selection mode", clean_text(splitter.get("selection_mode"))), ("Branches", " • ".join(clean_text(branch.get("label") or branch.get("id")) for branch in splitter.get("branches", []) if isinstance(branch, dict)))),
+                "method_sentence": f"Explicit route traversal branches through {clean_text(splitter.get('name') or splitter.get('display_label'))}.",
+            }
+            for splitter in route_splitters
+        ]
     if splitters:
         sections.append({"id": "splitters", "display_label": "Splitters / Selectors", "items": splitters})
 

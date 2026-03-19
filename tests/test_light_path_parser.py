@@ -267,39 +267,53 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(cube["control_label"], "Cube 1")
         self.assertEqual(cube["options"][0]["display_label"], "GFP Cube")
 
-    def test_splitter_payload_includes_control_metadata(self) -> None:
+    def test_splitter_payload_is_derived_from_route_owned_branch_blocks(self) -> None:
         payload = generate_virtual_microscope_payload(
             {
                 "hardware": {
-                    "light_path": {
-                        "splitters": [
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [
+                        {"id": "camera_splitter", "name": "Camera Splitter", "stage_role": "splitter", "element_type": "splitter", "selection_mode": "exclusive"},
+                        {"id": "green_filter", "name": "Green Filter", "stage_role": "emission", "element_type": "filter_wheel", "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50}},
+                        {"id": "red_filter", "name": "Red Filter", "stage_role": "emission", "element_type": "filter_wheel", "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75}},
+                    ],
+                    "endpoints": [
+                        {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
+                        {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "camera_splitter"},
                             {
-                                "name": "Camera Splitter",
-                                "dichroic": {"component_type": "dichroic", "cutoffs_nm": [560]},
-                                "branches": [
-                                    {
-                                        "id": "green",
-                                        "label": "Green",
-                                        "mode": "transmitted",
-                                        "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
-                                        "target_ids": ["detector_1"],
-                                    },
-                                    {
-                                        "id": "red",
-                                        "label": "Red",
-                                        "mode": "reflected",
-                                        "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75},
-                                        "target_ids": ["detector_2"],
-                                    },
-                                ],
-                            }
-                        ],
-                        "endpoints": [
-                            {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
-                            {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {
+                                            "branch_id": "green",
+                                            "label": "Green",
+                                            "sequence": [
+                                                {"optical_path_element_id": "green_filter"},
+                                                {"endpoint_id": "detector_1"},
+                                            ],
+                                        },
+                                        {
+                                            "branch_id": "red",
+                                            "label": "Red",
+                                            "sequence": [
+                                                {"optical_path_element_id": "red_filter"},
+                                                {"endpoint_id": "detector_2"},
+                                            ],
+                                        },
+                                    ],
+                                }
+                            },
                         ],
                     }
-                }
+                ],
             }
         )
 
@@ -307,6 +321,8 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(splitter["control_kind"], "dropdown")
         self.assertEqual(splitter["control_label"], "Camera Splitter")
         self.assertEqual(splitter["options"][0]["slot"], 1)
+        self.assertEqual(splitter["branches"][0]["sequence"][0]["optical_path_element_id"], "green_filter")
+        self.assertEqual(splitter["branches"][0]["target_ids"], ["detector_1"])
 
 
     def test_validate_light_path_ignores_policy_owned_component_shape_requirements(self) -> None:
@@ -425,40 +441,35 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(detector["bandwidth_nm"], 50.0)
         self.assertNotIn("default_gain", detector)
 
-    def test_top_level_splitters_are_ingested_with_branch_metadata(self) -> None:
+    def test_route_owned_branches_drive_runtime_splitter_metadata(self) -> None:
         payload = generate_virtual_microscope_payload(
             {
                 "hardware": {
-                    "splitters": [
-                        {
-                            "name": "Top-level Splitter",
-                            "path": "confocal",
-                            "dichroic": {"component_type": "dichroic", "cutoffs_nm": [560]},
-                            "branches": [
-                                {
-                                    "id": "red",
-                                    "name": "Red Path",
-                                    "mode": "transmitted",
-                                    "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75},
-                                    "target_ids": ["detector_1"],
-                                },
-                                {
-                                    "id": "green",
-                                    "name": "Green Path",
-                                    "mode": "reflected",
-                                    "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
-                                    "target_ids": ["detector_2"],
-                                },
-                            ],
-                        }
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [
+                        {"id": "route_splitter", "name": "Top-level Splitter", "stage_role": "splitter", "element_type": "splitter", "selection_mode": "exclusive"},
+                        {"id": "red_filter", "stage_role": "emission", "element_type": "filter_wheel", "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75}},
+                        {"id": "green_filter", "stage_role": "emission", "element_type": "filter_wheel", "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50}},
                     ],
-                    "light_path": {
-                        "endpoints": [
-                            {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
-                            {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
-                        ]
-                    },
+                    "endpoints": [
+                        {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
+                        {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
+                    ],
                 }
+                ,
+                "light_paths": [
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "route_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": [
+                                {"branch_id": "red", "label": "Red Path", "mode": "transmitted", "sequence": [{"optical_path_element_id": "red_filter"}, {"endpoint_id": "detector_1"}]},
+                                {"branch_id": "green", "label": "Green Path", "mode": "reflected", "sequence": [{"optical_path_element_id": "green_filter"}, {"endpoint_id": "detector_2"}]},
+                            ]}},
+                        ],
+                    }
+                ],
             }
         )
 
@@ -518,6 +529,29 @@ class LightPathParserTests(unittest.TestCase):
 
         self.assertEqual(_runtime_projection(payload)["splitters"][0]["branches"][0]["target_ids"], [])
         self.assertTrue(payload["metadata"].get("graph_incomplete"))
+
+    def test_branch_blocks_must_follow_optical_path_element_and_detection_branches_need_endpoints(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [{"id": "split_1", "stage_role": "splitter", "element_type": "splitter"}],
+                    "endpoints": [{"id": "cam_a", "endpoint_type": "detector"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "broken", "sequence": [{"optical_path_element_id": "split_1"}]}]}}
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(any("branches must follow an optical_path_element_id" in error for error in errors))
+        self.assertTrue(any("must terminate explicitly at one or more endpoint_id items" in error for error in errors))
 
     def test_cube_payload_exposes_direct_component_aliases(self) -> None:
         payload = generate_virtual_microscope_payload(

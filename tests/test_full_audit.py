@@ -87,10 +87,8 @@ class FullAuditScriptTests(unittest.TestCase):
                             "stage_role": "splitter",
                             "element_type": "splitter",
                             "dichroic": {"type": "dichroic", "cutoffs_nm": [560]},
-                            "branches": [
-                                {"id": "green", "label": "Green", "mode": "reflected", "target_ids": ["cam_a"], "component": {"type": "bandpass", "center_nm": 525, "width_nm": 50}},
-                                {"id": "red", "label": "Red", "mode": "transmitted", "target_ids": ["pmt_a"], "component": {"type": "bandpass", "center_nm": 700, "width_nm": 75}},
-                            ],
+                            "selection_mode": "exclusive",
+                            "supported_branch_count": 2,
                         },
                     ],
                     "endpoints": [
@@ -106,8 +104,10 @@ class FullAuditScriptTests(unittest.TestCase):
                             {"optical_path_element_id": "main_dichroic"},
                             {"optical_path_element_id": "em_filter"},
                             {"optical_path_element_id": "det_splitter"},
-                            {"endpoint_id": "cam_a"},
-                            {"endpoint_id": "pmt_a"},
+                            {"branches": {"selection_mode": "exclusive", "items": [
+                                {"branch_id": "green", "label": "Green", "mode": "reflected", "sequence": [{"endpoint_id": "cam_a"}]},
+                                {"branch_id": "red", "label": "Red", "mode": "transmitted", "sequence": [{"endpoint_id": "pmt_a"}]},
+                            ]}},
                         ],
                     }
                 ],
