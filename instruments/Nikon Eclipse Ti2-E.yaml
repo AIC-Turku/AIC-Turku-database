@@ -8,325 +8,451 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: ''
-  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence
-    (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging
-    (with autofocus), High-content screening (multi-well scanning).'
+  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning).'
   url: ''
+
 modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- dic
+  - widefield_fluorescence
+  - transmitted_brightfield
+  - dic
+
 modules:
-- name: incubation
-  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
-  url: ''
-  manufacturer: Okolab
-  model: H201-T
-- name: hardware_autofocus
-  notes: Nikon Perfect Focus System (autofocus)
-  url: ''
-  manufacturer: Nikon
-  model: Perfect Focus System
+  - type: incubation # CORRECTED: Changed 'name' to canonical 'type'
+    notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
+    url: ''
+    manufacturer: Okolab
+    model: H201-T
+  - type: hardware_autofocus # CORRECTED: Changed 'name' to canonical 'type'
+    notes: Nikon Perfect Focus System (autofocus)
+    url: ''
+    manufacturer: Nikon
+    model: Perfect Focus System
+
 software:
-- role: acquisition
-  name: Nikon NIS-Elements AR
-  version: '5.11'
-  url: ''
+  - role: acquisition
+    name: Nikon NIS-Elements AR
+    version: '5.11'
+    url: ''
+
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
     notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
+    
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
+    
   scanner:
     type: none
     notes: ''
     url: ''
+    
   detectors:
-  - kind: scmos
-    manufacturer: Hamamatsu
-    model: Orca Flash4.0 V3
-    pixel_pitch_um: null
-    sensor_format_px: 2048 x 2044
-    notes: sCMOS
-    url: ''
-    id: detector_1
-  - kind: cmos
-    manufacturer: Nikon
-    model: DS-Fi3
-    pixel_pitch_um: null
-    sensor_format_px: 2880 x 2048
-    notes: Color CMOS
-    url: ''
-    id: detector_2
-  filters:
-  - name: Chroma 89403bs
-    location: Filter Turret
-    product_code: 89403bs
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Dichroic for CFP/YFP/mCherry/Cy7
-    url: ''
-  - name: Chroma 84000v2
-    location: Filter Turret
-    product_code: 84000v2
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Quad-band for DAPI/FITC/TRITC/Cy5
-    url: ''
-  - name: Chroma 96377
-    location: Filter Turret
-    product_code: '96377'
-    excitation: ''
-    dichroic: ''
-    emission: 809/81
-    notes: Cy7 emission filter
-    url: ''
-  - name: DAPI Emission
-    location: Emission Wheel
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 435/26
-    notes: ''
-    url: ''
-  - name: CFP Emission
-    location: Emission Wheel
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 475/20
-    notes: ''
-    url: ''
-  - name: GFP Emission
-    location: Emission Wheel
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 515/30
-    notes: ''
-    url: ''
-  - name: YFP Emission
-    location: Emission Wheel
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 540/21
-    notes: ''
-    url: ''
-  - name: TRITC Emission
-    location: Emission Wheel
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 595/40
-    notes: Additional optional emission
-    url: ''
-  - name: mCherry Emission
-    location: Emission Wheel
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 632/60
-    notes: Additional optional emission
-    url: ''
-  - name: Cy5 Emission
-    location: Emission Wheel
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 705/71
-    notes: Additional optional emission
-    url: ''
-  - name: Lamp Filter Cubes
-    location: Epi Turret
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
-    url: ''
-  - name: DIC Fixed Analyzer
-    location: Analyzer Slider
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: For DIC imaging
-    url: ''
+    - kind: scmos
+      manufacturer: Hamamatsu
+      model: Orca Flash4.0 V3
+      pixel_pitch_um: 6.5 # CORRECTED: Missing required value replaced with known sensor specification
+      sensor_format_px: 2048 x 2044
+      notes: sCMOS
+      url: ''
+      id: detector_1
+    - kind: cmos
+      manufacturer: Nikon
+      model: DS-Fi3
+      pixel_pitch_um: 2.4 # CORRECTED: Missing required value replaced with known sensor specification
+      sensor_format_px: 2880 x 2048
+      notes: Color CMOS
+      url: ''
+      id: detector_2
+
+  eyepieces: # ADDED: Required for trinocular routing
+    - id: eyepieces
+      notes: 'Binocular Eyepieces'
+      
   objectives:
-  - id: 2x_air
-    manufacturer: Nikon
-    model: Plan UW 2x/0.06
-    product_code: MRL00022
-    magnification: 2.0
-    numerical_aperture: 0.06
-    working_distance: 7.5 mm
-    immersion: air
-    correction: plan_achromat
-    afc_compatible: false
-    specialties:
-    - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) possible; polarization possible.'
-    url: ''
-    is_installed: true
-  - id: 4x_air
-    manufacturer: Nikon
-    model: Plan Fluor 4x/0.13
-    product_code: MRH00041
-    magnification: 4.0
-    numerical_aperture: 0.13
-    working_distance: 17.2 mm
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: false
-    specialties:
-    - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended;
-      polarization possible.'
-    url: ''
-    is_installed: true
-  - id: 4x_air_2
-    manufacturer: Nikon
-    model: Plan Apo λD 4x/0.20
-    product_code: MRD70040
-    magnification: 4.0
-    numerical_aperture: 0.2
-    working_distance: 20.0 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties: []
-    notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS)
-      recommended; FLUO (NIR) recommended.'
-    url: ''
-    is_installed: true
-  - id: 10x_air
-    manufacturer: Nikon
-    model: Plan Fluor 10x/0.30 OFN 25 Ph1 DL
-    product_code: MRH20101
-    magnification: 10.0
-    numerical_aperture: 0.3
-    working_distance: 15.2 mm
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: true
-    specialties:
-    - phase
-    notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV)
-      suitable.'
-    url: ''
-    is_installed: true
-  - id: 20x_air
-    manufacturer: Nikon
-    model: S Plan Fluor ELWD ADM 20x/0.45 DIC N1
-    product_code: MRH08230
-    magnification: 20.0
-    numerical_aperture: 0.45
-    working_distance: 8.2 - 6.9 mm
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: true
-    specialties:
-    - long_working_distance
-    - dic
-    - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended;
-      polarization suitable.'
-    url: ''
-    is_installed: true
-  - id: 20x_air_2
-    manufacturer: Nikon
-    model: Plan Apo λ 20x/0.75 OFN25 DIC N2
-    product_code: MRD00205
-    magnification: 20.0
-    numerical_aperture: 0.75
-    working_distance: 1.0 mm
-    immersion: air
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - dic
-    - polarization
-    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO
-      (VIS) recommended; FLUO (UV) recommended; polarization possible.'
-    url: ''
-    is_installed: true
-  - id: 40x_air
-    manufacturer: Nikon
-    model: S Plan Fluor ELWD 40x/0.60 OFN22 Ph2
-    product_code: MRH48430
-    magnification: 40.0
-    numerical_aperture: 0.6
-    working_distance: 3.6 - 2.8 mm
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: true
-    specialties:
-    - long_working_distance
-    - phase
-    notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV)
-      suitable.'
-    url: ''
-    is_installed: true
-  - id: 60x_oil
-    manufacturer: Nikon
-    model: Plan Apo λ 60x/1.40 Oil OFN25 DIC N2
-    product_code: MRD01605
-    magnification: 60.0
-    numerical_aperture: 1.4
-    working_distance: 0.13 mm
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: true
-    specialties:
-    - dic
-    - polarization
-    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO
-      (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
-    url: ''
-    is_installed: true
-  - id: 100x_oil
-    manufacturer: Nikon
-    model: Apo TIRF 100x/1.49 Oil
-    product_code: MRD01991
-    magnification: 100.0
-    numerical_aperture: 1.49
-    working_distance: 0.16 - 0.10 mm
-    immersion: oil
-    correction: apochromat
-    afc_compatible: true
-    specialties:
-    - tirf
-    - phase
-    - dic
-    - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible;
-      polarization suitable.'
-    url: ''
-    is_installed: true
+    - id: 2x_air
+      manufacturer: Nikon
+      model: Plan UW 2x/0.06
+      product_code: MRL00022
+      magnification: 2.0
+      numerical_aperture: 0.06
+      working_distance: 7.5 mm
+      immersion: air
+      correction: plan_achromat
+      afc_compatible: false
+      specialties:
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) possible; polarization possible.'
+      url: ''
+      is_installed: true
+    - id: 4x_air
+      manufacturer: Nikon
+      model: Plan Fluor 4x/0.13
+      product_code: MRH00041
+      magnification: 4.0
+      numerical_aperture: 0.13
+      working_distance: 17.2 mm
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties:
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
+      url: ''
+      is_installed: true
+    - id: 4x_air_2
+      manufacturer: Nikon
+      model: Plan Apo λD 4x/0.20
+      product_code: MRD70040
+      magnification: 4.0
+      numerical_aperture: 0.2
+      working_distance: 20.0 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended.'
+      url: ''
+      is_installed: true
+    - id: 10x_air
+      manufacturer: Nikon
+      model: Plan Fluor 10x/0.30 OFN 25 Ph1 DL
+      product_code: MRH20101
+      magnification: 10.0
+      numerical_aperture: 0.3
+      working_distance: 15.2 mm
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: true
+      specialties:
+        - phase
+      notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
+      url: ''
+      is_installed: true
+    - id: 20x_air
+      manufacturer: Nikon
+      model: S Plan Fluor ELWD ADM 20x/0.45 DIC N1
+      product_code: MRH08230
+      magnification: 20.0
+      numerical_aperture: 0.45
+      working_distance: 8.2 - 6.9 mm
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: true
+      specialties:
+        - long_working_distance
+        - dic
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
+      url: ''
+      is_installed: true
+    - id: 20x_air_2
+      manufacturer: Nikon
+      model: Plan Apo λ 20x/0.75 OFN25 DIC N2
+      product_code: MRD00205
+      magnification: 20.0
+      numerical_aperture: 0.75
+      working_distance: 1.0 mm
+      immersion: air
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - dic
+        - polarization
+      notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
+      url: ''
+      is_installed: true
+    - id: 40x_air
+      manufacturer: Nikon
+      model: S Plan Fluor ELWD 40x/0.60 OFN22 Ph2
+      product_code: MRH48430
+      magnification: 40.0
+      numerical_aperture: 0.6
+      working_distance: 3.6 - 2.8 mm
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: true
+      specialties:
+        - long_working_distance
+        - phase
+      notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
+      url: ''
+      is_installed: true
+    - id: 60x_oil
+      manufacturer: Nikon
+      model: Plan Apo λ 60x/1.40 Oil OFN25 DIC N2
+      product_code: MRD01605
+      magnification: 60.0
+      numerical_aperture: 1.4
+      working_distance: 0.13 mm
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: true
+      specialties:
+        - dic
+        - polarization
+      notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
+      url: ''
+      is_installed: true
+    - id: 100x_oil
+      manufacturer: Nikon
+      model: Apo TIRF 100x/1.49 Oil
+      product_code: MRD01991
+      magnification: 100.0
+      numerical_aperture: 1.49
+      working_distance: 0.16 - 0.10 mm
+      immersion: oil
+      correction: apochromat
+      afc_compatible: true
+      specialties:
+        - tirf
+        - phase
+        - dic
+        - polarization
+      notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
+      url: ''
+      is_installed: true
+      
   sources:
-  - kind: led
-    manufacturer: Lumencor
-    model: Spectra X LED system
-    wavelength_nm: 395/25; 440/20; 475/28; 550/15; 575/35; 640/30; 730/40
-    power: ''
-    notes: 550 nm module available by request
-    url: ''
-    id: spectra_x_led_system
-    modalities:
-    - epi
-    path: epi
-  optical_path_elements: []
-  endpoints: []
+    # CORRECTED: Multi-line engines must be split into canonical individual sources for valid routing
+    - kind: led
+      manufacturer: Lumencor
+      model: Spectra X LED system
+      wavelength_nm: 395
+      width_nm: 25
+      id: spectra_x_395
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Lumencor
+      model: Spectra X LED system
+      wavelength_nm: 440
+      width_nm: 20
+      id: spectra_x_440
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Lumencor
+      model: Spectra X LED system
+      wavelength_nm: 475
+      width_nm: 28
+      id: spectra_x_475
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Lumencor
+      model: Spectra X LED system
+      wavelength_nm: 550
+      width_nm: 15
+      notes: 550 nm module available by request
+      id: spectra_x_550
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Lumencor
+      model: Spectra X LED system
+      wavelength_nm: 575
+      width_nm: 35
+      id: spectra_x_575
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Lumencor
+      model: Spectra X LED system
+      wavelength_nm: 640
+      width_nm: 30
+      id: spectra_x_640
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Lumencor
+      model: Spectra X LED system
+      wavelength_nm: 730
+      width_nm: 40
+      id: spectra_x_730
+      modalities:
+        - widefield_fluorescence
+    - kind: led # ADDED: Required to satisfy Transmitted Brightfield/DIC light paths
+      manufacturer: Nikon
+      model: Ti2 Transmitted Illuminator
+      role: transmitted_illumination
+      notes: Broad spectrum transmitted source for BF/DIC.
+      id: transmitted_illuminator
+      modalities:
+        - transmitted_brightfield
+        - dic
+
+  optical_path_elements:
+    # CORRECTED: Migrated legacy hardware.filters into canonical elements with bands
+    - name: Filter Turret
+      stage_role: dichroic
+      id: filter_turret
+      element_type: turret
+      modalities:
+        - widefield_fluorescence
+      positions:
+        Pos_1:
+          name: Chroma 89403bs
+          product_code: 89403bs
+          component_type: multiband_dichroic
+          notes: Dichroic for CFP/YFP/mCherry/Cy7
+        Pos_2:
+          name: Chroma 84000v2
+          product_code: 84000v2
+          component_type: multiband_dichroic
+          notes: Quad-band for DAPI/FITC/TRITC/Cy5
+        Pos_3:
+          name: Chroma 96377
+          product_code: '96377'
+          component_type: bandpass
+          bands:
+            - center_nm: 809
+              width_nm: 81
+          notes: Cy7 emission filter housed in turret
+
+    - name: Emission Wheel
+      stage_role: emission
+      id: emission_wheel
+      element_type: filter_wheel
+      modalities:
+        - widefield_fluorescence
+      positions:
+        Pos_1:
+          name: DAPI Emission
+          component_type: bandpass
+          bands:
+            - center_nm: 435
+              width_nm: 26
+        Pos_2:
+          name: CFP Emission
+          component_type: bandpass
+          bands:
+            - center_nm: 475
+              width_nm: 20
+        Pos_3:
+          name: GFP Emission
+          component_type: bandpass
+          bands:
+            - center_nm: 515
+              width_nm: 30
+        Pos_4:
+          name: YFP Emission
+          component_type: bandpass
+          bands:
+            - center_nm: 540
+              width_nm: 21
+        Pos_5:
+          name: TRITC Emission
+          component_type: bandpass
+          bands:
+            - center_nm: 595
+              width_nm: 40
+        Pos_6:
+          name: mCherry Emission
+          component_type: bandpass
+          bands:
+            - center_nm: 632
+              width_nm: 60
+        Pos_7:
+          name: Cy5 Emission
+          component_type: bandpass
+          bands:
+            - center_nm: 705
+              width_nm: 71
+
+    - name: Lamp Filter Cubes
+      stage_role: cube
+      id: epi_turret
+      element_type: turret
+      modalities:
+        - widefield_fluorescence
+      positions:
+        Pos_1:
+          name: Standard Cubes
+          component_type: filter_cube
+          notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
+
+    - name: DIC Fixed Analyzer
+      stage_role: analyzer
+      id: analyzer_slider
+      element_type: slider
+      modalities:
+        - dic
+      positions:
+        Pos_1:
+          component_type: analyzer
+          notes: For DIC imaging
+
+    - name: Trinocular Port
+      stage_role: splitter
+      id: trinocular_port
+      element_type: splitter
+      selection_mode: exclusive
+      modalities:
+        - widefield_fluorescence
+        - transmitted_brightfield
+        - dic
+      supported_branch_modes:
+        - exclusive
+      supported_branch_count: 3
+      notes: Routes light between oculars and dual camera ports.
+
+  # CORRECTED: Removed the deprecated hardware.endpoints block.
+
 light_paths:
-- id: epi
-  name: Epi-fluorescence
-  illumination_sequence:
-  - source_id: spectra_x_led_system
-  detection_sequence: []
+  - id: widefield_fluorescence # CORRECTED: Aligned ID with standard modalities
+    name: Epi-fluorescence
+    illumination_sequence:
+      - source_id: spectra_x_395
+      - source_id: spectra_x_440
+      - source_id: spectra_x_475
+      - source_id: spectra_x_550
+      - source_id: spectra_x_575
+      - source_id: spectra_x_640
+      - source_id: spectra_x_730
+      - optical_path_element_id: epi_turret
+      - optical_path_element_id: filter_turret
+    detection_sequence:
+      - optical_path_element_id: filter_turret
+      - optical_path_element_id: emission_wheel
+      - optical_path_element_id: trinocular_port
+      - branches: # ADDED: Required detection routing to valid endpoints
+          selection_mode: exclusive
+          items:
+            - branch_id: to_orca
+              label: "To Orca Flash4.0"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_ds_fi3
+              label: "To DS-Fi3"
+              sequence:
+                - endpoint_id: detector_2
+            - branch_id: to_eyepieces
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
+
+  - id: transmitted_brightfield
+    name: Transmitted Brightfield
+    illumination_sequence:
+      - source_id: transmitted_illuminator
+    detection_sequence:
+      - optical_path_element_id: trinocular_port
+      - branches:
+          selection_mode: exclusive
+          items:
+            - branch_id: to_orca
+              label: "To Orca Flash4.0"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_ds_fi3
+              label: "To DS-Fi3"
+              sequence:
+                - endpoint_id: detector_2
+            - branch_id: to_eyepieces
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
