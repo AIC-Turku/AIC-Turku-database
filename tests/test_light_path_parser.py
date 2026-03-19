@@ -254,6 +254,35 @@ class LightPathParserTests(unittest.TestCase):
         self.assertNotIn("terminals", payload)
         self.assertIn("projections", payload)
         self.assertIn("virtual_microscope", payload["projections"])
+        self.assertIn("hardware_inventory", payload)
+        self.assertIn("route_hardware_usage", payload)
+        self.assertIn("normalized_endpoints", payload)
+
+    def test_authoritative_dto_builds_numbered_inventory_and_route_graph(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "manufacturer": "LaserCo", "model": "488"}],
+                    "optical_path_elements": [{"id": "ex_filter", "stage_role": "excitation", "element_type": "filter_wheel", "display_label": "EX 488"}],
+                    "endpoints": [{"id": "cam_main", "endpoint_type": "camera_port", "display_label": "Main camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "ex_filter"}],
+                        "detection_sequence": [{"endpoint_id": "cam_main"}],
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(
+            [item["display_number"] for item in payload["hardware_inventory"]],
+            [1, 2, 3],
+        )
+        self.assertEqual(payload["route_hardware_usage"][0]["hardware_inventory_ids"], ["source:src_488", "optical_path_element:ex_filter", "endpoint:cam_main"])
+        self.assertEqual(payload["light_paths"][0]["graph_nodes"][0]["display_number"], 1)
+        self.assertEqual(payload["light_paths"][0]["graph_nodes"][1]["display_number"], 2)
 
     def test_details_include_notes_with_pipe_separator(self) -> None:
         payload = generate_virtual_microscope_payload(

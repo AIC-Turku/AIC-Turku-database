@@ -279,6 +279,44 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             self.assertIn("method_sentence", row)
             self.assertIn("display_subtitle", row)
 
+    def test_optical_path_dto_exposes_authoritative_inventory_and_route_views(self) -> None:
+        lightpath_dto = {
+            "hardware_inventory": [
+                {"id": "source:src_488", "display_label": "488 Laser", "display_number": 1, "inventory_class": "light_source", "route_usage_summary": ["epi"]},
+                {"id": "optical_path_element:ex_488", "display_label": "EX 488", "display_number": 2, "inventory_class": "optical_element", "route_usage_summary": ["epi"]},
+                {"id": "endpoint:cam", "display_label": "Main Camera", "display_number": 3, "inventory_class": "endpoint", "route_usage_summary": ["epi"]},
+            ],
+            "normalized_endpoints": [{"id": "cam", "display_label": "Main Camera", "endpoint_type": "camera_port"}],
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "name": "Epi",
+                    "graph_nodes": [
+                        {"id": "n1", "component_kind": "source", "hardware_inventory_id": "source:src_488", "label": "488 Laser", "display_number": 1, "column": 0, "lane": 0},
+                        {"id": "n2", "component_kind": "optical_path_element", "hardware_inventory_id": "optical_path_element:ex_488", "label": "EX 488", "display_number": 2, "column": 1, "lane": 0},
+                        {"id": "n3", "component_kind": "sample", "label": "Objective / Sample Plane", "column": 2, "lane": 0},
+                        {"id": "n4", "component_kind": "endpoint", "hardware_inventory_id": "endpoint:cam", "label": "Main Camera", "display_number": 3, "column": 3, "lane": 0, "endpoint_type": "camera_port"},
+                    ],
+                    "graph_edges": [
+                        {"source": "n1", "target": "n2"},
+                        {"source": "n2", "target": "n3"},
+                        {"source": "n3", "target": "n4"},
+                    ],
+                }
+            ],
+            "route_hardware_usage": [
+                {"route_id": "epi", "hardware_inventory_ids": ["source:src_488", "optical_path_element:ex_488", "endpoint:cam"], "endpoint_inventory_ids": ["endpoint:cam"]},
+            ],
+        }
+
+        optical_path = build_optical_path_dto(lightpath_dto)
+
+        self.assertEqual(optical_path["hardware_inventory_renderables"][0]["display_number"], 1)
+        self.assertEqual(optical_path["methods_route_options"], [{"id": "epi", "label": "Epi"}])
+        self.assertEqual(optical_path["methods_route_views"][0]["light_sources"][0]["display_label"], "488 Laser")
+        self.assertEqual(optical_path["methods_route_views"][0]["filters"][0]["display_label"], "EX 488")
+        self.assertIn("<svg", optical_path["static_graphs"][0]["svg_markup"])
+
 
     def test_normalize_hardware_preserves_tunable_source_and_detector_path_metadata(self) -> None:
         hardware = normalize_hardware(

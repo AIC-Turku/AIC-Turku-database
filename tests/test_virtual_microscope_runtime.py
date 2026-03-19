@@ -976,6 +976,34 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["branchSequenceKinds"], ["optical_path_element_id", "endpoint_id"])
         self.assertEqual(result["endpointRoutes"], [{"id": "cam", "routes": ["epi"]}, {"id": "eye", "routes": ["epi"]}])
 
+    def test_runtime_keeps_authoritative_inventory_and_route_usage_from_dto(self) -> None:
+        result = self.run_node_json(
+            """
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'strict' },
+              hardware_inventory: [
+                { id: 'source:src_488', display_number: 1, display_label: '488 laser' },
+                { id: 'endpoint:cam', display_number: 2, display_label: 'Camera' }
+              ],
+              route_hardware_usage: [
+                { route_id: 'epi', hardware_inventory_ids: ['source:src_488', 'endpoint:cam'], endpoint_inventory_ids: ['endpoint:cam'] }
+              ],
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser' }],
+              endpoints: [{ id: 'cam', display_label: 'Camera', endpoint_type: 'camera' }],
+              light_paths: [{ id: 'epi', name: 'Epi', illumination_sequence: [{ source_id: 'src_488' }], detection_sequence: [{ endpoint_id: 'cam' }] }]
+            });
+            return {
+              hardwareInventoryCount: instrument.hardwareInventory.length,
+              routeUsageCount: instrument.routeHardwareUsage.length,
+              endpointInventoryId: instrument.routeHardwareUsage[0].endpoint_inventory_ids[0],
+            };
+            """
+        )
+
+        self.assertEqual(result["hardwareInventoryCount"], 2)
+        self.assertEqual(result["routeUsageCount"], 1)
+        self.assertEqual(result["endpointInventoryId"], "endpoint:cam")
+
     def test_migration_compatibility_strict_mode_does_not_fallback_route_catalog_from_component_tags(self) -> None:
         result = self.run_node_json(
             """

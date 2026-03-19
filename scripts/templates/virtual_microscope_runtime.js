@@ -798,6 +798,9 @@
     const normalized = {
       metadata: payload.metadata || {},
       lightPaths: Array.isArray(payload.light_paths) ? payload.light_paths : [],
+      hardwareInventory: Array.isArray(payload.hardware_inventory) ? payload.hardware_inventory : [],
+      routeHardwareUsage: Array.isArray(payload.route_hardware_usage) ? payload.route_hardware_usage : [],
+      normalizedEndpoints: Array.isArray(payload.normalized_endpoints || payload.endpoints) ? (payload.normalized_endpoints || payload.endpoints) : [],
       opticalPathElements: canonicalElements(payload.optical_path_elements),
       lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings, { allowApproximation: approximationMode })),
       cube: normalizeMechanismList(stageSource && stageSource.cube),
