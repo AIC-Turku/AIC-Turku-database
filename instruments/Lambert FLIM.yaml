@@ -8,133 +8,146 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'Fluorescence lifetime imaging microscopy (FLIM) measures differences in
-    fluorescence decay lifetimes. The Lambert Instruments LIFA frequency-domain FLIM
-    system is attached to an inverted Carl Zeiss AxioImager microscope body and supports
-    fixed-sample imaging in widefield mode. It is suitable for FRET imaging, where
-    donor lifetime decreases upon FRET; CFP-YFP and GFP-DsRed pairs have been used
-    successfully. Lifetime imaging performance is <100 ps resolution over an approximately
-    0.1 ns to 1 ms range. The system is capable of high-content imaging. Recommended
-    background reading: Bastiaens and Squire, "Fluorescence lifetime imaging microscopy:
-    spatial resolution of biochemical processes in the cell" (Trends Cell Biol. 1999
-    Feb;9(2):48-52).'
+  notes: 'Fluorescence lifetime imaging microscopy (FLIM) measures differences in fluorescence decay lifetimes. The Lambert Instruments LIFA frequency-domain FLIM system is attached to an inverted Carl Zeiss AxioImager microscope body and supports fixed-sample imaging in widefield mode. It is suitable for FRET imaging, where donor lifetime decreases upon FRET; CFP-YFP and GFP-DsRed pairs have been used successfully. Lifetime imaging performance is <100 ps resolution over an approximately 0.1 ns to 1 ms range. The system is capable of high-content imaging. Recommended background reading: Bastiaens and Squire, "Fluorescence lifetime imaging microscopy: spatial resolution of biochemical processes in the cell" (Trends Cell Biol. 1999 Feb;9(2):48-52).'
   url: ''
+
 modalities:
-- widefield_fluorescence
-- flim
+  - widefield_fluorescence
+  - flim
+
 modules:
-- name: flim
-  notes: Lambert Instruments LIFA fast frequency-domain FLIM module
-  url: ''
-  manufacturer: Lambert Instruments
-  model: LIFA
+  - type: flim # CORRECTED: Changed from 'name' to the canonical 'type'
+    notes: Lambert Instruments LIFA fast frequency-domain FLIM module
+    url: ''
+    manufacturer: Lambert Instruments
+    model: LIFA
+
 software:
-- role: acquisition
-  name: Unknown
-  version: ''
-  url: ''
+  - role: acquisition
+    name: Unknown
+    version: ''
+    url: ''
+
 hardware:
   scanner:
     type: none
     notes: ''
     url: ''
-  detectors: []
-  splitters: []
-  filters:
-  - name: Placeholder_Filter
-    location: ''
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: ''
-    notes: Placeholder added to satisfy schema validation.
-    url: ''
+    
+  detectors: # ADDED: A detector must exist to serve as a valid light path endpoint
+    - kind: ccd 
+      manufacturer: Lambert Instruments
+      model: LIFA Camera
+      notes: Assumed LIFA integrated frequency-domain FLIM camera.
+      url: ''
+      id: detector_1
+      
+  eyepieces: # ADDED: Required to support trinocular routing
+    - id: eyepieces
+      notes: 'Binocular Eyepieces'
+      
+  # CORRECTED: Removed deprecated 'filters', 'splitters', and 'endpoints' arrays
+      
   objectives:
-  - id: 20x_air_ph2
-    manufacturer: Zeiss
-    model: LD-Plan NEOFLUAR 20x/0.4 Ph2 Korr
-    product_code: 421351-9970
-    magnification: 20.0
-    numerical_aperture: 0.4
-    working_distance: ''
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: false
-    specialties:
-    - phase
-    notes: Korr (correction collar)
-    url: ''
-    is_installed: true
-  - id: 40x_air_ph2
-    manufacturer: Zeiss
-    model: Plan NEOFLUAR 40x/0.6 Ph2 Korr
-    product_code: 421361-9970
-    magnification: 40.0
-    numerical_aperture: 0.6
-    working_distance: ''
-    immersion: air
-    correction: plan_fluorite
-    afc_compatible: false
-    specialties:
-    - phase
-    notes: Korr (correction collar)
-    url: ''
-    is_installed: true
-  - id: 63x_oil
-    manufacturer: Zeiss
-    model: Plan APOCHROMAT 63x/1.4 Oil
-    product_code: 420780-9900
-    magnification: 63.0
-    numerical_aperture: 1.4
-    working_distance: ''
-    immersion: oil
-    correction: plan_apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
+    - id: 20x_air_ph2
+      manufacturer: Zeiss
+      model: LD-Plan NEOFLUAR 20x/0.4 Ph2 Korr
+      product_code: 421351-9970
+      magnification: 20.0
+      numerical_aperture: 0.4
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties:
+        - phase
+      notes: Korr (correction collar)
+      url: ''
+      is_installed: true
+    - id: 40x_air_ph2
+      manufacturer: Zeiss
+      model: Plan NEOFLUAR 40x/0.6 Ph2 Korr
+      product_code: 421361-9970
+      magnification: 40.0
+      numerical_aperture: 0.6
+      working_distance: ''
+      immersion: air
+      correction: plan_fluorite
+      afc_compatible: false
+      specialties:
+        - phase
+      notes: Korr (correction collar)
+      url: ''
+      is_installed: true
+    - id: 63x_oil
+      manufacturer: Zeiss
+      model: Plan APOCHROMAT 63x/1.4 Oil
+      product_code: 420780-9900
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: ''
+      immersion: oil
+      correction: plan_apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
+      
   sources:
-  - kind: led
-    manufacturer: null
-    model: Multi-LED excitation
-    wavelength_nm: '406'
-    power: ''
-    notes: Excitation line
-    url: ''
-    id: multi_led_excitation
-    modalities:
-    - epi
-    path: epi
-  - kind: led
-    manufacturer: null
-    model: Multi-LED excitation
-    wavelength_nm: '469'
-    power: ''
-    notes: Excitation line
-    url: ''
-    id: multi_led_excitation_2
-    modalities:
-    - epi
-    path: epi
-  - kind: led
-    manufacturer: Unknown
-    model: Multi-LED excitation
-    wavelength_nm: '533'
-    power: ''
-    notes: Excitation line
-    url: ''
-    id: multi_led_excitation_3
-    modalities:
-    - epi
-    path: epi
+    - kind: led
+      manufacturer: Unknown # CORRECTED: Replaced invalid 'null' with 'Unknown'
+      model: Multi-LED excitation
+      wavelength_nm: 406 # CORRECTED: Changed string '406' to number 406
+      power: ''
+      notes: Excitation line
+      url: ''
+      id: multi_led_excitation
+      modalities:
+        - widefield_fluorescence
+        - flim
+      # CORRECTED: Removed legacy 'path' alias
+    - kind: led
+      manufacturer: Unknown
+      model: Multi-LED excitation
+      wavelength_nm: 469
+      power: ''
+      notes: Excitation line
+      url: ''
+      id: multi_led_excitation_2
+      modalities:
+        - widefield_fluorescence
+        - flim
+    - kind: led
+      manufacturer: Unknown
+      model: Multi-LED excitation
+      wavelength_nm: 533
+      power: ''
+      notes: Excitation line
+      url: ''
+      id: multi_led_excitation_3
+      modalities:
+        - widefield_fluorescence
+        - flim
+        
   optical_path_elements: []
-  endpoints: []
+
 light_paths:
-- id: epi
-  name: Epi-fluorescence
-  illumination_sequence:
-  - source_id: multi_led_excitation
-  - source_id: multi_led_excitation_2
-  - source_id: multi_led_excitation_3
-  detection_sequence: []
+  - id: flim_widefield # CORRECTED: Updated ID to better reflect system modalities
+    name: FLIM / Epi-fluorescence
+    illumination_sequence:
+      - source_id: multi_led_excitation
+      - source_id: multi_led_excitation_2
+      - source_id: multi_led_excitation_3
+    detection_sequence:
+      - branches: # ADDED: Required terminal routing to explicitly defined endpoints
+          selection_mode: exclusive
+          items:
+            - branch_id: to_camera
+              label: "To LIFA Camera"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_eyepieces
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
