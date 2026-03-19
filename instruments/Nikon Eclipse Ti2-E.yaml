@@ -396,7 +396,7 @@ hardware:
         - transmitted_brightfield
         - dic
       supported_branch_modes:
-        - exclusive
+        - selected
       supported_branch_count: 3
       notes: Routes light between oculars and dual camera ports.
 

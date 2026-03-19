@@ -173,8 +173,7 @@ hardware:
         - transmitted_brightfield
         - darkfield
       supported_branch_modes:
-        - exclusive # ADDED: Support for exclusive branching
-        - concurrent # CORRECTED: 'transmitted' is not a valid branch mode.
+        - selected
       supported_branch_count: 2 # CORRECTED: Increased to 2 for camera + eyepieces
       notes: Camera port for optional detector and eyepieces.
       

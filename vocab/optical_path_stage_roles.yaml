@@ -11,6 +11,9 @@ terms:
   - id: emission
     label: "Emission"
     description: "Element participates in the detection path after the sample plane."
+  - id: analyzer
+    label: "Analyzer"
+    description: "Element represents a DIC/polarization analyzer stage in the detection path."
   - id: splitter
     label: "Splitter"
     description: "Element explicitly branches or selects downstream routes/endpoints."

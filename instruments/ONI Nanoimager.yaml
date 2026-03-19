@@ -54,7 +54,7 @@ hardware:
     type: infrared_reflection
     
   stages:
-    - type: piezo_z_stage # CORRECTED: Changed from non-standard 'z_piezo'
+    - type: z_piezo # Canonical stage type for the installed piezo Z stage
       manufacturer: ONI # ADDED: Required for completeness
       model: Closed-loop Piezo XYZ Stage
       notes: Closed-loop piezo stage (20/20/10 mm XYZ travel, 1 nm resolution)
@@ -163,14 +163,14 @@ hardware:
       stage_role: splitter
       id: internal_emission_splitter
       element_type: splitter
-      selection_mode: concurrent
+      selection_mode: multiple
       modalities:
         - tirf
         - smlm
         - spt
         - fret
       supported_branch_modes:
-        - concurrent
+        - selected
       supported_branch_count: 2
       notes: 'Simultaneous 2-channel imaging. Splits emission onto two halves of the single camera chip.'
       positions:
@@ -189,7 +189,7 @@ hardware:
   # CORRECTED: Removed deprecated hardware.endpoints array
 
 light_paths:
-  - id: smlm_tirf # CORRECTED: Aligned ID with documented modalities
+  - id: tirf # Canonical physical route; SMLM/SPT/FRET remain documented as supported modalities
     name: SMLM / TIRF / SPT / FRET
     illumination_sequence:
       - source_id: 405_nm_violet
@@ -199,7 +199,7 @@ light_paths:
     detection_sequence:
       - optical_path_element_id: internal_emission_splitter
       - branches: # ADDED: Required detection routing to valid endpoints
-          selection_mode: concurrent
+          selection_mode: multiple
           items:
             - branch_id: to_channel_0
               label: "Channel 0 (Green/Red - Left Half of Sensor)"

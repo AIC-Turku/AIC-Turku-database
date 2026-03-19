@@ -33,7 +33,7 @@ modules:
     url: ''
     manufacturer: GE Healthcare
     model: Nanomotion Stage with Piezo Z-axis
-  - type: structured_illumination 
+  - type: 3d_sim 
     notes: Proprietary electro-optical high speed structured illumination engine. 110-160 nm lateral and 320-400 nm axial resolution.
     url: ''
     manufacturer: GE Healthcare
@@ -59,7 +59,7 @@ hardware:
     notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system.
     
   stages:
-    - type: piezo_z_stage 
+    - type: z_piezo 
       manufacturer: GE Healthcare 
       model: Nanomotion Stage with Piezo Z-axis
       notes: X, Y, Z Nanomotion sample stage with fast piezo Z-axis system

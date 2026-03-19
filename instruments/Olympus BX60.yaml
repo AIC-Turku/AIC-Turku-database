@@ -207,8 +207,7 @@ hardware:
         - transmitted_brightfield
         - phase_contrast
       supported_branch_modes:
-        - exclusive
-        - concurrent
+        - selected
       supported_branch_count: 2
       notes: Splits light between the eyepieces and the camera.
 

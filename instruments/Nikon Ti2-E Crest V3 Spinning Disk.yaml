@@ -63,7 +63,7 @@ hardware:
     type: infrared_reflection
     
   stages:
-    - type: piezo_z_stage # CORRECTED: Replaced invalid type 'z_piezo'
+    - type: z_piezo # Canonical stage type for the installed piezo Z stage
       manufacturer: Prior
       model: QG/Prior SP600 piezo kit
       notes: QG/Prior SP600 piezo kit with well-plate holder
@@ -477,7 +477,7 @@ hardware:
     - name: Nikon DIA
       notes: Neutral filter for assigning the light path to single camera
       supported_branch_modes:
-        - exclusive # CORRECTED: Replaced invalid 'transmitted' mode
+        - selected
       supported_branch_count: 2
       stage_role: splitter
       id: nikon_dia
@@ -490,13 +490,13 @@ hardware:
     - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
       notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
       supported_branch_modes:
-        - concurrent # CORRECTED: Replaced invalid 'transmitted' mode
-        - exclusive
+        - transmitted
+        - reflected
       supported_branch_count: 2
       stage_role: splitter
       id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
       element_type: splitter
-      selection_mode: concurrent # CORRECTED: Changed to concurrent to support DualCam
+      selection_mode: multiple # Both camera branches can be active simultaneously
       modalities:
         - confocal_spinning_disk
       positions:
@@ -510,13 +510,13 @@ hardware:
     - name: MXR00545 V3 DualCam-CFP/YFP 2 Bands Celesta Set
       notes: Additional DualCam Splitter option for CFP/YFP imaging.
       supported_branch_modes:
-        - concurrent
-        - exclusive
+        - transmitted
+        - reflected
       supported_branch_count: 2
       stage_role: splitter
       id: mxr00545_v3_dualcam_cfp_yfp_2_bands_celesta_set
       element_type: splitter
-      selection_mode: concurrent
+      selection_mode: multiple
       modalities:
         - confocal_spinning_disk
         
@@ -530,7 +530,7 @@ hardware:
         - widefield_fluorescence
         - transmitted_brightfield
       supported_branch_modes:
-        - exclusive
+        - selected
       supported_branch_count: 2
 
   # CORRECTED: Removed the deprecated hardware.endpoints block.
@@ -552,24 +552,19 @@ light_paths:
       - optical_path_element_id: crest_dichroic_wheel
       - optical_path_element_id: crest_emission_wheel
       - optical_path_element_id: trinocular_port
-      - branches: # CORRECTED: Fixed impossible sequential detector logic
+      - branches:
           selection_mode: exclusive
           items:
-            - branch_id: to_dual_cam
-              label: "To Dual Camera Splitter"
+            - branch_id: to_master
+              label: "To Kinetix Master (via Dual Camera Splitter)"
               sequence:
                 - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
-                - branches:
-                    selection_mode: concurrent
-                    items:
-                      - branch_id: to_master
-                        label: "To Kinetix Master (GFP/Cy5)"
-                        sequence:
-                          - endpoint_id: kinetix_master_camera
-                      - branch_id: to_slave
-                        label: "To Kinetix Slave (DAPI/Cy3)"
-                        sequence:
-                          - endpoint_id: kinetix_slave_camera
+                - endpoint_id: kinetix_master_camera
+            - branch_id: to_slave
+              label: "To Kinetix Slave (via Dual Camera Splitter)"
+              sequence:
+                - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
+                - endpoint_id: kinetix_slave_camera
             - branch_id: to_eyepieces
               label: "To Eyepieces"
               sequence:

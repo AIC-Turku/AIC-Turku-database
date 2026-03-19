@@ -18,7 +18,7 @@ modalities:
   - transmitted_brightfield
 
 modules:
-  - type: ism_module # CORRECTED: Changed 'name' to the canonical 'type'
+  - type: airyscan # CORRECTED: Changed 'name' to the canonical 'type'
     notes: 32-channel GaAsP area detector for super-resolution
     url: ''
     manufacturer: Zeiss
@@ -60,7 +60,7 @@ hardware:
     type: infrared_reflection
     
   stages:
-    - type: piezo_z_stage # CORRECTED: Standardized 'z_piezo'
+    - type: z_piezo # Canonical stage type for the installed piezo Z stage
       manufacturer: Zeiss # ADDED: Required completeness
       model: Piezo Z-stage
       notes: Piezo Z-stage
@@ -341,7 +341,7 @@ hardware:
         - ism
         - transmitted_brightfield
       supported_branch_modes:
-        - exclusive
+        - selected
       supported_branch_count: 2
 
   # CORRECTED: Removed deprecated hardware.endpoints block.

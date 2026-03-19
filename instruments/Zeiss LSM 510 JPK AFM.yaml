@@ -95,7 +95,7 @@ hardware:
         - confocal_point
         - transmitted_brightfield
       supported_branch_modes:
-        - exclusive
+        - selected
       supported_branch_count: 2
       notes: Routes light between oculars and detector.
 

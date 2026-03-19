@@ -411,6 +411,18 @@ hardware:
         Pos_6:
           component_type: empty
 
+    - id: trinocular_port_selector
+      name: Trinocular Port Selector
+      stage_role: splitter
+      element_type: splitter
+      selection_mode: exclusive
+      supported_branch_modes:
+        - selected
+      supported_branch_count: 2
+      modalities:
+        - widefield_fluorescence
+        - transmitted_brightfield
+
   # CORRECTED: Removed the deprecated hardware.endpoints block.
 
 light_paths:
@@ -429,7 +441,8 @@ light_paths:
     detection_sequence:
       - optical_path_element_id: filter_turret
       - optical_path_element_id: standalone_emission_wheel
-      - branches: # ADDED: Required detection routing to valid endpoints
+      - optical_path_element_id: trinocular_port_selector
+      - branches:
           selection_mode: exclusive 
           items:
             - branch_id: to_k8
@@ -445,6 +458,7 @@ light_paths:
     name: Transmitted Brightfield
     illumination_sequence: [] # Intentionally empty as no specific transmitted source is documented
     detection_sequence:
+      - optical_path_element_id: trinocular_port_selector
       - branches:
           selection_mode: exclusive
           items:

@@ -130,17 +130,30 @@ hardware:
         - widefield_fluorescence
         - flim
         
-  optical_path_elements: []
+  optical_path_elements:
+    - id: trinocular_port_selector
+      name: Trinocular Port Selector
+      stage_role: splitter
+      element_type: splitter
+      selection_mode: exclusive
+      supported_branch_modes:
+        - selected
+      supported_branch_count: 2
+      modalities:
+        - widefield_fluorescence
+        - flim
+
 
 light_paths:
-  - id: flim_widefield # CORRECTED: Updated ID to better reflect system modalities
+  - id: flim # Canonical route identifier for the installed FLIM detection path
     name: FLIM / Epi-fluorescence
     illumination_sequence:
       - source_id: multi_led_excitation
       - source_id: multi_led_excitation_2
       - source_id: multi_led_excitation_3
     detection_sequence:
-      - branches: # ADDED: Required terminal routing to explicitly defined endpoints
+      - optical_path_element_id: trinocular_port_selector
+      - branches:
           selection_mode: exclusive
           items:
             - branch_id: to_camera

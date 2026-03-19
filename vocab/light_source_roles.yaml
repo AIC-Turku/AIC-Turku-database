@@ -17,3 +17,8 @@ terms:
     label: "Transmitted Illumination"
     description: "Diascopic or transmitted-light illumination source used for brightfield, phase contrast, darkfield, or DIC."
     synonyms: ["transmitted", "brightfield", "diascopic", "dia"]
+
+  - id: reflected_illumination
+    label: "Reflected Illumination"
+    description: "Source provides reflected-light illumination onto the sample from the objective or an epi/top-light path."
+    synonyms: ["epi illumination", "incident illumination"]
