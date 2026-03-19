@@ -71,7 +71,7 @@ hardware:
     notes: CrestOptics X-Light V3 HTDS (Laser-SP disk-Throughput-V2&V3 50:250um)
     url: https://crestoptics.com/x-light-v3/
   detectors:
-  - id: detector_1
+  - id: kinetix_master_camera
     kind: scmos
     manufacturer: Photometrics
     model: Kinetix
@@ -80,7 +80,7 @@ hardware:
     sensor_format_px: 3200 x 3200
     notes: Master Camera (1st F-cam) - GFP/Cy5 in DualCam mode
     url: https://www.photometrics.com/products/kinetix-family/kinetix
-  - id: detector_2
+  - id: kinetix_slave_camera
     kind: scmos
     manufacturer: Photometrics
     model: Kinetix
