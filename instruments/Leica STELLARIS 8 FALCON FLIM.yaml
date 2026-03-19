@@ -162,10 +162,16 @@ hardware:
       stage_role: dichroic
       id: aobs
       element_type: splitter # ADDED: Required to route excitation/emission
-      selection_mode: concurrent
+      selection_mode: multiple
+      supported_branch_modes:
+        - transmitted
+        - reflected
       modalities:
         - confocal_point
         - spectral_imaging
+        - flim
+        - fcs
+        - transmitted_brightfield
 
   # CORRECTED: Removed deprecated 'endpoints: []' array
 
@@ -179,7 +185,7 @@ light_paths:
     detection_sequence:
       - optical_path_element_id: aobs
       - branches: # ADDED: Valid detection routing to endpoints
-          selection_mode: concurrent
+          selection_mode: multiple
           items:
             - branch_id: to_hyd
               label: "To HyD Detectors"
@@ -194,6 +200,7 @@ light_paths:
     name: Transmitted Brightfield
     illumination_sequence: []
     detection_sequence:
+      - optical_path_element_id: aobs
       - branches:
           selection_mode: exclusive
           items:

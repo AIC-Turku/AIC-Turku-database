@@ -50,10 +50,10 @@ hardware:
     
   # MISSING: The 'hardware.stages' array is required because 'motorized_stage' and 'piezo_z_stage' are defined in modules
   stages: 
-    - type: motorized_stage # Conditional requirement
+    - type: xy_motorized # Canonical stage type for the installed XY stage
       manufacturer: ASI
       model: ''
-    - type: piezo_z_stage # Conditional requirement
+    - type: z_piezo # Canonical stage type for the installed piezo Z stage
       manufacturer: ASI
       model: ''
       

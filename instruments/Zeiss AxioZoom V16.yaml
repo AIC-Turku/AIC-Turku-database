@@ -18,7 +18,7 @@ modalities:
   - reflected_brightfield # ADDED: Required to properly classify the top-illumination ring light
 
 modules:
-  - type: structured_illumination # CORRECTED: Changed 'name: sim_module' to canonical type
+  - type: sim_module # Canonical module ID for the installed ApoTome structured-illumination add-on
     notes: Zeiss ApoTome.2 module (structured illumination for optical sectioning)
     url: ''
     manufacturer: Zeiss
@@ -175,7 +175,7 @@ hardware:
         - transmitted_brightfield
         - reflected_brightfield
       supported_branch_modes:
-        - exclusive
+        - selected
       supported_branch_count: 3
       notes: Splits light between the eyepieces, mono camera, and color camera.
 

@@ -119,3 +119,8 @@ terms:
     label: "Live Cell Imaging"
     description: "Refers to imaging workflows optimized for viable cells over time with controlled environment and low phototoxicity. Can be combined with multiple optical modalities."
     synonyms: ["live imaging", "time-lapse live imaging"]
+
+  - id: reflected_brightfield
+    label: "Reflected Brightfield"
+    description: "Uses incident reflected light rather than transmitted illumination to visualize opaque or thick specimens in brightfield mode."
+    synonyms: ["epi brightfield", "reflected light brightfield"]

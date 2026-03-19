@@ -31,6 +31,14 @@ terms:
     label: "Notch"
     description: "Requires center_nm and width_nm."
 
+  - id: filter_cube
+    label: "Filter Cube"
+    description: "Linked excitation/dichroic/emission cube or filter-set assembly installed as a single selectable position."
+
+  - id: analyzer
+    label: "Analyzer"
+    description: "Polarization analyzer element used in DIC or polarized-light detection paths."
+
   - id: empty
     label: "Empty"
     description: "An explicitly empty slot."
@@ -49,4 +57,3 @@ terms:
   - id: neutral_density
     label: "Neutral Density"
     description: "Broadband neutral-density attenuator. Spectral shape is preserved even if total intensity is reduced."
-

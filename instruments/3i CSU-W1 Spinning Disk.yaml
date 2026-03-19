@@ -53,7 +53,7 @@ hardware:
     notes: Okolab Full Enclosure Incubator with temperature and digital CO2 control
     
   stages:
-    - type: piezo_z_stage
+    - type: z_piezo
       manufacturer: ASI
       model: PZ-2000
       notes: ASI piezo stage (300 µm travel)
@@ -423,6 +423,19 @@ hardware:
             - center_nm: 700
               width_nm: 25
 
+    - name: Trinocular Port Selector
+      stage_role: splitter
+      id: trinocular_port_selector
+      element_type: splitter
+      selection_mode: exclusive
+      supported_branch_modes:
+        - selected
+      supported_branch_count: 3
+      modalities:
+        - confocal
+        - epi
+        - transmitted
+
 light_paths:
   - id: confocal
     name: Confocal
@@ -436,7 +449,8 @@ light_paths:
     detection_sequence:
       - optical_path_element_id: csu_w1_dichroic_slider
       - optical_path_element_id: csu_w1_emission_wheel
-      - branches: # ADDED: Splitting logic for Confocal
+      - optical_path_element_id: trinocular_port_selector
+      - branches:
           selection_mode: exclusive
           items:
             - branch_id: to_camera_1
@@ -457,7 +471,8 @@ light_paths:
     detection_sequence:
       - optical_path_element_id: widefield_dichroic
       - optical_path_element_id: widefield_emission
-      - branches: # ADDED: 3-way split logic for Epi
+      - optical_path_element_id: trinocular_port_selector
+      - branches:
           selection_mode: exclusive
           items:
             - branch_id: to_camera_1
@@ -477,6 +492,7 @@ light_paths:
     name: Transmitted Light
     illumination_sequence: [] # Intentionally left empty since no specific brightfield source is declared
     detection_sequence:
+      - optical_path_element_id: trinocular_port_selector
       - branches:
           selection_mode: exclusive
           items:

@@ -21,15 +21,32 @@ from typing import Any
 
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
 NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough", "neutral_density"}
-ROUTE_TAGS = {"epi", "tirf", "confocal", "multiphoton", "transmitted", "shared", "all"}
+ROUTE_TAGS = {"epi", "widefield_fluorescence", "tirf", "confocal", "confocal_point", "confocal_spinning_disk", "multiphoton", "light_sheet", "transmitted", "transmitted_brightfield", "phase_contrast", "darkfield", "dic", "reflected_brightfield", "optical_sectioning", "spectral_imaging", "flim", "fcs", "ism", "smlm", "spt", "fret", "shared", "all"}
 ROUTE_LABELS = {
     "confocal": "Confocal",
+    "confocal_point": "Point-Scanning Confocal",
+    "confocal_spinning_disk": "Spinning-Disk Confocal",
     "epi": "Epi-fluorescence",
+    "widefield_fluorescence": "Epi-fluorescence",
     "tirf": "TIRF",
     "multiphoton": "Multiphoton",
+    "light_sheet": "Light Sheet",
     "transmitted": "Transmitted light",
+    "transmitted_brightfield": "Transmitted Brightfield",
+    "phase_contrast": "Phase Contrast",
+    "darkfield": "Darkfield",
+    "dic": "DIC",
+    "reflected_brightfield": "Reflected Brightfield",
+    "optical_sectioning": "Optical Sectioning",
+    "spectral_imaging": "Spectral Imaging",
+    "flim": "FLIM",
+    "fcs": "FCS",
+    "ism": "ISM",
+    "smlm": "SMLM",
+    "spt": "SPT",
+    "fret": "FRET",
 }
-ROUTE_SORT_ORDER = ("confocal", "epi", "tirf", "multiphoton", "transmitted")
+ROUTE_SORT_ORDER = ("confocal", "confocal_point", "confocal_spinning_disk", "epi", "widefield_fluorescence", "tirf", "multiphoton", "light_sheet", "transmitted", "transmitted_brightfield", "phase_contrast", "darkfield", "dic", "reflected_brightfield", "optical_sectioning", "spectral_imaging", "flim", "fcs", "ism", "smlm", "spt", "fret")
 CUBE_LINK_KEYS = ("excitation_filter", "dichroic", "emission_filter")
 CAMERA_DETECTOR_KINDS = {"camera", "scmos", "cmos", "ccd", "emccd"}
 POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}

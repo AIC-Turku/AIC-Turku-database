@@ -49,7 +49,7 @@ hardware:
     type: infrared_reflection
     
   stages:
-    - type: motorized_stage # CORRECTED: Replaced non-standard 'xy_motorized'
+    - type: xy_motorized # Canonical stage type for the installed XY stage
       manufacturer: Zeiss # ADDED: Required for completeness
       model: Motorized XY Stage
       notes: Motorized XY stage
@@ -260,7 +260,7 @@ hardware:
         - transmitted_brightfield
         - tirf
       supported_branch_modes:
-        - exclusive
+        - selected
       supported_branch_count: 3
 
   # CORRECTED: Removed deprecated hardware.endpoints block.

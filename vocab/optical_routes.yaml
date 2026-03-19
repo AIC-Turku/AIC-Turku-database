@@ -2,25 +2,76 @@ terms:
   - id: epi
     label: "Epi"
     description: "Epifluorescence / epi illumination route."
+  - id: widefield_fluorescence
+    label: "Widefield Fluorescence"
+    description: "Widefield epifluorescence route identifier used by instrument light_paths and route guards."
   - id: tirf
     label: "TIRF"
     description: "TIRF excitation route."
   - id: confocal
     label: "Confocal"
-    description: "Point- or disk-confocal route."
+    description: "Generic point- or disk-confocal route."
+  - id: confocal_point
+    label: "Point-Scanning Confocal"
+    description: "Point-scanning confocal route identifier used when the route is explicitly distinct from spinning-disk confocal."
+  - id: confocal_spinning_disk
+    label: "Spinning-Disk Confocal"
+    description: "Spinning-disk confocal route identifier used by light_paths and route guards."
   - id: multiphoton
     label: "Multiphoton"
     description: "Multiphoton excitation route."
-  - id: shared
-    label: "Shared"
-    description: "Shared across multiple routes."
+  - id: light_sheet
+    label: "Light Sheet"
+    description: "Light-sheet illumination/detection route."
   - id: transmitted
     label: "Transmitted"
-    description: "Transmitted light route used for brightfield, darkfield, phase contrast, and DIC."
+    description: "Generic transmitted-light route used for brightfield, darkfield, phase contrast, and DIC."
     synonyms:
       - diascopic
       - dia
       - trans
+  - id: transmitted_brightfield
+    label: "Transmitted Brightfield"
+    description: "Transmitted brightfield route identifier used by light_paths and route guards."
+  - id: phase_contrast
+    label: "Phase Contrast"
+    description: "Phase-contrast route identifier used by light_paths and route guards."
+  - id: darkfield
+    label: "Darkfield"
+    description: "Darkfield route identifier used by light_paths and route guards."
+  - id: dic
+    label: "Differential Interference Contrast"
+    description: "DIC route identifier used by light_paths and route guards."
+  - id: reflected_brightfield
+    label: "Reflected Brightfield"
+    description: "Reflected-light brightfield route identifier used by stereo/zoom microscopes and top-illumination systems."
+  - id: optical_sectioning
+    label: "Optical Sectioning"
+    description: "Structured optical-sectioning route identifier used by grid- or patterned-illumination systems."
+  - id: spectral_imaging
+    label: "Spectral Imaging"
+    description: "Spectral imaging route identifier used when wavelength-resolved detection is modeled explicitly."
+  - id: flim
+    label: "FLIM"
+    description: "Fluorescence lifetime imaging route identifier."
+  - id: fcs
+    label: "FCS"
+    description: "Fluorescence correlation spectroscopy route identifier."
+  - id: ism
+    label: "Image Scanning Microscopy"
+    description: "Image-scanning microscopy route identifier, including Airyscan-style detection routes."
+  - id: smlm
+    label: "SMLM"
+    description: "Single-molecule localization microscopy route identifier."
+  - id: spt
+    label: "SPT"
+    description: "Single-particle tracking route identifier."
+  - id: fret
+    label: "FRET"
+    description: "FRET imaging route identifier."
+  - id: shared
+    label: "Shared"
+    description: "Shared across multiple routes."
   - id: all
     label: "All"
     description: "Applies to all routes."

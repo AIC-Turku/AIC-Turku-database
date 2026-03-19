@@ -17,7 +17,7 @@ modalities:
   - phase_contrast
 
 modules:
-  - type: vessel_holder # CORRECTED: Changed from legacy 'name'
+  - type: universal_vessel_holder # Canonical module ID for the installed vessel holder
     manufacturer: Thermo Fisher
     model: Universal Vessel Holder
     product_code: AMEP-VH009

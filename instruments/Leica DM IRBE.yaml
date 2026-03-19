@@ -166,8 +166,7 @@ hardware:
         - widefield_fluorescence
         - transmitted_brightfield
       supported_branch_modes:
-        - exclusive # ADDED: Support for exclusive branching
-        - concurrent
+        - selected
       supported_branch_count: 2 # CORRECTED: Increased to 2 for camera + eyepieces
       notes: Splits light between eyepieces and camera port.
 
