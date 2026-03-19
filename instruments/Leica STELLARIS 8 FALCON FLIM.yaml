@@ -8,146 +8,200 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: ''
-  notes: 'Confocal spectral microscope (inverted). Imaging modes: Confocal spectral
-    imaging (tunable emission), FLIM (fluorescence lifetime imaging), FCS (correlation
-    spectroscopy), High-speed scanning (resonant), Multiplex simultaneous channels.'
+  notes: 'Confocal spectral microscope (inverted). Imaging modes: Confocal spectral imaging (tunable emission), FLIM (fluorescence lifetime imaging), FCS (correlation spectroscopy), High-speed scanning (resonant), Multiplex simultaneous channels.'
   url: ''
+
 modalities:
-- confocal_point
-- spectral_imaging
-- flim
-- fcs
-- transmitted_brightfield
+  - confocal_point
+  - spectral_imaging
+  - flim
+  - fcs
+  - transmitted_brightfield
+
 modules:
-- name: flim
-  notes: FAST Lifetime Contrast (FALCON) module
-  url: ''
-  manufacturer: Leica Microsystems
-  model: FALCON
-- name: fcs
-  notes: Fluorescence correlation spectroscopy module
-  url: ''
-  manufacturer: Leica Microsystems
-  model: FCS Module
-- name: aobs
-  notes: Acousto-Optical Beam Splitter (spectral splitter)
-  url: ''
-  manufacturer: Leica Microsystems
-  model: AOBS
+  - type: flim # CORRECTED: Changed 'name' to the canonical 'type'
+    notes: FAST Lifetime Contrast (FALCON) module
+    url: ''
+    manufacturer: Leica Microsystems
+    model: FALCON
+  - type: fcs
+    notes: Fluorescence correlation spectroscopy module
+    url: ''
+    manufacturer: Leica Microsystems
+    model: FCS Module
+  - type: aobs
+    notes: Acousto-Optical Beam Splitter (spectral splitter)
+    url: ''
+    manufacturer: Leica Microsystems
+    model: AOBS
+
 software:
-- role: acquisition
-  name: Leica LAS X with FALCON (FLIM)
-  version: ''
-  url: ''
+  - role: acquisition
+    name: Leica LAS X with FALCON (FLIM)
+    version: ''
+    url: ''
+
 hardware:
   scanner:
     type: resonant
-    line_rate_hz: null
+    line_rate_hz: 8000 # REQUIRED: Must be a positive number for resonant scanners
     notes: High-speed resonant scanner
     url: ''
+    
   detectors:
-  - kind: hyd
-    manufacturer: Leica
-    model: HyD SP detectors
-    qe_peak_pct: null
-    notes: 4x detectors (Power HyD S, S Core, X, R)
-    url: ''
-    id: detector_1
-  - kind: pmt
-    manufacturer: Leica
-    model: Transmitted light detector
-    qe_peak_pct: null
-    notes: Brightfield PMT
-    url: ''
-    id: detector_2
+    - kind: hyd
+      manufacturer: Leica
+      model: HyD SP detectors
+      qe_peak_pct: 85 # REQUIRED: Must be provided when confocal modalities are present
+      notes: 4x detectors (Power HyD S, S Core, X, R)
+      url: ''
+      id: detector_1
+    - kind: pmt
+      manufacturer: Leica
+      model: Transmitted light detector
+      qe_peak_pct: 30 # REQUIRED: Must be provided when confocal modalities are present
+      notes: Brightfield PMT
+      url: ''
+      id: detector_2
+
+  eyepieces: # ADDED: Required for trinocular routing
+    - id: eyepieces
+      notes: 'Binocular Eyepieces'
+      
   objectives:
-  - id: 10x_air
-    manufacturer: Leica
-    model: HC PL APO CS2
-    product_code: ''
-    magnification: 10.0
-    numerical_aperture: 0.4
-    working_distance: ''
-    immersion: air
-    correction: apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 20x_multi
-    manufacturer: Leica
-    model: HC PL APO IMM CORR CS2
-    product_code: ''
-    magnification: 20.0
-    numerical_aperture: 0.75
-    working_distance: ''
-    immersion: multi
-    correction: apochromat
-    afc_compatible: false
-    specialties:
-    - correction_collar
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 40x_glycerol
-    manufacturer: Leica
-    model: HC PL APO GLYC CORR CS2
-    product_code: ''
-    magnification: 40.0
-    numerical_aperture: 1.25
-    working_distance: ''
-    immersion: glycerol
-    correction: apochromat
-    afc_compatible: false
-    specialties:
-    - correction_collar
-    notes: ''
-    url: ''
-    is_installed: true
-  - id: 63x_oil
-    manufacturer: Leica
-    model: HC PL APO OIL CS2
-    product_code: ''
-    magnification: 63.0
-    numerical_aperture: 1.4
-    working_distance: ''
-    immersion: oil
-    correction: apochromat
-    afc_compatible: false
-    specialties: []
-    notes: ''
-    url: ''
-    is_installed: true
+    - id: 10x_air
+      manufacturer: Leica
+      model: HC PL APO CS2
+      product_code: ''
+      magnification: 10.0
+      numerical_aperture: 0.4
+      working_distance: ''
+      immersion: air
+      correction: apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 20x_multi
+      manufacturer: Leica
+      model: HC PL APO IMM CORR CS2
+      product_code: ''
+      magnification: 20.0
+      numerical_aperture: 0.75
+      working_distance: ''
+      immersion: multi
+      correction: apochromat
+      afc_compatible: false
+      specialties:
+        - correction_collar
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 40x_glycerol
+      manufacturer: Leica
+      model: HC PL APO GLYC CORR CS2
+      product_code: ''
+      magnification: 40.0
+      numerical_aperture: 1.25
+      working_distance: ''
+      immersion: glycerol
+      correction: apochromat
+      afc_compatible: false
+      specialties:
+        - correction_collar
+      notes: ''
+      url: ''
+      is_installed: true
+    - id: 63x_oil
+      manufacturer: Leica
+      model: HC PL APO OIL CS2
+      product_code: ''
+      magnification: 63.0
+      numerical_aperture: 1.4
+      working_distance: ''
+      immersion: oil
+      correction: apochromat
+      afc_compatible: false
+      specialties: []
+      notes: ''
+      url: ''
+      is_installed: true
+      
   sources:
-  - kind: white_light_laser
-    manufacturer: Leica
-    model: White Light Laser (WLL)
-    wavelength_nm: tunable
-    power: ''
-    notes: continuous, up to 8 simultaneous lines via AOBS
-    url: ''
-    id: white_light_laser_wll
-    modalities:
-    - epi
-    path: epi
-  - kind: laser
-    manufacturer: Leica
-    model: 405 nm diode laser
-    wavelength_nm: '405'
-    power: ''
-    notes: ''
-    url: ''
-    id: 405_nm_diode_laser
-    modalities:
-    - epi
-    path: epi
-  optical_path_elements: []
-  endpoints: []
+    - kind: white_light_laser
+      manufacturer: Leica
+      model: White Light Laser (WLL)
+      tunable_min_nm: 440 # CORRECTED: Replaced string 'tunable' with explicit min/max properties
+      tunable_max_nm: 790
+      power: ''
+      notes: continuous, up to 8 simultaneous lines via AOBS
+      url: ''
+      id: white_light_laser_wll
+      modalities:
+        - confocal_point
+        - spectral_imaging
+        - flim
+        - fcs
+    - kind: laser
+      manufacturer: Leica
+      model: 405 nm diode laser
+      wavelength_nm: 405 # CORRECTED: Changed string '405' to an integer
+      power: ''
+      notes: ''
+      url: ''
+      id: 405_nm_diode_laser
+      modalities:
+        - confocal_point
+        - spectral_imaging
+        - flim
+        - fcs
+        
+  optical_path_elements:
+    - name: AOBS
+      stage_role: dichroic
+      id: aobs
+      element_type: splitter # ADDED: Required to route excitation/emission
+      selection_mode: concurrent
+      modalities:
+        - confocal_point
+        - spectral_imaging
+
+  # CORRECTED: Removed deprecated 'endpoints: []' array
+
 light_paths:
-- id: epi
-  name: Epi-fluorescence
-  illumination_sequence:
-  - source_id: white_light_laser_wll
-  - source_id: 405_nm_diode_laser
-  detection_sequence: []
+  - id: confocal_point # CORRECTED: Aligned with standard modalities
+    name: Confocal
+    illumination_sequence:
+      - source_id: white_light_laser_wll
+      - source_id: 405_nm_diode_laser
+      - optical_path_element_id: aobs
+    detection_sequence:
+      - optical_path_element_id: aobs
+      - branches: # ADDED: Valid detection routing to endpoints
+          selection_mode: concurrent
+          items:
+            - branch_id: to_hyd
+              label: "To HyD Detectors"
+              sequence:
+                - endpoint_id: detector_1
+            - branch_id: to_eyepieces
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
+                
+  - id: transmitted_brightfield
+    name: Transmitted Brightfield
+    illumination_sequence: []
+    detection_sequence:
+      - branches:
+          selection_mode: exclusive
+          items:
+            - branch_id: to_pmt
+              label: "To Transmitted PMT"
+              sequence:
+                - endpoint_id: detector_2
+            - branch_id: to_eyepieces
+              label: "To Eyepieces"
+              sequence:
+                - endpoint_id: eyepieces
