@@ -8,133 +8,135 @@ instrument:
   stand_orientation: other
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: 'Light-sheet fluorescence microscope using Airy-beam illumination for long-term
-    volumetric live imaging with reduced photobleaching and striping artefacts. Approximate
-    performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial
-    resolution, and lower phototoxic burden due to single exposure per z-slice and
-    self-healing/non-diffractive beam propagation.'
+  notes: 'Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation.'
   url: ''
+
 modalities:
-- light_sheet
-- widefield_fluorescence
+  - light_sheet
+
 modules:
-- name: environmental_enclosure
-  notes: Laser safety enclosure CUBE & BOX
-  url: ''
-  manufacturer: M Squared
-  model: CUBE & BOX Laser Safety Enclosure
+  - type: environmental_enclosure 
+    notes: Laser safety enclosure CUBE & BOX
+    url: ''
+    manufacturer: M Squared
+    model: CUBE & BOX Laser Safety Enclosure
+
 software:
-- role: acquisition
-  name: M Squared Cubes Acquisition
-  version: ''
-  url: ''
-- role: processing
-  name: M Squared Cubes Deconvolution
-  version: ''
-  url: ''
+  - role: acquisition
+    name: M Squared Cubes Acquisition
+    version: ''
+    url: ''
+  - role: processing
+    name: M Squared Cubes Deconvolution
+    version: ''
+    url: ''
+
 hardware:
   environment:
     temperature_control: true
+    
   scanner:
     type: tandem
     light_sheet_type: airy_beam
-    line_rate_hz: null
-    notes: Galvanometric scanner and remote focusing lenses on illumination/detection;
-      integrated Resonant scanner for beam scanning.
+    line_rate_hz: 8000 
+    notes: Galvanometric scanner and remote focusing lenses on illumination/detection; integrated Resonant scanner for beam scanning.
     url: ''
+    
   detectors:
-  - kind: scmos
-    manufacturer: Hamamatsu
-    model: ORCA-Flash4.0 V3 (C11440-22CU)
-    pixel_pitch_um: 6.5
-    sensor_format_px: 2048 x 2048
-    notes: Supplied with water chiller for camera chip cooling
-    url: ''
-    id: detector_1
-  filters:
-  - name: GFP filter
-    location: Emission Wheel (6-position)
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: 520/40
-    notes: ''
-    url: ''
-  - name: GFP longpass
-    location: Emission Wheel (6-position)
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: LP 500
-    notes: ''
-    url: ''
-  - name: RFP longpass
-    location: Emission Wheel (6-position)
-    product_code: ''
-    excitation: ''
-    dichroic: ''
-    emission: LP 570
-    notes: ''
-    url: ''
+    - kind: scmos
+      manufacturer: Hamamatsu
+      model: ORCA-Flash4.0 V3 (C11440-22CU)
+      pixel_pitch_um: 6.5
+      qe_peak_pct: 82 # ADDED: Added standard peak QE for this sensor
+      sensor_format_px: 2048 x 2048
+      notes: Supplied with water chiller for camera chip cooling
+      url: ''
+      id: detector_1
+      
   objectives:
-  - id: 17x_multi
-    manufacturer: Special Optics
-    model: 54-10-12 Airy beam dipping objective
-    product_code: 54-10-12
-    magnification: 17.0
-    numerical_aperture: 0.4
-    working_distance: 12 mm
-    immersion: multi
-    correction: ''
-    afc_compatible: false
-    specialties:
-    - cleared_tissue_imaging
-    notes: Excitation and detection objectives designed for dipping media with refractive
-      index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across
-      RI. FOV 1.2 mm diameter.
-    url: ''
-    is_installed: true
+    - id: 17x_multi
+      manufacturer: Special Optics
+      model: 54-10-12 Airy beam dipping objective
+      product_code: 54-10-12
+      magnification: 17.0
+      numerical_aperture: 0.4
+      working_distance: 12 mm
+      immersion: multi
+      correction: fluorite 
+      afc_compatible: false
+      specialties:
+        - cleared_tissue_imaging
+      notes: 'Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI. FOV 1.2 mm diameter.'
+      url: ''
+      is_installed: true
+      
   sources:
-  - kind: laser
-    manufacturer: Coherent OBIS
-    model: 488 nm laser
-    wavelength_nm: '488'
-    power: 100 mW
-    notes: ''
-    url: ''
-    id: 488_nm_laser
-    modalities:
-    - epi
-    path: epi
-  - kind: laser
-    manufacturer: Coherent OBIS
-    model: 561 nm laser
-    wavelength_nm: '561'
-    power: 80 mW
-    notes: ''
-    url: ''
-    id: 561_nm_laser
-    modalities:
-    - epi
-    path: epi
-  - kind: laser
-    manufacturer: Coherent OBIS
-    model: 640 nm laser (LX)
-    wavelength_nm: '640'
-    power: 75 mW
-    notes: 'FIBER PIGTAIL:UFC: Galaxy'
-    url: ''
-    id: 640_nm_laser_lx
-    modalities:
-    - epi
-    path: epi
-  optical_path_elements: []
-  endpoints: []
+    - kind: laser
+      manufacturer: Coherent OBIS
+      model: 488 nm laser
+      wavelength_nm: 488 
+      power: 100 mW
+      notes: ''
+      url: ''
+      id: 488_nm_laser
+      modalities:
+        - light_sheet 
+
+    - kind: laser
+      manufacturer: Coherent OBIS
+      model: 561 nm laser
+      wavelength_nm: 561
+      power: 80 mW
+      notes: ''
+      url: ''
+      id: 561_nm_laser
+      modalities:
+        - light_sheet
+    - kind: laser
+      manufacturer: Coherent OBIS
+      model: 640 nm laser (LX)
+      wavelength_nm: 640
+      power: 75 mW
+      notes: 'FIBER PIGTAIL:UFC: Galaxy'
+      url: ''
+      id: 640_nm_laser_lx
+      modalities:
+        - light_sheet
+        
+  optical_path_elements:
+
+    - name: Emission Wheel
+      stage_role: emission
+      id: emission_wheel
+      element_type: filter_wheel
+      modalities:
+        - light_sheet
+      positions:
+        Pos_1:
+          name: GFP filter
+          component_type: bandpass
+          bands: # CORRECTED: Translated 520/40 string to canonical bands array
+            - center_nm: 520
+              width_nm: 40
+        Pos_2:
+          name: GFP longpass
+          component_type: longpass
+          cut_on_nm: # CORRECTED: Translated LP 500 string to canonical cut_on_nm array
+            - 500
+        Pos_3:
+          name: RFP longpass
+          component_type: longpass
+          cut_on_nm:
+            - 570
+
+
 light_paths:
-- id: epi
-  name: Epi-fluorescence
-  illumination_sequence:
-  - source_id: 488_nm_laser
-  - source_id: 561_nm_laser
-  - source_id: 640_nm_laser_lx
-  detection_sequence: []
+  - id: light_sheet # CORRECTED: Aligned ID with standard modalities
+    name: Light-Sheet
+    illumination_sequence:
+      - source_id: 488_nm_laser
+      - source_id: 561_nm_laser
+      - source_id: 640_nm_laser_lx
+    detection_sequence:
+      - optical_path_element_id: emission_wheel
+      - endpoint_id: detector_1 # ADDED: Sequence routed directly to the detector
