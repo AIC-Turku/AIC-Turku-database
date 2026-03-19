@@ -101,6 +101,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'section-scanner',
               'section-obj',
               'section-light',
+              'section-route',
               'section-filter',
               'section-splitter',
               'section-det',
@@ -112,6 +113,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'scanner-list',
               'obj-list',
               'light-list',
+              'route-select',
               'det-list',
               'magnification-changer-list',
               'optical-modulator-list',
@@ -119,7 +121,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'filter-list',
               'splitter-list',
             ];
-            requiredIds.forEach((id) => ensureElement(id, id === 'system-select' ? 'select' : id === 'output-text' ? 'textarea' : 'div'));
+            requiredIds.forEach((id) => ensureElement(id, (id === 'system-select' || id === 'route-select') ? 'select' : id === 'output-text' ? 'textarea' : 'div'));
             ensureElement('add-btn', 'button');
             ensureElement('copy-btn', 'button');
             ensureElement('clear-btn', 'button');
@@ -406,6 +408,78 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("Some instrument metadata is missing", result["output"])
         self.assertIn("ask staff", result["output"])
         self.assertIn("Objective NA", result["output"])
+
+    def test_route_selector_filters_optical_hardware_from_dto_route_usage(self) -> None:
+        instrument = {
+            "id": "scope-route",
+            "display_name": "Scope Route",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [
+                    {"id": "source:laser_488", "display_label": "488 Laser", "display_subtitle": "Light Source"},
+                    {"id": "source:laser_561", "display_label": "561 Laser", "display_subtitle": "Light Source"},
+                ],
+                "detectors": [
+                    {"id": "endpoint:cam", "display_label": "Main Camera", "display_subtitle": "Endpoint"},
+                    {"id": "endpoint:hyd", "display_label": "HyD", "display_subtitle": "Endpoint"},
+                ],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "filters": [],
+                    "splitters": [],
+                    "methods_route_views": [
+                        {
+                            "id": "epi",
+                            "display_label": "Epi",
+                            "light_sources": [{"id": "source:laser_488", "display_label": "488 Laser", "display_subtitle": "Light Source"}],
+                            "filters": [{"id": "optical_path_element:ex_488", "display_label": "EX 488", "display_subtitle": "Optical Element"}],
+                            "splitters": [],
+                            "detectors": [{"id": "endpoint:cam", "display_label": "Main Camera", "display_subtitle": "Endpoint"}],
+                        },
+                        {
+                            "id": "confocal",
+                            "display_label": "Confocal",
+                            "light_sources": [{"id": "source:laser_561", "display_label": "561 Laser", "display_subtitle": "Light Source"}],
+                            "filters": [{"id": "optical_path_element:pinhole", "display_label": "Pinhole", "display_subtitle": "Optical Element"}],
+                            "splitters": [],
+                            "detectors": [{"id": "endpoint:hyd", "display_label": "HyD", "display_subtitle": "Endpoint"}],
+                        },
+                    ],
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-route';
+            systemSelect.listeners.change({ target: systemSelect });
+            const routeSelect = document.getElementById('route-select');
+            routeSelect.value = 'confocal';
+            routeSelect.listeners.change({ target: routeSelect });
+            return {
+              routeVisible: document.getElementById('section-route').style.display,
+              lightCount: document.getElementById('light-list').children.length,
+              lightLabel: document.getElementById('light-list').children[0].children[1].children[0].textContent,
+              filterLabel: document.getElementById('filter-list').children[0].children[1].children[0].textContent,
+              detectorLabel: document.getElementById('det-list').children[0].children[1].children[0].textContent,
+            };
+            """,
+        )
+
+        self.assertEqual(result["routeVisible"], "")
+        self.assertEqual(result["lightCount"], 1)
+        self.assertIn("561 Laser", result["lightLabel"])
+        self.assertIn("Pinhole", result["filterLabel"])
+        self.assertIn("HyD", result["detectorLabel"])
 
 
 if __name__ == "__main__":

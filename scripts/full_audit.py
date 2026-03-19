@@ -179,7 +179,14 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
 
     source_rows = _coerce_component_list(hardware.get("sources")) or _coerce_component_list(hardware.get("light_sources"))
     source_count = len(source_rows)
-    detector_count = len(_coerce_component_list(hardware.get("detectors")))
+    detector_rows = _coerce_component_list(hardware.get("detectors"))
+    if not detector_rows:
+        detector_rows = [
+            row
+            for row in _coerce_component_list(hardware.get("endpoints"))
+            if str(row.get("endpoint_type") or row.get("kind") or row.get("type")).strip().lower() in {"detector", "camera", "camera_port"}
+        ]
+    detector_count = len(detector_rows)
     payload_source_count = sum(len(group.get("positions", {})) for group in runtime_projection.get("light_sources", []) if isinstance(group, dict))
     payload_detector_count = len([item for item in runtime_projection.get("detectors", []) if isinstance(item, dict)])
     raw_splitters = {"total_distinct_entries": len([item for item in canonical_model.get("optical_path_elements", []) if item.get("stage_role") == "splitter"])}
@@ -196,7 +203,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             else:
                 infos.append(issue)
 
-    for index, detector in enumerate(_coerce_component_list(hardware.get("detectors"))):
+    for index, detector in enumerate(detector_rows):
         for issue in _detector_readiness_issue(index, detector):
             if issue["severity"] == "warning":
                 warnings.append(issue)

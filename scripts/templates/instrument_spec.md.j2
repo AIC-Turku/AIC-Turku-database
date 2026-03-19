@@ -237,13 +237,41 @@
 .aic-lightpath-muted { color: #64748b; }
 </style>
 
+{% if hw.optical_path.hardware_inventory_renderables %}
+<div class="aic-lightpath-callout">
+  <strong>Optical hardware inventory</strong>
+  <table class="aic-lightpath-index">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Component</th>
+        <th>Class</th>
+        <th>Routes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in hw.optical_path.hardware_inventory_renderables %}
+      <tr>
+        <td><span class="aic-lightpath-nodeid">{{ item.display_number }}</span></td>
+        <td><strong>{{ item.display_label }}</strong>{% if item.model %}<br><span class="aic-lightpath-muted">{{ item.manufacturer }} {{ item.model }}</span>{% endif %}</td>
+        <td>{{ item.display_subtitle }}</td>
+        <td>{{ (item.route_usage_summary or []) | join(', ') or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% for graph in hw.optical_path.static_graphs or [hw.optical_path.static_graph] %}
 <div class="aic-lightpath-panel">
   <div class="aic-lightpath-panel__header">
-    <div class="aic-lightpath-panel__title">Logical light-path graph</div>
-    <p class="aic-lightpath-panel__subtitle">A numbered, static overview of the instrument’s optical graph. The numbering below is intended to line up the human-readable spec sheet with the machine-readable YAML and the simulator routing model.</p>
+    <div class="aic-lightpath-panel__title">{{ graph.route_label or 'Logical light-path graph' }}</div>
+    <p class="aic-lightpath-panel__subtitle">A numbered, static overview of the instrument’s optical graph. Graph numbers reuse the DTO hardware inventory numbers shown above.</p>
   </div>
-  <div class="aic-lightpath-panel__svg">{{ hw.optical_path.static_graph.svg | safe }}</div>
+  <div class="aic-lightpath-panel__svg">{{ graph.svg_markup | safe }}</div>
 </div>
+{% endfor %}
 
 <div class="aic-lightpath-notes">
   <div class="aic-lightpath-callout">

@@ -244,6 +244,41 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertEqual(runtime.get("splitters", [])[0].get("branches", [])[0].get("target_ids"), [])
         self.assertTrue(payload.get("metadata", {}).get("graph_incomplete"))
 
+    def test_authoritative_dto_exposes_inventory_route_usage_and_graph_contract(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "manufacturer": "LaserCo", "model": "488"}],
+                    "optical_path_elements": [
+                        {"id": "main_splitter", "stage_role": "splitter", "element_type": "splitter", "display_label": "Main splitter"},
+                        {"id": "green_filter", "stage_role": "emission", "element_type": "filter_wheel", "display_label": "Green filter"},
+                    ],
+                    "endpoints": [{"id": "cam_main", "endpoint_type": "camera_port", "display_label": "Main camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "main_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "items": [{"branch_id": "camera", "sequence": [{"optical_path_element_id": "green_filter"}, {"endpoint_id": "cam_main"}]}]}},
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertIn("hardware_inventory", payload)
+        self.assertIn("hardware_index_map", payload)
+        self.assertIn("route_hardware_usage", payload)
+        self.assertIn("normalized_endpoints", payload)
+        self.assertEqual(payload["hardware_inventory"][0]["display_number"], 1)
+        self.assertEqual(payload["route_hardware_usage"][0]["route_id"], "epi")
+        self.assertTrue(payload["route_hardware_usage"][0]["hardware_inventory_ids"])
+        self.assertTrue(payload["light_paths"][0]["graph_nodes"])
+        self.assertTrue(payload["light_paths"][0]["graph_edges"])
+        self.assertTrue(payload["light_paths"][0]["branch_blocks"])
+
     def test_methods_and_llm_exports_use_dto_contract_not_raw_yaml_fields(self) -> None:
         inst = {
             "manufacturer": "RAW Manufacturer",

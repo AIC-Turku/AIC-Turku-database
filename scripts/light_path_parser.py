@@ -862,7 +862,38 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
     sources = canonical["sources"]
     elements = canonical["optical_path_elements"]
     endpoints = canonical["endpoints"]
-    light_paths = canonical["light_paths"]
+    raw_light_paths = canonical["light_paths"]
+    hardware_inventory, hardware_index_map = _build_hardware_inventory(sources, elements, endpoints)
+    inventory_lookup = {item["id"]: item for item in hardware_inventory if isinstance(item, dict) and item.get("id")}
+    source_lookup = {entry.get("id"): entry for entry in sources if isinstance(entry, dict) and entry.get("id")}
+    element_lookup = {entry.get("id"): entry for entry in elements if isinstance(entry, dict) and entry.get("id")}
+    endpoint_lookup = {entry.get("id"): entry for entry in endpoints if isinstance(entry, dict) and entry.get("id")}
+    light_paths: list[dict[str, Any]] = []
+    route_hardware_usage: list[dict[str, Any]] = []
+    for route in raw_light_paths:
+        if not isinstance(route, dict):
+            continue
+        resolved_route, usage = _build_route_sequences_and_graph(
+            route,
+            source_lookup=source_lookup,
+            element_lookup=element_lookup,
+            endpoint_lookup=endpoint_lookup,
+            inventory_lookup=inventory_lookup,
+        )
+        light_paths.append(resolved_route)
+        route_hardware_usage.append(usage)
+
+    route_usage_by_inventory_id: dict[str, list[str]] = {}
+    for usage in route_hardware_usage:
+        route_id = _clean_string(usage.get("route_id"))
+        for inventory_id in usage.get("hardware_inventory_ids") or []:
+            route_usage_by_inventory_id.setdefault(inventory_id, [])
+            if route_id and route_id not in route_usage_by_inventory_id[inventory_id]:
+                route_usage_by_inventory_id[inventory_id].append(route_id)
+    for item in hardware_inventory:
+        inventory_id = item.get("id")
+        if inventory_id:
+            item["route_usage_summary"] = route_usage_by_inventory_id.get(inventory_id, [])
     raw_light_paths = instrument_dict.get("light_paths") if isinstance(instrument_dict.get("light_paths"), list) else []
     light_paths_for_validation = raw_light_paths if (_has_canonical_light_path_input(instrument_dict) and raw_light_paths) else light_paths
 
@@ -2161,6 +2192,465 @@ def _splitter_payload(index: int, splitter: dict[str, Any], terminals: list[dict
     return splitter_payload
 
 
+def _component_inventory_key(component_type: str, component_id: str) -> str:
+    return f"{component_type}:{component_id}"
+
+
+def _component_inventory_class(component_type: str, row: dict[str, Any]) -> str:
+    if component_type == "source":
+        return "light_source"
+    if component_type == "endpoint":
+        endpoint_type = _normalize_endpoint_type(row.get("endpoint_type") or row.get("type") or row.get("kind"))
+        if endpoint_type == "eyepiece":
+            return "eyepiece"
+        if endpoint_type == "camera_port":
+            return "camera_port"
+        return "endpoint"
+    stage_role = _clean_string(row.get("stage_role")).lower()
+    if stage_role == "splitter":
+        return "splitter"
+    return "optical_element"
+
+
+def _component_display_label(component_type: str, row: dict[str, Any]) -> str:
+    if component_type == "source":
+        wavelength = row.get("wavelength_nm") or row.get("wavelength")
+        parts = []
+        if wavelength not in (None, ""):
+            parts.append(_format_numeric(wavelength) + " nm")
+        parts.extend(
+            part
+            for part in (
+                _clean_string(row.get("kind") or row.get("type")),
+                _clean_string(row.get("manufacturer")),
+                _clean_string(row.get("model")),
+            )
+            if part
+        )
+        return _clean_string(row.get("display_label") or row.get("name") or " ".join(parts) or row.get("id"))
+    return _clean_string(
+        row.get("display_label")
+        or row.get("name")
+        or " ".join(
+            part for part in (_clean_string(row.get("manufacturer")), _clean_string(row.get("model"))) if part
+        )
+        or row.get("model")
+        or row.get("id")
+    )
+
+
+def _inventory_metadata(component_type: str, row: dict[str, Any]) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    if component_type == "source":
+        source_meta = {
+            key: row.get(key)
+            for key in (
+                "kind",
+                "technology",
+                "role",
+                "timing_mode",
+                "wavelength_nm",
+                "tunable_min_nm",
+                "tunable_max_nm",
+                "power",
+                "pulse_width_ps",
+                "repetition_rate_mhz",
+                "depletion_targets_nm",
+            )
+            if row.get(key) not in (None, "", [])
+        }
+        if source_meta:
+            metadata["source_metadata"] = source_meta
+        return metadata
+    if component_type == "endpoint":
+        endpoint_meta = {
+            key: row.get(key)
+            for key in (
+                "endpoint_type",
+                "source_section",
+                "channel_name",
+                "details",
+                "kind",
+                "min_nm",
+                "max_nm",
+                "collection_min_nm",
+                "collection_max_nm",
+            )
+            if row.get(key) not in (None, "", [])
+        }
+        if endpoint_meta:
+            metadata["endpoint_metadata"] = endpoint_meta
+        return metadata
+    optical_meta = {
+        key: row.get(key)
+        for key in (
+            "stage_role",
+            "element_type",
+            "selection_mode",
+            "supported_branch_modes",
+            "supported_branch_count",
+            "component_type",
+            "center_nm",
+            "width_nm",
+            "cut_on_nm",
+            "cut_off_nm",
+            "cutoffs_nm",
+            "bands",
+            "transmission_bands",
+            "reflection_bands",
+        )
+        if row.get(key) not in (None, "", [])
+    }
+    if optical_meta:
+        metadata["optical_element_metadata"] = optical_meta
+    return metadata
+
+
+def _build_hardware_inventory(
+    sources: list[dict[str, Any]],
+    elements: list[dict[str, Any]],
+    endpoints: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    inventory: list[dict[str, Any]] = []
+    by_inventory_id: dict[str, int] = {}
+    by_ref: dict[str, str] = {}
+    by_hardware_id: dict[str, int] = {}
+    ordered_rows = [
+        *[("source", row) for row in sources if isinstance(row, dict)],
+        *[("optical_path_element", row) for row in elements if isinstance(row, dict)],
+        *[("endpoint", row) for row in endpoints if isinstance(row, dict)],
+    ]
+
+    for display_number, (component_type, row) in enumerate(ordered_rows, start=1):
+        component_id = _clean_identifier(row.get("id"))
+        if not component_id:
+            continue
+        inventory_id = _component_inventory_key(component_type, component_id)
+        modalities = _normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes"))
+        item = {
+            "id": inventory_id,
+            "hardware_id": component_id,
+            "component_type": component_type,
+            "inventory_class": _component_inventory_class(component_type, row),
+            "manufacturer": _clean_string(row.get("manufacturer")),
+            "model": _clean_string(row.get("model")),
+            "product_code": _clean_string(row.get("product_code")),
+            "display_label": _component_display_label(component_type, row),
+            "display_number": display_number,
+            "modalities": modalities,
+            "source_ref": {"component_type": component_type, "id": component_id},
+        }
+        item.update(_inventory_metadata(component_type, row))
+        if _clean_string(row.get("name")):
+            item["name"] = _clean_string(row.get("name"))
+        if _clean_string(row.get("notes")):
+            item["notes"] = _clean_string(row.get("notes"))
+        inventory.append(item)
+        by_inventory_id[inventory_id] = display_number
+        by_ref[inventory_id] = inventory_id
+        by_hardware_id[component_id] = display_number
+
+    return inventory, {"by_inventory_id": by_inventory_id, "by_ref": by_ref, "by_hardware_id": by_hardware_id}
+
+
+def _resolve_graph_component(
+    ref_key: str,
+    ref_id: str,
+    *,
+    source_lookup: dict[str, dict[str, Any]],
+    element_lookup: dict[str, dict[str, Any]],
+    endpoint_lookup: dict[str, dict[str, Any]],
+    inventory_lookup: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    component_type = "source" if ref_key == "source_id" else "endpoint" if ref_key == "endpoint_id" else "optical_path_element"
+    if component_type == "source":
+        row = source_lookup.get(ref_id) or {}
+    elif component_type == "endpoint":
+        row = endpoint_lookup.get(ref_id) or {}
+    else:
+        row = element_lookup.get(ref_id) or {}
+    inventory_id = _component_inventory_key(component_type, ref_id)
+    inventory_item = inventory_lookup.get(inventory_id) or {}
+    resolved = {
+        "kind": component_type,
+        "id": ref_id,
+        "hardware_inventory_id": inventory_id if inventory_item else "",
+        "display_label": inventory_item.get("display_label") or _component_display_label(component_type, row) or ref_id,
+        "display_number": inventory_item.get("display_number"),
+        "modalities": inventory_item.get("modalities") or _normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes")),
+    }
+    if component_type == "optical_path_element":
+        resolved["stage_role"] = _clean_string(row.get("stage_role") or row.get("element_type")).lower()
+        resolved["element_type"] = _clean_string(row.get("element_type") or row.get("type"))
+    if component_type == "endpoint":
+        resolved["endpoint_type"] = _normalize_endpoint_type(row.get("endpoint_type") or row.get("type") or row.get("kind"))
+    if component_type == "source":
+        resolved["role"] = _clean_string(row.get("role")).lower()
+    return resolved
+
+
+def _build_route_sequences_and_graph(
+    route: dict[str, Any],
+    *,
+    source_lookup: dict[str, dict[str, Any]],
+    element_lookup: dict[str, dict[str, Any]],
+    endpoint_lookup: dict[str, dict[str, Any]],
+    inventory_lookup: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    graph_nodes: list[dict[str, Any]] = []
+    graph_edges: list[dict[str, Any]] = []
+    usage = {
+        "route_id": route.get("id"),
+        "route_label": route.get("name"),
+        "illumination_hardware_inventory_ids": [],
+        "detection_hardware_inventory_ids": [],
+        "hardware_inventory_ids": [],
+        "endpoint_inventory_ids": [],
+        "branch_blocks": [],
+    }
+    usage_seen: set[str] = set()
+    endpoint_seen: set[str] = set()
+    node_counter = 0
+    edge_counter = 0
+    branch_counter = 0
+
+    def register_usage(inventory_id: str, phase: str) -> None:
+        if not inventory_id:
+            return
+        if inventory_id not in usage_seen:
+            usage["hardware_inventory_ids"].append(inventory_id)
+            usage_seen.add(inventory_id)
+        phase_key = "illumination_hardware_inventory_ids" if phase == "illumination" else "detection_hardware_inventory_ids"
+        if inventory_id not in usage[phase_key]:
+            usage[phase_key].append(inventory_id)
+        if inventory_id.startswith("endpoint:") and inventory_id not in endpoint_seen:
+            usage["endpoint_inventory_ids"].append(inventory_id)
+            endpoint_seen.add(inventory_id)
+
+    def add_graph_node(resolved: dict[str, Any], *, phase: str, column: int, lane: int) -> str:
+        nonlocal node_counter
+        node_counter += 1
+        node_id = f"{route['id']}_{phase}_{node_counter}"
+        graph_nodes.append(
+            {
+                "id": node_id,
+                "route_id": route["id"],
+                "phase": phase,
+                "component_kind": resolved.get("kind"),
+                "hardware_inventory_id": resolved.get("hardware_inventory_id") or None,
+                "hardware_id": resolved.get("id"),
+                "label": resolved.get("display_label"),
+                "display_number": resolved.get("display_number"),
+                "stage_role": resolved.get("stage_role"),
+                "endpoint_type": resolved.get("endpoint_type"),
+                "column": column,
+                "lane": lane,
+            }
+        )
+        register_usage(resolved.get("hardware_inventory_id") or "", phase)
+        return node_id
+
+    def add_graph_edge(source_id: str, target_id: str, *, branch_id: str = "", label: str = "") -> None:
+        nonlocal edge_counter
+        edge_counter += 1
+        graph_edges.append(
+            {
+                "id": f"{route['id']}_edge_{edge_counter}",
+                "route_id": route["id"],
+                "source": source_id,
+                "target": target_id,
+                "branch_id": branch_id or None,
+                "label": label,
+            }
+        )
+
+    def resolve_step(step: dict[str, Any]) -> dict[str, Any]:
+        if step.get("source_id"):
+            return _resolve_graph_component(
+                "source_id",
+                _clean_identifier(step.get("source_id")),
+                source_lookup=source_lookup,
+                element_lookup=element_lookup,
+                endpoint_lookup=endpoint_lookup,
+                inventory_lookup=inventory_lookup,
+            )
+        if step.get("endpoint_id"):
+            return _resolve_graph_component(
+                "endpoint_id",
+                _clean_identifier(step.get("endpoint_id")),
+                source_lookup=source_lookup,
+                element_lookup=element_lookup,
+                endpoint_lookup=endpoint_lookup,
+                inventory_lookup=inventory_lookup,
+            )
+        return _resolve_graph_component(
+            "optical_path_element_id",
+            _clean_identifier(step.get("optical_path_element_id")),
+            source_lookup=source_lookup,
+            element_lookup=element_lookup,
+            endpoint_lookup=endpoint_lookup,
+            inventory_lookup=inventory_lookup,
+        )
+
+    def walk_sequence(
+        sequence: list[dict[str, Any]],
+        *,
+        phase: str,
+        prev_node_id: str | None,
+        column: int,
+        lane: int,
+    ) -> tuple[list[dict[str, Any]], str | None, int]:
+        nonlocal branch_counter
+        resolved_steps: list[dict[str, Any]] = []
+        current_prev = prev_node_id
+        current_column = column
+        for step in sequence:
+            if not isinstance(step, dict):
+                continue
+            branch_block = step.get("branches")
+            if isinstance(branch_block, dict):
+                branch_counter += 1
+                branch_block_id = f"{route['id']}_branch_block_{branch_counter}"
+                resolved_branches: list[dict[str, Any]] = []
+                branch_columns: list[int] = [current_column]
+                for branch_index, branch in enumerate(branch_block.get("items") or [], start=1):
+                    if not isinstance(branch, dict):
+                        continue
+                    branch_id = _clean_identifier(branch.get("branch_id")) or f"branch_{branch_index}"
+                    branch_label = _clean_string(branch.get("label")) or branch_id.replace("_", " ").title()
+                    branch_sequence, branch_tail_id, branch_column = walk_sequence(
+                        branch.get("sequence") or [],
+                        phase=phase,
+                        prev_node_id=current_prev,
+                        column=current_column + 1,
+                        lane=lane + branch_index - 1,
+                    )
+                    branch_columns.append(branch_column)
+                    branch_inventory_ids = [
+                        item.get("hardware_inventory_id")
+                        for item in branch_sequence
+                        if isinstance(item, dict) and item.get("hardware_inventory_id")
+                    ]
+                    branch_endpoint_ids = [
+                        item.get("hardware_inventory_id")
+                        for item in branch_sequence
+                        if isinstance(item, dict) and item.get("kind") == "endpoint" and item.get("hardware_inventory_id")
+                    ]
+                    resolved_branches.append(
+                        {
+                            "branch_id": branch_id,
+                            "label": branch_label,
+                            "mode": _clean_string(branch.get("mode")).lower() or None,
+                            "sequence": branch_sequence,
+                            "tail_node_id": branch_tail_id,
+                            "hardware_inventory_ids": branch_inventory_ids,
+                            "endpoint_inventory_ids": branch_endpoint_ids,
+                        }
+                    )
+                usage["branch_blocks"].append(
+                    {
+                        "id": branch_block_id,
+                        "selection_mode": _clean_string(branch_block.get("selection_mode")).lower() or "exclusive",
+                        "branches": [
+                            {
+                                "branch_id": branch["branch_id"],
+                                "label": branch["label"],
+                                "mode": branch.get("mode"),
+                                "hardware_inventory_ids": list(branch.get("hardware_inventory_ids") or []),
+                                "endpoint_inventory_ids": list(branch.get("endpoint_inventory_ids") or []),
+                            }
+                            for branch in resolved_branches
+                        ],
+                    }
+                )
+                resolved_steps.append(
+                    {
+                        "kind": "branch_block",
+                        "id": branch_block_id,
+                        "selection_mode": _clean_string(branch_block.get("selection_mode")).lower() or "exclusive",
+                        "branches": resolved_branches,
+                        "hardware_inventory_ids": sorted(
+                            {
+                                hardware_id
+                                for branch in resolved_branches
+                                for hardware_id in (branch.get("hardware_inventory_ids") or [])
+                            }
+                        ),
+                        "endpoint_inventory_ids": sorted(
+                            {
+                                endpoint_id
+                                for branch in resolved_branches
+                                for endpoint_id in (branch.get("endpoint_inventory_ids") or [])
+                            }
+                        ),
+                    }
+                )
+                current_column = max(branch_columns) if branch_columns else current_column
+                continue
+
+            ref_key = next((candidate for candidate in ("source_id", "optical_path_element_id", "endpoint_id") if step.get(candidate)), "")
+            if not ref_key:
+                continue
+            resolved = resolve_step(step)
+            node_id = add_graph_node(resolved, phase=phase, column=current_column, lane=lane)
+            if current_prev:
+                add_graph_edge(current_prev, node_id)
+            resolved_steps.append({**resolved, "node_id": node_id, "sequence_ref": {ref_key: resolved.get("id")}})
+            current_prev = node_id
+            current_column += 1
+        return resolved_steps, current_prev, current_column
+
+    illumination_sequence, illumination_tail, next_column = walk_sequence(
+        route.get("illumination_sequence") or [],
+        phase="illumination",
+        prev_node_id=None,
+        column=0,
+        lane=0,
+    )
+    sample_node_id = f"{route['id']}_sample"
+    graph_nodes.append(
+        {
+            "id": sample_node_id,
+            "route_id": route["id"],
+            "phase": "sample",
+            "component_kind": "sample",
+            "hardware_inventory_id": None,
+            "hardware_id": "sample_plane",
+            "label": "Objective / Sample Plane",
+            "display_number": None,
+            "column": next_column,
+            "lane": 0,
+        }
+    )
+    if illumination_tail:
+        add_graph_edge(illumination_tail, sample_node_id)
+    detection_sequence, _, _ = walk_sequence(
+        route.get("detection_sequence") or [],
+        phase="detection",
+        prev_node_id=sample_node_id,
+        column=next_column + 1,
+        lane=0,
+    )
+
+    resolved_route = {
+        **route,
+        "route_identity": {"id": route.get("id"), "name": route.get("name"), "modality": route.get("id")},
+        "illumination_mode": route.get("id"),
+        "illumination_traversal": illumination_sequence,
+        "detection_traversal": detection_sequence,
+        "branch_blocks": list(usage["branch_blocks"]),
+        "endpoints": list(usage["endpoint_inventory_ids"]),
+        "hardware_inventory_ids": list(usage["hardware_inventory_ids"]),
+        "graph_nodes": graph_nodes,
+        "graph_edges": graph_edges,
+        "graph_tree": {
+            "illumination": illumination_sequence,
+            "sample": {"node_id": sample_node_id, "label": "Objective / Sample Plane"},
+            "detection": detection_sequence,
+        },
+    }
+    return resolved_route, usage
+
 
 def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferred_terminals: bool = False) -> dict:
     """Build the authoritative canonical DTO plus explicit downstream projections.
@@ -2180,7 +2670,37 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
     sources = canonical["sources"]
     elements = canonical["optical_path_elements"]
     endpoints = canonical["endpoints"]
-    light_paths = canonical["light_paths"]
+    raw_light_paths = canonical["light_paths"]
+    hardware_inventory, hardware_index_map = _build_hardware_inventory(sources, elements, endpoints)
+    inventory_lookup = {item["id"]: item for item in hardware_inventory if isinstance(item, dict) and item.get("id")}
+    source_lookup = {entry.get("id"): entry for entry in sources if isinstance(entry, dict) and entry.get("id")}
+    element_lookup = {entry.get("id"): entry for entry in elements if isinstance(entry, dict) and entry.get("id")}
+    endpoint_lookup = {entry.get("id"): entry for entry in endpoints if isinstance(entry, dict) and entry.get("id")}
+    light_paths: list[dict[str, Any]] = []
+    route_hardware_usage: list[dict[str, Any]] = []
+    for route in raw_light_paths:
+        if not isinstance(route, dict):
+            continue
+        resolved_route, usage = _build_route_sequences_and_graph(
+            route,
+            source_lookup=source_lookup,
+            element_lookup=element_lookup,
+            endpoint_lookup=endpoint_lookup,
+            inventory_lookup=inventory_lookup,
+        )
+        light_paths.append(resolved_route)
+        route_hardware_usage.append(usage)
+    route_usage_by_inventory_id: dict[str, list[str]] = {}
+    for usage in route_hardware_usage:
+        route_id = _clean_string(usage.get("route_id"))
+        for inventory_id in usage.get("hardware_inventory_ids") or []:
+            route_usage_by_inventory_id.setdefault(inventory_id, [])
+            if route_id and route_id not in route_usage_by_inventory_id[inventory_id]:
+                route_usage_by_inventory_id[inventory_id].append(route_id)
+    for item in hardware_inventory:
+        inventory_id = item.get("id")
+        if inventory_id:
+            item["route_usage_summary"] = route_usage_by_inventory_id.get(inventory_id, [])
 
     stage_mappings = {"excitation": [], "dichroic": [], "emission": [], "cube": []}
     prefix_mappings = {"excitation": "exc", "dichroic": "dichroic", "emission": "em", "cube": "cube"}
@@ -2193,11 +2713,16 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
             "topology_contract": "schema -> validator -> canonical dto -> derived adapters -> consumers",
             "authoritative_contract": "canonical_v2_only",
             "topology_truth": "light_paths",
+            "hardware_contract": "hardware_inventory",
             "graph_incomplete": False,
         },
         "sources": json.loads(json.dumps(sources)),
         "optical_path_elements": json.loads(json.dumps(elements)),
         "endpoints": json.loads(json.dumps(endpoints)),
+        "normalized_endpoints": json.loads(json.dumps(endpoints)),
+        "hardware_inventory": json.loads(json.dumps(hardware_inventory)),
+        "hardware_index_map": json.loads(json.dumps(hardware_index_map)),
+        "route_hardware_usage": json.loads(json.dumps(route_hardware_usage)),
         "light_paths": json.loads(json.dumps(light_paths)),
         "light_sources": [],
         "detectors": [],
@@ -2367,6 +2892,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         "valid_paths": json.loads(json.dumps(payload["valid_paths"])),
         "available_routes": json.loads(json.dumps(payload["available_routes"])),
         "default_route": payload["default_route"],
+        "route_hardware_usage": json.loads(json.dumps(payload["route_hardware_usage"])),
     }
 
     canonical_payload = {
@@ -2385,6 +2911,10 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         "sources": json.loads(json.dumps(payload["sources"])),
         "optical_path_elements": json.loads(json.dumps(payload["optical_path_elements"])),
         "endpoints": json.loads(json.dumps(payload["endpoints"])),
+        "normalized_endpoints": json.loads(json.dumps(payload["normalized_endpoints"])),
+        "hardware_inventory": json.loads(json.dumps(payload["hardware_inventory"])),
+        "hardware_index_map": json.loads(json.dumps(payload["hardware_index_map"])),
+        "route_hardware_usage": json.loads(json.dumps(payload["route_hardware_usage"])),
         "light_paths": json.loads(json.dumps(payload["light_paths"])),
         "projections": {
             "virtual_microscope": runtime_projection,

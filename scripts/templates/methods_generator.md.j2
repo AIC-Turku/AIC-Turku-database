@@ -50,33 +50,40 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
       <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
+    <div id="section-route" class="methods-option-section">
+      <strong>7. Illumination Mode / Route:</strong>
+      <select id="route-select" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light);">
+        <option value="">-- All route-compatible hardware --</option>
+      </select>
+    </div>
+
     <div id="section-filter" class="md-typeset methods-option-section">
-      <h4>7. Filters / Dichroics:</h4>
+      <h4>8. Filters / Dichroics:</h4>
       <div id="filter-list" class="checkbox-group"></div>
     </div>
 
     <div class="md-typeset methods-option-section" id="section-splitter">
-      <h4>8. Camera / Emission Splitters:</h4>
+      <h4>9. Camera / Emission Splitters:</h4>
       <div id="splitter-list" class="checkbox-group"></div>
     </div>
 
     <div id="section-det" class="methods-option-section">
-      <strong>9. Detectors:</strong>
+      <strong>10. Detectors:</strong>
       <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-magnification-changer" class="methods-option-section">
-      <strong>10. Magnification Changers:</strong>
+      <strong>11. Magnification Changers:</strong>
       <div id="magnification-changer-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-optical-modulator" class="methods-option-section">
-      <strong>11. Optical Modulators:</strong>
+      <strong>12. Optical Modulators:</strong>
       <div id="optical-modulator-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-illumination-logic" class="methods-option-section">
-      <strong>12. Adaptive Illumination Logic:</strong>
+      <strong>13. Adaptive Illumination Logic:</strong>
       <div id="illumination-logic-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
@@ -136,6 +143,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const copyBtn = document.getElementById("copy-btn");
     const clearBtn = document.getElementById("clear-btn");
     const addBtn = document.getElementById("add-btn");
+    const routeSelect = document.getElementById("route-select");
 
     const methodsMetadataWarning = document.getElementById("methods-metadata-warning");
     const methodsMetadataBlockers = document.getElementById("methods-metadata-blockers");
@@ -241,6 +249,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     function bindCheckboxes(containerId, items, prefix) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
+        if (Array.isArray(container.children)) container.children = [];
+        if (Array.isArray(container.options)) container.options = [];
 
         const normalizedItems = Array.isArray(items) ? items.filter(item => item && typeof item === 'object') : [];
         if (!normalizedItems.length) {
@@ -287,6 +297,47 @@ document.addEventListener("DOMContentLoaded", async () => {
         const section = document.getElementById(sectionId);
         if (!section) return;
         section.style.display = hasItems ? "" : "none";
+    }
+
+    function routeViewsForInstrument(dto) {
+        return Array.isArray(dto?.hardware?.optical_path?.methods_route_views)
+            ? dto.hardware.optical_path.methods_route_views
+            : [];
+    }
+
+    function populateRouteSelector(dto) {
+        if (!routeSelect) return [];
+        const routeViews = routeViewsForInstrument(dto);
+        routeSelect.innerHTML = '<option value="">-- All route-compatible hardware --</option>';
+        routeViews.forEach((routeView) => {
+            const option = document.createElement("option");
+            option.value = routeView.id || "";
+            option.textContent = routeView.display_label || routeView.id || "Route";
+            routeSelect.appendChild(option);
+        });
+        routeSelect.value = "";
+        toggleSectionVisibility("section-route", routeViews.length > 0);
+        return routeViews;
+    }
+
+    function activeRouteView(dto) {
+        const routeViews = routeViewsForInstrument(dto);
+        const selectedRouteId = cleanText(routeSelect?.value);
+        if (!selectedRouteId) return null;
+        return routeViews.find((routeView) => cleanText(routeView.id) === selectedRouteId) || null;
+    }
+
+    function refreshOpticalPathSelections(dto) {
+        const opticalPath = dto?.hardware?.optical_path || {};
+        const routeView = activeRouteView(dto);
+        const lightItems = routeView?.light_sources || dto.hardware?.light_sources || [];
+        const detItems = routeView?.detectors || dto.hardware?.detectors || [];
+        const filterItems = routeView?.filters || opticalPath.filters || [];
+        const splitterItems = routeView?.splitters || opticalPath.splitters || [];
+        toggleSectionVisibility("section-light", bindCheckboxes("light-list", lightItems, "light") > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", detItems, "det") > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterItems, "filter") > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", splitterItems, "splitter") > 0);
     }
 
     function getCheckedSelections(prefix) {
@@ -361,6 +412,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             scanner: getCheckedIds("scanner"),
             obj: getCheckedIds("obj"),
             light: getCheckedIds("light"),
+            route: cleanText(routeSelect?.value),
             filter: getCheckedIds("filter"),
             splitter: getCheckedIds("splitter"),
             det: getCheckedIds("det"),
@@ -443,15 +495,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
         toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
         toggleSectionVisibility("section-obj", bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj") > 0);
-        toggleSectionVisibility("section-light", bindCheckboxes("light-list", dto.hardware?.light_sources || [], "light") > 0);
-        toggleSectionVisibility("section-det", bindCheckboxes("det-list", dto.hardware?.detectors || [], "det") > 0);
         toggleSectionVisibility("section-magnification-changer", bindCheckboxes("magnification-changer-list", dto.hardware?.magnification_changers || [], "magnification-changer") > 0);
         toggleSectionVisibility("section-optical-modulator", bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator") > 0);
         toggleSectionVisibility("section-illumination-logic", bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic") > 0);
+        populateRouteSelector(dto);
+        refreshOpticalPathSelections(dto);
+    });
 
-        const opticalPath = dto.hardware?.optical_path || {};
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", opticalPath.filters || [], "filter") > 0);
-        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", opticalPath.splitters || [], "splitter") > 0);
+    routeSelect?.addEventListener("change", () => {
+        if (!currentInst) return;
+        refreshOpticalPathSelections(currentInst);
     });
 
     addBtn.addEventListener("click", () => {
