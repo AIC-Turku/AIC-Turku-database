@@ -1,4 +1,4 @@
-version: 1
+version: 2
 schema_id: instrument_metadata_policy
 applies_to:
   template: templates/microscope_template.yaml
