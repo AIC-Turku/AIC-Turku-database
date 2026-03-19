@@ -151,7 +151,7 @@ hardware:
       model: ""  # Source model: Vendor-facing source model/designation.
       product_code: ""  # Source product code: Explicit source SKU/catalog code when known.
       technology: ""  # Source technology subtype: Helpful subtype metadata for lasers, LED engines, and tunable sources. | Allowed values (canonical IDs): diode, dpss, led_array, supercontinuum, ti_sapphire, other
-      role: ""  # Source role: Declares the source role without relying on notes-based inference. | Allowed values (canonical IDs): excitation, depletion, activation, alignment, transmitted_illumination, reflected_illumination
+      role: ""  # Source role: Declares the source role without relying on notes-based inference. | Allowed values (canonical IDs): excitation, depletion, activation, alignment, transmitted_illumination
       timing_mode: ""  # Source timing mode: Declares whether the source is continuous-wave or pulsed. | Allowed values (canonical IDs): cw, pulsed
       wavelength_nm: ""  # Source wavelength (nm): Peak or representative wavelength for discrete excitation sources.
       width_nm: ""  # Source bandwidth / FWHM (nm): Optional spectral width for broad-spectrum or band-defined sources.
@@ -163,7 +163,7 @@ hardware:
       tunable_min_nm: ""  # Source tunable minimum wavelength: Lower tunable wavelength bound for tunable or white-light sources.
       tunable_max_nm: ""  # Source tunable maximum wavelength: Upper tunable wavelength bound for tunable or white-light sources.
       simultaneous_lines_max: ""  # Source simultaneous line count: Maximum simultaneously active lines for multi-line sources.
-      modalities:  # Source modalities: Validation-only route guards for installed sources. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, widefield_fluorescence, tirf, confocal, confocal_point, confocal_spinning_disk, multiphoton, light_sheet, transmitted, transmitted_brightfield, phase_contrast, darkfield, dic, reflected_brightfield, optical_sectioning, spectral_imaging, flim, fcs, ism, smlm, spt, fret, shared, all
+      modalities:  # Source modalities: Validation-only route guards for installed sources. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
         - ""
       notes: ""  # Source notes: Free-text source notes for operational caveats.
       url: ""  # Source URL: Reference link only.
@@ -172,17 +172,17 @@ hardware:
       id: ""  # Optical path element ID: Stable identifier referenced by light_paths sequences.
       name: ""  # Optical path element name: Human-readable element label for authoring clarity and consumer display.
       display_label: ""  # Optical path element display label: Optional alternate display label for UI-facing consumers.
-      stage_role: ""  # Optical path element stage role: Descriptive grouping metadata for UI/runtime consumers. `light_paths` remain the sole canonical source of route topology, so stage_role should only be supplied when a stable stage grouping is genuinely useful. | Allowed values (canonical IDs): excitation, cube, dichroic, emission, analyzer, splitter
+      stage_role: ""  # Optical path element stage role: Descriptive grouping metadata for UI/runtime consumers. `light_paths` remain the sole canonical source of route topology, so stage_role should only be supplied when a stable stage grouping is genuinely useful. | Allowed values (canonical IDs): excitation, cube, dichroic, emission, splitter
       element_type: ""  # Optical path element type: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling. | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array, selector, splitter, emission_splitter, image_splitter, dual_view, quad_view
       selection_mode: ""  # Optical path element selection mode: Inventory-level selector/splitter capability metadata. Canonical route branching now lives in light_paths sequence branch blocks. | Allowed values (canonical IDs): fixed, exclusive, multiple
       supported_branch_modes:  # Supported branch modes: Inventory-level capability metadata describing which branch modes a selector/splitter can support. | Allowed values (canonical IDs): transmitted, reflected, selected, passthrough
         - ""
       supported_branch_count: ""  # Supported branch count: Inventory-level capability metadata describing how many branches a selector/splitter can support.
-      modalities:  # Optical path element modalities: Validation-only route guards for optical path elements. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, widefield_fluorescence, tirf, confocal, confocal_point, confocal_spinning_disk, multiphoton, light_sheet, transmitted, transmitted_brightfield, phase_contrast, darkfield, dic, reflected_brightfield, optical_sectioning, spectral_imaging, flim, fcs, ism, smlm, spt, fret, shared, all
+      modalities:  # Optical path element modalities: Validation-only route guards for optical path elements. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, tirf, confocal, multiphoton, shared, transmitted, all
         - ""
       positions:  # Optical path element positions: Position map for installed filter wheels, turrets, sliders, or cubes.
         Pos_1:
-          component_type: ""  # Optical path position component type: Canonical optical component classifier for direct position payloads. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, filter_cube, analyzer, empty, mirror, block, passthrough, neutral_density
+          component_type: ""  # Optical path position component type: Canonical optical component classifier for direct position payloads. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, empty, mirror, block, passthrough, neutral_density
           manufacturer: ""  # Optical path position manufacturer: Structured provenance for direct position payloads.
           model: ""  # Optical path position model: Vendor-facing model/designation for direct position payloads.
           product_code: ""  # Optical path position product code: Explicit catalog/SKU/reference code for direct position payloads when known.
