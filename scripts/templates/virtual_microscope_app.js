@@ -886,14 +886,48 @@
         return leftLane - rightLane;
       });
 
+    const branchBlocks = (
+      Array.isArray(topology && topology.branchBlocks)
+        ? topology.branchBlocks
+        : (Array.isArray(routeRecord && routeRecord.branch_blocks) ? routeRecord.branch_blocks : [])
+    ).map((block, blockIndex) => {
+      const rawBranches = Array.isArray(block && block.branches)
+        ? block.branches
+        : (Array.isArray(block && block.items) ? block.items : []);
+      return {
+        ...block,
+        id: cleanString(block && block.id) || `branch_block_${blockIndex + 1}`,
+        selection_mode: cleanString(block && block.selection_mode).toLowerCase() || 'exclusive',
+        branches: rawBranches.map((branch, branchIndex) => {
+          const sequence = Array.isArray(branch && branch.sequence) ? branch.sequence : [];
+          const endpointIds = endpointIdsFromSequence(sequence);
+          const endpointLabels = endpointIds.map((endpointId) => endpointLabelForTargetId(endpointId)).filter(Boolean);
+          const branchId = cleanString(branch && (branch.branch_id || branch.id)) || `branch_${branchIndex + 1}`;
+          const branchLabel = cleanString(branch && (branch.label || branch.branch_id || branch.id)) || `Branch ${branchIndex + 1}`;
+          return {
+            ...branch,
+            branch_id: branchId,
+            label: branchLabel,
+            endpointIds,
+            endpointLabels,
+            sequenceSummary: sequence.map((step) => {
+              if (!(step && typeof step === 'object')) return '';
+              if (step.endpoint_id) return endpointLabelForTargetId(step.endpoint_id);
+              if (step.optical_path_element_id) return cleanString(step.optical_path_element_id);
+              if (step.source_id) return cleanString(step.source_id);
+              return '';
+            }).filter(Boolean),
+          };
+        }),
+      };
+    });
+
     return {
       routeId: cleanString(routeRecord && routeRecord.id) || cleanString(topology && topology.route) || null,
       routeLabel: cleanString(routeRecord && (routeRecord.label || routeRecord.name || routeRecord.id)) || normalizeRouteLabel(topology && topology.route),
       nodes,
       edges: rawEdges.map((edge) => ({ ...edge })),
-      branchBlocks: Array.isArray(topology && topology.branchBlocks)
-        ? topology.branchBlocks.map((block) => ({ ...block }))
-        : (Array.isArray(routeRecord && routeRecord.branch_blocks) ? routeRecord.branch_blocks.map((block) => ({ ...block })) : []),
+      branchBlocks,
       endpointIds: Array.isArray(topology && topology.endpointIds) ? topology.endpointIds.slice() : [],
       routeLocalHardwareUsage: topology && topology.routeLocalHardwareUsage ? { ...topology.routeLocalHardwareUsage } : { hardware_inventory_ids: [], endpoint_inventory_ids: [] },
       sourceIds: Array.isArray(topology && topology.sourceMechanisms)
@@ -993,9 +1027,61 @@
 
     if (graphModel.branchBlocks.length) {
       const branchWrap = document.createElement('div');
-      branchWrap.className = 'vm-mini';
       branchWrap.style.marginTop = '12px';
-      branchWrap.textContent = `Branch blocks: ${graphModel.branchBlocks.length}. Explicit branch-local traversal remains authoritative for this route.`;
+
+      const branchSummary = document.createElement('div');
+      branchSummary.className = 'vm-mini';
+      branchSummary.textContent = `Branch blocks: ${graphModel.branchBlocks.length}. Explicit branch-local traversal remains authoritative for this route.`;
+      branchWrap.appendChild(branchSummary);
+
+      graphModel.branchBlocks.forEach((block, blockIndex) => {
+        const blockCard = document.createElement('div');
+        blockCard.className = 'vm-info-card';
+        blockCard.style.marginTop = '10px';
+        blockCard.style.padding = '10px 12px';
+
+        const blockTitle = document.createElement('div');
+        blockTitle.className = 'vm-info-row';
+        blockTitle.style.justifyContent = 'space-between';
+        blockTitle.style.alignItems = 'center';
+
+        const blockLabel = document.createElement('strong');
+        blockLabel.textContent = cleanString(block && block.label) || `Branch block ${blockIndex + 1}`;
+        blockTitle.appendChild(blockLabel);
+
+        const blockMeta = document.createElement('span');
+        blockMeta.className = 'vm-mini';
+        blockMeta.textContent = `Mode: ${cleanString(block && block.selection_mode) || 'exclusive'}`;
+        blockTitle.appendChild(blockMeta);
+        blockCard.appendChild(blockTitle);
+
+        const branchList = document.createElement('div');
+        branchList.style.display = 'grid';
+        branchList.style.gap = '8px';
+        branchList.style.marginTop = '8px';
+
+        (Array.isArray(block && block.branches) ? block.branches : []).forEach((branch) => {
+          const branchRow = document.createElement('div');
+          branchRow.className = 'vm-mini';
+          const endpointText = Array.isArray(branch && branch.endpointLabels) && branch.endpointLabels.length
+            ? branch.endpointLabels.join(' • ')
+            : (Array.isArray(branch && branch.sequenceSummary) && branch.sequenceSummary.length
+              ? branch.sequenceSummary.join(' → ')
+              : 'Branch sequence declared without explicit endpoint labels');
+          branchRow.textContent = `${cleanString(branch && branch.label) || cleanString(branch && branch.branch_id) || 'Branch'} → ${endpointText}`;
+          branchList.appendChild(branchRow);
+        });
+
+        if (!branchList.childNodes.length) {
+          const empty = document.createElement('div');
+          empty.className = 'vm-mini';
+          empty.textContent = 'No branch-local sequences were attached to this block.';
+          branchList.appendChild(empty);
+        }
+        blockCard.appendChild(branchList);
+        branchWrap.appendChild(blockCard);
+      });
+
       section.appendChild(branchWrap);
     }
 

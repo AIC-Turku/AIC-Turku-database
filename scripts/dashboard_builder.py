@@ -1148,7 +1148,13 @@ def _build_static_light_path_graphs(lightpath_dto: dict[str, Any], raw_hardware:
                 "subtitle": clean_text(inventory_item.get("inventory_class") if inventory_item else node.get("stage_role") or node.get("endpoint_type")),
                 "category": kind,
                 "yaml_path": node.get("hardware_inventory_id") or "light_paths",
-                "number": inventory_item.get("display_number") if inventory_item else None,
+                "number": (
+                    inventory_item.get("display_number")
+                    if inventory_item and inventory_item.get("display_number") is not None
+                    else node.get("inventory_display_number")
+                    if node.get("inventory_display_number") is not None
+                    else node.get("display_number")
+                ),
                 "xcol": int(node.get("column") or 0),
                 "lane": int(node.get("lane") or 0),
                 "fill": fill,
@@ -1183,7 +1189,7 @@ def _build_static_light_path_graphs(lightpath_dto: dict[str, Any], raw_hardware:
             svg_edges.append({
                 "from": edge.get("source"),
                 "to": edge.get("target"),
-                "label": clean_text(edge.get("label")),
+                "label": clean_text(edge.get("label") or edge.get("branch_id")),
                 "x1": src["x"] + src["w"],
                 "y1": src["y"] + src["h"] / 2,
                 "x2": dst["x"],
@@ -1193,9 +1199,14 @@ def _build_static_light_path_graphs(lightpath_dto: dict[str, Any], raw_hardware:
         node_index = []
         for node in ordered_nodes:
             downstream = [
-                target["title"]
+                (
+                    f'{target["title"]} [{clean_text(edge.get("label") or edge.get("branch_id"))}]'
+                    if clean_text(edge.get("label") or edge.get("branch_id"))
+                    else target["title"]
+                )
                 for target in ordered_nodes
-                if any(edge.get("source") == node["key"] and edge.get("target") == target["key"] for edge in raw_edges)
+                for edge in raw_edges
+                if edge.get("source") == node["key"] and edge.get("target") == target["key"]
             ]
             node_index.append({
                 "number": node["number"],
