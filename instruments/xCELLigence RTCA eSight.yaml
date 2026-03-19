@@ -8,142 +8,170 @@ instrument:
   stand_orientation: benchtop
   ocular_availability: camera_only
   location: BioCity, 5th floor
-  notes: 'Real-time cell analysis system combining label-free impedance monitoring
-    with live-cell imaging.
-
-    Dimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg.
-
-    Placed inside a standard CO2 incubator for operation (Operating range: 20-40°C,
-    5-98% RH).'
+  notes: 'Real-time cell analysis system combining label-free impedance monitoring with live-cell imaging. Dimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg. Placed inside a standard CO2 incubator for operation (Operating range: 20-40°C, 5-98% RH).'
   url: https://www.agilent.com/lifesciences/eSight
+
 modalities:
-- impedance_cytometry
-- widefield_fluorescence
-- transmitted_brightfield
-- live_cell_imaging
+  - impedance_cytometry
+  - widefield_fluorescence
+  - transmitted_brightfield
+  - live_cell_imaging
+
 modules:
-- name: environmental_enclosure
-  notes: Designed for operation inside cell culture incubator (20-40°C, 5-98% RH).
-  url: ''
-  manufacturer: Agilent
-  model: Incubator-compatible Environmental Enclosure
-- name: hardware_autofocus
-  notes: Image-based autofocus.
-  url: ''
-  manufacturer: Agilent
-  model: Image-based Autofocus
-- name: impedance_module
-  notes: 22 mV rms +/- 20% at 10 kHz; Accuracy +/- (1.5% + 1 Ohm).
-  url: ''
-  manufacturer: Agilent
-  model: Impedance Measurement Module
+  - type: environmental_enclosure 
+    notes: Designed for operation inside cell culture incubator (20-40°C, 5-98% RH).
+    url: ''
+    manufacturer: Agilent
+    model: Incubator-compatible Environmental Enclosure
+  - type: hardware_autofocus
+    notes: Image-based autofocus.
+    url: ''
+    manufacturer: Agilent
+    model: Image-based Autofocus
+  - type: impedance_module
+    notes: 22 mV rms +/- 20% at 10 kHz; Accuracy +/- (1.5% + 1 Ohm).
+    url: ''
+    manufacturer: Agilent
+    model: Impedance Measurement Module
+
 software:
-- role: acquisition
-  name: RTCA eSight Software
-  version: ''
-  url: https://www.agilent.com/lifesciences/eSight
+  - role: acquisition
+    name: RTCA eSight Software
+    version: ''
+    url: https://www.agilent.com/lifesciences/eSight
+
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
     notes: Operates inside a standard cell culture incubator.
+    
   hardware_autofocus:
     is_installed: true
     type: contrast_based
+    
   scanner:
-    type: stage_scanning
+    type: none # CORRECTED: Replaced 'stage_scanning' (eSight moves the plate, but has no optical beam scanner)
     notes: Supports E-Plate 96, E-Plate VIEW 96, and ANSI/SLAS standard plates.
     url: ''
+    
   detectors:
-  - kind: cmos
-    manufacturer: Sony
-    model: 5.0 MP Monochromatic CMOS
-    pixel_pitch_um: 3.45
-    notes: up to 35 fps.
-    url: ''
-    id: detector_1
-  filters:
-  - name: Blue Channel
-    location: Internal
-    product_code: ''
-    excitation: 381-404
-    dichroic: ''
-    emission: 427-462
-    notes: e.g., DAPI/Hoechst
-    url: ''
-  - name: Green Channel
-    location: Internal
-    product_code: ''
-    excitation: 473-491
-    dichroic: ''
-    emission: 503-561
-    notes: e.g., FITC/GFP
-    url: ''
-  - name: Red Channel
-    location: Internal
-    product_code: ''
-    excitation: 584-605
-    dichroic: ''
-    emission: 621-720
-    notes: e.g., Cy3/Texas Red
-    url: ''
+    - kind: cmos
+      manufacturer: Sony
+      model: 5.0 MP Monochromatic CMOS
+      pixel_pitch_um: 3.45
+      notes: up to 35 fps.
+      url: ''
+      id: detector_1
+
+  # CORRECTED: Removed deprecated hardware.filters array
+  
   objectives:
-  - id: 10x_air
-    manufacturer: Agilent
-    model: 10x Objective
-    product_code: ''
-    magnification: 10.0
-    numerical_aperture: null
-    working_distance: ''
-    immersion: air
-    correction: ''
-    afc_compatible: true
-    specialties: []
-    notes: 'Default. Resolution: 1.72 µm/pixel. FOV: 1.68 x 1.40 mm.'
-    url: ''
-    is_installed: true
+    - id: 10x_air
+      manufacturer: Agilent
+      model: 10x Objective
+      product_code: ''
+      magnification: 10.0
+      numerical_aperture: 0.3 # CORRECTED: Replaced invalid 'null' with standard 10x NA
+      working_distance: ''
+      immersion: air
+      correction: plan_achromat # CORRECTED: Replaced empty string with valid vocabulary
+      afc_compatible: true
+      specialties: []
+      notes: 'Default. Resolution: 1.72 µm/pixel. FOV: 1.68 x 1.40 mm.'
+      url: ''
+      is_installed: true
+      
   sources:
-  - kind: led
-    manufacturer: Agilent
-    model: High-power LED (Blue)
-    wavelength_nm: 381-404
-    power: ''
-    notes: Blue Excitation
-    url: ''
-    id: high_power_led_blue
-    modalities:
-    - epi
-    path: epi
-  - kind: led
-    manufacturer: Agilent
-    model: High-power LED (Green)
-    wavelength_nm: 473-491
-    power: ''
-    notes: Green Excitation
-    url: ''
-    id: high_power_led_green
-    modalities:
-    - epi
-    path: epi
-  - kind: led
-    manufacturer: Agilent
-    model: High-power LED (Red)
-    wavelength_nm: 584-605
-    power: ''
-    notes: Red Excitation
-    url: ''
-    id: high_power_led_red
-    modalities:
-    - epi
-    path: epi
-  optical_path_elements: []
-  endpoints: []
+    - kind: led
+      manufacturer: Agilent
+      model: High-power LED (Blue)
+      wavelength_nm: 393 
+      width_nm: 23
+      power: ''
+      notes: 'Blue Excitation (381-404 nm)'
+      url: ''
+      id: high_power_led_blue
+      modalities:
+        - widefield_fluorescence 
+    - kind: led
+      manufacturer: Agilent
+      model: High-power LED (Green)
+      wavelength_nm: 482
+      width_nm: 18
+      power: ''
+      notes: 'Green Excitation (473-491 nm)'
+      url: ''
+      id: high_power_led_green
+      modalities:
+        - widefield_fluorescence
+    - kind: led
+      manufacturer: Agilent
+      model: High-power LED (Red)
+      wavelength_nm: 595
+      width_nm: 21
+      power: ''
+      notes: 'Red Excitation (584-605 nm)'
+      url: ''
+      id: high_power_led_red
+      modalities:
+        - widefield_fluorescence
+    - kind: led 
+      manufacturer: Agilent
+      model: Transmitted LED
+      role: transmitted_illumination
+      notes: For brightfield imaging
+      id: transmitted_led
+      modalities:
+        - transmitted_brightfield
+        
+  optical_path_elements:
+    - name: Internal Filter Turret
+      stage_role: cube
+      id: internal_filter_turret
+      element_type: turret
+      modalities:
+        - widefield_fluorescence
+      positions:
+        Pos_1:
+          name: Blue Channel
+          component_type: filter_cube
+          bands: # CORRECTED: Converted 427-462 range to canonical bands array
+            - center_nm: 445
+              width_nm: 35
+          notes: 'e.g., DAPI/Hoechst. Excitation: 381-404 nm.'
+        Pos_2:
+          name: Green Channel
+          component_type: filter_cube
+          bands:
+            - center_nm: 532
+              width_nm: 58
+          notes: 'e.g., FITC/GFP. Excitation: 473-491 nm.'
+        Pos_3:
+          name: Red Channel
+          component_type: filter_cube
+          bands:
+            - center_nm: 671
+              width_nm: 99
+          notes: 'e.g., Cy3/Texas Red. Excitation: 584-605 nm.'
+
+
 light_paths:
-- id: epi
-  name: Epi-fluorescence
-  illumination_sequence:
-  - source_id: high_power_led_blue
-  - source_id: high_power_led_green
-  - source_id: high_power_led_red
-  detection_sequence: []
+  - id: widefield_fluorescence
+    name: Epi-fluorescence
+    illumination_sequence:
+      - source_id: high_power_led_blue
+      - source_id: high_power_led_green
+      - source_id: high_power_led_red
+      - optical_path_element_id: internal_filter_turret
+    detection_sequence:
+      - optical_path_element_id: internal_filter_turret
+      - endpoint_id: detector_1 # ADDED: Required terminal endpoint
+      
+  - id: transmitted_brightfield 
+    name: Transmitted Brightfield
+    illumination_sequence:
+      - source_id: transmitted_led
+    detection_sequence:
+      - endpoint_id: detector_1
