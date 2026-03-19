@@ -519,7 +519,7 @@ sections:
         required_if:
           parent_present: "hardware.detectors[]"
         used_by: [dashboard]
-        rationale: Stable graph target ID for virtual microscope routing and splitter branch targets.
+        rationale: Stable graph target ID for light path routing, virtual microscope traversal, and splitter branch targets.
 
       - path: hardware.detectors[].kind
         title: Detector kind
@@ -1506,44 +1506,43 @@ sections:
         used_by: [dashboard, method_generator]
         rationale: Canonical component classifier for a branch-specific optical payload.
 
-      - path: hardware.endpoints
-        title: Endpoints
+      - path: hardware.eyepieces
+        title: Eyepieces
         status: optional
         type: list
         item_type: object
         used_by: [dashboard, method_generator]
-        rationale: Explicit terminal detectors, camera ports, and eyepieces.
+        rationale: Explicit terminal eyepieces addressed directly by light path routing.
 
-      - path: hardware.endpoints[].id
-        title: Endpoint ID
-        status: required
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable endpoint identifier referenced by light_paths detection sequences and branch-local sequences.
-
-      - path: hardware.endpoints[].endpoint_type
-        title: Endpoint type
-        status: required
+      - path: hardware.eyepieces[].id
+        title: Eyepiece ID
+        status: conditional
         type: string
-        vocab: endpoint_types
+        required_if:
+          parent_present: "hardware.eyepieces[]"
         used_by: [dashboard, method_generator]
-        rationale: Endpoint class used by runtime for detector, camera-port, or eyepiece handling.
+        rationale: Stable identifier referenced by light_paths.
 
-      - path: hardware.endpoints[].display_label
-        title: Endpoint display label
+      - path: hardware.eyepieces[].magnification
+        title: Eyepiece magnification
         status: optional
-        type: string
+        type: positive_number
         used_by: [dashboard, method_generator]
-        rationale: Optional UI/display label for the endpoint.
+        rationale: Optional magnification value for the eyepiece.
 
-      - path: hardware.endpoints[].modalities
-        title: Endpoint modalities
+      - path: hardware.eyepieces[].field_number
+        title: Eyepiece field number
         status: optional
-        type: list
-        item_type: string
-        vocab: optical_routes
+        type: positive_number
         used_by: [dashboard, method_generator]
-        rationale: Validation-only route guards for endpoints. Ordered light_paths sequences remain authoritative.
+        rationale: Optional field number value for the eyepiece.
+
+      - path: hardware.eyepieces[].notes
+        title: Eyepiece notes
+        status: optional
+        type: text
+        used_by: [dashboard, method_generator]
+        rationale: Useful for documenting eyepiece-specific caveats or labels.
 
       - path: hardware.detectors[].collection_min_nm
         title: Detector collection minimum wavelength
@@ -1704,7 +1703,7 @@ sections:
         status: optional
         type: slug
         used_by: [dashboard, method_generator]
-        rationale: Stable endpoint reference for direct unbranched detection terminals.
+        rationale: Explicit branch endpoint reference. Must correspond to an ID defined in either hardware.detectors or hardware.eyepieces.
 
       - path: light_paths[].detection_sequence[].branches
         title: Detection branch block
@@ -1770,4 +1769,4 @@ sections:
         status: optional
         type: slug
         used_by: [dashboard, method_generator]
-        rationale: Explicit branch endpoint reference used by validator, graph rendering, and simulation.
+        rationale: Explicit branch endpoint reference. Must correspond to an ID defined in either hardware.detectors or hardware.eyepieces.
