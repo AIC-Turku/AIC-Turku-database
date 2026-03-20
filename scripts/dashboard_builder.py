@@ -32,7 +32,6 @@ import os
 import re
 import shutil
 import sys
-from html import escape
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1053,193 +1052,6 @@ def _terminal_summary(terminal: dict[str, Any]) -> str:
     return _compact_join([endpoint_type, route_text])
 
 
-def _svg_text(text: str, limit: int = 32) -> str:
-    value = clean_text(text)
-    if len(value) <= limit:
-        return value
-    return value[: max(0, limit - 1)].rstrip() + "…"
-
-
-def _static_graph_svg_markup(route_graph: dict[str, Any]) -> str:
-    svg_data = route_graph.get("svg") if isinstance(route_graph.get("svg"), dict) else {}
-    svg_nodes = svg_data.get("nodes") if isinstance(svg_data.get("nodes"), list) else []
-    svg_edges = svg_data.get("edges") if isinstance(svg_data.get("edges"), list) else []
-    if not svg_nodes:
-        return ""
-    width = max((node.get("x", 0) + node.get("w", 0) + 56) for node in svg_nodes)
-    height = max((node.get("y", 0) + node.get("h", 0) + 48) for node in svg_nodes)
-    parts = [
-        f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="{escape(route_graph.get("route_label") or "Light path graph")}">'
-    ]
-    for edge in svg_edges:
-        parts.append(
-            f'<line x1="{edge["x1"]}" y1="{edge["y1"]}" x2="{edge["x2"]}" y2="{edge["y2"]}" stroke="#94a3b8" stroke-width="2.4" />'
-        )
-        if clean_text(edge.get("label")):
-            tx = (edge["x1"] + edge["x2"]) / 2
-            ty = (edge["y1"] + edge["y2"]) / 2 - 8
-            parts.append(f'<text x="{tx}" y="{ty}" text-anchor="middle" font-size="12" fill="#475569">{escape(clean_text(edge["label"]))}</text>')
-    for node in svg_nodes:
-        parts.append(
-            f'<rect x="{node["x"]}" y="{node["y"]}" width="{node["w"]}" height="{node["h"]}" rx="18" ry="18" fill="{node["fill"]}" stroke="{node["stroke"]}" stroke-width="2.4" />'
-        )
-        if node.get("display_number"):
-            parts.append(
-                f'<circle cx="{node["x"] + 16}" cy="{node["y"] + 16}" r="12" fill="{node["stroke"]}" />'
-                f'<text x="{node["x"] + 16}" y="{node["y"] + 20}" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">{node["display_number"]}</text>'
-            )
-        parts.append(
-            f'<text x="{node["x"] + 16}" y="{node["y"] + 42}" font-size="13" font-weight="700" fill="#0f172a">{escape(_svg_text(node["title"], 26))}</text>'
-        )
-        if clean_text(node.get("subtitle")):
-            parts.append(
-                f'<text x="{node["x"] + 16}" y="{node["y"] + 62}" font-size="11" fill="#475569">{escape(_svg_text(node["subtitle"], 28))}</text>'
-            )
-    parts.append("</svg>")
-    return "".join(parts)
-
-
-def _build_static_light_path_graphs(lightpath_dto: dict[str, Any], raw_hardware: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    light_paths = [
-        item for item in (lightpath_dto.get("light_paths") or []) if isinstance(item, dict)
-    ] if isinstance(lightpath_dto, dict) else []
-    inventory = {
-        item.get("id"): item
-        for item in (lightpath_dto.get("hardware_inventory") or [])
-        if isinstance(item, dict) and item.get("id")
-    } if isinstance(lightpath_dto, dict) else {}
-
-    color_map = {
-        "source": ("#e0f2fe", "#0284c7"),
-        "optical_path_element": ("#ede9fe", "#7c3aed"),
-        "sample": ("#fef3c7", "#d97706"),
-        "endpoint": ("#fee2e2", "#dc2626"),
-    }
-    graphs: list[dict[str, Any]] = []
-    for route in light_paths:
-        raw_nodes = [node for node in (route.get("graph_nodes") or []) if isinstance(node, dict)]
-        raw_edges = [edge for edge in (route.get("graph_edges") or []) if isinstance(edge, dict)]
-        if not raw_nodes:
-            continue
-        ordered_nodes: list[dict[str, Any]] = []
-        for node in raw_nodes:
-            inventory_item = inventory.get(node.get("hardware_inventory_id") or "")
-            kind = clean_text(node.get("component_kind")) or "optical_path_element"
-            fill, stroke = color_map.get(kind, ("#f3f4f6", "#6b7280"))
-            if kind == "endpoint":
-                endpoint_type = clean_text(node.get("endpoint_type"))
-                fill, stroke = (
-                    ("#cffafe", "#0891b2") if endpoint_type == "camera_port"
-                    else ("#fce7f3", "#db2777") if endpoint_type == "eyepiece"
-                    else ("#fee2e2", "#dc2626")
-                )
-            ordered_nodes.append({
-                "key": node.get("id"),
-                "title": clean_text(node.get("label")),
-                "subtitle": clean_text(inventory_item.get("inventory_class") if inventory_item else node.get("stage_role") or node.get("endpoint_type")),
-                "category": kind,
-                "yaml_path": node.get("hardware_inventory_id") or "light_paths",
-                "number": (
-                    inventory_item.get("display_number")
-                    if inventory_item and inventory_item.get("display_number") is not None
-                    else node.get("inventory_display_number")
-                    if node.get("inventory_display_number") is not None
-                    else node.get("display_number")
-                ),
-                "xcol": int(node.get("column") or 0),
-                "lane": int(node.get("lane") or 0),
-                "fill": fill,
-                "stroke": stroke,
-            })
-
-        box_w = 176
-        box_h = 84
-        start_x = 56
-        start_y = 96
-        svg_nodes = []
-        for node in ordered_nodes:
-            svg_nodes.append({
-                "key": node["key"],
-                "title": node["title"],
-                "subtitle": node["subtitle"],
-                "display_number": node["number"],
-                "x": start_x + node["xcol"] * 220,
-                "y": start_y + node["lane"] * 116,
-                "w": box_w,
-                "h": box_h,
-                "fill": node["fill"],
-                "stroke": node["stroke"],
-            })
-        svg_lookup = {node["key"]: node for node in svg_nodes}
-        svg_edges = []
-        for edge in raw_edges:
-            src = svg_lookup.get(edge.get("source"))
-            dst = svg_lookup.get(edge.get("target"))
-            if not src or not dst:
-                continue
-            svg_edges.append({
-                "from": edge.get("source"),
-                "to": edge.get("target"),
-                "label": clean_text(edge.get("label") or edge.get("branch_id")),
-                "x1": src["x"] + src["w"],
-                "y1": src["y"] + src["h"] / 2,
-                "x2": dst["x"],
-                "y2": dst["y"] + dst["h"] / 2,
-            })
-
-        node_index = []
-        for node in ordered_nodes:
-            downstream = [
-                (
-                    f'{target["title"]} [{clean_text(edge.get("label") or edge.get("branch_id"))}]'
-                    if clean_text(edge.get("label") or edge.get("branch_id"))
-                    else target["title"]
-                )
-                for target in ordered_nodes
-                for edge in raw_edges
-                if edge.get("source") == node["key"] and edge.get("target") == target["key"]
-            ]
-            node_index.append({
-                "number": node["number"],
-                "title": node["title"],
-                "category": node["category"],
-                "yaml_path": node["yaml_path"],
-                "item_preview": node["subtitle"],
-                "notes": "",
-                "downstream": ", ".join(downstream),
-            })
-        graph = {
-            "route_id": clean_text(route.get("id")),
-            "route_label": clean_text(route.get("name") or route.get("id")),
-            "nodes": node_index,
-            "ordered_nodes": ordered_nodes,
-            "edges": raw_edges,
-            "svg": {"nodes": svg_nodes, "edges": svg_edges},
-            "svg_markup": "",
-            "recommendations": [],
-            "schema_notes": [
-                "Static light-path graphs are drawn directly from DTO route graph nodes/edges and use DTO hardware numbering.",
-            ],
-        }
-        graph["svg_markup"] = _static_graph_svg_markup(graph)
-        graphs.append(graph)
-    return graphs
-
-
-def _build_static_light_path_graph(lightpath_dto: dict[str, Any], raw_hardware: dict[str, Any] | None = None) -> dict[str, Any]:
-    graphs = _build_static_light_path_graphs(lightpath_dto, raw_hardware=raw_hardware)
-    return graphs[0] if graphs else {
-        "route_id": "",
-        "route_label": "",
-        "nodes": [],
-        "ordered_nodes": [],
-        "edges": [],
-        "svg": {"nodes": [], "edges": []},
-        "svg_markup": "",
-        "recommendations": [],
-        "schema_notes": [],
-    }
-
 
 def hardware_renderables_from_inventory(
     inventory_renderables: list[dict[str, Any]],
@@ -1372,7 +1184,6 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
 
     Derived-only compatibility helpers:
     - sections / renderables / splitters / methods_route_views
-    - static_graph / static_graphs SVG summaries
     - runtime_splitters and other adapter/card-style projections
     """
     optical_elements = [item for item in (lightpath_dto.get("optical_path_elements") or []) if isinstance(item, dict)] if isinstance(lightpath_dto, dict) else []
@@ -1484,10 +1295,6 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
 
     route_usage_map = {clean_text(item.get("route_id")): item for item in route_hardware_usage if clean_text(item.get("route_id"))}
     runtime_splitters = copy.deepcopy(projection_root.get("splitters", lightpath_dto.get("splitters", []))) if isinstance(lightpath_dto, dict) else []
-    # Static SVG graphs are derived visualization summaries of the canonical route graphs above.
-    derived_static_graph_summaries = _build_static_light_path_graphs(lightpath_dto, raw_hardware=raw_hardware)
-    derived_static_graph_summary = derived_static_graph_summaries[0] if derived_static_graph_summaries else _build_static_light_path_graph(lightpath_dto, raw_hardware=raw_hardware)
-    derived_static_graph_map = {clean_text(item.get("route_id")): copy.deepcopy(item) for item in derived_static_graph_summaries if clean_text(item.get("route_id"))}
 
     canonical_light_paths: list[dict[str, Any]] = []
     derived_route_summary_cards: list[dict[str, Any]] = []
@@ -1555,7 +1362,6 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             },
             "endpoint_summary": endpoint_summary,
             "branch_summary": branch_summary,
-            "static_graph": copy.deepcopy(derived_static_graph_map.get(route_id) or {}),
         }
         canonical_light_paths.append(canonical_route)
 
@@ -1752,7 +1558,6 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "inventory_cards": "hardware_inventory_renderables",
             "route_summary_cards": "renderables/light_paths",
             "methods_route_views": "methods_route_views",
-            "static_graph_summaries": "static_graphs",
         },
         "authoritative_route_contract": {
             "contract_version": "authoritative_route_contract.v1",
@@ -1776,8 +1581,6 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "route_hardware_usage": copy.deepcopy(route_hardware_usage),
             "routes": authoritative_route_contract_routes,
         },
-        "static_graphs": derived_static_graph_summaries,
-        "static_graph": derived_static_graph_summary,
     }
 
 
