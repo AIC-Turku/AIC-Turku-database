@@ -405,6 +405,8 @@ hardware:
 light_paths:
   - id: widefield_fluorescence # CORRECTED: Aligned ID with standard modalities
     name: Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: spectra_x_395
       - source_id: spectra_x_440
@@ -437,6 +439,9 @@ light_paths:
 
   - id: transmitted_brightfield
     name: Transmitted Brightfield
+    modalities:
+      - transmitted_brightfield
+      - dic
     illumination_sequence:
       - source_id: transmitted_illuminator
     detection_sequence:

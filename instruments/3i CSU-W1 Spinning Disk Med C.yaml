@@ -339,6 +339,8 @@ hardware:
 light_paths:
   - id: confocal_spinning_disk
     name: Confocal spinning disk
+    modalities:
+      - confocal_spinning_disk
     illumination_sequence:
       - source_id: laserstack_405
       - source_id: laserstack_488
@@ -352,6 +354,8 @@ light_paths:
       
   - id: widefield_fluorescence
     name: Widefield fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: pe_300
       - optical_path_element_id: zeiss_widefield_fluorescence_positions
@@ -372,6 +376,8 @@ light_paths:
                 
   - id: transmitted_brightfield
     name: Transmitted brightfield
+    modalities:
+      - transmitted_brightfield
     illumination_sequence: []
     detection_sequence:
       - optical_path_element_id: trinocular_port_selector

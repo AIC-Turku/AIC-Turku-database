@@ -538,6 +538,8 @@ hardware:
 light_paths:
   - id: confocal_spinning_disk # CORRECTED: Aligned ID with standard modalities
     name: Confocal
+    modalities:
+      - confocal_spinning_disk
     illumination_sequence:
       - source_id: celesta_7ch_with_despeckler
       - source_id: celesta_7ch
@@ -572,6 +574,8 @@ light_paths:
                 
   - id: widefield_fluorescence
     name: Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: d_ledi_fluorescence_led_illumination_system
       - optical_path_element_id: epi_turret
@@ -597,6 +601,8 @@ light_paths:
                 
   - id: transmitted_brightfield
     name: Transmitted light
+    modalities:
+      - transmitted_brightfield
     illumination_sequence:
       - source_id: t12_d_lhled_led_lamp_house
     detection_sequence:

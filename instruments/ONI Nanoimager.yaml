@@ -191,6 +191,11 @@ hardware:
 light_paths:
   - id: tirf # Canonical physical route; SMLM/SPT/FRET remain documented as supported modalities
     name: SMLM / TIRF / SPT / FRET
+    modalities:
+      - tirf
+      - smlm
+      - spt
+      - fret
     illumination_sequence:
       - source_id: 405_nm_violet
       - source_id: 488_nm_blue

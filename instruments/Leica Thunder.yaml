@@ -428,6 +428,8 @@ hardware:
 light_paths:
   - id: widefield_fluorescence # CORRECTED: Aligned ID with standard modalities
     name: Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: led_8
       - source_id: led_8_2
@@ -456,6 +458,8 @@ light_paths:
                 
   - id: transmitted_brightfield # ADDED: Routing for declared modality
     name: Transmitted Brightfield
+    modalities:
+      - transmitted_brightfield
     illumination_sequence: [] # Intentionally empty as no specific transmitted source is documented
     detection_sequence:
       - optical_path_element_id: trinocular_port_selector

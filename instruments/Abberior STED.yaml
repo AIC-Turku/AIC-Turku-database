@@ -222,8 +222,12 @@ hardware:
   endpoints: []
 
 light_paths:
-  - id: epi
+  - id: confocal_point
     name: Epi-fluorescence
+    modalities:
+      - confocal_point
+      - sted
+      - resolft
     illumination_sequence:
       - source_id: ldh_d_c_485
       - source_id: pdl_t_561

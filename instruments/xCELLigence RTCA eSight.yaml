@@ -160,6 +160,8 @@ hardware:
 light_paths:
   - id: widefield_fluorescence
     name: Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: high_power_led_blue
       - source_id: high_power_led_green
@@ -171,6 +173,8 @@ light_paths:
       
   - id: transmitted_brightfield 
     name: Transmitted Brightfield
+    modalities:
+      - transmitted_brightfield
     illumination_sequence:
       - source_id: transmitted_led
     detection_sequence:

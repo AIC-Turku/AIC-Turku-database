@@ -178,6 +178,11 @@ hardware:
 light_paths:
   - id: confocal_point # CORRECTED: Aligned with standard modalities
     name: Confocal
+    modalities:
+      - confocal_point
+      - spectral_imaging
+      - flim
+      - fcs
     illumination_sequence:
       - source_id: white_light_laser_wll
       - source_id: 405_nm_diode_laser
@@ -198,6 +203,8 @@ light_paths:
                 
   - id: transmitted_brightfield
     name: Transmitted Brightfield
+    modalities:
+      - transmitted_brightfield
     illumination_sequence: []
     detection_sequence:
       - optical_path_element_id: aobs

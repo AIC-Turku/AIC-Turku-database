@@ -1569,12 +1569,15 @@ sections:
 
       - path: light_paths[].modalities
         title: Light path modalities
-        status: optional
+        status: conditional
         type: list
         item_type: string
+        min_items: 1
         vocab: modalities
+        required_if:
+          parent_present: "light_paths[]"
         used_by: [dashboard, method_generator]
-        rationale: Optional canonical modality IDs linked to this route so modality-driven UI flows can reveal the relevant route-compatible hardware.
+        rationale: Canonical modality IDs explicitly mapped to this route. When light_paths are declared, every populated route must define a non-empty modalities list so route-aware consumers never have to infer modality coverage.
 
       - path: light_paths[].illumination_sequence
         title: Illumination sequence

@@ -148,6 +148,9 @@ hardware:
 light_paths:
   - id: transmitted_brightfield 
     name: Transmitted Brightfield
+    modalities:
+      - transmitted_brightfield
+      - dic
     illumination_sequence:
       - source_id: 12v_100w_halogen_bulb
     detection_sequence:
