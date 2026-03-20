@@ -1417,9 +1417,8 @@
 
     if (!derivedControlGroups.length) return;
 
-    derivedControlGroups.forEach((group, index) => {
-      if (index > 0) pipeline.appendChild(createPipeSegment(stagePipeKey(derivedControlGroups[index - 1].id, group.id)));
-      pipeline.appendChild(createPipelineBadge(group.id, group.label));
+    pipeline.style.display = 'none';
+    derivedControlGroups.forEach((group) => {
       const panel = createInspectorPanel(group.id, group.label, group.subtitle);
       group.build(panel);
       inspector.appendChild(panel);

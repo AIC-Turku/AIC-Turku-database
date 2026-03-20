@@ -342,26 +342,79 @@ document.addEventListener("DOMContentLoaded", async () => {
         return routeViews.find((routeView) => cleanText(routeView.id) === selectedRouteId) || null;
     }
 
+    function modalityIdsForRoute(routeView) {
+        const routeIdentity = routeView?.route_identity || {};
+        const ids = [];
+        const pushValue = (value) => {
+            const cleaned = cleanText(value);
+            if (cleaned && !ids.includes(cleaned)) ids.push(cleaned);
+        };
+        (Array.isArray(routeView?.modalities) ? routeView.modalities : []).forEach(pushValue);
+        (Array.isArray(routeIdentity?.modalities) ? routeIdentity.modalities : []).forEach(pushValue);
+        pushValue(routeIdentity?.modality);
+        pushValue(routeView?.illumination_mode);
+        pushValue(routeView?.id);
+        return ids;
+    }
+
+    function selectedModalityIds() {
+        return getCheckedSelections("modality").map(item => cleanText(item.id)).filter(Boolean);
+    }
+
+    function routeViewsForSelectedModalities(dto) {
+        const routeViews = routeViewsForInstrument(dto);
+        const selected = selectedModalityIds();
+        if (!selected.length) return routeViews;
+        const selectedSet = new Set(selected);
+        return routeViews.filter(routeView => modalityIdsForRoute(routeView).some(id => selectedSet.has(id)));
+    }
+
+    function mergeHardwareRows(groups) {
+        const merged = [];
+        const seen = new Set();
+        (Array.isArray(groups) ? groups : []).forEach(group => {
+            (Array.isArray(group) ? group : []).forEach(item => {
+                if (!item || typeof item !== 'object') return;
+                const key = cleanText(item.id || item.display_label);
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                merged.push(item);
+            });
+        });
+        return merged;
+    }
+
+    function syncRouteSelectorWithModalities(dto) {
+        if (!routeSelect) return [];
+        const routeViews = routeViewsForInstrument(dto);
+        const compatibleViews = routeViewsForSelectedModalities(dto);
+        const compatibleIds = new Set(compatibleViews.map(routeView => cleanText(routeView.id)).filter(Boolean));
+        Array.from(routeSelect.options).forEach((option, index) => {
+            if (index === 0) return;
+            option.hidden = compatibleIds.size > 0 && !compatibleIds.has(cleanText(option.value));
+        });
+        if (cleanText(routeSelect.value) && compatibleIds.size > 0 && !compatibleIds.has(cleanText(routeSelect.value))) {
+            routeSelect.value = compatibleViews.length === 1 ? cleanText(compatibleViews[0].id) : "";
+        }
+        return compatibleViews.length ? compatibleViews : routeViews;
+    }
+
     function refreshOpticalPathSelections(dto) {
-        const opticalPath = dto?.hardware?.optical_path || {};
         const routeView = activeRouteView(dto);
-        const relevantHardware = routeView?.relevant_hardware || {};
-        const lightItems = Array.isArray(relevantHardware?.sources) && relevantHardware.sources.length
-            ? relevantHardware.sources
-            : inventoryItemsForClasses(dto, ["light_source"]);
-        const detItems = Array.isArray(relevantHardware?.endpoints) && relevantHardware.endpoints.length
-            ? relevantHardware.endpoints
-            : inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
-        const filterItems = Array.isArray(relevantHardware?.filters) && relevantHardware.filters.length
-            ? relevantHardware.filters
-            : inventoryItemsForClasses(dto, ["optical_element"]);
-        const splitterItems = Array.isArray(relevantHardware?.splitters) && relevantHardware.splitters.length
-            ? relevantHardware.splitters
-            : inventoryItemsForClasses(dto, ["splitter"]);
-        toggleSectionVisibility("section-light", bindCheckboxes("light-list", lightItems, "light") > 0);
-        toggleSectionVisibility("section-det", bindCheckboxes("det-list", detItems, "det") > 0);
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterItems, "filter") > 0);
-        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", splitterItems, "splitter") > 0);
+        const compatibleRouteViews = syncRouteSelectorWithModalities(dto);
+        const hardwareViews = routeView ? [routeView] : compatibleRouteViews;
+        const lightItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.sources));
+        const detItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.endpoints));
+        const filterItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.filters));
+        const splitterItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.splitters));
+        const fallbackLightItems = inventoryItemsForClasses(dto, ["light_source"]);
+        const fallbackDetItems = inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
+        const fallbackFilterItems = inventoryItemsForClasses(dto, ["optical_element"]);
+        const fallbackSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
+        toggleSectionVisibility("section-light", bindCheckboxes("light-list", lightItems.length ? lightItems : fallbackLightItems, "light") > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", detItems.length ? detItems : fallbackDetItems, "det") > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterItems.length ? filterItems : fallbackFilterItems, "filter") > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", splitterItems.length ? splitterItems : fallbackSplitterItems, "splitter") > 0);
     }
 
     function selectedRouteSentence(dto) {
@@ -522,7 +575,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const dto = currentInst;
 
-        toggleSectionVisibility("section-modality", bindCheckboxes("modality-list", dto.modalities || [], "modality") > 0);
+        const modalityCount = bindCheckboxes("modality-list", dto.modalities || [], "modality");
+        toggleSectionVisibility("section-modality", modalityCount > 0);
+        document.querySelectorAll('#modality-list input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.addEventListener('change', () => refreshOpticalPathSelections(dto));
+        });
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
         toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
         toggleSectionVisibility("section-obj", bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj") > 0);
