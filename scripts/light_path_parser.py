@@ -606,9 +606,11 @@ def _parse_canonical_light_paths(raw_light_paths: list[dict[str, Any]], sources:
             )
             if normalized
         ]
+        route_modalities = _normalize_modalities(route.get("modalities") or route.get("routes") or route.get("path"))
         routes.append({
             "id": route_id,
             "name": _clean_string(route.get("name")) or ROUTE_LABELS.get(route_id, route_id.replace("_", " ").title()),
+            "modalities": route_modalities or [route_id],
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
         })
@@ -699,8 +701,10 @@ def _apply_route_modalities_from_sequences(
                     apply_to_ref(ref_key, ref_id, route_id)
 
     for route in light_paths:
-        for sequence_key in ("illumination_sequence", "detection_sequence"):
-            walk_sequence(route.get(sequence_key, []), route["id"])
+        route_ids = _normalize_modalities(route.get("modalities") or route.get("routes") or route.get("path")) or [route["id"]]
+        for route_id in route_ids:
+            for sequence_key in ("illumination_sequence", "detection_sequence"):
+                walk_sequence(route.get(sequence_key, []), route_id)
 
 
 
@@ -2665,10 +2669,17 @@ def _build_route_sequences_and_graph(
         lane=0,
     )
 
+    route_modalities = _normalize_modalities(route.get("modalities") or route.get("routes") or route.get("path")) or [route.get("id")]
     resolved_route = {
         **route,
-        "route_identity": {"id": route.get("id"), "name": route.get("name"), "modality": route.get("id")},
-        "illumination_mode": route.get("id"),
+        "route_identity": {
+            "id": route.get("id"),
+            "name": route.get("name"),
+            "modality": route_modalities[0],
+            "modalities": route_modalities,
+        },
+        "illumination_mode": route_modalities[0],
+        "modalities": route_modalities,
         "illumination_traversal": illumination_sequence,
         "detection_traversal": detection_sequence,
         "branch_blocks": list(usage["branch_blocks"]),

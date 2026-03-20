@@ -184,15 +184,6 @@ def build_methods_generator_page_config(facility: dict[str, Any], repo_root: Pat
         "xcelligence_addition": str(facility_ack.get("xcelligence_addition", "")),
     }
 
-    acknowledgements_path = repo_root / "acknowledgements.yaml"
-    if acknowledgements_path.exists():
-        ack_loaded = yaml.safe_load(acknowledgements_path.read_text(encoding="utf-8"))
-        if isinstance(ack_loaded, dict):
-            ack_data = {
-                "standard": str(ack_loaded.get("standard", ack_data["standard"])),
-                "xcelligence_addition": str(ack_loaded.get("xcelligence_addition", ack_data["xcelligence_addition"])),
-            }
-
     methods_config = facility.get("methods_generator", {}) if isinstance(facility.get("methods_generator"), dict) else {}
     return {
         "output_title": str(methods_config.get("output_title", "Light Microscopy Methods")),
@@ -1832,8 +1823,11 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
         for endpoint in endpoint_rows
     ]
 
+    source_rows = [build_light_source_dto(vocabulary, src) for src in (canonical_hardware.get("sources") or canonical_hardware.get("light_sources") or []) if isinstance(src, dict)]
+
     return {
-        "light_sources": [build_light_source_dto(vocabulary, src) for src in (canonical_hardware.get("sources") or canonical_hardware.get("light_sources") or []) if isinstance(src, dict)],
+        "sources": source_rows,
+        "light_sources": copy.deepcopy(source_rows),
         "scanner": build_scanner_dto(vocabulary, scanner),
         "detectors": [build_detector_dto(vocabulary, det) for det in canonical_hardware.get("detectors", []) if isinstance(det, dict)],
         "endpoints": endpoint_renderables,
@@ -1995,7 +1989,7 @@ def slugify(value: str) -> str:
     return s
 
 
-INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
+INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 def is_valid_instrument_id(value: str) -> bool:
@@ -2128,13 +2122,17 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
             "url": get_val(scanner, "url"),
         }
 
-    light_sources_raw = raw.get("sources") or raw.get("light_sources")
-    if isinstance(light_sources_raw, list):
-        hw["light_sources"] = [
+    sources_raw = raw.get("sources") or raw.get("light_sources")
+    if isinstance(sources_raw, list):
+        hw["sources"] = [
             _normalized_light_source_payload(light_source, get_val)
-            for light_source in light_sources_raw
+            for light_source in sources_raw
             if isinstance(light_source, dict)
         ]
+
+    optical_path_elements_raw = raw.get("optical_path_elements")
+    if isinstance(optical_path_elements_raw, list):
+        hw["optical_path_elements"] = [copy.deepcopy(element) for element in optical_path_elements_raw if isinstance(element, dict)]
 
     detectors_raw = raw.get("detectors")
     if isinstance(detectors_raw, list):
@@ -2148,10 +2146,9 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
     if isinstance(eyepieces_raw, list):
         hw["eyepieces"] = [copy.deepcopy(eyepiece) for eyepiece in eyepieces_raw if isinstance(eyepiece, dict)]
 
-    for endpoint_key in ("endpoints", "terminals", "detection_endpoints"):
-        endpoint_rows = raw.get(endpoint_key)
-        if isinstance(endpoint_rows, list):
-            hw[endpoint_key] = [copy.deepcopy(endpoint) for endpoint in endpoint_rows if isinstance(endpoint, dict)]
+    endpoint_rows = raw.get("endpoints") or raw.get("terminals") or raw.get("detection_endpoints")
+    if isinstance(endpoint_rows, list):
+        hw["endpoints"] = [copy.deepcopy(endpoint) for endpoint in endpoint_rows if isinstance(endpoint, dict)]
 
     objectives_raw = raw.get("objectives")
     if isinstance(objectives_raw, list):
@@ -2177,9 +2174,6 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
         ]
 
     passthrough_keys = [
-        "light_path",
-        "filters",
-        "splitters",
         "magnification_changers",
         "environment",
         "stages",
@@ -2319,6 +2313,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "notes": notes_raw,
         "software": software,
         "hardware": hardware,
+        "light_paths": copy.deepcopy(payload.get("light_paths") or []),
         "policy": {
             "sections": policy.sections,
             "missing_required": policy.missing_required,
