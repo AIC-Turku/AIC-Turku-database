@@ -683,6 +683,16 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
     gating_delay_ns = _fmt_num(det.get("default_gating_delay_ns"))
     gate_width_ns = _fmt_num(det.get("default_gate_width_ns"))
     display_label = " ".join(part for part in [manufacturer, model] if part).strip() or kind_label or "Detector"
+    sensor_detail_parts = []
+    if sensor_format:
+        sensor_detail_parts.append(f"sensor: {sensor_format}")
+    if pixel_pitch:
+        sensor_detail_parts.append(f"pixel pitch: {pixel_pitch} µm")
+    if bit_depth:
+        sensor_detail_parts.append(f"{bit_depth}-bit")
+    sensor_clause = f" ({', '.join(sensor_detail_parts)})" if sensor_detail_parts else ""
+    kind_clause = f" {kind_label}" if kind_label else ""
+    base_detection = f"Detection was performed using a {display_label}{kind_clause}{sensor_clause}"
     if supports_time_gating is True:
         gating_phrase = ""
         if gating_delay_ns and gate_width_ns:
@@ -691,9 +701,9 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
             gating_phrase = f" using default gating delay {gating_delay_ns} ns"
         elif gate_width_ns:
             gating_phrase = f" using default gate width {gate_width_ns} ns"
-        method_sentence = f"Detection was performed using {display_label}{f' ({kind_label})' if kind_label else ''}, configured for time-gated acquisition{gating_phrase}."
+        method_sentence = f"{base_detection}, configured for time-gated acquisition{gating_phrase}."
     else:
-        method_sentence = f"Detection was performed using {display_label}{f' ({kind_label})' if kind_label else ''}."
+        method_sentence = f"{base_detection}."
     spec_lines = _spec_lines(
         ("Type", kind_label),
         ("Optical route", route_label),
@@ -760,6 +770,8 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         ]
         if part
     ).strip() or model or kind_label or "Light source"
+    tech_power_parts = [part for part in [technology, power] if part]
+    tech_power_clause = f" ({', '.join(tech_power_parts)})" if tech_power_parts else ""
     if normalized_role == "depletion":
         pulse_details = []
         if pulse_width_ps:
@@ -770,11 +782,11 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         depletion_descriptor = "pulsed depletion laser" if normalized_timing_mode == "pulsed" else "depletion laser"
         method_sentence = f"STED depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a {depletion_descriptor}{targets_clause}."
     elif normalized_role == "transmitted_illumination":
-        method_sentence = f"Transmitted illumination was provided by {display_label}."
+        method_sentence = f"Transmitted illumination was provided by {display_label}{tech_power_clause}."
     elif normalized_role == "excitation":
-        method_sentence = f"Excitation was provided by {display_label}."
+        method_sentence = f"Excitation was provided by {display_label}{tech_power_clause}."
     else:
-        method_sentence = f"Light source in use: {display_label}."
+        method_sentence = f"Light source in use: {display_label}{tech_power_clause}."
     spec_lines = _spec_lines(
         ("Type", kind_label),
         ("Role", role_label),
@@ -1363,6 +1375,33 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "endpoint_summary": endpoint_summary,
             "branch_summary": branch_summary,
         }
+
+        route_hw_id_set = set(hardware_ids)
+        route_light_sentences = [
+            clean_text(item.get("method_sentence"))
+            for item in hardware_renderables_from_inventory(derived_inventory_cards, route_hw_id_set, "light_source")
+            if clean_text(item.get("method_sentence"))
+        ]
+        route_filter_sentences = [
+            clean_text(item.get("method_sentence"))
+            for item in hardware_renderables_from_inventory(derived_inventory_cards, route_hw_id_set, "optical_element")
+            if clean_text(item.get("method_sentence"))
+        ]
+        route_splitter_sentences = [
+            clean_text(item.get("method_sentence"))
+            for item in hardware_renderables_from_inventory(derived_inventory_cards, route_hw_id_set, "splitter")
+            if clean_text(item.get("method_sentence"))
+        ]
+        route_detector_sentences = [
+            clean_text(item.get("method_sentence"))
+            for item in hardware_renderables_from_inventory(derived_inventory_cards, route_hw_id_set, "endpoint", "camera_port", "eyepiece")
+            if clean_text(item.get("method_sentence"))
+        ]
+        route_method_paragraph = " ".join(
+            route_light_sentences + route_filter_sentences + route_splitter_sentences + route_detector_sentences
+        )
+        canonical_route["route_method_paragraph"] = route_method_paragraph
+
         canonical_light_paths.append(canonical_route)
 
         hardware_labels = [clean_text(item.get("display_label") or item.get("id")) for item in route_hardware_items if clean_text(item.get("display_label") or item.get("id"))]
@@ -1382,6 +1421,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         derived_methods_route_views.append({
             "id": route_id,
             "display_label": canonical_route["name"],
+            "route_method_paragraph": route_method_paragraph,
             "light_sources": [item for item in hardware_renderables_from_inventory(derived_inventory_cards, set(hardware_ids), "light_source")],
             "filters": [item for item in hardware_renderables_from_inventory(derived_inventory_cards, set(hardware_ids), "optical_element")],
             "splitters": [item for item in hardware_renderables_from_inventory(derived_inventory_cards, set(hardware_ids), "splitter")],
@@ -1528,6 +1568,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
                 if route_label
                 else ""
             ),
+            "route_method_paragraph": clean_text(route_renderable.get("route_method_paragraph") or ""),
         })
 
     return {
@@ -1542,7 +1583,15 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         "splitters": derived_splitter_cards,
         "terminal_renderables": derived_endpoint_cards,
         "hardware_inventory_renderables": derived_inventory_cards,
-        "methods_route_options": [{"id": item["id"], "label": item["display_label"]} for item in derived_methods_route_views],
+        "methods_route_options": [
+            {
+                "id": item["id"],
+                "label": item["display_label"],
+                "display_label": item["display_label"],
+                "method_sentence": item.get("route_method_paragraph", ""),
+            }
+            for item in derived_methods_route_views
+        ],
         "methods_route_views": derived_methods_route_views,
         "sections": derived_sections,
         "renderables": derived_renderables,
