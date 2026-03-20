@@ -1,6 +1,6 @@
 {% macro render_spec_card(item) -%}
-- **{% if item.url %}[{{ item.display_label }}]({{ item.url }}){:target="_blank"}{% else %}{{ item.display_label }}{% endif %}**
-  {% if item.display_subtitle %}<br><small class="aic-muted">{{ item.display_subtitle }}</small>{% endif %}
+- **{% if item.url %}[{{ item.display_label }}]({{ item.url }}){:target="_blank"}{% else %}{{ item.display_label }}{% endif %}**{% if item.display_subtitle %}
+  <br><small class="aic-muted">{{ item.display_subtitle }}</small>{% endif %}
   {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
 {%- endmacro %}
 
@@ -199,10 +199,11 @@
 {% if hw.stages %}
 ### 🧭 Stages & Focus Drives
 
+<div class="grid cards" markdown>
 {% for item in hw.stages %}
-- {{ item.display_label }}
-  {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
+{{ render_spec_card(item) }}
 {% endfor %}
+</div>
 {% endif %}
 
 {% if hw.hardware_autofocus.present or hw.triggering.present %}
@@ -218,39 +219,17 @@
 </div>
 {% endif %}
 
-{% if hw.optical_path.sections or hw.optical_path.splitters or hw.optical_path.terminal_renderables %}
+{% set _optical_element_sections = hw.optical_path.sections | selectattr("id", "equalto", "optical_path_elements") | list if hw.optical_path.sections else [] %}
+{% if _optical_element_sections %}
 ### 🎛️ Optical Path Elements
 
-{% if hw.optical_path.sections %}
-{% for section in hw.optical_path.sections %}
-{% if section.id not in ["terminals", "hardware_inventory", "light_paths"] %}
-### {{ section.display_label }}
+{% for section in _optical_element_sections %}
 <div class="grid cards" markdown>
 {% for item in section["items"] %}
 {{ render_spec_card(item) }}
 {% endfor %}
 </div>
-{% endif %}
 {% endfor %}
-{% endif %}
-
-{% if hw.optical_path.splitters %}
-### 🔀 Branching & Selector Summaries
-<div class="grid cards" markdown>
-{% for item in hw.optical_path.splitters %}
-{{ render_spec_card(item) }}
-{% endfor %}
-</div>
-{% endif %}
-
-{% if hw.optical_path.terminal_renderables %}
-### 🎯 Detection Endpoint Summaries
-<div class="grid cards" markdown>
-{% for item in hw.optical_path.terminal_renderables %}
-{{ render_spec_card(item) }}
-{% endfor %}
-</div>
-{% endif %}
 {% endif %}
 
 
