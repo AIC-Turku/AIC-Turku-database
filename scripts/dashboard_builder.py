@@ -176,12 +176,24 @@ def _collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str
     return known_fields, missing_fields
 
 
-def build_methods_generator_page_config(facility: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    facility_ack = facility.get("acknowledgements", {}) if isinstance(facility.get("acknowledgements"), dict) else {}
-    ack_data = {
-        "standard": str(facility_ack.get("standard", "")),
-        "xcelligence_addition": str(facility_ack.get("xcelligence_addition", "")),
+def _build_ack_data(ack: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "standard": str(ack.get("standard", "")),
+        "xcelligence_addition": str(ack.get("xcelligence_addition", "")),
     }
+
+
+def build_methods_generator_page_config(facility: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    ack_override_path = repo_root / "acknowledgements.yaml"
+    if ack_override_path.is_file():
+        with ack_override_path.open(encoding="utf-8") as _f:
+            override_ack = yaml.safe_load(_f.read()) or {}
+        if not isinstance(override_ack, dict):
+            override_ack = {}
+        ack_data = _build_ack_data(override_ack)
+    else:
+        facility_ack = facility.get("acknowledgements", {}) if isinstance(facility.get("acknowledgements"), dict) else {}
+        ack_data = _build_ack_data(facility_ack)
 
     methods_config = facility.get("methods_generator", {}) if isinstance(facility.get("methods_generator"), dict) else {}
     return {
@@ -1927,11 +1939,13 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
 
     sources_raw = raw.get("sources") or raw.get("light_sources")
     if isinstance(sources_raw, list):
-        hw["sources"] = [
+        normalized_sources = [
             _normalized_light_source_payload(light_source, get_val)
             for light_source in sources_raw
             if isinstance(light_source, dict)
         ]
+        hw["sources"] = normalized_sources
+        hw["light_sources"] = normalized_sources
 
     optical_path_elements_raw = raw.get("optical_path_elements")
     if isinstance(optical_path_elements_raw, list):
