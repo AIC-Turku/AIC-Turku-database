@@ -50,11 +50,6 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
       <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
-    <div id="section-route" class="methods-option-section">
-      <strong>7. Illumination Mode / Route:</strong>
-      <div id="route-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
-    </div>
-
     <div id="section-filter" class="md-typeset methods-option-section">
       <h4>8. Filters / Dichroics:</h4>
       <div id="filter-list" class="checkbox-group"></div>
@@ -313,16 +308,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return opticalPathInventory(dto).filter(item => wanted.has(cleanText(item?.inventory_class)));
     }
 
-    function populateRouteCheckboxes(dto) {
-        const routeOptions = Array.isArray(dto?.hardware?.optical_path?.methods_route_options)
-            ? dto.hardware.optical_path.methods_route_options
-            : [];
-        const count = bindCheckboxes("route-list", routeOptions, "route");
-        toggleSectionVisibility("section-route", count > 0);
-        document.getElementById("route-list").addEventListener("change", () => refreshOpticalPathSelections(dto));
-        return routeOptions;
-    }
-
     function mergeHardwareRows(groups) {
         const merged = [];
         const seen = new Set();
@@ -338,24 +323,51 @@ document.addEventListener("DOMContentLoaded", async () => {
         return merged;
     }
 
-    function refreshOpticalPathSelections(dto) {
-        const checkedRouteIds = new Set(getCheckedIds("route"));
+    function updateHardwareVisibility(dto) {
+        const checkedModalityIds = new Set(getCheckedIds("modality"));
         const routeViews = routeViewsForInstrument(dto);
-        const hardwareViews = checkedRouteIds.size > 0
-            ? routeViews.filter(rv => checkedRouteIds.has(cleanText(rv.id)))
-            : routeViews;
-        const lightItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.sources));
-        const detItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.endpoints));
-        const filterItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.filters));
-        const splitterItems = mergeHardwareRows(hardwareViews.map(view => view?.relevant_hardware?.splitters));
-        const fallbackLightItems = inventoryItemsForClasses(dto, ["light_source"]);
-        const fallbackDetItems = inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
-        const fallbackFilterItems = inventoryItemsForClasses(dto, ["optical_element"]);
-        const fallbackSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
-        toggleSectionVisibility("section-light", bindCheckboxes("light-list", lightItems.length ? lightItems : fallbackLightItems, "light") > 0);
-        toggleSectionVisibility("section-det", bindCheckboxes("det-list", detItems.length ? detItems : fallbackDetItems, "det") > 0);
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterItems.length ? filterItems : fallbackFilterItems, "filter") > 0);
-        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", splitterItems.length ? splitterItems : fallbackSplitterItems, "splitter") > 0);
+
+        // Collect hardware IDs from routes that match the checked modalities.
+        // When no modalities are checked, include hardware from ALL routes.
+        // Both illumination_mode (derived from route_identity.modality) and id are
+        // checked because illumination_mode may differ from the route id when
+        // route_identity.modality is explicitly set (e.g. id="epi-fluorescence"
+        // with illumination_mode="widefield_fluorescence").
+        const matchingRouteHardwareIds = new Set();
+        routeViews
+            .filter(rv => checkedModalityIds.size === 0 ||
+                checkedModalityIds.has(cleanText(rv.illumination_mode)) ||
+                checkedModalityIds.has(cleanText(rv.id)))
+            .forEach(rv => {
+                ["sources", "filters", "splitters", "endpoints"].forEach(key => {
+                    (rv.relevant_hardware?.[key] || []).forEach(item => {
+                        const id = cleanText(item?.id);
+                        if (id) matchingRouteHardwareIds.add(id);
+                    });
+                });
+            });
+
+        // Filter inventory renderables (which carry method_sentence) by:
+        //   1. The item's own modalities array declares a checked modality, OR
+        //   2. The item belongs to a route that declares a checked modality.
+        // When no modalities are checked, return all items unfiltered.
+        function filterByModality(items) {
+            if (checkedModalityIds.size === 0) return items;
+            return items.filter(item => {
+                const id = cleanText(item?.id);
+                if (matchingRouteHardwareIds.has(id)) return true;
+                return Array.isArray(item?.modalities) && item.modalities.some(m => checkedModalityIds.has(cleanText(m)));
+            });
+        }
+
+        const allLightItems = inventoryItemsForClasses(dto, ["light_source"]);
+        const allDetItems = inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
+        const allFilterItems = inventoryItemsForClasses(dto, ["optical_element"]);
+        const allSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
+        toggleSectionVisibility("section-light", bindCheckboxes("light-list", filterByModality(allLightItems), "light") > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", filterByModality(allDetItems), "det") > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterByModality(allFilterItems), "filter") > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterByModality(allSplitterItems), "splitter") > 0);
     }
 
     function getCheckedSelections(prefix) {
@@ -430,7 +442,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             scanner: getCheckedIds("scanner"),
             obj: getCheckedIds("obj"),
             light: getCheckedIds("light"),
-            route: getCheckedIds("route"),
             filter: getCheckedIds("filter"),
             splitter: getCheckedIds("splitter"),
             det: getCheckedIds("det"),
@@ -511,17 +522,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const modalityCount = bindCheckboxes("modality-list", dto.modalities || [], "modality");
         toggleSectionVisibility("section-modality", modalityCount > 0);
-        document.querySelectorAll('#modality-list input[type="checkbox"]').forEach((checkbox) => {
-            checkbox.addEventListener('change', () => refreshOpticalPathSelections(dto));
-        });
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
         toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
         toggleSectionVisibility("section-obj", bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj") > 0);
         toggleSectionVisibility("section-magnification-changer", bindCheckboxes("magnification-changer-list", dto.hardware?.magnification_changers || [], "magnification-changer") > 0);
         toggleSectionVisibility("section-optical-modulator", bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator") > 0);
         toggleSectionVisibility("section-illumination-logic", bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic") > 0);
-        populateRouteCheckboxes(dto);
-        refreshOpticalPathSelections(dto);
+        updateHardwareVisibility(dto);
+    });
+
+    // Container-level change listener for modality checkboxes. Registered once at
+    // initialization so it survives instrument switches; reads currentInst at call time.
+    document.getElementById("modality-list").addEventListener("change", () => {
+        if (currentInst) updateHardwareVisibility(currentInst);
     });
 
     addBtn.addEventListener("click", () => {
@@ -560,20 +573,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             dto.methods?.triggering_sentence,
         ]).join(" ");
 
-        const checkedRouteSelections = getCheckedSelections("route");
-        const routeMethodParagraphs = dedupeSentences(
-            checkedRouteSelections.map(item => cleanText(item.methodSentence)).filter(Boolean)
-        );
-        const fallbackLightPath = dedupeSentences([
+        const paragraphLightPath = dedupeSentences([
             groupedLabelSentence("light", getCheckedSelections("light")),
             groupedLabelSentence("det", getCheckedSelections("det")),
             groupedLabelSentence("filter", getCheckedSelections("filter")),
             ...specialistSelections,
             dto.methods?.quarep_light_path_recommendation,
         ]).join(" ");
-        const paragraphLightPath = routeMethodParagraphs.length > 0
-            ? dedupeSentences([...routeMethodParagraphs, ...specialistSelections, dto.methods?.quarep_light_path_recommendation]).join(" ")
-            : fallbackLightPath;
 
         const paragraphAcquisition = dedupeSentences([
             ...(dto.methods?.processing_sentences || []),

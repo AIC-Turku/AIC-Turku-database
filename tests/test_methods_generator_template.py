@@ -101,7 +101,6 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'section-scanner',
               'section-obj',
               'section-light',
-              'section-route',
               'section-filter',
               'section-splitter',
               'section-det',
@@ -113,7 +112,6 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'scanner-list',
               'obj-list',
               'light-list',
-              'route-list',
               'det-list',
               'magnification-changer-list',
               'optical-modulator-list',
@@ -409,10 +407,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("ask staff", result["output"])
         self.assertIn("Objective NA", result["output"])
 
-    def test_route_selector_filters_optical_hardware_from_dto_route_usage(self) -> None:
+    def test_modality_selector_filters_optical_hardware_from_dto_route_usage(self) -> None:
         instrument = {
-            "id": "scope-route",
-            "display_name": "Scope Route",
+            "id": "scope-modality-filter",
+            "display_name": "Scope Modality Filter",
             "retired": False,
             "methods_generation": {"is_blocked": False, "blockers": []},
             "methods": {"base_sentence": "Base method block."},
@@ -426,63 +424,63 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "illumination_logic": [],
                 "optical_path": {
                     "hardware_inventory_renderables": [
-                        {"id": "source:laser_488", "inventory_class": "light_source", "display_label": "488 Laser", "display_subtitle": "Light Source", "method_sentence": "488 sentence."},
-                        {"id": "source:laser_561", "inventory_class": "light_source", "display_label": "561 Laser", "display_subtitle": "Light Source", "method_sentence": "561 sentence."},
-                        {"id": "optical_path_element:ex_488", "inventory_class": "optical_element", "display_label": "EX 488", "display_subtitle": "Optical Element", "method_sentence": "EX sentence."},
-                        {"id": "optical_path_element:pinhole", "inventory_class": "optical_element", "display_label": "Pinhole", "display_subtitle": "Optical Element", "method_sentence": "Pinhole sentence."},
-                        {"id": "endpoint:cam", "inventory_class": "endpoint", "display_label": "Main Camera", "display_subtitle": "Endpoint", "method_sentence": "Cam sentence."},
-                        {"id": "endpoint:hyd", "inventory_class": "endpoint", "display_label": "HyD", "display_subtitle": "Endpoint", "method_sentence": "HyD sentence."},
-                    ],
-                    "methods_route_options": [
-                        {"id": "epi", "label": "Epi", "display_label": "Epi", "method_sentence": "488 sentence. EX sentence. Cam sentence."},
-                        {"id": "confocal", "label": "Confocal", "display_label": "Confocal", "method_sentence": "561 sentence. Pinhole sentence. HyD sentence."},
+                        {"id": "source:laser_488", "inventory_class": "light_source", "display_label": "488 Laser", "display_subtitle": "Light Source", "method_sentence": "488 sentence.", "modalities": ["widefield_fluorescence"]},
+                        {"id": "source:laser_561", "inventory_class": "light_source", "display_label": "561 Laser", "display_subtitle": "Light Source", "method_sentence": "561 sentence.", "modalities": ["confocal"]},
+                        {"id": "optical_path_element:ex_488", "inventory_class": "optical_element", "display_label": "EX 488", "display_subtitle": "Optical Element", "method_sentence": "EX sentence.", "modalities": ["widefield_fluorescence"]},
+                        {"id": "optical_path_element:pinhole", "inventory_class": "optical_element", "display_label": "Pinhole", "display_subtitle": "Optical Element", "method_sentence": "Pinhole sentence.", "modalities": ["confocal"]},
+                        {"id": "endpoint:cam", "inventory_class": "endpoint", "display_label": "Main Camera", "display_subtitle": "Endpoint", "method_sentence": "Cam sentence.", "modalities": ["widefield_fluorescence"]},
+                        {"id": "endpoint:hyd", "inventory_class": "endpoint", "display_label": "HyD", "display_subtitle": "Endpoint", "method_sentence": "HyD sentence.", "modalities": ["confocal"]},
                     ],
                     "authoritative_route_contract": {
                         "routes": [
                         {
-                            "id": "epi",
-                            "display_label": "Epi",
-                            "illumination_mode": "epi",
-                            "method_sentence": "The Epi illumination mode / route was used.",
+                            "id": "widefield_fluorescence",
+                            "display_label": "Widefield",
+                            "illumination_mode": "widefield_fluorescence",
                             "relevant_hardware": {
-                                "sources": [{"id": "source:laser_488", "display_label": "488 Laser", "display_subtitle": "Light Source"}],
-                                "filters": [{"id": "optical_path_element:ex_488", "display_label": "EX 488", "display_subtitle": "Optical Element"}],
+                                "sources": [{"id": "source:laser_488", "display_label": "488 Laser", "modalities": ["widefield_fluorescence"]}],
+                                "filters": [{"id": "optical_path_element:ex_488", "display_label": "EX 488", "modalities": ["widefield_fluorescence"]}],
                                 "splitters": [],
-                                "endpoints": [{"id": "endpoint:cam", "display_label": "Main Camera", "display_subtitle": "Endpoint"}],
+                                "endpoints": [{"id": "endpoint:cam", "display_label": "Main Camera", "modalities": ["widefield_fluorescence"]}],
                             },
                         },
                         {
                             "id": "confocal",
                             "display_label": "Confocal",
                             "illumination_mode": "confocal",
-                            "method_sentence": "The Confocal illumination mode / route was used.",
                             "relevant_hardware": {
-                                "sources": [{"id": "source:laser_561", "display_label": "561 Laser", "display_subtitle": "Light Source"}],
-                                "filters": [{"id": "optical_path_element:pinhole", "display_label": "Pinhole", "display_subtitle": "Optical Element"}],
+                                "sources": [{"id": "source:laser_561", "display_label": "561 Laser", "modalities": ["confocal"]}],
+                                "filters": [{"id": "optical_path_element:pinhole", "display_label": "Pinhole", "modalities": ["confocal"]}],
                                 "splitters": [],
-                                "endpoints": [{"id": "endpoint:hyd", "display_label": "HyD", "display_subtitle": "Endpoint"}],
+                                "endpoints": [{"id": "endpoint:hyd", "display_label": "HyD", "modalities": ["confocal"]}],
                             },
                         },
                     ],
                     },
                 },
             },
-            "modalities": [],
+            "modalities": [
+                {"id": "widefield_fluorescence", "display_label": "Widefield Fluorescence"},
+                {"id": "confocal", "display_label": "Confocal"},
+            ],
             "modules": [],
         }
         result = self.run_template(
             instruments=[instrument],
             actions_js="""
             const systemSelect = document.getElementById('system-select');
-            systemSelect.value = 'scope-route';
+            systemSelect.value = 'scope-modality-filter';
             systemSelect.listeners.change({ target: systemSelect });
-            // Check the confocal route checkbox and fire the container change event
-            const confocalCheckbox = state.inputs.find(cb => cb.id && cb.id.startsWith('route-') && cb.value === 'confocal');
+            // Check the confocal modality checkbox and fire the container change event
+            const confocalCheckbox = state.inputs.find(cb => cb.id && cb.id.startsWith('modality-') && cb.value === 'confocal');
             confocalCheckbox.checked = true;
-            document.getElementById('route-list').listeners.change();
+            document.getElementById('modality-list').listeners.change();
+            // Check all hardware items now shown (only confocal hardware after filtering)
+            document.getElementById('light-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
+            document.getElementById('filter-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
+            document.getElementById('det-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
             document.getElementById('add-btn').listeners.click();
             return {
-              routeVisible: document.getElementById('section-route').style.display,
               lightCount: document.getElementById('light-list').children.length,
               lightLabel: document.getElementById('light-list').children[0].children[1].children[0].textContent,
               filterLabel: document.getElementById('filter-list').children[0].children[1].children[0].textContent,
@@ -492,12 +490,11 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertEqual(result["routeVisible"], "")
         self.assertEqual(result["lightCount"], 1)
         self.assertIn("561 Laser", result["lightLabel"])
         self.assertIn("Pinhole", result["filterLabel"])
         self.assertIn("HyD", result["detectorLabel"])
-        self.assertIn("561 sentence.", result["output"])
+        self.assertIn("Excitation was provided by 561 Laser.", result["output"])
         self.assertIn("Pinhole sentence.", result["output"])
         self.assertIn("HyD sentence.", result["output"])
 
