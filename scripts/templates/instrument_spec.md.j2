@@ -218,143 +218,13 @@
 </div>
 {% endif %}
 
-{% if route_graphs or hardware_inventory %}
-### 🗺️ Route Graph Topology
-
-<details>
-<summary><strong>Show authoritative route graphs and numbered hardware inventory</strong></summary>
-
-<style>
-.aic-lightpath-panel { margin: 0 0 1rem 0; border: 1px solid rgba(148,163,184,.28); border-radius: 22px; background: linear-gradient(180deg, rgba(248,250,252,.95), rgba(255,255,255,.98)); box-shadow: 0 16px 40px rgba(15,23,42,.06); overflow: hidden; }
-.aic-lightpath-panel__header { padding: 18px 22px 0 22px; }
-.aic-lightpath-panel__title { font-size: 1.06rem; font-weight: 700; margin: 0 0 .25rem 0; color: #0f172a; }
-.aic-lightpath-panel__subtitle { color: #475569; font-size: .92rem; margin: 0 0 .9rem 0; }
-.aic-lightpath-panel__svg { padding: 0 12px 14px 12px; overflow-x: auto; }
-.aic-lightpath-panel__svg svg { min-width: 920px; width: 100%; height: auto; display: block; }
-.aic-lightpath-notes { display: grid; gap: .85rem; margin: 1rem 0 0 0; }
-.aic-lightpath-callout { border-radius: 16px; padding: 14px 16px; border: 1px solid rgba(148,163,184,.24); background: rgba(255,255,255,.9); }
-.aic-lightpath-callout strong { display: block; margin-bottom: .35rem; color: #0f172a; }
-.aic-lightpath-index { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .92rem; }
-.aic-lightpath-index th, .aic-lightpath-index td { padding: .7rem .75rem; border-bottom: 1px solid rgba(226,232,240,.9); vertical-align: top; }
-.aic-lightpath-index th { text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #475569; background: rgba(248,250,252,.9); }
-.aic-lightpath-nodeid { display: inline-flex; width: 1.7rem; height: 1.7rem; align-items: center; justify-content: center; border-radius: 999px; background: #0f172a; color: #fff; font-weight: 700; font-size: .82rem; }
-.aic-lightpath-muted { color: #64748b; }
-.aic-lightpath-route-meta { display: flex; flex-wrap: wrap; gap: .6rem; margin: .7rem 0 0 0; }
-.aic-lightpath-route-meta span { display: inline-flex; align-items: center; gap: .35rem; background: rgba(15,23,42,.06); border-radius: 999px; padding: .28rem .72rem; font-size: .83rem; color: #334155; }
-</style>
-
-{% if hardware_inventory %}
-<div class="aic-lightpath-callout">
-  <strong>Optical hardware inventory</strong>
-  <div class="aic-muted">Each installed component appears once here. Route graphs below may show the same numbered component multiple times if it is reused across routes or positions.</div>
-  <table class="aic-lightpath-index">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Component</th>
-        <th>Class</th>
-        <th>Routes</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in hardware_inventory %}
-      <tr>
-        <td><span class="aic-lightpath-nodeid">{{ item.display_number or '—' }}</span></td>
-        <td><strong>{{ item.display_label }}</strong>{% if item.model %}<br><span class="aic-lightpath-muted">{{ item.manufacturer }} {{ item.model }}</span>{% endif %}</td>
-        <td>{{ item.inventory_class | replace('_', ' ') | title }}</td>
-        <td>{{ (item.route_usage_summary or []) | join(', ') or '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-
-{% for route in route_graphs %}
-{% set route_name = route.name or route.display_label or route.id %}
-<div class="aic-lightpath-panel">
-  <div class="aic-lightpath-panel__header">
-    <div class="aic-lightpath-panel__title">{{ route_name or 'Logical light-path graph' }}</div>
-    <p class="aic-lightpath-panel__subtitle">This route is rendered from canonical DTO graph data (`light_paths[*].graph_nodes` / `graph_edges`) and numbered against the shared `hardware_inventory` / `hardware_index_map` contract above.</p>
-    <div class="aic-lightpath-route-meta">
-      <span><strong>Nodes:</strong> {{ (route.graph_nodes or []) | length }}</span>
-      <span><strong>Edges:</strong> {{ (route.graph_edges or []) | length }}</span>
-      <span><strong>Endpoints:</strong> {{ (route.endpoint_summary.labels or []) | join(', ') or '—' }}</span>
-      <span><strong>Branches:</strong> {% if route.branch_summary and route.branch_summary.has_branches %}{{ route.branch_summary.count }} path(s){% else %}None{% endif %}</span>
-      <span><strong>Inventory usage:</strong> {{ ((route.route_local_hardware_usage or {}).inventory_ids or []) | length }}</span>
-    </div>
-  </div>
-  {% if route.static_graph and route.static_graph.svg_markup %}
-  <div class="aic-lightpath-panel__svg">{{ route.static_graph.svg_markup | safe }}</div>
-  {% endif %}
-  <div class="aic-lightpath-panel__header" style="padding-top: 0;">
-    <table class="aic-lightpath-index">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Graph node</th>
-          <th>Inventory link</th>
-          <th>Downstream targets</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for node in route.graph_nodes or [] %}
-        {% set node_number = node.inventory_display_number or node.display_number or ((hardware_index_map.by_inventory_id or {}).get(node.hardware_inventory_id) if node.hardware_inventory_id else none) %}
-        {% set downstream = [] %}
-        {% for edge in route.graph_edges or [] if edge.source == node.id %}
-          {% for target in route.graph_nodes or [] if target.id == edge.target %}
-            {% set target_number = target.inventory_display_number or target.display_number or ((hardware_index_map.by_inventory_id or {}).get(target.hardware_inventory_id) if target.hardware_inventory_id else none) %}
-            {% set target_label = ((target_number ~ ' — ') if target_number else '') ~ (target.label or target.id) %}
-            {% if edge.branch_id or edge.label %}
-              {% set target_label = target_label ~ ' [' ~ (edge.label or edge.branch_id) ~ ']' %}
-            {% endif %}
-            {% set _ = downstream.append(target_label) %}
-          {% endfor %}
-        {% endfor %}
-        <tr>
-          <td><span class="aic-lightpath-nodeid">{{ node_number or '—' }}</span></td>
-          <td><strong>{{ node.label or node.id }}</strong><br><span class="aic-lightpath-muted">{{ node.component_kind or node.stage_role or node.endpoint_type or 'Route node' }}</span></td>
-          <td>
-            {% if node.hardware_inventory_id %}
-              <code>{{ node.hardware_inventory_id }}</code>
-            {% else %}
-              <span class="aic-lightpath-muted">Route-local / non-inventory node</span>
-            {% endif %}
-          </td>
-          <td>{{ downstream | join(', ') or 'Terminal node' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    {% if route.branch_summary and route.branch_summary.has_branches %}
-    <div class="aic-lightpath-notes">
-      <div class="aic-lightpath-callout">
-        <strong>Branch summary</strong>
-        <div>Selection modes: {{ (route.branch_summary.selection_modes or []) | join(', ') or '—' }}</div>
-        {% for branch in route.branch_summary.branches or [] %}
-        <div>• <strong>{{ branch.label or branch.branch_id }}</strong>{% if branch.mode %} ({{ branch.mode }}){% endif %}{% if branch.endpoint_inventory_ids %} → {{ branch.endpoint_inventory_ids | join(', ') }}{% endif %}</div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-  </div>
-</div>
-{% endfor %}
-
-</details>
-
-{% endif %}
-
 {% if hw.optical_path.sections or hw.optical_path.splitters or hw.optical_path.terminal_renderables %}
-### 🎛️ Supplementary Optical Path Summaries
-
-<div class="aic-muted" style="margin-bottom: .85rem;">The route graphs above are the primary topology truth. The cards below are convenience summaries derived from the same DTO data and remaining compatibility helpers.</div>
+### 🎛️ Optical Path Elements
 
 {% if hw.optical_path.sections %}
 {% for section in hw.optical_path.sections %}
 {% if section.id not in ["terminals", "hardware_inventory", "light_paths"] %}
-#### {{ section.display_label }}
+### {{ section.display_label }}
 <div class="grid cards" markdown>
 {% for item in section["items"] %}
 {{ render_spec_card(item) }}
@@ -365,7 +235,7 @@
 {% endif %}
 
 {% if hw.optical_path.splitters %}
-#### 🔀 Branching & Selector Summaries
+### 🔀 Branching & Selector Summaries
 <div class="grid cards" markdown>
 {% for item in hw.optical_path.splitters %}
 {{ render_spec_card(item) }}
@@ -374,7 +244,7 @@
 {% endif %}
 
 {% if hw.optical_path.terminal_renderables %}
-#### 🎯 Detection Endpoint Summaries
+### 🎯 Detection Endpoint Summaries
 <div class="grid cards" markdown>
 {% for item in hw.optical_path.terminal_renderables %}
 {{ render_spec_card(item) }}
