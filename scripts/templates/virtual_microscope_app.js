@@ -839,6 +839,17 @@
     return cleanString(node && (node.label || node.display_label || node.id)) || 'Route node';
   }
 
+  function stageGroupForNodeKind(kindLabel) {
+    const kind = cleanString(kindLabel).toLowerCase();
+    if (kind.includes('source') || kind.includes('laser') || kind.includes('led') || kind.includes('lamp')) return 'sources';
+    if (kind.includes('excitation') || kind.includes('cube')) return 'illumination-controls';
+    if (kind.includes('dichroic')) return 'illumination-controls';
+    if (kind.includes('emission') || kind.includes('splitter')) return 'detection-controls';
+    if (kind.includes('detector') || kind.includes('camera') || kind.includes('pmt') || kind.includes('apd') || kind.includes('hyd') || kind.includes('eyepiece') || kind.includes('endpoint')) return 'detectors';
+    if (kind === 'sample') return 'sample';
+    return null;
+  }
+
   function buildAuthoritativeRouteGraph(topology) {
     const routeRecord = topology && topology.routeRecord ? topology.routeRecord : {};
     const rawNodes = Array.isArray(topology && topology.graphNodes) ? topology.graphNodes : [];
@@ -976,6 +987,12 @@
       card.style.gridColumn = String((Number.isFinite(node.column) ? node.column : 0) + 1);
       card.style.gridRow = String((Number.isFinite(node.lane) ? node.lane : 0) + 1);
       card.dataset.nodeId = node.id || '';
+      const nodeStageGroup = stageGroupForNodeKind(node.kindLabel);
+      if (nodeStageGroup) {
+        card.style.cursor = 'pointer';
+        card.title = `Click to open ${nodeStageGroup.replace(/-/g, ' ')} panel`;
+        card.addEventListener('click', () => setInspectorStage(nodeStageGroup));
+      }
 
       const heading = document.createElement('div');
       heading.className = 'vm-info-row';
@@ -1209,28 +1226,75 @@
     });
   }
 
-  function init() {
-    initCharts();
-    const entries = Object.entries(state.allInstruments || {});
-    if (!entries.length) return;
-
-    entries.forEach(([id, payload]) => {
+  function populateScopeSelector() {
+    DOM.scopeSel.innerHTML = '';
+    Object.entries(state.allInstruments || {}).forEach(([id, payload]) => {
       const option = document.createElement('option');
       option.value = id;
-      option.textContent = payload && payload.display_name ? payload.display_name : id;
+      option.textContent = (payload && (payload.display_label || payload.display_name)) || id;
       DOM.scopeSel.appendChild(option);
     });
+  }
 
+  async function fetchInstrumentsFromDataJson() {
+    const candidates = ['../assets/instruments_data.json', 'assets/instruments_data.json'];
+    for (const url of candidates) {
+      try {
+        const data = await requestJSON(url);
+        const rows = Array.isArray(data) ? data : (Array.isArray(data && data.instruments) ? data.instruments : []);
+        const loaded = {};
+        rows.forEach((inst) => {
+          const id = cleanString((inst && inst.id) || (inst && inst.identity && inst.identity.id));
+          if (id) loaded[id] = inst;
+        });
+        if (Object.keys(loaded).length) {
+          if (!state.allInstruments || typeof state.allInstruments !== 'object' || Array.isArray(state.allInstruments)) {
+            state.allInstruments = {};
+          }
+          Object.assign(state.allInstruments, loaded);
+          return;
+        }
+      } catch (err) {
+        // try next URL
+      }
+    }
+  }
+
+  function initInstrumentList() {
+    const entries = Object.entries(state.allInstruments || {});
+    if (!entries.length) {
+      fetchInstrumentsFromDataJson()
+        .then(() => {
+          const loaded = Object.entries(state.allInstruments || {});
+          if (!loaded.length) return;
+          populateScopeSelector();
+          const requestedScope = new URLSearchParams(window.location.search).get('scope');
+          currentInstrumentId = (requestedScope && state.allInstruments[requestedScope]) ? requestedScope : loaded[0][0];
+          DOM.scopeSel.value = currentInstrumentId;
+          loadInstrument();
+        })
+        .catch((err) => console.error('Could not load instrument data', err));
+      return;
+    }
+    populateScopeSelector();
     const requestedScope = new URLSearchParams(window.location.search).get('scope');
     currentInstrumentId = (requestedScope && state.allInstruments[requestedScope]) ? requestedScope : entries[0][0];
     DOM.scopeSel.value = currentInstrumentId;
+    loadInstrument();
+  }
+
+  function init() {
+    initCharts();
 
     DOM.scopeSel.addEventListener('change', (event) => {
       currentInstrumentId = event.target.value;
+      state.activeInstrumentRaw = state.allInstruments[currentInstrumentId] || {};
+      state.activeInstrument = VM.normalizeInstrumentPayload(state.activeInstrumentRaw);
       loadInstrument();
     });
     DOM.routeSel.addEventListener('change', (event) => {
       state.activeRoute = cleanString(event.target.value).toLowerCase() || null;
+      state.spectralBandsByMechanism.clear();
       state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
       renderGraphFlow();
       refreshOutputs();
@@ -1264,7 +1328,7 @@
       setInlineStatus(DOM.localSearchStatus, `Local spectra index unavailable: ${error.message}`, 'error');
     });
 
-    loadInstrument();
+    initInstrumentList();
   }
 
   function loadInstrument() {
@@ -1280,9 +1344,13 @@
   }
 
   function renderRouteSelector() {
-    const options = Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
+    const explicitOptions = Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
       ? state.activeInstrument.routeOptions
       : [];
+    const catalogFallback = Array.isArray(
+      state.activeInstrument && state.activeInstrument.routeTopology && state.activeInstrument.routeTopology.routeCatalog
+    ) ? state.activeInstrument.routeTopology.routeCatalog : [];
+    const options = explicitOptions.length ? explicitOptions : catalogFallback;
     DOM.routeSel.innerHTML = '';
 
     if (options.length <= 1) {
