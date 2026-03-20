@@ -1567,6 +1567,15 @@ sections:
         used_by: [dashboard, method_generator]
         rationale: Human-readable route label shown in UI and exported DTO route catalogs.
 
+      - path: light_paths[].modalities
+        title: Light path modalities
+        status: optional
+        type: list
+        item_type: string
+        vocab: modalities
+        used_by: [dashboard, method_generator]
+        rationale: Optional canonical modality IDs linked to this route so modality-driven UI flows can reveal the relevant route-compatible hardware.
+
       - path: light_paths[].illumination_sequence
         title: Illumination sequence
         status: required
