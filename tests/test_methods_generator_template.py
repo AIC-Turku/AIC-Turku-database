@@ -113,7 +113,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'scanner-list',
               'obj-list',
               'light-list',
-              'route-select',
+              'route-list',
               'det-list',
               'magnification-changer-list',
               'optical-modulator-list',
@@ -121,7 +121,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'filter-list',
               'splitter-list',
             ];
-            requiredIds.forEach((id) => ensureElement(id, (id === 'system-select' || id === 'route-select') ? 'select' : id === 'output-text' ? 'textarea' : 'div'));
+            requiredIds.forEach((id) => ensureElement(id, id === 'system-select' ? 'select' : id === 'output-text' ? 'textarea' : 'div'));
             ensureElement('add-btn', 'button');
             ensureElement('copy-btn', 'button');
             ensureElement('clear-btn', 'button');
@@ -433,6 +433,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                         {"id": "endpoint:cam", "inventory_class": "endpoint", "display_label": "Main Camera", "display_subtitle": "Endpoint", "method_sentence": "Cam sentence."},
                         {"id": "endpoint:hyd", "inventory_class": "endpoint", "display_label": "HyD", "display_subtitle": "Endpoint", "method_sentence": "HyD sentence."},
                     ],
+                    "methods_route_options": [
+                        {"id": "epi", "label": "Epi", "display_label": "Epi", "method_sentence": "488 sentence. EX sentence. Cam sentence."},
+                        {"id": "confocal", "label": "Confocal", "display_label": "Confocal", "method_sentence": "561 sentence. Pinhole sentence. HyD sentence."},
+                    ],
                     "authoritative_route_contract": {
                         "routes": [
                         {
@@ -472,9 +476,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-route';
             systemSelect.listeners.change({ target: systemSelect });
-            const routeSelect = document.getElementById('route-select');
-            routeSelect.value = 'confocal';
-            routeSelect.listeners.change({ target: routeSelect });
+            // Check the confocal route checkbox and fire the container change event
+            const confocalCheckbox = state.inputs.find(cb => cb.id && cb.id.startsWith('route-') && cb.value === 'confocal');
+            confocalCheckbox.checked = true;
+            document.getElementById('route-list').listeners.change();
             document.getElementById('add-btn').listeners.click();
             return {
               routeVisible: document.getElementById('section-route').style.display,
@@ -492,7 +497,9 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("561 Laser", result["lightLabel"])
         self.assertIn("Pinhole", result["filterLabel"])
         self.assertIn("HyD", result["detectorLabel"])
-        self.assertIn("Confocal illumination mode / route was used.", result["output"])
+        self.assertIn("561 sentence.", result["output"])
+        self.assertIn("Pinhole sentence.", result["output"])
+        self.assertIn("HyD sentence.", result["output"])
 
 
 if __name__ == "__main__":
