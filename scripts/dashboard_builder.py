@@ -1070,6 +1070,57 @@ def _mechanism_preview(mechanisms: Any) -> tuple[int, list[str]]:
     return total_positions, previews[:4]
 
 
+def _format_position_value(pos: dict[str, Any]) -> str:
+    """Format a single optical path element position (filter/cube/dichroic) into a compact display string."""
+    name = clean_text(pos.get("name") or pos.get("display_label") or pos.get("label"))
+    if not name:
+        return ""
+    product_code = clean_text(pos.get("product_code"))
+    bands = pos.get("bands")
+    notes = clean_text(pos.get("notes"))
+    parts: list[str] = [name]
+    if product_code:
+        parts.append(f"({product_code})")
+    if isinstance(bands, list) and bands:
+        band_strs = []
+        for band in bands:
+            if isinstance(band, dict):
+                center = band.get("center_nm")
+                width = band.get("width_nm")
+                if center is not None and width is not None:
+                    band_strs.append(f"{center}/{width} nm")
+                elif center is not None:
+                    band_strs.append(f"{center} nm")
+        if band_strs:
+            parts.append(f"— emission {', '.join(band_strs)}")
+    if notes:
+        parts.append(f"— {notes}")
+    return " ".join(parts)
+
+
+def _optical_element_position_pairs(element: dict[str, Any]) -> list[tuple[str, str]]:
+    """Return (label, value) pairs for each named position of an optical path element."""
+    positions = element.get("positions")
+    pairs: list[tuple[str, str]] = []
+    if isinstance(positions, dict):
+        for key in sorted(positions):
+            pos = positions[key]
+            if not isinstance(pos, dict):
+                continue
+            value = _format_position_value(pos)
+            if value:
+                label = key.replace("_", " ").title()
+                pairs.append((label, value))
+    elif isinstance(positions, list):
+        for i, pos in enumerate(positions):
+            if not isinstance(pos, dict):
+                continue
+            value = _format_position_value(pos)
+            if value:
+                pairs.append((f"Pos {i + 1}", value))
+    return pairs
+
+
 def _terminal_summary(terminal: dict[str, Any]) -> str:
     endpoint_type = clean_text(terminal.get("endpoint_type") or terminal.get("type") or terminal.get("kind")).replace("_", " ").title()
     route_text = ", ".join(terminal.get("routes") or []) if isinstance(terminal.get("routes"), list) else clean_text(terminal.get("path"))
@@ -1246,11 +1297,17 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
                 "method_sentence": f"Downstream routing may traverse {clean_text(element.get('name') or element.get('id'))}; explicit branch truth is declared on route-owned branch blocks.",
             })
         else:
+            position_pairs = _optical_element_position_pairs(element)
             element_items.append({
                 "id": clean_text(element.get("id")),
                 "display_label": clean_text(element.get("name") or element.get("display_label") or element.get("id")),
                 "display_subtitle": stage_role or "Optical path element",
-                "spec_lines": _spec_lines(("Element type", clean_text(element.get("element_type") or element.get("type"))), ("Modalities", ", ".join(element.get("modalities") or [])), ("Details", clean_text(element.get("notes")))),
+                "spec_lines": _spec_lines(
+                    ("Element type", clean_text(element.get("element_type") or element.get("type"))),
+                    ("Modalities", ", ".join(element.get("modalities") or [])),
+                    ("Details", clean_text(element.get("notes"))),
+                    *position_pairs,
+                ),
                 "method_sentence": f"The optical path includes {clean_text(element.get('name') or element.get('id'))}.",
             })
     if element_items:
