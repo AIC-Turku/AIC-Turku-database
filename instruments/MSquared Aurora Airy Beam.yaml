@@ -133,6 +133,8 @@ hardware:
 light_paths:
   - id: light_sheet # CORRECTED: Aligned ID with standard modalities
     name: Light-Sheet
+    modalities:
+      - light_sheet
     illumination_sequence:
       - source_id: 488_nm_laser
       - source_id: 561_nm_laser

@@ -310,6 +310,89 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(len(redundant), 1)
         self.assertIn('name', redundant[0].message)
 
+    def test_validate_instrument_ledgers_emits_explicit_light_path_modality_findings(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'modalities': {
+                        'source': 'inline',
+                        'allowed_values': [
+                            'widefield_fluorescence',
+                            'transmitted_brightfield',
+                            'phase_contrast',
+                        ],
+                    },
+                    'endpoint_types': {
+                        'source': 'inline',
+                        'allowed_values': ['camera_port'],
+                    },
+                },
+                'sections': [
+                    {
+                        'id': 'instrument',
+                        'title': 'Instrument',
+                        'rules': [
+                            {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                            {'path': 'modalities', 'status': 'required', 'type': 'list', 'item_type': 'string', 'vocab': 'modalities'},
+                            {'path': 'hardware.endpoints', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'hardware.endpoints[].id', 'status': 'conditional', 'type': 'string', 'required_if': {'parent_present': 'hardware.endpoints[]'}},
+                            {'path': 'hardware.endpoints[].endpoint_type', 'status': 'conditional', 'type': 'string', 'vocab': 'endpoint_types', 'required_if': {'parent_present': 'hardware.endpoints[]'}},
+                            {'path': 'light_paths', 'status': 'required', 'type': 'list', 'item_type': 'object', 'min_items': 1},
+                            {'path': 'light_paths[].id', 'status': 'required', 'type': 'string'},
+                            {'path': 'light_paths[].name', 'status': 'required', 'type': 'string'},
+                            {'path': 'light_paths[].modalities', 'status': 'conditional', 'type': 'list', 'item_type': 'string', 'vocab': 'modalities', 'min_items': 1, 'required_if': {'parent_present': 'light_paths[]'}},
+                            {'path': 'light_paths[].illumination_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'light_paths[].detection_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'light_paths[].detection_sequence[].endpoint_id', 'status': 'optional', 'type': 'string'},
+                        ],
+                    }
+                ],
+            },
+        )
+        self._write_json_yaml(
+            'instruments/example.yaml',
+            {
+                'instrument': {'instrument_id': 'scope-1', 'display_name': 'Scope 1'},
+                'modalities': ['widefield_fluorescence', 'transmitted_brightfield'],
+                'hardware': {
+                    'endpoints': [{'id': 'cam_main', 'endpoint_type': 'camera_port'}],
+                },
+                'light_paths': [
+                    {
+                        'id': 'epi',
+                        'name': 'Epi',
+                        'illumination_sequence': [],
+                        'detection_sequence': [{'endpoint_id': 'cam_main'}],
+                    },
+                    {
+                        'id': 'transmitted',
+                        'name': 'Transmitted',
+                        'modalities': [],
+                        'illumination_sequence': [],
+                        'detection_sequence': [{'endpoint_id': 'cam_main'}],
+                    },
+                    {
+                        'id': 'camera_only',
+                        'name': 'Camera Only',
+                        'modalities': ['widefield_fluorescence', 'widefield_fluorescence', 'phase_contrast'],
+                        'illumination_sequence': [],
+                        'detection_sequence': [{'endpoint_id': 'cam_main'}],
+                    },
+                ],
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertTrue(all(issue.code == 'invalid_light_path' for issue in issues))
+        warning_codes = {warning.code for warning in warnings}
+        self.assertIn('light_path_modalities_missing', warning_codes)
+        self.assertIn('light_path_modalities_empty', warning_codes)
+        self.assertIn('light_path_modalities_duplicate', warning_codes)
+        self.assertIn('light_path_modality_not_in_instrument', warning_codes)
+        self.assertIn('top_level_modality_uncovered_by_light_paths', warning_codes)
+
     def test_validate_instrument_ledgers_reports_legacy_topology_as_migration_only(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
@@ -1056,7 +1139,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                     'optical_modulators': [{'type': 'slm', 'supported_phase_masks': ['vortex']}],
                     'illumination_logic': [{'method': 'rescue_sted', 'default_enabled': True}],
                 },
-                'light_paths': [{'id': 'sted', 'illumination_sequence': [{'source_id': 'src_exc'}, {'source_id': 'src_dep'}], 'detection_sequence': [{'endpoint_id': 'hyd_ep'}]}],
+                'light_paths': [{'id': 'sted', 'modalities': ['sted'], 'illumination_sequence': [{'source_id': 'src_exc'}, {'source_id': 'src_dep'}], 'detection_sequence': [{'endpoint_id': 'hyd_ep'}]}],
             },
         )
 
@@ -1524,6 +1607,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'instruments/stage-role-optional.yaml',
             {
                 'instrument': {'instrument_id': 'stage-role-optional'},
+                'modalities': ['widefield_fluorescence'],
                 'hardware': {
                     'endpoints': [{'id': 'camera_port_1', 'endpoint_type': 'camera_port'}],
                     'optical_path_elements': [
@@ -1532,7 +1616,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 },
                 'light_paths': [
                     {
-                        'id': 'epi',
+                        'id': 'widefield_fluorescence',
+                        'modalities': ['widefield_fluorescence'],
                         'illumination_sequence': [],
                         'detection_sequence': [
                             {'optical_path_element_id': 'generic_filter'},
@@ -1600,12 +1685,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'instruments/normalized-detector-endpoint.yaml',
             {
                 'instrument': {'instrument_id': 'normalized-detector-endpoint'},
+                'modalities': ['widefield_fluorescence'],
                 'hardware': {
                     'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
                 },
                 'light_paths': [
                     {
-                        'id': 'epi',
+                        'id': 'widefield_fluorescence',
+                        'modalities': ['widefield_fluorescence'],
                         'illumination_sequence': [],
                         'detection_sequence': [{'endpoint_id': 'detector_1'}],
                     }
@@ -1627,13 +1714,15 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'instruments/duplicate-endpoint-id.yaml',
             {
                 'instrument': {'instrument_id': 'duplicate-endpoint-id'},
+                'modalities': ['widefield_fluorescence'],
                 'hardware': {
                     'detectors': [{'id': 'shared_endpoint', 'kind': 'camera'}],
                     'eyepieces': [{'id': 'shared_endpoint'}],
                 },
                 'light_paths': [
                     {
-                        'id': 'epi',
+                        'id': 'widefield_fluorescence',
+                        'modalities': ['widefield_fluorescence'],
                         'illumination_sequence': [],
                         'detection_sequence': [{'endpoint_id': 'shared_endpoint'}],
                     }
@@ -1656,6 +1745,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'instruments/mixed-sequence-item.yaml',
             {
                 'instrument': {'instrument_id': 'mixed-sequence-item'},
+                'modalities': ['widefield_fluorescence'],
                 'hardware': {
                     'sources': [{'id': 'src_488', 'kind': 'laser'}],
                     'optical_path_elements': [{'id': 'exc_filter', 'stage_role': 'excitation', 'element_type': 'filter_wheel'}],
@@ -1663,7 +1753,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 },
                 'light_paths': [
                     {
-                        'id': 'epi',
+                        'id': 'widefield_fluorescence',
+                        'modalities': ['widefield_fluorescence'],
                         'illumination_sequence': [{'source_id': 'src_488', 'optical_path_element_id': 'exc_filter'}],
                         'detection_sequence': [{'endpoint_id': 'detector_1'}],
                     }
@@ -1686,6 +1777,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'instruments/illumination-branch-block.yaml',
             {
                 'instrument': {'instrument_id': 'illumination-branch-block'},
+                'modalities': ['widefield_fluorescence'],
                 'hardware': {
                     'sources': [{'id': 'src_488', 'kind': 'laser'}],
                     'optical_path_elements': [{'id': 'exc_filter', 'element_type': 'filter_wheel'}],
@@ -1693,7 +1785,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 },
                 'light_paths': [
                     {
-                        'id': 'epi',
+                        'id': 'widefield_fluorescence',
+                        'modalities': ['widefield_fluorescence'],
                         'illumination_sequence': [
                             {'source_id': 'src_488'},
                             {'branches': {'selection_mode': 'exclusive', 'items': [{'branch_id': 'alt', 'sequence': [{'optical_path_element_id': 'exc_filter'}]}]}},
@@ -1719,13 +1812,15 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'instruments/missing-branch-fields.yaml',
             {
                 'instrument': {'instrument_id': 'missing-branch-fields'},
+                'modalities': ['widefield_fluorescence'],
                 'hardware': {
                     'optical_path_elements': [{'id': 'det_splitter', 'stage_role': 'splitter', 'element_type': 'splitter'}],
                     'detectors': [{'id': 'detector_1', 'kind': 'camera'}],
                 },
                 'light_paths': [
                     {
-                        'id': 'epi',
+                        'id': 'widefield_fluorescence',
+                        'modalities': ['widefield_fluorescence'],
                         'illumination_sequence': [],
                         'detection_sequence': [
                             {'optical_path_element_id': 'det_splitter'},
@@ -1752,6 +1847,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'instruments/deprecated-hardware-branch-routing.yaml',
             {
                 'instrument': {'instrument_id': 'deprecated-hardware-branch-routing'},
+                'modalities': ['widefield_fluorescence'],
                 'hardware': {
                     'optical_path_elements': [
                         {
@@ -1765,7 +1861,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                 },
                 'light_paths': [
                     {
-                        'id': 'epi',
+                        'id': 'widefield_fluorescence',
+                        'modalities': ['widefield_fluorescence'],
                         'illumination_sequence': [],
                         'detection_sequence': [{'optical_path_element_id': 'legacy_splitter'}, {'endpoint_id': 'detector_1'}],
                     }

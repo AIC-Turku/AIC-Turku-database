@@ -258,8 +258,13 @@ hardware:
   endpoints: []
 
 light_paths:
-  - id: epi
+  - id: widefield_fluorescence
     name: Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
+      - tirf
+      - sim
+      - smlm
     illumination_sequence:
       - source_id: 405_nm
       - source_id: 445_nm

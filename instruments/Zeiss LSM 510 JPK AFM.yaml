@@ -104,6 +104,8 @@ hardware:
 light_paths:
   - id: confocal_point # CORRECTED: Aligned ID with standard modalities
     name: Confocal
+    modalities:
+      - confocal_point
     illumination_sequence:
       - source_id: source_1
     detection_sequence:

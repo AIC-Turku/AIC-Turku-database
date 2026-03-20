@@ -373,6 +373,114 @@ def _append_product_code_redundancy_warnings(
                         _check_mapping(item, f"{node.path}[{index}]")
             elif isinstance(node.value, dict):
                 _check_mapping(node.value, node.path)
+
+
+def _append_light_path_modality_warnings(
+    warnings: list[ValidationIssue],
+    payload: dict[str, Any],
+    instrument_file: Path,
+    vocabulary: Vocabulary,
+    canonical_modalities: set[str],
+) -> None:
+    light_paths = payload.get('light_paths')
+    if not isinstance(light_paths, list) or not light_paths:
+        return
+
+    covered_modalities: set[str] = set()
+
+    for index, light_path in enumerate(light_paths):
+        if not isinstance(light_path, dict):
+            continue
+
+        route_id = light_path.get('id')
+        route_label = route_id.strip() if isinstance(route_id, str) and route_id.strip() else f'light_paths[{index}]'
+        route_path = f"{instrument_file.as_posix()}:light_paths[{index}]"
+        raw_modalities = light_path.get('modalities')
+
+        if raw_modalities is None:
+            warnings.append(
+                ValidationIssue(
+                    code='light_path_modalities_missing',
+                    path=route_path,
+                    message=(
+                        f"Instrument '{instrument_file.stem}' light path '{route_label}' is missing "
+                        "light_paths[].modalities; add a non-empty canonical modality list for this route."
+                    ),
+                )
+            )
+            continue
+
+        if not isinstance(raw_modalities, list) or not raw_modalities:
+            warnings.append(
+                ValidationIssue(
+                    code='light_path_modalities_empty',
+                    path=f"{route_path}:modalities",
+                    message=(
+                        f"Instrument '{instrument_file.stem}' light path '{route_label}' has an empty or invalid "
+                        "modalities value; route modalities must be a non-empty YAML list."
+                    ),
+                )
+            )
+            continue
+
+        seen_modalities: set[str] = set()
+        duplicate_modalities: set[str] = set()
+
+        for modality_index, raw_value in enumerate(raw_modalities):
+            if not isinstance(raw_value, str) or not raw_value.strip():
+                continue
+            resolved_value = vocabulary.resolve_canonical('modalities', raw_value)
+            raw_cleaned = raw_value.strip()
+            known_modalities = vocabulary.valid_ids_by_vocab.get('modalities', set())
+            if resolved_value is None and known_modalities and raw_cleaned not in known_modalities:
+                continue
+            canonical_value = (resolved_value or raw_cleaned).strip()
+
+            if canonical_value in seen_modalities:
+                duplicate_modalities.add(canonical_value)
+            else:
+                seen_modalities.add(canonical_value)
+
+            if canonical_value in canonical_modalities:
+                covered_modalities.add(canonical_value)
+                continue
+
+            warnings.append(
+                ValidationIssue(
+                    code='light_path_modality_not_in_instrument',
+                    path=f"{route_path}:modalities[{modality_index}]",
+                    message=(
+                        f"Instrument '{instrument_file.stem}' light path '{route_label}' declares modality "
+                        f"'{canonical_value}', but that value is not present in the instrument-level modalities list."
+                    ),
+                )
+            )
+
+        for duplicate_value in sorted(duplicate_modalities):
+            warnings.append(
+                ValidationIssue(
+                    code='light_path_modalities_duplicate',
+                    path=f"{route_path}:modalities",
+                    message=(
+                        f"Instrument '{instrument_file.stem}' light path '{route_label}' repeats modality "
+                        f"'{duplicate_value}' in light_paths[].modalities; keep each route modality only once."
+                    ),
+                )
+            )
+
+    for modality in sorted(canonical_modalities - covered_modalities):
+        warnings.append(
+            ValidationIssue(
+                code='top_level_modality_uncovered_by_light_paths',
+                path=f"{instrument_file.as_posix()}:modalities",
+                message=(
+                    f"Instrument '{instrument_file.stem}' top-level modality '{modality}' is not covered by any "
+                    "light_paths[].modalities entry; add an explicit route mapping or keep this as manual follow-up."
+                ),
+            )
+        )
+
+
 def _nodes_have_present_value(nodes: list[ResolvedNode]) -> bool:
     return any(node.value not in (None, '') for node in nodes)
 
@@ -1607,6 +1715,14 @@ def validate_instrument_ledgers(
                 ]
                 if isinstance(canonical, str)
             }
+
+        _append_light_path_modality_warnings(
+            warnings=warnings,
+            payload=payload,
+            instrument_file=instrument_file,
+            vocabulary=vocabulary,
+            canonical_modalities=canonical_modalities,
+        )
 
         if 'sted' in canonical_modalities and not is_retired_instrument:
             source_nodes = _resolve_path_nodes(canonical_payload, 'hardware.sources[]')

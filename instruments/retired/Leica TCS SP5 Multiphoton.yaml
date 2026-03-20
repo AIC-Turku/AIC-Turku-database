@@ -176,6 +176,8 @@ hardware:
 light_paths:
   - id: multiphoton
     name: Multiphoton
+    modalities:
+      - multiphoton
     illumination_sequence:
       - source_id: chameleon_ultra_ii
       - source_id: compact_opo

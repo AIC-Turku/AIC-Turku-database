@@ -216,6 +216,8 @@ hardware:
 light_paths:
   - id: widefield_fluorescence # CORRECTED: Aligned ID with standard modalities
     name: Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: hbo_103w_short_arc_bulb
       - optical_path_element_id: fluorescence_turret
@@ -236,6 +238,9 @@ light_paths:
                 
   - id: transmitted_brightfield # CORRECTED: Aligned ID with standard modalities
     name: Transmitted Brightfield
+    modalities:
+      - transmitted_brightfield
+      - phase_contrast
     illumination_sequence:
       - source_id: 12v_100w_halogen_bulb
     detection_sequence:

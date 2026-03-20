@@ -349,6 +349,9 @@ hardware:
 light_paths:
   - id: confocal_point # CORRECTED: Aligned ID with standard modalities
     name: Confocal Scanning
+    modalities:
+      - confocal_point
+      - spectral_imaging
     illumination_sequence:
       - source_id: 405_nm_diode
       - source_id: 458_nm_argon
@@ -376,6 +379,8 @@ light_paths:
                 
   - id: ism
     name: Super-resolution AiryScan
+    modalities:
+      - ism
     illumination_sequence:
       - source_id: 405_nm_diode
       - source_id: 458_nm_argon

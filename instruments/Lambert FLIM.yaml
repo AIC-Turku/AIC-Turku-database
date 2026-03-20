@@ -147,6 +147,9 @@ hardware:
 light_paths:
   - id: flim # Canonical route identifier for the installed FLIM detection path
     name: FLIM / Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
+      - flim
     illumination_sequence:
       - source_id: multi_led_excitation
       - source_id: multi_led_excitation_2

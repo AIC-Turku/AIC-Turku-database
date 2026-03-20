@@ -173,6 +173,8 @@ hardware:
 light_paths:
   - id: widefield_fluorescence
     name: Epi-fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: 50w_hbo_short_arc_bulb
       - optical_path_element_id: fluorescence_turret
@@ -193,6 +195,10 @@ light_paths:
                 
   - id: transmitted_brightfield
     name: Transmitted light
+    modalities:
+      - transmitted_brightfield
+      - phase_contrast
+      - darkfield
     illumination_sequence:
       - source_id: 12v_100w_halogen_bulb
     detection_sequence:

@@ -208,6 +208,8 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
   -
     id: ""  # Light path ID: Stable route identifier used by simulator, UI, and graph rendering.
     name: ""  # Light path name: Human-readable route label shown in UI and exported DTO route catalogs.
+    modalities:  # Light path modalities: Conditionally required when light_paths is present and non-empty; list the canonical modality IDs explicitly supported by this route. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield
+      - ""
     illumination_sequence:  # Illumination sequence: Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id.
       -
         source_id: ""  # Illumination source reference: Stable source reference for the source_id variant of an illumination sequence tagged union item.

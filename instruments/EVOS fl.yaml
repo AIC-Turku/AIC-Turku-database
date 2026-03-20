@@ -219,6 +219,8 @@ hardware:
 light_paths:
   - id: widefield_fluorescence # CORRECTED: Aligned ID with canonical modality names
     name: Widefield Fluorescence
+    modalities:
+      - widefield_fluorescence
     illumination_sequence:
       - source_id: evos_dapi_light_cube_led
       - source_id: evos_cfp_light_cube_led
@@ -232,6 +234,9 @@ light_paths:
       
   - id: transmitted_brightfield
     name: Transmitted Light
+    modalities:
+      - transmitted_brightfield
+      - phase_contrast
     illumination_sequence:
       - source_id: transmitted_light_led
     detection_sequence:
