@@ -127,6 +127,15 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("topology.sourceMechanisms", source)
         self.assertIn("topology.endpointMechanisms", source)
 
+    def test_endpoint_entries_excluded_from_detection_traversal_stages(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("entry.kind === 'endpoint'", source)
+        pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
+        self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", pipe_fn)
+        groups_fn = source.split("function buildDerivedControlGroups")[1].split("\n  function ")[0]
+        self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", groups_fn)
+
 
 if __name__ == "__main__":
     unittest.main()

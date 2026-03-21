@@ -172,7 +172,7 @@
     stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
     const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
     detection.forEach((entry, index) => {
-      if (entry.kind === 'branch-block') return;
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('detection-step-' + index);
       stages.push({
         id: stepId,
@@ -1012,7 +1012,7 @@
 
     let detStepIndex = 0;
     detectionEntries.forEach((entry) => {
-      if (entry.kind === 'branch-block') return;
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('detection-step-' + detStepIndex);
       groups.push({
         id: stepId,
