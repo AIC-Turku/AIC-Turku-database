@@ -51,6 +51,7 @@ from scripts.validate import (
 )
 from scripts.light_path_parser import generate_virtual_microscope_payload
 from scripts.display_labels import (
+    resolve_component_type_label,
     resolve_element_type_label,
     resolve_endpoint_type_label,
     resolve_inventory_class_label,
@@ -1204,7 +1205,6 @@ def _format_position_value(pos: dict[str, Any], vocabulary: Any = None) -> str:
     if not name:
         raw_component_type = clean_text(pos.get("component_type"))
         if raw_component_type and vocabulary:
-            from scripts.display_labels import resolve_component_type_label
             name = resolve_component_type_label(raw_component_type, vocabulary)
         elif raw_component_type:
             name = raw_component_type.replace("_", " ").title()
@@ -1439,7 +1439,12 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         else:
             position_pairs = _optical_element_position_pairs(element, vocabulary)
             raw_element_type = clean_text(element.get("element_type") or element.get("type"))
-            element_type_label = resolve_element_type_label(raw_element_type, vocabulary) if vocabulary else raw_element_type.replace("_", " ").title() if raw_element_type else ""
+            if vocabulary:
+                element_type_label = resolve_element_type_label(raw_element_type, vocabulary)
+            elif raw_element_type:
+                element_type_label = raw_element_type.replace("_", " ").title()
+            else:
+                element_type_label = ""
             element_items.append({
                 "id": clean_text(element.get("id")),
                 "display_label": clean_text(element.get("name") or element.get("display_label") or element.get("id")),
