@@ -2236,13 +2236,16 @@
       ? new Set(['excitation', 'dichroic'])
       : new Set(['dichroic', 'emission']);
     const result = [];
+    function pushPhaseComponents(components) {
+      components.filter((comp) => phaseStages.has(comp.stage)).forEach((comp) => result.push({ component: comp.component, mode }));
+    }
     entries.forEach((entry) => {
       if (!entry || entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
       if (entry.stageKey === 'splitters') return;
       const mechId = entry.mechanism ? cleanString(entry.mechanism.id).toLowerCase() : '';
       if (entry.kind === 'linked' && mechId) {
         const stored = mechanismResolved.get(mechId);
-        if (stored) stored.filter((comp) => phaseStages.has(comp.stage)).forEach((comp) => result.push({ component: comp.component, mode }));
+        if (stored) pushPhaseComponents(stored);
         return;
       }
       const key = entry.stageKey;
@@ -2255,7 +2258,7 @@
           allSubs.push({ component: sub.component, stage: sub.stage });
         });
         if (mechId) mechanismResolved.set(mechId, allSubs);
-        allSubs.filter((comp) => phaseStages.has(comp.stage)).forEach((comp) => result.push({ component: comp.component, mode }));
+        pushPhaseComponents(allSubs);
         return;
       }
       const arr = selection[key];
