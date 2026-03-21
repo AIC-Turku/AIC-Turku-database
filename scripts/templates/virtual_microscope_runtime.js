@@ -488,7 +488,7 @@
           (Array.isArray(branchBlock.items) ? branchBlock.items : []).forEach((branch, branchIndex) => {
             if (!(branch && typeof branch === 'object')) return;
             const branchId = normalizeIdentifier(branch.branch_id || branch.id) || `branch_${branchIndex + 1}`;
-            const dedupeKey = `${routeId}::${branchId}`;
+            const dedupeKey = branchId;
             if (!splitterBinding) {
               walkSequence(branch.sequence, routeId, phase, previousElementId);
               return;
@@ -505,6 +505,10 @@
               });
             }
             const entry = splitterBinding.branches[splitterBinding.branchIndex.get(dedupeKey)];
+            if (!entry.label || entry.label === routeLabel(branchId)) {
+              const candidateLabel = cleanString(branch.label);
+              if (candidateLabel) entry.label = candidateLabel;
+            }
             entry.sequence = Array.isArray(branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [];
             entry.__routes.add(routeId);
             const endpointIds = [];
@@ -1846,6 +1850,17 @@
           ? false
           : mode === 'excitation';
       return wantsReflection ? transmit.map((value) => 1 - value) : transmit;
+    }
+    // filter_cube: treat as bandpass (single band) or multiband_bandpass (multiple bands).
+    if (type === 'filter_cube') {
+      const bands = normalizedBandMasks(grid, component.bands);
+      if (bands.length) return sumMasks(bands, grid);
+      const center = numberOrNull(component.center_nm);
+      const width = numberOrNull(component.width_nm);
+      if (center !== null && width !== null && width > 0) return bandMask(grid, center - (width / 2), center + (width / 2), 2);
+      const cutOn = numberOrNull(component.cut_on_nm);
+      if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
+      return grid.map(() => 1);
     }
     return grid.map(() => 1);
   }
