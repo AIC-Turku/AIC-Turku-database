@@ -149,14 +149,50 @@
     return spectra.empty;
   }
 
-  function buildPipelineStages(derivedControlGroups) {
-    return (Array.isArray(derivedControlGroups) ? derivedControlGroups : [])
-      .map((group) => ({
-        id: cleanString(group && group.id),
-        label: cleanString(group && group.label) || 'Stage',
-        flowOrigin: pipelineFlowOrigin(group && group.id),
-      }))
-      .filter((group) => group.id);
+  function buildPipelineStages(derivedControlGroups, topology) {
+    const groupIds = new Set(
+      (Array.isArray(derivedControlGroups) ? derivedControlGroups : [])
+        .map((g) => cleanString(g && g.id)).filter(Boolean)
+    );
+    const stages = [];
+    if (groupIds.has('sources')) {
+      stages.push({ id: 'sources', key: 'pipe:sources:0', label: 'Sources', inspectorStage: 'sources', flowOrigin: 'sources' });
+    }
+    const illumination = topology && topology.traversal && Array.isArray(topology.traversal.illumination) ? topology.traversal.illumination : [];
+    if (illumination.length && groupIds.has('illumination-controls')) {
+      illumination.forEach((entry, index) => {
+        stages.push({
+          id: entry.key || ('illumination:' + index),
+          key: 'pipe:illumination:' + index,
+          label: entry.title || 'Illumination',
+          inspectorStage: 'illumination-controls',
+          flowOrigin: 'illumination-controls',
+        });
+      });
+    } else if (groupIds.has('illumination-controls')) {
+      stages.push({ id: 'illumination-controls', key: 'pipe:illumination-controls:0', label: 'Illumination Controls', inspectorStage: 'illumination-controls', flowOrigin: 'illumination-controls' });
+    }
+    if (groupIds.has('sample')) {
+      stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
+    }
+    const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
+    if (detection.length && groupIds.has('detection-controls')) {
+      detection.forEach((entry, index) => {
+        stages.push({
+          id: entry.key || ('detection:' + index),
+          key: 'pipe:detection:' + index,
+          label: entry.title || 'Detection',
+          inspectorStage: 'detection-controls',
+          flowOrigin: 'detection-controls',
+        });
+      });
+    } else if (groupIds.has('detection-controls')) {
+      stages.push({ id: 'detection-controls', key: 'pipe:detection-controls:0', label: 'Detection Controls', inspectorStage: 'detection-controls', flowOrigin: 'detection-controls' });
+    }
+    if (groupIds.has('detectors')) {
+      stages.push({ id: 'detectors', key: 'pipe:detectors:0', label: 'Detectors', inspectorStage: 'detectors', flowOrigin: 'detectors' });
+    }
+    return stages;
   }
 
   function setStatusMessage(message, tone = 'info') {
@@ -296,13 +332,14 @@
     });
   }
 
-  function createPipelineBadge(stageId, label) {
+  function createPipelineBadge(stageId, label, inspectorStage) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'vm-stage-tab';
     button.dataset.stageId = stageId;
+    button.dataset.inspectorStage = inspectorStage || stageId;
     button.textContent = label;
-    button.addEventListener('click', () => setInspectorStage(stageId));
+    button.addEventListener('click', () => setInspectorStage(inspectorStage || stageId));
     return button;
   }
 
@@ -337,7 +374,7 @@
   function setInspectorStage(stageId) {
     state.activeInspectorStage = stageId;
     Array.from(DOM.graph.querySelectorAll('.vm-stage-tab')).forEach((button) => {
-      button.classList.toggle('active', button.dataset.stageId === stageId);
+      button.classList.toggle('active', (button.dataset.inspectorStage || button.dataset.stageId) === stageId);
     });
     Array.from(DOM.graph.querySelectorAll('.vm-stage-panel')).forEach((panel) => {
       panel.classList.toggle('active', panel.dataset.stageId === stageId);
@@ -1259,14 +1296,14 @@
 
     if (!derivedControlGroups.length) return;
 
-    const pipelineStages = buildPipelineStages(derivedControlGroups);
+    const pipelineStages = buildPipelineStages(derivedControlGroups, topology);
     pipeline.innerHTML = '';
     pipeline.style.display = pipelineStages.length ? 'flex' : 'none';
     pipelineStages.forEach((stage, index) => {
       if (index > 0) {
         pipeline.appendChild(createPipeSegment(stagePipeKey(pipelineStages[index - 1].flowOrigin, stage.flowOrigin)));
       }
-      pipeline.appendChild(createPipelineBadge(stage.id, stage.label));
+      pipeline.appendChild(createPipelineBadge(stage.id, stage.label, stage.inspectorStage));
     });
 
     derivedControlGroups.forEach((group) => {
