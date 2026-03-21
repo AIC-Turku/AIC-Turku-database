@@ -2834,6 +2834,12 @@
     const excitationComponents = Array.isArray(selected.excitation) ? selected.excitation : [];
     const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];
     const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
+    const illuminationOrdered = Array.isArray(selected.illuminationComponents) && selected.illuminationComponents.length ? selected.illuminationComponents : null;
+    const detectionOrdered = Array.isArray(selected.detectionComponents) && selected.detectionComponents.length ? selected.detectionComponents : null;
+    const illuminationOrderedRaw = illuminationOrdered ? illuminationOrdered.map((entry) => entry.component) : null;
+    const illuminationOrderedCtx = illuminationOrdered ? ((component, index) => ({ mode: illuminationOrdered[index].mode })) : null;
+    const detectionOrderedRaw = detectionOrdered ? detectionOrdered.map((e) => e.component) : null;
+    const detectionOrderedCtx = detectionOrdered ? ((component, index) => ({ mode: detectionOrdered[index].mode })) : null;
 
     [
       ['Excitation component', excitationComponents],
@@ -2874,12 +2880,14 @@
 
     const propagatedExcitationSources = excitationSources.map((source) => {
       const weightedSpectrum = scaleArray(sourceSpectrum(source, grid), sourceWeight(source));
-      const atSample = applyComponentSeries(
-        applyComponentSeries(weightedSpectrum, excitationComponents, grid, { mode: 'excitation' }),
-        dichroicComponents,
-        grid,
-        { mode: 'excitation' }
-      );
+      const atSample = illuminationOrderedRaw
+        ? applyComponentSeries(weightedSpectrum, illuminationOrderedRaw, grid, illuminationOrderedCtx)
+        : applyComponentSeries(
+          applyComponentSeries(weightedSpectrum, excitationComponents, grid, { mode: 'excitation' }),
+          dichroicComponents,
+          grid,
+          { mode: 'excitation' }
+        );
       return { source, weightedSpectrum, atSample };
     });
     const combinedExcitation = propagatedExcitationSources.reduce(
@@ -2892,11 +2900,12 @@
       0
     );
     const excitationLeakageBySource = propagatedExcitationSources.map((entry) => {
-      const afterDichroic = applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' });
-      const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
+      const afterDetectionOptics = detectionOrderedRaw
+        ? applyComponentSeries(entry.atSample, detectionOrderedRaw, grid, detectionOrderedCtx)
+        : applyComponentSeries(applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' }), emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
-        : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
+        ? propagateSplitters(afterDetectionOptics, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
+        : [{ id: 'main', label: 'Main Path', spectrum: afterDetectionOptics, targetIds: [] }];
       return {
         sourceLabel: entry.source.display_label || entry.source.name || 'Source',
         sourceCenters: sourceCenters(entry.source),
@@ -2925,8 +2934,9 @@
       const brightnessFactor = fluorophoreBrightnessFactor(fluorophore);
       const generatedEmission = scaleArray(emissionCurve, excitationStrength * sted.suppressionFactor * brightnessFactor);
       const theoreticalBestEmission = scaleArray(emissionCurve, brightnessFactor);
-      const afterDichroic = applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' });
-      const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
+      const afterEmissionFilters = detectionOrderedRaw
+        ? applyComponentSeries(generatedEmission, detectionOrderedRaw, grid, detectionOrderedCtx)
+        : applyComponentSeries(applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' }), emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
         ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
