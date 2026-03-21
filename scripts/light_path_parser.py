@@ -1833,10 +1833,11 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
             # Flattened filter_cube positions (component_type: filter_cube with bands
             # but no explicit excitation_filter/dichroic/emission_filter sub-components)
             # need a synthetic emission_filter so the runtime can apply them spectrally.
+            cube_label = cube_position.get("name") or f"Cube {slot}"
             if not linked_components and _clean_string(cube_position.get("component_type")).lower() == "filter_cube":
                 bands = cube_position.get("bands")
                 cut_on_nm = cube_position.get("cut_on_nm")
-                synth: dict[str, Any] = {"name": cube_position.get("name") or f"Cube {slot}"}
+                synth: dict[str, Any] = {"name": cube_label}
                 if isinstance(bands, list) and len(bands) > 1:
                     synth["component_type"] = "multiband_bandpass"
                     synth["bands"] = bands
@@ -1858,13 +1859,13 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                 else:
                     synth["component_type"] = "bandpass"
                 if synth.get("component_type"):
-                    linked_components["emission_filter"] = _component_payload(synth, default_name=cube_position.get("name") or f"Cube {slot}")
+                    linked_components["emission_filter"] = _component_payload(synth, default_name=cube_label)
 
             position_payload: dict[str, Any] = {
                 "slot": slot,
                 "type": "cube",
-                "label": cube_position.get("name") or f"Cube {slot}",
-                "display_label": cube_position.get("name") or f"Cube {slot}",
+                "label": cube_label,
+                "display_label": cube_label,
                 "details": _build_details(cube_position),
                 "linked_components": linked_components,
                 # Backward-compatible direct aliases used by the browser runtime.

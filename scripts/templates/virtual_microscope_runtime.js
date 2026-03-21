@@ -505,6 +505,8 @@
               });
             }
             const entry = splitterBinding.branches[splitterBinding.branchIndex.get(dedupeKey)];
+            // Prefer an explicit label over the auto-generated routeLabel fallback.
+            // The first route to provide a real label wins; subsequent routes keep it.
             if (!entry.label || entry.label === routeLabel(branchId)) {
               const candidateLabel = cleanString(branch.label);
               if (candidateLabel) entry.label = candidateLabel;
