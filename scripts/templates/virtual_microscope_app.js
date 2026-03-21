@@ -162,7 +162,7 @@
     if (illumination.length && groupIds.has('illumination-controls')) {
       illumination.forEach((entry, index) => {
         stages.push({
-          id: entry.key || ('illumination:' + index),
+          id: entry.key || ('pipe:illumination:' + index),
           key: 'pipe:illumination:' + index,
           label: entry.title || 'Illumination',
           inspectorStage: 'illumination-controls',
@@ -179,7 +179,7 @@
     if (detection.length && groupIds.has('detection-controls')) {
       detection.forEach((entry, index) => {
         stages.push({
-          id: entry.key || ('detection:' + index),
+          id: entry.key || ('pipe:detection:' + index),
           key: 'pipe:detection:' + index,
           label: entry.title || 'Detection',
           inspectorStage: 'detection-controls',
