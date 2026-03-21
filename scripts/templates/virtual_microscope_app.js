@@ -1004,9 +1004,11 @@
       },
     });
 
-    detectionEntries.forEach((entry, index) => {
+    let detectionEntryCounter = 0;
+    detectionEntries.forEach((entry) => {
       if (entry.kind === 'branch-block') return;
-      const entryId = `detection-entry-${index}`;
+      const entryId = `detection-entry-${detectionEntryCounter}`;
+      detectionEntryCounter += 1;
       groups.push({
         id: entryId,
         label: entry.title || 'Detection',

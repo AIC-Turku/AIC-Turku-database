@@ -1804,13 +1804,13 @@
     if (type === 'bandpass') {
       const center = numberOrNull(component.center_nm);
       const width = numberOrNull(component.width_nm);
-      if (center !== null && width !== null) {
-        return bandMask(grid, center - (width / 2), center + (width / 2), 2);
+      if (center === null || width === null) {
+        // Fallback: bands array (YAML bandpass positions that list bands explicitly).
+        const fallbackBands = normalizedBandMasks(grid, component.bands);
+        if (fallbackBands.length) return sumMasks(fallbackBands, grid);
+        return grid.map(() => 1);
       }
-      // Fallback: bands array (YAML bandpass positions that list bands explicitly).
-      const fallbackBands = normalizedBandMasks(grid, component.bands);
-      if (fallbackBands.length) return sumMasks(fallbackBands, grid);
-      return grid.map(() => 1);
+      return bandMask(grid, center - (width / 2), center + (width / 2), 2);
     }
     if (type === 'multiband_bandpass') {
       return sumMasks(normalizedBandMasks(grid, component.bands), grid);
