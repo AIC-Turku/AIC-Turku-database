@@ -146,6 +146,14 @@
     return 'detector';
   }
 
+  function coerceSlotKey(key) {
+    if (typeof key === 'number' && Number.isFinite(key)) return String(Math.round(key));
+    const str = String(key).trim();
+    if (/^\d+$/.test(str)) return str;
+    const match = str.match(/(\d+)$/);
+    return match ? match[1] : str;
+  }
+
   function positionsToObject(positions) {
     if (Array.isArray(positions)) {
       return Object.fromEntries(
@@ -155,7 +163,9 @@
       );
     }
     if (positions && typeof positions === 'object') {
-      return { ...positions };
+      return Object.fromEntries(
+        Object.entries(positions).map(([key, value]) => [coerceSlotKey(key), value])
+      );
     }
     return {};
   }
@@ -168,20 +178,22 @@
         const positions = positionsToObject(mechanism.positions);
         const normalizedPositions = Object.fromEntries(
           Object.entries(positions).map(([slot, component]) => {
+            const normalizedSlot = coerceSlotKey(slot);
             const entry = component && typeof component === 'object' ? { ...component } : {};
-            entry.slot = Number.isFinite(entry.slot) ? entry.slot : Number(slot);
+            entry.slot = Number.isFinite(entry.slot) ? entry.slot : Number(normalizedSlot);
             entry.__routes = routesFromObject(entry).length ? routesFromObject(entry) : routes;
             if (!entry.display_label && entry.label) entry.display_label = entry.label;
-            return [slot, entry];
+            return [normalizedSlot, entry];
           })
         );
         const options = Array.isArray(mechanism.options)
           ? mechanism.options.map((option) => ({
               ...option,
+              slot: Number.isFinite(Number(option.slot)) ? Number(option.slot) : Number(coerceSlotKey(option.slot)),
               value: option && option.value && typeof option.value === 'object'
                 ? {
                     ...option.value,
-                    slot: Number.isFinite(option.value.slot) ? option.value.slot : Number(option.slot),
+                    slot: Number.isFinite(option.value.slot) ? option.value.slot : Number(coerceSlotKey(option.slot)),
                     __routes: routesFromObject(option.value).length ? routesFromObject(option.value) : routes,
                   }
                 : option.value,

@@ -339,7 +339,7 @@
     button.dataset.stageId = stageId;
     button.dataset.inspectorStage = inspectorStage || stageId;
     button.textContent = label;
-    button.addEventListener('click', () => setInspectorStage(inspectorStage || stageId));
+    button.addEventListener('click', () => setInspectorStage(inspectorStage || stageId, stageId));
     return button;
   }
 
@@ -371,10 +371,14 @@
     return panel;
   }
 
-  function setInspectorStage(stageId) {
+  function setInspectorStage(stageId, activeBadgeId) {
     state.activeInspectorStage = stageId;
     Array.from(DOM.graph.querySelectorAll('.vm-stage-tab')).forEach((button) => {
-      button.classList.toggle('active', (button.dataset.inspectorStage || button.dataset.stageId) === stageId);
+      if (activeBadgeId) {
+        button.classList.toggle('active', button.dataset.stageId === activeBadgeId);
+      } else {
+        button.classList.toggle('active', (button.dataset.inspectorStage || button.dataset.stageId) === stageId);
+      }
     });
     Array.from(DOM.graph.querySelectorAll('.vm-stage-panel')).forEach((panel) => {
       panel.classList.toggle('active', panel.dataset.stageId === stageId);
