@@ -365,6 +365,7 @@ def normalize_optional_bool(value: Any) -> bool | None:
 
 def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any) -> dict[str, Any]:
     return {
+        "id": get_val(light_source, "id"),
         "kind": get_val(light_source, "kind", "type"),
         "manufacturer": get_val(light_source, "manufacturer"),
         "model": get_val(light_source, "model"),
@@ -904,13 +905,6 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         method_sentence = f"Excitation was provided by {display_label}{tech_power_clause}."
     else:
         method_sentence = f"Light source in use: {display_label}{tech_power_clause}."
-    method_sentence = _append_quarep_specs(
-        method_sentence,
-        manufacturer,
-        model,
-        product_code,
-        extras=[f"Wavelength: {wavelength_label}" if wavelength_label else "", f"Technology: {technology}" if technology else ""],
-    )
     spec_lines = _spec_lines(
         ("Type", kind_label),
         ("Role", role_label),
@@ -1476,37 +1470,13 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         product_code = clean_text(item.get("product_code"))
         method_sentence = ""
         if inventory_class == "light_source":
-            method_sentence = _append_quarep_specs(
-                f"Excitation was provided by {clean_text(item.get('display_label'))}.",
-                manufacturer,
-                model,
-                product_code,
-                extras=_inventory_method_extras(item),
-            )
+            method_sentence = f"Excitation was provided by {clean_text(item.get('display_label'))}."
         elif inventory_class in {"endpoint", "camera_port", "eyepiece"}:
-            method_sentence = _append_quarep_specs(
-                f"Detected or observed light terminated at {clean_text(item.get('display_label'))}.",
-                manufacturer,
-                model,
-                product_code,
-                extras=_inventory_method_extras(item),
-            )
+            method_sentence = f"Detected or observed light terminated at {clean_text(item.get('display_label'))}."
         elif inventory_class == "splitter":
-            method_sentence = _append_quarep_specs(
-                f"The active route traversed {clean_text(item.get('display_label'))} as an explicit selector.",
-                manufacturer,
-                model,
-                product_code,
-                extras=_inventory_method_extras(item),
-            )
+            method_sentence = f"The active route traversed {clean_text(item.get('display_label'))} as an explicit selector."
         elif inventory_class == "optical_element":
-            method_sentence = _append_quarep_specs(
-                f"The optical path included {clean_text(item.get('display_label'))}.",
-                manufacturer,
-                model,
-                product_code,
-                extras=_inventory_method_extras(item),
-            )
+            method_sentence = f"The optical path included {clean_text(item.get('display_label'))}."
         derived_inventory_cards.append({
             **copy.deepcopy(item),
             "id": clean_text(item.get("id")),

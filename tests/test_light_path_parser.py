@@ -1383,6 +1383,46 @@ class LightPathParserTests(unittest.TestCase):
             "excitation",
         )
 
+    def test_analyzer_stage_role_is_preserved_in_virtual_microscope_stages(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "hal", "kind": "halogen_lamp"}],
+                    "optical_path_elements": [
+                        {
+                            "id": "analyzer_slider",
+                            "name": "DIC Fixed Analyzer",
+                            "stage_role": "analyzer",
+                            "element_type": "slider",
+                            "positions": {
+                                "Pos_1": {"component_type": "analyzer"},
+                            },
+                        }
+                    ],
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                    "light_paths": [
+                        {
+                            "id": "dic",
+                            "illumination_sequence": [{"source_id": "hal"}],
+                            "detection_sequence": [
+                                {"optical_path_element_id": "analyzer_slider"},
+                                {"endpoint_id": "cam"},
+                            ],
+                        }
+                    ],
+                },
+            }
+        )
 
-if __name__ == "__main__":
-    unittest.main()
+        stages = _runtime_projection(payload).get("stages", {})
+        self.assertIn("analyzer", stages)
+        self.assertEqual(len(stages["analyzer"]), 1)
+        self.assertEqual(stages["analyzer"][0]["id"], "analyzer_mech_0")
+        self.assertEqual(stages["analyzer"][0]["name"], "DIC Fixed Analyzer")
+
+        valid_paths = _runtime_projection(payload).get("valid_paths", [])
+        self.assertTrue(len(valid_paths) > 0)
+        self.assertIn("analyzer_mech_0", valid_paths[0])
+
+
+

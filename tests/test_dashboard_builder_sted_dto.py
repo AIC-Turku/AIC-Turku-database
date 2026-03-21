@@ -492,7 +492,27 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(detector["channel_center_nm"], 675)
         self.assertEqual(detector["bandwidth_nm"], 50)
 
-    def test_route_metadata_is_rendered_in_source_and_detector_specs(self) -> None:
+    def test_normalize_hardware_preserves_authored_source_id(self) -> None:
+        hardware = normalize_hardware(
+            {
+                "sources": [
+                    {
+                        "id": "spectra_x_488",
+                        "kind": "led",
+                        "manufacturer": "Lumencor",
+                        "model": "Spectra X",
+                        "wavelength_nm": 488,
+                    }
+                ],
+            }
+        )
+
+        source = hardware["sources"][0]
+        self.assertEqual(source["id"], "spectra_x_488")
+        source_alias = hardware["light_sources"][0]
+        self.assertEqual(source_alias["id"], "spectra_x_488")
+
+
         inst = {
             "canonical": {
                 "hardware": {

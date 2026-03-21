@@ -425,7 +425,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "optical_path": {
                     "hardware_inventory_renderables": [
                         {"id": "source:laser_488", "inventory_class": "light_source", "display_label": "488 Laser", "display_subtitle": "Light Source", "method_sentence": "488 sentence.", "modalities": ["widefield_fluorescence"]},
-                        {"id": "source:laser_561", "inventory_class": "light_source", "display_label": "561 Laser", "display_subtitle": "Light Source", "method_sentence": "561 sentence.", "modalities": ["confocal"]},
+                        {"id": "source:laser_561", "inventory_class": "light_source", "display_label": "561 Laser", "display_subtitle": "Light Source", "method_sentence": "Excitation was provided by 561 Laser.", "modalities": ["confocal"]},
                         {"id": "optical_path_element:ex_488", "inventory_class": "optical_element", "display_label": "EX 488", "display_subtitle": "Optical Element", "method_sentence": "EX sentence.", "modalities": ["widefield_fluorescence"]},
                         {"id": "optical_path_element:pinhole", "inventory_class": "optical_element", "display_label": "Pinhole", "display_subtitle": "Optical Element", "method_sentence": "Pinhole sentence.", "modalities": ["confocal"]},
                         {"id": "endpoint:cam", "inventory_class": "endpoint", "display_label": "Main Camera", "display_subtitle": "Endpoint", "method_sentence": "Cam sentence.", "modalities": ["widefield_fluorescence"]},
