@@ -50,6 +50,12 @@ from scripts.validate import (
     validate_instrument_ledgers,
 )
 from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.display_labels import (
+    resolve_endpoint_type_label,
+    resolve_inventory_class_label,
+    resolve_stage_role_label,
+    resolve_vocab_section_title,
+)
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -1241,8 +1247,9 @@ def _optical_element_position_pairs(element: dict[str, Any]) -> list[tuple[str, 
     return pairs
 
 
-def _terminal_summary(terminal: dict[str, Any]) -> str:
-    endpoint_type = clean_text(terminal.get("endpoint_type") or terminal.get("type") or terminal.get("kind")).replace("_", " ").title()
+def _terminal_summary(terminal: dict[str, Any], vocabulary: Vocabulary | None = None) -> str:
+    raw_endpoint_type = clean_text(terminal.get("endpoint_type") or terminal.get("type") or terminal.get("kind"))
+    endpoint_type = resolve_endpoint_type_label(raw_endpoint_type, vocabulary) if vocabulary else raw_endpoint_type.replace("_", " ").title()
     route_text = ", ".join(terminal.get("routes") or []) if isinstance(terminal.get("routes"), list) else clean_text(terminal.get("path"))
     return _compact_join([endpoint_type, route_text])
 
@@ -1368,7 +1375,7 @@ def _route_branch_summary(route: dict[str, Any], usage: dict[str, Any]) -> dict[
     }
 
 
-def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str, Any] | None = None) -> dict[str, Any]:
+def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str, Any] | None = None, vocabulary: Vocabulary | None = None) -> dict[str, Any]:
     """
     Build the downstream optical-path DTO.
 
@@ -1407,7 +1414,8 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
 
     element_items: list[dict[str, Any]] = []
     for element in optical_elements:
-        stage_role = clean_text(element.get("stage_role") or element.get("element_type") or element.get("type")).replace("_", " ").title()
+        raw_stage_role = clean_text(element.get("stage_role") or element.get("element_type") or element.get("type"))
+        stage_role = resolve_stage_role_label(raw_stage_role, vocabulary) if vocabulary else raw_stage_role.replace("_", " ").title()
         if clean_text(element.get("stage_role")).lower() == "splitter":
             derived_splitter_cards.append({
                 "id": clean_text(element.get("id")),
@@ -1449,7 +1457,8 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         derived_sections.append({"id": "splitters", "display_label": "Splitters / Selectors", "items": derived_splitter_cards})
 
     for idx, terminal in enumerate(endpoints_raw):
-        endpoint_type = clean_text(terminal.get("endpoint_type") or terminal.get("type") or terminal.get("kind")).replace("_", " ").title()
+        raw_endpoint_type = clean_text(terminal.get("endpoint_type") or terminal.get("type") or terminal.get("kind"))
+        endpoint_type = resolve_endpoint_type_label(raw_endpoint_type, vocabulary) if vocabulary else raw_endpoint_type.replace("_", " ").title()
         display_label = clean_text(terminal.get("display_label") or terminal.get("name") or terminal.get("id")) or f"Endpoint {idx + 1}"
         derived_endpoint_cards.append({
             "id": clean_text(terminal.get("id")) or f"endpoint_{idx}",
@@ -1482,7 +1491,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "id": clean_text(item.get("id")),
             "display_number": item.get("display_number"),
             "display_label": clean_text(item.get("display_label") or item.get("id")),
-            "display_subtitle": inventory_class.replace("_", " ").title(),
+            "display_subtitle": resolve_inventory_class_label(inventory_class, vocabulary) if vocabulary else inventory_class.replace("_", " ").title(),
             "spec_lines": _spec_lines(
                 ("Number", f"`{item.get('display_number')}`" if item.get("display_number") else None),
                 ("Manufacturer", clean_text(item.get("manufacturer"))),
@@ -1850,9 +1859,9 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
         {
             **copy.deepcopy(endpoint),
             "display_label": clean_text(endpoint.get("display_label") or endpoint.get("channel_name") or endpoint.get("name") or endpoint.get("id")) or "Endpoint",
-            "display_subtitle": clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).replace("_", " ").title() or "Endpoint",
+            "display_subtitle": resolve_endpoint_type_label(clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")), vocabulary) or "Endpoint",
             "spec_lines": _spec_lines(
-                ("Endpoint type", clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")).replace("_", " ").title()),
+                ("Endpoint type", resolve_endpoint_type_label(clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")), vocabulary)),
                 ("Source section", clean_text(endpoint.get("source_section"))),
                 ("Modalities", ", ".join(endpoint.get("modalities") or [])),
                 ("Model", clean_text(endpoint.get("model"))),
@@ -1905,7 +1914,7 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
             "method_sentence": triggering_sentence,
             "present": bool(triggering_label or clean_text(triggering.get("notes"))),
         },
-        "optical_path": build_optical_path_dto(lightpath_dto, raw_hardware=canonical_hardware),
+        "optical_path": build_optical_path_dto(lightpath_dto, raw_hardware=canonical_hardware, vocabulary=vocabulary),
     }
 
 
@@ -2771,7 +2780,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
             if vocab_name in vocabulary.terms_by_vocab:
                 has_content = True
                 rendered_vocabs.add(vocab_name)
-                title = vocab_name.replace("_", " ").title()
+                title = resolve_vocab_section_title(vocab_name)
                 vocab_md_lines.append(f"    ## {title}\n")
                 vocab_md_lines.append("    | Label | Canonical ID | Synonyms | Description |")
                 vocab_md_lines.append("    | :--- | :--- | :--- | :--- |")
@@ -2792,7 +2801,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     if other_vocabs:
         vocab_md_lines.append('=== "📦 Other"\n')
         for vocab_name in sorted(other_vocabs):
-            title = vocab_name.replace("_", " ").title()
+            title = resolve_vocab_section_title(vocab_name)
             vocab_md_lines.append(f"    ## {title}\n")
             vocab_md_lines.append("    | Label | Canonical ID | Synonyms | Description |")
             vocab_md_lines.append("    | :--- | :--- | :--- | :--- |")
@@ -2895,7 +2904,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
                 latest_metrics.update(session_metrics)
         
         canonical_payload = inst.get("canonical", {})
-        lightpath_dto = generate_virtual_microscope_payload(canonical_payload if isinstance(canonical_payload, dict) else {"hardware": {}}, include_inferred_terminals=False)
+        lightpath_dto = generate_virtual_microscope_payload(canonical_payload if isinstance(canonical_payload, dict) else {"hardware": {}}, include_inferred_terminals=False, vocab=vocabulary)
         if not isinstance(lightpath_dto, dict):
             lightpath_dto = {}
         inst["lightpath_dto"] = lightpath_dto

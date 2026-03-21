@@ -18,6 +18,14 @@ import re
 from itertools import product
 from typing import Any
 
+from scripts.display_labels import (
+    VocabLookup,
+    resolve_component_type_label,
+    resolve_light_source_kind_label,
+    resolve_route_label,
+    resolve_stage_role_label,
+)
+
 
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
 NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough", "neutral_density"}
@@ -54,6 +62,47 @@ POWER_VALUE_RE = re.compile(r"(\d+(?:\.\d+)?)")
 CANONICAL_ENDPOINT_COLLECTION_KEYS = ("endpoints", "terminals", "detection_endpoints")
 ENDPOINT_CAPABLE_INVENTORY_KEYS = ("detectors", "eyepieces")
 SEQUENCE_TOPOLOGY_KEYS = ("source_id", "optical_path_element_id", "endpoint_id", "branches")
+
+# Module-level vocabulary context set by generate_virtual_microscope_payload()
+# so deeply nested helpers can resolve vocab-backed display labels without
+# requiring every internal function to accept a vocab parameter.
+_active_vocab: VocabLookup | None = None
+
+
+def _resolve_route_label(route_id: str, explicit_name: str | None = None) -> str:
+    """Resolve a display label for a route id using vocab or ROUTE_LABELS fallback."""
+    if explicit_name:
+        return explicit_name
+    if _active_vocab is not None:
+        return resolve_route_label(route_id, _active_vocab)
+    return ROUTE_LABELS.get(route_id, route_id.replace("_", " ").title())
+
+
+def _resolve_component_type_label(component_type: str) -> str:
+    """Resolve a display label for a component type via vocab or fallback."""
+    if _active_vocab is not None:
+        return resolve_component_type_label(component_type, _active_vocab)
+    return component_type.replace("_", " ").title()
+
+
+def _resolve_light_source_kind(kind: str) -> str:
+    """Resolve a display label for a light source kind via vocab or fallback."""
+    if _active_vocab is not None:
+        return resolve_light_source_kind_label(kind, _active_vocab)
+    return kind.replace("_", " ")
+
+
+_CUBE_LINK_LABELS = {
+    "excitation_filter": "Excitation Filter",
+    "dichroic": "Dichroic",
+    "emission_filter": "Emission Filter",
+}
+
+
+def _resolve_cube_link_label(link_key: str) -> str:
+    """Resolve a display label for a filter cube link key."""
+    return _CUBE_LINK_LABELS.get(link_key, link_key.replace("_", " ").title())
+
 
 def _is_positive_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
@@ -544,7 +593,7 @@ def _canonicalize_sequence_item(
                 return None
             branch_payload = {
                 "branch_id": branch_id,
-                "label": _clean_string(branch.get("label")) or branch_id.replace("_", " ").title(),
+                "label": _clean_string(branch.get("label")) or _resolve_route_label(branch_id),
                 "sequence": normalized_sequence,
             }
             if branch.get("mode"):
@@ -609,7 +658,7 @@ def _parse_canonical_light_paths(raw_light_paths: list[dict[str, Any]], sources:
         route_modalities = _normalize_modalities(route.get("modalities") or route.get("routes") or route.get("path"))
         routes.append({
             "id": route_id,
-            "name": _clean_string(route.get("name")) or ROUTE_LABELS.get(route_id, route_id.replace("_", " ").title()),
+            "name": _clean_string(route.get("name")) or _resolve_route_label(route_id),
             "modalities": route_modalities or [route_id],
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
@@ -653,7 +702,7 @@ def _import_legacy_light_paths(sources: list[dict[str, Any]], elements: list[dic
             continue
         routes.append({
             "id": route_id,
-            "name": ROUTE_LABELS.get(route_id, route_id.replace("_", " ").title()),
+            "name": _resolve_route_label(route_id),
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
         })
@@ -1161,7 +1210,7 @@ def _build_label(component: dict[str, Any]) -> str:
         width = component.get("width_nm")
         if _is_positive_number(center) and _is_positive_number(width):
             return f"{_format_numeric(center)}/{_format_numeric(width)}"
-        return str(component_type).title()
+        return _resolve_component_type_label(str(component_type))
     if component_type == "longpass":
         cut_on = component.get("cut_on_nm")
         return f"LP {_format_numeric(cut_on)}" if _is_positive_number(cut_on) else "Longpass"
@@ -1196,9 +1245,9 @@ def _build_label(component: dict[str, Any]) -> str:
             return f"Dichroic {' | '.join(parts)}"
         return "Dichroic"
     if component_type in NO_WAVELENGTH_TYPES:
-        return str(component_type).title()
+        return _resolve_component_type_label(str(component_type))
 
-    return str(component_type).replace("_", " ").title()
+    return _resolve_component_type_label(str(component_type))
 
 
 
@@ -1335,7 +1384,8 @@ def _component_payload(component: dict[str, Any], *, default_name: str = "", bra
 
 
 def _light_source_display_label(source: dict[str, Any]) -> str:
-    kind = _clean_string(source.get("kind") or source.get("type") or "source").replace("_", " ")
+    raw_kind = _clean_string(source.get("kind") or source.get("type") or "source")
+    kind = _resolve_light_source_kind(raw_kind)
     manufacturer = _clean_string(source.get("manufacturer"))
     model = _clean_string(source.get("model"))
     wavelength = source.get("wavelength_nm")
@@ -1348,7 +1398,7 @@ def _light_source_display_label(source: dict[str, Any]) -> str:
         prefix = f"{_format_numeric(tunable_min)}-{_format_numeric(tunable_max)} nm"
     elif isinstance(wavelength, str) and wavelength.strip():
         prefix = wavelength.strip()
-    return " ".join(part for part in [prefix, kind, manufacturer, model] if part).strip() or model or kind.title() or "Light Source"
+    return " ".join(part for part in [prefix, kind, manufacturer, model] if part).strip() or model or _resolve_light_source_kind(raw_kind) or "Light Source"
 
 
 
@@ -1698,10 +1748,11 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
             component_payload["display_label"] = f"Slot {slot}: {component_payload.get('label')}"
             positions.append(component_payload)
 
+    _stage_label = resolve_stage_role_label(stage_prefix) if _active_vocab is not None else stage_prefix.replace("_", " ").title()
     mechanism_payload = {
         "id": f"{stage_prefix}_mech_{index}",
-        "name": mechanism.get("name") or f"{stage_prefix.replace('_', ' ').title()} {index + 1}",
-        "display_label": mechanism.get("name") or f"{stage_prefix.replace('_', ' ').title()} {index + 1}",
+        "name": mechanism.get("name") or f"{_stage_label} {index + 1}",
+        "display_label": mechanism.get("name") or f"{_stage_label} {index + 1}",
         "type": mechanism.get("type", "unknown"),
         "positions": positions,
     }
@@ -1777,7 +1828,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                 component = cube_position.get(link_key)
                 if not isinstance(component, dict):
                     continue
-                linked_components[link_key] = _component_payload(component, default_name=link_key.replace("_", " ").title())
+                linked_components[link_key] = _component_payload(component, default_name=_resolve_cube_link_label(link_key))
 
             position_payload: dict[str, Any] = {
                 "slot": slot,
@@ -1963,7 +2014,7 @@ def _collect_route_owned_splitters(
                 else:
                     branch_payload = {
                         "id": branch_id,
-                        "label": branch.get("label") or branch_id.replace("_", " ").title(),
+                        "label": branch.get("label") or _resolve_route_label(branch_id),
                         "target_ids": [],
                         "sequence": json.loads(json.dumps(branch.get("sequence") or [])),
                         "__routes": [route_id] if route_id else [],
@@ -2051,7 +2102,7 @@ def _route_catalog_entries(payload: dict[str, Any]) -> list[dict[str, str]]:
     return [
         {
             "id": route_id,
-            "label": ROUTE_LABELS.get(route_id, route_id.replace("_", " ").title()),
+            "label": _resolve_route_label(route_id),
         }
         for route_id in sorted(constrained_routes, key=_route_sort_key)
     ]
@@ -2554,7 +2605,7 @@ def _build_route_sequences_and_graph(
                     if not isinstance(branch, dict):
                         continue
                     branch_id = _clean_identifier(branch.get("branch_id")) or f"branch_{branch_index}"
-                    branch_label = _clean_string(branch.get("label")) or branch_id.replace("_", " ").title()
+                    branch_label = _clean_string(branch.get("label")) or _resolve_route_label(branch_id)
                     branch_sequence, branch_tail_id, branch_column = walk_sequence(
                         branch.get("sequence") or [],
                         phase=phase,
@@ -2696,7 +2747,7 @@ def _build_route_sequences_and_graph(
     return resolved_route, usage
 
 
-def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferred_terminals: bool = False) -> dict:
+def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferred_terminals: bool = False, vocab: VocabLookup | None = None) -> dict:
     """Build the authoritative canonical DTO plus explicit downstream projections.
 
     Top-level DTO fields are the canonical contract consumed across the repository:
@@ -2709,6 +2760,17 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
     ``projections.virtual_microscope`` so legacy-style stage buckets and splitter
     renderables are clearly derived adapters rather than co-equal topology truth.
     """
+    global _active_vocab
+    _prev_vocab = _active_vocab
+    _active_vocab = vocab
+    try:
+        return _generate_virtual_microscope_payload_inner(instrument_dict, include_inferred_terminals=include_inferred_terminals)
+    finally:
+        _active_vocab = _prev_vocab
+
+
+def _generate_virtual_microscope_payload_inner(instrument_dict: dict, *, include_inferred_terminals: bool = False) -> dict:
+    """Inner implementation — always runs within a vocab context set by the public wrapper."""
     canonical = canonicalize_light_path_model(instrument_dict if isinstance(instrument_dict, dict) else {})
     hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
     sources = canonical["sources"]
@@ -2782,7 +2844,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         "stages": {"excitation": [], "dichroic": [], "emission": [], "cube": []},
         "splitters": [],
         "valid_paths": [],
-        "available_routes": [{"id": route["id"], "label": route.get("name") or ROUTE_LABELS.get(route["id"], route["id"].replace("_", " ").title())} for route in light_paths],
+        "available_routes": [{"id": route["id"], "label": route.get("name") or _resolve_route_label(route["id"])} for route in light_paths],
         "default_route": light_paths[0]["id"] if light_paths else None,
     }
 
