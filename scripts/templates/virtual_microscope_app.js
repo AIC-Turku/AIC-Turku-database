@@ -176,19 +176,21 @@
       stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
     }
     const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
-    if (detection.length && groupIds.has('detection-controls')) {
-      detection.forEach((entry, index) => {
+    let detectionEntryIndex = 0;
+    detection.forEach((entry, index) => {
+      if (entry.kind === 'branch-block') return;
+      const entryId = `detection-entry-${detectionEntryIndex}`;
+      if (groupIds.has(entryId)) {
         stages.push({
           id: entry.key || ('pipe:detection:' + index),
           key: 'pipe:detection:' + index,
           label: entry.title || 'Detection',
-          inspectorStage: 'detection-controls',
+          inspectorStage: entryId,
           flowOrigin: 'detection-controls',
         });
-      });
-    } else if (groupIds.has('detection-controls')) {
-      stages.push({ id: 'detection-controls', key: 'pipe:detection-controls:0', label: 'Detection Controls', inspectorStage: 'detection-controls', flowOrigin: 'detection-controls' });
-    }
+      }
+      detectionEntryIndex += 1;
+    });
     if (groupIds.has('detectors')) {
       stages.push({ id: 'detectors', key: 'pipe:detectors:0', label: 'Detectors', inspectorStage: 'detectors', flowOrigin: 'detectors' });
     }
@@ -478,7 +480,20 @@
         setting.enabled = Boolean(ref);
         if (ref && numberOrNull(ref.collection_min_nm) !== null) setting.collection_min_nm = numberOrNull(ref.collection_min_nm);
         if (ref && numberOrNull(ref.collection_max_nm) !== null) setting.collection_max_nm = numberOrNull(ref.collection_max_nm);
+        if (ref) autoSelectBranchForDetector(detector);
       });
+    });
+
+    // Apply splitter branch selections from the optimizer result.
+    (Array.isArray(config.splitters) ? config.splitters : []).forEach((entry) => {
+      const mechanismId = cleanString(entry.mechanismId).toLowerCase();
+      const branchIds = Array.isArray(entry.selected_branch_ids) ? entry.selected_branch_ids.map((id) => cleanString(id)) : [];
+      if (!mechanismId || !branchIds.length) return;
+      const splitters = Array.isArray(instrument.splitters) ? instrument.splitters : [];
+      const match = splitters.find((s) => cleanString(s.id).toLowerCase() === mechanismId);
+      if (match && branchIds.length) {
+        state.splitterBranchSelections.set(splitterBranchSelectionKey(match), branchIds.filter(Boolean));
+      }
     });
 
     renderGraphFlow();
@@ -566,6 +581,26 @@
       state.splitterBranchSelections.set(key, defaults.filter(Boolean));
     }
     return state.splitterBranchSelections.get(key);
+  }
+
+  function autoSelectBranchForDetector(detector) {
+    if (!detector || !state.activeInstrument) return;
+    const detectorId = cleanString(detector.id || detector.terminal_id || detector.display_label || detector.name).toLowerCase();
+    if (!detectorId) return;
+    const splitters = Array.isArray(state.activeInstrument.splitters) ? state.activeInstrument.splitters : [];
+    splitters.forEach((mechanism) => {
+      const branches = Array.isArray(mechanism.branches) ? mechanism.branches : [];
+      const match = branches.find((branch) => {
+        const targets = Array.isArray(branch.target_ids) ? branch.target_ids : [];
+        return targets.some((tid) => cleanString(tid).toLowerCase() === detectorId);
+      });
+      if (match) {
+        const branchId = cleanString(match.id || '');
+        if (branchId) {
+          state.splitterBranchSelections.set(splitterBranchSelectionKey(mechanism), [branchId]);
+        }
+      }
+    });
   }
 
   function knownEndpointEntries() {
@@ -969,16 +1004,18 @@
       },
     });
 
-    if (detectionEntries.length) {
+    detectionEntries.forEach((entry, index) => {
+      if (entry.kind === 'branch-block') return;
+      const entryId = `detection-entry-${index}`;
       groups.push({
-        id: 'detection-controls',
-        label: 'Detection Controls',
-        subtitle: 'Derived selectors aligned to route-local detection traversal and explicit branch semantics.',
+        id: entryId,
+        label: entry.title || 'Detection',
+        subtitle: '',
         build(panel) {
-          appendTraversalEntries(panel, detectionEntries);
+          appendTraversalEntries(panel, [entry]);
         },
       });
-    }
+    });
 
     if (detectorMechanisms.length) {
       groups.push({
@@ -1810,6 +1847,7 @@
     checkbox.checked = Boolean(setting.enabled);
     checkbox.addEventListener('change', () => {
       setting.enabled = checkbox.checked;
+      if (checkbox.checked) autoSelectBranchForDetector(detector);
       syncDetectorMetadata();
       refreshOutputs();
     });
