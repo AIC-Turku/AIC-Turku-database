@@ -339,7 +339,7 @@
     button.dataset.stageId = stageId;
     button.dataset.inspectorStage = inspectorStage || stageId;
     button.textContent = label;
-    button.addEventListener('click', () => setInspectorStage(inspectorStage || stageId));
+    button.addEventListener('click', () => setInspectorStage(inspectorStage || stageId, stageId));
     return button;
   }
 
@@ -371,10 +371,14 @@
     return panel;
   }
 
-  function setInspectorStage(stageId) {
+  function setInspectorStage(stageId, activeBadgeId) {
     state.activeInspectorStage = stageId;
     Array.from(DOM.graph.querySelectorAll('.vm-stage-tab')).forEach((button) => {
-      button.classList.toggle('active', (button.dataset.inspectorStage || button.dataset.stageId) === stageId);
+      if (activeBadgeId) {
+        button.classList.toggle('active', button.dataset.stageId === activeBadgeId);
+      } else {
+        button.classList.toggle('active', (button.dataset.inspectorStage || button.dataset.stageId) === stageId);
+      }
     });
     Array.from(DOM.graph.querySelectorAll('.vm-stage-panel')).forEach((panel) => {
       panel.classList.toggle('active', panel.dataset.stageId === stageId);
@@ -993,7 +997,7 @@
   }
 
   function activeRouteOrder() {
-    return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
+    return VM.ROUTE_SORT_ORDER || ['confocal', 'confocal_point', 'confocal_spinning_disk', 'epi', 'widefield_fluorescence', 'tirf', 'multiphoton', 'light_sheet', 'transmitted', 'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic', 'reflected_brightfield', 'optical_sectioning', 'spectral_imaging', 'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret'];
   }
 
   function inferRouteFromSourceSettings() {
@@ -1280,7 +1284,8 @@
     shell.appendChild(inspector);
     DOM.graph.appendChild(shell);
 
-    if (route === 'transmitted' || route === 'brightfield' || route === 'phase') {
+    const transmittedRoutes = ['transmitted', 'transmitted_brightfield', 'brightfield', 'phase', 'phase_contrast', 'darkfield', 'dic'];
+    if (transmittedRoutes.includes(route)) {
       const warningPanel = document.createElement('div');
       warningPanel.className = 'vm-info-card';
       warningPanel.style.borderLeft = '4px solid var(--warning)';
@@ -1530,14 +1535,14 @@
       ? mechanism.options.filter((option) => VM.routeMatches((option.value && option.value.__routes) || mechanism.__routes, state.activeRoute))
       : Object.entries(positionsForRoute(mechanism, state.activeRoute)).map(([slot, component]) => ({
           slot: Number(slot),
-          display_label: component.display_label || component.label || `Slot ${slot}`,
+          display_label: component.display_label || component.label || component.name || `Slot ${slot}`,
           value: component,
         }));
 
     options.forEach((option) => {
       const opt = document.createElement('option');
       opt.value = JSON.stringify(option.value);
-      opt.textContent = option.display_label || option.value && (option.value.display_label || option.value.label) || `Slot ${option.slot}`;
+      opt.textContent = option.display_label || option.value && (option.value.display_label || option.value.label || option.value.name) || `Slot ${option.slot}`;
       if (Number.isFinite(Number(option.slot))) {
         opt.dataset.slot = String(option.slot);
       } else if (Number.isFinite(Number(option.value && option.value.slot))) {

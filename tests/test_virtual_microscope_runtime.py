@@ -1472,6 +1472,79 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(state.get("ex_max"), 587)
         self.assertEqual(state.get("em_max"), 610)
 
+    def test_route_sort_order_is_exported_and_matches_python(self) -> None:
+        result = self.run_node_json(
+            """
+            return rt.ROUTE_SORT_ORDER;
+            """
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertGreater(len(result), 5, "ROUTE_SORT_ORDER should contain all route tags, not just 5")
+        self.assertIn("confocal", result)
+        self.assertIn("confocal_point", result)
+        self.assertIn("confocal_spinning_disk", result)
+        self.assertIn("widefield_fluorescence", result)
+        self.assertIn("tirf", result)
+        self.assertIn("light_sheet", result)
+        self.assertIn("flim", result)
+        self.assertIn("ism", result)
+        self.assertIn("transmitted_brightfield", result)
+        self.assertIn("darkfield", result)
+        self.assertIn("phase_contrast", result)
+        self.assertIn("dic", result)
+
+    def test_all_route_tags_accepted_by_normalize(self) -> None:
+        result = self.run_node_json(
+            """
+            const allRoutes = [
+              'epi', 'widefield_fluorescence', 'tirf', 'confocal', 'confocal_point',
+              'confocal_spinning_disk', 'multiphoton', 'light_sheet', 'transmitted',
+              'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic',
+              'reflected_brightfield', 'optical_sectioning', 'spectral_imaging',
+              'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret'
+            ];
+            const normalized = rt.normalizeRouteTags(allRoutes);
+            return { input: allRoutes, output: normalized };
+            """
+        )
+
+        input_set = set(result["input"])
+        output_set = set(result["output"])
+        dropped = input_set - output_set
+        self.assertEqual(len(result["input"]), len(result["output"]),
+                         f"All route tags should be accepted; dropped: {dropped}")
+
+    def test_eyepiece_detector_response_honors_dto_bounds(self) -> None:
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 350, max_nm: 800, step_nm: 2 });
+            const defaultResponse = rt.detectorResponse(
+              { kind: 'eyepiece', endpoint_type: 'eyepiece' },
+              grid
+            );
+            const customResponse = rt.detectorResponse(
+              { kind: 'eyepiece', endpoint_type: 'eyepiece', collection_min_nm: 350, collection_max_nm: 750 },
+              grid
+            );
+            // Default eyepiece should not respond much at 370nm (below 390)
+            const idx370 = grid.indexOf(370);
+            const idx500 = grid.indexOf(500);
+            // Custom eyepiece with 350-750 range should have response at 370nm
+            return {
+              defaultAt370: defaultResponse[idx370],
+              defaultAt500: defaultResponse[idx500],
+              customAt370: customResponse[idx370],
+              customAt500: customResponse[idx500],
+            };
+            """
+        )
+
+        self.assertGreater(result["defaultAt500"], result["defaultAt370"],
+                           "Default eyepiece should have lower response at 370nm than 500nm")
+        self.assertGreater(result["customAt370"], result["defaultAt370"],
+                           "Custom eyepiece with 350-750 bounds should have higher response at 370nm")
+
 
 if __name__ == "__main__":
     unittest.main()

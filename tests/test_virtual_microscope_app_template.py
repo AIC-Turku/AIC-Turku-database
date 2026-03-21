@@ -67,6 +67,29 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("key: 'pipe:detection:' + index", source)
         self.assertIn("key: 'pipe:detectors:0'", source)
 
+    def test_transmitted_route_detection_covers_all_transmitted_tags(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("'transmitted_brightfield'", source)
+        self.assertIn("'phase_contrast'", source)
+        self.assertIn("'darkfield'", source)
+        self.assertIn("'dic'", source)
+        self.assertNotIn(
+            "route === 'transmitted' || route === 'brightfield' || route === 'phase'",
+            source,
+            "Old 3-route transmitted check should be replaced with comprehensive list",
+        )
+
+    def test_active_route_order_uses_runtime_sort_order(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("VM.ROUTE_SORT_ORDER", source)
+        self.assertNotIn(
+            "return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];",
+            source,
+            "Old 5-route hardcoded order should be replaced",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
