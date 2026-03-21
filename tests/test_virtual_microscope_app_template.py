@@ -122,7 +122,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_pipeline_stages_render_from_topology_not_derived_groups(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertNotIn("derivedControlGroups", source.split("function buildPipelineStages")[1].split("function ")[0])
+        self.assertIn("function buildPipelineStages(topology)", source)
+        self.assertNotIn("function buildPipelineStages(derivedControlGroups", source)
         self.assertIn("topology.sourceMechanisms", source)
         self.assertIn("topology.endpointMechanisms", source)
 
