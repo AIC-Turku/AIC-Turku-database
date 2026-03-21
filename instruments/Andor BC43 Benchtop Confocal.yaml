@@ -267,11 +267,8 @@ hardware:
           component_type: bandpass
           bands:
             - center_nm: 685
-              width_nm: 50
-              
-  endpoints: []
+              width_nm: 50              
 
-# ADDED: Three explicit light paths as requested
 light_paths:
   - id: confocal_spinning_disk
     name: Confocal Spinning Disk
