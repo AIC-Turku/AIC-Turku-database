@@ -25,8 +25,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_pipeline_ui_is_built_from_route_traversal(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("function buildPipelineStages(derivedControlGroups, topology)", source)
-        self.assertIn("const pipelineStages = buildPipelineStages(derivedControlGroups, topology);", source)
+        self.assertIn("function buildPipelineStages(topology)", source)
+        self.assertIn("const pipelineStages = buildPipelineStages(topology);", source)
         self.assertIn("pipeline.style.display = pipelineStages.length ? 'flex' : 'none';", source)
         self.assertIn("createPipeSegment(stagePipeKey(pipelineStages[index - 1].flowOrigin, stage.flowOrigin))", source)
         self.assertIn("createPipelineBadge(stage.id, stage.label, stage.inspectorStage)", source)
@@ -89,6 +89,42 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
             source,
             "Old 5-route hardcoded order should be replaced",
         )
+
+    def test_pipe_no_longer_invents_generic_illumination_or_detection_controls(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("id: 'illumination-controls'", source)
+        self.assertNotIn("label: 'Illumination Controls'", source)
+        self.assertNotIn("id: 'detection-controls'", source)
+        self.assertNotIn("label: 'Detection Controls'", source)
+
+    def test_traversal_entries_receive_stable_route_step_ids(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function assignRouteStepIds(entries, phase)", source)
+        self.assertIn("entry.routeStepId = `${phase}-step-${stepIndex}`", source)
+        self.assertIn("assignRouteStepIds(result.illumination, 'illumination')", source)
+        self.assertIn("assignRouteStepIds(result.detection, 'detection')", source)
+
+    def test_pipe_stages_use_route_step_ids(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("entry.routeStepId || ('illumination-step-' + index)", source)
+        self.assertIn("entry.routeStepId || ('detection-step-' + index)", source)
+
+    def test_derived_control_groups_use_per_entry_illumination_groups(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("id: 'illumination-controls'", source)
+        self.assertIn("entry.routeStepId || ('illumination-step-' + illumStepIndex)", source)
+        self.assertIn("entry.routeStepId || ('detection-step-' + detStepIndex)", source)
+
+    def test_pipeline_stages_render_from_topology_not_derived_groups(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("derivedControlGroups", source.split("function buildPipelineStages")[1].split("function ")[0])
+        self.assertIn("topology.sourceMechanisms", source)
+        self.assertIn("topology.endpointMechanisms", source)
 
 
 if __name__ == "__main__":

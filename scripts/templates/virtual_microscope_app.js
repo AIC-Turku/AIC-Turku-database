@@ -151,49 +151,39 @@
     return spectra.empty;
   }
 
-  function buildPipelineStages(derivedControlGroups, topology) {
-    const groupIds = new Set(
-      (Array.isArray(derivedControlGroups) ? derivedControlGroups : [])
-        .map((g) => cleanString(g && g.id)).filter(Boolean)
-    );
+  function buildPipelineStages(topology) {
     const stages = [];
-    if (groupIds.has('sources')) {
+    const sourceMechs = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : [];
+    if (sourceMechs.length) {
       stages.push({ id: 'sources', key: 'pipe:sources:0', label: 'Sources', inspectorStage: 'sources', flowOrigin: 'sources' });
     }
     const illumination = topology && topology.traversal && Array.isArray(topology.traversal.illumination) ? topology.traversal.illumination : [];
-    if (illumination.length && groupIds.has('illumination-controls')) {
-      illumination.forEach((entry, index) => {
-        stages.push({
-          id: entry.key || ('pipe:illumination:' + index),
-          key: 'pipe:illumination:' + index,
-          label: entry.title || 'Illumination',
-          inspectorStage: 'illumination-controls',
-          flowOrigin: 'illumination-controls',
-        });
+    illumination.forEach((entry, index) => {
+      if (entry.kind === 'branch-block') return;
+      const stepId = entry.routeStepId || ('illumination-step-' + index);
+      stages.push({
+        id: stepId,
+        key: 'pipe:illumination:' + index,
+        label: entry.title || 'Illumination',
+        inspectorStage: stepId,
+        flowOrigin: 'illumination',
       });
-    } else if (groupIds.has('illumination-controls')) {
-      stages.push({ id: 'illumination-controls', key: 'pipe:illumination-controls:0', label: 'Illumination Controls', inspectorStage: 'illumination-controls', flowOrigin: 'illumination-controls' });
-    }
-    if (groupIds.has('sample')) {
-      stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
-    }
+    });
+    stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
     const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
-    let detectionEntryIndex = 0;
     detection.forEach((entry, index) => {
       if (entry.kind === 'branch-block') return;
-      const entryId = `detection-entry-${detectionEntryIndex}`;
-      if (groupIds.has(entryId)) {
-        stages.push({
-          id: entry.key || ('pipe:detection:' + index),
-          key: 'pipe:detection:' + index,
-          label: entry.title || 'Detection',
-          inspectorStage: entryId,
-          flowOrigin: 'detection-controls',
-        });
-      }
-      detectionEntryIndex += 1;
+      const stepId = entry.routeStepId || ('detection-step-' + index);
+      stages.push({
+        id: stepId,
+        key: 'pipe:detection:' + index,
+        label: entry.title || 'Detection',
+        inspectorStage: stepId,
+        flowOrigin: 'detection',
+      });
     });
-    if (groupIds.has('detectors')) {
+    const endpointMechs = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : [];
+    if (endpointMechs.length) {
       stages.push({ id: 'detectors', key: 'pipe:detectors:0', label: 'Detectors', inspectorStage: 'detectors', flowOrigin: 'detectors' });
     }
     return stages;
@@ -883,7 +873,16 @@
         ? routeRecord.detection_traversal
         : null;
 
-    return {
+    function assignRouteStepIds(entries, phase) {
+      let stepIndex = 0;
+      (Array.isArray(entries) ? entries : []).forEach((entry) => {
+        if (entry.kind === 'branch-block') return;
+        entry.routeStepId = `${phase}-step-${stepIndex}`;
+        stepIndex += 1;
+      });
+    }
+
+    const result = {
       illumination: resolvedIlluminationTraversal
         ? buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination')
         : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence)) || (routeRecord && routeRecord.illumination_sequence), 'illumination', 'illumination'),
@@ -891,6 +890,9 @@
         ? buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection')
         : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence)) || (routeRecord && routeRecord.detection_sequence), 'detection', 'detection'),
     };
+    assignRouteStepIds(result.illumination, 'illumination');
+    assignRouteStepIds(result.detection, 'detection');
+    return result;
   }
 
   function endpointIdsFromSequence(sequence) {
@@ -957,17 +959,15 @@
   function stageGroupForNodeKind(kindLabel) {
     const kind = cleanString(kindLabel).toLowerCase();
     if (kind.includes('source') || kind.includes('laser') || kind.includes('led') || kind.includes('lamp')) return 'sources';
-    if (kind.includes('excitation') || kind.includes('cube')) return 'illumination-controls';
-    if (kind.includes('dichroic')) return 'illumination-controls';
-    if (kind.includes('emission') || kind.includes('splitter')) return 'detection-controls';
+    if (kind.includes('excitation') || kind.includes('cube')) return 'illumination';
+    if (kind.includes('dichroic')) return 'illumination';
+    if (kind.includes('emission') || kind.includes('splitter')) return 'detection';
     if (kind.includes('detector') || kind.includes('camera') || kind.includes('pmt') || kind.includes('apd') || kind.includes('hyd') || kind.includes('eyepiece') || kind.includes('endpoint')) return 'detectors';
     if (kind === 'sample') return 'sample';
     return null;
   }
 
   function buildDerivedControlGroups(inst, topology, route) {
-    // UI-only compatibility layer: these groups are projections/adapters derived
-    // from the already-selected authoritative route graph and traversal payload.
     const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : mechanismsForRoute(inst.lightSources, route);
     const illuminationEntries = topology && topology.traversal ? topology.traversal.illumination : [];
     const detectionEntries = topology && topology.traversal ? topology.traversal.detection : [];
@@ -986,16 +986,20 @@
       });
     }
 
-    if (illuminationEntries.length) {
+    let illumStepIndex = 0;
+    illuminationEntries.forEach((entry) => {
+      if (entry.kind === 'branch-block') return;
+      const stepId = entry.routeStepId || ('illumination-step-' + illumStepIndex);
       groups.push({
-        id: 'illumination-controls',
-        label: 'Illumination Controls',
-        subtitle: 'Derived selectors aligned to route-local illumination traversal.',
+        id: stepId,
+        label: entry.title || 'Illumination',
+        subtitle: '',
         build(panel) {
-          appendTraversalEntries(panel, illuminationEntries);
+          appendTraversalEntries(panel, [entry]);
         },
       });
-    }
+      illumStepIndex += 1;
+    });
 
     groups.push({
       id: 'sample',
@@ -1006,19 +1010,19 @@
       },
     });
 
-    let detectionEntryCounter = 0;
+    let detStepIndex = 0;
     detectionEntries.forEach((entry) => {
       if (entry.kind === 'branch-block') return;
-      const entryId = `detection-entry-${detectionEntryCounter}`;
-      detectionEntryCounter += 1;
+      const stepId = entry.routeStepId || ('detection-step-' + detStepIndex);
       groups.push({
-        id: entryId,
+        id: stepId,
         label: entry.title || 'Detection',
         subtitle: '',
         build(panel) {
           appendTraversalEntries(panel, [entry]);
         },
       });
+      detStepIndex += 1;
     });
 
     if (detectorMechanisms.length) {
@@ -1342,7 +1346,7 @@
 
     if (!derivedControlGroups.length) return;
 
-    const pipelineStages = buildPipelineStages(derivedControlGroups, topology);
+    const pipelineStages = buildPipelineStages(topology);
     pipeline.innerHTML = '';
     pipeline.style.display = pipelineStages.length ? 'flex' : 'none';
     pipelineStages.forEach((stage, index) => {
