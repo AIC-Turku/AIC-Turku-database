@@ -796,14 +796,14 @@
 
     const resolvedIlluminationTraversal = Array.isArray(routeRecord && routeRecord.illuminationTraversal) && routeRecord.illuminationTraversal.length
       ? routeRecord.illuminationTraversal
-      : (Array.isArray(routeRecord && routeRecord.illumination_traversal) && routeRecord.illumination_traversal.length
+      : Array.isArray(routeRecord && routeRecord.illumination_traversal) && routeRecord.illumination_traversal.length
         ? routeRecord.illumination_traversal
-        : null);
+        : null;
     const resolvedDetectionTraversal = Array.isArray(routeRecord && routeRecord.detectionTraversal) && routeRecord.detectionTraversal.length
       ? routeRecord.detectionTraversal
-      : (Array.isArray(routeRecord && routeRecord.detection_traversal) && routeRecord.detection_traversal.length
+      : Array.isArray(routeRecord && routeRecord.detection_traversal) && routeRecord.detection_traversal.length
         ? routeRecord.detection_traversal
-        : null);
+        : null;
 
     return {
       illumination: resolvedIlluminationTraversal
@@ -867,6 +867,360 @@
     };
   }
 
+  function routeGraphNodeNumber(node) {
+    const direct = numberOrNull(node && (node.inventory_display_number ?? node.display_number));
+    return direct === null ? null : Math.round(direct);
+  }
+
+  function routeGraphNodeLabel(node) {
+    return cleanString(node && (node.label || node.display_label || node.id)) || 'Route node';
+  }
+
+  function stageGroupForNodeKind(kindLabel) {
+    const kind = cleanString(kindLabel).toLowerCase();
+    if (kind.includes('source') || kind.includes('laser') || kind.includes('led') || kind.includes('lamp')) return 'sources';
+    if (kind.includes('excitation') || kind.includes('cube')) return 'illumination-controls';
+    if (kind.includes('dichroic')) return 'illumination-controls';
+    if (kind.includes('emission') || kind.includes('splitter')) return 'detection-controls';
+    if (kind.includes('detector') || kind.includes('camera') || kind.includes('pmt') || kind.includes('apd') || kind.includes('hyd') || kind.includes('eyepiece') || kind.includes('endpoint')) return 'detectors';
+    if (kind === 'sample') return 'sample';
+    return null;
+  }
+
+  function buildDerivedControlGroups(inst, topology, route) {
+    // UI-only compatibility layer: these groups are projections/adapters derived
+    // from the already-selected authoritative route graph and traversal payload.
+    const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : mechanismsForRoute(inst.lightSources, route);
+    const illuminationEntries = topology && topology.traversal ? topology.traversal.illumination : [];
+    const detectionEntries = topology && topology.traversal ? topology.traversal.detection : [];
+    const detectorMechanisms = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : mechanismsForRoute(inst.detectors, route);
+
+    const groups = [];
+
+    if (lightSourceMechanisms.length) {
+      groups.push({
+        id: 'sources',
+        label: 'Sources',
+        subtitle: 'Derived control group layered on top of the active route graph.',
+        build(panel) {
+          lightSourceMechanisms.forEach((mechanism) => panel.appendChild(createLightSourceControl(mechanism)));
+        },
+      });
+    }
+
+    if (illuminationEntries.length) {
+      groups.push({
+        id: 'illumination-controls',
+        label: 'Illumination Controls',
+        subtitle: 'Derived selectors aligned to route-local illumination traversal.',
+        build(panel) {
+          appendTraversalEntries(panel, illuminationEntries);
+        },
+      });
+    }
+
+    groups.push({
+      id: 'sample',
+      label: 'Sample',
+      subtitle: 'Emission generation remains between illumination and detection traversal.',
+      build(panel) {
+        panel.appendChild(createLinkedStageNote('Emission generation', 'Loaded fluorophores absorb the excitation spectrum here and emit according to their reference spectra.'));
+      },
+    });
+
+    if (detectionEntries.length) {
+      groups.push({
+        id: 'detection-controls',
+        label: 'Detection Controls',
+        subtitle: 'Derived selectors aligned to route-local detection traversal and explicit branch semantics.',
+        build(panel) {
+          appendTraversalEntries(panel, detectionEntries);
+        },
+      });
+    }
+
+    if (detectorMechanisms.length) {
+      groups.push({
+        id: 'detectors',
+        label: 'Detectors & Endpoints',
+        subtitle: 'Derived control widgets for explicit route endpoints.',
+        build(panel) {
+          detectorMechanisms.forEach((mechanism) => {
+            createDetectorControls(mechanism).forEach((block) => panel.appendChild(block));
+          });
+        },
+      });
+    }
+
+    return groups;
+  }
+
+  function activeRouteOrder() {
+    return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
+  }
+
+  function inferRouteFromSourceSettings() {
+    const tags = new Set();
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        if (!setting.enabled) return;
+        VM.normalizeRouteTags(source.routes || source.path || source.__routes || []).forEach((tag) => tags.add(tag));
+      });
+    });
+    for (const candidate of activeRouteOrder()) {
+      if (tags.has(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  function normalizeRouteLabel(route) {
+    if (!route) return 'Any compatible route';
+    return VM.routeLabel ? VM.routeLabel(route) : route.toUpperCase();
+  }
+
+  function describeSpectraSource(sourceId) {
+    const sourceMap = {
+      api: 'FPbase spectra API',
+      detail: 'FPbase detail spectra',
+      'detail+api': 'FPbase detail + API spectra',
+      bundled_cache: 'Bundled FP cache',
+      local: 'Local spectra library',
+      synthetic: 'Synthetic fallback',
+      'api+synthetic': 'FPbase API + synthetic fallback',
+      'detail+synthetic': 'FPbase detail + synthetic fallback',
+      'detail+api+synthetic': 'FPbase detail + API + synthetic fallback',
+      'bundled_cache+synthetic': 'Bundled cache + synthetic fallback',
+      none: 'No spectra available',
+    };
+    return sourceMap[cleanString(sourceId)] || cleanString(sourceId) || 'Unknown source';
+  }
+
+  function seedSettingsFromInstrument() {
+    state.sourceSettings.clear();
+    state.detectorSettings.clear();
+    state.splitterBranchSelections.clear();
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => ensureSourceSetting(source));
+    });
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.detectors, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((detector) => ensureDetectorSetting(mechanism, detector));
+    });
+  }
+
+  function populateScopeSelector() {
+    DOM.scopeSel.innerHTML = '';
+    Object.entries(state.allInstruments || {}).forEach(([id, payload]) => {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = (payload && (payload.display_label || payload.display_name)) || id;
+      DOM.scopeSel.appendChild(option);
+    });
+  }
+
+  async function fetchInstrumentsFromDataJson() {
+    const candidates = ['../assets/instruments_data.json', 'assets/instruments_data.json'];
+    for (const url of candidates) {
+      try {
+        const data = await requestJSON(url);
+        const rows = Array.isArray(data) ? data : (Array.isArray(data && data.instruments) ? data.instruments : []);
+        const loaded = {};
+        rows.forEach((inst) => {
+          const id = cleanString((inst && inst.id) || (inst && inst.identity && inst.identity.id));
+          if (id) loaded[id] = inst;
+        });
+        if (Object.keys(loaded).length) {
+          if (!state.allInstruments || typeof state.allInstruments !== 'object' || Array.isArray(state.allInstruments)) {
+            state.allInstruments = {};
+          }
+          Object.assign(state.allInstruments, loaded);
+          return;
+        }
+      } catch (err) {
+        // try next URL
+      }
+    }
+  }
+
+  function initInstrumentList() {
+    const entries = Object.entries(state.allInstruments || {});
+    if (!entries.length) {
+      fetchInstrumentsFromDataJson()
+        .then(() => {
+          const loaded = Object.entries(state.allInstruments || {});
+          if (!loaded.length) return;
+          populateScopeSelector();
+          const requestedScope = new URLSearchParams(window.location.search).get('scope');
+          currentInstrumentId = (requestedScope && state.allInstruments[requestedScope]) ? requestedScope : loaded[0][0];
+          DOM.scopeSel.value = currentInstrumentId;
+          loadInstrument();
+        })
+        .catch((err) => console.error('Could not load instrument data', err));
+      return;
+    }
+    populateScopeSelector();
+    const requestedScope = new URLSearchParams(window.location.search).get('scope');
+    currentInstrumentId = (requestedScope && state.allInstruments[requestedScope]) ? requestedScope : entries[0][0];
+    DOM.scopeSel.value = currentInstrumentId;
+    loadInstrument();
+  }
+
+  function init() {
+    initCharts();
+
+    DOM.scopeSel.addEventListener('change', (event) => {
+      currentInstrumentId = event.target.value;
+      state.activeInstrumentRaw = state.allInstruments[currentInstrumentId] || {};
+      state.activeInstrument = VM.normalizeInstrumentPayload(state.activeInstrumentRaw);
+      loadInstrument();
+    });
+    DOM.routeSel.addEventListener('change', (event) => {
+      state.activeRoute = cleanString(event.target.value).toLowerCase() || null;
+      state.spectralBandsByMechanism.clear();
+      state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+      renderGraphFlow();
+      refreshOutputs();
+    });
+    DOM.localSearchBtn.addEventListener('click', () => searchLocalLibrary(DOM.localQuery.value));
+    DOM.localQuery.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') searchLocalLibrary(DOM.localQuery.value);
+    });
+    DOM.localQuery.addEventListener('input', debounce(() => searchLocalLibrary(DOM.localQuery.value), 150));
+    DOM.searchBtn.addEventListener('click', () => searchFPbase(DOM.fpQuery.value));
+    DOM.fpQuery.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') searchFPbase(DOM.fpQuery.value);
+    });
+    DOM.fpQuery.addEventListener('input', debounce(() => searchFPbase(DOM.fpQuery.value), 300));
+    DOM.use2Photon.addEventListener('change', (event) => {
+      state.preferTwoPhoton = Boolean(event.target.checked);
+      refreshOutputs();
+    });
+    if (DOM.autoConfigBtn) {
+      DOM.autoConfigBtn.addEventListener('click', runAutoConfigure);
+    }
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.fp-search-wrap')) {
+        if (DOM.fpResults) DOM.fpResults.style.display = 'none';
+        if (DOM.localResults) DOM.localResults.style.display = 'none';
+      }
+    });
+
+    loadLocalFluorophoreIndex().catch((error) => {
+      console.error('Failed to preload local fluorophore index', error);
+      setInlineStatus(DOM.localSearchStatus, `Local spectra index unavailable: ${error.message}`, 'error');
+    });
+
+    initInstrumentList();
+  }
+
+  function loadInstrument() {
+    state.activeInstrumentRaw = state.allInstruments[currentInstrumentId] || {};
+    state.activeInstrument = VM.normalizeInstrumentPayload(state.activeInstrumentRaw);
+    state.activeRoute = state.activeInstrument.defaultRoute || null;
+    state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+    state.spectralBandsByMechanism.clear();
+    seedSettingsFromInstrument();
+    renderRouteSelector();
+    renderGraphFlow();
+    refreshOutputs();
+  }
+
+  function renderRouteSelector() {
+    const explicitOptions = Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
+      ? state.activeInstrument.routeOptions
+      : [];
+    const catalogFallback = Array.isArray(
+      state.activeInstrument && state.activeInstrument.routeTopology && state.activeInstrument.routeTopology.routeCatalog
+    ) ? state.activeInstrument.routeTopology.routeCatalog : [];
+    const options = explicitOptions.length ? explicitOptions : catalogFallback;
+    DOM.routeSel.innerHTML = '';
+
+    if (options.length <= 1) {
+      DOM.routeWrap.style.display = 'none';
+      const singleRoute = options[0] ? cleanString(options[0].id).toLowerCase() : null;
+      state.activeRoute = singleRoute || state.activeRoute || state.activeInstrument.defaultRoute || null;
+      state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+      return;
+    }
+
+    options.forEach((option) => {
+      const entry = option && typeof option === 'object' ? option : { id: option, label: normalizeRouteLabel(option) };
+      const opt = document.createElement('option');
+      opt.value = cleanString(entry.id).toLowerCase();
+      opt.textContent = cleanString(entry.label) || normalizeRouteLabel(entry.id);
+      DOM.routeSel.appendChild(opt);
+    });
+    const selectedRoute = state.activeRoute || state.activeInstrument.defaultRoute || (strictHardwareTruthMode() ? '' : ((options[0] && options[0].id) || ''));
+    DOM.routeSel.value = selectedRoute;
+    state.activeRoute = cleanString(DOM.routeSel.value).toLowerCase() || null;
+    state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+    DOM.routeWrap.style.display = 'flex';
+  }
+
+
+  function snapshotStageSelections() {
+    return Array.from(DOM.graph.querySelectorAll('select[data-stage]')).map((select) => ({
+      stage: select.dataset.stage,
+      mechanismId: select.dataset.mechanismId || '',
+      value: select.value,
+    }));
+  }
+
+  function restoreStageSelections(snapshot) {
+    (Array.isArray(snapshot) ? snapshot : []).forEach((saved) => {
+      const selector = `select[data-stage="${saved.stage}"][data-mechanism-id="${CSS.escape(saved.mechanismId || '')}"]`;
+      const select = DOM.graph.querySelector(selector);
+      if (!select) return;
+      if (Array.from(select.options).some((option) => option.value === saved.value)) {
+        select.value = saved.value;
+      }
+    });
+  }
+
+  function normalizeSourceRoutes(source) {
+
+    return VM.normalizeRouteTags(source.routes || source.path || source.__routes || []);
+  }
+
+  function pruneConflictingSources() {
+    if (routeSelectionIsExplicit()) return;
+    const chosenRoute = inferRouteFromSourceSettings();
+    if (!chosenRoute) return;
+    mechanismsForRoute(state.activeInstrument && state.activeInstrument.lightSources, null).forEach((mechanism) => {
+      Object.values(positionsForRoute(mechanism, null)).forEach((source) => {
+        const setting = ensureSourceSetting(source);
+        if (!setting.enabled) return;
+        if (!VM.routeMatches(normalizeSourceRoutes(source), chosenRoute)) {
+          setting.enabled = false;
+        }
+      });
+    });
+  }
+
+  function appendTraversalEntries(panel, entries) {
+    (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+      if (entry.kind === 'control') {
+        if (entry.stageKey === 'splitters') panel.appendChild(createSplitterControl(entry.mechanism));
+        else panel.appendChild(createMechanismControl(entry.stageKey, entry.mechanism, index));
+        return;
+      }
+      if (entry.kind === 'branch-block') {
+        const container = document.createElement('div');
+        container.className = 'vm-branch-block';
+        container.appendChild(createLinkedStageNote(entry.title, entry.message));
+        (Array.isArray(entry.branches) ? entry.branches : []).forEach((branch) => {
+          const branchPanel = document.createElement('div');
+          branchPanel.className = 'vm-branch-sequence';
+          branchPanel.appendChild(createLinkedStageNote(branch.title, 'Branch-local optics and endpoint(s) declared directly in light_paths.'));
+          appendTraversalEntries(branchPanel, branch.sequence || []);
+          container.appendChild(branchPanel);
+        });
+        panel.appendChild(container);
+        return;
+      }
+      panel.appendChild(createLinkedStageNote(entry.title, entry.message, entry.mechanism));
+    });
+  }
 
   function renderGraphFlow() {
     const snapshot = snapshotStageSelections();
