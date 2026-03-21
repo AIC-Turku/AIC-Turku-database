@@ -368,6 +368,7 @@ def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any)
         "kind": get_val(light_source, "kind", "type"),
         "manufacturer": get_val(light_source, "manufacturer"),
         "model": get_val(light_source, "model"),
+        "product_code": get_val(light_source, "product_code"),
         "technology": get_val(light_source, "technology"),
         "wavelength_nm": get_val(light_source, "wavelength_nm", "wavelength"),
         "width_nm": get_val(light_source, "width_nm", "bandwidth_nm"),
@@ -392,6 +393,7 @@ def _normalized_detector_payload(detector: dict[str, Any], get_val: Any) -> dict
         "kind": get_val(detector, "kind", "type"),
         "manufacturer": get_val(detector, "manufacturer"),
         "model": get_val(detector, "model"),
+        "product_code": get_val(detector, "product_code"),
         "channel_name": get_val(detector, "channel_name", "channel", "name"),
         "path": get_val(detector, "path"),
         "pixel_pitch_um": get_val(detector, "pixel_pitch_um", "pixel_size_um"),
@@ -614,6 +616,107 @@ def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
     return fallback
 
 
+def _quarep_value(value: Any) -> str:
+    cleaned = clean_text(value)
+    return cleaned or "missing (ask staff)"
+
+
+def _quarep_specs_clause(
+    manufacturer: Any,
+    model: Any,
+    product_code: Any,
+    *,
+    extras: Iterable[str] | None = None,
+) -> str:
+    parts = [
+        f"Manufacturer: {_quarep_value(manufacturer)}",
+        f"Model: {_quarep_value(model)}",
+        f"Product code: {_quarep_value(product_code)}",
+    ]
+    for part in extras or []:
+        cleaned = clean_text(part)
+        if cleaned:
+            parts.append(cleaned)
+    return "; ".join(parts)
+
+
+def _append_quarep_specs(
+    sentence: Any,
+    manufacturer: Any,
+    model: Any,
+    product_code: Any,
+    *,
+    extras: Iterable[str] | None = None,
+) -> str:
+    base = clean_text(sentence).rstrip()
+    if base.endswith('.'):
+        base = base[:-1]
+    specs = _quarep_specs_clause(manufacturer, model, product_code, extras=extras)
+    return f"{base} ({specs})." if base else f"{specs}."
+
+
+def _inventory_method_extras(item: dict[str, Any]) -> list[str]:
+    extras: list[str] = []
+    source_meta = item.get("source_metadata") if isinstance(item.get("source_metadata"), dict) else {}
+    optical_meta = item.get("optical_element_metadata") if isinstance(item.get("optical_element_metadata"), dict) else {}
+    endpoint_meta = item.get("endpoint_metadata") if isinstance(item.get("endpoint_metadata"), dict) else {}
+
+    wavelength = _format_wavelength_label(source_meta.get("wavelength_nm"))
+    if wavelength:
+        extras.append(f"Wavelength: {wavelength}")
+    tunable_min = _fmt_num(source_meta.get("tunable_min_nm"))
+    tunable_max = _fmt_num(source_meta.get("tunable_max_nm"))
+    if tunable_min and tunable_max:
+        extras.append(f"Tunable range: {tunable_min}-{tunable_max} nm")
+    power = clean_text(source_meta.get("power"))
+    if power:
+        extras.append(f"Power: {power}")
+    timing = clean_text(source_meta.get("timing_mode"))
+    if timing:
+        extras.append(f"Timing mode: {timing}")
+
+    center = _fmt_num(optical_meta.get("center_nm"))
+    width = _fmt_num(optical_meta.get("width_nm"))
+    if center and width:
+        extras.append(f"Band: {center}/{width} nm")
+    elif center:
+        extras.append(f"Center: {center} nm")
+    cut_on = _fmt_num(optical_meta.get("cut_on_nm"))
+    if cut_on:
+        extras.append(f"Cut-on: {cut_on} nm")
+    cut_off = _fmt_num(optical_meta.get("cut_off_nm"))
+    if cut_off:
+        extras.append(f"Cut-off: {cut_off} nm")
+
+    def _band_summary(bands: Any, label: str) -> str:
+        summaries: list[str] = []
+        for band in bands if isinstance(bands, list) else []:
+            if not isinstance(band, dict):
+                continue
+            band_center = _fmt_num(band.get("center_nm"))
+            band_width = _fmt_num(band.get("width_nm"))
+            if band_center and band_width:
+                summaries.append(f"{band_center}/{band_width} nm")
+            elif band_center:
+                summaries.append(f"{band_center} nm")
+        return f"{label}: {', '.join(summaries)}" if summaries else ""
+
+    for label, key in (("Bands", "bands"), ("Transmission", "transmission_bands"), ("Reflection", "reflection_bands")):
+        summary = _band_summary(optical_meta.get(key), label)
+        if summary:
+            extras.append(summary)
+
+    collection_min = _fmt_num(endpoint_meta.get("collection_min_nm") or endpoint_meta.get("min_nm"))
+    collection_max = _fmt_num(endpoint_meta.get("collection_max_nm") or endpoint_meta.get("max_nm"))
+    if collection_min and collection_max:
+        extras.append(f"Collection range: {collection_min}-{collection_max} nm")
+    channel_name = clean_text(endpoint_meta.get("channel_name"))
+    if channel_name:
+        extras.append(f"Channel: {channel_name}")
+
+    return extras
+
+
 def _spec_lines(*pairs: tuple[str, Any]) -> list[str]:
     lines: list[str] = []
     for label, raw_value in pairs:
@@ -660,6 +763,7 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
         else f"Images were acquired using a {method_core}." if method_core
         else ""
     )
+    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     spec_lines = _spec_lines(
         ("Model", model),
         ("Magnification / NA", f"`{mag}x/{na}`" if mag and na else None),
@@ -716,6 +820,7 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
         method_sentence = f"{base_detection}, configured for time-gated acquisition{gating_phrase}."
     else:
         method_sentence = f"{base_detection}."
+    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     spec_lines = _spec_lines(
         ("Type", kind_label),
         ("Optical route", route_label),
@@ -799,6 +904,13 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         method_sentence = f"Excitation was provided by {display_label}{tech_power_clause}."
     else:
         method_sentence = f"Light source in use: {display_label}{tech_power_clause}."
+    method_sentence = _append_quarep_specs(
+        method_sentence,
+        manufacturer,
+        model,
+        product_code,
+        extras=[f"Wavelength: {wavelength_label}" if wavelength_label else "", f"Technology: {technology}" if technology else ""],
+    )
     spec_lines = _spec_lines(
         ("Type", kind_label),
         ("Role", role_label),
@@ -841,9 +953,11 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
     instance_name = clean_text(modulator.get("name"))
     component_reference = _component_reference(manufacturer, model, type_label or "optical modulator")
     display_label = type_label or instance_name or model or "Optical Modulator"
+    product_code = clean_text(modulator.get("product_code"))
     method_sentence = f"Beam shaping used {component_reference} optics{f' with {_human_list(supported_masks)} phase mask support' if supported_masks else ''}."
     if modulator_type in {"slm", "phase_plate", "vortex_plate"}:
         method_sentence = f"STED beam shaping was configured with {component_reference}{f' using {_human_list(supported_masks)} phase mask profiles' if supported_masks else ''}."
+    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     return {
         **copy.deepcopy(modulator),
         "display_label": display_label,
@@ -866,7 +980,9 @@ def build_illumination_logic_dto(vocabulary: Vocabulary, logic: dict[str, Any]) 
     instance_name = clean_text(logic.get("name"))
     component_reference = _component_reference(manufacturer, model, method_label or "adaptive illumination logic")
     display_label = method_label or instance_name or model or "Illumination Logic"
+    product_code = clean_text(logic.get("product_code"))
     method_sentence = f"Adaptive illumination used {component_reference}{', enabled by default' if default_enabled is True else ''}."
+    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     return {
         **copy.deepcopy(logic),
         "display_label": display_label,
@@ -888,8 +1004,12 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
     light_sheet_type = clean_text(scanner.get("light_sheet_type"))
     line_rate = _fmt_num(scanner.get("line_rate_hz"))
     pinhole = _fmt_num(scanner.get("pinhole_um"))
+    product_code = clean_text(scanner.get("product_code"))
     spec_lines = _spec_lines(
         ("Type", scanner_type),
+        ("Manufacturer", manufacturer),
+        ("Model", model),
+        ("Product code", f"`{product_code}`" if product_code else None),
         ("Light-sheet type", light_sheet_type),
         ("Line rate", f"`{line_rate} Hz`" if line_rate else None),
         ("Pinhole", f"`{pinhole} µm`" if pinhole else None),
@@ -904,6 +1024,8 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
         else f"The microscope used {component_reference}." if scanner_type and scanner_type != "No Scanner"
         else ""
     )
+    if method_sentence:
+        method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     return {
         **copy.deepcopy(scanner),
         "display_label": scanner_type or instance_name or model or "No Scanner",
@@ -975,8 +1097,11 @@ def build_magnification_changer_dto(changer: dict[str, Any]) -> dict[str, Any]:
     magnification = _fmt_num(changer.get("magnification"))
     component_reference = _component_reference(manufacturer, model, "magnification changer")
     display_label = instance_name or model or "Magnification Changer"
+    product_code = clean_text(changer.get("product_code"))
     spec_lines = _spec_lines(
         ("Manufacturer", manufacturer),
+        ("Model", model),
+        ("Product code", f"`{product_code}`" if product_code else None),
         ("Magnification", f"`{magnification}x`" if magnification else None),
         ("Notes", clean_text(changer.get("notes"))),
     )
@@ -987,6 +1112,7 @@ def build_magnification_changer_dto(changer: dict[str, Any]) -> dict[str, Any]:
         if component_reference
         else ""
     )
+    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     return {
         **copy.deepcopy(changer),
         "display_label": display_label,
@@ -1345,15 +1471,42 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
     for item in hardware_inventory:
         inventory_class = clean_text(item.get("inventory_class"))
         role = clean_text(((item.get("source_metadata") or {}) if isinstance(item.get("source_metadata"), dict) else {}).get("role"))
+        manufacturer = clean_text(item.get("manufacturer"))
+        model = clean_text(item.get("model"))
+        product_code = clean_text(item.get("product_code"))
         method_sentence = ""
         if inventory_class == "light_source":
-            method_sentence = f"Excitation was provided by {clean_text(item.get('display_label'))}."
+            method_sentence = _append_quarep_specs(
+                f"Excitation was provided by {clean_text(item.get('display_label'))}.",
+                manufacturer,
+                model,
+                product_code,
+                extras=_inventory_method_extras(item),
+            )
         elif inventory_class in {"endpoint", "camera_port", "eyepiece"}:
-            method_sentence = f"Detected or observed light terminated at {clean_text(item.get('display_label'))}."
+            method_sentence = _append_quarep_specs(
+                f"Detected or observed light terminated at {clean_text(item.get('display_label'))}.",
+                manufacturer,
+                model,
+                product_code,
+                extras=_inventory_method_extras(item),
+            )
         elif inventory_class == "splitter":
-            method_sentence = f"The active route traversed {clean_text(item.get('display_label'))} as an explicit selector."
+            method_sentence = _append_quarep_specs(
+                f"The active route traversed {clean_text(item.get('display_label'))} as an explicit selector.",
+                manufacturer,
+                model,
+                product_code,
+                extras=_inventory_method_extras(item),
+            )
         elif inventory_class == "optical_element":
-            method_sentence = f"The optical path included {clean_text(item.get('display_label'))}."
+            method_sentence = _append_quarep_specs(
+                f"The optical path included {clean_text(item.get('display_label'))}.",
+                manufacturer,
+                model,
+                product_code,
+                extras=_inventory_method_extras(item),
+            )
         derived_inventory_cards.append({
             **copy.deepcopy(item),
             "id": clean_text(item.get("id")),
@@ -1811,6 +1964,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         module_name = clean_text(module.get("display_name")) or _vocab_display(vocabulary, "modules", module_id) or module_id
         manufacturer = clean_text(module.get("manufacturer"))
         model = clean_text(module.get("model"))
+        product_code = clean_text(module.get("product_code"))
         notes = clean_text(module.get("notes"))
         provenance = " ".join(part for part in [manufacturer, model] if part).strip()
         modules.append(
@@ -1819,7 +1973,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 "display_label": module_name,
                 "display_subtitle": provenance,
                 "display_notes": notes,
-                "method_sentence": f"The {module_name} module was used." if module_name else "",
+                "method_sentence": _append_quarep_specs(f"The {module_name} module was used." if module_name else "", manufacturer, model, product_code),
             }
         )
 
@@ -2036,6 +2190,10 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
     if isinstance(scanner, dict):
         hw["scanner"] = {
             "type": get_val(scanner, "type", "id"),
+            "name": get_val(scanner, "name"),
+            "manufacturer": get_val(scanner, "manufacturer"),
+            "model": get_val(scanner, "model"),
+            "product_code": get_val(scanner, "product_code"),
             "line_rate_hz": get_val(scanner, "line_rate_hz"),
             "pinhole_um": get_val(scanner, "pinhole_um"),
             "light_sheet_type": get_val(scanner, "light_sheet_type"),
@@ -2140,6 +2298,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
                     "name": clean_text(m.get("name")),
                     "manufacturer": clean_text(m.get("manufacturer")),
                     "model": clean_text(m.get("model")),
+                    "product_code": clean_text(m.get("product_code")),
                     "notes": clean_text(m.get("notes")),
                     "url": clean_text(m.get("url")),
                 }
