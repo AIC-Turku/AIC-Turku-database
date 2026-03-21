@@ -182,6 +182,10 @@ hide:
   .vm-chart-subtitle { font-size: 11px; color: var(--muted); }
   .vm-chart-wrap { background: var(--surface); border-radius: 12px; padding: 4px; height: 280px; }
   .vm-chart-wrap.vm-chart-wrap-short { height: 250px; }
+  .vm-chart-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 6px 4px 2px; font-size: 11px; color: var(--muted); justify-content: center; }
+  .vm-chart-legend-item { display: inline-flex; align-items: center; gap: 4px; cursor: default; white-space: nowrap; }
+  .vm-chart-legend-swatch { display: inline-block; width: 12px; height: 3px; border-radius: 1px; flex-shrink: 0; }
+  .vm-chart-legend-swatch.vm-swatch-dashed { background: repeating-linear-gradient(90deg, var(--swatch-color) 0 4px, transparent 4px 7px); }
   .vm-path-head {
     display:flex;
     justify-content:space-between;
@@ -487,6 +491,7 @@ hide:
             <div class="vm-chart-wrap vm-chart-wrap-short">
               <canvas id="referenceSpectraChart"></canvas>
             </div>
+            <div id="referenceSpectraLegend" class="vm-chart-legend"></div>
           </div>
 
           <div class="vm-chart-panel">
@@ -500,6 +505,7 @@ hide:
             <div class="vm-chart-wrap vm-chart-wrap-short">
               <canvas id="propagationSpectraChart"></canvas>
             </div>
+            <div id="propagationSpectraLegend" class="vm-chart-legend"></div>
           </div>
         </div>
       </section>

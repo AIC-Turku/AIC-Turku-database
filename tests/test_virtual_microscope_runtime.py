@@ -1639,6 +1639,71 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertIn("to_cam", result["branchIds"])
         self.assertIn("to_eyes", result["branchIds"])
 
+    def test_component_mask_analyzer_is_passthrough(self) -> None:
+        """Analyzer component should pass all wavelengths (no spectral effect)."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const mask = rt.componentMask(
+              { component_type: 'analyzer' },
+              grid,
+              { mode: 'emission' }
+            );
+            const allOnes = mask.every(v => v === 1);
+            return { allOnes, length: mask.length };
+            """
+        )
+        self.assertTrue(result["allOnes"], "analyzer should pass all wavelengths")
+        self.assertGreater(result["length"], 0)
+
+    def test_component_mask_all_vocabulary_types_are_handled(self) -> None:
+        """Every vocabulary component_type should produce a defined mask (not fall through to generic passthrough)."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const types = [
+              { component_type: 'bandpass', center_nm: 525, width_nm: 50 },
+              { component_type: 'multiband_bandpass', bands: [{ center_nm: 525, width_nm: 50 }] },
+              { component_type: 'longpass', cut_on_nm: 500 },
+              { component_type: 'shortpass', cut_off_nm: 600 },
+              { component_type: 'dichroic', cutoffs_nm: [500] },
+              { component_type: 'multiband_dichroic', cutoffs_nm: [500, 600] },
+              { component_type: 'polychroic', cutoffs_nm: [500, 600] },
+              { component_type: 'notch', center_nm: 525, width_nm: 50 },
+              { component_type: 'filter_cube', bands: [{ center_nm: 525, width_nm: 50 }] },
+              { component_type: 'analyzer' },
+              { component_type: 'empty' },
+              { component_type: 'mirror' },
+              { component_type: 'block' },
+              { component_type: 'passthrough' },
+              { component_type: 'neutral_density' },
+            ];
+            const results = {};
+            types.forEach((comp) => {
+              const mask = rt.componentMask(comp, grid, { mode: 'emission' });
+              results[comp.component_type] = {
+                length: mask.length,
+                hasVariation: !mask.every(v => v === mask[0]),
+                firstValue: mask[0],
+              };
+            });
+            return results;
+            """
+        )
+        # Spectral filters should have variation
+        for comp_type in ["bandpass", "multiband_bandpass", "longpass", "shortpass", "notch", "filter_cube"]:
+            self.assertTrue(result[comp_type]["hasVariation"], f"{comp_type} should have spectral variation")
+        # Passthrough types should all be 1
+        for comp_type in ["empty", "mirror", "passthrough", "neutral_density", "analyzer"]:
+            self.assertFalse(result[comp_type]["hasVariation"], f"{comp_type} should be uniform")
+            self.assertEqual(result[comp_type]["firstValue"], 1, f"{comp_type} should pass all light")
+        # Block should be all 0
+        self.assertFalse(result["block"]["hasVariation"])
+        self.assertEqual(result["block"]["firstValue"], 0, "block should block all light")
+        # Dichroics should have variation
+        for comp_type in ["dichroic", "multiband_dichroic", "polychroic"]:
+            self.assertTrue(result[comp_type]["hasVariation"], f"{comp_type} should have spectral variation")
+
 
 if __name__ == "__main__":
     unittest.main()

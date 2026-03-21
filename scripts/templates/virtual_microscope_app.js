@@ -39,6 +39,8 @@
     referenceChart: document.getElementById('referenceSpectraChart'),
     propagationChart: document.getElementById('propagationSpectraChart'),
     detectionChart: document.getElementById('detectionChart'),
+    referenceLegend: document.getElementById('referenceSpectraLegend'),
+    propagationLegend: document.getElementById('propagationSpectraLegend'),
     scopeSel: document.getElementById('microscopeSelector'),
     routeWrap: document.getElementById('opticalRouteChooserWrap'),
     routeSel: document.getElementById('opticalRouteSelector'),
@@ -2153,13 +2155,35 @@
         interaction: { mode: 'index', intersect: false },
         plugins: {
           tooltip: { enabled: true },
-          legend: { position: 'bottom', labels: { boxWidth: 12 } },
+          legend: { display: false },
         },
         scales: {
           x: { type: 'linear', min: 350, max: 800, title: { display: true, text: 'Wavelength (nm)' } },
           y: { min: 0, max: 105, title: { display: true, text: yTitle } },
         },
       },
+    });
+  }
+
+  function renderHtmlLegend(container, chart) {
+    if (!container || !chart) return;
+    container.innerHTML = '';
+    (chart.data.datasets || []).forEach((dataset) => {
+      const item = document.createElement('span');
+      item.className = 'vm-chart-legend-item';
+      const swatch = document.createElement('span');
+      swatch.className = 'vm-chart-legend-swatch';
+      const color = dataset.borderColor || dataset.backgroundColor || '#888';
+      const isDashed = Array.isArray(dataset.borderDash) && dataset.borderDash.length > 0;
+      if (isDashed) {
+        swatch.classList.add('vm-swatch-dashed');
+        swatch.style.setProperty('--swatch-color', color);
+      } else {
+        swatch.style.background = color;
+      }
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(dataset.label || ''));
+      container.appendChild(item);
     });
   }
 
@@ -2358,6 +2382,7 @@
     referenceChart.data.datasets = datasets;
     referenceChart.options.scales.x.max = chartMax;
     referenceChart.update();
+    renderHtmlLegend(DOM.referenceLegend, referenceChart);
   }
 
   function renderPropagationPanel(selection, simulation) {
@@ -2424,6 +2449,7 @@
     propagationChart.data.datasets = datasets;
     propagationChart.options.scales.x.max = chartMax;
     propagationChart.update();
+    renderHtmlLegend(DOM.propagationLegend, propagationChart);
   }
 
   function averageSpectrumCurves(curves, grid) {

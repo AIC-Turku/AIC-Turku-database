@@ -1257,16 +1257,20 @@ def _render_kind(component: dict[str, Any]) -> str:
         return "source"
     if component_type in {"detector"}:
         return "detector"
-    if component_type in {"bandpass", "notch", "multiband_bandpass"}:
+    if component_type in {"bandpass", "notch", "multiband_bandpass", "filter_cube"}:
         return "band"
     if component_type in {"longpass"}:
         return "longpass"
+    if component_type in {"shortpass"}:
+        return "shortpass"
     if component_type in {"tunable"}:
         return "tunable"
     if component_type in NO_WAVELENGTH_TYPES:
         return "empty"
     if component_type in DICHROIC_TYPES:
         return "dichroic"
+    if component_type in {"analyzer"}:
+        return "analyzer"
     return "other"
 
 

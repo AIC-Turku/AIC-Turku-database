@@ -1801,7 +1801,7 @@
 
   function componentMask(component, grid, context) {
     const type = cleanString(component && (component.component_type || component.type)).toLowerCase();
-    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density') {
+    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density' || type === 'analyzer') {
       return grid.map(() => 1);
     }
     if (type === 'block' || type === 'blocker') {
