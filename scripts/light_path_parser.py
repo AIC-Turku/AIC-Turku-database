@@ -2003,12 +2003,12 @@ def _collect_route_owned_splitters(
             if not isinstance(branch_block, dict) or not last_element_id:
                 continue
             splitter = ensure_splitter(last_element_id, _clean_string(branch_block.get("selection_mode")).lower(), route_id)
-            branch_index: dict[tuple[str, str], int] = splitter["__branch_index"]
+            branch_index: dict[str, int] = splitter["__branch_index"]
             for branch_position, branch in enumerate(branch_block.get("items") or [], start=1):
                 if not isinstance(branch, dict):
                     continue
                 branch_id = _clean_identifier(branch.get("branch_id")) or f"branch_{branch_position}"
-                dedupe_key = (route_id, branch_id)
+                dedupe_key = branch_id
                 if dedupe_key in branch_index:
                     branch_payload = splitter["branches"][branch_index[dedupe_key]]
                 else:
