@@ -102,5 +102,30 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("setInspectorStage(nodeStageGroup)", source)
 
 
+    def test_pipeline_ui_is_rebuilt_from_derived_control_groups(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function buildPipelineStages(derivedControlGroups)", source)
+        self.assertIn("const pipelineStages = buildPipelineStages(derivedControlGroups);", source)
+        self.assertIn("pipeline.style.display = pipelineStages.length ? 'flex' : 'none';", source)
+        self.assertIn("createPipeSegment(stagePipeKey(pipelineStages[index - 1].flowOrigin, stage.flowOrigin))", source)
+        self.assertIn("createPipelineBadge(stage.id, stage.label)", source)
+
+    def test_pipeline_beam_colors_support_group_level_stage_ids(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function pipelineSpectrumForOrigin(origin, spectra)", source)
+        self.assertIn("normalized === 'illumination-controls'", source)
+        self.assertIn("normalized === 'detection-controls'", source)
+        self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForOrigin(fromNode, spectra), grid);", source)
+
+    def test_source_settings_are_keyed_by_instrument_and_source_identity(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("currentInstrumentId || 'scope'", source)
+        self.assertIn("source.id || source.inventory_id || source.hardware_inventory_id", source)
+        self.assertIn("normalizeSourceRoutes(source).join('|') || 'any-route'", source)
+
+
 if __name__ == "__main__":
     unittest.main()
