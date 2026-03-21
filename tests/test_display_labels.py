@@ -122,7 +122,7 @@ class ResolveEndpointTypeLabelTests(unittest.TestCase):
         self.assertEqual(resolve_endpoint_type_label(None, None), "")
 
 
-class ResolveStagRoleLabelTests(unittest.TestCase):
+class ResolveStageRoleLabelTests(unittest.TestCase):
     def test_known_role(self) -> None:
         vocab = _vocab_with(optical_path_stage_roles={"excitation": "Excitation"})
         self.assertEqual(resolve_stage_role_label("excitation", vocab), "Excitation")

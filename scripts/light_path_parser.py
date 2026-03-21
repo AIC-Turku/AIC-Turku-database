@@ -1748,7 +1748,7 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
             component_payload["display_label"] = f"Slot {slot}: {component_payload.get('label')}"
             positions.append(component_payload)
 
-    _stage_label = resolve_stage_role_label(stage_prefix) if _active_vocab is not None else stage_prefix.replace('_', ' ').title()
+    _stage_label = resolve_stage_role_label(stage_prefix) if _active_vocab is not None else stage_prefix.replace("_", " ").title()
     mechanism_payload = {
         "id": f"{stage_prefix}_mech_{index}",
         "name": mechanism.get("name") or f"{_stage_label} {index + 1}",
