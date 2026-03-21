@@ -1505,13 +1505,15 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
               'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret'
             ];
             const normalized = rt.normalizeRouteTags(allRoutes);
-            return { input: allRoutes.length, output: normalized.length, tags: normalized };
+            return { input: allRoutes, output: normalized };
             """
         )
 
-        self.assertEqual(result["input"], result["output"],
-                         f"All route tags should be accepted; dropped: "
-                         f"{set(result.get('tags', [])) - set(result.get('tags', []))}")
+        input_set = set(result["input"])
+        output_set = set(result["output"])
+        dropped = input_set - output_set
+        self.assertEqual(len(result["input"]), len(result["output"]),
+                         f"All route tags should be accepted; dropped: {dropped}")
 
     def test_eyepiece_detector_response_honors_dto_bounds(self) -> None:
         result = self.run_node_json(
