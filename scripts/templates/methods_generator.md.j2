@@ -395,9 +395,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 : `Imaging modalities used included ${humanJoin(labels)}.`;
         }
         if (prefix === "module") {
-            return labels.length === 1
-                ? `Installed module used was ${labels[0]}.`
-                : `Installed modules used included ${humanJoin(labels)}.`;
+            const moduleSentences = dedupeSentences(selections.map(item => item.methodSentence));
+            return moduleSentences.length
+                ? moduleSentences.join(" ")
+                : labels.length === 1
+                    ? `Installed module used was ${labels[0]}.`
+                    : `Installed modules used included ${humanJoin(labels)}.`;
         }
         if (prefix === "scanner") {
             return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
@@ -409,21 +412,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         if (prefix === "light") {
-            const excitationLabels = selections.filter(item => {
-                const role = cleanText(item.role).toLowerCase();
-                return role !== 'depletion' && role !== 'transmitted_illumination';
-            }).map(item => item.displayLabel);
-            const transmittedLabels = selections.filter(item => cleanText(item.role).toLowerCase() === 'transmitted_illumination').map(item => item.displayLabel);
-            const depletionSentences = dedupeSentences(
-                selections
-                    .filter(item => cleanText(item.role).toLowerCase() === 'depletion')
-                    .map(item => item.methodSentence)
-            );
-            const clauses = [];
-            if (excitationLabels.length) clauses.push(`Excitation was provided by ${humanJoin(excitationLabels)}.`);
-            if (transmittedLabels.length) clauses.push(`Transmitted illumination was provided by ${humanJoin(transmittedLabels)}.`);
-            if (depletionSentences.length) clauses.push(depletionSentences.join(' '));
-            return clauses.join(' ');
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         if (prefix === "magnification-changer") {
             return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
