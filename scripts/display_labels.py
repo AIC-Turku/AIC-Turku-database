@@ -145,6 +145,34 @@ def resolve_light_source_kind_label(
     )
 
 
+def resolve_element_type_label(
+    element_type: str | None,
+    vocab: VocabLookup | None = None,
+) -> str:
+    """Return a display label for an optical path element type."""
+    if not element_type:
+        return ""
+    return resolve_display_label(
+        element_type,
+        vocab_name="optical_path_element_types",
+        vocab=vocab,
+    )
+
+
+def resolve_modality_label(
+    modality: str | None,
+    vocab: VocabLookup | None = None,
+) -> str:
+    """Return a display label for an imaging modality."""
+    if not modality:
+        return ""
+    return resolve_display_label(
+        modality,
+        vocab_name="modalities",
+        vocab=vocab,
+    )
+
+
 def resolve_inventory_class_label(
     inventory_class: str | None,
     vocab: VocabLookup | None = None,
