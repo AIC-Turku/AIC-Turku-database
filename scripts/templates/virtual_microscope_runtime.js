@@ -5,13 +5,30 @@
   }
   root.VirtualMicroscopeRuntime = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
-  const ROUTE_TAGS = new Set(['epi', 'tirf', 'confocal', 'multiphoton', 'transmitted', 'shared', 'all']);
+  const ROUTE_TAGS = new Set(['epi', 'widefield_fluorescence', 'tirf', 'confocal', 'confocal_point', 'confocal_spinning_disk', 'multiphoton', 'light_sheet', 'transmitted', 'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic', 'reflected_brightfield', 'optical_sectioning', 'spectral_imaging', 'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret', 'shared', 'all']);
   const ROUTE_LABELS = {
     confocal: 'Confocal',
+    confocal_point: 'Point-Scanning Confocal',
+    confocal_spinning_disk: 'Spinning-Disk Confocal',
     epi: 'Epi-fluorescence',
+    widefield_fluorescence: 'Epi-fluorescence',
     tirf: 'TIRF',
     multiphoton: 'Multiphoton',
+    light_sheet: 'Light Sheet',
     transmitted: 'Transmitted light',
+    transmitted_brightfield: 'Transmitted Brightfield',
+    phase_contrast: 'Phase Contrast',
+    darkfield: 'Darkfield',
+    dic: 'DIC',
+    reflected_brightfield: 'Reflected Brightfield',
+    optical_sectioning: 'Optical Sectioning',
+    spectral_imaging: 'Spectral Imaging',
+    flim: 'FLIM',
+    fcs: 'FCS',
+    ism: 'ISM',
+    smlm: 'SMLM',
+    spt: 'SPT',
+    fret: 'FRET',
   };
   const ROUTE_SORT_ORDER = ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
   const CAMERA_KINDS = new Set(['camera', 'scmos', 'cmos', 'ccd', 'emccd']);
@@ -147,7 +164,7 @@
   }
 
   function coerceSlotKey(key) {
-    if (typeof key === 'number' && Number.isFinite(key)) return String(Math.round(key));
+    if (typeof key === 'number' && Number.isFinite(key)) return String(Math.trunc(key));
     const str = String(key).trim();
     if (/^\d+$/.test(str)) return str;
     const match = str.match(/(\d+)$/);
@@ -170,6 +187,24 @@
     return {};
   }
 
+  function positionDisplayLabel(slot, component) {
+    if (component.display_label) return component.display_label;
+    const name = cleanString(component.name || component.label);
+    const bands = Array.isArray(component.bands) ? component.bands : [];
+    if (name) return `Slot ${slot}: ${name}`;
+    if (bands.length) {
+      const bandStr = bands.map((band) => {
+        const center = numberOrNull(band && band.center_nm);
+        const width = numberOrNull(band && band.width_nm);
+        return center !== null && width !== null ? `${Math.round(center)}/${Math.round(width)}` : null;
+      }).filter(Boolean).join(' + ');
+      if (bandStr) return `Slot ${slot}: ${bandStr}`;
+    }
+    const componentType = cleanString(component.component_type || component.type).replace(/_/g, ' ');
+    if (componentType && componentType !== 'unknown') return `Slot ${slot}: ${componentType}`;
+    return `Slot ${slot}`;
+  }
+
   function normalizeMechanismList(rows) {
     return (Array.isArray(rows) ? rows : [])
       .filter((row) => row && typeof row === 'object')
@@ -177,30 +212,37 @@
         const routes = routesFromObject(mechanism);
         const positions = positionsToObject(mechanism.positions);
         const normalizedPositions = Object.fromEntries(
-          Object.entries(positions).map(([slot, component]) => {
+          Object.entries(positions).map(([slot, component], posIndex) => {
             const normalizedSlot = coerceSlotKey(slot);
             const entry = component && typeof component === 'object' ? { ...component } : {};
-            entry.slot = Number.isFinite(entry.slot) ? entry.slot : Number(normalizedSlot);
+            const slotNum = Number(normalizedSlot);
+            entry.slot = Number.isFinite(entry.slot) ? entry.slot : (Number.isFinite(slotNum) ? slotNum : posIndex + 1);
             entry.__routes = routesFromObject(entry).length ? routesFromObject(entry) : routes;
-            if (!entry.display_label && entry.label) entry.display_label = entry.label;
+            if (!entry.display_label) {
+              entry.display_label = positionDisplayLabel(entry.slot, entry);
+            }
             return [normalizedSlot, entry];
           })
         );
         const options = Array.isArray(mechanism.options)
-          ? mechanism.options.map((option) => ({
-              ...option,
-              slot: Number.isFinite(Number(option.slot)) ? Number(option.slot) : Number(coerceSlotKey(option.slot)),
-              value: option && option.value && typeof option.value === 'object'
-                ? {
-                    ...option.value,
-                    slot: Number.isFinite(option.value.slot) ? option.value.slot : Number(coerceSlotKey(option.slot)),
-                    __routes: routesFromObject(option.value).length ? routesFromObject(option.value) : routes,
-                  }
-                : option.value,
-            }))
+          ? mechanism.options.map((option) => {
+              const rawSlot = Number(option.slot);
+              const coercedSlot = Number.isFinite(rawSlot) ? rawSlot : Number(coerceSlotKey(option.slot));
+              return {
+                ...option,
+                slot: coercedSlot,
+                value: option && option.value && typeof option.value === 'object'
+                  ? {
+                      ...option.value,
+                      slot: Number.isFinite(option.value.slot) ? option.value.slot : coercedSlot,
+                      __routes: routesFromObject(option.value).length ? routesFromObject(option.value) : routes,
+                    }
+                  : option.value,
+              };
+            })
           : Object.values(normalizedPositions).map((entry) => ({
               slot: entry.slot,
-              display_label: entry.display_label || entry.label || `Slot ${entry.slot}`,
+              display_label: entry.display_label || `Slot ${entry.slot}`,
               value: entry,
             }));
         return {

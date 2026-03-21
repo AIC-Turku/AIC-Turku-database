@@ -1534,14 +1534,14 @@
       ? mechanism.options.filter((option) => VM.routeMatches((option.value && option.value.__routes) || mechanism.__routes, state.activeRoute))
       : Object.entries(positionsForRoute(mechanism, state.activeRoute)).map(([slot, component]) => ({
           slot: Number(slot),
-          display_label: component.display_label || component.label || `Slot ${slot}`,
+          display_label: component.display_label || component.label || component.name || `Slot ${slot}`,
           value: component,
         }));
 
     options.forEach((option) => {
       const opt = document.createElement('option');
       opt.value = JSON.stringify(option.value);
-      opt.textContent = option.display_label || option.value && (option.value.display_label || option.value.label) || `Slot ${option.slot}`;
+      opt.textContent = option.display_label || option.value && (option.value.display_label || option.value.label || option.value.name) || `Slot ${option.slot}`;
       if (Number.isFinite(Number(option.slot))) {
         opt.dataset.slot = String(option.slot);
       } else if (Number.isFinite(Number(option.value && option.value.slot))) {
