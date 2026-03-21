@@ -2070,7 +2070,7 @@ def calculate_valid_paths(payload: dict) -> list[dict[str, int]]:
         return []
 
     discrete_choices: list[tuple[str, str, list[dict[str, Any]]]] = []
-    for stage_name in ("excitation", "dichroic", "emission", "cube"):
+    for stage_name in ("excitation", "dichroic", "emission", "cube", "analyzer"):
         mechanisms = stages.get(stage_name, [])
         if not isinstance(mechanisms, list):
             continue
@@ -2746,8 +2746,8 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
         if inventory_id:
             item["route_usage_summary"] = route_usage_by_inventory_id.get(inventory_id, [])
 
-    stage_mappings = {"excitation": [], "dichroic": [], "emission": [], "cube": []}
-    prefix_mappings = {"excitation": "exc", "dichroic": "dichroic", "emission": "em", "cube": "cube"}
+    stage_mappings = {"excitation": [], "dichroic": [], "emission": [], "cube": [], "analyzer": []}
+    prefix_mappings = {"excitation": "exc", "dichroic": "dichroic", "emission": "em", "cube": "cube", "analyzer": "analyzer"}
 
     payload: dict[str, Any] = {
         "dto_schema": "light_paths_v2",
@@ -2910,7 +2910,7 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
             payload["metadata"]["graph_incomplete"] = True
         return splitter_payload
 
-    stage_indices = {"excitation": 0, "dichroic": 0, "emission": 0, "cube": 0}
+    stage_indices = {"excitation": 0, "dichroic": 0, "emission": 0, "cube": 0, "analyzer": 0}
     for element in elements:
         stage_role = element.get("stage_role")
         if stage_role == "splitter":

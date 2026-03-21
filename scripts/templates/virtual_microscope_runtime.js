@@ -634,10 +634,10 @@
   }
 
   function canonicalStagePayload(payload, topologyBindings, options) {
-    const out = { cube: [], excitation: [], dichroic: [], emission: [] };
+    const out = { cube: [], excitation: [], dichroic: [], emission: [], analyzer: [] };
     canonicalElements(payload && payload.optical_path_elements).forEach((element) => {
       const stageRole = cleanString(element && element.stage_role).toLowerCase();
-      if (!['cube', 'excitation', 'dichroic', 'emission'].includes(stageRole)) return;
+      if (!['cube', 'excitation', 'dichroic', 'emission', 'analyzer'].includes(stageRole)) return;
       const mechanism = { ...element, type: element.element_type || element.type || 'mechanism' };
       const routes = canonicalElementRoutes(element, topologyBindings, options);
       const binding = topologyBindings && topologyBindings.elementBindings

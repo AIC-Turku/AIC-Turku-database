@@ -672,7 +672,7 @@
 
   function opticalMechanismCatalog(instrument, route) {
     const catalog = new Map();
-    ['cube', 'excitation', 'dichroic', 'emission', 'splitters'].forEach((key) => {
+    ['cube', 'excitation', 'dichroic', 'emission', 'analyzer', 'splitters'].forEach((key) => {
       mechanismsForRoute(instrument && instrument[key], route).forEach((mechanism) => {
         const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
         if (!mechanismId) return;

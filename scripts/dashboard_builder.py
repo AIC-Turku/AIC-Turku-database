@@ -365,6 +365,7 @@ def normalize_optional_bool(value: Any) -> bool | None:
 
 def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any) -> dict[str, Any]:
     return {
+        "id": get_val(light_source, "id"),
         "kind": get_val(light_source, "kind", "type"),
         "manufacturer": get_val(light_source, "manufacturer"),
         "model": get_val(light_source, "model"),
