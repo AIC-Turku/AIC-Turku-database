@@ -51,8 +51,10 @@ from scripts.validate import (
 )
 from scripts.light_path_parser import generate_virtual_microscope_payload
 from scripts.display_labels import (
+    resolve_element_type_label,
     resolve_endpoint_type_label,
     resolve_inventory_class_label,
+    resolve_modality_label,
     resolve_stage_role_label,
     resolve_vocab_section_title,
 )
@@ -1196,12 +1198,22 @@ def _mechanism_preview(mechanisms: Any) -> tuple[int, list[str]]:
     return total_positions, previews[:4]
 
 
-def _format_position_value(pos: dict[str, Any]) -> str:
+def _format_position_value(pos: dict[str, Any], vocabulary: Any = None) -> str:
     """Format a single optical path element position (filter/cube/dichroic) into a compact display string."""
     name = clean_text(pos.get("name") or pos.get("display_label") or pos.get("label"))
     if not name:
-        return ""
+        raw_component_type = clean_text(pos.get("component_type"))
+        if raw_component_type and vocabulary:
+            from scripts.display_labels import resolve_component_type_label
+            name = resolve_component_type_label(raw_component_type, vocabulary)
+        elif raw_component_type:
+            name = raw_component_type.replace("_", " ").title()
     product_code = clean_text(pos.get("product_code"))
+    if not name and product_code:
+        name = product_code
+        product_code = ""
+    if not name:
+        return ""
     bands = pos.get("bands")
     notes = clean_text(pos.get("notes"))
     parts: list[str] = [name]
@@ -1224,7 +1236,7 @@ def _format_position_value(pos: dict[str, Any]) -> str:
     return " ".join(parts)
 
 
-def _optical_element_position_pairs(element: dict[str, Any]) -> list[tuple[str, str]]:
+def _optical_element_position_pairs(element: dict[str, Any], vocabulary: Any = None) -> list[tuple[str, str]]:
     """Return (label, value) pairs for each named position of an optical path element."""
     positions = element.get("positions")
     pairs: list[tuple[str, str]] = []
@@ -1233,7 +1245,7 @@ def _optical_element_position_pairs(element: dict[str, Any]) -> list[tuple[str, 
             pos = positions[key]
             if not isinstance(pos, dict):
                 continue
-            value = _format_position_value(pos)
+            value = _format_position_value(pos, vocabulary)
             if value:
                 label = key.replace("_", " ").title()
                 pairs.append((label, value))
@@ -1241,7 +1253,7 @@ def _optical_element_position_pairs(element: dict[str, Any]) -> list[tuple[str, 
         for i, pos in enumerate(positions):
             if not isinstance(pos, dict):
                 continue
-            value = _format_position_value(pos)
+            value = _format_position_value(pos, vocabulary)
             if value:
                 pairs.append((f"Pos {i + 1}", value))
     return pairs
@@ -1425,14 +1437,15 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
                 "method_sentence": f"Downstream routing may traverse {clean_text(element.get('name') or element.get('id'))}; explicit branch truth is declared on route-owned branch blocks.",
             })
         else:
-            position_pairs = _optical_element_position_pairs(element)
+            position_pairs = _optical_element_position_pairs(element, vocabulary)
+            raw_element_type = clean_text(element.get("element_type") or element.get("type"))
+            element_type_label = resolve_element_type_label(raw_element_type, vocabulary) if vocabulary else raw_element_type.replace("_", " ").title() if raw_element_type else ""
             element_items.append({
                 "id": clean_text(element.get("id")),
                 "display_label": clean_text(element.get("name") or element.get("display_label") or element.get("id")),
                 "display_subtitle": stage_role or "Optical path element",
                 "spec_lines": _spec_lines(
-                    ("Element type", clean_text(element.get("element_type") or element.get("type"))),
-                    ("Modalities", ", ".join(element.get("modalities") or [])),
+                    ("Element type", element_type_label),
                     ("Details", clean_text(element.get("notes"))),
                     *position_pairs,
                 ),
@@ -1464,7 +1477,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "id": clean_text(terminal.get("id")) or f"endpoint_{idx}",
             "display_label": display_label,
             "display_subtitle": endpoint_type or "Endpoint",
-            "spec_lines": _spec_lines(("Endpoint type", endpoint_type), ("Modalities", ", ".join(terminal.get("modalities") or [])), ("Details", clean_text(terminal.get("details") or terminal.get("notes")))),
+            "spec_lines": _spec_lines(("Endpoint type", endpoint_type), ("Details", clean_text(terminal.get("details") or terminal.get("notes")))),
             "method_sentence": f"Detected or observed light can terminate at {display_label}.",
         })
     derived_sections.append({"id": "terminals", "display_label": "Detection Endpoints", "items": derived_endpoint_cards or [{"id": "no_explicit_terminals", "display_label": "No normalized detection endpoints available", "display_subtitle": "Structured topology incomplete", "spec_lines": ["**Action needed:** add endpoint-capable inventory rows (for example hardware.detectors[], hardware.eyepieces[], or hardware.endpoints[]) and terminate routes with explicit endpoint_id values."], "method_sentence": ""}]})
@@ -1497,7 +1510,6 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
                 ("Manufacturer", clean_text(item.get("manufacturer"))),
                 ("Model", clean_text(item.get("model"))),
                 ("Product code", f"`{clean_text(item.get('product_code'))}`" if clean_text(item.get("product_code")) else None),
-                ("Modalities", ", ".join(item.get("modalities") or [])),
                 ("Used in routes", ", ".join(item.get("route_usage_summary") or [])),
             ),
             "role": role,
@@ -1575,6 +1587,10 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             },
             "endpoint_summary": endpoint_summary,
             "branch_summary": branch_summary,
+            "illumination_traversal": copy.deepcopy(route.get("illumination_traversal") or []),
+            "detection_traversal": copy.deepcopy(route.get("detection_traversal") or []),
+            "illumination_sequence": copy.deepcopy(route.get("illumination_sequence") or []),
+            "detection_sequence": copy.deepcopy(route.get("detection_sequence") or []),
         }
 
         route_hw_id_set = set(hardware_ids)
@@ -1863,7 +1879,6 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
             "spec_lines": _spec_lines(
                 ("Endpoint type", resolve_endpoint_type_label(clean_text(endpoint.get("endpoint_type") or endpoint.get("kind") or endpoint.get("type")), vocabulary)),
                 ("Source section", clean_text(endpoint.get("source_section"))),
-                ("Modalities", ", ".join(endpoint.get("modalities") or [])),
                 ("Model", clean_text(endpoint.get("model"))),
                 ("Notes", clean_text(endpoint.get("notes"))),
             ),

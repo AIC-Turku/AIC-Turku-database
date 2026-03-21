@@ -116,7 +116,9 @@ class DashboardBuilderOpticalPathTests(unittest.TestCase):
         from scripts.dashboard_builder import _format_position_value
 
         self.assertEqual(_format_position_value({}), "")
-        self.assertEqual(_format_position_value({"product_code": "XY"}), "")
+        self.assertEqual(_format_position_value({"product_code": "XY"}), "XY")
+        self.assertEqual(_format_position_value({"component_type": "bandpass", "product_code": "FF01-525/50"}), "Bandpass (FF01-525/50)")
+        self.assertIn("Bandpass", _format_position_value({"component_type": "bandpass", "bands": [{"center_nm": 525, "width_nm": 50}]}))
 
     def test_optical_path_element_card_includes_positions(self) -> None:
         """Integration test: optical path element DTO must include position spec_lines."""
