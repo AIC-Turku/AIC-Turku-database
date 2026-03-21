@@ -2216,7 +2216,59 @@
       });
     });
 
+    selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination');
+    selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection');
+
     return selection;
+  }
+
+  function buildTraversalOrderedComponents(topology, selection, phase) {
+    if (!topology || !topology.traversal) return [];
+    const entries = phase === 'illumination' ? topology.traversal.illumination : topology.traversal.detection;
+    if (!Array.isArray(entries) || !entries.length) return [];
+    const mode = phase === 'illumination' ? 'excitation' : 'emission';
+    const consumed = { excitation: 0, dichroic: 0, emission: 0 };
+    const mechanismResolved = new Map();
+    const cubeSelections = (Array.isArray(selection.debugSelections) ? selection.debugSelections : [])
+      .filter((entry) => entry && entry.stage === 'cube');
+    let cubeIndex = 0;
+    const phaseStages = phase === 'illumination'
+      ? new Set(['excitation', 'dichroic'])
+      : new Set(['dichroic', 'emission']);
+    const result = [];
+    entries.forEach((entry) => {
+      if (!entry || entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
+      if (entry.stageKey === 'splitters') return;
+      const mechId = entry.mechanism ? cleanString(entry.mechanism.id).toLowerCase() : '';
+      if (entry.kind === 'linked' && mechId) {
+        const stored = mechanismResolved.get(mechId);
+        if (stored) stored.filter((comp) => phaseStages.has(comp.stage)).forEach((comp) => result.push({ component: comp.component, mode }));
+        return;
+      }
+      const key = entry.stageKey;
+      if (key === 'cube') {
+        const cubeValue = cubeIndex < cubeSelections.length ? cubeSelections[cubeIndex++].component : null;
+        const expanded = cubeValue ? expandCubeSelection(cubeValue, (entry.mechanism && entry.mechanism.name) || '') : [];
+        const allSubs = [];
+        expanded.forEach((sub) => {
+          if (consumed[sub.stage] !== undefined) consumed[sub.stage] += 1;
+          allSubs.push({ component: sub.component, stage: sub.stage });
+        });
+        if (mechId) mechanismResolved.set(mechId, allSubs);
+        allSubs.filter((comp) => phaseStages.has(comp.stage)).forEach((comp) => result.push({ component: comp.component, mode }));
+        return;
+      }
+      const arr = selection[key];
+      if (!Array.isArray(arr)) return;
+      const idx = consumed[key] || 0;
+      if (idx >= arr.length) return;
+      consumed[key] = idx + 1;
+      const component = arr[idx];
+      if (!component) return;
+      if (mechId) mechanismResolved.set(mechId, [{ component, stage: key }]);
+      result.push({ component, mode });
+    });
+    return result;
   }
 
 

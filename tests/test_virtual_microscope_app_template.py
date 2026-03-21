@@ -149,6 +149,21 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertNotIn("function pipelineFlowOrigin(", source)
         self.assertNotIn("function pipelineSpectrumForOrigin(", source)
 
+    def test_selection_includes_traversal_ordered_components(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function buildTraversalOrderedComponents(topology, selection, phase)", source)
+        self.assertIn("selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination')", source)
+        self.assertIn("selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection')", source)
+
+    def test_simulation_uses_traversal_ordered_components(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("selected.illuminationComponents", source)
+        self.assertIn("selected.detectionComponents", source)
+        self.assertIn("illuminationOrdered", source)
+        self.assertIn("detectionOrdered", source)
+
 
 if __name__ == "__main__":
     unittest.main()
