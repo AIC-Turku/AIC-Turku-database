@@ -997,7 +997,7 @@
   }
 
   function activeRouteOrder() {
-    return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
+    return VM.ROUTE_SORT_ORDER || ['confocal', 'confocal_point', 'confocal_spinning_disk', 'epi', 'widefield_fluorescence', 'tirf', 'multiphoton', 'light_sheet', 'transmitted', 'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic', 'reflected_brightfield', 'optical_sectioning', 'spectral_imaging', 'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret'];
   }
 
   function inferRouteFromSourceSettings() {
@@ -1284,7 +1284,8 @@
     shell.appendChild(inspector);
     DOM.graph.appendChild(shell);
 
-    if (route === 'transmitted' || route === 'brightfield' || route === 'phase') {
+    const transmittedRoutes = ['transmitted', 'transmitted_brightfield', 'brightfield', 'phase', 'phase_contrast', 'darkfield', 'dic'];
+    if (transmittedRoutes.includes(route)) {
       const warningPanel = document.createElement('div');
       warningPanel.className = 'vm-info-card';
       warningPanel.style.borderLeft = '4px solid var(--warning)';

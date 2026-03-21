@@ -30,7 +30,7 @@
     spt: 'SPT',
     fret: 'FRET',
   };
-  const ROUTE_SORT_ORDER = ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];
+  const ROUTE_SORT_ORDER = ['confocal', 'confocal_point', 'confocal_spinning_disk', 'epi', 'widefield_fluorescence', 'tirf', 'multiphoton', 'light_sheet', 'transmitted', 'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic', 'reflected_brightfield', 'optical_sectioning', 'spectral_imaging', 'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret'];
   const CAMERA_KINDS = new Set(['camera', 'scmos', 'cmos', 'ccd', 'emccd']);
   const HYBRID_KINDS = new Set(['hyd']);
   const APD_KINDS = new Set(['apd', 'spad']);
@@ -2001,7 +2001,10 @@
     let peak = normalizePercent(detector && detector.qe_peak_pct, null);
 
     if (className === 'eyepiece') {
-      const visibleMask = bandMask(grid, 390, 700, 12);
+      const bounds = detectorCollectionBounds(detector);
+      const eyeMin = bounds.min !== null ? bounds.min : 390;
+      const eyeMax = bounds.max !== null ? bounds.max : 700;
+      const visibleMask = bandMask(grid, eyeMin, eyeMax, 12);
       return visibleMask.map((value) => clamp((0.15 + (0.85 * value)) * 0.95, 0, 1));
     }
     if (className === 'camera_port') {
@@ -3118,5 +3121,6 @@
     selectionIsValid,
     simulateInstrument,
     optimizeLightPath,
+    ROUTE_SORT_ORDER: Array.from(ROUTE_SORT_ORDER),
   };
 });
