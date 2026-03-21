@@ -1545,6 +1545,165 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(result["customAt370"], result["defaultAt370"],
                            "Custom eyepiece with 350-750 bounds should have higher response at 370nm")
 
+    def test_component_mask_filter_cube_single_band(self) -> None:
+        """componentMask should filter spectrally for filter_cube with a single band."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 800, step_nm: 2 });
+            const mask = rt.componentMask(
+              { component_type: 'filter_cube', bands: [{ center_nm: 606, width_nm: 70 }] },
+              grid,
+              { mode: 'emission' }
+            );
+            const idx500 = grid.indexOf(500);
+            const idx606 = grid.indexOf(606);
+            const idx750 = grid.indexOf(750);
+            return { at500: mask[idx500], at606: mask[idx606], at750: mask[idx750] };
+            """
+        )
+        self.assertLess(result["at500"], 0.05, "filter_cube should block 500nm")
+        self.assertGreater(result["at606"], 0.9, "filter_cube should pass 606nm")
+        self.assertLess(result["at750"], 0.05, "filter_cube should block 750nm")
+
+    def test_component_mask_filter_cube_multiband(self) -> None:
+        """componentMask should handle filter_cube with multiple bands."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 750, step_nm: 2 });
+            const mask = rt.componentMask(
+              { component_type: 'filter_cube', bands: [
+                { center_nm: 459, width_nm: 25 },
+                { center_nm: 525, width_nm: 30 },
+                { center_nm: 608, width_nm: 30 }
+              ] },
+              grid,
+              { mode: 'emission' }
+            );
+            const idx459 = grid.indexOf(460);
+            const idx525 = grid.indexOf(526);
+            const idx608 = grid.indexOf(608);
+            const idx480 = grid.indexOf(480);
+            return { at459: mask[idx459], at525: mask[idx525], at608: mask[idx608], at480: mask[idx480] };
+            """
+        )
+        self.assertGreater(result["at459"], 0.8, "filter_cube should pass 459nm band")
+        self.assertGreater(result["at525"], 0.8, "filter_cube should pass 525nm band")
+        self.assertGreater(result["at608"], 0.8, "filter_cube should pass 608nm band")
+        self.assertLess(result["at480"], 0.1, "filter_cube should block gap between bands")
+
+    def test_branch_dedup_across_routes_uses_branch_id_only(self) -> None:
+        """Branches with the same branch_id in different routes should be deduplicated."""
+        result = self.run_node_json(
+            """
+            const payload = {
+              metadata: {},
+              light_paths: [
+                {
+                  id: 'route_a', name: 'Route A',
+                  detection_sequence: [
+                    { optical_path_element_id: 'trinocular' },
+                    { branches: { selection_mode: 'exclusive', items: [
+                      { branch_id: 'to_cam', label: 'To Camera', sequence: [{ endpoint_id: 'cam' }] },
+                      { branch_id: 'to_eyes', label: 'To Eyepieces', sequence: [{ endpoint_id: 'eyes' }] },
+                    ] } },
+                  ],
+                },
+                {
+                  id: 'route_b', name: 'Route B',
+                  detection_sequence: [
+                    { optical_path_element_id: 'trinocular' },
+                    { branches: { selection_mode: 'exclusive', items: [
+                      { branch_id: 'to_cam', label: 'To Camera', sequence: [{ endpoint_id: 'cam' }] },
+                      { branch_id: 'to_eyes', label: 'To Eyepieces', sequence: [{ endpoint_id: 'eyes' }] },
+                    ] } },
+                  ],
+                },
+              ],
+              optical_path_elements: [
+                { id: 'trinocular', stage_role: 'splitter', element_type: 'splitter', selection_mode: 'exclusive' },
+              ],
+              endpoints: [
+                { id: 'cam', endpoint_type: 'camera_port' },
+                { id: 'eyes', endpoint_type: 'eyepiece' },
+              ],
+            };
+            const inst = rt.normalizeInstrumentPayload(payload, { allowApproximation: false });
+            const splitters = inst.splitters || [];
+            const branchCounts = splitters.map(s => (s.branches || []).length);
+            const branchIds = splitters.flatMap(s => (s.branches || []).map(b => b.id));
+            return { splitterCount: splitters.length, branchCounts, branchIds };
+            """
+        )
+        self.assertEqual(result["splitterCount"], 1, "Should have exactly one splitter")
+        self.assertEqual(result["branchCounts"], [2], "Should have exactly 2 branches, not 4")
+        self.assertIn("to_cam", result["branchIds"])
+        self.assertIn("to_eyes", result["branchIds"])
+
+    def test_component_mask_analyzer_is_passthrough(self) -> None:
+        """Analyzer component should pass all wavelengths (no spectral effect)."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const mask = rt.componentMask(
+              { component_type: 'analyzer' },
+              grid,
+              { mode: 'emission' }
+            );
+            const allOnes = mask.every(v => v === 1);
+            return { allOnes, length: mask.length };
+            """
+        )
+        self.assertTrue(result["allOnes"], "analyzer should pass all wavelengths")
+        self.assertGreater(result["length"], 0)
+
+    def test_component_mask_all_vocabulary_types_are_handled(self) -> None:
+        """Every vocabulary component_type should produce a defined mask (not fall through to generic passthrough)."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const types = [
+              { component_type: 'bandpass', center_nm: 525, width_nm: 50 },
+              { component_type: 'multiband_bandpass', bands: [{ center_nm: 525, width_nm: 50 }] },
+              { component_type: 'longpass', cut_on_nm: 500 },
+              { component_type: 'shortpass', cut_off_nm: 600 },
+              { component_type: 'dichroic', cutoffs_nm: [500] },
+              { component_type: 'multiband_dichroic', cutoffs_nm: [500, 600] },
+              { component_type: 'polychroic', cutoffs_nm: [500, 600] },
+              { component_type: 'notch', center_nm: 525, width_nm: 50 },
+              { component_type: 'filter_cube', bands: [{ center_nm: 525, width_nm: 50 }] },
+              { component_type: 'analyzer' },
+              { component_type: 'empty' },
+              { component_type: 'mirror' },
+              { component_type: 'block' },
+              { component_type: 'passthrough' },
+              { component_type: 'neutral_density' },
+            ];
+            const results = {};
+            types.forEach((comp) => {
+              const mask = rt.componentMask(comp, grid, { mode: 'emission' });
+              results[comp.component_type] = {
+                length: mask.length,
+                hasVariation: !mask.every(v => v === mask[0]),
+                firstValue: mask[0],
+              };
+            });
+            return results;
+            """
+        )
+        # Spectral filters should have variation
+        for comp_type in ["bandpass", "multiband_bandpass", "longpass", "shortpass", "notch", "filter_cube"]:
+            self.assertTrue(result[comp_type]["hasVariation"], f"{comp_type} should have spectral variation")
+        # Passthrough types should all be 1
+        for comp_type in ["empty", "mirror", "passthrough", "neutral_density", "analyzer"]:
+            self.assertFalse(result[comp_type]["hasVariation"], f"{comp_type} should be uniform")
+            self.assertEqual(result[comp_type]["firstValue"], 1, f"{comp_type} should pass all light")
+        # Block should be all 0
+        self.assertFalse(result["block"]["hasVariation"])
+        self.assertEqual(result["block"]["firstValue"], 0, "block should block all light")
+        # Dichroics should have variation
+        for comp_type in ["dichroic", "multiband_dichroic", "polychroic"]:
+            self.assertTrue(result[comp_type]["hasVariation"], f"{comp_type} should have spectral variation")
+
 
 if __name__ == "__main__":
     unittest.main()

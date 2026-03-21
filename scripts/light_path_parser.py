@@ -1257,16 +1257,20 @@ def _render_kind(component: dict[str, Any]) -> str:
         return "source"
     if component_type in {"detector"}:
         return "detector"
-    if component_type in {"bandpass", "notch", "multiband_bandpass"}:
+    if component_type in {"bandpass", "notch", "multiband_bandpass", "filter_cube"}:
         return "band"
     if component_type in {"longpass"}:
         return "longpass"
+    if component_type in {"shortpass"}:
+        return "shortpass"
     if component_type in {"tunable"}:
         return "tunable"
     if component_type in NO_WAVELENGTH_TYPES:
         return "empty"
     if component_type in DICHROIC_TYPES:
         return "dichroic"
+    if component_type in {"analyzer"}:
+        return "analyzer"
     return "other"
 
 
@@ -1830,11 +1834,42 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                     continue
                 linked_components[link_key] = _component_payload(component, default_name=_resolve_cube_link_label(link_key))
 
+            # Flattened filter_cube positions (component_type: filter_cube with bands
+            # but no explicit excitation_filter/dichroic/emission_filter sub-components)
+            # need a synthetic emission_filter so the runtime can apply them spectrally.
+            cube_label = cube_position.get("name") or f"Cube {slot}"
+            if not linked_components and _clean_string(cube_position.get("component_type")).lower() == "filter_cube":
+                bands = cube_position.get("bands")
+                cut_on_nm = cube_position.get("cut_on_nm")
+                synth: dict[str, Any] = {"name": cube_label}
+                if isinstance(bands, list) and len(bands) > 1:
+                    synth["component_type"] = "multiband_bandpass"
+                    synth["bands"] = bands
+                elif isinstance(bands, list) and len(bands) == 1:
+                    synth["component_type"] = "bandpass"
+                    synth["bands"] = bands
+                    band = bands[0]
+                    if isinstance(band, dict):
+                        if band.get("center_nm") is not None:
+                            synth["center_nm"] = band["center_nm"]
+                        if band.get("width_nm") is not None:
+                            synth["width_nm"] = band["width_nm"]
+                elif isinstance(cut_on_nm, list) and cut_on_nm:
+                    synth["component_type"] = "longpass"
+                    synth["cut_on_nm"] = _coerce_number(cut_on_nm[0])
+                elif _coerce_number(cut_on_nm) is not None:
+                    synth["component_type"] = "longpass"
+                    synth["cut_on_nm"] = _coerce_number(cut_on_nm)
+                else:
+                    synth["component_type"] = "bandpass"
+                if synth.get("component_type"):
+                    linked_components["emission_filter"] = _component_payload(synth, default_name=cube_label)
+
             position_payload: dict[str, Any] = {
                 "slot": slot,
                 "type": "cube",
-                "label": cube_position.get("name") or f"Cube {slot}",
-                "display_label": cube_position.get("name") or f"Cube {slot}",
+                "label": cube_label,
+                "display_label": cube_label,
                 "details": _build_details(cube_position),
                 "linked_components": linked_components,
                 # Backward-compatible direct aliases used by the browser runtime.

@@ -1115,6 +1115,182 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(cube["dichroic"]["cutoffs_nm"], [570.0])
         self.assertEqual(cube["emission_filter"]["center_nm"], 605.0)
 
+    def test_filter_cube_single_band_synthesizes_bandpass_emission_filter(self) -> None:
+        """filter_cube positions with a single band should produce a bandpass emission_filter."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "CY3 Cube",
+                                    "component_type": "filter_cube",
+                                    "bands": [{"center_nm": 605, "width_nm": 70}],
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube_options = _runtime_projection(payload)["stages"]["cube"][0]["options"]
+        cube = cube_options[0]["value"]
+        self.assertIn("emission_filter", cube["linked_components"])
+        ef = cube["emission_filter"]
+        self.assertEqual(ef["component_type"], "bandpass")
+        self.assertEqual(ef["center_nm"], 605.0)
+        self.assertEqual(ef["width_nm"], 70.0)
+
+    def test_filter_cube_multiband_synthesizes_multiband_bandpass_emission_filter(self) -> None:
+        """filter_cube positions with multiple bands should produce a multiband_bandpass emission_filter."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "Triple Band Cube",
+                                    "component_type": "filter_cube",
+                                    "bands": [
+                                        {"center_nm": 459, "width_nm": 25},
+                                        {"center_nm": 525, "width_nm": 30},
+                                        {"center_nm": 608, "width_nm": 30},
+                                    ],
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        ef = cube["emission_filter"]
+        self.assertEqual(ef["component_type"], "multiband_bandpass")
+        self.assertEqual(len(ef["bands"]), 3)
+        self.assertEqual(ef["bands"][0]["center_nm"], 459.0)
+        self.assertEqual(ef["bands"][1]["center_nm"], 525.0)
+        self.assertEqual(ef["bands"][2]["center_nm"], 608.0)
+
+    def test_filter_cube_longpass_synthesizes_longpass_emission_filter(self) -> None:
+        """filter_cube positions with cut_on_nm list produce a longpass emission_filter."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "DAPI Cube",
+                                    "component_type": "filter_cube",
+                                    "cut_on_nm": [425],
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        ef = cube["emission_filter"]
+        self.assertEqual(ef["component_type"], "longpass")
+        self.assertEqual(ef["cut_on_nm"], 425.0)
+
+    def test_filter_cube_with_explicit_linked_components_keeps_them(self) -> None:
+        """filter_cube should not override explicit linked_components."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "TRITC Cube",
+                                    "excitation_filter": {"component_type": "bandpass", "center_nm": 550, "width_nm": 25},
+                                    "emission_filter": {"component_type": "bandpass", "center_nm": 605, "width_nm": 70},
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertEqual(cube["excitation_filter"]["center_nm"], 550.0)
+        self.assertEqual(cube["emission_filter"]["center_nm"], 605.0)
+
+    def test_splitter_branches_deduplicated_across_routes(self) -> None:
+        """Branches with the same branch_id across routes should be merged, not duplicated."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "trinocular",
+                            "stage_role": "splitter",
+                            "element_type": "splitter",
+                            "selection_mode": "exclusive",
+                        },
+                    ],
+                    "endpoints": [
+                        {"id": "cam", "endpoint_type": "camera_port"},
+                        {"id": "eyes", "endpoint_type": "eyepiece"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "route_a",
+                        "name": "Route A",
+                        "detection_sequence": [
+                            {"optical_path_element_id": "trinocular"},
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {"branch_id": "to_cam", "label": "To Camera", "sequence": [{"endpoint_id": "cam"}]},
+                                        {"branch_id": "to_eyes", "label": "To Eyes", "sequence": [{"endpoint_id": "eyes"}]},
+                                    ],
+                                }
+                            },
+                        ],
+                    },
+                    {
+                        "id": "route_b",
+                        "name": "Route B",
+                        "detection_sequence": [
+                            {"optical_path_element_id": "trinocular"},
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {"branch_id": "to_cam", "label": "To Camera", "sequence": [{"endpoint_id": "cam"}]},
+                                        {"branch_id": "to_eyes", "label": "To Eyes", "sequence": [{"endpoint_id": "eyes"}]},
+                                    ],
+                                }
+                            },
+                        ],
+                    },
+                ],
+            }
+        )
+        splitters = _runtime_projection(payload)["splitters"]
+        self.assertEqual(len(splitters), 1)
+        branches = splitters[0]["branches"]
+        self.assertEqual(len(branches), 2, f"Expected 2 branches but got {len(branches)}: {[b.get('label') for b in branches]}")
+
 
     def test_multiband_dichroic_bands_are_normalized_and_labeled(self) -> None:
         payload = generate_virtual_microscope_payload(
@@ -1424,5 +1600,52 @@ class LightPathParserTests(unittest.TestCase):
         self.assertTrue(len(valid_paths) > 0)
         self.assertIn("analyzer_mech_0", valid_paths[0])
 
+    def test_render_kind_covers_all_vocabulary_component_types(self) -> None:
+        """Every component_type in the vocabulary must produce a recognised render_kind (not 'other')."""
+        vocabulary_types = {
+            "bandpass", "multiband_bandpass", "longpass", "shortpass",
+            "dichroic", "multiband_dichroic", "polychroic", "notch",
+            "filter_cube", "analyzer", "empty", "mirror", "block",
+            "passthrough", "neutral_density",
+        }
+        expected_non_other = {
+            "bandpass": "band",
+            "multiband_bandpass": "band",
+            "longpass": "longpass",
+            "shortpass": "shortpass",
+            "dichroic": "dichroic",
+            "multiband_dichroic": "dichroic",
+            "polychroic": "dichroic",
+            "notch": "band",
+            "filter_cube": "band",
+            "analyzer": "analyzer",
+            "empty": "empty",
+            "mirror": "empty",
+            "block": "empty",
+            "passthrough": "empty",
+            "neutral_density": "empty",
+        }
+        for comp_type in vocabulary_types:
+            payload = generate_virtual_microscope_payload(
+                {
+                    "hardware": {
+                        "light_path": {
+                            "excitation_mechanisms": [
+                                {"positions": {1: {"component_type": comp_type}}}
+                            ]
+                        }
+                    }
+                }
+            )
+            stages = _runtime_projection(payload).get("stages", {})
+            positions = stages.get("excitation", [{}])[0].get("options", [])
+            if not positions:
+                continue
+            render_kind = positions[0].get("value", {}).get("render_kind", "other")
+            self.assertEqual(
+                render_kind,
+                expected_non_other.get(comp_type, "other"),
+                f"component_type '{comp_type}' should map to render_kind '{expected_non_other.get(comp_type)}' but got '{render_kind}'",
+            )
 
 
