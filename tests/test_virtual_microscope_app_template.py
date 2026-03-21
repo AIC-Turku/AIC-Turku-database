@@ -22,14 +22,14 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence))", source)
         self.assertIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence))", source)
 
-    def test_pipeline_ui_is_rebuilt_from_derived_control_groups(self) -> None:
+    def test_pipeline_ui_is_built_from_route_traversal(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("function buildPipelineStages(derivedControlGroups)", source)
-        self.assertIn("const pipelineStages = buildPipelineStages(derivedControlGroups);", source)
+        self.assertIn("function buildPipelineStages(derivedControlGroups, topology)", source)
+        self.assertIn("const pipelineStages = buildPipelineStages(derivedControlGroups, topology);", source)
         self.assertIn("pipeline.style.display = pipelineStages.length ? 'flex' : 'none';", source)
         self.assertIn("createPipeSegment(stagePipeKey(pipelineStages[index - 1].flowOrigin, stage.flowOrigin))", source)
-        self.assertIn("createPipelineBadge(stage.id, stage.label)", source)
+        self.assertIn("createPipelineBadge(stage.id, stage.label, stage.inspectorStage)", source)
 
     def test_pipeline_beam_colors_support_group_level_stage_ids(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -49,6 +49,23 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_pipeline_layout_stays_on_one_line(self) -> None:
         source = Path("scripts/templates/virtual_microscope.html.j2").read_text(encoding="utf-8")
         self.assertIn("flex-wrap: nowrap;", source)
+
+    def test_pipe_buttons_use_route_traversal_entries(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("topology && topology.traversal && Array.isArray(topology.traversal.illumination)", source)
+        self.assertIn("topology && topology.traversal && Array.isArray(topology.traversal.detection)", source)
+        self.assertIn("button.dataset.inspectorStage = inspectorStage || stageId;", source)
+        self.assertIn("button.dataset.inspectorStage || button.dataset.stageId", source)
+
+    def test_pipe_stages_use_unique_keys(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("key: 'pipe:sources:0'", source)
+        self.assertIn("key: 'pipe:illumination:' + index", source)
+        self.assertIn("key: 'pipe:sample:0'", source)
+        self.assertIn("key: 'pipe:detection:' + index", source)
+        self.assertIn("key: 'pipe:detectors:0'", source)
 
 
 if __name__ == "__main__":
