@@ -46,9 +46,9 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("source.id || source.inventory_id || source.hardware_inventory_id", source)
         self.assertIn("normalizeSourceRoutes(source).join('|') || 'any-route'", source)
 
-    def test_pipeline_layout_stays_on_one_line(self) -> None:
+    def test_pipeline_layout_wraps_to_new_row_when_badges_overflow(self) -> None:
         source = Path("scripts/templates/virtual_microscope.html.j2").read_text(encoding="utf-8")
-        self.assertIn("flex-wrap: nowrap;", source)
+        self.assertIn("flex-wrap: wrap;", source)
 
     def test_pipe_buttons_use_route_traversal_entries(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
