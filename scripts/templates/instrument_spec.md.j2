@@ -1,3 +1,10 @@
+---
+title: Methods Generator
+hide:
+  - navigation  
+---
+
+
 {% macro render_spec_card(item) -%}
 - **{% if item.url %}[{{ item.display_label }}]({{ item.url }}){:target="_blank"}{% else %}{{ item.display_label }}{% endif %}**{% if item.display_subtitle %}
   <br><small class="aic-muted">{{ item.display_subtitle }}</small>{% endif %}
