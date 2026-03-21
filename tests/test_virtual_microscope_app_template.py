@@ -31,13 +31,12 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("createPipeSegment(stagePipeKey(pipelineStages[index - 1].flowOrigin, stage.flowOrigin))", source)
         self.assertIn("createPipelineBadge(stage.id, stage.label, stage.inspectorStage)", source)
 
-    def test_pipeline_beam_colors_support_group_level_stage_ids(self) -> None:
+    def test_pipeline_beam_colors_use_per_step_spectra(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("function pipelineSpectrumForOrigin(origin, spectra)", source)
-        self.assertIn("normalized === 'illumination-controls'", source)
-        self.assertIn("normalized === 'detection-controls'", source)
-        self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForOrigin(fromNode, spectra), grid);", source)
+        self.assertIn("function pipelineSpectrumForStep(stepId, stepSpectra, fallbackSpectra)", source)
+        self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission)", source)
+        self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);", source)
 
     def test_source_settings_are_keyed_by_instrument_and_source_identity(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -135,6 +134,20 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", pipe_fn)
         groups_fn = source.split("function buildDerivedControlGroups")[1].split("\n  function ")[0]
         self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", groups_fn)
+
+    def test_pipe_stages_use_step_id_as_flow_origin(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
+        self.assertIn("flowOrigin: stepId", pipe_fn)
+        self.assertNotIn("flowOrigin: 'illumination'", pipe_fn)
+        self.assertNotIn("flowOrigin: 'detection'", pipe_fn)
+
+    def test_no_bucket_based_flow_origin_normalization(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("function pipelineFlowOrigin(", source)
+        self.assertNotIn("function pipelineSpectrumForOrigin(", source)
 
 
 if __name__ == "__main__":
