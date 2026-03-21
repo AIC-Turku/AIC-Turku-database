@@ -131,6 +131,34 @@
     return `${leftStage}->${rightStage}`;
   }
 
+  function pipelineFlowOrigin(stageId) {
+    const normalized = cleanString(stageId).toLowerCase();
+    if (normalized === 'illumination-controls') return 'illumination-controls';
+    if (normalized === 'detection-controls') return 'detection-controls';
+    return normalized;
+  }
+
+  function pipelineSpectrumForOrigin(origin, spectra) {
+    const normalized = pipelineFlowOrigin(origin);
+    if (normalized === 'sources') return spectra.sourceMixed;
+    if (normalized === 'illumination-controls' || normalized === 'illumination' || normalized === 'excitation' || normalized === 'dichroic') return spectra.excitationAtSample;
+    if (normalized === 'sample') return spectra.generatedEmission;
+    if (normalized === 'detection-controls' || normalized === 'detection' || normalized === 'emission' || normalized === 'splitters' || normalized === 'detectors') {
+      return spectra.branchEmission.some((value) => value > 1e-9) ? spectra.branchEmission : spectra.postEmission;
+    }
+    return spectra.empty;
+  }
+
+  function buildPipelineStages(derivedControlGroups) {
+    return (Array.isArray(derivedControlGroups) ? derivedControlGroups : [])
+      .map((group) => ({
+        id: cleanString(group && group.id),
+        label: cleanString(group && group.label) || 'Stage',
+        flowOrigin: pipelineFlowOrigin(group && group.id),
+      }))
+      .filter((group) => group.id);
+  }
+
   function setStatusMessage(message, tone = 'info') {
     if (!DOM.autoConfigStatus) return;
     DOM.autoConfigStatus.textContent = cleanString(message);
@@ -337,29 +365,22 @@
     const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
     const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
     const branchEmission = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'preDetectorSpectrum', grid);
+    const spectra = {
+      sourceMixed,
+      excitationAtSample,
+      generatedEmission,
+      postEmission,
+      branchEmission,
+      empty: grid.map(() => 0),
+    };
 
-    // Find all active pipes currently rendered in the DOM topology
     const pipes = Array.from(DOM.graph.querySelectorAll('.optical-pipe'));
 
     pipes.forEach((pipe) => {
       const key = pipe.dataset.pipeKey;
       if (!key) return;
-
-      // Determine what light is flowing into this pipe based on its origin
       const fromNode = key.split('->')[0];
-      let spectrum = grid.map(() => 0);
-
-      if (fromNode === 'sources') spectrum = sourceMixed;
-      else if (fromNode === 'illumination') spectrum = excitationAtSample;
-      else if (fromNode === 'excitation') spectrum = excitationFiltered;
-      else if (fromNode === 'dichroic') spectrum = excitationAtSample;
-      else if (fromNode === 'sample') spectrum = generatedEmission;
-      else if (fromNode === 'detection') spectrum = branchEmission.some((value) => value > 1e-9) ? branchEmission : postEmission;
-      else if (fromNode === 'emission') spectrum = postEmission;
-      else if (fromNode === 'splitters') spectrum = branchEmission;
-      else if (fromNode === 'detectors') spectrum = branchEmission.some((value) => value > 1e-9) ? branchEmission : postEmission;
-
-      setPipeSpectrumColor(key, spectrum, grid);
+      setPipeSpectrumColor(key, pipelineSpectrumForOrigin(fromNode, spectra), grid);
     });
   }
 
@@ -474,7 +495,12 @@
   }
 
   function sourceSettingKey(source) {
-    return `${source.slot || 0}::${source.display_label || source.name || source.model || 'source'}`;
+    const routes = normalizeSourceRoutes(source).join('|') || 'any-route';
+    const stableId = cleanString(source && (source.id || source.inventory_id || source.hardware_inventory_id || source.display_label || source.name || source.model)) || 'source';
+    const slot = cleanString(source && source.slot) || '0';
+    const wavelength = numberOrNull(source && (source.selected_wavelength_nm ?? source.wavelength_nm));
+    const tuning = [numberOrNull(source && source.tunable_min_nm), numberOrNull(source && source.tunable_max_nm)].filter((value) => value !== null).join('-') || 'fixed';
+    return [currentInstrumentId || 'scope', stableId, slot, routes, wavelength === null ? 'na' : String(Math.round(wavelength)), tuning].join('::');
   }
 
   function detectorSettingKey(mechanism, detector) {
@@ -482,7 +508,11 @@
   }
 
   function splitterBranchSelectionKey(mechanism) {
-    return mechanism && (mechanism.id || mechanism.name || mechanism.display_label || 'splitter');
+    return [
+      currentInstrumentId || 'scope',
+      cleanString(state.activeRoute) || 'route',
+      cleanString(mechanism && (mechanism.id || mechanism.name || mechanism.display_label)) || 'splitter',
+    ].join('::');
   }
 
   function ensureSplitterBranchSelection(mechanism) {
@@ -1485,7 +1515,16 @@
 
     if (!derivedControlGroups.length) return;
 
-    pipeline.style.display = 'none';
+    const pipelineStages = buildPipelineStages(derivedControlGroups);
+    pipeline.innerHTML = '';
+    pipeline.style.display = pipelineStages.length ? 'flex' : 'none';
+    pipelineStages.forEach((stage, index) => {
+      if (index > 0) {
+        pipeline.appendChild(createPipeSegment(stagePipeKey(pipelineStages[index - 1].flowOrigin, stage.flowOrigin)));
+      }
+      pipeline.appendChild(createPipelineBadge(stage.id, stage.label));
+    });
+
     derivedControlGroups.forEach((group) => {
       const panel = createInspectorPanel(group.id, group.label, group.subtitle);
       group.build(panel);
