@@ -159,7 +159,7 @@
     }
     const illumination = topology && topology.traversal && Array.isArray(topology.traversal.illumination) ? topology.traversal.illumination : [];
     illumination.forEach((entry, index) => {
-      if (entry.kind === 'branch-block') return;
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('illumination-step-' + index);
       stages.push({
         id: stepId,
@@ -988,7 +988,7 @@
 
     let illumStepIndex = 0;
     illuminationEntries.forEach((entry) => {
-      if (entry.kind === 'branch-block') return;
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('illumination-step-' + illumStepIndex);
       groups.push({
         id: stepId,
