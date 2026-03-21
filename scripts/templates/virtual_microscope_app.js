@@ -427,8 +427,11 @@
     const topology = state.routeTopology;
     if (!topology || !topology.traversal) return stepSpectra;
 
-    const consumed = { excitation: 0, dichroic: 0, emission: 0, analyzer: 0 };
+    const consumed = { excitation: 0, dichroic: 0, emission: 0 };
     const mechanismComponent = new Map();
+    const cubeSelections = (Array.isArray(selection.debugSelections) ? selection.debugSelections : [])
+      .filter((entry) => entry && entry.stage === 'cube');
+    let cubeIndex = 0;
 
     function resolveComponent(entry) {
       if (!entry || (!entry.stageKey && entry.kind !== 'linked')) return null;
@@ -436,16 +439,11 @@
       if (entry.kind === 'linked' && mechId) return mechanismComponent.get(mechId) || null;
       const key = entry.stageKey;
       if (key === 'cube') {
-        const cubeComponents = [];
-        ['excitation', 'dichroic', 'emission'].forEach((stage) => {
-          const arr = selection[stage];
-          if (Array.isArray(arr) && consumed[stage] < arr.length) {
-            const component = arr[consumed[stage]];
-            if (component && component.display_label && typeof component.display_label === 'string' && component.display_label.includes('Cube')) {
-              cubeComponents.push({ component, stage });
-              consumed[stage] += 1;
-            }
-          }
+        const cubeValue = cubeIndex < cubeSelections.length ? cubeSelections[cubeIndex++].component : null;
+        const expanded = cubeValue ? expandCubeSelection(cubeValue, (entry.mechanism && entry.mechanism.name) || '') : [];
+        const cubeComponents = expanded.map((sub) => {
+          if (consumed[sub.stage] !== undefined) consumed[sub.stage] += 1;
+          return { component: sub.component, stage: sub.stage };
         });
         if (mechId) mechanismComponent.set(mechId, cubeComponents.length ? cubeComponents : null);
         return cubeComponents.length ? cubeComponents : null;
@@ -464,9 +462,8 @@
       if (!component) return spectrum;
       if (Array.isArray(component)) {
         let values = spectrum.slice();
-        component.forEach((entry) => {
-          const m = entry.stage === 'excitation' && mode === 'excitation' ? 'excitation' : mode;
-          values = values.map((value, i) => value * ((VM.componentMask(entry.component, grid, { mode: m })[i]) || 0));
+        component.forEach((sub) => {
+          values = values.map((value, i) => value * ((VM.componentMask(sub.component, grid, { mode })[i]) || 0));
         });
         return values;
       }
