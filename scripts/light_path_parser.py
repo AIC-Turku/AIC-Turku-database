@@ -3090,6 +3090,14 @@ def _build_selected_route_steps(
     selected: list[dict[str, Any]] = []
 
     def _available_positions_for_element(element: dict[str, Any]) -> list[dict[str, Any]]:
+        """Build enriched available position entries for a multi-position element.
+
+        Each entry carries the full parser-resolved component data so the
+        browser runtime can resolve user selections without re-computing optics.
+
+        Returns a list of dicts, each containing at minimum:
+        ``position_key``, ``slot``, ``label``, ``component_type``, ``spectral_ops``.
+        """
         candidates = _iter_element_positions(element)
         out: list[dict[str, Any]] = []
         for key_text, slot, position in candidates:

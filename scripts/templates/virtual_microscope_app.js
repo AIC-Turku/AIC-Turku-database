@@ -2377,6 +2377,18 @@
     return config;
   }
 
+  /**
+   * Resolve parser-provided selected_route_steps with user mechanism selections.
+   *
+   * For each "unresolved" step, matches the user's selected position_key from
+   * mechanismSelections against the step's available_positions (which carry
+   * parser-computed spectral_ops).  Resolved steps are returned as-is.
+   *
+   * @param {Array} selectedRouteSteps - Parser v2 selected_route_steps array.
+   * @param {Object} mechanismSelections - Map of mechanismId → selected component.
+   * @returns {Array} Steps with all resolvable entries filled in
+   *   (selection_state becomes 'user_resolved', spectral_ops populated).
+   */
   function resolveSelectedExecution(selectedRouteSteps, mechanismSelections) {
     if (!Array.isArray(selectedRouteSteps)) return [];
     const byMechanism = (mechanismSelections && typeof mechanismSelections === 'object')
@@ -2412,6 +2424,17 @@
     });
   }
 
+  /**
+   * Extract ordered component arrays from resolved execution steps for simulation.
+   *
+   * Filters to optical_component steps in the requested phase and builds
+   * component entries compatible with simulateInstrument's illumination/detection
+   * ordered component interface.
+   *
+   * @param {Array} resolvedSteps - Resolved execution steps from resolveSelectedExecution.
+   * @param {'illumination'|'detection'} phase - Optical phase to extract.
+   * @returns {Array<{component: Object, mode: string, routeStepId: string, stageKey: string|null}>}
+   */
   function orderedComponentsFromExecution(resolvedSteps, phase) {
     if (!Array.isArray(resolvedSteps)) return [];
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
