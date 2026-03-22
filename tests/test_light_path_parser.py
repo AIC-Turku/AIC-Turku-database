@@ -1232,7 +1232,144 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(cube["excitation_filter"]["center_nm"], 550.0)
         self.assertEqual(cube["emission_filter"]["center_nm"], 605.0)
 
-    def test_splitter_branches_deduplicated_across_routes(self) -> None:
+    def test_flattened_cube_synthesizes_dichroic_from_emission_band(self) -> None:
+        """Flattened filter_cube should synthesize a dichroic estimated from the emission band edge."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "GFP Cube",
+                                    "component_type": "filter_cube",
+                                    "bands": [{"center_nm": 525, "width_nm": 50}],
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertIn("dichroic", cube["linked_components"])
+        di = cube["dichroic"]
+        self.assertEqual(di["component_type"], "dichroic")
+        # Dichroic cut-on: (525 - 50/2) - 20 = 480.0
+        self.assertEqual(di["cut_on_nm"], 480.0)
+
+    def test_flattened_cube_multiband_dichroic_uses_lowest_band_edge(self) -> None:
+        """Multiband flattened cube dichroic should use lowest emission band edge."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "Triple Band",
+                                    "component_type": "filter_cube",
+                                    "bands": [
+                                        {"center_nm": 459, "width_nm": 25},
+                                        {"center_nm": 525, "width_nm": 30},
+                                        {"center_nm": 608, "width_nm": 30},
+                                    ],
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        di = cube["dichroic"]
+        # Lowest band edge: 459 - 25/2 = 446.5, dichroic = 446.5 - 20 = 426.5
+        self.assertEqual(di["cut_on_nm"], 426.5)
+
+    def test_flattened_cube_longpass_dichroic_estimate(self) -> None:
+        """Longpass flattened cube should also get a synthesized dichroic."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "DAPI LP",
+                                    "component_type": "filter_cube",
+                                    "cut_on_nm": [425],
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        di = cube["dichroic"]
+        self.assertEqual(di["component_type"], "dichroic")
+        # Dichroic: 425 - 20 = 405.0
+        self.assertEqual(di["cut_on_nm"], 405.0)
+
+    def test_flattened_cube_flagged_incomplete_without_excitation(self) -> None:
+        """Flattened cubes without excitation data should be flagged _cube_incomplete."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "Incomplete Cube",
+                                    "component_type": "filter_cube",
+                                    "bands": [{"center_nm": 510, "width_nm": 40}],
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertTrue(cube.get("_cube_incomplete"), "Flattened cube without excitation should be flagged incomplete")
+
+    def test_explicit_cube_not_flagged_incomplete(self) -> None:
+        """Cubes with explicit excitation_filter should NOT be flagged incomplete."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "cube_turret",
+                            "stage_role": "cube",
+                            "element_type": "turret",
+                            "positions": {
+                                "Pos_1": {
+                                    "name": "Full Cube",
+                                    "excitation_filter": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                    "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                                    "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                                }
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertFalse(cube.get("_cube_incomplete", False), "Explicit cube should not be flagged incomplete")
         """Branches with the same branch_id across routes should be merged, not duplicated."""
         payload = generate_virtual_microscope_payload(
             {

@@ -164,6 +164,17 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("illuminationOrdered", source)
         self.assertIn("detectionOrdered", source)
 
+    def test_expand_cube_selection_warns_on_incomplete_cubes(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("cubePosition._cube_incomplete", source)
+        self.assertIn("has no explicit excitation filter data", source)
+
+    def test_filter_cube_component_mask_fallback_present(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("if (type === 'filter_cube')", source)
+
 
 if __name__ == "__main__":
     unittest.main()

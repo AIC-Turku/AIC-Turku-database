@@ -1704,6 +1704,73 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         for comp_type in ["dichroic", "multiband_dichroic", "polychroic"]:
             self.assertTrue(result[comp_type]["hasVariation"], f"{comp_type} should have spectral variation")
 
+    def test_dichroic_mask_reflects_excitation_transmits_emission(self) -> None:
+        """Dichroic with cut_on_nm should reflect excitation light and transmit emission light."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 800, step_nm: 2 });
+            const mask_ex = rt.componentMask(
+              { component_type: 'dichroic', cut_on_nm: 500 },
+              grid,
+              { mode: 'excitation' }
+            );
+            const mask_em = rt.componentMask(
+              { component_type: 'dichroic', cut_on_nm: 500 },
+              grid,
+              { mode: 'emission' }
+            );
+            const idx450 = grid.indexOf(450);
+            const idx600 = grid.indexOf(600);
+            return {
+              ex_at450: mask_ex[idx450],
+              ex_at600: mask_ex[idx600],
+              em_at450: mask_em[idx450],
+              em_at600: mask_em[idx600],
+            };
+            """
+        )
+        # In excitation mode, dichroic reflects (1 - transmit): passes short wavelengths
+        self.assertGreater(result["ex_at450"], 0.8, "Dichroic should reflect/pass 450nm in excitation mode")
+        self.assertLess(result["ex_at600"], 0.2, "Dichroic should block 600nm in excitation mode")
+        # In emission mode, dichroic transmits: passes long wavelengths
+        self.assertLess(result["em_at450"], 0.2, "Dichroic should block 450nm in emission mode")
+        self.assertGreater(result["em_at600"], 0.8, "Dichroic should transmit 600nm in emission mode")
+
+    def test_simulate_with_cube_dichroic_and_emission(self) -> None:
+        """simulateInstrument should correctly filter through cube dichroic + emission."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 800, step_nm: 2 });
+            // Simulate a cube with dichroic (495nm cut-on) + emission (525/50 bandpass)
+            const selection = {
+              sources: [{ display_label: '470 LED', kind: 'led', role: 'excitation', wavelength_nm: 470, spectrum_type: 'gaussian', fwhm_nm: 30 }],
+              excitation: [],
+              dichroic: [{ component_type: 'dichroic', cut_on_nm: 495 }],
+              emission: [{ component_type: 'bandpass', center_nm: 525, width_nm: 50 }],
+              splitters: [],
+              detectors: [],
+            };
+            const instrument = {
+              metadata: { wavelength_grid: { min_nm: 400, max_nm: 800, step_nm: 2 } },
+            };
+            const gfp = {
+              key: 'gfp', name: 'GFP', exMax: 488, emMax: 509,
+              activeStateName: 'Default',
+              spectra: {
+                ex1p: [[430, 0], [460, 30], [488, 100], [500, 60], [520, 0]],
+                ex2p: [],
+                em: [[490, 0], [500, 30], [509, 100], [530, 60], [570, 0]],
+              },
+            };
+            const sim = rt.simulateInstrument(instrument, selection, [gfp], {});
+            const excArea = sim.excitationAtSample.reduce((s, v) => s + v, 0);
+            const hasEmission = sim.emittedSpectra.length > 0 && sim.emittedSpectra[0].postOpticsSpectrum.some(v => v > 0.01);
+            return { excArea: excArea > 0, hasEmission };
+            """
+        )
+        self.assertTrue(result["excArea"], "Excitation should reach sample through dichroic")
+        self.assertTrue(result["hasEmission"], "Emission should pass through dichroic + emission filter")
+
 
 if __name__ == "__main__":
     unittest.main()
