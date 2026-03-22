@@ -221,6 +221,7 @@
             const entry = component && typeof component === 'object' ? { ...component } : {};
             const slotNum = Number(normalizedSlot);
             entry.slot = Number.isFinite(entry.slot) ? entry.slot : (Number.isFinite(slotNum) ? slotNum : posIndex + 1);
+            entry.position_key = entry.position_key || String(slot);
             entry.__routes = routesFromObject(entry).length ? routesFromObject(entry) : routes;
             if (!entry.display_label) {
               entry.display_label = positionDisplayLabel(entry.slot, entry);
