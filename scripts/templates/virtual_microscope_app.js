@@ -861,7 +861,7 @@
           branches: (Array.isArray(step.routing && step.routing.branches) ? step.routing.branches : []).map((branch, branchIndex) => ({
             key: `${prefix}:${phase}:branch:${index}:${branchIndex}`,
             title: cleanString(branch && branch.label) || `Branch ${branchIndex + 1}`,
-            sequence: [],
+            sequence: buildResolvedTraversal(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`),
           })),
           message: 'This route includes parser-authored branch routing.',
         }];
@@ -2228,7 +2228,7 @@
       })),
       detectors: (selection.detectors || []).map((detector) => ({
         display_label: cleanString(detector.display_label || detector.name || detector.label || ''),
-        id: cleanString(detector.id || detector.terminal_id || ''),
+        id: cleanString(detector.id || detector.terminal_id || '') || null,
         detector_class: cleanString(detector.detector_class),
         collection_min_nm: numberOrNull(detector.collection_min_nm),
         collection_max_nm: numberOrNull(detector.collection_max_nm),
@@ -2283,7 +2283,7 @@
         result.push({ component: componentById.get(componentId), mode, routeStepId: entry.step_id });
         return;
       }
-      throw new Error('[VM] buildTraversalOrderedComponents: no selected component for route step "' + componentId + '".');
+      throw new Error('[VM] buildTraversalOrderedComponents: no selected component for route step "' + componentId + '" (phase=' + phase + ', step_id=' + (entry.step_id || 'unknown') + ').');
     });
     return result;
   }

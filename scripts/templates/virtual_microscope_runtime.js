@@ -92,13 +92,15 @@
   }
 
   function normalizeRouteTags(value) {
-    const items = Array.isArray(value) ? value : (typeof value === 'string' ? [value] : []);
+    let items = [];
+    if (typeof value === 'string') items = [value];
+    else if (Array.isArray(value)) items = value;
     const tags = [];
-    const seen = new Set();
+    const seenTags = new Set();
     items.forEach((item) => {
       const cleaned = cleanString(item).toLowerCase();
-      if (cleaned && ROUTE_TAGS.has(cleaned) && !seen.has(cleaned)) {
-        seen.add(cleaned);
+      if (cleaned && ROUTE_TAGS.has(cleaned) && !seenTags.has(cleaned)) {
+        seenTags.add(cleaned);
         tags.push(cleaned);
       }
     });
@@ -1585,7 +1587,7 @@
     const genericBandMasks = normalizedBandMasks(grid, component && component.bands);
     if (genericBandMasks.length) return sumMasks(genericBandMasks, grid);
 
-    throw new Error('[VM] dichroicTransmitMask: parser op missing explicit transmission/reflection band data');
+    throw new Error('[VM] dichroicTransmitMask: parser op missing required dichroic spectral data (transmission_bands, reflection_bands, bands, or cut_on_nm)');
   }
 
   /**
@@ -1672,6 +1674,20 @@
   function componentMask(component, grid, context) {
     if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) {
       throw new Error('[VM] componentMask: component "' + cleanString(component && (component.id || component.display_label || component.label)) + '" is missing parser spectral_ops.');
+    }
+    if (Array.isArray(component.spectral_ops.illumination)) {
+      component.spectral_ops.illumination.forEach((op) => {
+        if (op && op.unsupported_reason && cleanString(component && (component.component_type || component.type)).toLowerCase() === 'analyzer') {
+          console.warn('[VM] componentMask: analyzer "' + cleanString(component.name || component.label) + '" treated as spectrally transparent — polarization effects are not modeled. Results may not reflect polarization-dependent behavior.');
+        }
+      });
+    }
+    if (Array.isArray(component.spectral_ops.detection)) {
+      component.spectral_ops.detection.forEach((op) => {
+        if (op && op.unsupported_reason && cleanString(component && (component.component_type || component.type)).toLowerCase() === 'analyzer') {
+          console.warn('[VM] componentMask: analyzer "' + cleanString(component.name || component.label) + '" treated as spectrally transparent — polarization effects are not modeled. Results may not reflect polarization-dependent behavior.');
+        }
+      });
     }
     const mode = cleanString(context && context.mode).toLowerCase();
     const phase = (mode === 'excitation' || mode === 'illumination') ? 'illumination' : 'detection';

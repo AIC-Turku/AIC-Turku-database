@@ -1506,7 +1506,7 @@ def _spectral_ops_for_component(component: dict[str, Any]) -> dict[str, list[dic
     if ctype in DICHROIC_TYPES:
         dichroic_data = _extract_dichroic_spectral_data(component)
         if not any(key in dichroic_data for key in ("transmission_bands", "reflection_bands", "bands", "cut_on_nm")):
-            op = {"op": "passthrough", "unsupported_reason": "dichroic missing explicit spectral data"}
+            op = {"op": "passthrough", "unsupported_reason": "dichroic requires transmission_bands, reflection_bands, bands, or cut_on_nm"}
             return {"illumination": [op], "detection": [op]}
         return {
             "illumination": [{"op": "dichroic_reflect", **dichroic_data}],
@@ -2788,6 +2788,43 @@ def _build_route_steps(
 
     def _process_entries(entries: list[dict[str, Any]], phase: str) -> None:
         nonlocal order
+        def _routing_branch_sequence(sequence: Any) -> list[dict[str, Any]]:
+            normalized: list[dict[str, Any]] = []
+            for seq_step in sequence or []:
+                if not isinstance(seq_step, dict):
+                    continue
+                seq_kind = _clean_string(seq_step.get("kind")).lower()
+                seq_id = _clean_identifier(seq_step.get("id"))
+                if seq_kind == "source":
+                    normalized.append(
+                        {
+                            "kind": "source",
+                            "source_id": seq_id or None,
+                            "component_id": seq_id or None,
+                            "display_label": seq_step.get("display_label"),
+                        }
+                    )
+                    continue
+                if seq_kind == "endpoint":
+                    normalized.append(
+                        {
+                            "kind": "detector",
+                            "detector_id": seq_id or None,
+                            "endpoint_id": seq_id or None,
+                            "component_id": seq_id or None,
+                            "display_label": seq_step.get("display_label"),
+                        }
+                    )
+                    continue
+                normalized.append(
+                    {
+                        "kind": "optical_component",
+                        "component_id": seq_id or None,
+                        "display_label": seq_step.get("display_label"),
+                    }
+                )
+            return normalized
+
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
@@ -2807,6 +2844,7 @@ def _build_route_steps(
                                 "branch_id": br.get("branch_id"),
                                 "label": br.get("label"),
                                 "mode": br.get("mode"),
+                                "sequence": _routing_branch_sequence(br.get("sequence")),
                             }
                             for br in (entry.get("branches") or [])
                             if isinstance(br, dict)
@@ -2826,7 +2864,10 @@ def _build_route_steps(
             component_type = _clean_string(row.get("component_type") or row.get("type") or row.get("element_type") or "").lower()
             stage_role = _clean_string(row.get("stage_role") or row.get("element_type") or "").lower()
 
-            component_payload = _component_payload(row, default_name=row.get("name") or row.get("display_label") or entry.get("display_label") or "")
+            if entry_kind in {"source", "endpoint"}:
+                component_payload = row if isinstance(row, dict) else {}
+            else:
+                component_payload = _component_payload(row, default_name=row.get("name") or row.get("display_label") or entry.get("display_label") or "")
             step = {
                 "step_id": f"{phase}-step-{order}",
                 "order": order,
