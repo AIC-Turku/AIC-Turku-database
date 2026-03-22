@@ -320,6 +320,48 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                         }
                     )
 
+        # ── Verify selected_execution semantic authority ──
+        sel_exec = route.get("selected_execution")
+        if not isinstance(sel_exec, dict):
+            issues.append(
+                {
+                    "severity": "warning",
+                    "field": f"light_paths[{route_idx}].selected_execution",
+                    "message": f"Route '{route.get('id')}' is missing the selected_execution contract.",
+                }
+            )
+        else:
+            if sel_exec.get("contract_version") in (None, ""):
+                issues.append(
+                    {
+                        "severity": "warning",
+                        "field": f"light_paths[{route_idx}].selected_execution.contract_version",
+                        "message": f"Route '{route.get('id')}' selected_execution is missing contract_version.",
+                    }
+                )
+            sel_steps = sel_exec.get("steps")
+            if not isinstance(sel_steps, list) or not sel_steps:
+                issues.append(
+                    {
+                        "severity": "warning",
+                        "field": f"light_paths[{route_idx}].selected_execution.steps",
+                        "message": f"Route '{route.get('id')}' selected_execution has no steps.",
+                    }
+                )
+            else:
+                for sel_step_idx, sel_step in enumerate(sel_steps):
+                    if not isinstance(sel_step, dict):
+                        continue
+                    kind = sel_step.get("kind")
+                    if kind == "optical_component" and sel_step.get("spectral_ops") is None and sel_step.get("unsupported_reason") is None:
+                        issues.append(
+                            {
+                                "severity": "warning",
+                                "field": f"light_paths[{route_idx}].selected_execution.steps[{sel_step_idx}]",
+                                "message": f"Optical component step '{sel_step.get('step_id')}' has no spectral_ops and no unsupported_reason.",
+                            }
+                        )
+
     return {
         "instrument_id": instrument.get("id"),
         "display_name": instrument.get("display_name"),

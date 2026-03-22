@@ -2363,12 +2363,18 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertIn("option.value._cube_incomplete", source)
         self.assertIn("option.value._unsupported_spectral_model", source)
 
-    def test_expand_cube_selection_for_optimization_has_incomplete_guard(self) -> None:
-        """expandCubeSelectionForOptimization should explicitly guard incomplete cubes."""
+    def test_optimizer_scores_cubes_directly_via_composite_spectral_ops(self) -> None:
+        """Optimizer should score cubes via composite spectral_ops, not sub-component expansion."""
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
-        self.assertIn("expandCubeSelectionForOptimization(component)", source)
-        self.assertIn("component._cube_incomplete || component._unsupported_spectral_model", source)
-        self.assertIn("return [];", source)
+        # expandCubeSelectionForOptimization must be deleted — Python owns optical meaning.
+        self.assertNotIn("expandCubeSelectionForOptimization", source)
+        # Cube scoring uses pointMaskScore directly on the cube composite.
+        self.assertIn("pointMaskScore(option.value, exTargets, 'excitation')", source)
+        self.assertIn("pointMaskScore(option.value, emTargets, 'emission')", source)
+        # Selection building uses canonical parser field names (CUBE_LINK_KEYS).
+        self.assertIn("cube.excitation_filter", source)
+        self.assertIn("cube.dichroic", source)
+        self.assertIn("cube.emission_filter", source)
 
     # ── executeSpectralOps tests ──────────────────────────────────────
 

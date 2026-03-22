@@ -2135,12 +2135,12 @@
 
   function expandCubeSelection(cubePosition, mechanismName) {
     // The parser is the single source of truth for cube expansion.
-    // This function extracts the already-expanded sub-components from the
-    // parser-provided linked_components, preserving spectral_ops.
+    // This function extracts the already-expanded sub-components using
+    // canonical parser field names (CUBE_LINK_KEYS), preserving spectral_ops.
     const expanded = [];
-    const excitation = cubePosition.excitation_filter || cubePosition.excitation || cubePosition.ex;
-    const dichroic = cubePosition.dichroic_filter || cubePosition.dichroic || cubePosition.di || cubePosition.dichroic;
-    const emission = cubePosition.emission_filter || cubePosition.emission || cubePosition.em;
+    const excitation = cubePosition.excitation_filter;
+    const dichroic = cubePosition.dichroic;
+    const emission = cubePosition.emission_filter;
     if (excitation) expanded.push({ stage: 'excitation', name: `${mechanismName} (Cube Ex)`, component: excitation });
     if (dichroic) expanded.push({ stage: 'dichroic', name: `${mechanismName} (Cube Di)`, component: dichroic });
     if (emission) expanded.push({ stage: 'emission', name: `${mechanismName} (Cube Em)`, component: emission });

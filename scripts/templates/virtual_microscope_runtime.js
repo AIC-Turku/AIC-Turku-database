@@ -2199,26 +2199,6 @@
     return options.filter((option) => routeMatches((option.value && option.value.__routes) || mechanism.__routes, route));
   }
 
-  function expandCubeSelectionForOptimization(component) {
-    if (component && (component._cube_incomplete || component._unsupported_spectral_model)) {
-      // Incomplete/synthetic cube internals are visible in UI but excluded
-      // from exact optimizer modeling so optimization does not claim
-      // authoritative spectral truth for reconstructed cubes.
-      return [];
-    }
-    // The parser pre-computes spectral_ops for filter cubes with their
-    // sub-components already expanded.  This function retains the legacy
-    // expansion for cube positions that lack spectral_ops (e.g. old payloads).
-    const expanded = [];
-    const excitation = component && (component.excitation_filter || component.excitation || component.ex);
-    const dichroic = component && (component.dichroic_filter || component.dichroic || component.di);
-    const emission = component && (component.emission_filter || component.emission || component.em);
-    if (excitation) expanded.push({ stage: 'excitation', component: excitation });
-    if (dichroic) expanded.push({ stage: 'dichroic', component: dichroic });
-    if (emission) expanded.push({ stage: 'emission', component: emission });
-    return expanded;
-  }
-
   function routeMechanismsForOptimization(rows, route) {
     return (Array.isArray(rows) ? rows : []).filter((mechanism) => routeMatches(mechanism.__routes, route));
   }
@@ -2495,14 +2475,12 @@
         const options = mechanismOptionsForRoute(mechanism, route)
           .filter((option) => !(option && option.value && (option.value._cube_incomplete || option.value._unsupported_spectral_model)))
           .map((option) => {
-            const expanded = expandCubeSelectionForOptimization(option.value);
-            const ex = expanded.filter((entry) => entry.stage === 'excitation').map((entry) => entry.component);
-            const di = expanded.filter((entry) => entry.stage === 'dichroic').map((entry) => entry.component);
-            const em = expanded.filter((entry) => entry.stage === 'emission').map((entry) => entry.component);
-            const score = (ex.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 3)
-              + (di.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 2)
-              + (di.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 3)
-              + (em.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 4);
+            // Score the cube using parser-authoritative composite spectral_ops.
+            // componentMask selects the illumination or detection phase ops
+            // so this evaluates the full optical effect without reconstructing
+            // sub-component optics in JavaScript.
+            const score = pointMaskScore(option.value, exTargets, 'excitation') * 5
+              + pointMaskScore(option.value, emTargets, 'emission') * 7;
             return { ...option, score };
           })
           .sort((a, b) => b.score - a.score)
@@ -2539,11 +2517,12 @@
                     };
                   cubeCombo.forEach(({ mechanism, option }) => {
                     selectionMap[mechanism.id] = Number(option.slot || (option.value && option.value.slot));
-                    expandCubeSelectionForOptimization(option.value).forEach((entry) => {
-                      if (entry.stage === 'excitation') selection.excitation.push({ ...entry.component });
-                      if (entry.stage === 'dichroic') selection.dichroic.push({ ...entry.component });
-                      if (entry.stage === 'emission') selection.emission.push({ ...entry.component });
-                    });
+                    // Extract sub-components using canonical parser field names
+                    // (CUBE_LINK_KEYS: excitation_filter, dichroic, emission_filter).
+                    const cube = option.value || {};
+                    if (cube.excitation_filter) selection.excitation.push({ ...cube.excitation_filter });
+                    if (cube.dichroic) selection.dichroic.push({ ...cube.dichroic });
+                    if (cube.emission_filter) selection.emission.push({ ...cube.emission_filter });
                   });
                   exCombo.forEach(({ mechanism, option }) => {
                     selectionMap[mechanism.id] = Number(option.slot || (option.value && option.value.slot));
