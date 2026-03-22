@@ -2304,10 +2304,7 @@
   function buildSelectedConfiguration(selection, simulation) {
     if (!selection || !state.activeInstrument) return null;
     const inst = state.activeInstrument;
-    const routeRecord = state.routeTopology && state.routeTopology.routeRecord && state.routeTopology.routeRecord.record
-      ? state.routeTopology.routeRecord.record
-      : null;
-    const routeSteps = authoritativeRouteSteps(state.routeTopology && state.routeTopology.routeRecord ? state.routeTopology.routeRecord : null);
+    const resolvedSteps = Array.isArray(selection.resolvedExecution) ? selection.resolvedExecution : [];
     const config = {
       scope_id: cleanString(currentInstrumentId || (inst.metadata && inst.metadata.instrument_id) || ''),
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
@@ -2321,20 +2318,33 @@
         model: cleanString(source.model),
         product_code: cleanString(source.product_code),
       })),
-      stages: (selection.debugSelections || []).map((entry) => {
-        const comp = entry.component || {};
+      selected_route_steps: resolvedSteps.map((step) => {
+        const resolved = step._resolved_component || {};
         return {
-          stage: entry.stage,
-          name: entry.name || '',
-          component_type: cleanString(comp.component_type || comp.type || ''),
-          display_label: cleanString(comp.display_label || comp.label || comp.name || ''),
-          manufacturer: cleanString(comp.manufacturer),
-          model: cleanString(comp.model),
-          product_code: cleanString(comp.product_code),
-          position_key: cleanString(comp.position_key),
-          slot: comp.slot != null ? comp.slot : null,
-          _cube_incomplete: Boolean(comp._cube_incomplete),
-          _unsupported_spectral_model: comp._unsupported_spectral_model || false,
+          step_id: step.step_id || null,
+          order: step.order != null ? step.order : null,
+          phase: step.phase || null,
+          kind: step.kind || null,
+          selection_state: step.selection_state || null,
+          component_id: step.component_id || null,
+          source_id: step.source_id || null,
+          detector_id: step.detector_id || null,
+          endpoint_id: step.endpoint_id || null,
+          position_id: step.position_id || step.selected_position_id || null,
+          position_key: step.position_key || step.selected_position_key || null,
+          position_label: step.position_label || step.selected_position_label || null,
+          display_label: step.display_label || cleanString(resolved.display_label || resolved.label || resolved.name || ''),
+          component_type: step.component_type || null,
+          stage_role: step.stage_role || null,
+          spectral_ops: step.spectral_ops || null,
+          routing: step.routing || null,
+          metadata: step.metadata || {},
+          unsupported_reason: step.unsupported_reason || null,
+          manufacturer: cleanString(resolved.manufacturer || (step.metadata && step.metadata.manufacturer) || ''),
+          model: cleanString(resolved.model || (step.metadata && step.metadata.model) || ''),
+          product_code: cleanString(resolved.product_code || (step.metadata && step.metadata.product_code) || ''),
+          _cube_incomplete: Boolean(resolved._cube_incomplete || step._cube_incomplete),
+          _unsupported_spectral_model: Boolean(resolved._unsupported_spectral_model || step.unsupported_reason === 'unsupported_spectral_model'),
         };
       }),
       splitters: (selection.splitters || []).map((splitter) => ({
@@ -2353,25 +2363,6 @@
         product_code: cleanString(detector.product_code),
       })),
       selectionMap: selection.selectionMap || {},
-      route_steps: routeSteps.map((step) => ({
-        step_id: step.step_id,
-        order: step.order,
-        phase: step.phase,
-        kind: step.kind,
-        component_id: step.component_id || null,
-        source_id: step.source_id || null,
-        detector_id: step.detector_id || null,
-        endpoint_id: step.endpoint_id || null,
-        position_id: step.position_id || null,
-        position_key: step.position_key || null,
-        position_label: step.position_label || null,
-        component_type: step.component_type || null,
-        stage_role: step.stage_role || null,
-        spectral_ops: step.spectral_ops || null,
-        routing: step.routing || null,
-        metadata: step.metadata || {},
-        unsupported_reason: step.unsupported_reason || null,
-      })),
       acquisition_plan: state.lastAcquisitionPlan || {
         mode: 'simultaneous',
         requiresSequentialAcquisition: false,

@@ -286,6 +286,16 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("acquisition_plan", source)
         self.assertIn("_cube_incomplete", source)
 
+    def test_selected_configuration_uses_resolved_execution(self) -> None:
+        """buildSelectedConfiguration must source from resolvedExecution, not debugSelections."""
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        config_fn = source[source.index("function buildSelectedConfiguration("):source.index("function buildSelectedConfiguration(") + 3000]
+        self.assertIn("selection.resolvedExecution", config_fn)
+        self.assertIn("selected_route_steps:", config_fn)
+        self.assertNotIn("selection.debugSelections", config_fn)
+        self.assertNotIn("stages:", config_fn)
+
     def test_selected_configuration_is_computed_on_every_refresh(self) -> None:
         """buildSelectedConfiguration must be called in refreshOutputs so the config is always current."""
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
