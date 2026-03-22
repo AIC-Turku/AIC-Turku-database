@@ -170,9 +170,7 @@
     stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
     const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
     detection.forEach((entry, index) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') {
-        if (entry.kind === 'endpoint') return;
-      }
+      if (entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('detection-step-' + index);
       stages.push({
         id: stepId,
@@ -425,8 +423,8 @@
     });
   }
 
-  function buildStepSpectra(selection, grid, sourceMixed, generatedEmission) {
-    const simulation = arguments.length > 4 ? arguments[4] : (state.lastSimulation || null);
+  function buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation) {
+    const resolvedSimulation = simulation || state.lastSimulation || null;
     const stepSpectra = new Map();
     stepSpectra.set('sources', sourceMixed);
     stepSpectra.set('sample', generatedEmission);
@@ -469,7 +467,7 @@
     const topologyRouteRecord = topology && topology.routeRecord ? topology.routeRecord : null;
     const detectionRouteSteps = authoritativeRouteSteps(topologyRouteRecord).filter((step) => step && step.phase === 'detection');
     const routedBranchSpectrum = sumSpectra(
-      Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [],
+      Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
       'preDetectorSpectrum',
       grid
     );
@@ -481,7 +479,7 @@
     });
 
     const detectorSpectrum = sumSpectra(
-      Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [],
+      Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
       'spectrum',
       grid
     );

@@ -39,7 +39,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("function pipelineSpectrumForStep(stepId, stepSpectra, fallbackSpectra)", source)
-        self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission)", source)
+        self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation)", source)
         self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);", source)
         self.assertIn("const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];", source)
         self.assertIn("const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];", source)
@@ -137,7 +137,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("entry.kind === 'endpoint'", source)
         pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
-        self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", pipe_fn)
+        self.assertIn("if (entry.kind === 'endpoint') return;", pipe_fn)
         groups_fn = source.split("function buildDerivedControlGroups")[1].split("\n  function ")[0]
         self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", groups_fn)
 
