@@ -1289,6 +1289,102 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(rows[("green", "Main Path -> Green path -> Cam A")], rows[("green", "Main Path -> Red path -> Cam B")])
         self.assertGreater(rows[("red", "Main Path -> Red path -> Cam B")], rows[("red", "Main Path -> Green path -> Cam A")])
 
+    def test_normalize_terminals_preserves_undefined_default_enabled(self) -> None:
+        result = self.run_node_json(
+            """
+            const terminals = rt.normalizeTerminals([
+              { id: 'cam_default', display_label: 'Default Camera', endpoint_type: 'camera' },
+              { id: 'cam_false', display_label: 'Disabled Camera', endpoint_type: 'camera', default_enabled: false },
+              { id: 'cam_true', display_label: 'Enabled Camera', endpoint_type: 'camera', default_enabled: true }
+            ]);
+            return terminals.map((terminal) => ({
+              id: terminal.id,
+              defaultEnabledType: typeof terminal.default_enabled,
+              defaultEnabled: terminal.default_enabled === undefined ? null : terminal.default_enabled
+            }));
+            """
+        )
+
+        by_id = {row["id"]: row for row in result}
+        self.assertEqual(by_id["cam_default"]["defaultEnabledType"], "undefined")
+        self.assertIsNone(by_id["cam_default"]["defaultEnabled"])
+        self.assertFalse(by_id["cam_false"]["defaultEnabled"])
+        self.assertTrue(by_id["cam_true"]["defaultEnabled"])
+
+    def test_simulate_instrument_allows_zero_selected_detectors(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor() {
+              return {
+                key: 'green',
+                name: 'Green',
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [488, 100], [530, 0]],
+                  ex2p: [],
+                  em: [[500, 0], [520, 100], [560, 0]]
+                },
+                exMax: 488,
+                emMax: 520
+              };
+            }
+            const routeSteps = [
+              { step_id: 'illumination-step-0', order: 0, phase: 'illumination', kind: 'source', source_id: 'src_488', component_id: 'src_488' },
+              { step_id: 'sample-step-1', order: 1, phase: 'sample', kind: 'sample', component_id: 'sample_plane' },
+              { step_id: 'detection-step-2', order: 2, phase: 'detection', kind: 'detector', detector_id: 'cam_1', endpoint_id: 'cam_1', component_id: 'cam_1' }
+            ];
+            const instrument = {
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'confocal', wavelength_grid: { min_nm: 430, max_nm: 700, step_nm: 2 } },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [],
+              endpoints: [{ id: 'cam_1', display_label: 'Cam 1', endpoint_type: 'camera' }],
+              light_paths: [{
+                id: 'confocal',
+                illumination_sequence: [{ source_id: 'src_488' }],
+                detection_sequence: [{ endpoint_id: 'cam_1' }],
+                route_steps: routeSteps,
+                selected_execution: { contract_version: 'selected_execution.v2', selected_route_steps: routeSteps }
+              }]
+            };
+            const baseSelection = {
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              illuminationComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'excitation', routeStepId: 'illumination-step-0' }],
+              detectionComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'emission', routeStepId: 'detection-step-2' }],
+              excitation: [],
+              dichroic: [],
+              emission: [],
+              splitters: [],
+              selectionMap: {}
+            };
+            function summarize(selection) {
+              const simulation = rt.simulateInstrument(
+                instrument,
+                selection,
+                [fluor()],
+                { currentRoute: 'confocal' }
+              );
+              return {
+                selectedDetectors: simulation.selectedDetectors,
+                resultsCount: simulation.results.length,
+                pathSpectraCount: simulation.pathSpectra.length,
+                validSelection: simulation.validSelection
+              };
+            }
+            return {
+              explicitEmpty: summarize({ ...baseSelection, detectors: [] }),
+              missingDetectors: summarize(baseSelection),
+              nullDetectors: summarize({ ...baseSelection, detectors: null })
+            };
+            """
+        )
+
+        for variant in ("explicitEmpty", "missingDetectors", "nullDetectors"):
+            self.assertEqual(result[variant]["selectedDetectors"], [])
+            self.assertEqual(result[variant]["resultsCount"], 0)
+            self.assertEqual(result[variant]["pathSpectraCount"], 0)
+            self.assertTrue(result[variant]["validSelection"])
+
     def test_runtime_keeps_authoritative_inventory_and_route_usage_from_dto(self) -> None:
         result = self.run_node_json(
             """
