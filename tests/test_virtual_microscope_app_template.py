@@ -19,6 +19,10 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("route_steps", source)
         self.assertIn("active route is missing authoritative route_steps", source)
+        self.assertIn("function authoritativeRouteSteps(routeRecord)", source)
+        self.assertIn("const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;", source)
+        self.assertIn("const selectedSteps = Array.isArray(selectedExecution && selectedExecution.steps) ? selectedExecution.steps : [];", source)
+        self.assertIn("if (selectedSteps.length) return selectedSteps;", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence))", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence))", source)
 
@@ -37,6 +41,9 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("function pipelineSpectrumForStep(stepId, stepSpectra, fallbackSpectra)", source)
         self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission)", source)
         self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);", source)
+        self.assertIn("const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];", source)
+        self.assertIn("const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];", source)
+        self.assertNotIn("const consumed = { excitation: 0, dichroic: 0, emission: 0 };", source)
 
     def test_source_settings_are_keyed_by_instrument_and_source_identity(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -152,6 +159,10 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("function buildTraversalOrderedComponents(topology, selection, phase)", source)
         self.assertIn("selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination')", source)
         self.assertIn("selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection')", source)
+        self.assertIn("selectedComponentByMechanism", source)
+        self.assertIn("const mechanismByStepId = new Map();", source)
+        self.assertIn("mechanismByStepId.set(entry.routeStepId", source)
+        self.assertIn("step_id", source)
 
     def test_simulation_uses_traversal_ordered_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
