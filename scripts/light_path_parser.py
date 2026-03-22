@@ -1388,8 +1388,169 @@ def _component_payload(component: dict[str, Any], *, default_name: str = "", bra
     # as transparent.
     if component_type == "analyzer":
         payload["_unsupported_spectral_model"] = True
+    payload["spectral_ops"] = _spectral_ops_for_component(payload)
     return payload
 
+
+def _extract_dichroic_spectral_data(component: dict[str, Any]) -> dict[str, Any]:
+    """Extract the raw dichroic spectral specification fields from a component."""
+    data: dict[str, Any] = {}
+    if isinstance(component.get("transmission_bands"), list) and component["transmission_bands"]:
+        data["transmission_bands"] = component["transmission_bands"]
+    if isinstance(component.get("reflection_bands"), list) and component["reflection_bands"]:
+        data["reflection_bands"] = component["reflection_bands"]
+    if isinstance(component.get("bands"), list) and component["bands"]:
+        data["bands"] = component["bands"]
+    cut_on = _coerce_number(component.get("cut_on_nm"))
+    if cut_on is not None:
+        data["cut_on_nm"] = cut_on
+    if isinstance(component.get("cutoffs_nm"), list) and component["cutoffs_nm"]:
+        data["cutoffs_nm"] = component["cutoffs_nm"]
+    return data
+
+
+def _spectral_ops_for_component(component: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Compute parser-authoritative spectral operations keyed by phase.
+
+    Every mechanism position and component payload receives this field so the
+    browser runtime never has to interpret component types to decide spectral
+    behavior.  The runtime becomes a pure executor of these pre-computed ops.
+
+    Returns ``{"illumination": [...], "detection": [...]}`` where each value
+    is an ordered list of spectral operation dicts the runtime must apply.
+    """
+    ctype = _clean_string(component.get("component_type") or component.get("type")).lower()
+
+    _passthrough: list[dict[str, Any]] = [{"op": "passthrough"}]
+
+    if not ctype or ctype in {"mirror", "empty", "passthrough", "neutral_density"}:
+        return {"illumination": list(_passthrough), "detection": list(_passthrough)}
+
+    if ctype in {"block", "blocker"}:
+        both: list[dict[str, Any]] = [{"op": "block"}]
+        return {"illumination": list(both), "detection": list(both)}
+
+    if ctype == "analyzer":
+        both = [{"op": "passthrough", "unsupported_reason": "polarization_not_modeled"}]
+        return {"illumination": list(both), "detection": list(both)}
+
+    if ctype == "bandpass":
+        center = _coerce_number(component.get("center_nm"))
+        width = _coerce_number(component.get("width_nm"))
+        if center is not None and width is not None:
+            op: dict[str, Any] = {"op": "bandpass", "center_nm": center, "width_nm": width}
+        else:
+            bands = component.get("bands")
+            if isinstance(bands, list) and bands:
+                normalized = [b for b in (
+                    {"center_nm": _coerce_number(b.get("center_nm")), "width_nm": _coerce_number(b.get("width_nm"))}
+                    for b in bands if isinstance(b, dict)
+                ) if b.get("center_nm") is not None]
+                if normalized:
+                    op = {"op": "multiband_bandpass", "bands": normalized}
+                else:
+                    op = {"op": "passthrough", "unsupported_reason": "bandpass missing usable spectral data"}
+            else:
+                op = {"op": "passthrough", "unsupported_reason": "bandpass missing center_nm/width_nm and no bands"}
+        return {"illumination": [op], "detection": [op]}
+
+    if ctype == "multiband_bandpass":
+        bands = component.get("bands")
+        if isinstance(bands, list) and bands:
+            normalized = [b for b in (
+                {"center_nm": _coerce_number(b.get("center_nm")), "width_nm": _coerce_number(b.get("width_nm"))}
+                for b in bands if isinstance(b, dict)
+            ) if b.get("center_nm") is not None]
+            if normalized:
+                op = {"op": "multiband_bandpass", "bands": normalized}
+            else:
+                op = {"op": "passthrough", "unsupported_reason": "multiband_bandpass bands are invalid"}
+        else:
+            op = {"op": "passthrough", "unsupported_reason": "multiband_bandpass missing bands"}
+        return {"illumination": [op], "detection": [op]}
+
+    if ctype == "longpass":
+        cut_on = _coerce_number(component.get("cut_on_nm"))
+        if cut_on is not None:
+            op = {"op": "longpass", "cut_on_nm": cut_on}
+        else:
+            op = {"op": "passthrough", "unsupported_reason": "longpass missing cut_on_nm"}
+        return {"illumination": [op], "detection": [op]}
+
+    if ctype == "shortpass":
+        cut_off = _coerce_number(component.get("cut_off_nm"))
+        if cut_off is not None:
+            op = {"op": "shortpass", "cut_off_nm": cut_off}
+        else:
+            op = {"op": "passthrough", "unsupported_reason": "shortpass missing cut_off_nm"}
+        return {"illumination": [op], "detection": [op]}
+
+    if ctype == "notch":
+        center = _coerce_number(component.get("center_nm"))
+        width = _coerce_number(component.get("width_nm"))
+        if center is not None and width is not None:
+            op = {"op": "notch", "center_nm": center, "width_nm": width}
+        else:
+            op = {"op": "passthrough", "unsupported_reason": "notch missing center_nm or width_nm"}
+        return {"illumination": [op], "detection": [op]}
+
+    if ctype == "tunable":
+        start = _coerce_number(component.get("band_start_nm")) or _coerce_number(component.get("min_nm"))
+        end = _coerce_number(component.get("band_end_nm")) or _coerce_number(component.get("max_nm"))
+        if start is not None and end is not None:
+            op = {"op": "tunable_bandpass", "start_nm": start, "end_nm": end}
+        else:
+            op = {"op": "passthrough", "unsupported_reason": "tunable missing start/end bounds"}
+        return {"illumination": [op], "detection": [op]}
+
+    if ctype in DICHROIC_TYPES:
+        dichroic_data = _extract_dichroic_spectral_data(component)
+        return {
+            "illumination": [{"op": "dichroic_reflect", **dichroic_data}],
+            "detection": [{"op": "dichroic_transmit", **dichroic_data}],
+        }
+
+    if ctype == "filter_cube":
+        return _cube_spectral_ops(component)
+
+    return {
+        "illumination": [{"op": "passthrough", "unsupported_reason": f"unknown component type '{ctype}'"}],
+        "detection": [{"op": "passthrough", "unsupported_reason": f"unknown component type '{ctype}'"}],
+    }
+
+
+def _cube_spectral_ops(component: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Compute phase-aware spectral ops for a filter cube from its sub-components.
+
+    In illumination: excitation_filter + dichroic (reflection mode).
+    In detection: dichroic (transmission mode) + emission_filter.
+    """
+    exc = component.get("excitation_filter") or component.get("excitation") or component.get("ex")
+    di = component.get("dichroic") or component.get("dichroic_filter") or component.get("di")
+    em = component.get("emission_filter") or component.get("emission") or component.get("em")
+
+    illumination: list[dict[str, Any]] = []
+    detection: list[dict[str, Any]] = []
+
+    if isinstance(exc, dict):
+        exc_ops = _spectral_ops_for_component(exc)
+        for op in exc_ops.get("illumination", []):
+            illumination.append({**op, "sub_role": "excitation_filter"})
+    if isinstance(di, dict):
+        di_data = _extract_dichroic_spectral_data(di)
+        illumination.append({"op": "dichroic_reflect", "sub_role": "dichroic", **di_data})
+        detection.append({"op": "dichroic_transmit", "sub_role": "dichroic", **di_data})
+    if isinstance(em, dict):
+        em_ops = _spectral_ops_for_component(em)
+        for op in em_ops.get("detection", []):
+            detection.append({**op, "sub_role": "emission_filter"})
+
+    if not illumination:
+        illumination = [{"op": "passthrough", "unsupported_reason": "filter_cube missing excitation/dichroic data"}]
+    if not detection:
+        detection = [{"op": "passthrough", "unsupported_reason": "filter_cube missing dichroic/emission data"}]
+
+    return {"illumination": illumination, "detection": detection}
 
 
 def _light_source_display_label(source: dict[str, Any]) -> str:
@@ -1919,6 +2080,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                 "slot": slot,
                 "position_key": str(original_key),
                 "type": "cube",
+                "component_type": "filter_cube",
                 "label": cube_label,
                 "display_label": cube_label,
                 "details": _build_details(cube_position),
@@ -1932,6 +2094,8 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
             # can warn users about incomplete cube modeling.
             if linked_components and "excitation_filter" not in linked_components:
                 position_payload["_cube_incomplete"] = True
+            # Parser-authoritative spectral ops for the browser runtime.
+            position_payload["spectral_ops"] = _cube_spectral_ops(position_payload)
             routes = _normalize_routes(cube_position.get("path") or cube_position.get("paths") or cube_position.get("route") or cube_position.get("routes") or mechanism.get("path"))
             if routes:
                 position_payload["routes"] = routes
@@ -2558,6 +2722,143 @@ def _resolve_graph_component(
     return resolved
 
 
+def _build_route_steps(
+    illumination_traversal: list[dict[str, Any]],
+    detection_traversal: list[dict[str, Any]],
+    *,
+    source_lookup: dict[str, dict[str, Any]],
+    element_lookup: dict[str, dict[str, Any]],
+    endpoint_lookup: dict[str, dict[str, Any]],
+    inventory_lookup: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Build the authoritative ordered route-step contract.
+
+    Combines illumination traversal, a sample step, and detection traversal
+    into a single ordered list.  Each step carries its phase, kind, component
+    identity, authored metadata, and parser-computed spectral_ops so the
+    browser runtime never needs to infer optical meaning.
+
+    Returns ``(steps, warnings)`` where *warnings* lists any issues discovered
+    while building the contract.
+    """
+    steps: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    order = 0
+
+    def _step_kind(entry: dict[str, Any]) -> str:
+        kind = entry.get("kind", "")
+        if kind == "source":
+            return "source"
+        if kind == "endpoint":
+            return "detector"
+        if kind == "branch_block":
+            return "routing_component"
+        return "optical_component"
+
+    def _component_metadata(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "manufacturer": _clean_string(row.get("manufacturer")) or None,
+            "model": _clean_string(row.get("model")) or None,
+            "product_code": _clean_string(row.get("product_code")) or None,
+        }
+
+    def _lookup_row(entry: dict[str, Any]) -> dict[str, Any]:
+        ref_id = entry.get("id", "")
+        kind = entry.get("kind", "")
+        if kind == "source":
+            return source_lookup.get(ref_id, {})
+        if kind == "endpoint":
+            return endpoint_lookup.get(ref_id, {})
+        return element_lookup.get(ref_id, {})
+
+    def _process_entries(entries: list[dict[str, Any]], phase: str) -> None:
+        nonlocal order
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            entry_kind = entry.get("kind", "")
+
+            if entry_kind == "branch_block":
+                step: dict[str, Any] = {
+                    "step_id": f"{phase}-step-{order}",
+                    "order": order,
+                    "phase": phase,
+                    "kind": "routing_component",
+                    "component_id": entry.get("id"),
+                    "routing": {
+                        "selection_mode": entry.get("selection_mode"),
+                        "branches": [
+                            {
+                                "branch_id": br.get("branch_id"),
+                                "label": br.get("label"),
+                                "mode": br.get("mode"),
+                            }
+                            for br in (entry.get("branches") or [])
+                            if isinstance(br, dict)
+                        ],
+                    },
+                    "spectral_ops": None,
+                    "metadata": {},
+                    "unsupported_reason": None,
+                }
+                steps.append(step)
+                order += 1
+                continue
+
+            row = _lookup_row(entry)
+            inventory_id = entry.get("hardware_inventory_id", "")
+            inventory_item = inventory_lookup.get(inventory_id, {})
+            component_type = _clean_string(row.get("component_type") or row.get("type") or row.get("element_type") or "").lower()
+            stage_role = _clean_string(row.get("stage_role") or row.get("element_type") or "").lower()
+
+            step = {
+                "step_id": f"{phase}-step-{order}",
+                "order": order,
+                "phase": phase,
+                "kind": _step_kind(entry),
+                "component_id": entry.get("id"),
+                "hardware_inventory_id": inventory_id or None,
+                "component_type": component_type or stage_role or None,
+                "stage_role": stage_role or None,
+                "display_label": entry.get("display_label"),
+                "position_key": None,
+                "position_label": None,
+                "spectral_ops": None,
+                "routing": None,
+                "metadata": _component_metadata(inventory_item) if inventory_item else _component_metadata(row),
+                "unsupported_reason": None,
+            }
+
+            if entry_kind == "endpoint":
+                step["endpoint_id"] = entry.get("id")
+                endpoint_type = _normalize_endpoint_type(row.get("endpoint_type") or row.get("type") or row.get("kind"))
+                step["endpoint_type"] = endpoint_type
+            elif entry_kind == "source":
+                step["source_id"] = entry.get("id")
+
+            steps.append(step)
+            order += 1
+
+    _process_entries(illumination_traversal, "illumination")
+
+    steps.append({
+        "step_id": f"sample-step-{order}",
+        "order": order,
+        "phase": "sample",
+        "kind": "sample",
+        "component_id": "sample_plane",
+        "spectral_ops": None,
+        "routing": None,
+        "metadata": {},
+        "unsupported_reason": None,
+    })
+    order += 1
+
+    _process_entries(detection_traversal, "detection")
+
+    return steps, warnings
+
+
 def _build_route_sequences_and_graph(
     route: dict[str, Any],
     *,
@@ -2811,6 +3112,14 @@ def _build_route_sequences_and_graph(
     )
 
     route_modalities = _normalize_modalities(route.get("modalities") or route.get("routes") or route.get("path")) or [route.get("id")]
+    route_steps, route_warnings = _build_route_steps(
+        illumination_sequence,
+        detection_sequence,
+        source_lookup=source_lookup,
+        element_lookup=element_lookup,
+        endpoint_lookup=endpoint_lookup,
+        inventory_lookup=inventory_lookup,
+    )
     resolved_route = {
         **route,
         "route_identity": {
@@ -2823,6 +3132,8 @@ def _build_route_sequences_and_graph(
         "modalities": route_modalities,
         "illumination_traversal": illumination_sequence,
         "detection_traversal": detection_sequence,
+        "route_steps": route_steps,
+        "route_warnings": route_warnings,
         "branch_blocks": list(usage["branch_blocks"]),
         "endpoints": list(usage["endpoint_inventory_ids"]),
         "hardware_inventory_ids": list(usage["hardware_inventory_ids"]),

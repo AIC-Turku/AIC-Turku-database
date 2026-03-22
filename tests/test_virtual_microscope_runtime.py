@@ -143,11 +143,15 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertTrue(all(len(row["points"]) > 0 for row in result))
 
     def test_source_spectrum_parses_multi_line_descriptors(self) -> None:
+        """sourceCenters only uses explicit wavelength fields — never
+        display_label, name, model, product_code or notes.  Multi-value
+        strings in wavelength_nm are still parsed because that field is
+        wavelength-semantic by definition."""
         result = self.run_node_json(
             """
             const grid = rt.wavelengthGrid({ min_nm: 380, max_nm: 760, step_nm: 2 });
             const spectrum = rt.sourceSpectrum({
-              display_label: '395/25; 440/20; 475/28; 555/15; 640/30',
+              wavelength_nm: '395; 440; 475; 555; 640',
               spectral_mode: 'line'
             }, grid);
             function localPeak(target) {
@@ -158,12 +162,15 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
                 target,
                 value: localPeak(target),
               })),
-              centers: rt.sourceCenters({ display_label: '395/25; 440/20; 475/28; 555/15; 640/30' })
+              centersFromWavelengthField: rt.sourceCenters({ wavelength_nm: '395; 440; 475; 555; 640' }),
+              centersFromDisplayLabel: rt.sourceCenters({ display_label: '395/25; 440/20; 475/28; 555/15; 640/30' })
             };
             """
         )
 
-        self.assertEqual(result["centers"], [395, 440, 475, 555, 640])
+        self.assertEqual(result["centersFromWavelengthField"], [395, 440, 475, 555, 640])
+        # display_label is no longer parsed for wavelengths.
+        self.assertEqual(result["centersFromDisplayLabel"], [])
         bright_peaks = [entry for entry in result["peaks"] if entry["value"] >= 0.49]
         self.assertEqual(len(bright_peaks), 5)
 

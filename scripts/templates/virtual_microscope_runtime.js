@@ -1805,7 +1805,110 @@
     return legacyAlternatingCutoffTransmitMask(grid, component && component.cutoffs_nm);
   }
 
+  /**
+   * Execute a single parser-provided spectral operation.
+   *
+   * The parser is the sole authority for deciding which spectral operation
+   * applies to any optical component.  This function is a pure mechanical
+   * executor that maps an op specification to a wavelength mask.
+   */
+  function executeSingleSpectralOp(op, grid) {
+    if (!op || typeof op !== 'object') return grid.map(() => 1);
+    const kind = cleanString(op.op).toLowerCase();
+    if (!kind || kind === 'passthrough') return grid.map(() => 1);
+    if (kind === 'block') return grid.map(() => 0);
+    if (kind === 'bandpass') {
+      const center = numberOrNull(op.center_nm);
+      const width = numberOrNull(op.width_nm);
+      if (center === null || width === null) {
+        throw new Error('[VM] executeSingleSpectralOp: bandpass op missing center_nm/width_nm');
+      }
+      return bandMask(grid, center - (width / 2), center + (width / 2), 2);
+    }
+    if (kind === 'multiband_bandpass') {
+      const bands = normalizedBandMasks(grid, op.bands);
+      if (!bands.length) {
+        throw new Error('[VM] executeSingleSpectralOp: multiband_bandpass op has no valid bands');
+      }
+      return sumMasks(bands, grid);
+    }
+    if (kind === 'longpass') {
+      const cutOn = numberOrNull(op.cut_on_nm);
+      if (cutOn === null) {
+        throw new Error('[VM] executeSingleSpectralOp: longpass op missing cut_on_nm');
+      }
+      return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
+    }
+    if (kind === 'shortpass') {
+      const cutOff = numberOrNull(op.cut_off_nm);
+      if (cutOff === null) {
+        throw new Error('[VM] executeSingleSpectralOp: shortpass op missing cut_off_nm');
+      }
+      return grid.map((wavelength) => 1 - smoothStep(wavelength, cutOff, 2));
+    }
+    if (kind === 'notch') {
+      const center = numberOrNull(op.center_nm);
+      const width = numberOrNull(op.width_nm);
+      if (center === null || width === null) {
+        throw new Error('[VM] executeSingleSpectralOp: notch op missing center_nm/width_nm');
+      }
+      const blocked = bandMask(grid, center - (width / 2), center + (width / 2), 2);
+      return blocked.map((value) => 1 - value);
+    }
+    if (kind === 'tunable_bandpass') {
+      const start = numberOrNull(op.start_nm);
+      const end = numberOrNull(op.end_nm);
+      if (start === null || end === null) {
+        throw new Error('[VM] executeSingleSpectralOp: tunable_bandpass op missing start_nm/end_nm');
+      }
+      return bandMask(grid, start, end, 2);
+    }
+    if (kind === 'dichroic_reflect' || kind === 'dichroic_transmit') {
+      const transmit = dichroicTransmitMask(grid, op);
+      return kind === 'dichroic_reflect' ? transmit.map((value) => 1 - value) : transmit;
+    }
+    throw new Error('[VM] executeSingleSpectralOp: unknown op "' + kind + '"');
+  }
+
+  /**
+   * Execute an ordered array of parser-provided spectral operations.
+   *
+   * Each op is applied multiplicatively in order.  The parser decides
+   * the exact sequence; the runtime just executes it.
+   */
+  function executeSpectralOps(ops, grid) {
+    if (!Array.isArray(ops) || !ops.length) return grid.map(() => 1);
+    let mask = grid.map(() => 1);
+    for (let i = 0; i < ops.length; i++) {
+      const opMask = executeSingleSpectralOp(ops[i], grid);
+      mask = mask.map((value, idx) => value * opMask[idx]);
+    }
+    return mask;
+  }
+
   function componentMask(component, grid, context) {
+    // If the parser has provided authoritative spectral_ops, use them
+    // directly without interpreting the component type.
+    if (component && component.spectral_ops && typeof component.spectral_ops === 'object') {
+      const mode = cleanString(context && context.mode).toLowerCase();
+      const phase = (mode === 'excitation' || mode === 'illumination') ? 'illumination' : 'detection';
+      const ops = component.spectral_ops[phase] || component.spectral_ops.detection || component.spectral_ops.illumination;
+      if (Array.isArray(ops) && ops.length) {
+        // For dichroics with explicit branchMode, override the phase-based choice.
+        const branchMode = cleanString((context && context.branchMode) || (component && component.branch_mode)).toLowerCase();
+        if (branchMode === 'reflected' && component.spectral_ops.illumination) {
+          return executeSpectralOps(component.spectral_ops.illumination, grid);
+        }
+        if (branchMode === 'transmitted' && component.spectral_ops.detection) {
+          return executeSpectralOps(component.spectral_ops.detection, grid);
+        }
+        return executeSpectralOps(ops, grid);
+      }
+    }
+    // Fallback: type-based interpretation for components without spectral_ops.
+    // This path is retained only for backward compatibility with payloads that
+    // pre-date the parser spectral_ops contract.  New payloads should always
+    // carry spectral_ops and never reach this code.
     const type = cleanString(component && (component.component_type || component.type)).toLowerCase();
     if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density') {
       return grid.map(() => 1);
@@ -1923,34 +2026,21 @@
       if (Array.isArray(candidate)) candidate.forEach(pushCandidate);
     });
 
-    [
-      source && source.wavelength_nm,
-      source && source.display_label,
-      source && source.name,
-      source && source.model,
-      source && source.product_code,
-      source && source.notes,
-    ].forEach((candidate) => {
-      if (typeof candidate !== 'string') return;
-      candidate
-        .split(/[;,]/)
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .forEach((token) => {
-          const slashLead = token.match(/(\d+(?:\.\d+)?)\s*\//);
-          if (slashLead) {
-            pushCandidate(slashLead[1]);
-            return;
-          }
-          const nmLead = token.match(/(\d+(?:\.\d+)?)\s*nm/i);
-          if (nmLead) {
-            pushCandidate(nmLead[1]);
-            return;
-          }
-          const bare = token.match(/^(\d+(?:\.\d+)?)(?:|$)/);
-          if (bare) pushCandidate(bare[1]);
-        });
-    });
+    // Only parse the wavelength_nm field itself when it is a multi-value
+    // string (e.g. "405; 488; 561").  display_label, name, model,
+    // product_code, and notes are never parsed for wavelengths — the parser
+    // is the single source of truth for source identity.
+    const rawWavelength = source && source.wavelength_nm;
+    if (typeof rawWavelength === 'string') {
+      rawWavelength.split(/[;,]/).map((item) => item.trim()).filter(Boolean).forEach((token) => {
+        const nmLead = token.match(/(\d+(?:\.\d+)?)\s*nm/i);
+        if (nmLead) { pushCandidate(nmLead[1]); return; }
+        const slashLead = token.match(/(\d+(?:\.\d+)?)\s*\//);
+        if (slashLead) { pushCandidate(slashLead[1]); return; }
+        const bare = token.match(/^(\d+(?:\.\d+)?)(?:\x08|$)/);
+        if (bare) pushCandidate(bare[1]);
+      });
+    }
 
     return Array.from(new Set(values));
   }
@@ -2349,6 +2439,9 @@
   }
 
   function expandCubeSelectionForOptimization(component) {
+    // The parser pre-computes spectral_ops for filter cubes with their
+    // sub-components already expanded.  This function retains the legacy
+    // expansion for cube positions that lack spectral_ops (e.g. old payloads).
     const expanded = [];
     const excitation = component && (component.excitation_filter || component.excitation || component.ex);
     const dichroic = component && (component.dichroic_filter || component.dichroic || component.di);
@@ -3212,6 +3305,8 @@
     wavelengthToRGB,
     spectrumToCSSColor,
     componentMask,
+    executeSpectralOps,
+    executeSingleSpectralOp,
     sourceCenters,
     sourceSpectrum,
     detectorResponse,
