@@ -14,13 +14,13 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("shell.appendChild(pipeline);", source)
         self.assertIn("shell.appendChild(inspector);", source)
 
-    def test_route_traversal_falls_back_to_canonical_sequences_when_resolved_arrays_are_empty(self) -> None:
+    def test_route_traversal_uses_authoritative_route_steps_without_sequence_fallback(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("const resolvedIlluminationTraversal = Array.isArray(routeRecord && routeRecord.illuminationTraversal) && routeRecord.illuminationTraversal.length", source)
-        self.assertIn("const resolvedDetectionTraversal = Array.isArray(routeRecord && routeRecord.detectionTraversal) && routeRecord.detectionTraversal.length", source)
-        self.assertIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence))", source)
-        self.assertIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence))", source)
+        self.assertIn("route_steps", source)
+        self.assertIn("active route is missing authoritative route_steps", source)
+        self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence))", source)
+        self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence))", source)
 
     def test_pipeline_ui_is_built_from_route_traversal(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -97,13 +97,11 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertNotIn("id: 'detection-controls'", source)
         self.assertNotIn("label: 'Detection Controls'", source)
 
-    def test_traversal_entries_receive_stable_route_step_ids(self) -> None:
+    def test_traversal_entries_use_parser_step_ids(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("function assignRouteStepIds(entries, phase)", source)
-        self.assertIn("entry.routeStepId = `${phase}-step-${stepIndex}`", source)
-        self.assertIn("assignRouteStepIds(result.illumination, 'illumination')", source)
-        self.assertIn("assignRouteStepIds(result.detection, 'detection')", source)
+        self.assertIn("routeStepId: step.step_id", source)
+        self.assertNotIn("function assignRouteStepIds(entries, phase)", source)
 
     def test_pipe_stages_use_route_step_ids(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -111,12 +109,11 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("entry.routeStepId || ('illumination-step-' + index)", source)
         self.assertIn("entry.routeStepId || ('detection-step-' + index)", source)
 
-    def test_derived_control_groups_use_per_entry_illumination_groups(self) -> None:
+    def test_derived_control_groups_use_parser_step_ids(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertNotIn("id: 'illumination-controls'", source)
-        self.assertIn("entry.routeStepId || ('illumination-step-' + illumStepIndex)", source)
-        self.assertIn("entry.routeStepId || ('detection-step-' + detStepIndex)", source)
+        self.assertIn("const stepId = entry.routeStepId", source)
 
     def test_pipeline_stages_render_from_topology_not_derived_groups(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -170,33 +167,32 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("cubePosition._cube_incomplete", source)
         self.assertIn("has no explicit excitation filter data", source)
 
-    def test_filter_cube_component_mask_fallback_present(self) -> None:
+    def test_filter_cube_component_mask_fallback_removed(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 
-        self.assertIn("if (type === 'filter_cube')", source)
+        self.assertNotIn("if (type === 'filter_cube')", source)
 
     # ── VM-005: composite cube in componentMask ─────────────────────────
 
     def test_filter_cube_component_mask_uses_linked_sub_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 
-        self.assertIn("component.excitation_filter || component.excitation", source)
-        self.assertIn("component.dichroic || component.dichroic_filter", source)
-        self.assertIn("component.emission_filter || component.emission", source)
-        self.assertIn("has no linked sub-components; treating as emission-only filter", source)
+        self.assertIn("component.spectral_ops", source)
+        self.assertIn("missing parser spectral_ops", source)
+        self.assertNotIn("has no linked sub-components", source)
 
     # ── VM-006: unsupported component warnings ──────────────────────────
 
-    def test_analyzer_warns_in_component_mask(self) -> None:
+    def test_analyzer_handling_is_parser_driven(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 
-        self.assertIn("type === 'analyzer'", source)
-        self.assertIn("polarization effects are not modeled", source)
+        self.assertIn("component.spectral_ops", source)
+        self.assertNotIn("type === 'analyzer'", source)
 
-    def test_unknown_type_warns_in_component_mask(self) -> None:
+    def test_unknown_type_no_longer_warns_in_runtime(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 
-        self.assertIn("unsupported component type", source)
+        self.assertNotIn("unsupported component type", source)
 
     # ── VM-006: analyzer stage in deriveStageGroupAdapters ──
 
@@ -276,11 +272,10 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
     # ── Stage adapter comment accuracy ──
 
-    def test_stage_adapter_comment_mentions_optimizer_role(self) -> None:
-        """deriveStageGroupAdapters comment must document that the optimizer uses stage groups."""
+    def test_stage_adapters_no_longer_document_fallback_roles(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 
-        self.assertIn("optimizer (optimizeLightPath) enumerates candidate stage positions", source)
+        self.assertNotIn("fallbacks when route topology", source)
 
     def test_execute_spectral_ops_functions_are_exported(self) -> None:
         """The runtime must export executeSpectralOps and executeSingleSpectralOp."""

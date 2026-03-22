@@ -840,31 +840,41 @@
   function buildRouteTraversalEntries(instrument, routeRecord, route) {
     const catalog = opticalMechanismCatalog(instrument, route);
     const seenControlIds = new Set();
+    const routeSteps = Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
+      ? routeRecord.record.route_steps
+      : Array.isArray(routeRecord && routeRecord.route_steps)
+        ? routeRecord.route_steps
+        : [];
+    if (!routeSteps.length) {
+      throw new Error('[VM] buildRouteTraversalEntries: active route is missing authoritative route_steps.');
+    }
     const buildResolvedTraversal = (steps, phase, prefix) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
       if (!(step && typeof step === 'object')) return [];
-      if (step.kind === 'branch_block') {
+      if (step.kind === 'routing_component') {
         return [{
           kind: 'branch-block',
           key: `${prefix}:${phase}:branches:${index}`,
           phase,
-          title: `Branches (${step.selection_mode || 'exclusive'})`,
-          selectionMode: step.selection_mode || 'exclusive',
-          branches: (Array.isArray(step.branches) ? step.branches : []).map((branch, branchIndex) => ({
+          routeStepId: step.step_id || `${phase}-step-${index}`,
+          title: `Branches (${(step.routing && step.routing.selection_mode) || 'exclusive'})`,
+          selectionMode: (step.routing && step.routing.selection_mode) || 'exclusive',
+          branches: (Array.isArray(step.routing && step.routing.branches) ? step.routing.branches : []).map((branch, branchIndex) => ({
             key: `${prefix}:${phase}:branch:${index}:${branchIndex}`,
             title: cleanString(branch && branch.label) || `Branch ${branchIndex + 1}`,
             sequence: buildResolvedTraversal(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`),
           })),
-          message: 'This route forks explicitly here; each branch sequence is declared directly in the DTO route graph.',
+          message: 'This route includes parser-authored branch routing.',
         }];
       }
-      const elementId = cleanString(step.id).toLowerCase();
-      if (step.kind === 'endpoint') {
+      const elementId = cleanString(step.component_id).toLowerCase();
+      if (step.kind === 'detector') {
         return [{
           kind: 'endpoint',
           key: `${prefix}:${phase}:endpoint:${index}`,
           phase,
-          endpointId: step.id,
-          title: cleanString(step.display_label) || endpointLabelForTargetId(step.id),
+          routeStepId: step.step_id || `${phase}-step-${index}`,
+          endpointId: step.endpoint_id || step.detector_id || step.component_id,
+          title: cleanString(step.display_label) || endpointLabelForTargetId(step.endpoint_id || step.detector_id || step.component_id),
           message: '',
         }];
       }
@@ -876,8 +886,9 @@
         return [{
           kind: 'missing',
           key: `${prefix}:${phase}:${elementId}:${index}`,
-          title: step.display_label || step.id,
-          message: `This DTO route references optical path element "${step.id}", but no interactive UI control was derived for it.`,
+          routeStepId: step.step_id || `${phase}-step-${index}`,
+          title: step.display_label || step.component_id,
+          message: `This DTO route references optical path element "${step.component_id}", but no interactive UI control was derived for it.`,
         }];
       }
       const firstUse = !seenControlIds.has(elementId);
@@ -885,100 +896,23 @@
       return [{
         kind: firstUse ? 'control' : 'linked',
         key: `${prefix}:${phase}:${elementId}:${index}`,
+        routeStepId: step.step_id || `${phase}-step-${index}`,
         stageKey: match.stageKey,
         mechanism: match.mechanism,
         phase,
-        title: match.mechanism.display_label || match.mechanism.name || step.display_label || step.id,
+        title: match.mechanism.display_label || match.mechanism.name || step.display_label || step.component_id,
         message: firstUse
           ? ''
           : `This route reuses the same ${match.stageKey.replace(/_/g, ' ')} selector later in the traversal; the active selection above is applied here as well.`,
       }];
     });
-    const buildPhase = (steps, phase, prefix) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
-      const branchBlock = step && step.branches && typeof step.branches === 'object' ? step.branches : null;
-      if (branchBlock) {
-        return [{
-          kind: 'branch-block',
-          key: `${prefix}:${phase}:branches:${index}`,
-          phase,
-          title: `Branches (${branchBlock.selection_mode || 'exclusive'})`,
-          selectionMode: branchBlock.selection_mode || 'exclusive',
-          branches: (Array.isArray(branchBlock.items) ? branchBlock.items : []).map((branch, branchIndex) => ({
-            key: `${prefix}:${phase}:branch:${index}:${branchIndex}`,
-            title: cleanString(branch && (branch.label || branch.branch_id)) || `Branch ${branchIndex + 1}`,
-            sequence: buildPhase(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`),
-          })),
-          message: 'This route forks explicitly here; each branch sequence is declared in light_paths.',
-        }];
-      }
-      const elementId = cleanString(step && step.optical_path_element_id).toLowerCase();
-      if (!elementId) {
-        if (step && step.endpoint_id) {
-          return [{
-            kind: 'endpoint',
-            key: `${prefix}:${phase}:endpoint:${index}`,
-            phase,
-            endpointId: step.endpoint_id,
-            title: endpointLabelForTargetId(step.endpoint_id),
-            message: '',
-          }];
-        }
-        return [];
-      }
-      const match = catalog.get(elementId);
-      if (!match) {
-        return [{
-          kind: 'missing',
-          key: `${prefix}:${phase}:${elementId}:${index}`,
-          title: step.optical_path_element_id,
-          message: `This canonical route references optical path element "${step.optical_path_element_id}", but no interactive UI control was derived for it.`,
-        }];
-      }
-      const firstUse = !seenControlIds.has(elementId);
-      seenControlIds.add(elementId);
-      return [{
-        kind: firstUse ? 'control' : 'linked',
-        key: `${prefix}:${phase}:${elementId}:${index}`,
-        stageKey: match.stageKey,
-        mechanism: match.mechanism,
-        phase,
-        title: match.mechanism.display_label || match.mechanism.name || step.optical_path_element_id,
-        message: firstUse
-          ? ''
-          : `This route reuses the same ${match.stageKey.replace(/_/g, ' ')} selector later in the traversal; the active selection above is applied here as well.`,
-      }];
-    });
-
-    const resolvedIlluminationTraversal = Array.isArray(routeRecord && routeRecord.illuminationTraversal) && routeRecord.illuminationTraversal.length
-      ? routeRecord.illuminationTraversal
-      : Array.isArray(routeRecord && routeRecord.illumination_traversal) && routeRecord.illumination_traversal.length
-        ? routeRecord.illumination_traversal
-        : null;
-    const resolvedDetectionTraversal = Array.isArray(routeRecord && routeRecord.detectionTraversal) && routeRecord.detectionTraversal.length
-      ? routeRecord.detectionTraversal
-      : Array.isArray(routeRecord && routeRecord.detection_traversal) && routeRecord.detection_traversal.length
-        ? routeRecord.detection_traversal
-        : null;
-
-    function assignRouteStepIds(entries, phase) {
-      let stepIndex = 0;
-      (Array.isArray(entries) ? entries : []).forEach((entry) => {
-        if (entry.kind === 'branch-block') return;
-        entry.routeStepId = `${phase}-step-${stepIndex}`;
-        stepIndex += 1;
-      });
-    }
+    const resolvedIlluminationTraversal = routeSteps.filter((step) => step && step.phase === 'illumination');
+    const resolvedDetectionTraversal = routeSteps.filter((step) => step && step.phase === 'detection');
 
     const result = {
-      illumination: resolvedIlluminationTraversal
-        ? buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination')
-        : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence)) || (routeRecord && routeRecord.illumination_sequence), 'illumination', 'illumination'),
-      detection: resolvedDetectionTraversal
-        ? buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection')
-        : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence)) || (routeRecord && routeRecord.detection_sequence), 'detection', 'detection'),
+      illumination: buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination'),
+      detection: buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection'),
     };
-    assignRouteStepIds(result.illumination, 'illumination');
-    assignRouteStepIds(result.detection, 'detection');
     return result;
   }
 
@@ -998,23 +932,26 @@
 
   function deriveRouteTopology(instrument, route) {
     const routeRecord = routeRecordForInstrument(instrument, route);
-    const sourceIds = Array.isArray(routeRecord && routeRecord.explicitSourceIds) && routeRecord.explicitSourceIds.length
-      ? routeRecord.explicitSourceIds.slice()
-      : (Array.isArray(routeRecord && (routeRecord.illumination_traversal || routeRecord.illumination_sequence))
-        ? (routeRecord.illumination_traversal || routeRecord.illumination_sequence)
-        : [])
-        .filter((step) => cleanString(step && (step.kind || (step.source_id ? 'source' : ''))).toLowerCase() === 'source' || Boolean(step && step.source_id))
-        .map((step) => step && (step.id || step.source_id))
-        .filter(Boolean);
+    const routeSteps = Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
+      ? routeRecord.record.route_steps
+      : Array.isArray(routeRecord && routeRecord.route_steps)
+        ? routeRecord.route_steps
+        : [];
+    if (!routeSteps.length) {
+      throw new Error('[VM] deriveRouteTopology: active route has no parser route_steps.');
+    }
+    const sourceIds = routeSteps
+      .filter((step) => step && step.kind === 'source')
+      .map((step) => step.source_id || step.component_id)
+      .filter(Boolean);
     const usage = (routeRecord && routeRecord.routeHardwareUsage)
       || (Array.isArray(instrument && instrument.routeHardwareUsage) ? instrument.routeHardwareUsage : [])
         .find((entry) => cleanString(entry && entry.route_id).toLowerCase() === cleanString(routeRecord && routeRecord.id).toLowerCase())
       || null;
-    const endpointIds = Array.isArray(routeRecord && routeRecord.explicitEndpointIds) && routeRecord.explicitEndpointIds.length
-      ? routeRecord.explicitEndpointIds.slice()
-      : usage && Array.isArray(usage.endpoint_inventory_ids)
-      ? usage.endpoint_inventory_ids.map((value) => cleanString(value).split(':').pop()).filter(Boolean)
-      : endpointIdsFromSequence((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence)) || (routeRecord && routeRecord.detection_sequence));
+    const endpointIds = routeSteps
+      .filter((step) => step && step.kind === 'detector')
+      .map((step) => step.endpoint_id || step.detector_id || step.component_id)
+      .filter(Boolean);
     return {
       route: cleanString(routeRecord && routeRecord.id).toLowerCase() || cleanString(route).toLowerCase() || null,
       routeRecord,
@@ -2123,6 +2060,9 @@
 
   function collectRuntimeSelection() {
     const topology = state.routeTopology || deriveRouteTopology(state.activeInstrument, state.activeRoute);
+    if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(topology.routeRecord.record.route_steps)) {
+      throw new Error('[VM] collectRuntimeSelection: route topology is missing parser route_steps.');
+    }
     const selection = {
       sources: [],
       excitation: [],
@@ -2250,6 +2190,10 @@
   function buildSelectedConfiguration(selection, simulation) {
     if (!selection || !state.activeInstrument) return null;
     const inst = state.activeInstrument;
+    const routeRecord = state.routeTopology && state.routeTopology.routeRecord && state.routeTopology.routeRecord.record
+      ? state.routeTopology.routeRecord.record
+      : null;
+    const routeSteps = Array.isArray(routeRecord && routeRecord.route_steps) ? routeRecord.route_steps : [];
     const config = {
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
       route: state.activeRoute || null,
@@ -2284,6 +2228,7 @@
       })),
       detectors: (selection.detectors || []).map((detector) => ({
         display_label: cleanString(detector.display_label || detector.name || detector.label || ''),
+        id: cleanString(detector.id || detector.terminal_id || '') || null,
         detector_class: cleanString(detector.detector_class),
         collection_min_nm: numberOrNull(detector.collection_min_nm),
         collection_max_nm: numberOrNull(detector.collection_max_nm),
@@ -2292,58 +2237,53 @@
         product_code: cleanString(detector.product_code),
       })),
       selectionMap: selection.selectionMap || {},
+      route_steps: routeSteps.map((step) => ({
+        step_id: step.step_id,
+        order: step.order,
+        phase: step.phase,
+        kind: step.kind,
+        component_id: step.component_id || null,
+        source_id: step.source_id || null,
+        detector_id: step.detector_id || null,
+        endpoint_id: step.endpoint_id || null,
+        position_id: step.position_id || null,
+        position_key: step.position_key || null,
+        position_label: step.position_label || null,
+        component_type: step.component_type || null,
+        stage_role: step.stage_role || null,
+        spectral_ops: step.spectral_ops || null,
+        routing: step.routing || null,
+        metadata: step.metadata || {},
+        unsupported_reason: step.unsupported_reason || null,
+      })),
     };
     return config;
   }
 
   function buildTraversalOrderedComponents(topology, selection, phase) {
-    if (!topology || !topology.traversal) return [];
-    const entries = phase === 'illumination' ? topology.traversal.illumination : topology.traversal.detection;
-    if (!Array.isArray(entries) || !entries.length) return [];
+    const routeSteps = topology && topology.routeRecord && topology.routeRecord.record && Array.isArray(topology.routeRecord.record.route_steps)
+      ? topology.routeRecord.record.route_steps
+      : [];
+    if (!routeSteps.length) return [];
+    const entries = routeSteps.filter((step) => step && step.phase === phase);
+    if (!entries.length) return [];
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
-    const consumed = { excitation: 0, dichroic: 0, emission: 0 };
-    const mechanismResolved = new Map();
-    const cubeSelections = (Array.isArray(selection.debugSelections) ? selection.debugSelections : [])
-      .filter((entry) => entry && entry.stage === 'cube');
-    let cubeIndex = 0;
-    const phaseStages = phase === 'illumination'
-      ? new Set(['excitation', 'dichroic'])
-      : new Set(['dichroic', 'emission']);
     const result = [];
-    function pushPhaseComponents(components) {
-      components.filter((comp) => phaseStages.has(comp.stage)).forEach((comp) => result.push({ component: comp.component, mode }));
-    }
+    const componentById = new Map();
+    (Array.isArray(selection.debugSelections) ? selection.debugSelections : []).forEach((entry) => {
+      const comp = entry && entry.component;
+      const id = cleanString(comp && comp.id).toLowerCase();
+      if (id && !componentById.has(id)) componentById.set(id, comp);
+    });
     entries.forEach((entry) => {
-      if (!entry || entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
-      if (entry.stageKey === 'splitters') return;
-      const mechId = entry.mechanism ? cleanString(entry.mechanism.id).toLowerCase() : '';
-      if (entry.kind === 'linked' && mechId) {
-        const stored = mechanismResolved.get(mechId);
-        if (stored) pushPhaseComponents(stored);
+      if (!entry || entry.kind === 'source' || entry.kind === 'detector' || entry.kind === 'sample' || entry.kind === 'routing_component') return;
+      const componentId = cleanString(entry.component_id).toLowerCase();
+      if (!componentId) return;
+      if (componentById.has(componentId)) {
+        result.push({ component: componentById.get(componentId), mode, routeStepId: entry.step_id });
         return;
       }
-      const key = entry.stageKey;
-      if (key === 'cube') {
-        const cubeValue = cubeIndex < cubeSelections.length ? cubeSelections[cubeIndex++].component : null;
-        const expanded = cubeValue ? expandCubeSelection(cubeValue, (entry.mechanism && entry.mechanism.name) || '') : [];
-        const allSubs = [];
-        expanded.forEach((sub) => {
-          if (consumed[sub.stage] !== undefined) consumed[sub.stage] += 1;
-          allSubs.push({ component: sub.component, stage: sub.stage });
-        });
-        if (mechId) mechanismResolved.set(mechId, allSubs);
-        pushPhaseComponents(allSubs);
-        return;
-      }
-      const arr = selection[key];
-      if (!Array.isArray(arr)) return;
-      const idx = consumed[key] || 0;
-      if (idx >= arr.length) return;
-      consumed[key] = idx + 1;
-      const component = arr[idx];
-      if (!component) return;
-      if (mechId) mechanismResolved.set(mechId, [{ component, stage: key }]);
-      result.push({ component, mode });
+      throw new Error('[VM] buildTraversalOrderedComponents: no selected component for route step "' + componentId + '" (phase=' + phase + ', step_id=' + (entry.step_id || 'unknown') + ').');
     });
     return result;
   }

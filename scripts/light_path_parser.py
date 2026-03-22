@@ -1505,6 +1505,9 @@ def _spectral_ops_for_component(component: dict[str, Any]) -> dict[str, list[dic
 
     if ctype in DICHROIC_TYPES:
         dichroic_data = _extract_dichroic_spectral_data(component)
+        if not any(key in dichroic_data for key in ("transmission_bands", "reflection_bands", "bands", "cut_on_nm")):
+            op = {"op": "passthrough", "unsupported_reason": "dichroic requires transmission_bands, reflection_bands, bands, or cut_on_nm"}
+            return {"illumination": [op], "detection": [op]}
         return {
             "illumination": [{"op": "dichroic_reflect", **dichroic_data}],
             "detection": [{"op": "dichroic_transmit", **dichroic_data}],
@@ -1528,6 +1531,18 @@ def _cube_spectral_ops(component: dict[str, Any]) -> dict[str, list[dict[str, An
     exc = component.get("excitation_filter") or component.get("excitation") or component.get("ex")
     di = component.get("dichroic") or component.get("dichroic_filter") or component.get("di")
     em = component.get("emission_filter") or component.get("emission") or component.get("em")
+
+    linked_components = component.get("linked_components")
+    if not isinstance(linked_components, dict):
+        linked_components = {}
+    if isinstance(exc, dict):
+        linked_components.setdefault("excitation_filter", exc)
+    if isinstance(di, dict):
+        linked_components.setdefault("dichroic", di)
+    if isinstance(em, dict):
+        linked_components.setdefault("emission_filter", em)
+    if linked_components:
+        component["linked_components"] = linked_components
 
     illumination: list[dict[str, Any]] = []
     detection: list[dict[str, Any]] = []
@@ -2773,6 +2788,43 @@ def _build_route_steps(
 
     def _process_entries(entries: list[dict[str, Any]], phase: str) -> None:
         nonlocal order
+        def _routing_branch_sequence(sequence: Any) -> list[dict[str, Any]]:
+            normalized: list[dict[str, Any]] = []
+            for seq_step in sequence or []:
+                if not isinstance(seq_step, dict):
+                    continue
+                seq_kind = _clean_string(seq_step.get("kind")).lower()
+                seq_id = _clean_identifier(seq_step.get("id"))
+                if seq_kind == "source":
+                    normalized.append(
+                        {
+                            "kind": "source",
+                            "source_id": seq_id or None,
+                            "component_id": seq_id or None,
+                            "display_label": seq_step.get("display_label"),
+                        }
+                    )
+                    continue
+                if seq_kind == "endpoint":
+                    normalized.append(
+                        {
+                            "kind": "detector",
+                            "detector_id": seq_id or None,
+                            "endpoint_id": seq_id or None,
+                            "component_id": seq_id or None,
+                            "display_label": seq_step.get("display_label"),
+                        }
+                    )
+                    continue
+                normalized.append(
+                    {
+                        "kind": "optical_component",
+                        "component_id": seq_id or None,
+                        "display_label": seq_step.get("display_label"),
+                    }
+                )
+            return normalized
+
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
@@ -2792,6 +2844,7 @@ def _build_route_steps(
                                 "branch_id": br.get("branch_id"),
                                 "label": br.get("label"),
                                 "mode": br.get("mode"),
+                                "sequence": _routing_branch_sequence(br.get("sequence")),
                             }
                             for br in (entry.get("branches") or [])
                             if isinstance(br, dict)
@@ -2811,30 +2864,36 @@ def _build_route_steps(
             component_type = _clean_string(row.get("component_type") or row.get("type") or row.get("element_type") or "").lower()
             stage_role = _clean_string(row.get("stage_role") or row.get("element_type") or "").lower()
 
+            if entry_kind in {"source", "endpoint"}:
+                component_payload = row if isinstance(row, dict) else {}
+            else:
+                component_payload = _component_payload(row, default_name=row.get("name") or row.get("display_label") or entry.get("display_label") or "")
             step = {
                 "step_id": f"{phase}-step-{order}",
                 "order": order,
                 "phase": phase,
                 "kind": _step_kind(entry),
                 "component_id": entry.get("id"),
+                "source_id": entry.get("id") if entry_kind == "source" else None,
+                "detector_id": entry.get("id") if entry_kind == "endpoint" else None,
+                "endpoint_id": entry.get("id") if entry_kind == "endpoint" else None,
                 "hardware_inventory_id": inventory_id or None,
                 "component_type": component_type or stage_role or None,
                 "stage_role": stage_role or None,
                 "display_label": entry.get("display_label"),
+                "position_id": None,
                 "position_key": None,
                 "position_label": None,
-                "spectral_ops": None,
+                "spectral_ops": component_payload.get("spectral_ops"),
                 "routing": None,
                 "metadata": _component_metadata(inventory_item) if inventory_item else _component_metadata(row),
                 "unsupported_reason": None,
             }
-
             if entry_kind == "endpoint":
-                step["endpoint_id"] = entry.get("id")
                 endpoint_type = _normalize_endpoint_type(row.get("endpoint_type") or row.get("type") or row.get("kind"))
                 step["endpoint_type"] = endpoint_type
-            elif entry_kind == "source":
-                step["source_id"] = entry.get("id")
+            if component_payload.get("_unsupported_spectral_model"):
+                step["unsupported_reason"] = "unsupported_spectral_model"
 
             steps.append(step)
             order += 1
@@ -2847,6 +2906,14 @@ def _build_route_steps(
         "phase": "sample",
         "kind": "sample",
         "component_id": "sample_plane",
+        "source_id": None,
+        "detector_id": None,
+        "endpoint_id": None,
+        "position_id": None,
+        "position_key": None,
+        "position_label": None,
+        "component_type": "sample",
+        "stage_role": "sample",
         "spectral_ops": None,
         "routing": None,
         "metadata": {},
