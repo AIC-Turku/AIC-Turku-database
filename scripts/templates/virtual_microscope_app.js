@@ -147,48 +147,53 @@
     if (normalized === 'detectors') {
       return fallbackSpectra.branchEmission.some((value) => value > 1e-9) ? fallbackSpectra.branchEmission : fallbackSpectra.postEmission;
     }
-    if (normalized.startsWith('illumination')) return fallbackSpectra.excitationAtSample;
-    if (normalized.startsWith('detection')) {
-      return fallbackSpectra.branchEmission.some((value) => value > 1e-9) ? fallbackSpectra.branchEmission : fallbackSpectra.postEmission;
-    }
     return fallbackSpectra.empty;
   }
 
   function buildPipelineStages(topology) {
     const stages = [];
-    const sourceMechs = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : [];
-    if (sourceMechs.length) {
+    const routeRecord = topology && topology.routeRecord ? topology.routeRecord : null;
+    const routeSteps = authoritativeRouteSteps(routeRecord);
+    if (!routeSteps.length) return stages;
+
+    if (routeSteps.some((step) => step && step.kind === 'source')) {
       stages.push({ id: 'sources', key: 'pipe:sources:0', label: 'Sources', inspectorStage: 'sources', flowOrigin: 'sources' });
     }
-    const illumination = topology && topology.traversal && Array.isArray(topology.traversal.illumination) ? topology.traversal.illumination : [];
-    illumination.forEach((entry, index) => {
-      if (entry.kind === 'endpoint') return;
-      const stepId = entry.routeStepId || ('illumination-step-' + index);
+
+    let illumIndex = 0;
+    routeSteps.filter((step) => step && step.phase === 'illumination' && step.kind !== 'source').forEach((step) => {
+      const stepId = cleanString(step.step_id);
+      if (!stepId) return;
       stages.push({
         id: stepId,
-        key: 'pipe:illumination:' + index,
-        label: entry.title || 'Illumination',
+        key: 'pipe:illumination:' + illumIndex,
+        label: step.kind === 'routing_component' ? 'Routing' : (cleanString(step.display_label) || 'Illumination'),
         inspectorStage: stepId,
         flowOrigin: stepId,
       });
+      illumIndex++;
     });
+
     stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
-    const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
-    detection.forEach((entry, index) => {
-      if (entry.kind === 'endpoint') return;
-      const stepId = entry.routeStepId || ('detection-step-' + index);
+
+    let detectIndex = 0;
+    routeSteps.filter((step) => step && step.phase === 'detection' && step.kind !== 'detector').forEach((step) => {
+      const stepId = cleanString(step.step_id);
+      if (!stepId) return;
       stages.push({
         id: stepId,
-        key: 'pipe:detection:' + index,
-        label: entry.kind === 'branch-block' ? 'Routing' : (entry.title || 'Detection'),
+        key: 'pipe:detection:' + detectIndex,
+        label: step.kind === 'routing_component' ? 'Routing' : (cleanString(step.display_label) || 'Detection'),
         inspectorStage: stepId,
         flowOrigin: stepId,
       });
+      detectIndex++;
     });
-    const endpointMechs = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : [];
-    if (endpointMechs.length) {
+
+    if (routeSteps.some((step) => step && step.kind === 'detector')) {
       stages.push({ id: 'detectors', key: 'pipe:detectors:0', label: 'Detectors', inspectorStage: 'detectors', flowOrigin: 'detectors' });
     }
+
     return stages;
   }
 
@@ -460,8 +465,6 @@
       : VM.wavelengthGrid({ min_nm: 350, max_nm: determineChartMax(selection), step_nm: 2 });
 
     const sourceMixed = currentSourceSpectrum(grid);
-    const excitationFiltered = applyComponentsToSpectrum(sourceMixed, selection.excitation, grid, 'excitation');
-    const excitationAtSample = Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : excitationFiltered;
 
     const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
     const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
@@ -469,7 +472,6 @@
 
     const fallbackSpectra = {
       sourceMixed,
-      excitationAtSample,
       generatedEmission,
       postEmission,
       branchEmission,
@@ -494,54 +496,57 @@
     stepSpectra.set('sources', sourceMixed);
     stepSpectra.set('sample', generatedEmission);
 
-    const topology = state.routeTopology;
-    if (!topology || !topology.traversal) return stepSpectra;
+    const resolvedExecution = Array.isArray(selection && selection.resolvedExecution) ? selection.resolvedExecution : [];
+    if (!resolvedExecution.length) return stepSpectra;
 
-    function applyComponent(spectrum, component, mode) {
-      if (!component) return spectrum;
-      if (Array.isArray(component)) {
-        let values = spectrum.slice();
-        component.forEach((sub) => {
-          values = values.map((value, i) => value * ((VM.componentMask(sub.component, grid, { mode })[i]) || 0));
-        });
-        return values;
-      }
+    function componentForStep(step) {
+      return step._resolved_component || {
+        id: step.component_id,
+        display_label: step.display_label,
+        component_type: step.component_type,
+        type: step.component_type,
+        spectral_ops: step.spectral_ops,
+        position_key: step.position_key || step.selected_position_key,
+      };
+    }
+
+    function applyStepComponent(spectrum, step, mode) {
+      const component = componentForStep(step);
+      if (!component || !component.spectral_ops) return spectrum;
       return spectrum.map((value, i) => value * ((VM.componentMask(component, grid, { mode })[i]) || 0));
     }
 
     let runningIllum = sourceMixed.slice();
-    const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];
-    illuminationComponents.forEach((entry) => {
-      if (!entry || !entry.routeStepId) return;
-      const component = entry.component;
-      if (component) runningIllum = applyComponent(runningIllum, component, 'excitation');
-      stepSpectra.set(entry.routeStepId, runningIllum.slice());
-    });
+    resolvedExecution
+      .filter((step) => step && step.phase === 'illumination' && step.kind !== 'source')
+      .forEach((step) => {
+        const stepId = cleanString(step.step_id);
+        if (!stepId) return;
+        if (step.kind === 'optical_component') {
+          runningIllum = applyStepComponent(runningIllum, step, 'excitation');
+        }
+        stepSpectra.set(stepId, runningIllum.slice());
+      });
 
     let runningDetect = generatedEmission.slice();
-    const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];
-    detectionComponents.forEach((entry) => {
-      if (!entry || !entry.routeStepId) return;
-      const stageKey = cleanString(entry.stageKey).toLowerCase();
-      if (stageKey === 'splitters') return;
-      const component = entry.component;
-      if (component) runningDetect = applyComponent(runningDetect, component, 'emission');
-      stepSpectra.set(entry.routeStepId, runningDetect.slice());
-    });
-
-    const topologyRouteRecord = topology && topology.routeRecord ? topology.routeRecord : null;
-    const detectionRouteSteps = authoritativeRouteSteps(topologyRouteRecord).filter((step) => step && step.phase === 'detection');
-    const routedBranchSpectrum = sumSpectra(
-      Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
-      'preDetectorSpectrum',
-      grid
-    );
-    detectionRouteSteps.forEach((step) => {
-      if (!step || step.kind !== 'routing_component') return;
-      const stepId = cleanString(step.step_id);
-      if (!stepId) return;
-      stepSpectra.set(stepId, routedBranchSpectrum);
-    });
+    resolvedExecution
+      .filter((step) => step && step.phase === 'detection' && step.kind !== 'detector')
+      .forEach((step) => {
+        const stepId = cleanString(step.step_id);
+        if (!stepId) return;
+        if (step.kind === 'routing_component') {
+          const routedBranchSpectrum = sumSpectra(
+            Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
+            'preDetectorSpectrum',
+            grid
+          );
+          runningDetect = routedBranchSpectrum;
+          stepSpectra.set(stepId, runningDetect.slice());
+        } else if (step.kind === 'optical_component') {
+          runningDetect = applyStepComponent(runningDetect, step, 'emission');
+          stepSpectra.set(stepId, runningDetect.slice());
+        }
+      });
 
     const detectorSpectrum = sumSpectra(
       Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
@@ -926,8 +931,8 @@
 
   function authoritativeRouteSteps(routeRecord) {
     const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;
-    const selectedSteps = Array.isArray(selectedExecution && selectedExecution.steps) ? selectedExecution.steps : [];
-    if (selectedSteps.length) return selectedSteps;
+    const selectedRouteSteps = Array.isArray(selectedExecution && selectedExecution.selected_route_steps) ? selectedExecution.selected_route_steps : [];
+    if (selectedRouteSteps.length) return selectedRouteSteps;
     return Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
       ? routeRecord.record.route_steps
       : Array.isArray(routeRecord && routeRecord.route_steps)
@@ -2135,12 +2140,12 @@
 
   function expandCubeSelection(cubePosition, mechanismName) {
     // The parser is the single source of truth for cube expansion.
-    // This function extracts the already-expanded sub-components from the
-    // parser-provided linked_components, preserving spectral_ops.
+    // This function extracts the already-expanded sub-components using
+    // canonical parser field names (CUBE_LINK_KEYS), preserving spectral_ops.
     const expanded = [];
-    const excitation = cubePosition.excitation_filter || cubePosition.excitation || cubePosition.ex;
-    const dichroic = cubePosition.dichroic_filter || cubePosition.dichroic || cubePosition.di || cubePosition.dichroic;
-    const emission = cubePosition.emission_filter || cubePosition.emission || cubePosition.em;
+    const excitation = cubePosition.excitation_filter;
+    const dichroic = cubePosition.dichroic;
+    const emission = cubePosition.emission_filter;
     if (excitation) expanded.push({ stage: 'excitation', name: `${mechanismName} (Cube Ex)`, component: excitation });
     if (dichroic) expanded.push({ stage: 'dichroic', name: `${mechanismName} (Cube Di)`, component: dichroic });
     if (emission) expanded.push({ stage: 'emission', name: `${mechanismName} (Cube Em)`, component: emission });
@@ -2288,8 +2293,10 @@
       });
     });
 
-    selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination');
-    selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection');
+    const selectedRouteSteps = authoritativeRouteSteps(topology.routeRecord);
+    selection.resolvedExecution = resolveSelectedExecution(selectedRouteSteps, selection.selectedComponentByMechanism);
+    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination');
+    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection');
 
     return selection;
   }
@@ -2297,10 +2304,7 @@
   function buildSelectedConfiguration(selection, simulation) {
     if (!selection || !state.activeInstrument) return null;
     const inst = state.activeInstrument;
-    const routeRecord = state.routeTopology && state.routeTopology.routeRecord && state.routeTopology.routeRecord.record
-      ? state.routeTopology.routeRecord.record
-      : null;
-    const routeSteps = authoritativeRouteSteps(state.routeTopology && state.routeTopology.routeRecord ? state.routeTopology.routeRecord : null);
+    const resolvedSteps = Array.isArray(selection.resolvedExecution) ? selection.resolvedExecution : [];
     const config = {
       scope_id: cleanString(currentInstrumentId || (inst.metadata && inst.metadata.instrument_id) || ''),
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
@@ -2314,20 +2318,33 @@
         model: cleanString(source.model),
         product_code: cleanString(source.product_code),
       })),
-      stages: (selection.debugSelections || []).map((entry) => {
-        const comp = entry.component || {};
+      selected_route_steps: resolvedSteps.map((step) => {
+        const resolved = step._resolved_component || {};
         return {
-          stage: entry.stage,
-          name: entry.name || '',
-          component_type: cleanString(comp.component_type || comp.type || ''),
-          display_label: cleanString(comp.display_label || comp.label || comp.name || ''),
-          manufacturer: cleanString(comp.manufacturer),
-          model: cleanString(comp.model),
-          product_code: cleanString(comp.product_code),
-          position_key: cleanString(comp.position_key),
-          slot: comp.slot != null ? comp.slot : null,
-          _cube_incomplete: Boolean(comp._cube_incomplete),
-          _unsupported_spectral_model: comp._unsupported_spectral_model || false,
+          step_id: step.step_id || null,
+          order: step.order != null ? step.order : null,
+          phase: step.phase || null,
+          kind: step.kind || null,
+          selection_state: step.selection_state || null,
+          component_id: step.component_id || null,
+          source_id: step.source_id || null,
+          detector_id: step.detector_id || null,
+          endpoint_id: step.endpoint_id || null,
+          position_id: step.position_id || step.selected_position_id || null,
+          position_key: step.position_key || step.selected_position_key || null,
+          position_label: step.position_label || step.selected_position_label || null,
+          display_label: step.display_label || cleanString(resolved.display_label || resolved.label || resolved.name || ''),
+          component_type: step.component_type || null,
+          stage_role: step.stage_role || null,
+          spectral_ops: step.spectral_ops || null,
+          routing: step.routing || null,
+          metadata: step.metadata || {},
+          unsupported_reason: step.unsupported_reason || null,
+          manufacturer: cleanString(resolved.manufacturer || (step.metadata && step.metadata.manufacturer) || ''),
+          model: cleanString(resolved.model || (step.metadata && step.metadata.model) || ''),
+          product_code: cleanString(resolved.product_code || (step.metadata && step.metadata.product_code) || ''),
+          _cube_incomplete: Boolean(resolved._cube_incomplete || step._cube_incomplete),
+          _unsupported_spectral_model: Boolean(resolved._unsupported_spectral_model || step.unsupported_reason === 'unsupported_spectral_model'),
         };
       }),
       splitters: (selection.splitters || []).map((splitter) => ({
@@ -2346,25 +2363,6 @@
         product_code: cleanString(detector.product_code),
       })),
       selectionMap: selection.selectionMap || {},
-      route_steps: routeSteps.map((step) => ({
-        step_id: step.step_id,
-        order: step.order,
-        phase: step.phase,
-        kind: step.kind,
-        component_id: step.component_id || null,
-        source_id: step.source_id || null,
-        detector_id: step.detector_id || null,
-        endpoint_id: step.endpoint_id || null,
-        position_id: step.position_id || null,
-        position_key: step.position_key || null,
-        position_label: step.position_label || null,
-        component_type: step.component_type || null,
-        stage_role: step.stage_role || null,
-        spectral_ops: step.spectral_ops || null,
-        routing: step.routing || null,
-        metadata: step.metadata || {},
-        unsupported_reason: step.unsupported_reason || null,
-      })),
       acquisition_plan: state.lastAcquisitionPlan || {
         mode: 'simultaneous',
         requiresSequentialAcquisition: false,
@@ -2375,48 +2373,87 @@
     return config;
   }
 
-  function buildTraversalOrderedComponents(topology, selection, phase) {
-    const routeSteps = authoritativeRouteSteps(topology && topology.routeRecord ? topology.routeRecord : null);
-    if (!routeSteps.length) return [];
-    const entries = routeSteps.filter((step) => step && step.phase === phase);
-    if (!entries.length) return [];
-    const mode = phase === 'illumination' ? 'excitation' : 'emission';
-    const result = [];
-    const selectedByMechanism = (selection && selection.selectedComponentByMechanism && typeof selection.selectedComponentByMechanism === 'object')
-      ? selection.selectedComponentByMechanism
+  /**
+   * Resolve parser-provided selected_route_steps with user mechanism selections.
+   *
+   * For each "unresolved" step, matches the user's selected position_key from
+   * mechanismSelections against the step's available_positions (which carry
+   * parser-computed spectral_ops).  Resolved steps are returned as-is.
+   *
+   * @param {Array} selectedRouteSteps - Parser v2 selected_route_steps array.
+   * @param {Object} mechanismSelections - Map of mechanismId → selected component.
+   * @returns {Array} Steps with all resolvable entries filled in
+   *   (selection_state becomes 'user_resolved', spectral_ops populated).
+   */
+  function resolveSelectedExecution(selectedRouteSteps, mechanismSelections) {
+    if (!Array.isArray(selectedRouteSteps)) return [];
+    const byMechanism = (mechanismSelections && typeof mechanismSelections === 'object')
+      ? mechanismSelections
       : {};
-    const controls = phase === 'illumination'
-      ? ((topology && topology.traversal && Array.isArray(topology.traversal.illumination)) ? topology.traversal.illumination : [])
-      : ((topology && topology.traversal && Array.isArray(topology.traversal.detection)) ? topology.traversal.detection : []);
-    const mechanismByStepId = new Map();
-    controls.forEach((entry) => {
-      if (!(entry && entry.routeStepId && entry.mechanism)) return;
-      mechanismByStepId.set(entry.routeStepId, {
-        mechanism: entry.mechanism,
-        stageKey: entry.stageKey,
-      });
+    return selectedRouteSteps.map((step) => {
+      if (!(step && typeof step === 'object')) return step;
+      if (step.selection_state !== 'unresolved') return step;
+      const mechanismId = cleanString(step.mechanism_id).toLowerCase();
+      const selectedComponent = mechanismId ? byMechanism[mechanismId] : null;
+      if (!selectedComponent) return step;
+      const positionKey = cleanString(selectedComponent.position_key);
+      const candidates = Array.isArray(step.available_positions) ? step.available_positions : [];
+      const matched = positionKey
+        ? candidates.find((cand) => cleanString(cand.position_key) === positionKey)
+        : null;
+      const resolvedOps = (matched && matched.spectral_ops) || selectedComponent.spectral_ops || null;
+      const resolvedLabel = cleanString(matched && matched.label) || cleanString(selectedComponent.display_label || selectedComponent.label || selectedComponent.name) || positionKey;
+      const resolvedComponentType = cleanString((matched && matched.component_type) || selectedComponent.component_type || selectedComponent.type).toLowerCase() || null;
+      return {
+        ...step,
+        selection_state: 'user_resolved',
+        selected_position_id: positionKey || String(selectedComponent.slot || ''),
+        selected_position_key: positionKey,
+        selected_position_label: resolvedLabel,
+        position_id: positionKey || String(selectedComponent.slot || ''),
+        position_key: positionKey,
+        position_label: resolvedLabel,
+        component_type: resolvedComponentType,
+        spectral_ops: resolvedOps,
+        _resolved_component: selectedComponent,
+      };
     });
-    entries.forEach((entry) => {
-      if (!entry || entry.kind === 'source' || entry.kind === 'detector' || entry.kind === 'sample' || entry.kind === 'routing_component') return;
-      const stepId = cleanString(entry.step_id);
-      if (!stepId) {
-        throw new Error('[VM] buildTraversalOrderedComponents: parser route step is missing step_id (phase=' + phase + ').');
-      }
-      const mechanismRef = mechanismByStepId.get(stepId);
-      const mechanism = mechanismRef && mechanismRef.mechanism;
-      const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
-      const selectedComponent = mechanismId ? selectedByMechanism[mechanismId] : null;
-      if (!selectedComponent) {
-        throw new Error('[VM] buildTraversalOrderedComponents: no selected component for parser route step "' + stepId + '" (phase=' + phase + ').');
-      }
-      result.push({
-        component: selectedComponent,
-        mode,
-        routeStepId: stepId,
-        stageKey: cleanString(mechanismRef && mechanismRef.stageKey).toLowerCase() || cleanString(entry.stage_role).toLowerCase() || null,
+  }
+
+  /**
+   * Extract ordered component arrays from resolved execution steps for simulation.
+   *
+   * Filters to optical_component steps in the requested phase and builds
+   * component entries compatible with simulateInstrument's illumination/detection
+   * ordered component interface.
+   *
+   * @param {Array} resolvedSteps - Resolved execution steps from resolveSelectedExecution.
+   * @param {'illumination'|'detection'} phase - Optical phase to extract.
+   * @returns {Array<{component: Object, mode: string, routeStepId: string, stageKey: string|null}>}
+   */
+  function orderedComponentsFromExecution(resolvedSteps, phase) {
+    if (!Array.isArray(resolvedSteps)) return [];
+    const mode = phase === 'illumination' ? 'excitation' : 'emission';
+    return resolvedSteps
+      .filter((step) => step && step.phase === phase && step.kind === 'optical_component')
+      .map((step) => {
+        const component = step._resolved_component || {
+          id: step.component_id,
+          display_label: step.display_label,
+          component_type: step.component_type,
+          type: step.component_type,
+          spectral_ops: step.spectral_ops,
+          position_key: step.position_key || step.selected_position_key,
+          _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
+          _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
+        };
+        return {
+          component,
+          mode,
+          routeStepId: step.step_id || step.route_step_id,
+          stageKey: cleanString(step.stage_role).toLowerCase() || null,
+        };
       });
-    });
-    return result;
   }
 
 

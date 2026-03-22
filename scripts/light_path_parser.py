@@ -2962,6 +2962,7 @@ def _build_route_steps(
                         "position_label": position_label,
                         "spectral_ops": component_payload.get("spectral_ops"),
                         "unsupported_reason": "unsupported_spectral_model" if component_payload.get("_unsupported_spectral_model") else None,
+                        "_authored_position_id": seq_step.get("_authored_position_id"),
                     }
                 )
             return normalized
@@ -3026,6 +3027,7 @@ def _build_route_steps(
                 "routing": None,
                 "metadata": _component_metadata(inventory_item) if inventory_item else _component_metadata(row),
                 "unsupported_reason": None,
+                "_authored_position_id": entry.get("_authored_position_id"),
             }
             if entry_kind == "endpoint":
                 endpoint_type = _normalize_endpoint_type(row.get("endpoint_type") or row.get("type") or row.get("kind"))
@@ -3062,6 +3064,218 @@ def _build_route_steps(
     _process_entries(detection_traversal, "detection")
 
     return steps, warnings
+
+
+def _build_selected_route_steps(
+    route_steps: list[dict[str, Any]],
+    route_id: str,
+    element_lookup: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build the runtime-selected execution model from static route topology.
+
+    Unlike ``route_steps`` (which always defaults unspecified positions to the
+    first available slot), the selected route steps explicitly flag unresolved
+    mechanism positions so the runtime can present a real selection prompt.
+
+    Each step carries ``selection_state``:
+
+    * ``"resolved"`` – authored YAML specified a position, fully resolved with
+      identity and ``spectral_ops``.
+    * ``"fixed"`` – element has zero or one positions, or is a non-positioned
+      step (source/detector/sample/routing).  Always carries ``spectral_ops``
+      when the optics are computable.
+    * ``"unresolved"`` – multi-position mechanism with no authored selection.
+      ``spectral_ops`` is *null*; ``available_positions`` lists the candidates.
+    """
+    selected: list[dict[str, Any]] = []
+
+    def _available_positions_for_element(element: dict[str, Any]) -> list[dict[str, Any]]:
+        """Build enriched available position entries for a multi-position element.
+
+        Each entry carries the full parser-resolved component data so the
+        browser runtime can resolve user selections without re-computing optics.
+
+        Returns a list of dicts, each containing at minimum:
+        ``position_key``, ``slot``, ``label``, ``component_type``, ``spectral_ops``.
+        """
+        candidates = _iter_element_positions(element)
+        out: list[dict[str, Any]] = []
+        for key_text, slot, position in candidates:
+            component = _component_payload(position)
+            pos_label = (
+                _clean_string(component.get("display_label"))
+                or _clean_string(component.get("label"))
+                or _clean_string(component.get("name"))
+                or key_text
+            )
+            entry: dict[str, Any] = {
+                "position_key": key_text,
+                "slot": slot,
+                "label": pos_label,
+                "component_type": _clean_string(component.get("component_type")).lower() or None,
+                "spectral_ops": component.get("spectral_ops"),
+            }
+            # Preserve identity fields for methods reporting & UI display.
+            for identity_field in ("manufacturer", "model", "product_code", "name"):
+                val = _clean_string(component.get(identity_field))
+                if val:
+                    entry[identity_field] = val
+            # Carry unsupported flags so the runtime can surface them.
+            if component.get("_unsupported_spectral_model"):
+                entry["_unsupported_spectral_model"] = True
+            if component.get("_cube_incomplete"):
+                entry["_cube_incomplete"] = True
+            # For filter_cube positions, include sub-component links.
+            comp_type = _clean_string(component.get("component_type")).lower()
+            if comp_type == "filter_cube":
+                for cube_key in CUBE_LINK_KEYS:
+                    sub = component.get(cube_key)
+                    if isinstance(sub, dict):
+                        entry[cube_key] = sub
+            out.append(entry)
+        return out
+
+    def _derive_selection_state(step: dict[str, Any]) -> tuple[str, list[dict[str, Any]] | None]:
+        """Return ``(selection_state, available_positions | None)``.
+
+        *step* is a route_step dict produced by ``_build_route_steps``.  The
+        function inspects ``kind``, ``_authored_position_id``, and the element's
+        position count to decide whether the step is ``"fixed"``,
+        ``"resolved"``, or ``"unresolved"``.
+        """
+        kind = step.get("kind", "")
+        if kind in ("source", "detector", "sample", "routing_component"):
+            return "fixed", None
+        authored = step.get("_authored_position_id")
+        if authored:
+            return "resolved", None
+        element_id = _clean_identifier(step.get("component_id"))
+        element_row = element_lookup.get(element_id, {})
+        positions = _iter_element_positions(element_row)
+        if len(positions) <= 1:
+            return "fixed", None
+        return "unresolved", _available_positions_for_element(element_row)
+
+    def _process_branch_sequence(seq: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        resolved_seq: list[dict[str, Any]] = []
+        for branch_step in seq:
+            if not isinstance(branch_step, dict):
+                continue
+            kind = branch_step.get("kind", "")
+            selection_state: str
+            available: list[dict[str, Any]] | None = None
+            if kind in ("source", "detector"):
+                selection_state = "fixed"
+            else:
+                authored = branch_step.get("_authored_position_id")
+                if authored:
+                    selection_state = "resolved"
+                else:
+                    elem_id = _clean_identifier(branch_step.get("component_id"))
+                    elem_row = element_lookup.get(elem_id, {})
+                    positions = _iter_element_positions(elem_row)
+                    if len(positions) <= 1:
+                        selection_state = "fixed"
+                    else:
+                        selection_state = "unresolved"
+                        available = _available_positions_for_element(elem_row)
+            entry: dict[str, Any] = {
+                "kind": branch_step.get("kind"),
+                "component_id": branch_step.get("component_id"),
+                "display_label": branch_step.get("display_label"),
+                "selection_state": selection_state,
+            }
+            if selection_state == "unresolved":
+                entry["selected_position_id"] = None
+                entry["selected_position_key"] = None
+                entry["selected_position_label"] = None
+                entry["position_id"] = None
+                entry["position_key"] = None
+                entry["position_label"] = None
+                entry["spectral_ops"] = None
+                entry["available_positions"] = available
+            else:
+                entry["selected_position_id"] = branch_step.get("position_id")
+                entry["selected_position_key"] = branch_step.get("position_key")
+                entry["selected_position_label"] = branch_step.get("position_label")
+                entry["position_id"] = branch_step.get("position_id")
+                entry["position_key"] = branch_step.get("position_key")
+                entry["position_label"] = branch_step.get("position_label")
+                entry["spectral_ops"] = branch_step.get("spectral_ops")
+            if kind == "source":
+                entry["source_id"] = branch_step.get("source_id")
+            elif kind == "detector":
+                entry["detector_id"] = branch_step.get("detector_id")
+                entry["endpoint_id"] = branch_step.get("endpoint_id")
+            entry["unsupported_reason"] = branch_step.get("unsupported_reason")
+            resolved_seq.append(entry)
+        return resolved_seq
+
+    for step in route_steps:
+        if not isinstance(step, dict):
+            continue
+        selection_state, available = _derive_selection_state(step)
+        entry: dict[str, Any] = {
+            "route_step_id": step.get("step_id"),
+            "step_id": step.get("step_id"),
+            "route_id": route_id,
+            "order": step.get("order"),
+            "phase": step.get("phase"),
+            "kind": step.get("kind"),
+            "mechanism_id": step.get("component_id") if step.get("kind") == "optical_component" else None,
+            "element_id": step.get("component_id") if step.get("kind") == "optical_component" else None,
+            "component_id": step.get("component_id"),
+            "source_id": step.get("source_id"),
+            "detector_id": step.get("detector_id"),
+            "endpoint_id": step.get("endpoint_id"),
+            "hardware_inventory_id": step.get("hardware_inventory_id"),
+            "selection_state": selection_state,
+            "display_label": step.get("display_label"),
+            "component_type": step.get("component_type") if selection_state != "unresolved" else None,
+            "stage_role": step.get("stage_role"),
+            "metadata": step.get("metadata", {}),
+            "unsupported_reason": step.get("unsupported_reason"),
+        }
+        if selection_state == "unresolved":
+            entry["selected_position_id"] = None
+            entry["selected_position_key"] = None
+            entry["selected_position_label"] = None
+            entry["position_id"] = None
+            entry["position_key"] = None
+            entry["position_label"] = None
+            entry["spectral_ops"] = None
+            entry["available_positions"] = available
+        else:
+            entry["selected_position_id"] = step.get("position_id")
+            entry["selected_position_key"] = step.get("position_key")
+            entry["selected_position_label"] = step.get("position_label")
+            entry["position_id"] = step.get("position_id")
+            entry["position_key"] = step.get("position_key")
+            entry["position_label"] = step.get("position_label")
+            entry["spectral_ops"] = step.get("spectral_ops")
+
+        if step.get("kind") == "routing_component" and isinstance(step.get("routing"), dict):
+            entry["routing"] = {
+                "selection_mode": step["routing"].get("selection_mode"),
+                "branches": [
+                    {
+                        "branch_id": br.get("branch_id"),
+                        "label": br.get("label"),
+                        "mode": br.get("mode"),
+                        "sequence": _process_branch_sequence(br.get("sequence") or []),
+                    }
+                    for br in step["routing"].get("branches", [])
+                    if isinstance(br, dict)
+                ],
+            }
+        elif step.get("routing") is not None:
+            entry["routing"] = step.get("routing")
+        else:
+            entry["routing"] = None
+
+        selected.append(entry)
+
+    return selected
 
 
 def _build_route_sequences_and_graph(
@@ -3295,6 +3509,8 @@ def _build_route_sequences_and_graph(
                     resolved["_unsupported_spectral_model"] = True
                 if _clean_string(component_payload.get("component_type")):
                     resolved["component_type"] = _clean_string(component_payload.get("component_type")).lower()
+            if ref_key == "optical_path_element_id":
+                resolved["_authored_position_id"] = _clean_string(step.get("position_id")) or None
             node_id = add_graph_node(resolved, phase=phase, column=current_column, lane=lane)
             if current_prev:
                 add_graph_edge(current_prev, node_id)
@@ -3347,6 +3563,8 @@ def _build_route_sequences_and_graph(
         endpoint_lookup=endpoint_lookup,
         inventory_lookup=inventory_lookup,
     )
+    _route_id = route.get("id") or ""
+    selected_route_steps = _build_selected_route_steps(route_steps, _route_id, element_lookup)
     resolved_route = {
         **route,
         "route_identity": {
@@ -3360,15 +3578,11 @@ def _build_route_sequences_and_graph(
         "illumination_traversal": illumination_sequence,
         "detection_traversal": detection_sequence,
         "route_steps": route_steps,
-        "selected_execution": deepcopy(
-            {
-                "contract_version": "selected_execution.v1",
-                "steps": route_steps,
-                "warnings": list(route_warnings),
-                "illumination_traversal": illumination_sequence,
-                "detection_traversal": detection_sequence,
-            }
-        ),
+        "selected_execution": {
+            "contract_version": "selected_execution.v2",
+            "selected_route_steps": deepcopy(selected_route_steps),
+            "warnings": list(route_warnings),
+        },
         "route_warnings": route_warnings,
         "branch_blocks": list(usage["branch_blocks"]),
         "endpoints": list(usage["endpoint_inventory_ids"]),

@@ -528,13 +528,13 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                   scope_id: 'scope-runtime-vm',
                   route: 'confocal_spinning_disk',
                   sources: [{ display_label: 'Laser 561', wavelength_nm: 561 }],
-                  stages: [
-                    { display_label: 'Filter wheel', position_key: 'Pos_1', _cube_incomplete: true, _unsupported_spectral_model: false },
-                    { display_label: 'Analyzer', position_key: 'Pos_2', _unsupported_spectral_model: true },
+                  selected_route_steps: [
+                    { kind: 'optical_component', display_label: 'Filter wheel', position_key: 'Pos_1', _cube_incomplete: true, _unsupported_spectral_model: false },
+                    { kind: 'optical_component', display_label: 'Analyzer', position_key: 'Pos_2', _unsupported_spectral_model: true },
+                    { kind: 'routing_component', display_label: 'Trinocular', unsupported_reason: 'unsupported_spectral_model' },
                   ],
                   splitters: [{ display_label: 'Dual-view splitter', selected_branch_ids: ['green', 'red'] }],
                   detectors: [{ display_label: 'sCMOS camera', collection_min_nm: 600, collection_max_nm: 700 }],
-                  route_steps: [{ unsupported_reason: 'unsupported_spectral_model' }],
                   acquisition_plan: {
                     requiresSequentialAcquisition: true,
                     steps: [
@@ -562,7 +562,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("sCMOS camera (600–700 nm)", result["output"])
         self.assertIn("Flattened/incomplete optics were present", result["output"])
         self.assertIn("Unsupported spectral model flags were present", result["output"])
-        self.assertIn("Sequential acquisition was required and executed", result["output"])
+        self.assertIn("Sequential acquisition is planned", result["output"])
 
 
 if __name__ == "__main__":

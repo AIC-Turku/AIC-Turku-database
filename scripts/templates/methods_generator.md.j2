@@ -472,9 +472,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             const wavelength = source?.wavelength_nm;
             return label ? `${label}${Number.isFinite(Number(wavelength)) ? ` (${Number(wavelength)} nm)` : ""}` : "";
         }));
-        const stageSelections = uniqueTexts((Array.isArray(runtimeConfig.stages) ? runtimeConfig.stages : []).map((stage) => {
-            const label = cleanText(stage?.display_label || stage?.name || stage?.stage);
-            const position = cleanText(stage?.position_key) || (stage?.slot != null ? String(stage.slot) : "");
+        const routeSteps = Array.isArray(runtimeConfig.selected_route_steps) ? runtimeConfig.selected_route_steps : [];
+        const opticalSteps = routeSteps.filter((step) => step?.kind === "optical_component");
+        const stageSelections = uniqueTexts(opticalSteps.map((step) => {
+            const label = cleanText(step?.display_label || step?.position_label || step?.component_type);
+            const position = cleanText(step?.position_key) || cleanText(step?.position_id) || "";
             return label ? `${label}${position ? ` @ ${position}` : ""}` : "";
         }));
         const splitterSelections = uniqueTexts((Array.isArray(runtimeConfig.splitters) ? runtimeConfig.splitters : []).map((splitter) => {
@@ -487,10 +489,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             const hasWindow = Number.isFinite(Number(detector?.collection_min_nm)) && Number.isFinite(Number(detector?.collection_max_nm));
             return label ? `${label}${hasWindow ? ` (${Number(detector.collection_min_nm)}–${Number(detector.collection_max_nm)} nm)` : ""}` : "";
         }));
-        const stageRows = Array.isArray(runtimeConfig.stages) ? runtimeConfig.stages : [];
-        const flattenedIncomplete = stageRows.filter((stage) => stage?._cube_incomplete).map((stage) => cleanText(stage?.display_label || stage?.name || stage?.stage)).filter(Boolean);
-        const unsupportedComponents = stageRows.filter((stage) => stage?._unsupported_spectral_model).map((stage) => cleanText(stage?.display_label || stage?.name || stage?.stage)).filter(Boolean);
-        const unsupportedRouteSteps = (Array.isArray(runtimeConfig.route_steps) ? runtimeConfig.route_steps : [])
+        const flattenedIncomplete = routeSteps.filter((step) => step?._cube_incomplete).map((step) => cleanText(step?.display_label || step?.position_label || step?.component_type)).filter(Boolean);
+        const unsupportedComponents = routeSteps.filter((step) => step?._unsupported_spectral_model).map((step) => cleanText(step?.display_label || step?.position_label || step?.component_type)).filter(Boolean);
+        const unsupportedReasons = routeSteps
             .map((step) => cleanText(step?.unsupported_reason || ""))
             .filter(Boolean);
 
@@ -508,13 +509,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                     return `step ${stepNo} (${fluor}, route ${stepRoute})`;
                 })
                 .filter(Boolean);
-            acquisitionSentence = `Sequential acquisition was required and executed as ${humanJoin(stepSummary)}.`;
+            acquisitionSentence = `Sequential acquisition is planned as ${humanJoin(stepSummary)}.`;
         }
 
         const notes = [];
         if (flattenedIncomplete.length) notes.push(`Flattened/incomplete optics were present for ${humanJoin(flattenedIncomplete)}.`);
-        if (unsupportedComponents.length || unsupportedRouteSteps.length) {
-            notes.push(`Unsupported spectral model flags were present (${humanJoin([...unsupportedComponents, ...unsupportedRouteSteps])}).`);
+        if (unsupportedComponents.length || unsupportedReasons.length) {
+            notes.push(`Unsupported spectral model flags were present (${humanJoin([...unsupportedComponents, ...unsupportedReasons])}).`);
         }
 
         return dedupeSentences([

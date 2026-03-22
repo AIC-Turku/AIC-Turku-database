@@ -351,6 +351,79 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertIn("llm_context.authoritative_route_contract", plan_source)
         self.assertNotIn("hardware.light_path", plan_source)
 
+    # ── Semantic authority: JS simulation sources from selected execution, not DOM ──
+
+    def test_simulation_uses_resolved_execution_not_dom_order(self) -> None:
+        """JS simulation must derive component order from resolvedExecution, not DOM/mechanism state."""
+        app_source = APP_PATH.read_text(encoding="utf-8")
+
+        # Must have resolvedExecution and orderedComponentsFromExecution
+        self.assertIn("selection.resolvedExecution = resolveSelectedExecution(", app_source)
+        self.assertIn("orderedComponentsFromExecution(selection.resolvedExecution,", app_source)
+
+        # Must NOT have deleted buildTraversalOrderedComponents reconstruction
+        self.assertNotIn("buildTraversalOrderedComponents", app_source)
+        # Must NOT reconstruct component order from DOM
+        self.assertNotIn("buildOrderedComponentsFromDom", app_source)
+        self.assertNotIn("selection.excitation.map(", app_source)
+
+    def test_build_selected_configuration_sources_from_resolved_execution(self) -> None:
+        """buildSelectedConfiguration must read from resolvedExecution, not debugSelections."""
+        app_source = APP_PATH.read_text(encoding="utf-8")
+
+        # Find the buildSelectedConfiguration function body
+        fn_start = app_source.index("function buildSelectedConfiguration(")
+        fn_body = app_source[fn_start:fn_start + 3000]
+
+        # Must read from resolvedExecution
+        self.assertIn("selection.resolvedExecution", fn_body)
+        self.assertIn("selected_route_steps:", fn_body)
+
+        # Must NOT read from debugSelections
+        self.assertNotIn("debugSelections", fn_body)
+        # Must NOT output a 'stages' field sourced from debug data
+        self.assertNotIn("stages:", fn_body)
+
+    def test_methods_generator_reads_selected_route_steps_not_stages(self) -> None:
+        """Methods generator must read selected_route_steps, not deprecated stages or static route_steps."""
+        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+        self.assertIn("selected_route_steps", methods_source)
+        # Must not read deprecated 'stages' field from runtime config
+        self.assertNotIn("runtimeConfig.stages", methods_source)
+        # Must not read static route_steps as optical truth
+        self.assertNotIn("runtimeConfig.route_steps", methods_source)
+
+    def test_acquisition_plan_wording_does_not_overstate_execution(self) -> None:
+        """Sequential acquisition must be described as planned, not as executed."""
+        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+        # Must not claim sequential acquisition "was executed"
+        self.assertNotIn("was required and executed", methods_source)
+        self.assertNotIn("was executed as", methods_source)
+        # Should use "planned" language
+        self.assertIn("is planned", methods_source)
+
+    def test_reporting_export_uses_selected_execution_contract(self) -> None:
+        """The exported configuration must carry selected_route_steps from the resolved execution."""
+        app_source = APP_PATH.read_text(encoding="utf-8")
+
+        # buildSelectedConfiguration must persist to localStorage
+        self.assertIn("persistSelectedConfiguration", app_source)
+        self.assertIn("aic.virtualMicroscope.selectedConfiguration", app_source)
+
+        # The persisted config must include selected_route_steps, not a bare route_steps key
+        fn_start = app_source.index("function buildSelectedConfiguration(")
+        fn_body = app_source[fn_start:fn_start + 3000]
+        self.assertIn("selected_route_steps:", fn_body)
+        # Must not have a standalone 'route_steps:' key (not preceded by 'selected_')
+        import re
+        bare_route_steps = re.findall(r'(?<!selected_)route_steps:', fn_body)
+        self.assertEqual(
+            bare_route_steps, [],
+            msg="buildSelectedConfiguration should only have selected_route_steps, not a separate route_steps key.",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
