@@ -498,6 +498,72 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("Pinhole sentence.", result["output"])
         self.assertIn("HyD sentence.", result["output"])
 
+    def test_methods_include_exact_runtime_selected_vm_configuration_when_available(self) -> None:
+        instrument = {
+            "id": "scope-runtime-vm",
+            "display_name": "Scope Runtime VM",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {"filters": [], "splitters": []},
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            globalThis.localStorage = {
+              getItem(key) {
+                if (key !== 'aic.virtualMicroscope.selectedConfiguration') return null;
+                return JSON.stringify({
+                  scope_id: 'scope-runtime-vm',
+                  route: 'confocal_spinning_disk',
+                  sources: [{ display_label: 'Laser 561', wavelength_nm: 561 }],
+                  stages: [
+                    { display_label: 'Filter wheel', position_key: 'Pos_1', _cube_incomplete: true, _unsupported_spectral_model: false },
+                    { display_label: 'Analyzer', position_key: 'Pos_2', _unsupported_spectral_model: true },
+                  ],
+                  splitters: [{ display_label: 'Dual-view splitter', selected_branch_ids: ['green', 'red'] }],
+                  detectors: [{ display_label: 'sCMOS camera', collection_min_nm: 600, collection_max_nm: 700 }],
+                  route_steps: [{ unsupported_reason: 'unsupported_spectral_model' }],
+                  acquisition_plan: {
+                    requiresSequentialAcquisition: true,
+                    steps: [
+                      { step: 1, fluorophoreName: 'DAPI', route: 'widefield' },
+                      { step: 2, fluorophoreName: 'mCherry', route: 'confocal' },
+                    ],
+                  },
+                });
+              }
+            };
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-runtime-vm';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+
+        self.assertIn("Exact virtual microscope runtime-selected configuration used route confocal_spinning_disk.", result["output"])
+        self.assertIn("Selected wheel/turret positions:", result["output"])
+        self.assertIn("Filter wheel @ Pos_1", result["output"])
+        self.assertIn("Selected splitter branches:", result["output"])
+        self.assertIn("Dual-view splitter [green, red]", result["output"])
+        self.assertIn("Selected endpoints/detectors:", result["output"])
+        self.assertIn("sCMOS camera (600–700 nm)", result["output"])
+        self.assertIn("Flattened/incomplete optics were present", result["output"])
+        self.assertIn("Unsupported spectral model flags were present", result["output"])
+        self.assertIn("Sequential acquisition was required and executed", result["output"])
+
 
 if __name__ == "__main__":
     unittest.main()

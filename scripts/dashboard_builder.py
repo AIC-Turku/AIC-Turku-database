@@ -227,6 +227,7 @@ def build_plan_experiments_page_config(facility: dict[str, Any]) -> dict[str, An
 def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str, Any]:
     dto = copy.deepcopy(inst.get("dto") or {})
     dto["methods_generation"] = copy.deepcopy(inst.get("methods_generation") or {})
+    dto["runtime_selected_configuration"] = copy.deepcopy(inst.get("runtime_selected_configuration"))
     return dto
 
 

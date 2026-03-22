@@ -557,6 +557,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                 },
             },
             "methods_generation": {"is_blocked": True, "blockers": [{"path": "software[0].version"}]},
+            "runtime_selected_configuration": {
+                "route": "epi",
+                "sources": [{"display_label": "Laser 488"}],
+            },
         }
 
         exported = build_methods_generator_instrument_export(instrument)
@@ -564,6 +568,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(exported["id"], "scope-1")
         self.assertIn("methods_generation", exported)
         self.assertTrue(exported["methods_generation"]["is_blocked"])
+        self.assertEqual(exported["runtime_selected_configuration"]["route"], "epi")
         self.assertEqual(
             exported["hardware"]["optical_path"]["authoritative_route_contract"]["available_routes"][0]["id"],
             "epi",

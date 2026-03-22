@@ -27,6 +27,7 @@
     lastSelection: null,
     lastSimulation: null,
     lastSelectedConfiguration: null,
+    lastAcquisitionPlan: null,
     activeInspectorStage: null,
     routeTopology: null,
   };
@@ -191,6 +192,20 @@
     if (!DOM.autoConfigStatus) return;
     DOM.autoConfigStatus.textContent = cleanString(message);
     DOM.autoConfigStatus.dataset.tone = tone;
+  }
+
+  function persistSelectedConfiguration() {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const payload = state.lastSelectedConfiguration || null;
+      if (!payload) {
+        window.localStorage.removeItem('aic.virtualMicroscope.selectedConfiguration');
+        return;
+      }
+      window.localStorage.setItem('aic.virtualMicroscope.selectedConfiguration', JSON.stringify(payload));
+    } catch (error) {
+      // Ignore storage failures (private mode/quota/security policy).
+    }
   }
 
   function renderSequentialAcquisitionPlan(steps, activeStepIndex = null) {
@@ -644,10 +659,31 @@
         setStatusMessage('Sequential acquisition required, but no executable plan steps were produced.', 'warning');
         return;
       }
+      state.lastAcquisitionPlan = {
+        mode: 'sequential',
+        requiresSequentialAcquisition: true,
+        reason: result.reason || null,
+        steps: steps.map((entry, index) => ({
+          step: entry.step || (index + 1),
+          fluorophoreName: cleanString(entry.fluorophoreName),
+          route: cleanString(entry.route) || null,
+          detectors: Array.isArray(entry.detectors) ? entry.detectors.map((detector) => ({
+            mechanismId: cleanString(detector.mechanismId),
+            slot: detector.slot,
+            collection_min_nm: numberOrNull(detector.collection_min_nm),
+            collection_max_nm: numberOrNull(detector.collection_max_nm),
+          })) : [],
+          splitters: Array.isArray(entry.splitters) ? entry.splitters.map((splitter) => ({
+            mechanismId: cleanString(splitter.mechanismId),
+            selected_branch_ids: Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids.slice() : [],
+          })) : [],
+        })),
+      };
       applyOptimizedConfiguration(steps[0].configuration);
       renderSequentialAcquisitionPlan(steps, 0);
       return;
     }
+    state.lastAcquisitionPlan = null;
     applyOptimizedConfiguration(result);
     setStatusMessage(
       result.strictLeakageSatisfied === false ? 'Optimized the best near-zero-leakage configuration.' : 'Configuration Optimized!',
@@ -2259,6 +2295,7 @@
       : null;
     const routeSteps = authoritativeRouteSteps(state.routeTopology && state.routeTopology.routeRecord ? state.routeTopology.routeRecord : null);
     const config = {
+      scope_id: cleanString(currentInstrumentId || (inst.metadata && inst.metadata.instrument_id) || ''),
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
       route: state.activeRoute || null,
       timestamp: new Date().toISOString(),
@@ -2282,6 +2319,7 @@
           product_code: cleanString(comp.product_code),
           position_key: cleanString(comp.position_key),
           slot: comp.slot != null ? comp.slot : null,
+          _cube_incomplete: Boolean(comp._cube_incomplete),
           _unsupported_spectral_model: comp._unsupported_spectral_model || false,
         };
       }),
@@ -2320,6 +2358,12 @@
         metadata: step.metadata || {},
         unsupported_reason: step.unsupported_reason || null,
       })),
+      acquisition_plan: state.lastAcquisitionPlan || {
+        mode: 'simultaneous',
+        requiresSequentialAcquisition: false,
+        reason: null,
+        steps: [],
+      },
     };
     return config;
   }
@@ -3011,6 +3055,7 @@
       state.lastSelection = repairedSelection;
       state.lastSimulation = simulation;
       state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
+      persistSelectedConfiguration();
       renderReferenceSpectra(repairedSelection, simulation);
       renderPropagationPanel(repairedSelection, simulation);
       updatePipelineBeamColors(repairedSelection, simulation);
@@ -3022,6 +3067,7 @@
     state.lastSelection = selection;
     state.lastSimulation = simulation;
     state.lastSelectedConfiguration = buildSelectedConfiguration(selection, simulation);
+    persistSelectedConfiguration();
     renderReferenceSpectra(selection, simulation);
     renderPropagationPanel(selection, simulation);
     updatePipelineBeamColors(selection, simulation);

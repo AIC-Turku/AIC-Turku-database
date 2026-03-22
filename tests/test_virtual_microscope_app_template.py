@@ -273,6 +273,9 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("function buildSelectedConfiguration(", source)
         self.assertIn("selectionMap", source)
+        self.assertIn("scope_id", source)
+        self.assertIn("acquisition_plan", source)
+        self.assertIn("_cube_incomplete", source)
 
     def test_selected_configuration_is_computed_on_every_refresh(self) -> None:
         """buildSelectedConfiguration must be called in refreshOutputs so the config is always current."""
@@ -287,6 +290,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("window.getVirtualMicroscopeConfiguration", source)
         self.assertIn("state.lastSelectedConfiguration", source)
+        self.assertIn("persistSelectedConfiguration", source)
+        self.assertIn("aic.virtualMicroscope.selectedConfiguration", source)
 
     # ── Stage adapter comment accuracy ──
 
