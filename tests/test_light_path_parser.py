@@ -2139,3 +2139,124 @@ class LightPathParserTests(unittest.TestCase):
         meta = source_steps[0]["metadata"]
         self.assertEqual(meta["manufacturer"], "Coherent")
         self.assertEqual(meta["model"], "OBIS 488")
+
+    def test_route_steps_preserve_selected_position_metadata_and_spectral_ops(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {
+                            "id": "exc_filter",
+                            "stage_role": "excitation",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                "Pos_1": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40, "label": "BP 470/40"},
+                                "Pos_2": {"component_type": "bandpass", "center_nm": 640, "width_nm": 30, "label": "BP 640/30"},
+                            },
+                        }
+                    ],
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [
+                            {"source_id": "src_488"},
+                            {"optical_path_element_id": "exc_filter", "position_id": "Pos_2"},
+                        ],
+                        "detection_sequence": [{"endpoint_id": "cam"}],
+                    }
+                ],
+            }
+        )
+
+        route = payload["light_paths"][0]
+        exc_step = next(step for step in route["route_steps"] if step.get("component_id") == "exc_filter")
+        self.assertEqual(exc_step["position_id"], "Pos_2")
+        self.assertEqual(exc_step["position_key"], "Pos_2")
+        self.assertEqual(exc_step["position_label"], "BP 640/30")
+        self.assertEqual(exc_step["component_type"], "bandpass")
+        self.assertEqual(exc_step["spectral_ops"]["illumination"][0]["center_nm"], 640.0)
+
+        selected_execution = route["selected_execution"]
+        self.assertEqual(selected_execution["contract_version"], "selected_execution.v1")
+        selected_step = next(step for step in selected_execution["steps"] if step.get("component_id") == "exc_filter")
+        self.assertEqual(selected_step["position_id"], "Pos_2")
+        self.assertEqual(selected_step["spectral_ops"]["illumination"][0]["center_nm"], 640.0)
+
+    def test_route_step_splitter_branches_include_resolved_branch_optics(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {"id": "camera_splitter", "name": "Camera Splitter", "stage_role": "splitter", "element_type": "splitter"},
+                        {
+                            "id": "green_filter",
+                            "stage_role": "emission",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                1: {"component_type": "bandpass", "center_nm": 525, "width_nm": 50, "label": "525/50"},
+                            },
+                        },
+                        {
+                            "id": "red_filter",
+                            "stage_role": "emission",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                1: {"component_type": "bandpass", "center_nm": 700, "width_nm": 75, "label": "700/75"},
+                            },
+                        },
+                    ],
+                    "endpoints": [
+                        {"id": "detector_1", "endpoint_type": "detector"},
+                        {"id": "detector_2", "endpoint_type": "detector"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "camera_splitter"},
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {
+                                            "branch_id": "green",
+                                            "mode": "reflected",
+                                            "sequence": [
+                                                {"optical_path_element_id": "green_filter", "position_id": "1"},
+                                                {"endpoint_id": "detector_1"},
+                                            ],
+                                        },
+                                        {
+                                            "branch_id": "red",
+                                            "mode": "transmitted",
+                                            "sequence": [
+                                                {"optical_path_element_id": "red_filter", "position_id": "1"},
+                                                {"endpoint_id": "detector_2"},
+                                            ],
+                                        },
+                                    ],
+                                }
+                            },
+                        ],
+                    }
+                ],
+            }
+        )
+
+        route_steps = payload["light_paths"][0]["route_steps"]
+        routing_step = next(step for step in route_steps if step.get("kind") == "routing_component")
+        branches = routing_step["routing"]["branches"]
+        self.assertEqual(len(branches), 2)
+
+        green_component = next(item for item in branches[0]["sequence"] if item.get("kind") == "optical_component")
+        self.assertEqual(green_component["component_id"], "green_filter")
+        self.assertEqual(green_component["position_id"], "1")
+        self.assertEqual(green_component["position_key"], "1")
+        self.assertEqual(green_component["position_label"], "525/50")
+        self.assertEqual(green_component["spectral_ops"]["detection"][0]["center_nm"], 525.0)

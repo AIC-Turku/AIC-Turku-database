@@ -762,6 +762,46 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(dto["runtime_splitters"][0]["branches"][1]["component"]["center_nm"], 525)
         self.assertEqual(dto["splitters"][0]["display_label"], "Di: 560 LP | P1: 700/75 | P2: 525/50")
 
+    def test_optical_path_dto_keeps_selected_execution_contract_on_routes(self) -> None:
+        lightpath_dto = {
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "name": "Epi",
+                    "route_steps": [{"step_id": "illumination-step-0", "phase": "illumination", "kind": "source", "component_id": "src"}],
+                    "selected_execution": {
+                        "contract_version": "selected_execution.v1",
+                        "steps": [
+                            {
+                                "step_id": "illumination-step-1",
+                                "phase": "illumination",
+                                "kind": "optical_component",
+                                "component_id": "wheel",
+                                "position_id": "2",
+                                "position_key": "Pos_2",
+                            }
+                        ],
+                    },
+                }
+            ],
+            "hardware_inventory": [],
+            "hardware_index_map": {},
+            "route_hardware_usage": [],
+            "normalized_endpoints": [],
+            "optical_path_elements": [],
+            "splitters": [],
+            "stages": {},
+            "terminals": [],
+        }
+
+        dto = build_optical_path_dto(lightpath_dto)
+        self.assertEqual(dto["light_paths"][0]["selected_execution"]["contract_version"], "selected_execution.v1")
+        self.assertEqual(dto["light_paths"][0]["selected_execution"]["steps"][0]["position_key"], "Pos_2")
+        self.assertEqual(
+            dto["authoritative_route_contract"]["routes"][0]["selected_execution"]["steps"][0]["position_id"],
+            "2",
+        )
+
     def test_build_instrument_mega_dto_uses_canonical_identity_as_source_of_truth(self) -> None:
         inst = {
             "id": "scope-9",
