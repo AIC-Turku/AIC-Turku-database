@@ -1632,6 +1632,13 @@
   function dichroicTransmitMask(grid, component) {
     const cutOn = numberOrNull(component && component.cut_on_nm);
     if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
+    const cutoffs = component && component.cutoffs_nm;
+    if (Array.isArray(cutoffs) && cutoffs.length) {
+      const reflectionBands = cutoffs.map((val) => ({ center_nm: val, width_nm: 15 }));
+      const reflectionMasks = normalizedBandMasks(grid, reflectionBands);
+      const reflected = sumMasks(reflectionMasks, grid);
+      return reflected.map((value) => 1 - clamp(value, 0, 1));
+    }
 
     const transmissionMasks = normalizedBandMasks(grid, component && component.transmission_bands);
     if (transmissionMasks.length) return sumMasks(transmissionMasks, grid);
@@ -1795,7 +1802,7 @@
         if (nmLead) { pushCandidate(nmLead[1]); return; }
         const slashLead = token.match(/(\d+(?:\.\d+)?)\s*\//);
         if (slashLead) { pushCandidate(slashLead[1]); return; }
-        const bare = token.match(/^(\d+(?:\.\d+)?)(?:\x08|$)/);
+        const bare = token.match(/^(\d+(?:\.\d+)?)(?:\b|$)/);
         if (bare) pushCandidate(bare[1]);
       });
     }
@@ -1983,7 +1990,7 @@
     return { min: center - halfWidth, max: center + halfWidth };
   }
 
-  function detectorCollectionMask(detector, grid) {
+function detectorCollectionMask(detector, grid) {
     const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && (detector.kind || detector.endpoint_type));
     if (className === 'camera' || className === 'camera_port') return grid.map(() => 1);
     if (detector && detector.collection_enabled === false) return grid.map(() => 1);
@@ -1992,10 +1999,18 @@
     if (className === 'eyepiece') {
       return bandMask(grid, bounds.min, bounds.max, 12);
     }
+    
+    // FIX: Add synthetic spectral_ops to prevent crash
+    const center = (bounds.min + bounds.max) / 2;
+    const width = Math.max(4, bounds.max - bounds.min);
     return componentMask({
       component_type: 'bandpass',
-      center_nm: (bounds.min + bounds.max) / 2,
-      width_nm: Math.max(4, bounds.max - bounds.min),
+      center_nm: center,
+      width_nm: width,
+      spectral_ops: {
+        illumination: [{ op: 'bandpass', center_nm: center, width_nm: width }],
+        detection: [{ op: 'bandpass', center_nm: center, width_nm: width }]
+      }
     }, grid, { mode: 'emission' });
   }
 
@@ -2326,6 +2341,9 @@
       positionValuesForRoute(mechanism, route).forEach((detector) => {
         const bounds = detectorCollectionBounds(detector);
         const coverage = emTargets.reduce((sum, emMax) => sum + ((bounds.min === null || bounds.max === null || (emMax >= bounds.min && emMax <= bounds.max)) ? 1 : 0), 0);
+        
+        const center = (bounds.min + bounds.max) / 2;
+        const width = Math.max(4, bounds.max - bounds.min);
         const response = (bounds.min === null || bounds.max === null)
           ? 1
           : pointMaskScore({ component_type: 'bandpass', center_nm: (bounds.min + bounds.max) / 2, width_nm: Math.max(4, bounds.max - bounds.min) }, emTargets, 'emission');
