@@ -2102,6 +2102,9 @@
   }
 
   function expandCubeSelection(cubePosition, mechanismName) {
+    // The parser is the single source of truth for cube expansion.
+    // This function extracts the already-expanded sub-components from the
+    // parser-provided linked_components, preserving spectral_ops.
     const expanded = [];
     const excitation = cubePosition.excitation_filter || cubePosition.excitation || cubePosition.ex;
     const dichroic = cubePosition.dichroic_filter || cubePosition.dichroic || cubePosition.di || cubePosition.dichroic;
@@ -2111,6 +2114,9 @@
     if (emission) expanded.push({ stage: 'emission', name: `${mechanismName} (Cube Em)`, component: emission });
     if (cubePosition._cube_incomplete) {
       console.warn(`[VM] Cube "${cubePosition.label || cubePosition.display_label || mechanismName}" has no explicit excitation filter data; simulation uses estimated dichroic + emission only.`);
+    }
+    if (!expanded.length && cubePosition.spectral_ops) {
+      console.warn(`[VM] Cube "${cubePosition.label || cubePosition.display_label || mechanismName}" has spectral_ops but no linked sub-components — using parser spectral_ops directly.`);
     }
     return expanded;
   }
