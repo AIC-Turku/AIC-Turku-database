@@ -947,9 +947,13 @@
     const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings, { allowApproximation }));
     const stageSource = canonicalStagePayload(payload, topologyBindings, { allowApproximation });
     const splitterSource = canonicalSplitterPayload(payload, topologyBindings, { allowApproximation });
-    // These are compatibility/UI adapters only. They are reconstructed from the
-    // authoritative canonical payload so older stage/group-based consumers can
-    // keep working, but routeTopology + hardwareInventory remain the topology truth.
+    // Stage-group adapters serve two roles:
+    // 1. The optimizer (optimizeLightPath) enumerates candidate stage positions
+    //    via normalizedInstrument.cube / .excitation / .dichroic / .emission.
+    // 2. The app UI uses lightSources/detectors as fallbacks when route topology
+    //    does not provide explicit source/endpoint mechanisms.
+    // routeTopology + hardwareInventory remain the authoritative topology truth
+    // for pipe rendering, simulation order, and inspector panels.
     return {
       lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings, { allowApproximation })),
       stages: {
@@ -957,6 +961,7 @@
         excitation: normalizeMechanismList(stageSource && stageSource.excitation),
         dichroic: normalizeMechanismList(stageSource && stageSource.dichroic),
         emission: normalizeMechanismList(stageSource && stageSource.emission),
+        analyzer: normalizeMechanismList(stageSource && stageSource.analyzer),
       },
       splitters: normalizeSplitters(splitterSource, { allowApproximation }),
       terminals: normalizedTerminals,
@@ -1006,6 +1011,7 @@
       excitation: derivedStageAdapters.stages.excitation,
       dichroic: derivedStageAdapters.stages.dichroic,
       emission: derivedStageAdapters.stages.emission,
+      analyzer: derivedStageAdapters.stages.analyzer,
       splitters: derivedStageAdapters.splitters,
       detectors: derivedStageAdapters.detectors,
       terminals: derivedStageAdapters.terminals,
@@ -1801,7 +1807,11 @@
 
   function componentMask(component, grid, context) {
     const type = cleanString(component && (component.component_type || component.type)).toLowerCase();
-    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density' || type === 'analyzer') {
+    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density') {
+      return grid.map(() => 1);
+    }
+    if (type === 'analyzer') {
+      console.warn('[VM] componentMask: analyzer "' + cleanString(component.name || component.label) + '" treated as spectrally transparent — polarization effects are not modeled. Results may not reflect polarization-dependent behavior.');
       return grid.map(() => 1);
     }
     if (type === 'block' || type === 'blocker') {
@@ -1853,8 +1863,31 @@
           : mode === 'excitation';
       return wantsReflection ? transmit.map((value) => 1 - value) : transmit;
     }
-    // filter_cube: treat as bandpass (single band) or multiband_bandpass (multiple bands).
+    // filter_cube: use linked sub-components when available for true composite
+    // modeling; fall back to emission-only bands with a warning.
     if (type === 'filter_cube') {
+      const exc = component.excitation_filter || component.excitation;
+      const di = component.dichroic || component.dichroic_filter;
+      const em = component.emission_filter || component.emission;
+      if (exc || di || em) {
+        const mode = cleanString(context && context.mode).toLowerCase();
+        let mask = grid.map(() => 1);
+        if (mode === 'excitation') {
+          if (exc) mask = mask.map((v, i) => v * componentMask(exc, grid, { mode: 'excitation' })[i]);
+          if (di) mask = mask.map((v, i) => v * componentMask(di, grid, { mode: 'excitation' })[i]);
+        } else {
+          if (di) mask = mask.map((v, i) => v * componentMask(di, grid, { mode: 'emission' })[i]);
+          if (em) mask = mask.map((v, i) => v * componentMask(em, grid, { mode: 'emission' })[i]);
+        }
+        if (component._cube_incomplete) {
+          console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" missing excitation filter data; using estimated dichroic + emission only.');
+        }
+        return mask;
+      }
+      // Flat fallback: bands only — used when a filter_cube reaches componentMask
+      // without having been expanded into sub-components by expandCubeSelection
+      // (e.g. legacy payload or direct componentMask call).
+      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no linked sub-components; treating as emission-only filter. Add excitation_filter/dichroic/emission_filter properties for full cube modeling.');
       const bands = normalizedBandMasks(grid, component.bands);
       if (bands.length) return sumMasks(bands, grid);
       const center = numberOrNull(component.center_nm);
@@ -1863,6 +1896,10 @@
       const cutOn = numberOrNull(component.cut_on_nm);
       if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
       return grid.map(() => 1);
+    }
+    // Unknown component type — warn so authors know the type is not modeled.
+    if (type) {
+      console.warn('[VM] componentMask: unsupported component type "' + type + '" treated as spectrally transparent.');
     }
     return grid.map(() => 1);
   }
@@ -2695,7 +2732,32 @@
       });
     });
 
-    return bestStrict || bestFallback;
+    const sharedResult = bestStrict || bestFallback;
+    if (sharedResult || fluorList.length <= 1) return sharedResult;
+
+    // No common configuration satisfies all fluorophores simultaneously.
+    // Try optimizing per-fluorophore to detect sequential-acquisition scenarios.
+    const perFluorophoreConfigs = [];
+    fluorList.forEach((fluor) => {
+      const single = optimizeLightPath([fluor], instrument, options);
+      if (single) {
+        perFluorophoreConfigs.push({
+          fluorophoreKey: fluor.key,
+          fluorophoreName: fluor.name || fluor.key,
+          configuration: single,
+        });
+      }
+    });
+
+    if (perFluorophoreConfigs.length >= 2) {
+      return {
+        requiresSequentialAcquisition: true,
+        reason: 'No single optical path simultaneously satisfies all loaded fluorophores. Each fluorophore can be imaged individually with different settings.',
+        perFluorophoreConfigs,
+      };
+    }
+
+    return null;
   }
 
   function selectionIsValid(validPaths, selectionMap) {
@@ -2834,6 +2896,12 @@
     const excitationComponents = Array.isArray(selected.excitation) ? selected.excitation : [];
     const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];
     const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
+    const illuminationOrdered = Array.isArray(selected.illuminationComponents) && selected.illuminationComponents.length ? selected.illuminationComponents : null;
+    const detectionOrdered = Array.isArray(selected.detectionComponents) && selected.detectionComponents.length ? selected.detectionComponents : null;
+    const illuminationOrderedRaw = illuminationOrdered ? illuminationOrdered.map((entry) => entry.component) : null;
+    const illuminationOrderedCtx = illuminationOrdered ? ((component, index) => ({ mode: illuminationOrdered[index].mode })) : null;
+    const detectionOrderedRaw = detectionOrdered ? detectionOrdered.map((e) => e.component) : null;
+    const detectionOrderedCtx = detectionOrdered ? ((component, index) => ({ mode: detectionOrdered[index].mode })) : null;
 
     [
       ['Excitation component', excitationComponents],
@@ -2874,12 +2942,14 @@
 
     const propagatedExcitationSources = excitationSources.map((source) => {
       const weightedSpectrum = scaleArray(sourceSpectrum(source, grid), sourceWeight(source));
-      const atSample = applyComponentSeries(
-        applyComponentSeries(weightedSpectrum, excitationComponents, grid, { mode: 'excitation' }),
-        dichroicComponents,
-        grid,
-        { mode: 'excitation' }
-      );
+      const atSample = illuminationOrderedRaw
+        ? applyComponentSeries(weightedSpectrum, illuminationOrderedRaw, grid, illuminationOrderedCtx)
+        : applyComponentSeries(
+          applyComponentSeries(weightedSpectrum, excitationComponents, grid, { mode: 'excitation' }),
+          dichroicComponents,
+          grid,
+          { mode: 'excitation' }
+        );
       return { source, weightedSpectrum, atSample };
     });
     const combinedExcitation = propagatedExcitationSources.reduce(
@@ -2892,11 +2962,12 @@
       0
     );
     const excitationLeakageBySource = propagatedExcitationSources.map((entry) => {
-      const afterDichroic = applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' });
-      const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
+      const afterDetectionOptics = detectionOrderedRaw
+        ? applyComponentSeries(entry.atSample, detectionOrderedRaw, grid, detectionOrderedCtx)
+        : applyComponentSeries(applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' }), emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
-        : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
+        ? propagateSplitters(afterDetectionOptics, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
+        : [{ id: 'main', label: 'Main Path', spectrum: afterDetectionOptics, targetIds: [] }];
       return {
         sourceLabel: entry.source.display_label || entry.source.name || 'Source',
         sourceCenters: sourceCenters(entry.source),
@@ -2925,8 +2996,9 @@
       const brightnessFactor = fluorophoreBrightnessFactor(fluorophore);
       const generatedEmission = scaleArray(emissionCurve, excitationStrength * sted.suppressionFactor * brightnessFactor);
       const theoreticalBestEmission = scaleArray(emissionCurve, brightnessFactor);
-      const afterDichroic = applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' });
-      const afterEmissionFilters = applyComponentSeries(afterDichroic, emissionComponents, grid, { mode: 'emission' });
+      const afterEmissionFilters = detectionOrderedRaw
+        ? applyComponentSeries(generatedEmission, detectionOrderedRaw, grid, detectionOrderedCtx)
+        : applyComponentSeries(applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' }), emissionComponents, grid, { mode: 'emission' });
       const branches = selectedSplitters.length
         ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];

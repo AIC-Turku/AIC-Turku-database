@@ -26,6 +26,7 @@
     splitterBranchSelections: new Map(),
     lastSelection: null,
     lastSimulation: null,
+    lastSelectedConfiguration: null,
     activeInspectorStage: null,
     routeTopology: null,
   };
@@ -133,67 +134,54 @@
     return `${leftStage}->${rightStage}`;
   }
 
-  function pipelineFlowOrigin(stageId) {
-    const normalized = cleanString(stageId).toLowerCase();
-    if (normalized === 'illumination-controls') return 'illumination-controls';
-    if (normalized === 'detection-controls') return 'detection-controls';
-    return normalized;
-  }
-
-  function pipelineSpectrumForOrigin(origin, spectra) {
-    const normalized = pipelineFlowOrigin(origin);
-    if (normalized === 'sources') return spectra.sourceMixed;
-    if (normalized === 'illumination-controls' || normalized === 'illumination' || normalized === 'excitation' || normalized === 'dichroic') return spectra.excitationAtSample;
-    if (normalized === 'sample') return spectra.generatedEmission;
-    if (normalized === 'detection-controls' || normalized === 'detection' || normalized === 'emission' || normalized === 'splitters' || normalized === 'detectors') {
-      return spectra.branchEmission.some((value) => value > 1e-9) ? spectra.branchEmission : spectra.postEmission;
+  function pipelineSpectrumForStep(stepId, stepSpectra, fallbackSpectra) {
+    if (stepSpectra.has(stepId)) return stepSpectra.get(stepId);
+    const normalized = cleanString(stepId).toLowerCase();
+    if (normalized === 'sources') return fallbackSpectra.sourceMixed;
+    if (normalized === 'sample') return fallbackSpectra.generatedEmission;
+    if (normalized === 'detectors') {
+      return fallbackSpectra.branchEmission.some((value) => value > 1e-9) ? fallbackSpectra.branchEmission : fallbackSpectra.postEmission;
     }
-    return spectra.empty;
+    if (normalized.startsWith('illumination')) return fallbackSpectra.excitationAtSample;
+    if (normalized.startsWith('detection')) {
+      return fallbackSpectra.branchEmission.some((value) => value > 1e-9) ? fallbackSpectra.branchEmission : fallbackSpectra.postEmission;
+    }
+    return fallbackSpectra.empty;
   }
 
-  function buildPipelineStages(derivedControlGroups, topology) {
-    const groupIds = new Set(
-      (Array.isArray(derivedControlGroups) ? derivedControlGroups : [])
-        .map((g) => cleanString(g && g.id)).filter(Boolean)
-    );
+  function buildPipelineStages(topology) {
     const stages = [];
-    if (groupIds.has('sources')) {
+    const sourceMechs = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : [];
+    if (sourceMechs.length) {
       stages.push({ id: 'sources', key: 'pipe:sources:0', label: 'Sources', inspectorStage: 'sources', flowOrigin: 'sources' });
     }
     const illumination = topology && topology.traversal && Array.isArray(topology.traversal.illumination) ? topology.traversal.illumination : [];
-    if (illumination.length && groupIds.has('illumination-controls')) {
-      illumination.forEach((entry, index) => {
-        stages.push({
-          id: entry.key || ('pipe:illumination:' + index),
-          key: 'pipe:illumination:' + index,
-          label: entry.title || 'Illumination',
-          inspectorStage: 'illumination-controls',
-          flowOrigin: 'illumination-controls',
-        });
+    illumination.forEach((entry, index) => {
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      const stepId = entry.routeStepId || ('illumination-step-' + index);
+      stages.push({
+        id: stepId,
+        key: 'pipe:illumination:' + index,
+        label: entry.title || 'Illumination',
+        inspectorStage: stepId,
+        flowOrigin: stepId,
       });
-    } else if (groupIds.has('illumination-controls')) {
-      stages.push({ id: 'illumination-controls', key: 'pipe:illumination-controls:0', label: 'Illumination Controls', inspectorStage: 'illumination-controls', flowOrigin: 'illumination-controls' });
-    }
-    if (groupIds.has('sample')) {
-      stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
-    }
-    const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
-    let detectionEntryIndex = 0;
-    detection.forEach((entry, index) => {
-      if (entry.kind === 'branch-block') return;
-      const entryId = `detection-entry-${detectionEntryIndex}`;
-      if (groupIds.has(entryId)) {
-        stages.push({
-          id: entry.key || ('pipe:detection:' + index),
-          key: 'pipe:detection:' + index,
-          label: entry.title || 'Detection',
-          inspectorStage: entryId,
-          flowOrigin: 'detection-controls',
-        });
-      }
-      detectionEntryIndex += 1;
     });
-    if (groupIds.has('detectors')) {
+    stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
+    const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
+    detection.forEach((entry, index) => {
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      const stepId = entry.routeStepId || ('detection-step-' + index);
+      stages.push({
+        id: stepId,
+        key: 'pipe:detection:' + index,
+        label: entry.title || 'Detection',
+        inspectorStage: stepId,
+        flowOrigin: stepId,
+      });
+    });
+    const endpointMechs = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : [];
+    if (endpointMechs.length) {
       stages.push({ id: 'detectors', key: 'pipe:detectors:0', label: 'Detectors', inspectorStage: 'detectors', flowOrigin: 'detectors' });
     }
     return stages;
@@ -270,6 +258,9 @@
     if (component.detector_class) rows.push(`Detector: ${component.detector_class}`);
     if (numberOrNull(component.collection_min_nm) !== null && numberOrNull(component.collection_max_nm) !== null) {
       rows.push(`Collection: ${Math.round(numberOrNull(component.collection_min_nm))}-${Math.round(numberOrNull(component.collection_max_nm))} nm`);
+    }
+    if (component._unsupported_spectral_model) {
+      rows.push('⚠ Spectral model not available — treated as transparent in simulation.');
     }
     return rows;
   }
@@ -410,7 +401,8 @@
     const generatedEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'generatedSpectrum', grid);
     const postEmission = sumSpectra(Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [], 'postOpticsSpectrum', grid);
     const branchEmission = sumSpectra(Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [], 'preDetectorSpectrum', grid);
-    const spectra = {
+
+    const fallbackSpectra = {
       sourceMixed,
       excitationAtSample,
       generatedEmission,
@@ -419,14 +411,87 @@
       empty: grid.map(() => 0),
     };
 
+    const stepSpectra = buildStepSpectra(selection, grid, sourceMixed, generatedEmission);
+
     const pipes = Array.from(DOM.graph.querySelectorAll('.optical-pipe'));
 
     pipes.forEach((pipe) => {
       const key = pipe.dataset.pipeKey;
       if (!key) return;
       const fromNode = key.split('->')[0];
-      setPipeSpectrumColor(key, pipelineSpectrumForOrigin(fromNode, spectra), grid);
+      setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);
     });
+  }
+
+  function buildStepSpectra(selection, grid, sourceMixed, generatedEmission) {
+    const stepSpectra = new Map();
+    stepSpectra.set('sources', sourceMixed);
+    stepSpectra.set('sample', generatedEmission);
+
+    const topology = state.routeTopology;
+    if (!topology || !topology.traversal) return stepSpectra;
+
+    const consumed = { excitation: 0, dichroic: 0, emission: 0 };
+    const mechanismComponent = new Map();
+    const cubeSelections = (Array.isArray(selection.debugSelections) ? selection.debugSelections : [])
+      .filter((entry) => entry && entry.stage === 'cube');
+    let cubeIndex = 0;
+
+    function resolveComponent(entry) {
+      if (!entry || (!entry.stageKey && entry.kind !== 'linked')) return null;
+      const mechId = entry.mechanism ? cleanString(entry.mechanism.id).toLowerCase() : '';
+      if (entry.kind === 'linked' && mechId) return mechanismComponent.get(mechId) || null;
+      const key = entry.stageKey;
+      if (key === 'cube') {
+        const cubeValue = cubeIndex < cubeSelections.length ? cubeSelections[cubeIndex++].component : null;
+        const expanded = cubeValue ? expandCubeSelection(cubeValue, (entry.mechanism && entry.mechanism.name) || '') : [];
+        const cubeComponents = expanded.map((sub) => {
+          if (consumed[sub.stage] !== undefined) consumed[sub.stage] += 1;
+          return { component: sub.component, stage: sub.stage };
+        });
+        if (mechId) mechanismComponent.set(mechId, cubeComponents.length ? cubeComponents : null);
+        return cubeComponents.length ? cubeComponents : null;
+      }
+      const arr = selection[key];
+      if (!Array.isArray(arr)) return null;
+      const idx = consumed[key] || 0;
+      if (idx >= arr.length) return null;
+      consumed[key] = idx + 1;
+      const component = arr[idx];
+      if (mechId) mechanismComponent.set(mechId, component || null);
+      return component || null;
+    }
+
+    function applyComponent(spectrum, component, mode) {
+      if (!component) return spectrum;
+      if (Array.isArray(component)) {
+        let values = spectrum.slice();
+        component.forEach((sub) => {
+          values = values.map((value, i) => value * ((VM.componentMask(sub.component, grid, { mode })[i]) || 0));
+        });
+        return values;
+      }
+      return spectrum.map((value, i) => value * ((VM.componentMask(component, grid, { mode })[i]) || 0));
+    }
+
+    let runningIllum = sourceMixed.slice();
+    (topology.traversal.illumination || []).forEach((entry) => {
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
+      const component = resolveComponent(entry);
+      if (component) runningIllum = applyComponent(runningIllum, component, 'excitation');
+      if (entry.routeStepId) stepSpectra.set(entry.routeStepId, runningIllum.slice());
+    });
+
+    let runningDetect = generatedEmission.slice();
+    (topology.traversal.detection || []).forEach((entry) => {
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
+      if (entry.stageKey === 'splitters') return;
+      const component = resolveComponent(entry);
+      if (component) runningDetect = applyComponent(runningDetect, component, 'emission');
+      if (entry.routeStepId) stepSpectra.set(entry.routeStepId, runningDetect.slice());
+    });
+
+    return stepSpectra;
   }
 
   function activeFilterMaskDatasets(selection, grid) {
@@ -525,6 +590,18 @@
     });
     if (!result) {
       setStatusMessage('No compatible zero-leakage configuration was found for the current fluorophores.', 'warning');
+      return;
+    }
+    if (result.requiresSequentialAcquisition) {
+      const names = result.perFluorophoreConfigs.map((cfg) => cfg.fluorophoreName).join(', ');
+      setStatusMessage(
+        `Sequential acquisition required: no single path supports all fluorophores simultaneously. Individual settings found for: ${names}.`,
+        'warning'
+      );
+      // Apply the first fluorophore's configuration as a starting point.
+      if (result.perFluorophoreConfigs.length) {
+        applyOptimizedConfiguration(result.perFluorophoreConfigs[0].configuration);
+      }
       return;
     }
     applyOptimizedConfiguration(result);
@@ -883,7 +960,16 @@
         ? routeRecord.detection_traversal
         : null;
 
-    return {
+    function assignRouteStepIds(entries, phase) {
+      let stepIndex = 0;
+      (Array.isArray(entries) ? entries : []).forEach((entry) => {
+        if (entry.kind === 'branch-block') return;
+        entry.routeStepId = `${phase}-step-${stepIndex}`;
+        stepIndex += 1;
+      });
+    }
+
+    const result = {
       illumination: resolvedIlluminationTraversal
         ? buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination')
         : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence)) || (routeRecord && routeRecord.illumination_sequence), 'illumination', 'illumination'),
@@ -891,6 +977,9 @@
         ? buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection')
         : buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence)) || (routeRecord && routeRecord.detection_sequence), 'detection', 'detection'),
     };
+    assignRouteStepIds(result.illumination, 'illumination');
+    assignRouteStepIds(result.detection, 'detection');
+    return result;
   }
 
   function endpointIdsFromSequence(sequence) {
@@ -957,17 +1046,15 @@
   function stageGroupForNodeKind(kindLabel) {
     const kind = cleanString(kindLabel).toLowerCase();
     if (kind.includes('source') || kind.includes('laser') || kind.includes('led') || kind.includes('lamp')) return 'sources';
-    if (kind.includes('excitation') || kind.includes('cube')) return 'illumination-controls';
-    if (kind.includes('dichroic')) return 'illumination-controls';
-    if (kind.includes('emission') || kind.includes('splitter')) return 'detection-controls';
+    if (kind.includes('excitation') || kind.includes('cube')) return 'illumination';
+    if (kind.includes('dichroic')) return 'illumination';
+    if (kind.includes('emission') || kind.includes('splitter')) return 'detection';
     if (kind.includes('detector') || kind.includes('camera') || kind.includes('pmt') || kind.includes('apd') || kind.includes('hyd') || kind.includes('eyepiece') || kind.includes('endpoint')) return 'detectors';
     if (kind === 'sample') return 'sample';
     return null;
   }
 
   function buildDerivedControlGroups(inst, topology, route) {
-    // UI-only compatibility layer: these groups are projections/adapters derived
-    // from the already-selected authoritative route graph and traversal payload.
     const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : mechanismsForRoute(inst.lightSources, route);
     const illuminationEntries = topology && topology.traversal ? topology.traversal.illumination : [];
     const detectionEntries = topology && topology.traversal ? topology.traversal.detection : [];
@@ -986,16 +1073,20 @@
       });
     }
 
-    if (illuminationEntries.length) {
+    let illumStepIndex = 0;
+    illuminationEntries.forEach((entry) => {
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      const stepId = entry.routeStepId || ('illumination-step-' + illumStepIndex);
       groups.push({
-        id: 'illumination-controls',
-        label: 'Illumination Controls',
-        subtitle: 'Derived selectors aligned to route-local illumination traversal.',
+        id: stepId,
+        label: entry.title || 'Illumination',
+        subtitle: '',
         build(panel) {
-          appendTraversalEntries(panel, illuminationEntries);
+          appendTraversalEntries(panel, [entry]);
         },
       });
-    }
+      illumStepIndex += 1;
+    });
 
     groups.push({
       id: 'sample',
@@ -1006,19 +1097,19 @@
       },
     });
 
-    let detectionEntryCounter = 0;
+    let detStepIndex = 0;
     detectionEntries.forEach((entry) => {
-      if (entry.kind === 'branch-block') return;
-      const entryId = `detection-entry-${detectionEntryCounter}`;
-      detectionEntryCounter += 1;
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      const stepId = entry.routeStepId || ('detection-step-' + detStepIndex);
       groups.push({
-        id: entryId,
+        id: stepId,
         label: entry.title || 'Detection',
         subtitle: '',
         build(panel) {
           appendTraversalEntries(panel, [entry]);
         },
       });
+      detStepIndex += 1;
     });
 
     if (detectorMechanisms.length) {
@@ -1342,7 +1433,7 @@
 
     if (!derivedControlGroups.length) return;
 
-    const pipelineStages = buildPipelineStages(derivedControlGroups, topology);
+    const pipelineStages = buildPipelineStages(topology);
     pipeline.innerHTML = '';
     pipeline.style.display = pipelineStages.length ? 'flex' : 'none';
     pipelineStages.forEach((stage, index) => {
@@ -2018,6 +2109,9 @@
     if (excitation) expanded.push({ stage: 'excitation', name: `${mechanismName} (Cube Ex)`, component: excitation });
     if (dichroic) expanded.push({ stage: 'dichroic', name: `${mechanismName} (Cube Di)`, component: dichroic });
     if (emission) expanded.push({ stage: 'emission', name: `${mechanismName} (Cube Em)`, component: emission });
+    if (cubePosition._cube_incomplete) {
+      console.warn(`[VM] Cube "${cubePosition.label || cubePosition.display_label || mechanismName}" has no explicit excitation filter data; simulation uses estimated dichroic + emission only.`);
+    }
     return expanded;
   }
 
@@ -2141,7 +2235,111 @@
       });
     });
 
+    selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination');
+    selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection');
+
     return selection;
+  }
+
+  function buildSelectedConfiguration(selection, simulation) {
+    if (!selection || !state.activeInstrument) return null;
+    const inst = state.activeInstrument;
+    const config = {
+      instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
+      route: state.activeRoute || null,
+      timestamp: new Date().toISOString(),
+      sources: (selection.sources || []).map((source) => ({
+        display_label: source.display_label || source.name || source.label || '',
+        wavelength_nm: numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+        kind: cleanString(source.kind || source.type || ''),
+        manufacturer: cleanString(source.manufacturer),
+        model: cleanString(source.model),
+        product_code: cleanString(source.product_code),
+      })),
+      stages: (selection.debugSelections || []).map((entry) => {
+        const comp = entry.component || {};
+        return {
+          stage: entry.stage,
+          name: entry.name || '',
+          component_type: cleanString(comp.component_type || comp.type || ''),
+          display_label: cleanString(comp.display_label || comp.label || comp.name || ''),
+          manufacturer: cleanString(comp.manufacturer),
+          model: cleanString(comp.model),
+          product_code: cleanString(comp.product_code),
+          position_key: cleanString(comp.position_key),
+          slot: comp.slot != null ? comp.slot : null,
+          _unsupported_spectral_model: comp._unsupported_spectral_model || false,
+        };
+      }),
+      splitters: (selection.splitters || []).map((splitter) => ({
+        id: splitter.id || '',
+        display_label: cleanString(splitter.label || splitter.display_label || ''),
+        selected_branch_ids: Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids.slice() : [],
+      })),
+      detectors: (selection.detectors || []).map((detector) => ({
+        display_label: cleanString(detector.display_label || detector.name || detector.label || ''),
+        detector_class: cleanString(detector.detector_class),
+        collection_min_nm: numberOrNull(detector.collection_min_nm),
+        collection_max_nm: numberOrNull(detector.collection_max_nm),
+        manufacturer: cleanString(detector.manufacturer),
+        model: cleanString(detector.model),
+        product_code: cleanString(detector.product_code),
+      })),
+      selectionMap: selection.selectionMap || {},
+    };
+    return config;
+  }
+
+  function buildTraversalOrderedComponents(topology, selection, phase) {
+    if (!topology || !topology.traversal) return [];
+    const entries = phase === 'illumination' ? topology.traversal.illumination : topology.traversal.detection;
+    if (!Array.isArray(entries) || !entries.length) return [];
+    const mode = phase === 'illumination' ? 'excitation' : 'emission';
+    const consumed = { excitation: 0, dichroic: 0, emission: 0 };
+    const mechanismResolved = new Map();
+    const cubeSelections = (Array.isArray(selection.debugSelections) ? selection.debugSelections : [])
+      .filter((entry) => entry && entry.stage === 'cube');
+    let cubeIndex = 0;
+    const phaseStages = phase === 'illumination'
+      ? new Set(['excitation', 'dichroic'])
+      : new Set(['dichroic', 'emission']);
+    const result = [];
+    function pushPhaseComponents(components) {
+      components.filter((comp) => phaseStages.has(comp.stage)).forEach((comp) => result.push({ component: comp.component, mode }));
+    }
+    entries.forEach((entry) => {
+      if (!entry || entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
+      if (entry.stageKey === 'splitters') return;
+      const mechId = entry.mechanism ? cleanString(entry.mechanism.id).toLowerCase() : '';
+      if (entry.kind === 'linked' && mechId) {
+        const stored = mechanismResolved.get(mechId);
+        if (stored) pushPhaseComponents(stored);
+        return;
+      }
+      const key = entry.stageKey;
+      if (key === 'cube') {
+        const cubeValue = cubeIndex < cubeSelections.length ? cubeSelections[cubeIndex++].component : null;
+        const expanded = cubeValue ? expandCubeSelection(cubeValue, (entry.mechanism && entry.mechanism.name) || '') : [];
+        const allSubs = [];
+        expanded.forEach((sub) => {
+          if (consumed[sub.stage] !== undefined) consumed[sub.stage] += 1;
+          allSubs.push({ component: sub.component, stage: sub.stage });
+        });
+        if (mechId) mechanismResolved.set(mechId, allSubs);
+        pushPhaseComponents(allSubs);
+        return;
+      }
+      const arr = selection[key];
+      if (!Array.isArray(arr)) return;
+      const idx = consumed[key] || 0;
+      if (idx >= arr.length) return;
+      consumed[key] = idx + 1;
+      const component = arr[idx];
+      if (!component) return;
+      if (mechId) mechanismResolved.set(mechId, [{ component, stage: key }]);
+      result.push({ component, mode });
+    });
+    return result;
   }
 
 
@@ -2159,7 +2357,10 @@
         },
         scales: {
           x: { type: 'linear', min: 350, max: 800, title: { display: true, text: 'Wavelength (nm)' } },
-          y: { min: 0, max: 105, title: { display: true, text: yTitle } },
+          // suggestedMax 105 provides a comfortable visual ceiling for relative-shape
+          // plots (0–100%) while allowing Chart.js to autoscale beyond 105 if data
+          // values exceed that threshold (e.g., bright fluorophores in absolute mode).
+          y: { min: 0, suggestedMax: 105, title: { display: true, text: yTitle } },
         },
       },
     });
@@ -2215,7 +2416,7 @@
   function chartDatasetFromGrid(label, grid, values, style) {
     return {
       label,
-      data: grid.map((wavelength, index) => ({ x: wavelength, y: Math.min(105, Math.max(0, values[index] || 0)) })),
+      data: grid.map((wavelength, index) => ({ x: wavelength, y: Math.max(0, values[index] || 0) })),
       fill: false,
       pointRadius: 0,
       tension: 0.15,
@@ -2394,8 +2595,13 @@
     const emissionMask = combinedMask([...(selection.dichroic || []), ...(selection.emission || [])], grid, 'emission');
     const datasets = [baselineMaskDataset('Emission passband', grid, emissionMask, 'rgba(5, 150, 105, 0.85)', 0)];
 
+    // Deduplicate detector collection baselines — shared detectors appear once.
+    const seenDetectorLabels = new Set();
     bestPaths.forEach(({ result, path }, index) => {
-      datasets.push(baselineMaskDataset(`${result.detectorLabel} collection`, grid, path.collectionMask || grid.map(() => 0), 'rgba(148, 163, 184, 0.95)', index + 1));
+      const detLabel = result.detectorLabel || 'Detector';
+      if (seenDetectorLabels.has(detLabel)) return;
+      seenDetectorLabels.add(detLabel);
+      datasets.push(baselineMaskDataset(`${detLabel} collection`, grid, path.collectionMask || grid.map(() => 0), 'rgba(148, 163, 184, 0.95)', index + 1));
     });
 
     emissionEntries.forEach((entry) => {
@@ -2778,6 +2984,7 @@
       });
       state.lastSelection = repairedSelection;
       state.lastSimulation = simulation;
+      state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
       renderReferenceSpectra(repairedSelection, simulation);
       renderPropagationPanel(repairedSelection, simulation);
       updatePipelineBeamColors(repairedSelection, simulation);
@@ -2788,6 +2995,7 @@
     }
     state.lastSelection = selection;
     state.lastSimulation = simulation;
+    state.lastSelectedConfiguration = buildSelectedConfiguration(selection, simulation);
     renderReferenceSpectra(selection, simulation);
     renderPropagationPanel(selection, simulation);
     updatePipelineBeamColors(selection, simulation);
@@ -3216,4 +3424,15 @@
   }
 
   window.addEventListener('load', init);
+
+  /**
+   * Public API: Returns the current exact selected-configuration object.
+   * External consumers (e.g., methods generator) can call this to get the
+   * precise optical settings the user has chosen — cube positions, filters,
+   * splitter branches, detector windows, and identity metadata.
+   * Returns null if no instrument is loaded or no selection has been made.
+   */
+  window.getVirtualMicroscopeConfiguration = function getVirtualMicroscopeConfiguration() {
+    return state.lastSelectedConfiguration || null;
+  };
 })();

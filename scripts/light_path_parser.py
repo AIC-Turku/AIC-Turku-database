@@ -676,7 +676,7 @@ def _import_legacy_light_paths(sources: list[dict[str, Any]], elements: list[dic
         route_ids = {"epi"}
     ordered_routes = sorted(route_ids, key=_route_sort_key)
     routes: list[dict[str, Any]] = []
-    stage_order = {"illumination": ["excitation", "cube", "dichroic"], "detection": ["cube", "dichroic", "emission", "splitter"]}
+    stage_order = {"illumination": ["excitation", "cube", "dichroic"], "detection": ["cube", "dichroic", "emission", "analyzer", "splitter"]}
     for route_id in ordered_routes:
         illumination_sequence = [{"source_id": source["id"]} for source in sources if _modality_match(_normalize_modalities(source.get("modalities") or source.get("path") or source.get("routes")), route_id)]
         for stage_role in stage_order["illumination"]:
@@ -1383,6 +1383,11 @@ def _component_payload(component: dict[str, Any], *, default_name: str = "", bra
     if branch_mode:
         payload["branch_mode"] = branch_mode
     _normalize_component_numeric_fields(payload, component)
+    # Flag component types whose spectral behavior is not modeled so the
+    # runtime and UI can surface a note instead of silently treating them
+    # as transparent.
+    if component_type == "analyzer":
+        payload["_unsupported_spectral_model"] = True
     return payload
 
 
@@ -1739,16 +1744,17 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
     if isinstance(raw_positions, dict):
         normalized_positions = sorted(
             (
-                (_coerce_slot_key(slot), component)
+                (_coerce_slot_key(slot), slot, component)
                 for slot, component in raw_positions.items()
             ),
             key=lambda item: (item[0] is None, item[0]),
         )
-        for slot, component in normalized_positions:
+        for slot, original_key, component in normalized_positions:
             if slot is None or not isinstance(component, dict):
                 continue
             component_payload = _component_payload(component)
             component_payload["slot"] = slot
+            component_payload["position_key"] = str(original_key)
             component_payload["display_label"] = f"Slot {slot}: {component_payload.get('label')}"
             positions.append(component_payload)
 
@@ -1811,6 +1817,38 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
     return mechanism_payload
 
 
+def _estimate_dichroic_cut_on(
+    bands: Any,
+    cut_on_nm: Any,
+) -> float | None:
+    """Estimate a dichroic cut-on wavelength from emission band data.
+
+    For a single-band cube the dichroic is placed ~20 nm below the lower edge
+    of the emission band (center - width/2).  For multiband cubes the lowest
+    band edge is used.  When only a longpass *cut_on_nm* is present the
+    dichroic is placed 20 nm below that cut-on.
+
+    Returns ``None`` if no estimate can be made.
+    """
+    if isinstance(bands, list) and bands:
+        edges: list[float] = []
+        for band in bands:
+            if not isinstance(band, dict):
+                continue
+            center = _coerce_number(band.get("center_nm"))
+            width = _coerce_number(band.get("width_nm"))
+            if center is not None and width is not None and width > 0:
+                edges.append(center - width / 2)
+        if edges:
+            return round(min(edges) - 20, 1)
+    raw = cut_on_nm
+    if isinstance(raw, list) and raw:
+        raw = raw[0]
+    coerced = _coerce_number(raw)
+    if coerced is not None:
+        return round(coerced - 20, 1)
+    return None
+
 
 def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, Any]:
     raw_positions = mechanism.get("positions", {})
@@ -1818,12 +1856,12 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
     if isinstance(raw_positions, dict):
         normalized_positions = sorted(
             (
-                (_coerce_slot_key(slot), cube_position)
+                (_coerce_slot_key(slot), slot, cube_position)
                 for slot, cube_position in raw_positions.items()
             ),
             key=lambda item: (item[0] is None, item[0]),
         )
-        for slot, cube_position in normalized_positions:
+        for slot, original_key, cube_position in normalized_positions:
             if slot is None or not isinstance(cube_position, dict):
                 continue
 
@@ -1836,7 +1874,10 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
 
             # Flattened filter_cube positions (component_type: filter_cube with bands
             # but no explicit excitation_filter/dichroic/emission_filter sub-components)
-            # need a synthetic emission_filter so the runtime can apply them spectrally.
+            # are expanded into full composite optics: emission_filter plus a
+            # synthetic dichroic estimated from the emission band edge.  When
+            # only emission data is available the cube is flagged _cube_incomplete
+            # so the runtime can warn the user.
             cube_label = cube_position.get("name") or f"Cube {slot}"
             if not linked_components and _clean_string(cube_position.get("component_type")).lower() == "filter_cube":
                 bands = cube_position.get("bands")
@@ -1865,8 +1906,18 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                 if synth.get("component_type"):
                     linked_components["emission_filter"] = _component_payload(synth, default_name=cube_label)
 
+                # Synthesize a dichroic from the emission band lower edge so the
+                # runtime can model excitation reflection + emission transmission.
+                dichroic_cut_on = _estimate_dichroic_cut_on(bands, cut_on_nm)
+                if dichroic_cut_on is not None:
+                    linked_components["dichroic"] = _component_payload(
+                        {"name": f"{cube_label} (dichroic)", "component_type": "dichroic", "cut_on_nm": dichroic_cut_on},
+                        default_name=f"{cube_label} (dichroic)",
+                    )
+
             position_payload: dict[str, Any] = {
                 "slot": slot,
+                "position_key": str(original_key),
                 "type": "cube",
                 "label": cube_label,
                 "display_label": cube_label,
@@ -1877,6 +1928,10 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                 "dichroic": linked_components.get("dichroic"),
                 "emission_filter": linked_components.get("emission_filter"),
             }
+            # Flag cubes that have no explicit excitation data so the runtime
+            # can warn users about incomplete cube modeling.
+            if linked_components and "excitation_filter" not in linked_components:
+                position_payload["_cube_incomplete"] = True
             routes = _normalize_routes(cube_position.get("path") or cube_position.get("paths") or cube_position.get("route") or cube_position.get("routes") or mechanism.get("path"))
             if routes:
                 position_payload["routes"] = routes
