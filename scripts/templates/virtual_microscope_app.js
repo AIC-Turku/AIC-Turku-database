@@ -341,12 +341,60 @@
     return meta;
   }
 
+  function splitterBranchSelectionKey(mechanism) {
+    return [
+      currentInstrumentId || 'scope',
+      cleanString(state.activeRoute) || 'route',
+      cleanString(mechanism && (mechanism.id || mechanism.name || mechanism.display_label)) || 'splitter',
+    ].join('::');
+  }
+
+  function emptyRouteTopology(route) {
+    return {
+      route: cleanString(route).toLowerCase() || null,
+      routeRecord: null,
+      routeUsage: null,
+      routeLocalHardwareUsage: { hardware_inventory_ids: [], endpoint_inventory_ids: [] },
+      sourceMechanisms: [],
+      traversal: { illumination: [], detection: [] },
+      endpointMechanisms: [],
+      endpointIds: [],
+      graphNodes: [],
+      graphEdges: [],
+      branchBlocks: [],
+    };
+  }
+
+  function safeDeriveRouteTopology(instrument, route) {
+    try {
+      return deriveRouteTopology(instrument, route);
+    } catch (error) {
+      console.error('Failed to derive route topology', error);
+      const message = `Route topology error: ${errorMessage(error)}`;
+      setInlineStatus(DOM.searchStatus, message, 'error');
+      setInlineStatus(DOM.localSearchStatus, message, 'error');
+      return emptyRouteTopology(route);
+    }
+  }
+
   function updateMetadataBlock(metaNode, component, context = {}) {
     if (!metaNode) return;
+  
     const rows = formatComponentMetadata(component, context);
-    metaNode.innerHTML = rows.length
-      ? rows.map((row) => `<div>${row}</div>`).join('')
-      : '<span>No component metadata available.</span>';
+    metaNode.innerHTML = '';
+  
+    if (!rows.length) {
+      const empty = document.createElement('span');
+      empty.textContent = 'No component metadata available.';
+      metaNode.appendChild(empty);
+      return;
+    }
+  
+    rows.forEach((row) => {
+      const line = document.createElement('div');
+      line.textContent = row;
+      metaNode.appendChild(line);
+    });
   }
 
   function parseJsonValue(value) {
@@ -721,24 +769,26 @@
       .filter(Boolean)));
   }
 
+  
   function sourceSettingKey(source) {
     const routes = normalizeSourceRoutes(source).join('|') || 'any-route';
-    const stableId = cleanString(source && (source.id || source.inventory_id || source.hardware_inventory_id || source.display_label || source.name || source.model)) || 'source';
-    const slot = cleanString(source && source.slot) || '0';
+    const stableId =
+      cleanString(source && (source.id || source.inventory_id || source.hardware_inventory_id || source.display_label || source.name || source.model))
+      || 'source';
+    const slot = String(source && source.slot != null ? source.slot : '0');
     const wavelength = numberOrNull(source && (source.selected_wavelength_nm ?? source.wavelength_nm));
-    const tuning = [numberOrNull(source && source.tunable_min_nm), numberOrNull(source && source.tunable_max_nm)].filter((value) => value !== null).join('-') || 'fixed';
-    return [currentInstrumentId || 'scope', stableId, slot, routes, wavelength === null ? 'na' : String(Math.round(wavelength)), tuning].join('::');
-  }
-
-  function detectorSettingKey(mechanism, detector) {
-    return `${mechanism.id || 'detector'}::${detector.display_label || detector.name || detector.channel_name || 'detector'}`;
-  }
-
-  function splitterBranchSelectionKey(mechanism) {
+    const tuning = [
+      numberOrNull(source && source.tunable_min_nm),
+      numberOrNull(source && source.tunable_max_nm),
+    ].filter((value) => value !== null).join('-') || 'fixed';
+  
     return [
       currentInstrumentId || 'scope',
-      cleanString(state.activeRoute) || 'route',
-      cleanString(mechanism && (mechanism.id || mechanism.name || mechanism.display_label)) || 'splitter',
+      stableId,
+      slot,
+      routes,
+      wavelength === null ? 'na' : String(Math.round(wavelength)),
+      tuning,
     ].join('::');
   }
 
@@ -854,6 +904,15 @@
     const width = numberOrNull(detector && (detector.collection_width_nm ?? detector.bandwidth_nm ?? detector.width_nm)) ?? ((parsed.min !== null && parsed.max !== null) ? (parsed.max - parsed.min) : 40);
     const halfWidth = Math.max(2, width / 2);
     return { min: center - halfWidth, max: center + halfWidth };
+  }
+
+  function detectorSettingKey(mechanism, detector) {
+    const mechanismId = cleanString(mechanism && (mechanism.id || mechanism.name || mechanism.display_label)) || 'detector-group';
+    const detectorId =
+      cleanString(detector && (detector.id || detector.terminal_id || detector.hardware_inventory_id || detector.display_label || detector.name || detector.channel_name))
+      || 'detector';
+    const slot = String(detector && detector.slot != null ? detector.slot : '0');
+    return [currentInstrumentId || 'scope', mechanismId, detectorId, slot].join('::');
   }
 
   function ensureDetectorSetting(mechanism, detector) {
@@ -1090,15 +1149,20 @@
     if (kind === 'sample') return 'sample';
     return null;
   }
-
+  
   function buildDerivedControlGroups(inst, topology, route) {
-    const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms) ? topology.sourceMechanisms : mechanismsForRoute(inst.lightSources, route);
+    const lightSourceMechanisms = topology && Array.isArray(topology.sourceMechanisms)
+      ? topology.sourceMechanisms
+      : mechanismsForRoute(inst.lightSources, route);
+  
     const illuminationEntries = topology && topology.traversal ? topology.traversal.illumination : [];
     const detectionEntries = topology && topology.traversal ? topology.traversal.detection : [];
-    const detectorMechanisms = topology && Array.isArray(topology.endpointMechanisms) ? topology.endpointMechanisms : mechanismsForRoute(inst.detectors, route);
-
+    const detectorMechanisms = topology && Array.isArray(topology.endpointMechanisms)
+      ? topology.endpointMechanisms
+      : mechanismsForRoute(inst.detectors, route);
+  
     const groups = [];
-
+  
     if (lightSourceMechanisms.length) {
       groups.push({
         id: 'sources',
@@ -1109,47 +1173,51 @@
         },
       });
     }
-
-    let illumStepIndex = 0;
-    illuminationEntries.forEach((entry) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
-      const stepId = entry.routeStepId || ('illumination-step-' + illumStepIndex);
-      groups.push({
-        id: stepId,
-        label: entry.title || 'Illumination',
-        subtitle: '',
-        build(panel) {
-          appendTraversalEntries(panel, [entry]);
-        },
+  
+    illuminationEntries
+      .filter((entry) => entry && entry.kind !== 'endpoint')
+      .forEach((entry, index) => {
+        const stepId = entry.routeStepId || (`illumination-step-${index}`);
+        groups.push({
+          id: stepId,
+          label: entry.title || 'Illumination',
+          subtitle: '',
+          build(panel) {
+            appendTraversalEntries(panel, [entry]);
+          },
+        });
       });
-      illumStepIndex += 1;
-    });
-
+  
     groups.push({
       id: 'sample',
       label: 'Sample',
       subtitle: 'Emission generation remains between illumination and detection traversal.',
       build(panel) {
-        panel.appendChild(createLinkedStageNote('Emission generation', 'Loaded fluorophores absorb the excitation spectrum here and emit according to their reference spectra.'));
+        panel.appendChild(
+          createLinkedStageNote(
+            'Emission generation',
+            'Loaded fluorophores absorb the excitation spectrum here and emit according to their reference spectra.'
+          )
+        );
       },
     });
-
-    let detStepIndex = 0;
-    detectionEntries.forEach((entry) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
-      const stepId = entry.routeStepId || ('detection-step-' + detStepIndex);
-      groups.push({
-        id: stepId,
-        label: entry.title || 'Detection',
-        subtitle: '',
-        build(panel) {
-          appendTraversalEntries(panel, [entry]);
-        },
+  
+    detectionEntries
+      .filter((entry) => entry && entry.kind !== 'detector' && entry.kind !== 'endpoint')
+      .forEach((entry, index) => {
+        const stepId = entry.routeStepId || (`detection-step-${index}`);
+        groups.push({
+          id: stepId,
+          label: entry.title || 'Detection',
+          subtitle: '',
+          build(panel) {
+            appendTraversalEntries(panel, [entry]);
+          },
+        });
       });
-      detStepIndex += 1;
-    });
-
-    if (detectorMechanisms.length) {
+  
+    const explicitEndpointEntries = detectionEntries.filter((entry) => entry && entry.kind === 'endpoint');
+    if (detectorMechanisms.length || explicitEndpointEntries.length) {
       groups.push({
         id: 'detectors',
         label: 'Detectors & Endpoints',
@@ -1158,10 +1226,13 @@
           detectorMechanisms.forEach((mechanism) => {
             createDetectorControls(mechanism).forEach((block) => panel.appendChild(block));
           });
+          if (explicitEndpointEntries.length) {
+            appendTraversalEntries(panel, explicitEndpointEntries);
+          }
         },
       });
     }
-
+  
     return groups;
   }
 
@@ -1287,7 +1358,7 @@
     DOM.routeSel.addEventListener('change', (event) => {
       state.activeRoute = cleanString(event.target.value).toLowerCase() || null;
       state.spectralBandsByMechanism.clear();
-      state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+      state.routeTopology = safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
       renderGraphFlow();
       refreshOutputs();
     });
@@ -1327,7 +1398,7 @@
     state.activeInstrumentRaw = state.allInstruments[currentInstrumentId] || {};
     state.activeInstrument = VM.normalizeInstrumentPayload(state.activeInstrumentRaw);
     state.activeRoute = state.activeInstrument.defaultRoute || null;
-    state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+    state.routeTopology = safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
     state.spectralBandsByMechanism.clear();
     seedSettingsFromInstrument();
     renderRouteSelector();
@@ -1349,7 +1420,7 @@
       DOM.routeWrap.style.display = 'none';
       const singleRoute = options[0] ? cleanString(options[0].id).toLowerCase() : null;
       state.activeRoute = singleRoute || state.activeRoute || state.activeInstrument.defaultRoute || null;
-      state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+      state.routeTopology = safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
       return;
     }
 
@@ -1363,7 +1434,7 @@
     const selectedRoute = state.activeRoute || state.activeInstrument.defaultRoute || (strictHardwareTruthMode() ? '' : ((options[0] && options[0].id) || ''));
     DOM.routeSel.value = selectedRoute;
     state.activeRoute = cleanString(DOM.routeSel.value).toLowerCase() || null;
-    state.routeTopology = deriveRouteTopology(state.activeInstrument, state.activeRoute);
+    state.routeTopology = safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
     DOM.routeWrap.style.display = 'flex';
   }
 
@@ -1439,7 +1510,7 @@
 
     const inst = state.activeInstrument;
     const route = state.activeRoute;
-    state.routeTopology = deriveRouteTopology(inst, route);
+    state.routeTopology = safeDeriveRouteTopology(inst, route);
     const topology = state.routeTopology;
     const derivedControlGroups = buildDerivedControlGroups(inst, topology, route);
 
@@ -1643,50 +1714,65 @@
     if (mechanism.control_kind === 'spectral_array') {
       return createSpectralArrayControl(stageKey, mechanism, index);
     }
-
+  
     if (mechanism.control_kind === 'tunable_slider') {
       const block = document.createElement('div');
       block.className = 'tunable-control';
       block.dataset.stage = stageKey;
       block.dataset.mechanismName = mechanism.name || '';
       block.dataset.mechanismId = mechanism.id || '';
-
+  
       const readout = document.createElement('div');
       readout.className = 'tunable-range-label';
+  
       const row = document.createElement('div');
       row.className = 'slider-row';
+  
       const minInput = document.createElement('input');
       minInput.type = 'range';
       minInput.min = String(mechanism.min_nm ?? 400);
       minInput.max = String(mechanism.max_nm ?? 800);
       minInput.value = String(mechanism.default_min_nm ?? mechanism.min_nm ?? 450);
+  
       const maxInput = document.createElement('input');
       maxInput.type = 'range';
       maxInput.min = String(mechanism.min_nm ?? 400);
       maxInput.max = String(mechanism.max_nm ?? 800);
       maxInput.value = String(mechanism.default_max_nm ?? mechanism.max_nm ?? 550);
-
+  
       const update = () => {
-        if (Number(minInput.value) > Number(maxInput.value)) minInput.value = maxInput.value;
-        block.dataset.value = JSON.stringify({
+        let minVal = Number(minInput.value);
+        let maxVal = Number(maxInput.value);
+  
+        if (minVal > maxVal) {
+          minVal = maxVal;
+          minInput.value = String(minVal);
+        }
+  
+        const payload = {
           component_type: 'tunable',
           type: 'tunable',
           render_kind: 'tunable',
-          label: `${mechanism.name || stageKey} ${minInput.value}-${maxInput.value}`,
-          display_label: `${mechanism.name || stageKey} ${minInput.value}-${maxInput.value}`,
-          band_start_nm: Number(minInput.value),
-          band_end_nm: Number(maxInput.value),
+          label: `${mechanism.name || stageKey} ${minVal}-${maxVal}`,
+          display_label: `${mechanism.name || stageKey} ${minVal}-${maxVal}`,
+          band_start_nm: minVal,
+          band_end_nm: maxVal,
+          min_nm: minVal,
+          max_nm: maxVal,
           spectral_ops: {
             illumination: [{ op: 'tunable_bandpass', start_nm: minVal, end_nm: maxVal }],
-            detection: [{ op: 'tunable_bandpass', start_nm: minVal, end_nm: maxVal }]
-          }
-        });
-        readout.textContent = `${mechanism.control_label || mechanism.name || stageKey}: ${minInput.value}–${maxInput.value} nm`;
+            detection: [{ op: 'tunable_bandpass', start_nm: minVal, end_nm: maxVal }],
+          },
+        };
+  
+        block.dataset.value = JSON.stringify(payload);
+        readout.textContent = `${mechanism.control_label || mechanism.name || stageKey}: ${minVal}–${maxVal} nm`;
         refreshOutputs();
       };
-
+  
       minInput.addEventListener('input', update);
       maxInput.addEventListener('input', update);
+  
       row.appendChild(minInput);
       row.appendChild(maxInput);
       block.appendChild(readout);
@@ -1694,16 +1780,18 @@
       update();
       return block;
     }
-
+  
     const block = document.createElement('div');
     block.className = 'vm-field';
+  
     const label = document.createElement('label');
     label.textContent = mechanism.control_label || mechanism.display_label || mechanism.name || stageKey;
+  
     const select = document.createElement('select');
     select.dataset.stage = stageKey;
     select.dataset.mechanismName = mechanism.name || '';
     select.dataset.mechanismId = mechanism.id || '';
-
+  
     const options = Array.isArray(mechanism.options) && mechanism.options.length
       ? mechanism.options.filter((option) => VM.routeMatches((option.value && option.value.__routes) || mechanism.__routes, state.activeRoute))
       : Object.entries(positionsForRoute(mechanism, state.activeRoute)).map(([slot, component]) => ({
@@ -1711,11 +1799,15 @@
           display_label: component.display_label || component.label || component.name || `Slot ${slot}`,
           value: component,
         }));
-
+  
     options.forEach((option) => {
       const opt = document.createElement('option');
       opt.value = JSON.stringify(option.value);
-      opt.textContent = option.display_label || option.value && (option.value.display_label || option.value.label || option.value.name) || `Slot ${option.slot}`;
+      opt.textContent =
+        option.display_label
+        || (option.value && (option.value.display_label || option.value.label || option.value.name))
+        || `Slot ${option.slot}`;
+  
       if (Number.isFinite(Number(option.slot))) {
         opt.dataset.slot = String(option.slot);
       } else if (Number.isFinite(Number(option.value && option.value.slot))) {
@@ -1723,13 +1815,16 @@
       }
       select.appendChild(opt);
     });
+  
     const metadata = createMetadataBlock();
     const syncMetadata = () => updateMetadataBlock(metadata, parseJsonValue(select.value), { stage: stageKey });
+  
     select.addEventListener('change', () => {
       select.dataset.userSet = 'true';
       syncMetadata();
       refreshOutputs();
     });
+  
     block.appendChild(label);
     block.appendChild(select);
     block.appendChild(metadata);
@@ -1796,28 +1891,28 @@
       targetMeta.className = 'vm-mini';
       targetMeta.textContent = `Targets: ${targetText}`;
       row.appendChild(targetMeta);
-
+     
       if (mechanism.branch_selection_required) {
+        const branchId = cleanString(branch.id || '');
         const chooser = document.createElement('label');
         chooser.className = 'vm-mini';
         chooser.style.display = 'flex';
         chooser.style.alignItems = 'center';
         chooser.style.gap = '6px';
+      
         const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.checked = selectedBranches.includes(cleanString(branch.id || ''));
+        input.type = 'radio';
+        input.name = `splitter-${cleanString(mechanism.id || mechanism.name || mechanism.display_label)}`;
+        input.checked = selectedBranches.includes(branchId) || (!selectedBranches.length && branches[0] === branch);
+      
         input.addEventListener('change', () => {
-          const active = ensureSplitterBranchSelection(mechanism).slice();
-          const branchId = cleanString(branch.id || '');
-          const idx = active.indexOf(branchId);
-          if (input.checked && idx === -1) active.push(branchId);
-          if (!input.checked && idx >= 0) active.splice(idx, 1);
-          if (!active.length && branchId) active.push(branchId);
-          state.splitterBranchSelections.set(splitterBranchSelectionKey(mechanism), active);
+          if (!branchId) return;
+          state.splitterBranchSelections.set(splitterBranchSelectionKey(mechanism), [branchId]);
           refreshOutputs();
         });
+      
         chooser.appendChild(input);
-        chooser.appendChild(document.createTextNode('Enable this branch'));
+        chooser.appendChild(document.createTextNode('Use this branch'));
         row.appendChild(chooser);
       }
 
@@ -1828,6 +1923,34 @@
     return block;
   }
 
+  function buildSpectralArrayComponent(mechanismName, bands) {
+    const mappedBands = (Array.isArray(bands) ? bands : [])
+      .map((band) => {
+        const minNm = numberOrNull(band && band.min_nm);
+        const maxNm = numberOrNull(band && band.max_nm);
+        if (minNm === null || maxNm === null || maxNm <= minNm) return null;
+        return {
+          center_nm: (minNm + maxNm) / 2,
+          width_nm: Math.max(1, maxNm - minNm),
+          label: cleanString(band && band.label) || '',
+        };
+      })
+      .filter(Boolean);
+  
+    return {
+      component_type: 'multiband_bandpass',
+      type: 'multiband_bandpass',
+      render_kind: 'band',
+      label: `${mechanismName} spectral array`,
+      display_label: `${mechanismName} spectral array`,
+      bands: mappedBands,
+      spectral_ops: {
+        illumination: [{ op: 'multiband_bandpass', bands: mappedBands }],
+        detection: [{ op: 'multiband_bandpass', bands: mappedBands }],
+      },
+    };
+  }
+  
   function createSpectralArrayControl(stageKey, mechanism, index) {
     const block = document.createElement('div');
     block.className = 'tunable-control';
@@ -2163,7 +2286,7 @@
   }
 
   function collectRuntimeSelection() {
-    const topology = state.routeTopology || deriveRouteTopology(state.activeInstrument, state.activeRoute);
+    const topology = state.routeTopology || safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
     if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(authoritativeRouteSteps(topology.routeRecord))) {
       throw new Error('[VM] collectRuntimeSelection: route topology is missing parser selected route steps.');
     }
@@ -2232,29 +2355,16 @@
     Array.from(DOM.graph.querySelectorAll('.tunable-control[data-stage]')).forEach((block) => {
       const stage = block.dataset.stage;
       const mechanismName = block.dataset.mechanismName || stage;
-      if (block.dataset.mechanismType === 'spectral_array') {
-        const bands = state.spectralBandsByMechanism.get(block.dataset.mechanismKey || '') || [];
-        if (!bands.length) return;
-        const component = {
-          component_type: 'multiband_bandpass',
-          type: 'multiband_bandpass',
-          render_kind: 'band',
-          label: `${mechanismName} spectral array`,
-          display_label: `${mechanismName} spectral array`,
-          bands: bands.map((band) => ({
-            center_nm: (Number(band.min_nm) + Number(band.max_nm)) / 2,
-            width_nm: Math.max(1, Number(band.max_nm) - Number(band.min_nm)),
-            label: band.label,
-            spectral_ops: {
-            illumination: [{ op: 'multiband_bandpass', bands: mappedBands }],
-            detection: [{ op: 'multiband_bandpass', bands: mappedBands }]
-          }
-          })),
-        };
-        pushStageComponent(stage, mechanismName, component);
-        const mechanismId = cleanString(block.dataset.mechanismId).toLowerCase();
-        if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = component;
-      } else if (block.dataset.value) {
+if (block.dataset.mechanismType === 'spectral_array') {
+  const bands = state.spectralBandsByMechanism.get(block.dataset.mechanismKey || '') || [];
+  if (!bands.length) return;
+
+  const component = buildSpectralArrayComponent(mechanismName, bands);
+  pushStageComponent(stage, mechanismName, component);
+
+  const mechanismId = cleanString(block.dataset.mechanismId).toLowerCase();
+  if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = component;
+} else if (block.dataset.value) {
         try {
           const component = JSON.parse(block.dataset.value);
           pushStageComponent(stage, mechanismName, component);
@@ -3085,8 +3195,8 @@
   }
 
   function refreshOutputs() {
-
     if (!state.activeInstrumentRaw || !state.activeInstrument) return;
+  
     if (strictHardwareTruthMode()) {
       if (!routeSelectionIsExplicit()) {
         state.activeRoute = state.activeInstrument.defaultRoute || null;
@@ -3096,15 +3206,34 @@
     } else if (!state.activeRoute) {
       state.activeRoute = state.activeInstrument.defaultRoute || null;
     }
+  
     enforceValidStageOptions();
-    const selection = collectRuntimeSelection();
+  
     const fluorophores = mapToArray(state.loadedProteins);
+    let selection = {
+      sources: [],
+      excitation: [],
+      dichroic: [],
+      emission: [],
+      splitters: [],
+      detectors: [],
+      selectionMap: {},
+      debugSelections: [],
+      selectedComponentByMechanism: {},
+      resolvedExecution: [],
+      illuminationComponents: [],
+      detectionComponents: [],
+    };
     let simulation;
+  
     try {
+      selection = collectRuntimeSelection();
+  
       simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
         preferTwoPhoton: state.preferTwoPhoton,
         currentRoute: state.activeRoute,
       });
+  
       if (!strictHardwareTruthMode() && autoRepairBlockedPath(selection, simulation)) {
         enforceValidStageOptions();
         const repairedSelection = collectRuntimeSelection();
@@ -3145,6 +3274,7 @@
         crosstalkMatrix: {},
       };
     }
+  
     state.lastSelection = selection;
     state.lastSimulation = simulation;
     state.lastSelectedConfiguration = buildSelectedConfiguration(selection, simulation);
@@ -3156,7 +3286,6 @@
     renderDetectionChart(simulation);
     renderScoreboard(simulation);
   }
-
 
   async function requestJSON(url) {
     const response = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -3576,7 +3705,11 @@
     };
   }
 
-  window.addEventListener('load', init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 
   /**
    * Public API: Returns the current exact selected-configuration object.
