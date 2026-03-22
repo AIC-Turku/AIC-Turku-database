@@ -431,37 +431,6 @@
     const topology = state.routeTopology;
     if (!topology || !topology.traversal) return stepSpectra;
 
-    const consumed = { excitation: 0, dichroic: 0, emission: 0 };
-    const mechanismComponent = new Map();
-    const cubeSelections = (Array.isArray(selection.debugSelections) ? selection.debugSelections : [])
-      .filter((entry) => entry && entry.stage === 'cube');
-    let cubeIndex = 0;
-
-    function resolveComponent(entry) {
-      if (!entry || (!entry.stageKey && entry.kind !== 'linked')) return null;
-      const mechId = entry.mechanism ? cleanString(entry.mechanism.id).toLowerCase() : '';
-      if (entry.kind === 'linked' && mechId) return mechanismComponent.get(mechId) || null;
-      const key = entry.stageKey;
-      if (key === 'cube') {
-        const cubeValue = cubeIndex < cubeSelections.length ? cubeSelections[cubeIndex++].component : null;
-        const expanded = cubeValue ? expandCubeSelection(cubeValue, (entry.mechanism && entry.mechanism.name) || '') : [];
-        const cubeComponents = expanded.map((sub) => {
-          if (consumed[sub.stage] !== undefined) consumed[sub.stage] += 1;
-          return { component: sub.component, stage: sub.stage };
-        });
-        if (mechId) mechanismComponent.set(mechId, cubeComponents.length ? cubeComponents : null);
-        return cubeComponents.length ? cubeComponents : null;
-      }
-      const arr = selection[key];
-      if (!Array.isArray(arr)) return null;
-      const idx = consumed[key] || 0;
-      if (idx >= arr.length) return null;
-      consumed[key] = idx + 1;
-      const component = arr[idx];
-      if (mechId) mechanismComponent.set(mechId, component || null);
-      return component || null;
-    }
-
     function applyComponent(spectrum, component, mode) {
       if (!component) return spectrum;
       if (Array.isArray(component)) {
@@ -475,20 +444,23 @@
     }
 
     let runningIllum = sourceMixed.slice();
-    (topology.traversal.illumination || []).forEach((entry) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
-      const component = resolveComponent(entry);
+    const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];
+    illuminationComponents.forEach((entry) => {
+      if (!entry || !entry.routeStepId) return;
+      const component = entry.component;
       if (component) runningIllum = applyComponent(runningIllum, component, 'excitation');
-      if (entry.routeStepId) stepSpectra.set(entry.routeStepId, runningIllum.slice());
+      stepSpectra.set(entry.routeStepId, runningIllum.slice());
     });
 
     let runningDetect = generatedEmission.slice();
-    (topology.traversal.detection || []).forEach((entry) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
-      if (entry.stageKey === 'splitters') return;
-      const component = resolveComponent(entry);
+    const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];
+    detectionComponents.forEach((entry) => {
+      if (!entry || !entry.routeStepId) return;
+      const stageKey = cleanString(entry.stageKey).toLowerCase();
+      if (stageKey === 'splitters') return;
+      const component = entry.component;
       if (component) runningDetect = applyComponent(runningDetect, component, 'emission');
-      if (entry.routeStepId) stepSpectra.set(entry.routeStepId, runningDetect.slice());
+      stepSpectra.set(entry.routeStepId, runningDetect.slice());
     });
 
     return stepSpectra;
@@ -837,31 +809,42 @@
     return catalog;
   }
 
-  function buildRouteTraversalEntries(instrument, routeRecord, route) {
-    const catalog = opticalMechanismCatalog(instrument, route);
-    const seenControlIds = new Set();
-    const routeSteps = Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
+  function authoritativeRouteSteps(routeRecord) {
+    const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;
+    const selectedSteps = Array.isArray(selectedExecution && selectedExecution.steps) ? selectedExecution.steps : [];
+    if (selectedSteps.length) return selectedSteps;
+    return Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
       ? routeRecord.record.route_steps
       : Array.isArray(routeRecord && routeRecord.route_steps)
         ? routeRecord.route_steps
         : [];
+  }
+
+  function buildRouteTraversalEntries(instrument, routeRecord, route) {
+    const catalog = opticalMechanismCatalog(instrument, route);
+    const seenControlIds = new Set();
+    const routeSteps = authoritativeRouteSteps(routeRecord);
     if (!routeSteps.length) {
       throw new Error('[VM] buildRouteTraversalEntries: active route is missing authoritative route_steps.');
     }
-    const buildResolvedTraversal = (steps, phase, prefix) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
+    const buildResolvedTraversal = (steps, phase, prefix, requireStepId) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
       if (!(step && typeof step === 'object')) return [];
+      const stepId = cleanString(step.step_id) || `${prefix}:${phase}:step:${index}`;
+      if (requireStepId && !cleanString(step.step_id)) {
+        throw new Error('[VM] buildRouteTraversalEntries: parser route step is missing step_id for phase "' + phase + '".');
+      }
       if (step.kind === 'routing_component') {
         return [{
           kind: 'branch-block',
           key: `${prefix}:${phase}:branches:${index}`,
           phase,
-          routeStepId: step.step_id || `${phase}-step-${index}`,
+          routeStepId: step.step_id || stepId,
           title: `Branches (${(step.routing && step.routing.selection_mode) || 'exclusive'})`,
           selectionMode: (step.routing && step.routing.selection_mode) || 'exclusive',
           branches: (Array.isArray(step.routing && step.routing.branches) ? step.routing.branches : []).map((branch, branchIndex) => ({
             key: `${prefix}:${phase}:branch:${index}:${branchIndex}`,
             title: cleanString(branch && branch.label) || `Branch ${branchIndex + 1}`,
-            sequence: buildResolvedTraversal(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`),
+            sequence: buildResolvedTraversal(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`, false),
           })),
           message: 'This route includes parser-authored branch routing.',
         }];
@@ -872,7 +855,7 @@
           kind: 'endpoint',
           key: `${prefix}:${phase}:endpoint:${index}`,
           phase,
-          routeStepId: step.step_id || `${phase}-step-${index}`,
+          routeStepId: step.step_id || stepId,
           endpointId: step.endpoint_id || step.detector_id || step.component_id,
           title: cleanString(step.display_label) || endpointLabelForTargetId(step.endpoint_id || step.detector_id || step.component_id),
           message: '',
@@ -886,7 +869,7 @@
         return [{
           kind: 'missing',
           key: `${prefix}:${phase}:${elementId}:${index}`,
-          routeStepId: step.step_id || `${phase}-step-${index}`,
+          routeStepId: step.step_id || stepId,
           title: step.display_label || step.component_id,
           message: `This DTO route references optical path element "${step.component_id}", but no interactive UI control was derived for it.`,
         }];
@@ -896,7 +879,7 @@
       return [{
         kind: firstUse ? 'control' : 'linked',
         key: `${prefix}:${phase}:${elementId}:${index}`,
-        routeStepId: step.step_id || `${phase}-step-${index}`,
+        routeStepId: step.step_id || stepId,
         stageKey: match.stageKey,
         mechanism: match.mechanism,
         phase,
@@ -910,8 +893,8 @@
     const resolvedDetectionTraversal = routeSteps.filter((step) => step && step.phase === 'detection');
 
     const result = {
-      illumination: buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination'),
-      detection: buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection'),
+      illumination: buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination', true),
+      detection: buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection', true),
     };
     return result;
   }
@@ -932,11 +915,7 @@
 
   function deriveRouteTopology(instrument, route) {
     const routeRecord = routeRecordForInstrument(instrument, route);
-    const routeSteps = Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
-      ? routeRecord.record.route_steps
-      : Array.isArray(routeRecord && routeRecord.route_steps)
-        ? routeRecord.route_steps
-        : [];
+    const routeSteps = authoritativeRouteSteps(routeRecord);
     if (!routeSteps.length) {
       throw new Error('[VM] deriveRouteTopology: active route has no parser route_steps.');
     }
@@ -2060,8 +2039,8 @@
 
   function collectRuntimeSelection() {
     const topology = state.routeTopology || deriveRouteTopology(state.activeInstrument, state.activeRoute);
-    if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(topology.routeRecord.record.route_steps)) {
-      throw new Error('[VM] collectRuntimeSelection: route topology is missing parser route_steps.');
+    if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(authoritativeRouteSteps(topology.routeRecord))) {
+      throw new Error('[VM] collectRuntimeSelection: route topology is missing parser selected route steps.');
     }
     const selection = {
       sources: [],
@@ -2072,6 +2051,7 @@
       detectors: [],
       selectionMap: buildSelectionMapFromDom(),
       debugSelections: [],
+      selectedComponentByMechanism: {},
     };
 
     const sourceMechanisms = topology && Array.isArray(topology.sourceMechanisms)
@@ -2112,12 +2092,15 @@
         return;
       }
       const stage = select.dataset.stage;
+      const mechanismId = cleanString(select.dataset.mechanismId).toLowerCase();
       const mechanismName = select.dataset.mechanismName || stage;
       if (stage === 'cube') {
         selection.debugSelections.push({ stage: 'cube', name: mechanismName, component: value });
+        if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = value;
         expandCubeSelection(value, mechanismName).forEach((entry) => pushStageComponent(entry.stage, entry.name, entry.component));
       } else if (stage !== 'detectors' && stage !== 'splitters') {
         pushStageComponent(stage, mechanismName, value);
+        if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = value;
       }
     });
 
@@ -2127,7 +2110,7 @@
       if (block.dataset.mechanismType === 'spectral_array') {
         const bands = state.spectralBandsByMechanism.get(block.dataset.mechanismKey || '') || [];
         if (!bands.length) return;
-        pushStageComponent(stage, mechanismName, {
+        const component = {
           component_type: 'multiband_bandpass',
           type: 'multiband_bandpass',
           render_kind: 'band',
@@ -2138,10 +2121,16 @@
             width_nm: Math.max(1, Number(band.max_nm) - Number(band.min_nm)),
             label: band.label,
           })),
-        });
+        };
+        pushStageComponent(stage, mechanismName, component);
+        const mechanismId = cleanString(block.dataset.mechanismId).toLowerCase();
+        if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = component;
       } else if (block.dataset.value) {
         try {
-          pushStageComponent(stage, mechanismName, JSON.parse(block.dataset.value));
+          const component = JSON.parse(block.dataset.value);
+          pushStageComponent(stage, mechanismName, component);
+          const mechanismId = cleanString(block.dataset.mechanismId).toLowerCase();
+          if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = component;
         } catch (error) {
           // ignore invalid tunable payloads
         }
@@ -2154,6 +2143,8 @@
       .map((entry) => entry.mechanism);
     splitterMechanisms.forEach((mechanism) => {
       const selectedBranchIds = ensureSplitterBranchSelection(mechanism);
+      const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
+      if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = mechanism;
       selection.splitters.push({
         id: mechanism.id,
         label: mechanism.display_label || mechanism.name || 'Splitter',
@@ -2193,7 +2184,7 @@
     const routeRecord = state.routeTopology && state.routeTopology.routeRecord && state.routeTopology.routeRecord.record
       ? state.routeTopology.routeRecord.record
       : null;
-    const routeSteps = Array.isArray(routeRecord && routeRecord.route_steps) ? routeRecord.route_steps : [];
+    const routeSteps = authoritativeRouteSteps(state.routeTopology && state.routeTopology.routeRecord ? state.routeTopology.routeRecord : null);
     const config = {
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
       route: state.activeRoute || null,
@@ -2261,29 +2252,45 @@
   }
 
   function buildTraversalOrderedComponents(topology, selection, phase) {
-    const routeSteps = topology && topology.routeRecord && topology.routeRecord.record && Array.isArray(topology.routeRecord.record.route_steps)
-      ? topology.routeRecord.record.route_steps
-      : [];
+    const routeSteps = authoritativeRouteSteps(topology && topology.routeRecord ? topology.routeRecord : null);
     if (!routeSteps.length) return [];
     const entries = routeSteps.filter((step) => step && step.phase === phase);
     if (!entries.length) return [];
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
     const result = [];
-    const componentById = new Map();
-    (Array.isArray(selection.debugSelections) ? selection.debugSelections : []).forEach((entry) => {
-      const comp = entry && entry.component;
-      const id = cleanString(comp && comp.id).toLowerCase();
-      if (id && !componentById.has(id)) componentById.set(id, comp);
+    const selectedByMechanism = (selection && selection.selectedComponentByMechanism && typeof selection.selectedComponentByMechanism === 'object')
+      ? selection.selectedComponentByMechanism
+      : {};
+    const controls = phase === 'illumination'
+      ? ((topology && topology.traversal && Array.isArray(topology.traversal.illumination)) ? topology.traversal.illumination : [])
+      : ((topology && topology.traversal && Array.isArray(topology.traversal.detection)) ? topology.traversal.detection : []);
+    const mechanismByStepId = new Map();
+    controls.forEach((entry) => {
+      if (!(entry && entry.routeStepId && entry.mechanism)) return;
+      mechanismByStepId.set(entry.routeStepId, {
+        mechanism: entry.mechanism,
+        stageKey: entry.stageKey,
+      });
     });
     entries.forEach((entry) => {
       if (!entry || entry.kind === 'source' || entry.kind === 'detector' || entry.kind === 'sample' || entry.kind === 'routing_component') return;
-      const componentId = cleanString(entry.component_id).toLowerCase();
-      if (!componentId) return;
-      if (componentById.has(componentId)) {
-        result.push({ component: componentById.get(componentId), mode, routeStepId: entry.step_id });
-        return;
+      const stepId = cleanString(entry.step_id);
+      if (!stepId) {
+        throw new Error('[VM] buildTraversalOrderedComponents: parser route step is missing step_id (phase=' + phase + ').');
       }
-      throw new Error('[VM] buildTraversalOrderedComponents: no selected component for route step "' + componentId + '" (phase=' + phase + ', step_id=' + (entry.step_id || 'unknown') + ').');
+      const mechanismRef = mechanismByStepId.get(stepId);
+      const mechanism = mechanismRef && mechanismRef.mechanism;
+      const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
+      const selectedComponent = mechanismId ? selectedByMechanism[mechanismId] : null;
+      if (!selectedComponent) {
+        throw new Error('[VM] buildTraversalOrderedComponents: no selected component for parser route step "' + stepId + '" (phase=' + phase + ').');
+      }
+      result.push({
+        component: selectedComponent,
+        mode,
+        routeStepId: stepId,
+        stageKey: cleanString(mechanismRef && mechanismRef.stageKey).toLowerCase() || cleanString(entry.stage_role).toLowerCase() || null,
+      });
     });
     return result;
   }
