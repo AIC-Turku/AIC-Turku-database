@@ -1787,4 +1787,56 @@ class LightPathParserTests(unittest.TestCase):
                 f"component_type '{comp_type}' should map to render_kind '{expected_non_other.get(comp_type)}' but got '{render_kind}'",
             )
 
+    # ── VM-006: analyzer flagged _unsupported_spectral_model ────────────
 
+    def test_analyzer_component_payload_flagged_unsupported_spectral_model(self) -> None:
+        """Analyzer positions should carry _unsupported_spectral_model flag."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "analyzer_slider",
+                            "name": "DIC Fixed Analyzer",
+                            "stage_role": "analyzer",
+                            "element_type": "slider",
+                            "positions": {
+                                "Pos_1": {"component_type": "analyzer"},
+                            },
+                        },
+                    ],
+                    "light_path": {
+                        "detection_mechanisms": [{"optical_path_element_id": "analyzer_slider"}],
+                    },
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        self.assertIn("analyzer", stages)
+        positions = stages["analyzer"][0].get("options", [])
+        self.assertTrue(len(positions) > 0)
+        self.assertTrue(
+            positions[0]["value"].get("_unsupported_spectral_model"),
+            "Analyzer positions should be flagged _unsupported_spectral_model",
+        )
+
+    def test_non_analyzer_component_has_no_unsupported_flag(self) -> None:
+        """Normal spectral components should not carry _unsupported_spectral_model."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "excitation_mechanisms": [
+                            {"positions": {1: {"component_type": "bandpass", "center_nm": 470, "width_nm": 40}}}
+                        ]
+                    }
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        positions = stages.get("excitation", [{}])[0].get("options", [])
+        self.assertTrue(len(positions) > 0)
+        self.assertFalse(
+            positions[0]["value"].get("_unsupported_spectral_model", False),
+            "Bandpass should not have _unsupported_spectral_model flag",
+        )

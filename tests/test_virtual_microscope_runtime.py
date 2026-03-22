@@ -1771,6 +1771,116 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertTrue(result["excArea"], "Excitation should reach sample through dichroic")
         self.assertTrue(result["hasEmission"], "Emission should pass through dichroic + emission filter")
 
+    # ── VM-005: Filter cube composite modeling ──────────────────────────
+
+    def test_component_mask_filter_cube_composite_excitation_mode(self) -> None:
+        """componentMask should use sub-components when filter_cube has linked excitation/dichroic/emission."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 800, step_nm: 2 });
+            // Cube with explicit dichroic (cut_on=500) and emission_filter (bandpass 525/50).
+            // In excitation mode, dichroic reflects short wavelengths.
+            const cube = {
+              component_type: 'filter_cube',
+              dichroic: { component_type: 'dichroic', cut_on_nm: 500 },
+              emission_filter: { component_type: 'bandpass', center_nm: 525, width_nm: 50 },
+            };
+            const mask = rt.componentMask(cube, grid, { mode: 'excitation' });
+            const idx460 = grid.indexOf(460);
+            const idx600 = grid.indexOf(600);
+            return { at460: mask[idx460], at600: mask[idx600] };
+            """
+        )
+        # Excitation mode with dichroic cut_on=500: short wavelengths pass (reflected), long blocked
+        self.assertGreater(result["at460"], 0.8, "Cube in excitation mode should pass 460nm via dichroic reflection")
+        self.assertLess(result["at600"], 0.2, "Cube in excitation mode should block 600nm")
+
+    def test_component_mask_filter_cube_composite_emission_mode(self) -> None:
+        """componentMask should apply dichroic+emission in emission mode for composite filter_cube."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 800, step_nm: 2 });
+            const cube = {
+              component_type: 'filter_cube',
+              dichroic: { component_type: 'dichroic', cut_on_nm: 500 },
+              emission_filter: { component_type: 'bandpass', center_nm: 525, width_nm: 50 },
+            };
+            const mask = rt.componentMask(cube, grid, { mode: 'emission' });
+            const idx460 = grid.indexOf(460);
+            const idx525 = grid.indexOf(526);
+            const idx700 = grid.indexOf(700);
+            return { at460: mask[idx460], at525: mask[idx525], at700: mask[idx700] };
+            """
+        )
+        # Emission mode: dichroic transmits long λ, then emission bandpass selects 500-550nm
+        self.assertLess(result["at460"], 0.1, "460nm should not pass through dichroic+emission in emission mode")
+        self.assertGreater(result["at525"], 0.5, "525nm should pass through dichroic+emission in emission mode")
+        self.assertLess(result["at700"], 0.1, "700nm should be blocked by emission bandpass")
+
+    def test_component_mask_filter_cube_flat_fallback_still_works(self) -> None:
+        """Flat filter_cube without sub-components should still apply bands (emission-only fallback)."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 800, step_nm: 2 });
+            const mask = rt.componentMask(
+              { component_type: 'filter_cube', bands: [{ center_nm: 606, width_nm: 70 }] },
+              grid,
+              { mode: 'emission' }
+            );
+            const idx500 = grid.indexOf(500);
+            const idx606 = grid.indexOf(606);
+            return { at500: mask[idx500], at606: mask[idx606] };
+            """
+        )
+        self.assertLess(result["at500"], 0.05, "Flat fallback should still block 500nm")
+        self.assertGreater(result["at606"], 0.9, "Flat fallback should still pass 606nm")
+
+    # ── VM-006: Unsupported component surfacing ─────────────────────────
+
+    def test_component_mask_analyzer_warns_and_passes(self) -> None:
+        """Analyzer should pass all wavelengths but produce a console.warn."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const warnings = [];
+            const origWarn = console.warn;
+            console.warn = (...args) => warnings.push(args.join(' '));
+            const mask = rt.componentMask(
+              { component_type: 'analyzer', name: 'DIC Analyzer' },
+              grid,
+              { mode: 'emission' }
+            );
+            console.warn = origWarn;
+            const allOnes = mask.every(v => v === 1);
+            return { allOnes, warningCount: warnings.length, hasAnalyzerWarn: warnings.some(w => w.includes('analyzer')) };
+            """
+        )
+        self.assertTrue(result["allOnes"], "analyzer should still pass all wavelengths")
+        self.assertGreater(result["warningCount"], 0, "analyzer should emit a console.warn")
+        self.assertTrue(result["hasAnalyzerWarn"], "warning should mention 'analyzer'")
+
+    def test_component_mask_unknown_type_warns(self) -> None:
+        """Unknown component types should emit a console.warn about unsupported type."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const warnings = [];
+            const origWarn = console.warn;
+            console.warn = (...args) => warnings.push(args.join(' '));
+            const mask = rt.componentMask(
+              { component_type: 'objective_lens' },
+              grid,
+              { mode: 'emission' }
+            );
+            console.warn = origWarn;
+            const allOnes = mask.every(v => v === 1);
+            return { allOnes, warningCount: warnings.length, hasUnsupportedWarn: warnings.some(w => w.includes('unsupported')) };
+            """
+        )
+        self.assertTrue(result["allOnes"], "unknown type should pass all wavelengths")
+        self.assertGreater(result["warningCount"], 0, "unknown type should emit a console.warn")
+        self.assertTrue(result["hasUnsupportedWarn"], "warning should mention 'unsupported'")
+
 
 if __name__ == "__main__":
     unittest.main()

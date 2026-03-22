@@ -175,6 +175,29 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("if (type === 'filter_cube')", source)
 
+    # ── VM-005: composite cube in componentMask ─────────────────────────
+
+    def test_filter_cube_component_mask_uses_linked_sub_components(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("component.excitation_filter || component.excitation", source)
+        self.assertIn("component.dichroic || component.dichroic_filter", source)
+        self.assertIn("component.emission_filter || component.emission", source)
+        self.assertIn("has no linked sub-components; treating as emission-only filter", source)
+
+    # ── VM-006: unsupported component warnings ──────────────────────────
+
+    def test_analyzer_warns_in_component_mask(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("type === 'analyzer'", source)
+        self.assertIn("polarization effects are not modeled", source)
+
+    def test_unknown_type_warns_in_component_mask(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("unsupported component type", source)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1801,7 +1801,11 @@
 
   function componentMask(component, grid, context) {
     const type = cleanString(component && (component.component_type || component.type)).toLowerCase();
-    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density' || type === 'analyzer') {
+    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density') {
+      return grid.map(() => 1);
+    }
+    if (type === 'analyzer') {
+      console.warn('[VM] componentMask: analyzer "' + cleanString(component.name || component.label) + '" treated as spectrally transparent — polarization effects are not modeled.');
       return grid.map(() => 1);
     }
     if (type === 'block' || type === 'blocker') {
@@ -1853,8 +1857,30 @@
           : mode === 'excitation';
       return wantsReflection ? transmit.map((value) => 1 - value) : transmit;
     }
-    // filter_cube: treat as bandpass (single band) or multiband_bandpass (multiple bands).
+    // filter_cube: use linked sub-components when available for true composite
+    // modeling; fall back to emission-only bands with a warning.
     if (type === 'filter_cube') {
+      const exc = component.excitation_filter || component.excitation;
+      const di = component.dichroic || component.dichroic_filter;
+      const em = component.emission_filter || component.emission;
+      if (exc || di || em) {
+        const mode = cleanString(context && context.mode).toLowerCase();
+        let mask = grid.map(() => 1);
+        if (mode === 'excitation') {
+          if (exc) mask = mask.map((v, i) => v * componentMask(exc, grid, { mode: 'excitation' })[i]);
+          if (di) mask = mask.map((v, i) => v * componentMask(di, grid, { mode: 'excitation' })[i]);
+        } else {
+          if (di) mask = mask.map((v, i) => v * componentMask(di, grid, { mode: 'emission' })[i]);
+          if (em) mask = mask.map((v, i) => v * componentMask(em, grid, { mode: 'emission' })[i]);
+        }
+        if (component._cube_incomplete) {
+          console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" applied with incomplete sub-component data.');
+        }
+        return mask;
+      }
+      // Flat fallback: bands only — this should not happen for properly authored
+      // cubes.  Log a warning so the caller knows the cube was reduced.
+      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no linked sub-components; treating as emission-only filter.');
       const bands = normalizedBandMasks(grid, component.bands);
       if (bands.length) return sumMasks(bands, grid);
       const center = numberOrNull(component.center_nm);
@@ -1863,6 +1889,10 @@
       const cutOn = numberOrNull(component.cut_on_nm);
       if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
       return grid.map(() => 1);
+    }
+    // Unknown component type — warn so authors know the type is not modeled.
+    if (type) {
+      console.warn('[VM] componentMask: unsupported component type "' + type + '" treated as spectrally transparent.');
     }
     return grid.map(() => 1);
   }

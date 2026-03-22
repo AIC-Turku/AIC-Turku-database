@@ -1383,6 +1383,11 @@ def _component_payload(component: dict[str, Any], *, default_name: str = "", bra
     if branch_mode:
         payload["branch_mode"] = branch_mode
     _normalize_component_numeric_fields(payload, component)
+    # Flag component types whose spectral behavior is not modeled so the
+    # runtime and UI can surface a note instead of silently treating them
+    # as transparent.
+    if component_type == "analyzer":
+        payload["_unsupported_spectral_model"] = True
     return payload
 
 
