@@ -1034,6 +1034,261 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["branchSequenceKinds"], ["optical_path_element_id", "endpoint_id"])
         self.assertEqual(result["endpointRoutes"], [{"id": "cam", "routes": ["epi"]}, {"id": "eye", "routes": ["epi"]}])
 
+    def test_branch_sequence_uses_parser_resolved_positioned_component_payload(self) -> None:
+        result = self.run_node_json(
+            """
+            const routeSteps = [
+              { step_id: 'illumination-step-0', order: 0, phase: 'illumination', kind: 'source', source_id: 'src_488', component_id: 'src_488' },
+              { step_id: 'sample-step-1', order: 1, phase: 'sample', kind: 'sample', component_id: 'sample_plane' },
+              { step_id: 'detection-step-2', order: 2, phase: 'detection', kind: 'optical_component', component_id: 'main_splitter', stage_role: 'splitter' },
+              {
+                step_id: 'detection-step-3',
+                order: 3,
+                phase: 'detection',
+                kind: 'routing_component',
+                component_id: 'confocal_branch_block_1',
+                routing: {
+                  selection_mode: 'exclusive',
+                  branches: [
+                    {
+                      branch_id: 'green',
+                      label: 'Green',
+                      mode: 'reflected',
+                      sequence: [
+                        {
+                          kind: 'optical_component',
+                          component_id: 'wheel_1',
+                          position_id: '1',
+                          position_key: '1',
+                          position_label: '525/50',
+                          component_type: 'bandpass',
+                          spectral_ops: {
+                            illumination: [{ op: 'bandpass', center_nm: 525, width_nm: 50 }],
+                            detection: [{ op: 'bandpass', center_nm: 525, width_nm: 50 }]
+                          }
+                        },
+                        { kind: 'detector', detector_id: 'cam_a', endpoint_id: 'cam_a', component_id: 'cam_a' }
+                      ]
+                    },
+                    {
+                      branch_id: 'red',
+                      label: 'Red',
+                      mode: 'transmitted',
+                      sequence: [
+                        {
+                          kind: 'optical_component',
+                          component_id: 'wheel_1',
+                          position_id: '2',
+                          position_key: '2',
+                          position_label: '700/75',
+                          component_type: 'bandpass',
+                          spectral_ops: {
+                            illumination: [{ op: 'bandpass', center_nm: 700, width_nm: 75 }],
+                            detection: [{ op: 'bandpass', center_nm: 700, width_nm: 75 }]
+                          }
+                        },
+                        { kind: 'detector', detector_id: 'cam_b', endpoint_id: 'cam_b', component_id: 'cam_b' }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ];
+            const instrument = rt.normalizeInstrumentPayload({
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'confocal' },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [
+                { id: 'main_splitter', stage_role: 'splitter', element_type: 'splitter', display_label: 'Main splitter', selection_mode: 'exclusive' },
+                {
+                  id: 'wheel_1',
+                  stage_role: 'emission',
+                  element_type: 'filter_wheel',
+                  display_label: 'Emission wheel',
+                  positions: {
+                    1: { component_type: 'bandpass', center_nm: 525, width_nm: 50, label: '525/50' },
+                    2: { component_type: 'bandpass', center_nm: 700, width_nm: 75, label: '700/75' }
+                  }
+                }
+              ],
+              endpoints: [
+                { id: 'cam_a', display_label: 'Cam A', endpoint_type: 'camera' },
+                { id: 'cam_b', display_label: 'Cam B', endpoint_type: 'camera' }
+              ],
+              light_paths: [
+                {
+                  id: 'confocal',
+                  illumination_sequence: [{ source_id: 'src_488' }],
+                  detection_sequence: [
+                    { optical_path_element_id: 'main_splitter' },
+                    { branches: { selection_mode: 'exclusive', items: [
+                      { branch_id: 'green', mode: 'reflected', sequence: [{ optical_path_element_id: 'wheel_1', position_id: '1' }, { endpoint_id: 'cam_a' }] },
+                      { branch_id: 'red', mode: 'transmitted', sequence: [{ optical_path_element_id: 'wheel_1', position_id: '2' }, { endpoint_id: 'cam_b' }] }
+                    ] } }
+                  ],
+                  route_steps: routeSteps,
+                  selected_execution: { contract_version: 'selected_execution.v1', steps: routeSteps }
+                }
+              ]
+            });
+            const splitters = instrument.splitters || [];
+            return {
+              splitterCount: splitters.length,
+              centers: splitters[0].branches.map((branch) => branch.component.center_nm),
+              labels: splitters[0].branches.map((branch) => branch.component.display_label || branch.component.label),
+            };
+            """
+        )
+
+        self.assertEqual(result["splitterCount"], 1)
+        self.assertEqual(result["centers"], [525, 700])
+        self.assertEqual(result["labels"], ["525/50", "700/75"])
+
+    def test_parser_branch_sequence_optics_drive_splitter_paths(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor(key, emCenter) {
+              return {
+                key,
+                name: key,
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [470, 30], [488, 100], [510, 20], [540, 0]],
+                  ex2p: [],
+                  em: [[emCenter - 25, 0], [emCenter - 10, 45], [emCenter, 100], [emCenter + 10, 50], [emCenter + 25, 0]]
+                },
+                exMax: 488,
+                emMax: emCenter
+              };
+            }
+            const routeSteps = [
+              { step_id: 'illumination-step-0', order: 0, phase: 'illumination', kind: 'source', source_id: 'src_488', component_id: 'src_488' },
+              { step_id: 'sample-step-1', order: 1, phase: 'sample', kind: 'sample', component_id: 'sample_plane' },
+              { step_id: 'detection-step-2', order: 2, phase: 'detection', kind: 'optical_component', component_id: 'main_splitter', stage_role: 'splitter' },
+              {
+                step_id: 'detection-step-3',
+                order: 3,
+                phase: 'detection',
+                kind: 'routing_component',
+                component_id: 'confocal_branch_block_1',
+                routing: {
+                  selection_mode: 'exclusive',
+                  branches: [
+                    {
+                      branch_id: 'green',
+                      label: 'Green path',
+                      mode: 'reflected',
+                      sequence: [
+                        {
+                          kind: 'optical_component',
+                          component_id: 'wheel_1',
+                          position_id: '1',
+                          position_key: '1',
+                          position_label: '525/50',
+                          component_type: 'bandpass',
+                          spectral_ops: {
+                            illumination: [{ op: 'bandpass', center_nm: 525, width_nm: 50 }],
+                            detection: [{ op: 'bandpass', center_nm: 525, width_nm: 50 }]
+                          }
+                        },
+                        { kind: 'detector', detector_id: 'cam_a', endpoint_id: 'cam_a', component_id: 'cam_a' }
+                      ]
+                    },
+                    {
+                      branch_id: 'red',
+                      label: 'Red path',
+                      mode: 'transmitted',
+                      sequence: [
+                        {
+                          kind: 'optical_component',
+                          component_id: 'wheel_1',
+                          position_id: '2',
+                          position_key: '2',
+                          position_label: '700/75',
+                          component_type: 'bandpass',
+                          spectral_ops: {
+                            illumination: [{ op: 'bandpass', center_nm: 700, width_nm: 75 }],
+                            detection: [{ op: 'bandpass', center_nm: 700, width_nm: 75 }]
+                          }
+                        },
+                        { kind: 'detector', detector_id: 'cam_b', endpoint_id: 'cam_b', component_id: 'cam_b' }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ];
+            const rawInstrument = {
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'confocal', wavelength_grid: { min_nm: 430, max_nm: 760, step_nm: 2 } },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [
+                { id: 'main_splitter', stage_role: 'splitter', element_type: 'splitter', display_label: 'Main splitter', selection_mode: 'exclusive' },
+                {
+                  id: 'wheel_1',
+                  stage_role: 'emission',
+                  element_type: 'filter_wheel',
+                  display_label: 'Emission wheel',
+                  positions: {
+                    1: { component_type: 'bandpass', center_nm: 525, width_nm: 50, label: '525/50' },
+                    2: { component_type: 'bandpass', center_nm: 700, width_nm: 75, label: '700/75' }
+                  }
+                }
+              ],
+              endpoints: [
+                { id: 'cam_a', display_label: 'Cam A', endpoint_type: 'camera' },
+                { id: 'cam_b', display_label: 'Cam B', endpoint_type: 'camera' }
+              ],
+              light_paths: [
+                {
+                  id: 'confocal',
+                  illumination_sequence: [{ source_id: 'src_488' }],
+                  detection_sequence: [
+                    { optical_path_element_id: 'main_splitter' },
+                    { branches: { selection_mode: 'exclusive', items: [
+                      { branch_id: 'green', label: 'Green path', mode: 'reflected', sequence: [{ optical_path_element_id: 'wheel_1', position_id: '1' }, { endpoint_id: 'cam_a' }] },
+                      { branch_id: 'red', label: 'Red path', mode: 'transmitted', sequence: [{ optical_path_element_id: 'wheel_1', position_id: '2' }, { endpoint_id: 'cam_b' }] }
+                    ] } }
+                  ],
+                  route_steps: routeSteps,
+                  selected_execution: { contract_version: 'selected_execution.v1', steps: routeSteps }
+                }
+              ]
+            };
+            const instrument = rt.normalizeInstrumentPayload(rawInstrument);
+            const split = rt.simulateInstrument(
+              rawInstrument,
+              {
+                sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                illuminationComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'excitation', routeStepId: 'illumination-step-0' }],
+                detectionComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'emission', routeStepId: 'detection-step-0' }],
+                excitation: [],
+                dichroic: [],
+                emission: [],
+                splitters: [{
+                  id: 'main_splitter',
+                  branch_selection_required: true,
+                  selected_branch_ids: ['green', 'red'],
+                  branches: instrument.splitters[0].branches
+                }],
+                detectors: [
+                  { id: 'cam_a', display_label: 'Cam A', kind: 'camera' },
+                  { id: 'cam_b', display_label: 'Cam B', kind: 'camera' }
+                ],
+                selectionMap: {}
+              },
+              [fluor('green', 525), fluor('red', 670)],
+              { currentRoute: 'confocal' }
+            );
+            const rows = split.results.map((row) => ({ fluor: row.fluorophoreKey, path: row.pathLabel, intensity: row.detectorWeightedIntensity }));
+            return { rows };
+            """
+        )
+
+        rows = {(row["fluor"], row["path"]): row["intensity"] for row in result["rows"]}
+        self.assertGreater(rows[("green", "Main Path -> Green path -> Cam A")], rows[("green", "Main Path -> Red path -> Cam B")])
+        self.assertGreater(rows[("red", "Main Path -> Red path -> Cam B")], rows[("red", "Main Path -> Green path -> Cam A")])
+
     def test_runtime_keeps_authoritative_inventory_and_route_usage_from_dto(self) -> None:
         result = self.run_node_json(
             """
@@ -2085,6 +2340,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             return {
                 isSequential: result ? Boolean(result.requiresSequentialAcquisition) : false,
                 hasPerFluorConfigs: result && Array.isArray(result.perFluorophoreConfigs) ? result.perFluorophoreConfigs.length : 0,
+                hasSequentialPlan: result && Array.isArray(result.sequentialPlan) ? result.sequentialPlan.length : 0,
                 hasReason: result && result.reason ? true : false,
                 isNull: result === null,
             };
@@ -2097,8 +2353,22 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         elif result["isSequential"]:
             self.assertTrue(result["hasReason"], "sequential result should have a reason")
             self.assertGreaterEqual(result["hasPerFluorConfigs"], 2, "should have per-fluorophore configs")
+            self.assertGreaterEqual(result["hasSequentialPlan"], 2, "sequential result should include ordered plan steps")
         else:
             pass  # Optimizer found a shared config — also acceptable
+
+    def test_optimizer_filters_incomplete_cube_options_in_source(self) -> None:
+        """Runtime optimizer should filter incomplete/unsupported cube options before scoring."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+        self.assertIn("option.value._cube_incomplete", source)
+        self.assertIn("option.value._unsupported_spectral_model", source)
+
+    def test_expand_cube_selection_for_optimization_has_incomplete_guard(self) -> None:
+        """expandCubeSelectionForOptimization should explicitly guard incomplete cubes."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+        self.assertIn("expandCubeSelectionForOptimization(component)", source)
+        self.assertIn("component._cube_incomplete || component._unsupported_spectral_model", source)
+        self.assertIn("return [];", source)
 
     # ── executeSpectralOps tests ──────────────────────────────────────
 

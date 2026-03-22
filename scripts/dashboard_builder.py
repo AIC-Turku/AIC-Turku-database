@@ -227,6 +227,7 @@ def build_plan_experiments_page_config(facility: dict[str, Any]) -> dict[str, An
 def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str, Any]:
     dto = copy.deepcopy(inst.get("dto") or {})
     dto["methods_generation"] = copy.deepcopy(inst.get("methods_generation") or {})
+    dto["runtime_selected_configuration"] = copy.deepcopy(inst.get("runtime_selected_configuration"))
     return dto
 
 
@@ -1595,6 +1596,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "illumination_traversal": copy.deepcopy(route.get("illumination_traversal") or []),
             "detection_traversal": copy.deepcopy(route.get("detection_traversal") or []),
             "route_steps": copy.deepcopy(route.get("route_steps") or []),
+            "selected_execution": copy.deepcopy(route.get("selected_execution") or {}),
             "route_warnings": copy.deepcopy(route.get("route_warnings") or []),
             "illumination_sequence": copy.deepcopy(route.get("illumination_sequence") or []),
             "detection_sequence": copy.deepcopy(route.get("detection_sequence") or []),
@@ -1787,6 +1789,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
                     if isinstance(edge, dict)
                 ],
             },
+            "selected_execution": copy.deepcopy(route_renderable.get("selected_execution") or {}),
             "method_sentence": (
                 f"The {route_label} illumination mode / route was used."
                 if route_label

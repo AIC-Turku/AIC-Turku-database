@@ -19,6 +19,10 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("route_steps", source)
         self.assertIn("active route is missing authoritative route_steps", source)
+        self.assertIn("function authoritativeRouteSteps(routeRecord)", source)
+        self.assertIn("const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;", source)
+        self.assertIn("const selectedSteps = Array.isArray(selectedExecution && selectedExecution.steps) ? selectedExecution.steps : [];", source)
+        self.assertIn("if (selectedSteps.length) return selectedSteps;", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence))", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence))", source)
 
@@ -35,8 +39,13 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("function pipelineSpectrumForStep(stepId, stepSpectra, fallbackSpectra)", source)
-        self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission)", source)
+        self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation)", source)
         self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);", source)
+        self.assertIn("const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];", source)
+        self.assertIn("const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];", source)
+        self.assertIn("if (!step || step.kind !== 'routing_component') return;", source)
+        self.assertIn("stepSpectra.set(stepId, routedBranchSpectrum);", source)
+        self.assertNotIn("const consumed = { excitation: 0, dichroic: 0, emission: 0 };", source)
 
     def test_source_settings_are_keyed_by_instrument_and_source_identity(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -128,7 +137,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("entry.kind === 'endpoint'", source)
         pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
-        self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", pipe_fn)
+        self.assertIn("if (entry.kind === 'endpoint') return;", pipe_fn)
         groups_fn = source.split("function buildDerivedControlGroups")[1].split("\n  function ")[0]
         self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", groups_fn)
 
@@ -137,6 +146,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
         self.assertIn("flowOrigin: stepId", pipe_fn)
+        self.assertIn("label: entry.kind === 'branch-block' ? 'Routing' : (entry.title || 'Detection')", pipe_fn)
         self.assertNotIn("flowOrigin: 'illumination'", pipe_fn)
         self.assertNotIn("flowOrigin: 'detection'", pipe_fn)
 
@@ -152,6 +162,10 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("function buildTraversalOrderedComponents(topology, selection, phase)", source)
         self.assertIn("selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination')", source)
         self.assertIn("selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection')", source)
+        self.assertIn("selectedComponentByMechanism", source)
+        self.assertIn("const mechanismByStepId = new Map();", source)
+        self.assertIn("mechanismByStepId.set(entry.routeStepId", source)
+        self.assertIn("step_id", source)
 
     def test_simulation_uses_traversal_ordered_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
@@ -213,12 +227,16 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("requiresSequentialAcquisition", source)
         self.assertIn("perFluorophoreConfigs", source)
+        self.assertIn("sequentialPlan", source)
 
     def test_run_auto_configure_handles_sequential(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("result.requiresSequentialAcquisition", source)
-        self.assertIn("Sequential acquisition required", source)
+        self.assertIn("function renderSequentialAcquisitionPlan(steps, activeStepIndex = null)", source)
+        self.assertIn("button.textContent = activeStepIndex === index ? 'Applied' : `Apply step ${entry.step || (index + 1)}`;", source)
+        self.assertIn("applyOptimizedConfiguration(steps[0].configuration);", source)
+        self.assertIn("renderSequentialAcquisitionPlan(steps, 0);", source)
 
     # ── VM-008: deduplicated detector legends ──
 
@@ -247,6 +265,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("_unsupported_spectral_model", source)
         self.assertIn("Spectral model not available", source)
+        self.assertIn("_cube_incomplete", source)
+        self.assertIn("exact spectral simulation and optimization may be unavailable", source)
 
     # ── VM-011: buildSelectedConfiguration function exists ──
 
@@ -255,6 +275,9 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("function buildSelectedConfiguration(", source)
         self.assertIn("selectionMap", source)
+        self.assertIn("scope_id", source)
+        self.assertIn("acquisition_plan", source)
+        self.assertIn("_cube_incomplete", source)
 
     def test_selected_configuration_is_computed_on_every_refresh(self) -> None:
         """buildSelectedConfiguration must be called in refreshOutputs so the config is always current."""
@@ -269,6 +292,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("window.getVirtualMicroscopeConfiguration", source)
         self.assertIn("state.lastSelectedConfiguration", source)
+        self.assertIn("persistSelectedConfiguration", source)
+        self.assertIn("aic.virtualMicroscope.selectedConfiguration", source)
 
     # ── Stage adapter comment accuracy ──
 

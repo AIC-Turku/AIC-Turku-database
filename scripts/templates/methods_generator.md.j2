@@ -440,6 +440,94 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    function getRuntimeSelectedConfiguration() {
+        if (typeof window === "undefined" || !window.localStorage) return null;
+        try {
+            const raw = window.localStorage.getItem("aic.virtualMicroscope.selectedConfiguration");
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === "object" ? parsed : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function runtimeConfigurationMatchesInstrument(dto, runtimeConfig) {
+        if (!dto || !runtimeConfig || typeof runtimeConfig !== "object") return false;
+        const scopeId = cleanText(runtimeConfig.scope_id);
+        const instrumentId = cleanText(runtimeConfig.instrument_id);
+        const dtoId = cleanText(dto.id);
+        if (scopeId && dtoId && scopeId === dtoId) return true;
+        if (instrumentId && dtoId && instrumentId === dtoId) return true;
+        return false;
+    }
+
+    function runtimeConfigurationSentence(dto) {
+        const runtimeConfig = getRuntimeSelectedConfiguration();
+        if (!runtimeConfigurationMatchesInstrument(dto, runtimeConfig)) return "";
+
+        const route = cleanText(runtimeConfig.route) || "unspecified route";
+        const sourceLabels = uniqueTexts((Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).map((source) => {
+            const label = cleanText(source?.display_label || source?.name || source?.id);
+            const wavelength = source?.wavelength_nm;
+            return label ? `${label}${Number.isFinite(Number(wavelength)) ? ` (${Number(wavelength)} nm)` : ""}` : "";
+        }));
+        const stageSelections = uniqueTexts((Array.isArray(runtimeConfig.stages) ? runtimeConfig.stages : []).map((stage) => {
+            const label = cleanText(stage?.display_label || stage?.name || stage?.stage);
+            const position = cleanText(stage?.position_key) || (stage?.slot != null ? String(stage.slot) : "");
+            return label ? `${label}${position ? ` @ ${position}` : ""}` : "";
+        }));
+        const splitterSelections = uniqueTexts((Array.isArray(runtimeConfig.splitters) ? runtimeConfig.splitters : []).map((splitter) => {
+            const label = cleanText(splitter?.display_label || splitter?.id);
+            const branches = Array.isArray(splitter?.selected_branch_ids) ? splitter.selected_branch_ids.filter(Boolean) : [];
+            return label ? `${label}${branches.length ? ` [${branches.join(", ")}]` : ""}` : "";
+        }));
+        const detectorSelections = uniqueTexts((Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).map((detector) => {
+            const label = cleanText(detector?.display_label || detector?.id);
+            const hasWindow = Number.isFinite(Number(detector?.collection_min_nm)) && Number.isFinite(Number(detector?.collection_max_nm));
+            return label ? `${label}${hasWindow ? ` (${Number(detector.collection_min_nm)}–${Number(detector.collection_max_nm)} nm)` : ""}` : "";
+        }));
+        const stageRows = Array.isArray(runtimeConfig.stages) ? runtimeConfig.stages : [];
+        const flattenedIncomplete = stageRows.filter((stage) => stage?._cube_incomplete).map((stage) => cleanText(stage?.display_label || stage?.name || stage?.stage)).filter(Boolean);
+        const unsupportedComponents = stageRows.filter((stage) => stage?._unsupported_spectral_model).map((stage) => cleanText(stage?.display_label || stage?.name || stage?.stage)).filter(Boolean);
+        const unsupportedRouteSteps = (Array.isArray(runtimeConfig.route_steps) ? runtimeConfig.route_steps : [])
+            .map((step) => cleanText(step?.unsupported_reason || ""))
+            .filter(Boolean);
+
+        const acquisitionPlan = runtimeConfig.acquisition_plan && typeof runtimeConfig.acquisition_plan === "object"
+            ? runtimeConfig.acquisition_plan
+            : null;
+        let acquisitionSentence = "";
+        if (acquisitionPlan?.requiresSequentialAcquisition) {
+            const steps = Array.isArray(acquisitionPlan.steps) ? acquisitionPlan.steps : [];
+            const stepSummary = steps
+                .map((step) => {
+                    const stepNo = step?.step != null ? step.step : "?";
+                    const fluor = cleanText(step?.fluorophoreName) || "fluorophore";
+                    const stepRoute = cleanText(step?.route) || "current route";
+                    return `step ${stepNo} (${fluor}, route ${stepRoute})`;
+                })
+                .filter(Boolean);
+            acquisitionSentence = `Sequential acquisition was required and executed as ${humanJoin(stepSummary)}.`;
+        }
+
+        const notes = [];
+        if (flattenedIncomplete.length) notes.push(`Flattened/incomplete optics were present for ${humanJoin(flattenedIncomplete)}.`);
+        if (unsupportedComponents.length || unsupportedRouteSteps.length) {
+            notes.push(`Unsupported spectral model flags were present (${humanJoin([...unsupportedComponents, ...unsupportedRouteSteps])}).`);
+        }
+
+        return dedupeSentences([
+            `Exact virtual microscope runtime-selected configuration used route ${route}.`,
+            sourceLabels.length ? `Selected sources: ${humanJoin(sourceLabels)}.` : "",
+            stageSelections.length ? `Selected wheel/turret positions: ${humanJoin(stageSelections)}.` : "",
+            splitterSelections.length ? `Selected splitter branches: ${humanJoin(splitterSelections)}.` : "",
+            detectorSelections.length ? `Selected endpoints/detectors: ${humanJoin(detectorSelections)}.` : "",
+            acquisitionSentence,
+            ...notes,
+        ]).join(" ");
+    }
+
     function instrumentTriggersXcelligence(nameOrId) {
         const normalized = cleanText(nameOrId).toLowerCase();
         return ["xcelligence", "rtca esight"].some(token => normalized.includes(token));
@@ -569,6 +657,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ...specialistSelections,
             dto.methods?.quarep_light_path_recommendation,
         ]).join(" ");
+        const paragraphRuntimeSelectedConfig = runtimeConfigurationSentence(dto);
 
         const paragraphAcquisition = dedupeSentences([
             ...(dto.methods?.processing_sentences || []),
@@ -585,6 +674,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const textParts = [
             paragraphHardware,
             paragraphLightPath,
+            paragraphRuntimeSelectedConfig,
             paragraphAcquisition,
             paragraphDeposition,
             paragraphMissingMetadata,

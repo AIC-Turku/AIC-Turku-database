@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from itertools import product
 from typing import Any
 
@@ -620,7 +621,12 @@ def _canonicalize_sequence_item(
         return None
     if selected_key == "endpoint_id" and normalized_value not in endpoint_ids:
         return None
-    return {selected_key: normalized_value}
+    normalized_item = {selected_key: normalized_value}
+    if selected_key == "optical_path_element_id":
+        position_id = _clean_string(item.get("position_id"))
+        if position_id:
+            normalized_item["position_id"] = position_id
+    return normalized_item
 
 
 
@@ -1544,6 +1550,17 @@ def _cube_spectral_ops(component: dict[str, Any]) -> dict[str, list[dict[str, An
     if linked_components:
         component["linked_components"] = linked_components
 
+    if component.get("_cube_incomplete"):
+        # Flattened/synthetic cube reconstructions are intentionally treated as
+        # non-authoritative for exact spectral simulation. Return passthrough
+        # ops with an explicit unsupported_reason before deriving any modeled
+        # bandpass/dichroic behavior from incomplete internals.
+        reason = "filter_cube_incomplete_reconstruction"
+        return {
+            "illumination": [{"op": "passthrough", "unsupported_reason": reason}],
+            "detection": [{"op": "passthrough", "unsupported_reason": reason}],
+        }
+
     illumination: list[dict[str, Any]] = []
     detection: list[dict[str, Any]] = []
 
@@ -2109,6 +2126,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
             # can warn users about incomplete cube modeling.
             if linked_components and "excitation_filter" not in linked_components:
                 position_payload["_cube_incomplete"] = True
+                position_payload["_unsupported_spectral_model"] = True
             # Parser-authoritative spectral ops for the browser runtime.
             position_payload["spectral_ops"] = _cube_spectral_ops(position_payload)
             routes = _normalize_routes(cube_position.get("path") or cube_position.get("paths") or cube_position.get("route") or cube_position.get("routes") or mechanism.get("path"))
@@ -2228,6 +2246,99 @@ def _component_payload_from_element_reference(
     return {}
 
 
+def _iter_element_positions(element: dict[str, Any]) -> list[tuple[str, int | None, dict[str, Any]]]:
+    positions = element.get("positions")
+    candidates: list[tuple[str, int | None, dict[str, Any]]] = []
+    if isinstance(positions, dict):
+        for raw_key, position in positions.items():
+            if not isinstance(position, dict):
+                continue
+            key_text = str(raw_key)
+            slot = _coerce_slot_key(position.get("slot"))
+            if slot is None:
+                slot = _coerce_slot_key(raw_key)
+            candidates.append((key_text, slot, position))
+    elif isinstance(positions, list):
+        for idx, position in enumerate(positions, start=1):
+            if not isinstance(position, dict):
+                continue
+            key_text = _clean_string(position.get("position_key")) or str(position.get("slot") or idx)
+            slot = _coerce_slot_key(position.get("slot"))
+            candidates.append((key_text, slot, position))
+    candidates.sort(key=lambda item: (item[1] is None, item[1] if item[1] is not None else 0, item[0]))
+    return candidates
+
+
+def _resolve_positioned_component_from_element(
+    element: dict[str, Any],
+    *,
+    position_id: str = "",
+) -> tuple[dict[str, Any], str | None, str | None, str | None]:
+    position_candidates = _iter_element_positions(element)
+    requested = _clean_string(position_id)
+    requested_identifier = _clean_identifier(position_id)
+    requested_slot = _coerce_slot_key(position_id)
+
+    selected_key: str | None = None
+    selected_slot: int | None = None
+    selected_position: dict[str, Any] | None = None
+    if requested and position_candidates:
+        for key_text, slot, position in position_candidates:
+            position_key = _clean_string(position.get("position_key"))
+            identifiers = {
+                _clean_identifier(key_text),
+                _clean_identifier(position_key),
+                _clean_identifier(position.get("id")),
+            }
+            key_matches = (
+                requested == key_text
+                or requested == position_key
+                or (requested_identifier and requested_identifier in identifiers)
+            )
+            slot_matches = requested_slot is not None and slot == requested_slot
+            if key_matches or slot_matches:
+                selected_key = key_text
+                selected_slot = slot
+                selected_position = position
+                break
+
+    if selected_position is None and position_candidates:
+        selected_key, selected_slot, selected_position = position_candidates[0]
+
+    if isinstance(selected_position, dict):
+        if isinstance(selected_position.get("component"), dict):
+            component_payload = _component_payload(
+                selected_position["component"],
+                default_name=element.get("name") or element.get("display_label") or element.get("id") or "",
+            )
+        elif any(isinstance(selected_position.get(link_key), dict) for link_key in CUBE_LINK_KEYS):
+            component_payload = dict(selected_position)
+            component_payload.setdefault("component_type", "filter_cube")
+            component_payload.setdefault("type", component_payload.get("component_type"))
+            component_payload.setdefault("label", _clean_string(selected_position.get("label") or selected_position.get("name")))
+            component_payload.setdefault("display_label", _clean_string(selected_position.get("display_label") or selected_position.get("label") or selected_position.get("name")))
+            component_payload.setdefault("spectral_ops", _cube_spectral_ops(component_payload))
+        else:
+            component_payload = _component_payload(
+                selected_position,
+                default_name=element.get("name") or element.get("display_label") or element.get("id") or "",
+            )
+        position_key = _clean_string(selected_position.get("position_key")) or selected_key
+        resolved_position_id = requested or (str(selected_slot) if selected_slot is not None else position_key)
+        position_label = (
+            _clean_string(selected_position.get("display_label"))
+            or _clean_string(selected_position.get("label"))
+            or _clean_string(selected_position.get("name"))
+            or _clean_string(component_payload.get("display_label"))
+            or _clean_string(component_payload.get("label"))
+            or None
+        )
+        return component_payload, resolved_position_id or None, position_key or None, position_label
+
+    component_payload = _component_payload_from_element_reference(_clean_identifier(element.get("id")), {element.get("id"): element})
+    return component_payload, None, None, None
+
+
 def _collect_route_owned_splitters(
     light_paths: list[dict[str, Any]],
     elements: list[dict[str, Any]],
@@ -2290,14 +2401,20 @@ def _collect_route_owned_splitters(
                     }
                     if branch.get("mode"):
                         branch_payload["mode"] = branch.get("mode")
-                    component = next(
-                        (
-                            _component_payload_from_element_reference(_clean_identifier(step.get("optical_path_element_id")), element_lookup)
-                            for step in branch.get("sequence") or []
-                            if isinstance(step, dict) and step.get("optical_path_element_id")
-                        ),
-                        {},
-                    )
+                    component: dict[str, Any] = {}
+                    for step in branch.get("sequence") or []:
+                        if not isinstance(step, dict):
+                            continue
+                        step_element_id = _clean_identifier(step.get("optical_path_element_id"))
+                        if not step_element_id or step_element_id not in element_lookup:
+                            continue
+                        resolved_component, _, _, _ = _resolve_positioned_component_from_element(
+                            element_lookup[step_element_id],
+                            position_id=_clean_string(step.get("position_id")),
+                        )
+                        if isinstance(resolved_component, dict) and resolved_component:
+                            component = resolved_component
+                            break
                     if component:
                         branch_payload["component"] = component
                     splitter["branches"].append(branch_payload)
@@ -2786,6 +2903,20 @@ def _build_route_steps(
             return endpoint_lookup.get(ref_id, {})
         return element_lookup.get(ref_id, {})
 
+    def _resolved_step_payload(entry: dict[str, Any]) -> tuple[dict[str, Any], str | None, str | None, str | None]:
+        entry_kind = entry.get("kind", "")
+        row = _lookup_row(entry)
+        if entry_kind in {"source", "endpoint"}:
+            payload = row if isinstance(row, dict) else {}
+            return payload, None, None, None
+
+        element_row = row if isinstance(row, dict) else {}
+        component_payload, position_id, position_key, position_label = _resolve_positioned_component_from_element(
+            element_row,
+            position_id=_clean_string(entry.get("position_id")),
+        )
+        return component_payload, position_id, position_key, position_label
+
     def _process_entries(entries: list[dict[str, Any]], phase: str) -> None:
         nonlocal order
         def _routing_branch_sequence(sequence: Any) -> list[dict[str, Any]]:
@@ -2816,11 +2947,21 @@ def _build_route_steps(
                         }
                     )
                     continue
+                row = element_lookup.get(seq_id or "", {})
+                component_payload, position_id, position_key, position_label = _resolve_positioned_component_from_element(
+                    row if isinstance(row, dict) else {},
+                    position_id=_clean_string(seq_step.get("position_id")),
+                )
                 normalized.append(
                     {
                         "kind": "optical_component",
                         "component_id": seq_id or None,
                         "display_label": seq_step.get("display_label"),
+                        "position_id": position_id,
+                        "position_key": position_key,
+                        "position_label": position_label,
+                        "spectral_ops": component_payload.get("spectral_ops"),
+                        "unsupported_reason": "unsupported_spectral_model" if component_payload.get("_unsupported_spectral_model") else None,
                     }
                 )
             return normalized
@@ -2863,11 +3004,8 @@ def _build_route_steps(
             inventory_item = inventory_lookup.get(inventory_id, {})
             component_type = _clean_string(row.get("component_type") or row.get("type") or row.get("element_type") or "").lower()
             stage_role = _clean_string(row.get("stage_role") or row.get("element_type") or "").lower()
-
-            if entry_kind in {"source", "endpoint"}:
-                component_payload = row if isinstance(row, dict) else {}
-            else:
-                component_payload = _component_payload(row, default_name=row.get("name") or row.get("display_label") or entry.get("display_label") or "")
+            component_payload, position_id, position_key, position_label = _resolved_step_payload(entry)
+            resolved_component_type = _clean_string(component_payload.get("component_type") or component_payload.get("type")).lower()
             step = {
                 "step_id": f"{phase}-step-{order}",
                 "order": order,
@@ -2878,12 +3016,12 @@ def _build_route_steps(
                 "detector_id": entry.get("id") if entry_kind == "endpoint" else None,
                 "endpoint_id": entry.get("id") if entry_kind == "endpoint" else None,
                 "hardware_inventory_id": inventory_id or None,
-                "component_type": component_type or stage_role or None,
+                "component_type": resolved_component_type or component_type or stage_role or None,
                 "stage_role": stage_role or None,
                 "display_label": entry.get("display_label"),
-                "position_id": None,
-                "position_key": None,
-                "position_label": None,
+                "position_id": position_id,
+                "position_key": position_key,
+                "position_label": position_label,
                 "spectral_ops": component_payload.get("spectral_ops"),
                 "routing": None,
                 "metadata": _component_metadata(inventory_item) if inventory_item else _component_metadata(row),
@@ -3138,10 +3276,32 @@ def _build_route_sequences_and_graph(
             if not ref_key:
                 continue
             resolved = resolve_step(step)
+            if ref_key == "optical_path_element_id":
+                element_id = _clean_identifier(step.get("optical_path_element_id"))
+                element_row = element_lookup.get(element_id, {})
+                component_payload, position_id, position_key, position_label = _resolve_positioned_component_from_element(
+                    element_row if isinstance(element_row, dict) else {},
+                    position_id=_clean_string(step.get("position_id")),
+                )
+                if position_id:
+                    resolved["position_id"] = position_id
+                if position_key:
+                    resolved["position_key"] = position_key
+                if position_label:
+                    resolved["position_label"] = position_label
+                if component_payload.get("spectral_ops") is not None:
+                    resolved["spectral_ops"] = component_payload.get("spectral_ops")
+                if component_payload.get("_unsupported_spectral_model"):
+                    resolved["_unsupported_spectral_model"] = True
+                if _clean_string(component_payload.get("component_type")):
+                    resolved["component_type"] = _clean_string(component_payload.get("component_type")).lower()
             node_id = add_graph_node(resolved, phase=phase, column=current_column, lane=lane)
             if current_prev:
                 add_graph_edge(current_prev, node_id)
-            resolved_steps.append({**resolved, "node_id": node_id, "sequence_ref": {ref_key: resolved.get("id")}})
+            sequence_ref = {ref_key: resolved.get("id")}
+            if ref_key == "optical_path_element_id" and _clean_string(step.get("position_id")):
+                sequence_ref["position_id"] = _clean_string(step.get("position_id"))
+            resolved_steps.append({**resolved, "node_id": node_id, "sequence_ref": sequence_ref})
             current_prev = node_id
             current_column += 1
         return resolved_steps, current_prev, current_column
@@ -3200,6 +3360,15 @@ def _build_route_sequences_and_graph(
         "illumination_traversal": illumination_sequence,
         "detection_traversal": detection_sequence,
         "route_steps": route_steps,
+        "selected_execution": deepcopy(
+            {
+                "contract_version": "selected_execution.v1",
+                "steps": route_steps,
+                "warnings": list(route_warnings),
+                "illumination_traversal": illumination_sequence,
+                "detection_traversal": detection_sequence,
+            }
+        ),
         "route_warnings": route_warnings,
         "branch_blocks": list(usage["branch_blocks"]),
         "endpoints": list(usage["endpoint_inventory_ids"]),
@@ -3286,6 +3455,7 @@ def _generate_virtual_microscope_payload_inner(instrument_dict: dict, *, include
             "yaml_source_of_truth": True,
             "topology_contract": "schema -> validator -> canonical dto -> derived adapters -> consumers",
             "authoritative_contract": "canonical_v2_only",
+            "selected_execution_contract": "light_paths[].selected_execution",
             "topology_truth": "light_paths",
             "hardware_contract": "hardware_inventory",
             "primary_rendering_contract": {

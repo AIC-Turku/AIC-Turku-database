@@ -415,19 +415,34 @@
       return binding;
     };
 
-    const walkSequence = (sequence, routeId, phase, trail) => {
+    const walkSequence = (sequence, routeId, phase, trail, routeRoutingContext) => {
       let previousElementId = normalizeIdentifier(trail);
       (Array.isArray(sequence) ? sequence : []).forEach((step, stepIndex) => {
         if (!(step && typeof step === 'object')) return;
         const branchBlock = step.branches && typeof step.branches === 'object' ? step.branches : null;
         if (branchBlock) {
           const splitterBinding = ensureSplitterBinding(previousElementId, branchBlock.selection_mode, routeId);
+          const routingSteps = routeRoutingContext && Array.isArray(routeRoutingContext[phase]) ? routeRoutingContext[phase] : [];
+          const cursor = routeRoutingContext && routeRoutingContext.__cursor && Number.isFinite(routeRoutingContext.__cursor[phase])
+            ? routeRoutingContext.__cursor[phase]
+            : 0;
+          const routingStep = cursor < routingSteps.length ? routingSteps[cursor] : null;
+          if (routeRoutingContext && routeRoutingContext.__cursor) routeRoutingContext.__cursor[phase] = cursor + 1;
+          const resolvedRoutingBranches = Array.isArray(routingStep && routingStep.routing && routingStep.routing.branches)
+            ? routingStep.routing.branches
+            : [];
           (Array.isArray(branchBlock.items) ? branchBlock.items : []).forEach((branch, branchIndex) => {
             if (!(branch && typeof branch === 'object')) return;
             const branchId = normalizeIdentifier(branch.branch_id || branch.id) || `branch_${branchIndex + 1}`;
+            const resolvedBranch = resolvedRoutingBranches.find((entry) => normalizeIdentifier(entry && (entry.branch_id || entry.id)) === branchId)
+              || resolvedRoutingBranches[branchIndex]
+              || null;
+            const resolvedSequence = Array.isArray(resolvedBranch && resolvedBranch.sequence)
+              ? resolvedBranch.sequence.map((item) => ({ ...item }))
+              : (Array.isArray(branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : []);
             const dedupeKey = branchId;
             if (!splitterBinding) {
-              walkSequence(branch.sequence, routeId, phase, previousElementId);
+              walkSequence(branch.sequence, routeId, phase, previousElementId, routeRoutingContext);
               return;
             }
             if (!splitterBinding.branchIndex.has(dedupeKey)) {
@@ -436,7 +451,7 @@
                 id: branchId,
                 label: cleanString(branch.label) || routeLabel(branchId),
                 mode: cleanString(branch.mode).toLowerCase() || '',
-                sequence: Array.isArray(branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [],
+                sequence: resolvedSequence,
                 target_ids: [],
                 __routes: new Set(routeId ? [routeId] : []),
               });
@@ -448,24 +463,24 @@
               const candidateLabel = cleanString(branch.label);
               if (candidateLabel) entry.label = candidateLabel;
             }
-            entry.sequence = Array.isArray(branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [];
+            entry.sequence = resolvedSequence;
             entry.__routes.add(routeId);
             const endpointIds = [];
-            (Array.isArray(branch.sequence) ? branch.sequence : []).forEach((branchStep, branchStepIndex) => {
+            resolvedSequence.forEach((branchStep, branchStepIndex) => {
               if (!(branchStep && typeof branchStep === 'object')) return;
               if (branchStep.endpoint_id) {
                 addRoute(endpointRoutes, branchStep.endpoint_id, routeId);
                 const endpointId = normalizeIdentifier(branchStep.endpoint_id);
                 if (endpointId && !endpointIds.includes(endpointId)) endpointIds.push(endpointId);
               }
-              const branchElementBinding = ensureElementBinding(branchStep.optical_path_element_id);
+              const branchElementBinding = ensureElementBinding(branchStep.optical_path_element_id || branchStep.component_id);
               if (branchElementBinding) {
                 branchElementBinding.routes.add(routeId);
                 branchElementBinding[phase].push({ route: routeId, index: `${stepIndex}.${branchIndex}.${branchStepIndex}` });
               }
             });
             entry.target_ids = endpointIds.slice();
-            walkSequence(branch.sequence, routeId, phase, previousElementId);
+            walkSequence(branch.sequence, routeId, phase, previousElementId, routeRoutingContext);
           });
           return;
         }
@@ -483,14 +498,22 @@
     (Array.isArray(payload && payload.light_paths) ? payload.light_paths : []).forEach((route, routeIndex) => {
       const routeId = normalizeIdentifier(route && (route.id || route.route || route.name));
       if (!routeId) return;
+      const selectedSteps = Array.isArray(route && route.selected_execution && route.selected_execution.steps) && route.selected_execution.steps.length
+        ? route.selected_execution.steps
+        : (Array.isArray(route && route.route_steps) ? route.route_steps : []);
+      const routeRoutingContext = {
+        illumination: selectedSteps.filter((step) => step && step.kind === 'routing_component' && step.phase === 'illumination'),
+        detection: selectedSteps.filter((step) => step && step.kind === 'routing_component' && step.phase === 'detection'),
+        __cursor: { illumination: 0, detection: 0 },
+      };
       routeCatalog.push({
         id: routeId,
         label: cleanString(route && route.name) || routeLabel(routeId),
         order: routeIndex,
       });
 
-      walkSequence(route && route.illumination_sequence, routeId, 'illumination', null);
-      walkSequence(route && route.detection_sequence, routeId, 'detection', null);
+      walkSequence(route && route.illumination_sequence, routeId, 'illumination', null, routeRoutingContext);
+      walkSequence(route && route.detection_sequence, routeId, 'detection', null, routeRoutingContext);
     });
 
     splitterBranches.forEach((value) => {
@@ -709,6 +732,39 @@
   }
 
   function canonicalSplitterPayload(payload, topologyBindings) {
+    const passthroughBranchComponent = {
+      component_type: 'passthrough',
+      type: 'passthrough',
+      label: 'Passthrough',
+      display_label: 'Passthrough',
+      spectral_ops: {
+        illumination: [{ op: 'passthrough' }],
+        detection: [{ op: 'passthrough' }],
+      },
+    };
+    const branchSequenceComponent = (step) => {
+      if (!(step && typeof step === 'object')) return null;
+      if (!(step.spectral_ops && typeof step.spectral_ops === 'object')) return null;
+      const label = cleanString(step.position_label || step.display_label || step.component_id) || 'Branch optical component';
+      const detectionOps = Array.isArray(step.spectral_ops.detection) ? step.spectral_ops.detection : [];
+      const firstBandpass = detectionOps.find((op) => op && op.op === 'bandpass');
+      return {
+        id: cleanString(step.component_id) || undefined,
+        component_type: cleanString(step.component_type || step.type) || 'optical_component',
+        type: cleanString(step.component_type || step.type) || 'optical_component',
+        label,
+        display_label: label,
+        position_id: cleanString(step.position_id) || undefined,
+        position_key: cleanString(step.position_key) || undefined,
+        center_nm: numberOrNull(firstBandpass && firstBandpass.center_nm),
+        width_nm: numberOrNull(firstBandpass && firstBandpass.width_nm),
+        spectral_ops: {
+          illumination: Array.isArray(step.spectral_ops.illumination) ? step.spectral_ops.illumination.map((op) => ({ ...op })) : [],
+          detection: detectionOps.map((op) => ({ ...op })),
+        },
+        _unsupported_spectral_model: Boolean(step.unsupported_reason),
+      };
+    };
     return canonicalElements(payload && payload.optical_path_elements)
       .filter((element) => cleanString(element && element.stage_role).toLowerCase() === 'splitter')
       .map((element, index) => {
@@ -720,14 +776,17 @@
           ? routeBranchBinding.branches
           : (Array.isArray(element && element.branches) ? element.branches : []);
         const branches = branchSource.map((branch, branchIndex) => {
-          const component = branch && branch.component && typeof branch.component === 'object' ? { ...branch.component } : {};
+          const sequence = Array.isArray(branch && branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [];
+          const explicitComponent = branch && branch.component && typeof branch.component === 'object' ? { ...branch.component } : null;
+          const resolvedComponent = sequence.map((step) => branchSequenceComponent(step)).find(Boolean);
+          const component = explicitComponent && explicitComponent.spectral_ops ? explicitComponent : (resolvedComponent || { ...passthroughBranchComponent });
           const payloadBranch = {
             id: cleanString(branch && branch.id) || `${cleanString(element && element.id) || 'splitter'}_branch_${branchIndex + 1}`,
             label: cleanString(branch && (branch.label || branch.name)) || `Branch ${branchIndex + 1}`,
             mode: cleanString(branch && branch.mode).toLowerCase() || (branchIndex === 0 ? 'transmitted' : 'reflected'),
             component,
             target_ids: normalizeTargetIds(branch && (branch.target_ids || branch.targets || branch.endpoint_id || branch.endpoint_ids || [])),
-            sequence: Array.isArray(branch && branch.sequence) ? branch.sequence.map((item) => ({ ...item })) : [],
+            sequence,
             __routes: normalizeRouteTags(branch && (branch.__routes || branch.routes || branch.path || branch.route)),
           };
           const branchRoutes = payloadBranch.__routes.length ? payloadBranch.__routes : routes;
@@ -1989,26 +2048,33 @@
     return selected;
   }
 
-  function elementLookupById(normalizedInstrument) {
-    const lookup = new Map();
-    canonicalElements(normalizedInstrument && normalizedInstrument.opticalPathElements).forEach((element) => {
-      const id = normalizeIdentifier(element && element.id);
-      if (id) lookup.set(id, element);
-    });
-    return lookup;
-  }
-
   function applyBranchSequenceSpectrum(inputSpectrum, branchDef, normalizedInstrument, grid) {
-    const lookup = elementLookupById(normalizedInstrument);
-    return applyComponentSeries(inputSpectrum, (Array.isArray(branchDef && branchDef.sequence) ? branchDef.sequence : []).map((step) => {
+    const sequenceComponents = (Array.isArray(branchDef && branchDef.sequence) ? branchDef.sequence : []).map((step) => {
       if (!(step && typeof step === 'object')) return null;
-      const elementId = normalizeIdentifier(step.optical_path_element_id);
-      if (!elementId || !lookup.has(elementId)) return null;
-      const element = lookup.get(elementId);
-      if (element && element.component && typeof element.component === 'object') return element.component;
-      if (element && element.dichroic && typeof element.dichroic === 'object') return element.dichroic;
-      return element;
-    }).filter(Boolean), grid, { mode: 'emission' });
+      if (step.spectral_ops && typeof step.spectral_ops === 'object') {
+        const label = cleanString(step.position_label || step.display_label || step.component_id) || 'Branch optical component';
+        const detectionOps = Array.isArray(step.spectral_ops.detection) ? step.spectral_ops.detection : [];
+        const firstBandpass = detectionOps.find((op) => op && op.op === 'bandpass');
+        return {
+          id: cleanString(step.component_id) || undefined,
+          component_type: cleanString(step.component_type || step.type) || 'optical_component',
+          type: cleanString(step.component_type || step.type) || 'optical_component',
+          label,
+          display_label: label,
+          position_id: cleanString(step.position_id) || undefined,
+          position_key: cleanString(step.position_key) || undefined,
+          center_nm: numberOrNull(firstBandpass && firstBandpass.center_nm),
+          width_nm: numberOrNull(firstBandpass && firstBandpass.width_nm),
+          spectral_ops: {
+            illumination: Array.isArray(step.spectral_ops.illumination) ? step.spectral_ops.illumination.map((op) => ({ ...op })) : [],
+            detection: detectionOps.map((op) => ({ ...op })),
+          },
+          _unsupported_spectral_model: Boolean(step.unsupported_reason),
+        };
+      }
+      return null;
+    }).filter(Boolean);
+    return applyComponentSeries(inputSpectrum, sequenceComponents, grid, { mode: 'emission' });
   }
 
   function propagateSplitters(inputSpectrum, splitters, normalizedInstrument, grid) {
@@ -2134,6 +2200,12 @@
   }
 
   function expandCubeSelectionForOptimization(component) {
+    if (component && (component._cube_incomplete || component._unsupported_spectral_model)) {
+      // Incomplete/synthetic cube internals are visible in UI but excluded
+      // from exact optimizer modeling so optimization does not claim
+      // authoritative spectral truth for reconstructed cubes.
+      return [];
+    }
     // The parser pre-computes spectral_ops for filter cubes with their
     // sub-components already expanded.  This function retains the legacy
     // expansion for cube positions that lack spectral_ops (e.g. old payloads).
@@ -2419,16 +2491,24 @@
 
     routes.forEach((route) => {
       const sourceSets = sourceCandidateSetsForRoute(normalizedInstrument, fluorList, route);
-      const cubeGroups = topMechanismOptions(normalizedInstrument.cube, route, (value) => {
-        const expanded = expandCubeSelectionForOptimization(value);
-        const ex = expanded.filter((entry) => entry.stage === 'excitation').map((entry) => entry.component);
-        const di = expanded.filter((entry) => entry.stage === 'dichroic').map((entry) => entry.component);
-        const em = expanded.filter((entry) => entry.stage === 'emission').map((entry) => entry.component);
-        return (ex.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 3)
-          + (di.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 2)
-          + (di.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 3)
-          + (em.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 4);
-      }, 3);
+      const cubeGroups = routeMechanismsForOptimization(normalizedInstrument.cube, route).map((mechanism) => {
+        const options = mechanismOptionsForRoute(mechanism, route)
+          .filter((option) => !(option && option.value && (option.value._cube_incomplete || option.value._unsupported_spectral_model)))
+          .map((option) => {
+            const expanded = expandCubeSelectionForOptimization(option.value);
+            const ex = expanded.filter((entry) => entry.stage === 'excitation').map((entry) => entry.component);
+            const di = expanded.filter((entry) => entry.stage === 'dichroic').map((entry) => entry.component);
+            const em = expanded.filter((entry) => entry.stage === 'emission').map((entry) => entry.component);
+            const score = (ex.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 3)
+              + (di.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 2)
+              + (di.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 3)
+              + (em.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 4);
+            return { ...option, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+        return { mechanism, options };
+      });
       const excitationGroups = cubeGroups.length ? [] : topMechanismOptions(normalizedInstrument.excitation, route, (value) => pointMaskScore(value, exTargets, 'excitation') * 5, 3);
       const dichroicGroups = cubeGroups.length ? [] : topMechanismOptions(normalizedInstrument.dichroic, route, (value) => (pointMaskScore(value, exTargets, 'excitation') * 3) + (pointMaskScore(value, emTargets, 'emission') * 4), 3);
       const emissionGroups = topMechanismOptions(normalizedInstrument.emission, route, (value) => (pointMaskScore(value, emTargets, 'emission') * 5) + ((1 - pointMaskScore(value, exTargets, 'emission')) * 2), 3);
@@ -2538,10 +2618,31 @@
     });
 
     if (perFluorophoreConfigs.length >= 2) {
+      const sequentialPlan = perFluorophoreConfigs.map((entry, index) => {
+        const config = entry && entry.configuration ? entry.configuration : {};
+        return {
+          step: index + 1,
+          fluorophoreKey: entry.fluorophoreKey,
+          fluorophoreName: entry.fluorophoreName,
+          route: cleanString(config.route).toLowerCase() || null,
+          detectors: Array.isArray(config.detectors) ? config.detectors.map((detector) => ({
+            mechanismId: detector.mechanismId || '',
+            slot: detector.slot,
+            collection_min_nm: detector.collection_min_nm,
+            collection_max_nm: detector.collection_max_nm,
+          })) : [],
+          splitters: Array.isArray(config.splitters) ? config.splitters.map((splitter) => ({
+            mechanismId: splitter.mechanismId || '',
+            selected_branch_ids: Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids.slice() : [],
+          })) : [],
+          configuration: config,
+        };
+      });
       return {
         requiresSequentialAcquisition: true,
         reason: 'No single optical path simultaneously satisfies all loaded fluorophores. Each fluorophore can be imaged individually with different settings.',
         perFluorophoreConfigs,
+        sequentialPlan,
       };
     }
 

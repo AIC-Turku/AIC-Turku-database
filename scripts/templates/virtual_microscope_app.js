@@ -27,6 +27,7 @@
     lastSelection: null,
     lastSimulation: null,
     lastSelectedConfiguration: null,
+    lastAcquisitionPlan: null,
     activeInspectorStage: null,
     routeTopology: null,
   };
@@ -157,7 +158,7 @@
     }
     const illumination = topology && topology.traversal && Array.isArray(topology.traversal.illumination) ? topology.traversal.illumination : [];
     illumination.forEach((entry, index) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      if (entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('illumination-step-' + index);
       stages.push({
         id: stepId,
@@ -170,12 +171,12 @@
     stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
     const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
     detection.forEach((entry, index) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      if (entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('detection-step-' + index);
       stages.push({
         id: stepId,
         key: 'pipe:detection:' + index,
-        label: entry.title || 'Detection',
+        label: entry.kind === 'branch-block' ? 'Routing' : (entry.title || 'Detection'),
         inspectorStage: stepId,
         flowOrigin: stepId,
       });
@@ -191,6 +192,63 @@
     if (!DOM.autoConfigStatus) return;
     DOM.autoConfigStatus.textContent = cleanString(message);
     DOM.autoConfigStatus.dataset.tone = tone;
+  }
+
+  function persistSelectedConfiguration() {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const payload = state.lastSelectedConfiguration || null;
+      if (!payload) {
+        window.localStorage.removeItem('aic.virtualMicroscope.selectedConfiguration');
+        return;
+      }
+      window.localStorage.setItem('aic.virtualMicroscope.selectedConfiguration', JSON.stringify(payload));
+    } catch (error) {
+      // Ignore storage failures (private mode/quota/security policy).
+    }
+  }
+
+  function renderSequentialAcquisitionPlan(steps, activeStepIndex = null) {
+    if (!DOM.autoConfigStatus) return;
+    const planSteps = Array.isArray(steps) ? steps.filter((entry) => entry && entry.configuration) : [];
+    if (!planSteps.length) {
+      setStatusMessage('Sequential acquisition required but no executable plan steps were returned.', 'warning');
+      return;
+    }
+    DOM.autoConfigStatus.innerHTML = '';
+    DOM.autoConfigStatus.dataset.tone = 'warning';
+
+    const intro = document.createElement('div');
+    intro.textContent = 'Sequential acquisition plan required: no single configuration supports all loaded fluorophores. Apply each step in order.';
+    DOM.autoConfigStatus.appendChild(intro);
+
+    const list = document.createElement('ol');
+    planSteps.forEach((entry, index) => {
+      const item = document.createElement('li');
+      const route = cleanString(entry && entry.route) || 'Current route';
+      const detectorSlots = (Array.isArray(entry && entry.detectors) ? entry.detectors : [])
+        .map((detector) => `${cleanString(detector.mechanismId)}@${detector.slot}`)
+        .filter(Boolean);
+      const splitterBranches = (Array.isArray(entry && entry.splitters) ? entry.splitters : [])
+        .map((splitter) => `${cleanString(splitter.mechanismId)}=[${(Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids : []).join(',')}]`)
+        .filter(Boolean);
+      const summary = `Step ${entry.step || (index + 1)} ${cleanString(entry.fluorophoreName) || 'Fluorophore'} (route: ${route}${detectorSlots.length ? `, detectors: ${detectorSlots.join('; ')}` : ''}${splitterBranches.length ? `, splitters: ${splitterBranches.join('; ')}` : ''})`;
+      const summaryText = document.createElement('span');
+      summaryText.textContent = summary + ' ';
+      item.appendChild(summaryText);
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = activeStepIndex === index ? 'Applied' : `Apply step ${entry.step || (index + 1)}`;
+      button.disabled = activeStepIndex === index;
+      button.addEventListener('click', () => {
+        applyOptimizedConfiguration(entry.configuration);
+        renderSequentialAcquisitionPlan(planSteps, index);
+      });
+      item.appendChild(button);
+      list.appendChild(item);
+    });
+    DOM.autoConfigStatus.appendChild(list);
   }
 
   function setInlineStatus(node, message, tone = 'info') {
@@ -261,6 +319,9 @@
     }
     if (component._unsupported_spectral_model) {
       rows.push('⚠ Spectral model not available — treated as transparent in simulation.');
+    }
+    if (component._cube_incomplete) {
+      rows.push('⚠ Cube position is incomplete/flattened — exact spectral simulation and optimization may be unavailable.');
     }
     return rows;
   }
@@ -411,7 +472,7 @@
       empty: grid.map(() => 0),
     };
 
-    const stepSpectra = buildStepSpectra(selection, grid, sourceMixed, generatedEmission);
+    const stepSpectra = buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation);
 
     const pipes = Array.from(DOM.graph.querySelectorAll('.optical-pipe'));
 
@@ -423,44 +484,14 @@
     });
   }
 
-  function buildStepSpectra(selection, grid, sourceMixed, generatedEmission) {
+  function buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation) {
+    const resolvedSimulation = simulation || state.lastSimulation || null;
     const stepSpectra = new Map();
     stepSpectra.set('sources', sourceMixed);
     stepSpectra.set('sample', generatedEmission);
 
     const topology = state.routeTopology;
     if (!topology || !topology.traversal) return stepSpectra;
-
-    const consumed = { excitation: 0, dichroic: 0, emission: 0 };
-    const mechanismComponent = new Map();
-    const cubeSelections = (Array.isArray(selection.debugSelections) ? selection.debugSelections : [])
-      .filter((entry) => entry && entry.stage === 'cube');
-    let cubeIndex = 0;
-
-    function resolveComponent(entry) {
-      if (!entry || (!entry.stageKey && entry.kind !== 'linked')) return null;
-      const mechId = entry.mechanism ? cleanString(entry.mechanism.id).toLowerCase() : '';
-      if (entry.kind === 'linked' && mechId) return mechanismComponent.get(mechId) || null;
-      const key = entry.stageKey;
-      if (key === 'cube') {
-        const cubeValue = cubeIndex < cubeSelections.length ? cubeSelections[cubeIndex++].component : null;
-        const expanded = cubeValue ? expandCubeSelection(cubeValue, (entry.mechanism && entry.mechanism.name) || '') : [];
-        const cubeComponents = expanded.map((sub) => {
-          if (consumed[sub.stage] !== undefined) consumed[sub.stage] += 1;
-          return { component: sub.component, stage: sub.stage };
-        });
-        if (mechId) mechanismComponent.set(mechId, cubeComponents.length ? cubeComponents : null);
-        return cubeComponents.length ? cubeComponents : null;
-      }
-      const arr = selection[key];
-      if (!Array.isArray(arr)) return null;
-      const idx = consumed[key] || 0;
-      if (idx >= arr.length) return null;
-      consumed[key] = idx + 1;
-      const component = arr[idx];
-      if (mechId) mechanismComponent.set(mechId, component || null);
-      return component || null;
-    }
 
     function applyComponent(spectrum, component, mode) {
       if (!component) return spectrum;
@@ -475,21 +506,45 @@
     }
 
     let runningIllum = sourceMixed.slice();
-    (topology.traversal.illumination || []).forEach((entry) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
-      const component = resolveComponent(entry);
+    const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];
+    illuminationComponents.forEach((entry) => {
+      if (!entry || !entry.routeStepId) return;
+      const component = entry.component;
       if (component) runningIllum = applyComponent(runningIllum, component, 'excitation');
-      if (entry.routeStepId) stepSpectra.set(entry.routeStepId, runningIllum.slice());
+      stepSpectra.set(entry.routeStepId, runningIllum.slice());
     });
 
     let runningDetect = generatedEmission.slice();
-    (topology.traversal.detection || []).forEach((entry) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint' || entry.kind === 'missing') return;
-      if (entry.stageKey === 'splitters') return;
-      const component = resolveComponent(entry);
+    const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];
+    detectionComponents.forEach((entry) => {
+      if (!entry || !entry.routeStepId) return;
+      const stageKey = cleanString(entry.stageKey).toLowerCase();
+      if (stageKey === 'splitters') return;
+      const component = entry.component;
       if (component) runningDetect = applyComponent(runningDetect, component, 'emission');
-      if (entry.routeStepId) stepSpectra.set(entry.routeStepId, runningDetect.slice());
+      stepSpectra.set(entry.routeStepId, runningDetect.slice());
     });
+
+    const topologyRouteRecord = topology && topology.routeRecord ? topology.routeRecord : null;
+    const detectionRouteSteps = authoritativeRouteSteps(topologyRouteRecord).filter((step) => step && step.phase === 'detection');
+    const routedBranchSpectrum = sumSpectra(
+      Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
+      'preDetectorSpectrum',
+      grid
+    );
+    detectionRouteSteps.forEach((step) => {
+      if (!step || step.kind !== 'routing_component') return;
+      const stepId = cleanString(step.step_id);
+      if (!stepId) return;
+      stepSpectra.set(stepId, routedBranchSpectrum);
+    });
+
+    const detectorSpectrum = sumSpectra(
+      Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
+      'spectrum',
+      grid
+    );
+    stepSpectra.set('detectors', detectorSpectrum);
 
     return stepSpectra;
   }
@@ -593,17 +648,45 @@
       return;
     }
     if (result.requiresSequentialAcquisition) {
-      const names = result.perFluorophoreConfigs.map((cfg) => cfg.fluorophoreName).join(', ');
-      setStatusMessage(
-        `Sequential acquisition required: no single path supports all fluorophores simultaneously. Individual settings found for: ${names}.`,
-        'warning'
-      );
-      // Apply the first fluorophore's configuration as a starting point.
-      if (result.perFluorophoreConfigs.length) {
-        applyOptimizedConfiguration(result.perFluorophoreConfigs[0].configuration);
+      const steps = Array.isArray(result.sequentialPlan) && result.sequentialPlan.length
+        ? result.sequentialPlan
+        : (Array.isArray(result.perFluorophoreConfigs) ? result.perFluorophoreConfigs.map((entry, index) => ({
+            step: index + 1,
+            fluorophoreName: entry.fluorophoreName,
+            route: entry && entry.configuration ? entry.configuration.route : null,
+            detectors: entry && entry.configuration && Array.isArray(entry.configuration.detectors) ? entry.configuration.detectors : [],
+            splitters: entry && entry.configuration && Array.isArray(entry.configuration.splitters) ? entry.configuration.splitters : [],
+            configuration: entry.configuration,
+          })) : []);
+      if (!steps.length) {
+        setStatusMessage('Sequential acquisition required, but no executable plan steps were produced.', 'warning');
+        return;
       }
+      state.lastAcquisitionPlan = {
+        mode: 'sequential',
+        requiresSequentialAcquisition: true,
+        reason: result.reason || null,
+        steps: steps.map((entry, index) => ({
+          step: entry.step || (index + 1),
+          fluorophoreName: cleanString(entry.fluorophoreName),
+          route: cleanString(entry.route) || null,
+          detectors: Array.isArray(entry.detectors) ? entry.detectors.map((detector) => ({
+            mechanismId: cleanString(detector.mechanismId),
+            slot: detector.slot,
+            collection_min_nm: numberOrNull(detector.collection_min_nm),
+            collection_max_nm: numberOrNull(detector.collection_max_nm),
+          })) : [],
+          splitters: Array.isArray(entry.splitters) ? entry.splitters.map((splitter) => ({
+            mechanismId: cleanString(splitter.mechanismId),
+            selected_branch_ids: Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids.slice() : [],
+          })) : [],
+        })),
+      };
+      applyOptimizedConfiguration(steps[0].configuration);
+      renderSequentialAcquisitionPlan(steps, 0);
       return;
     }
+    state.lastAcquisitionPlan = null;
     applyOptimizedConfiguration(result);
     setStatusMessage(
       result.strictLeakageSatisfied === false ? 'Optimized the best near-zero-leakage configuration.' : 'Configuration Optimized!',
@@ -837,31 +920,43 @@
     return catalog;
   }
 
-  function buildRouteTraversalEntries(instrument, routeRecord, route) {
-    const catalog = opticalMechanismCatalog(instrument, route);
-    const seenControlIds = new Set();
-    const routeSteps = Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
+  function authoritativeRouteSteps(routeRecord) {
+    const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;
+    const selectedSteps = Array.isArray(selectedExecution && selectedExecution.steps) ? selectedExecution.steps : [];
+    if (selectedSteps.length) return selectedSteps;
+    return Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
       ? routeRecord.record.route_steps
       : Array.isArray(routeRecord && routeRecord.route_steps)
         ? routeRecord.route_steps
         : [];
+  }
+
+  function buildRouteTraversalEntries(instrument, routeRecord, route) {
+    const catalog = opticalMechanismCatalog(instrument, route);
+    const seenControlIds = new Set();
+    const routeSteps = authoritativeRouteSteps(routeRecord);
     if (!routeSteps.length) {
       throw new Error('[VM] buildRouteTraversalEntries: active route is missing authoritative route_steps.');
     }
-    const buildResolvedTraversal = (steps, phase, prefix) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
+    const buildResolvedTraversal = (steps, phase, prefix, requireStepId) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
       if (!(step && typeof step === 'object')) return [];
+      const parserStepId = cleanString(step.step_id);
+      const stepId = parserStepId || `${prefix}:${phase}:step:${index}`;
+      if (requireStepId && !parserStepId) {
+        throw new Error('[VM] buildRouteTraversalEntries: parser route step is missing step_id for phase "' + phase + '".');
+      }
       if (step.kind === 'routing_component') {
         return [{
           kind: 'branch-block',
           key: `${prefix}:${phase}:branches:${index}`,
           phase,
-          routeStepId: step.step_id || `${phase}-step-${index}`,
+          routeStepId: step.step_id || stepId,
           title: `Branches (${(step.routing && step.routing.selection_mode) || 'exclusive'})`,
           selectionMode: (step.routing && step.routing.selection_mode) || 'exclusive',
           branches: (Array.isArray(step.routing && step.routing.branches) ? step.routing.branches : []).map((branch, branchIndex) => ({
             key: `${prefix}:${phase}:branch:${index}:${branchIndex}`,
             title: cleanString(branch && branch.label) || `Branch ${branchIndex + 1}`,
-            sequence: buildResolvedTraversal(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`),
+            sequence: buildResolvedTraversal(branch && branch.sequence, phase, `${prefix}:${index}:${branchIndex}`, false),
           })),
           message: 'This route includes parser-authored branch routing.',
         }];
@@ -872,7 +967,7 @@
           kind: 'endpoint',
           key: `${prefix}:${phase}:endpoint:${index}`,
           phase,
-          routeStepId: step.step_id || `${phase}-step-${index}`,
+          routeStepId: step.step_id || stepId,
           endpointId: step.endpoint_id || step.detector_id || step.component_id,
           title: cleanString(step.display_label) || endpointLabelForTargetId(step.endpoint_id || step.detector_id || step.component_id),
           message: '',
@@ -886,7 +981,7 @@
         return [{
           kind: 'missing',
           key: `${prefix}:${phase}:${elementId}:${index}`,
-          routeStepId: step.step_id || `${phase}-step-${index}`,
+          routeStepId: step.step_id || stepId,
           title: step.display_label || step.component_id,
           message: `This DTO route references optical path element "${step.component_id}", but no interactive UI control was derived for it.`,
         }];
@@ -896,7 +991,7 @@
       return [{
         kind: firstUse ? 'control' : 'linked',
         key: `${prefix}:${phase}:${elementId}:${index}`,
-        routeStepId: step.step_id || `${phase}-step-${index}`,
+        routeStepId: step.step_id || stepId,
         stageKey: match.stageKey,
         mechanism: match.mechanism,
         phase,
@@ -910,8 +1005,8 @@
     const resolvedDetectionTraversal = routeSteps.filter((step) => step && step.phase === 'detection');
 
     const result = {
-      illumination: buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination'),
-      detection: buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection'),
+      illumination: buildResolvedTraversal(resolvedIlluminationTraversal, 'illumination', 'illumination', true),
+      detection: buildResolvedTraversal(resolvedDetectionTraversal, 'detection', 'detection', true),
     };
     return result;
   }
@@ -932,11 +1027,7 @@
 
   function deriveRouteTopology(instrument, route) {
     const routeRecord = routeRecordForInstrument(instrument, route);
-    const routeSteps = Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
-      ? routeRecord.record.route_steps
-      : Array.isArray(routeRecord && routeRecord.route_steps)
-        ? routeRecord.route_steps
-        : [];
+    const routeSteps = authoritativeRouteSteps(routeRecord);
     if (!routeSteps.length) {
       throw new Error('[VM] deriveRouteTopology: active route has no parser route_steps.');
     }
@@ -2060,8 +2151,8 @@
 
   function collectRuntimeSelection() {
     const topology = state.routeTopology || deriveRouteTopology(state.activeInstrument, state.activeRoute);
-    if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(topology.routeRecord.record.route_steps)) {
-      throw new Error('[VM] collectRuntimeSelection: route topology is missing parser route_steps.');
+    if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(authoritativeRouteSteps(topology.routeRecord))) {
+      throw new Error('[VM] collectRuntimeSelection: route topology is missing parser selected route steps.');
     }
     const selection = {
       sources: [],
@@ -2072,6 +2163,7 @@
       detectors: [],
       selectionMap: buildSelectionMapFromDom(),
       debugSelections: [],
+      selectedComponentByMechanism: {},
     };
 
     const sourceMechanisms = topology && Array.isArray(topology.sourceMechanisms)
@@ -2112,12 +2204,15 @@
         return;
       }
       const stage = select.dataset.stage;
+      const mechanismId = cleanString(select.dataset.mechanismId).toLowerCase();
       const mechanismName = select.dataset.mechanismName || stage;
       if (stage === 'cube') {
         selection.debugSelections.push({ stage: 'cube', name: mechanismName, component: value });
+        if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = value;
         expandCubeSelection(value, mechanismName).forEach((entry) => pushStageComponent(entry.stage, entry.name, entry.component));
       } else if (stage !== 'detectors' && stage !== 'splitters') {
         pushStageComponent(stage, mechanismName, value);
+        if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = value;
       }
     });
 
@@ -2127,7 +2222,7 @@
       if (block.dataset.mechanismType === 'spectral_array') {
         const bands = state.spectralBandsByMechanism.get(block.dataset.mechanismKey || '') || [];
         if (!bands.length) return;
-        pushStageComponent(stage, mechanismName, {
+        const component = {
           component_type: 'multiband_bandpass',
           type: 'multiband_bandpass',
           render_kind: 'band',
@@ -2138,10 +2233,16 @@
             width_nm: Math.max(1, Number(band.max_nm) - Number(band.min_nm)),
             label: band.label,
           })),
-        });
+        };
+        pushStageComponent(stage, mechanismName, component);
+        const mechanismId = cleanString(block.dataset.mechanismId).toLowerCase();
+        if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = component;
       } else if (block.dataset.value) {
         try {
-          pushStageComponent(stage, mechanismName, JSON.parse(block.dataset.value));
+          const component = JSON.parse(block.dataset.value);
+          pushStageComponent(stage, mechanismName, component);
+          const mechanismId = cleanString(block.dataset.mechanismId).toLowerCase();
+          if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = component;
         } catch (error) {
           // ignore invalid tunable payloads
         }
@@ -2154,6 +2255,8 @@
       .map((entry) => entry.mechanism);
     splitterMechanisms.forEach((mechanism) => {
       const selectedBranchIds = ensureSplitterBranchSelection(mechanism);
+      const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
+      if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = mechanism;
       selection.splitters.push({
         id: mechanism.id,
         label: mechanism.display_label || mechanism.name || 'Splitter',
@@ -2193,8 +2296,9 @@
     const routeRecord = state.routeTopology && state.routeTopology.routeRecord && state.routeTopology.routeRecord.record
       ? state.routeTopology.routeRecord.record
       : null;
-    const routeSteps = Array.isArray(routeRecord && routeRecord.route_steps) ? routeRecord.route_steps : [];
+    const routeSteps = authoritativeRouteSteps(state.routeTopology && state.routeTopology.routeRecord ? state.routeTopology.routeRecord : null);
     const config = {
+      scope_id: cleanString(currentInstrumentId || (inst.metadata && inst.metadata.instrument_id) || ''),
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
       route: state.activeRoute || null,
       timestamp: new Date().toISOString(),
@@ -2218,6 +2322,7 @@
           product_code: cleanString(comp.product_code),
           position_key: cleanString(comp.position_key),
           slot: comp.slot != null ? comp.slot : null,
+          _cube_incomplete: Boolean(comp._cube_incomplete),
           _unsupported_spectral_model: comp._unsupported_spectral_model || false,
         };
       }),
@@ -2256,34 +2361,56 @@
         metadata: step.metadata || {},
         unsupported_reason: step.unsupported_reason || null,
       })),
+      acquisition_plan: state.lastAcquisitionPlan || {
+        mode: 'simultaneous',
+        requiresSequentialAcquisition: false,
+        reason: null,
+        steps: [],
+      },
     };
     return config;
   }
 
   function buildTraversalOrderedComponents(topology, selection, phase) {
-    const routeSteps = topology && topology.routeRecord && topology.routeRecord.record && Array.isArray(topology.routeRecord.record.route_steps)
-      ? topology.routeRecord.record.route_steps
-      : [];
+    const routeSteps = authoritativeRouteSteps(topology && topology.routeRecord ? topology.routeRecord : null);
     if (!routeSteps.length) return [];
     const entries = routeSteps.filter((step) => step && step.phase === phase);
     if (!entries.length) return [];
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
     const result = [];
-    const componentById = new Map();
-    (Array.isArray(selection.debugSelections) ? selection.debugSelections : []).forEach((entry) => {
-      const comp = entry && entry.component;
-      const id = cleanString(comp && comp.id).toLowerCase();
-      if (id && !componentById.has(id)) componentById.set(id, comp);
+    const selectedByMechanism = (selection && selection.selectedComponentByMechanism && typeof selection.selectedComponentByMechanism === 'object')
+      ? selection.selectedComponentByMechanism
+      : {};
+    const controls = phase === 'illumination'
+      ? ((topology && topology.traversal && Array.isArray(topology.traversal.illumination)) ? topology.traversal.illumination : [])
+      : ((topology && topology.traversal && Array.isArray(topology.traversal.detection)) ? topology.traversal.detection : []);
+    const mechanismByStepId = new Map();
+    controls.forEach((entry) => {
+      if (!(entry && entry.routeStepId && entry.mechanism)) return;
+      mechanismByStepId.set(entry.routeStepId, {
+        mechanism: entry.mechanism,
+        stageKey: entry.stageKey,
+      });
     });
     entries.forEach((entry) => {
       if (!entry || entry.kind === 'source' || entry.kind === 'detector' || entry.kind === 'sample' || entry.kind === 'routing_component') return;
-      const componentId = cleanString(entry.component_id).toLowerCase();
-      if (!componentId) return;
-      if (componentById.has(componentId)) {
-        result.push({ component: componentById.get(componentId), mode, routeStepId: entry.step_id });
-        return;
+      const stepId = cleanString(entry.step_id);
+      if (!stepId) {
+        throw new Error('[VM] buildTraversalOrderedComponents: parser route step is missing step_id (phase=' + phase + ').');
       }
-      throw new Error('[VM] buildTraversalOrderedComponents: no selected component for route step "' + componentId + '" (phase=' + phase + ', step_id=' + (entry.step_id || 'unknown') + ').');
+      const mechanismRef = mechanismByStepId.get(stepId);
+      const mechanism = mechanismRef && mechanismRef.mechanism;
+      const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
+      const selectedComponent = mechanismId ? selectedByMechanism[mechanismId] : null;
+      if (!selectedComponent) {
+        throw new Error('[VM] buildTraversalOrderedComponents: no selected component for parser route step "' + stepId + '" (phase=' + phase + ').');
+      }
+      result.push({
+        component: selectedComponent,
+        mode,
+        routeStepId: stepId,
+        stageKey: cleanString(mechanismRef && mechanismRef.stageKey).toLowerCase() || cleanString(entry.stage_role).toLowerCase() || null,
+      });
     });
     return result;
   }
@@ -2931,6 +3058,7 @@
       state.lastSelection = repairedSelection;
       state.lastSimulation = simulation;
       state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
+      persistSelectedConfiguration();
       renderReferenceSpectra(repairedSelection, simulation);
       renderPropagationPanel(repairedSelection, simulation);
       updatePipelineBeamColors(repairedSelection, simulation);
@@ -2942,6 +3070,7 @@
     state.lastSelection = selection;
     state.lastSimulation = simulation;
     state.lastSelectedConfiguration = buildSelectedConfiguration(selection, simulation);
+    persistSelectedConfiguration();
     renderReferenceSpectra(selection, simulation);
     renderPropagationPanel(selection, simulation);
     updatePipelineBeamColors(selection, simulation);
