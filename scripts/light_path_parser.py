@@ -131,6 +131,9 @@ def _format_numeric(value: Any) -> str:
 
 
 def _clean_string(value: Any) -> str:
+    """Normalize strings and safely stringify numeric values so YAML integer IDs are not erased."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        value = str(value)
     return value.strip() if isinstance(value, str) else ""
 
 
@@ -630,48 +633,176 @@ def _canonicalize_sequence_item(
 
 
 
-def _parse_canonical_light_paths(raw_light_paths: list[dict[str, Any]], sources: list[dict[str, Any]], elements: list[dict[str, Any]], endpoints: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _parse_canonical_light_paths(
+    raw_light_paths: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    elements: list[dict[str, Any]],
+    endpoints: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     routes: list[dict[str, Any]] = []
     for index, route in enumerate(raw_light_paths, start=1):
         if not isinstance(route, dict):
             continue
+
         route_id = _clean_identifier(route.get("id") or route.get("name") or f"route_{index}")
         if not route_id:
             continue
-        illumination_sequence = [
-            normalized
-            for normalized in (
-                _canonicalize_sequence_item(
-                    item,
-                    sources,
-                    elements,
-                    endpoints,
-                    sequence_key="illumination_sequence",
-                    allow_branches=False,
+
+        parse_warnings: list[str] = []
+
+        illumination_sequence: list[dict[str, Any]] = []
+        for item_index, item in enumerate(_as_list(route.get("illumination_sequence"))):
+            normalized = _canonicalize_sequence_item(
+                item,
+                sources,
+                elements,
+                endpoints,
+                sequence_key="illumination_sequence",
+                allow_branches=False,
+            )
+            if normalized is None:
+                parse_warnings.append(
+                    f"light_paths[{index - 1}].illumination_sequence[{item_index}]: "
+                    "could not be canonicalized; validation should treat this as an error."
                 )
-                for item in _as_list(route.get("illumination_sequence"))
+                continue
+            illumination_sequence.append(normalized)
+
+        detection_sequence: list[dict[str, Any]] = []
+        for item_index, item in enumerate(_as_list(route.get("detection_sequence"))):
+            normalized = _canonicalize_sequence_item(
+                item,
+                sources,
+                elements,
+                endpoints,
+                sequence_key="detection_sequence",
             )
-            if normalized
-        ]
-        detection_sequence = [
-            normalized
-            for normalized in (
-                _canonicalize_sequence_item(item, sources, elements, endpoints, sequence_key="detection_sequence")
-                for item in _as_list(route.get("detection_sequence"))
-            )
-            if normalized
-        ]
+            if normalized is None:
+                parse_warnings.append(
+                    f"light_paths[{index - 1}].detection_sequence[{item_index}]: "
+                    "could not be canonicalized; validation should treat this as an error."
+                )
+                continue
+            detection_sequence.append(normalized)
+
         route_modalities = _normalize_modalities(route.get("modalities") or route.get("routes") or route.get("path"))
-        routes.append({
+        route_payload = {
             "id": route_id,
             "name": _clean_string(route.get("name")) or _resolve_route_label(route_id),
             "modalities": route_modalities or [route_id],
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
-        })
+        }
+        if parse_warnings:
+            route_payload["_parse_warnings"] = parse_warnings
+        routes.append(route_payload)
+
     return routes
 
+def _resolve_position_candidate_payload(
+    position: dict[str, Any],
+    *,
+    parent_element: dict[str, Any],
+    fallback_key: str | None = None,
+    fallback_slot: int | None = None,
+) -> tuple[dict[str, Any], str | None, str | None, str | None]:
+    """Resolve one authored position object into a parser-authoritative payload.
 
+    This helper preserves exact authored position identity whenever available and
+    resolves wrapper-style positions consistently with the rest of the parser.
+
+    Returns:
+        (component_payload, position_id, position_key, position_label)
+    """
+    if not isinstance(position, dict):
+        return {}, None, None, None
+
+    default_name = (
+        _clean_string(parent_element.get("name"))
+        or _clean_string(parent_element.get("display_label"))
+        or _clean_string(parent_element.get("id"))
+        or ""
+    )
+
+    if isinstance(position.get("component"), dict):
+        component_payload = _component_payload(
+            position["component"],
+            default_name=default_name,
+        )
+    elif any(isinstance(position.get(link_key), dict) for link_key in CUBE_LINK_KEYS):
+        component_payload = dict(position)
+        component_payload.setdefault("component_type", "filter_cube")
+        component_payload.setdefault("type", component_payload.get("component_type"))
+        component_payload.setdefault(
+            "label",
+            _clean_string(position.get("label") or position.get("name") or default_name),
+        )
+        component_payload.setdefault(
+            "display_label",
+            _clean_string(position.get("display_label") or position.get("label") or position.get("name") or default_name),
+        )
+        component_payload.setdefault("spectral_ops", _cube_spectral_ops(component_payload))
+    else:
+        component_payload = _component_payload(position, default_name=default_name)
+
+    position_key = _clean_string(position.get("position_key")) or (_clean_string(fallback_key) or None)
+
+    authored_position_id = (
+        _clean_string(position.get("id"))
+        or position_key
+        or (str(fallback_slot) if fallback_slot is not None else None)
+    )
+
+    position_label = (
+        _clean_string(position.get("display_label"))
+        or _clean_string(position.get("label"))
+        or _clean_string(position.get("name"))
+        or _clean_string(component_payload.get("display_label"))
+        or _clean_string(component_payload.get("label"))
+        or position_key
+        or (str(fallback_slot) if fallback_slot is not None else None)
+    )
+
+    return (
+        component_payload,
+        authored_position_id or None,
+        position_key or None,
+        position_label or None,
+    )
+
+
+def _position_id_matches_element(element: dict[str, Any], position_id: Any) -> bool:
+    """Return True if *position_id* matches an authored position on *element*."""
+    requested = _clean_string(position_id)
+    if not requested:
+        return False
+
+    requested_identifier = _clean_identifier(requested)
+    requested_slot = _coerce_slot_key(requested)
+
+    for key_text, slot, position in _iter_element_positions(element):
+        if not isinstance(position, dict):
+            continue
+
+        authored_id = _clean_string(position.get("id"))
+        position_key = _clean_string(position.get("position_key"))
+
+        identifiers = {
+            _clean_identifier(key_text),
+            _clean_identifier(authored_id),
+            _clean_identifier(position_key),
+        }
+
+        if (
+            requested == key_text
+            or requested == authored_id
+            or requested == position_key
+            or (requested_identifier and requested_identifier in identifiers)
+            or (requested_slot is not None and slot == requested_slot)
+        ):
+            return True
+
+    return False
 
 def _import_legacy_light_paths(sources: list[dict[str, Any]], elements: list[dict[str, Any]], endpoints: list[dict[str, Any]]) -> list[dict[str, Any]]:
     route_ids: set[str] = set()
@@ -786,17 +917,25 @@ def _canonical_light_path_model(
 
 
 def _has_canonical_light_path_input(instrument_dict: dict[str, Any]) -> bool:
+    """Return True only when the canonical v2 contract is meaningfully present.
+
+    This is intentionally stricter than "any canonical-looking field exists".
+    A partially migrated instrument should not shadow a complete legacy topology
+    just because one canonical list is present.
+    """
     hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
-    return any(
-        (
-            isinstance(hardware.get("sources"), list),
-            isinstance(hardware.get("optical_path_elements"), list),
-            isinstance(hardware.get("endpoints"), list),
-            isinstance(hardware.get("terminals"), list),
-            isinstance(hardware.get("detection_endpoints"), list),
-            isinstance(instrument_dict.get("light_paths"), list),
-        )
+
+    raw_light_paths = instrument_dict.get("light_paths")
+    has_light_paths = isinstance(raw_light_paths, list) and bool(raw_light_paths)
+
+    has_sources = isinstance(hardware.get("sources"), list) and bool(hardware.get("sources"))
+    has_elements = isinstance(hardware.get("optical_path_elements"), list) and bool(hardware.get("optical_path_elements"))
+    has_endpoints = any(
+        isinstance(hardware.get(key), list) and bool(hardware.get(key))
+        for key in CANONICAL_ENDPOINT_COLLECTION_KEYS
     )
+
+    return has_light_paths and (has_sources or has_elements or has_endpoints)
 
 
 
@@ -934,16 +1073,28 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
     """
     errors: list[str] = []
     warnings: list[str] = []
+
     canonical = canonicalize_light_path_model(instrument_dict if isinstance(instrument_dict, dict) else {})
     sources = canonical["sources"]
     elements = canonical["optical_path_elements"]
     endpoints = canonical["endpoints"]
     raw_light_paths = canonical["light_paths"]
+
+    # Critical fix:
+    # canonical parse warnings must be surfaced as hard validation errors so
+    # malformed canonical routes cannot silently degrade into partial payloads.
+    for route_index, route in enumerate(raw_light_paths):
+        if not isinstance(route, dict):
+            continue
+        for parse_warning in route.get("_parse_warnings") or []:
+            errors.append(parse_warning)
+
     hardware_inventory, hardware_index_map = _build_hardware_inventory(sources, elements, endpoints)
     inventory_lookup = {item["id"]: item for item in hardware_inventory if isinstance(item, dict) and item.get("id")}
     source_lookup = {entry.get("id"): entry for entry in sources if isinstance(entry, dict) and entry.get("id")}
     element_lookup = {entry.get("id"): entry for entry in elements if isinstance(entry, dict) and entry.get("id")}
     endpoint_lookup = {entry.get("id"): entry for entry in endpoints if isinstance(entry, dict) and entry.get("id")}
+
     light_paths: list[dict[str, Any]] = []
     route_hardware_usage: list[dict[str, Any]] = []
     for route in raw_light_paths:
@@ -970,16 +1121,24 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
         inventory_id = item.get("id")
         if inventory_id:
             item["route_usage_summary"] = route_usage_by_inventory_id.get(inventory_id, [])
-    raw_light_paths = instrument_dict.get("light_paths") if isinstance(instrument_dict.get("light_paths"), list) else []
-    light_paths_for_validation = raw_light_paths if (_has_canonical_light_path_input(instrument_dict) and raw_light_paths) else light_paths
+
+    raw_input_light_paths = instrument_dict.get("light_paths") if isinstance(instrument_dict.get("light_paths"), list) else []
+    light_paths_for_validation = raw_input_light_paths if (_has_canonical_light_path_input(instrument_dict) and raw_input_light_paths) else light_paths
 
     source_ids = {entry.get("id") for entry in sources}
     element_ids = {entry.get("id") for entry in elements}
     endpoint_ids = {entry.get("id") for entry in endpoints}
 
-    has_topology = bool(sources or elements or endpoints or light_paths or _collect_splitters((instrument_dict.get("hardware") or {}), ((instrument_dict.get("hardware") or {}).get("light_path") or {})))
+    has_topology = bool(
+        sources
+        or elements
+        or endpoints
+        or light_paths
+        or _collect_splitters((instrument_dict.get("hardware") or {}), ((instrument_dict.get("hardware") or {}).get("light_path") or {}))
+    )
     if not has_topology:
         return [], []
+
     if not light_paths_for_validation:
         errors.append("light_paths must declare at least one route with illumination_sequence and detection_sequence.")
 
@@ -987,6 +1146,7 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
     legacy_light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
     _, endpoint_collisions = _normalized_endpoint_inventory(hardware, legacy_light_path)
     errors.extend(endpoint_collisions)
+
     raw_elements = hardware.get("optical_path_elements") if isinstance(hardware.get("optical_path_elements"), list) else []
     for element_index, element in enumerate(raw_elements):
         if not isinstance(element, dict):
@@ -1075,6 +1235,7 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
         source_id = _clean_identifier(item.get("source_id"))
         element_id = _clean_identifier(item.get("optical_path_element_id"))
         endpoint_id = _clean_identifier(item.get("endpoint_id"))
+
         if source_id:
             if source_id not in source_ids:
                 local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: unknown source_id `{source_id}`.")
@@ -1088,12 +1249,23 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
             if endpoint_id not in endpoint_ids:
                 local_errors.append(f"{route_context}.{sequence_key}[{item_index}]: unknown endpoint_id `{endpoint_id}`.")
             row = next((candidate for candidate in endpoints if candidate.get("id") == endpoint_id), None)
+
         if row:
             modalities = _normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes"))
             if modalities and route_id not in modalities:
                 local_errors.append(
                     f"{route_context}.{sequence_key}[{item_index}]: `{source_id or element_id or endpoint_id}` is declared for modalities {modalities} and does not permit route `{route_id}`."
                 )
+
+            # Critical fix:
+            # validate that sequence position_id actually exists on the referenced element.
+            if element_id:
+                raw_position_id = _clean_string(item.get("position_id"))
+                if raw_position_id and not _position_id_matches_element(row, raw_position_id):
+                    local_errors.append(
+                        f"{route_context}.{sequence_key}[{item_index}]: unknown position_id `{raw_position_id}` for optical_path_element_id `{element_id}`."
+                    )
+
         return previous_element_id, local_errors
 
     for route_index, route in enumerate(light_paths_for_validation):
@@ -1105,11 +1277,13 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
         if route_id in seen_route_ids:
             errors.append(f"{context}: duplicate light path id `{route_id}`.")
         seen_route_ids.add(route_id)
+
         for sequence_key in ("illumination_sequence", "detection_sequence"):
             sequence = route.get(sequence_key)
             if not isinstance(sequence, list):
                 errors.append(f"{context}.{sequence_key}: sequence must be a list.")
                 continue
+
             previous_element_id = ""
             sequence_error_count = len(errors)
             for item_index, item in enumerate(sequence):
@@ -1123,6 +1297,7 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
                     previous_element_id=previous_element_id,
                 )
                 errors.extend(item_errors)
+
             if sequence_key == "detection_sequence":
                 for item_index, item in enumerate(sequence):
                     branch_block = item.get("branches") if isinstance(item, dict) else None
@@ -1137,6 +1312,7 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
                         warnings.append(
                             f"{context}.{sequence_key}[{item_index}].branches.items[{branch_index}].sequence: branch does not terminate in a clear explicit endpoint_id."
                         )
+
                 if len(errors) == sequence_error_count and not _sequence_terminates_with_explicit_endpoint(sequence):
                     warnings.append(
                         f"{context}.{sequence_key}: route does not terminate in a clear explicit endpoint_id; add an endpoint_id or explicit branch endpoints."
@@ -1146,14 +1322,21 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
     known_target_ids = {endpoint.get("id") for endpoint in endpoints if endpoint.get("id")}
     known_target_ids.update(
         _clean_identifier(detector.get("id") or detector.get("channel_name") or detector.get("display_label") or detector.get("name"))
-        for detector in legacy_hardware.get("detectors", []) if isinstance(detector, dict)
+        for detector in legacy_hardware.get("detectors", [])
+        if isinstance(detector, dict)
     )
+
     for split_idx, splitter in enumerate(_collect_splitters(legacy_hardware, legacy_light_path)):
         split_ctx = f"splitters[{split_idx}]"
         for key in ("path_1", "path_2"):
             if isinstance(splitter.get(key), dict):
                 _validate_splitter_branch(splitter[key], errors, f"{split_ctx}.{key}")
-                for target in _as_list(splitter[key].get("targets") or splitter[key].get("target_ids") or splitter[key].get("endpoint_ids") or splitter[key].get("terminal_ids")):
+                for target in _as_list(
+                    splitter[key].get("targets")
+                    or splitter[key].get("target_ids")
+                    or splitter[key].get("endpoint_ids")
+                    or splitter[key].get("terminal_ids")
+                ):
                     normalized = _clean_identifier(target)
                     if normalized and normalized not in known_target_ids:
                         errors.append(f"{split_ctx}.{key}: target `{normalized}` does not match any declared detector or endpoint.")
@@ -1373,27 +1556,50 @@ def _normalize_component_numeric_fields(component_payload: dict[str, Any], sourc
 
 def _component_payload(component: dict[str, Any], *, default_name: str = "", branch_mode: str | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = dict(component)
-    component_type = _clean_string(component.get("component_type")).lower() or "unknown"
+    
+    # Extract explicitly defined component type
+    component_type = _clean_string(component.get("component_type")).lower()
+    
+    # INFERENCE FIX: Infer omitted component types based on optical properties 
+    # to prevent filter cube internals from resolving to "unknown" and bypassing the simulator.
+    if not component_type:
+        if "center_nm" in component and "width_nm" in component:
+            component_type = "bandpass"
+        elif "cut_on_nm" in component and "bands" not in component:
+            component_type = "longpass"
+        elif "cut_off_nm" in component:
+            component_type = "shortpass"
+        elif "cutoffs_nm" in component or "transmission_bands" in component:
+            component_type = "dichroic"
+        else:
+            component_type = "unknown"
+
     payload["component_type"] = component_type
     payload["type"] = component_type
     payload["label"] = _build_label(component)
     payload["display_label"] = payload.get("label")
     payload["details"] = _build_details(component)
     payload["render_kind"] = _render_kind(component)
+    
     if default_name and not _clean_string(payload.get("name")):
         payload["name"] = default_name
+        
     routes = _normalize_routes(component.get("path") or component.get("paths") or component.get("route") or component.get("routes"))
     if routes:
         payload["routes"] = routes
         payload["path"] = routes[0]
+        
     if branch_mode:
         payload["branch_mode"] = branch_mode
+        
     _normalize_component_numeric_fields(payload, component)
+    
     # Flag component types whose spectral behavior is not modeled so the
     # runtime and UI can surface a note instead of silently treating them
     # as transparent.
     if component_type == "analyzer":
         payload["_unsupported_spectral_model"] = True
+        
     payload["spectral_ops"] = _spectral_ops_for_component(payload)
     return payload
 
@@ -1511,7 +1717,7 @@ def _spectral_ops_for_component(component: dict[str, Any]) -> dict[str, list[dic
 
     if ctype in DICHROIC_TYPES:
         dichroic_data = _extract_dichroic_spectral_data(component)
-        if not any(key in dichroic_data for key in ("transmission_bands", "reflection_bands", "bands", "cut_on_nm")):
+        if not any(key in dichroic_data for key in ("transmission_bands", "reflection_bands", "bands", "cut_on_nm", "cutoffs_nm")):
             op = {"op": "passthrough", "unsupported_reason": "dichroic requires transmission_bands, reflection_bands, bands, or cut_on_nm"}
             return {"illumination": [op], "detection": [op]}
         return {
@@ -1942,20 +2148,34 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
             ),
             key=lambda item: (item[0] is None, item[0]),
         )
-        for slot, original_key, component in normalized_positions:
-            if slot is None or not isinstance(component, dict):
+        for slot, original_key, position in normalized_positions:
+            if slot is None or not isinstance(position, dict):
                 continue
-            component_payload = _component_payload(component)
+
+            component_payload, authored_position_id, position_key, position_label = _resolve_position_candidate_payload(
+                position,
+                parent_element=mechanism,
+                fallback_key=str(original_key),
+                fallback_slot=slot,
+            )
+            if not component_payload:
+                continue
+
             component_payload["slot"] = slot
-            component_payload["position_key"] = str(original_key)
-            component_payload["display_label"] = f"Slot {slot}: {component_payload.get('label')}"
+            component_payload["position_key"] = position_key or str(original_key)
+            if authored_position_id:
+                component_payload["id"] = authored_position_id
+                component_payload["position_id"] = authored_position_id
+            component_payload["display_label"] = f"Slot {slot}: {position_label or component_payload.get('label') or component_payload.get('display_label') or str(original_key)}"
             positions.append(component_payload)
 
-    _stage_label = resolve_stage_role_label(stage_prefix) if _active_vocab is not None else stage_prefix.replace("_", " ").title()
+    stage_label = resolve_stage_role_label(stage_prefix) if _active_vocab is not None else stage_prefix.replace("_", " ").title()
+    mechanism_id = _clean_identifier(mechanism.get("id")) or f"{stage_prefix}_mech_{index}"
+
     mechanism_payload = {
-        "id": f"{stage_prefix}_mech_{index}",
-        "name": mechanism.get("name") or f"{_stage_label} {index + 1}",
-        "display_label": mechanism.get("name") or f"{_stage_label} {index + 1}",
+        "id": mechanism_id,
+        "name": mechanism.get("name") or mechanism.get("display_label") or f"{stage_label} {index + 1}",
+        "display_label": mechanism.get("display_label") or mechanism.get("name") or f"{stage_label} {index + 1}",
         "type": mechanism.get("type", "unknown"),
         "positions": positions,
     }
@@ -1963,12 +2183,14 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
     mechanism_type = str(mechanism.get("type", "")).lower()
     mechanism_payload["control_kind"] = "dropdown"
     mechanism_payload["control_label"] = mechanism_payload["display_label"]
+
     if mechanism_type in {"tunable", "spectral_slider"}:
         mechanism_payload["control_kind"] = "tunable_slider"
         mechanism_payload["min_nm"] = mechanism.get("min_nm", 400)
         mechanism_payload["max_nm"] = mechanism.get("max_nm", 800)
         mechanism_payload["default_min_nm"] = mechanism.get("default_min_nm", 500)
         mechanism_payload["default_max_nm"] = mechanism.get("default_max_nm", 550)
+
     mechanism_payload["options"] = [
         {
             "slot": position.get("slot"),
@@ -1977,10 +2199,12 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
         }
         for position in positions
     ]
+
     routes = _normalize_routes(mechanism.get("path") or mechanism.get("paths") or mechanism.get("route") or mechanism.get("routes"))
     if routes:
         mechanism_payload["routes"] = routes
         mechanism_payload["path"] = routes[0]
+
     if isinstance(mechanism.get("notes"), str) and mechanism["notes"].strip():
         mechanism_payload["notes"] = mechanism["notes"].strip()
 
@@ -2046,6 +2270,7 @@ def _estimate_dichroic_cut_on(
 def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, Any]:
     raw_positions = mechanism.get("positions", {})
     positions: list[dict[str, Any]] = []
+
     if isinstance(raw_positions, dict):
         normalized_positions = sorted(
             (
@@ -2063,14 +2288,11 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                 component = cube_position.get(link_key)
                 if not isinstance(component, dict):
                     continue
-                linked_components[link_key] = _component_payload(component, default_name=_resolve_cube_link_label(link_key))
+                linked_components[link_key] = _component_payload(
+                    component,
+                    default_name=_resolve_cube_link_label(link_key),
+                )
 
-            # Flattened filter_cube positions (component_type: filter_cube with bands
-            # but no explicit excitation_filter/dichroic/emission_filter sub-components)
-            # are expanded into full composite optics: emission_filter plus a
-            # synthetic dichroic estimated from the emission band edge.  When
-            # only emission data is available the cube is flagged _cube_incomplete
-            # so the runtime can warn the user.
             cube_label = cube_position.get("name") or f"Cube {slot}"
             if not linked_components and _clean_string(cube_position.get("component_type")).lower() == "filter_cube":
                 bands = cube_position.get("bands")
@@ -2096,49 +2318,65 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
                     synth["cut_on_nm"] = _coerce_number(cut_on_nm)
                 else:
                     synth["component_type"] = "bandpass"
-                if synth.get("component_type"):
-                    linked_components["emission_filter"] = _component_payload(synth, default_name=cube_label)
 
-                # Synthesize a dichroic from the emission band lower edge so the
-                # runtime can model excitation reflection + emission transmission.
+                if synth.get("component_type"):
+                    linked_components["emission_filter"] = _component_payload(
+                        synth,
+                        default_name=cube_label,
+                    )
+
                 dichroic_cut_on = _estimate_dichroic_cut_on(bands, cut_on_nm)
                 if dichroic_cut_on is not None:
                     linked_components["dichroic"] = _component_payload(
-                        {"name": f"{cube_label} (dichroic)", "component_type": "dichroic", "cut_on_nm": dichroic_cut_on},
+                        {
+                            "name": f"{cube_label} (dichroic)",
+                            "component_type": "dichroic",
+                            "cut_on_nm": dichroic_cut_on,
+                        },
                         default_name=f"{cube_label} (dichroic)",
                     )
 
+            authored_position_id = _clean_string(cube_position.get("id")) or str(original_key)
             position_payload: dict[str, Any] = {
+                "id": authored_position_id,
+                "position_id": authored_position_id,
                 "slot": slot,
-                "position_key": str(original_key),
+                "position_key": _clean_string(cube_position.get("position_key")) or str(original_key),
                 "type": "cube",
                 "component_type": "filter_cube",
                 "label": cube_label,
                 "display_label": cube_label,
                 "details": _build_details(cube_position),
                 "linked_components": linked_components,
-                # Backward-compatible direct aliases used by the browser runtime.
                 "excitation_filter": linked_components.get("excitation_filter"),
                 "dichroic": linked_components.get("dichroic"),
                 "emission_filter": linked_components.get("emission_filter"),
             }
-            # Flag cubes that have no explicit excitation data so the runtime
-            # can warn users about incomplete cube modeling.
+
             if linked_components and "excitation_filter" not in linked_components:
                 position_payload["_cube_incomplete"] = True
                 position_payload["_unsupported_spectral_model"] = True
-            # Parser-authoritative spectral ops for the browser runtime.
+
             position_payload["spectral_ops"] = _cube_spectral_ops(position_payload)
-            routes = _normalize_routes(cube_position.get("path") or cube_position.get("paths") or cube_position.get("route") or cube_position.get("routes") or mechanism.get("path"))
+
+            routes = _normalize_routes(
+                cube_position.get("path")
+                or cube_position.get("paths")
+                or cube_position.get("route")
+                or cube_position.get("routes")
+                or mechanism.get("path")
+            )
             if routes:
                 position_payload["routes"] = routes
                 position_payload["path"] = routes[0]
+
             positions.append(position_payload)
 
+    mechanism_id = _clean_identifier(mechanism.get("id")) or f"cube_mech_{index}"
     mechanism_payload: dict[str, Any] = {
-        "id": f"cube_mech_{index}",
+        "id": mechanism_id,
         "name": mechanism.get("name") or f"Cube {index + 1}",
-        "display_label": mechanism.get("name") or f"Cube {index + 1}",
+        "display_label": mechanism.get("display_label") or mechanism.get("name") or f"Cube {index + 1}",
         "type": mechanism.get("type", "unknown"),
         "positions": positions,
         "control_kind": "dropdown",
@@ -2152,14 +2390,16 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
             for position in positions
         ],
     }
+
     routes = _normalize_routes(mechanism.get("path") or mechanism.get("paths") or mechanism.get("route") or mechanism.get("routes"))
     if routes:
         mechanism_payload["routes"] = routes
         mechanism_payload["path"] = routes[0]
+
     if isinstance(mechanism.get("notes"), str) and mechanism["notes"].strip():
         mechanism_payload["notes"] = mechanism["notes"].strip()
-    return mechanism_payload
 
+    return mechanism_payload
 
 
 def _route_tags(selection: dict[str, Any]) -> set[str]:
@@ -2282,60 +2522,55 @@ def _resolve_positioned_component_from_element(
     selected_key: str | None = None
     selected_slot: int | None = None
     selected_position: dict[str, Any] | None = None
+
     if requested and position_candidates:
         for key_text, slot, position in position_candidates:
+            if not isinstance(position, dict):
+                continue
+
+            authored_id = _clean_string(position.get("id"))
             position_key = _clean_string(position.get("position_key"))
             identifiers = {
                 _clean_identifier(key_text),
+                _clean_identifier(authored_id),
                 _clean_identifier(position_key),
-                _clean_identifier(position.get("id")),
             }
+
             key_matches = (
                 requested == key_text
+                or requested == authored_id
                 or requested == position_key
                 or (requested_identifier and requested_identifier in identifiers)
             )
             slot_matches = requested_slot is not None and slot == requested_slot
+
             if key_matches or slot_matches:
                 selected_key = key_text
                 selected_slot = slot
                 selected_position = position
                 break
 
+        # Critical fix:
+        # an explicitly authored but invalid position_id must NOT silently fall
+        # back to the first position.
+        if selected_position is None:
+            return {}, None, None, None
+
     if selected_position is None and position_candidates:
         selected_key, selected_slot, selected_position = position_candidates[0]
 
     if isinstance(selected_position, dict):
-        if isinstance(selected_position.get("component"), dict):
-            component_payload = _component_payload(
-                selected_position["component"],
-                default_name=element.get("name") or element.get("display_label") or element.get("id") or "",
-            )
-        elif any(isinstance(selected_position.get(link_key), dict) for link_key in CUBE_LINK_KEYS):
-            component_payload = dict(selected_position)
-            component_payload.setdefault("component_type", "filter_cube")
-            component_payload.setdefault("type", component_payload.get("component_type"))
-            component_payload.setdefault("label", _clean_string(selected_position.get("label") or selected_position.get("name")))
-            component_payload.setdefault("display_label", _clean_string(selected_position.get("display_label") or selected_position.get("label") or selected_position.get("name")))
-            component_payload.setdefault("spectral_ops", _cube_spectral_ops(component_payload))
-        else:
-            component_payload = _component_payload(
-                selected_position,
-                default_name=element.get("name") or element.get("display_label") or element.get("id") or "",
-            )
-        position_key = _clean_string(selected_position.get("position_key")) or selected_key
-        resolved_position_id = requested or (str(selected_slot) if selected_slot is not None else position_key)
-        position_label = (
-            _clean_string(selected_position.get("display_label"))
-            or _clean_string(selected_position.get("label"))
-            or _clean_string(selected_position.get("name"))
-            or _clean_string(component_payload.get("display_label"))
-            or _clean_string(component_payload.get("label"))
-            or None
+        return _resolve_position_candidate_payload(
+            selected_position,
+            parent_element=element,
+            fallback_key=selected_key,
+            fallback_slot=selected_slot,
         )
-        return component_payload, resolved_position_id or None, position_key or None, position_label
 
-    component_payload = _component_payload_from_element_reference(_clean_identifier(element.get("id")), {element.get("id"): element})
+    component_payload = _component_payload_from_element_reference(
+        _clean_identifier(element.get("id")),
+        {element.get("id"): element},
+    )
     return component_payload, None, None, None
 
 
@@ -3073,87 +3308,83 @@ def _build_selected_route_steps(
 ) -> list[dict[str, Any]]:
     """Build the runtime-selected execution model from static route topology.
 
-    Unlike ``route_steps`` (which always defaults unspecified positions to the
-    first available slot), the selected route steps explicitly flag unresolved
-    mechanism positions so the runtime can present a real selection prompt.
+    Unlike ``route_steps`` (which may still be used as a topology projection),
+    this structure explicitly distinguishes:
+    - fixed steps
+    - authored resolved steps
+    - unresolved multi-position steps that require a runtime selection
 
-    Each step carries ``selection_state``:
-
-    * ``"resolved"`` – authored YAML specified a position, fully resolved with
-      identity and ``spectral_ops``.
-    * ``"fixed"`` – element has zero or one positions, or is a non-positioned
-      step (source/detector/sample/routing).  Always carries ``spectral_ops``
-      when the optics are computable.
-    * ``"unresolved"`` – multi-position mechanism with no authored selection.
-      ``spectral_ops`` is *null*; ``available_positions`` lists the candidates.
+    The unresolved state carries parser-authoritative ``available_positions`` so
+    the browser does not need to infer optics or invent position identity.
     """
     selected: list[dict[str, Any]] = []
 
     def _available_positions_for_element(element: dict[str, Any]) -> list[dict[str, Any]]:
-        """Build enriched available position entries for a multi-position element.
-
-        Each entry carries the full parser-resolved component data so the
-        browser runtime can resolve user selections without re-computing optics.
-
-        Returns a list of dicts, each containing at minimum:
-        ``position_key``, ``slot``, ``label``, ``component_type``, ``spectral_ops``.
-        """
         candidates = _iter_element_positions(element)
         out: list[dict[str, Any]] = []
+
         for key_text, slot, position in candidates:
-            component = _component_payload(position)
-            pos_label = (
-                _clean_string(component.get("display_label"))
-                or _clean_string(component.get("label"))
-                or _clean_string(component.get("name"))
-                or key_text
+            if not isinstance(position, dict):
+                continue
+
+            component, authored_position_id, position_key, position_label = _resolve_position_candidate_payload(
+                position,
+                parent_element=element,
+                fallback_key=key_text,
+                fallback_slot=slot,
             )
+            if not component:
+                continue
+
             entry: dict[str, Any] = {
-                "position_key": key_text,
+                "position_id": authored_position_id,
+                "selected_position_id": authored_position_id,
+                "position_key": position_key,
+                "selected_position_key": position_key,
+                "position_label": position_label,
+                "selected_position_label": position_label,
                 "slot": slot,
-                "label": pos_label,
+                "label": position_label,
                 "component_type": _clean_string(component.get("component_type")).lower() or None,
                 "spectral_ops": component.get("spectral_ops"),
             }
-            # Preserve identity fields for methods reporting & UI display.
+
             for identity_field in ("manufacturer", "model", "product_code", "name"):
                 val = _clean_string(component.get(identity_field))
                 if val:
                     entry[identity_field] = val
-            # Carry unsupported flags so the runtime can surface them.
+
             if component.get("_unsupported_spectral_model"):
                 entry["_unsupported_spectral_model"] = True
             if component.get("_cube_incomplete"):
                 entry["_cube_incomplete"] = True
-            # For filter_cube positions, include sub-component links.
+
             comp_type = _clean_string(component.get("component_type")).lower()
             if comp_type == "filter_cube":
                 for cube_key in CUBE_LINK_KEYS:
                     sub = component.get(cube_key)
                     if isinstance(sub, dict):
                         entry[cube_key] = sub
+
             out.append(entry)
+
         return out
 
     def _derive_selection_state(step: dict[str, Any]) -> tuple[str, list[dict[str, Any]] | None]:
-        """Return ``(selection_state, available_positions | None)``.
-
-        *step* is a route_step dict produced by ``_build_route_steps``.  The
-        function inspects ``kind``, ``_authored_position_id``, and the element's
-        position count to decide whether the step is ``"fixed"``,
-        ``"resolved"``, or ``"unresolved"``.
-        """
         kind = step.get("kind", "")
         if kind in ("source", "detector", "sample", "routing_component"):
             return "fixed", None
+
         authored = step.get("_authored_position_id")
         if authored:
             return "resolved", None
+
         element_id = _clean_identifier(step.get("component_id"))
         element_row = element_lookup.get(element_id, {})
         positions = _iter_element_positions(element_row)
         if len(positions) <= 1:
             return "fixed", None
+
         return "unresolved", _available_positions_for_element(element_row)
 
     def _process_branch_sequence(seq: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -3161,9 +3392,10 @@ def _build_selected_route_steps(
         for branch_step in seq:
             if not isinstance(branch_step, dict):
                 continue
+
             kind = branch_step.get("kind", "")
-            selection_state: str
             available: list[dict[str, Any]] | None = None
+
             if kind in ("source", "detector"):
                 selection_state = "fixed"
             else:
@@ -3179,12 +3411,15 @@ def _build_selected_route_steps(
                     else:
                         selection_state = "unresolved"
                         available = _available_positions_for_element(elem_row)
+
             entry: dict[str, Any] = {
                 "kind": branch_step.get("kind"),
                 "component_id": branch_step.get("component_id"),
                 "display_label": branch_step.get("display_label"),
                 "selection_state": selection_state,
+                "unsupported_reason": branch_step.get("unsupported_reason"),
             }
+
             if selection_state == "unresolved":
                 entry["selected_position_id"] = None
                 entry["selected_position_key"] = None
@@ -3202,18 +3437,21 @@ def _build_selected_route_steps(
                 entry["position_key"] = branch_step.get("position_key")
                 entry["position_label"] = branch_step.get("position_label")
                 entry["spectral_ops"] = branch_step.get("spectral_ops")
+
             if kind == "source":
                 entry["source_id"] = branch_step.get("source_id")
             elif kind == "detector":
                 entry["detector_id"] = branch_step.get("detector_id")
                 entry["endpoint_id"] = branch_step.get("endpoint_id")
-            entry["unsupported_reason"] = branch_step.get("unsupported_reason")
+
             resolved_seq.append(entry)
+
         return resolved_seq
 
     for step in route_steps:
         if not isinstance(step, dict):
             continue
+
         selection_state, available = _derive_selection_state(step)
         entry: dict[str, Any] = {
             "route_step_id": step.get("step_id"),
@@ -3236,6 +3474,7 @@ def _build_selected_route_steps(
             "metadata": step.get("metadata", {}),
             "unsupported_reason": step.get("unsupported_reason"),
         }
+
         if selection_state == "unresolved":
             entry["selected_position_id"] = None
             entry["selected_position_key"] = None
@@ -3276,7 +3515,6 @@ def _build_selected_route_steps(
         selected.append(entry)
 
     return selected
-
 
 def _build_route_sequences_and_graph(
     route: dict[str, Any],
