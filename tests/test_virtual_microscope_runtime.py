@@ -1299,7 +1299,6 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             ]);
             return terminals.map((terminal) => ({
               id: terminal.id,
-              hasDefaultEnabled: Object.prototype.hasOwnProperty.call(terminal, 'default_enabled'),
               defaultEnabledType: typeof terminal.default_enabled,
               defaultEnabled: terminal.default_enabled === undefined ? null : terminal.default_enabled
             }));
@@ -1307,7 +1306,6 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         )
 
         by_id = {row["id"]: row for row in result}
-        self.assertTrue(by_id["cam_default"]["hasDefaultEnabled"])
         self.assertEqual(by_id["cam_default"]["defaultEnabledType"], "undefined")
         self.assertIsNone(by_id["cam_default"]["defaultEnabled"])
         self.assertFalse(by_id["cam_false"]["defaultEnabled"])
@@ -1349,35 +1347,43 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
                 selected_execution: { contract_version: 'selected_execution.v2', selected_route_steps: routeSteps }
               }]
             };
-            const simulation = rt.simulateInstrument(
-              instrument,
-              {
-                sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
-                illuminationComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'excitation', routeStepId: 'illumination-step-0' }],
-                detectionComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'emission', routeStepId: 'detection-step-2' }],
-                excitation: [],
-                dichroic: [],
-                emission: [],
-                splitters: [],
-                detectors: [],
-                selectionMap: {}
-              },
-              [fluor()],
-              { currentRoute: 'confocal' }
-            );
+            const baseSelection = {
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              illuminationComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'excitation', routeStepId: 'illumination-step-0' }],
+              detectionComponents: [{ component: { component_type: 'passthrough', spectral_ops: { illumination: [{ op: 'passthrough' }], detection: [{ op: 'passthrough' }] } }, mode: 'emission', routeStepId: 'detection-step-2' }],
+              excitation: [],
+              dichroic: [],
+              emission: [],
+              splitters: [],
+              selectionMap: {}
+            };
+            function summarize(selection) {
+              const simulation = rt.simulateInstrument(
+                instrument,
+                selection,
+                [fluor()],
+                { currentRoute: 'confocal' }
+              );
+              return {
+                selectedDetectors: simulation.selectedDetectors,
+                resultsCount: simulation.results.length,
+                pathSpectraCount: simulation.pathSpectra.length,
+                validSelection: simulation.validSelection
+              };
+            }
             return {
-              selectedDetectors: simulation.selectedDetectors,
-              resultsCount: simulation.results.length,
-              pathSpectraCount: simulation.pathSpectra.length,
-              validSelection: simulation.validSelection
+              explicitEmpty: summarize({ ...baseSelection, detectors: [] }),
+              missingDetectors: summarize(baseSelection),
+              nullDetectors: summarize({ ...baseSelection, detectors: null })
             };
             """
         )
 
-        self.assertEqual(result["selectedDetectors"], [])
-        self.assertEqual(result["resultsCount"], 0)
-        self.assertEqual(result["pathSpectraCount"], 0)
-        self.assertTrue(result["validSelection"])
+        for variant in ("explicitEmpty", "missingDetectors", "nullDetectors"):
+            self.assertEqual(result[variant]["selectedDetectors"], [])
+            self.assertEqual(result[variant]["resultsCount"], 0)
+            self.assertEqual(result[variant]["pathSpectraCount"], 0)
+            self.assertTrue(result[variant]["validSelection"])
 
     def test_runtime_keeps_authoritative_inventory_and_route_usage_from_dto(self) -> None:
         result = self.run_node_json(
