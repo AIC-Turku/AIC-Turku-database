@@ -302,7 +302,7 @@
           display_label: cleanString(terminal.display_label) || cleanString(terminal.name) || `Endpoint ${index + 1}`,
           detector_class: terminal.detector_class || detectorClass(kind),
           __routes: routes,
-          default_enabled: terminal.default_enabled === undefined ? false : Boolean(terminal.default_enabled),
+          default_enabled: terminal.default_enabled === undefined ? undefined : Boolean(terminal.default_enabled),
           is_digital: terminal.is_digital === undefined ? endpointType !== 'eyepiece' : Boolean(terminal.is_digital),
         };
         const collectionMin = numberOrNull(out.collection_min_nm);
@@ -2786,9 +2786,6 @@
       return role !== 'depletion' && role !== 'transmitted_illumination';
     });
     const depletionSources = selectedSources.filter((source) => cleanString(source.role).toLowerCase() === 'depletion');
-    if (!explicitDetectorSelections.length) {
-      throw new Error('[VM] simulateInstrument: no explicit detector selection provided for active route.');
-    }
     const resolvedDetectors = explicitDetectorSelections.map((detector) => hydrateDetectorSelection(detector, normalizedInstrument));
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
 
