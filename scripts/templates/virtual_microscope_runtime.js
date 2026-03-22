@@ -744,7 +744,6 @@
     };
     const branchSequenceComponent = (step) => {
       if (!(step && typeof step === 'object')) return null;
-      if (!(step.kind === 'optical_component' || (step.spectral_ops && typeof step.spectral_ops === 'object'))) return null;
       if (!(step.spectral_ops && typeof step.spectral_ops === 'object')) return null;
       const label = cleanString(step.position_label || step.display_label || step.component_id) || 'Branch optical component';
       const detectionOps = Array.isArray(step.spectral_ops.detection) ? step.spectral_ops.detection : [];
