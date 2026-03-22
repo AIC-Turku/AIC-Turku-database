@@ -1676,6 +1676,10 @@
           display_label: `${mechanism.name || stageKey} ${minInput.value}-${maxInput.value}`,
           band_start_nm: Number(minInput.value),
           band_end_nm: Number(maxInput.value),
+          spectral_ops: {
+            illumination: [{ op: 'tunable_bandpass', start_nm: minVal, end_nm: maxVal }],
+            detection: [{ op: 'tunable_bandpass', start_nm: minVal, end_nm: maxVal }]
+          }
         });
         readout.textContent = `${mechanism.control_label || mechanism.name || stageKey}: ${minInput.value}–${maxInput.value} nm`;
         refreshOutputs();
@@ -2241,6 +2245,10 @@
             center_nm: (Number(band.min_nm) + Number(band.max_nm)) / 2,
             width_nm: Math.max(1, Number(band.max_nm) - Number(band.min_nm)),
             label: band.label,
+            spectral_ops: {
+            illumination: [{ op: 'multiband_bandpass', bands: mappedBands }],
+            detection: [{ op: 'multiband_bandpass', bands: mappedBands }]
+          }
           })),
         };
         pushStageComponent(stage, mechanismName, component);
