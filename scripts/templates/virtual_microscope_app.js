@@ -1609,10 +1609,10 @@
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = Boolean(setting.enabled);
-      checkbox.dataset.routes = normalizeSourceRoutes(source).join(',');      
+      checkbox.dataset.routes = normalizeSourceRoutes(source).join(',');  
       checkbox.addEventListener('change', () => {
         setting.enabled = checkbox.checked;
-        if (checkbox.checked) autoSelectBranchForDetector(detector);
+        pruneConflictingSources();
         renderGraphFlow();
         refreshOutputs();
       });
@@ -2116,11 +2116,11 @@
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.checked = Boolean(setting.enabled);
+    checkbox.checked = Boolean(setting.enabled);    
     checkbox.addEventListener('change', () => {
       setting.enabled = checkbox.checked;
       if (checkbox.checked) autoSelectBranchForDetector(detector);
-      syncDetectorMetadata();
+      renderGraphFlow();
       refreshOutputs();
     });
     label.appendChild(checkbox);
