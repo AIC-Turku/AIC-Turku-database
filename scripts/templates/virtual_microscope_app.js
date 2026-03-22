@@ -90,7 +90,7 @@
   }
 
   function componentLabel(component, fallback) {
-    return component && (component.display_label || component.name) || fallback;
+    return (component && (component.display_label || component.name)) || fallback;
   }
 
   function rgbaFromHex(hex, alpha) {
@@ -3085,7 +3085,7 @@
       setInlineStatus(DOM.searchStatus, message, 'error');
       setInlineStatus(DOM.localSearchStatus, message, 'error');
       simulation = {
-        grid: VM.wavelengthGrid(state.activeInstrument && state.activeInstrument.metadata && state.activeInstrument.metadata.wavelength_grid),
+        grid: VM.wavelengthGrid(state.activeInstrument?.metadata?.wavelength_grid),
         excitationAtSample: [],
         emittedSpectra: [],
         pathSpectra: [],
