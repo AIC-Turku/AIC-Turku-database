@@ -1987,10 +1987,11 @@
         }
         return mask;
       }
-      // Flat fallback: bands only — used when a filter_cube reaches componentMask
-      // without having been expanded into sub-components by expandCubeSelection
-      // (e.g. legacy payload or direct componentMask call).
-      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no linked sub-components; treating as emission-only filter. Add excitation_filter/dichroic/emission_filter properties for full cube modeling.');
+      // Flat fallback: retained for backward compatibility with legacy
+      // payloads that lack linked sub-components.  New payloads always carry
+      // spectral_ops and linked_components from the parser, so this path
+      // should not be reached for current data.
+      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no linked sub-components and no spectral_ops; using emission bands only. Upgrade the YAML to include linked_components or regenerate the payload to get parser-provided spectral_ops.');
       const bands = normalizedBandMasks(grid, component.bands);
       if (bands.length) return sumMasks(bands, grid);
       const center = numberOrNull(component.center_nm);
@@ -1998,11 +1999,12 @@
       if (center !== null && width !== null && width > 0) return bandMask(grid, center - (width / 2), center + (width / 2), 2);
       const cutOn = numberOrNull(component.cut_on_nm);
       if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
+      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no spectral data at all — returning transparent mask. This indicates missing data in the instrument YAML.');
       return grid.map(() => 1);
     }
-    // Unknown component type — warn so authors know the type is not modeled.
+    // Unknown component type — error-level warning.
     if (type) {
-      console.warn('[VM] componentMask: unsupported component type "' + type + '" treated as spectrally transparent.');
+      console.warn('[VM] componentMask: unsupported component type "' + type + '" — no spectral_ops available and type is not recognized. This component will be treated as transparent but may produce incorrect simulation results.');
     }
     return grid.map(() => 1);
   }
@@ -2097,7 +2099,8 @@
     if (kind === 'white_light_laser' || kind === 'supercontinuum') {
       return broadbandSpectrum(grid, source);
     }
-    return grid.map((wavelength) => (wavelength >= 350 && wavelength <= 800 ? 0.08 : 0));
+    console.warn('[VM] sourceSpectrum: source "' + cleanString(source && (source.display_label || source.name || source.id)) + '" has no explicit wavelength data; returning zero spectrum. Add wavelength_nm, spectral_mode, or lines_nm to the YAML source definition.');
+    return grid.map(() => 0);
   }
 
   function sourceWeight(source) {

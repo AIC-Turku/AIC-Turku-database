@@ -2055,6 +2055,103 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         else:
             pass  # Optimizer found a shared config — also acceptable
 
+    # ── executeSpectralOps tests ──────────────────────────────────────
+
+    def test_execute_spectral_ops_bandpass(self) -> None:
+        """executeSingleSpectralOp should produce a bandpass mask from an op spec."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const mask = rt.executeSingleSpectralOp({ op: 'bandpass', center_nm: 525, width_nm: 50 }, grid);
+            const peakIdx = grid.reduce((best, w, i) => Math.abs(w - 525) < Math.abs(grid[best] - 525) ? i : best, 0);
+            const offIdx = grid.reduce((best, w, i) => Math.abs(w - 400) < Math.abs(grid[best] - 400) ? i : best, 0);
+            return { peak: mask[peakIdx], off: mask[offIdx] };
+            """
+        )
+        self.assertGreater(result["peak"], 0.9, "bandpass peak should be near 1.0")
+        self.assertLess(result["off"], 0.01, "bandpass off-peak should be near 0")
+
+    def test_execute_spectral_ops_dichroic_reflect_vs_transmit(self) -> None:
+        """Dichroic reflect and transmit should be complementary."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const reflect = rt.executeSingleSpectralOp({ op: 'dichroic_reflect', cut_on_nm: 505 }, grid);
+            const transmit = rt.executeSingleSpectralOp({ op: 'dichroic_transmit', cut_on_nm: 505 }, grid);
+            const below = grid.reduce((best, w, i) => Math.abs(w - 470) < Math.abs(grid[best] - 470) ? i : best, 0);
+            const above = grid.reduce((best, w, i) => Math.abs(w - 560) < Math.abs(grid[best] - 560) ? i : best, 0);
+            return {
+              reflectBelow: reflect[below],
+              reflectAbove: reflect[above],
+              transmitBelow: transmit[below],
+              transmitAbove: transmit[above],
+            };
+            """
+        )
+        self.assertGreater(result["reflectBelow"], 0.5, "below cut-on should reflect")
+        self.assertLess(result["reflectAbove"], 0.5, "above cut-on should not reflect")
+        self.assertLess(result["transmitBelow"], 0.5, "below cut-on should not transmit")
+        self.assertGreater(result["transmitAbove"], 0.5, "above cut-on should transmit")
+
+    def test_execute_spectral_ops_sequence(self) -> None:
+        """executeSpectralOps should multiply ops sequentially."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            const ops = [
+              { op: 'bandpass', center_nm: 525, width_nm: 50 },
+              { op: 'longpass', cut_on_nm: 500 },
+            ];
+            const mask = rt.executeSpectralOps(ops, grid);
+            const atCenter = grid.reduce((best, w, i) => Math.abs(w - 525) < Math.abs(grid[best] - 525) ? i : best, 0);
+            const below = grid.reduce((best, w, i) => Math.abs(w - 480) < Math.abs(grid[best] - 480) ? i : best, 0);
+            return { center: mask[atCenter], below: mask[below] };
+            """
+        )
+        self.assertGreater(result["center"], 0.8, "center of combined bandpass+longpass should pass")
+        self.assertLess(result["below"], 0.1, "below longpass cut-on should be blocked")
+
+    def test_component_mask_prefers_spectral_ops_over_type(self) -> None:
+        """When spectral_ops is present, componentMask should use it instead of the type."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 400, max_nm: 700, step_nm: 2 });
+            // Component has type=bandpass but spectral_ops says longpass —
+            // spectral_ops should win.
+            const component = {
+              component_type: 'bandpass',
+              center_nm: 525,
+              width_nm: 50,
+              spectral_ops: {
+                illumination: [{ op: 'longpass', cut_on_nm: 500 }],
+                detection: [{ op: 'longpass', cut_on_nm: 500 }],
+              }
+            };
+            const mask = rt.componentMask(component, grid, { mode: 'excitation' });
+            const below = grid.reduce((best, w, i) => Math.abs(w - 470) < Math.abs(grid[best] - 470) ? i : best, 0);
+            const above = grid.reduce((best, w, i) => Math.abs(w - 550) < Math.abs(grid[best] - 550) ? i : best, 0);
+            return { below: mask[below], above: mask[above] };
+            """
+        )
+        # If spectral_ops wins, this is a longpass at 500nm, so below=0, above=1
+        self.assertLess(result["below"], 0.1, "longpass should block below cut-on")
+        self.assertGreater(result["above"], 0.9, "longpass should pass above cut-on")
+
+    def test_source_centers_no_longer_parses_display_label(self) -> None:
+        """sourceCenters must NOT parse wavelengths from display_label."""
+        result = self.run_node_json(
+            """
+            return {
+              fromLabel: rt.sourceCenters({ display_label: '488nm Laser' }),
+              fromName: rt.sourceCenters({ name: '488nm Laser' }),
+              fromExplicit: rt.sourceCenters({ wavelength_nm: 488 }),
+            };
+            """
+        )
+        self.assertEqual(result["fromLabel"], [], "display_label should not be parsed")
+        self.assertEqual(result["fromName"], [], "name should not be parsed")
+        self.assertEqual(result["fromExplicit"], [488])
+
 
 if __name__ == "__main__":
     unittest.main()

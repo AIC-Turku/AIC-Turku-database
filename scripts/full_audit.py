@@ -277,6 +277,28 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             }
         )
 
+    # Verify the authoritative route-step contract is present.
+    for route_idx, route in enumerate(payload.get("light_paths", [])):
+        if not isinstance(route, dict):
+            continue
+        route_steps = route.get("route_steps")
+        if not isinstance(route_steps, list):
+            warnings.append(
+                {
+                    "severity": "warning",
+                    "field": f"light_paths[{route_idx}].route_steps",
+                    "message": f"Route '{route.get('id')}' is missing the authoritative route_steps contract.",
+                }
+            )
+        elif not route_steps:
+            warnings.append(
+                {
+                    "severity": "warning",
+                    "field": f"light_paths[{route_idx}].route_steps",
+                    "message": f"Route '{route.get('id')}' has an empty route_steps array.",
+                }
+            )
+
     return {
         "instrument_id": instrument.get("id"),
         "display_name": instrument.get("display_name"),

@@ -282,6 +282,29 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("optimizer (optimizeLightPath) enumerates candidate stage positions", source)
 
+    def test_execute_spectral_ops_functions_are_exported(self) -> None:
+        """The runtime must export executeSpectralOps and executeSingleSpectralOp."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+        self.assertIn("executeSpectralOps", source)
+        self.assertIn("executeSingleSpectralOp", source)
+
+    def test_component_mask_prefers_spectral_ops(self) -> None:
+        """componentMask should check for spectral_ops before type-based interpretation."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+        self.assertIn("component.spectral_ops", source)
+
+    def test_source_centers_does_not_parse_display_label(self) -> None:
+        """sourceCenters must not parse wavelengths from display_label."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+        # The old block parsed source.display_label, source.name, source.model, etc.
+        self.assertNotIn("source.display_label,\n      source && source.name,", source)
+
+    def test_parser_spectral_ops_present_in_component_payload(self) -> None:
+        """_component_payload should include spectral_ops."""
+        source = Path("scripts/light_path_parser.py").read_text(encoding="utf-8")
+        self.assertIn("_spectral_ops_for_component", source)
+        self.assertIn('"spectral_ops"', source)
+
 
 if __name__ == "__main__":
     unittest.main()

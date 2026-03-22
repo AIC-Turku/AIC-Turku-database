@@ -1925,3 +1925,217 @@ class LightPathParserTests(unittest.TestCase):
         self.assertTrue(len(cube_positions) > 0)
         position_keys = [p["value"].get("position_key") for p in cube_positions]
         self.assertIn("Pos_1", position_keys, "Original cube position key should be preserved")
+
+    # ── spectral_ops contract tests ──────────────────────────────────────
+
+    def test_bandpass_position_has_spectral_ops(self) -> None:
+        """Mechanism positions of type bandpass should carry spectral_ops."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "exc",
+                            "stage_role": "excitation",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                1: {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        pos = stages["excitation"][0]["options"][0]["value"]
+        self.assertIn("spectral_ops", pos)
+        ops = pos["spectral_ops"]
+        self.assertIn("illumination", ops)
+        self.assertIn("detection", ops)
+        self.assertEqual(ops["illumination"][0]["op"], "bandpass")
+        self.assertEqual(ops["illumination"][0]["center_nm"], 470.0)
+        self.assertEqual(ops["illumination"][0]["width_nm"], 40.0)
+
+    def test_dichroic_position_has_phase_aware_spectral_ops(self) -> None:
+        """Dichroic positions must have different ops for illumination and detection."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "di",
+                            "stage_role": "dichroic",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                1: {"component_type": "dichroic", "cut_on_nm": 505},
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        pos = stages["dichroic"][0]["options"][0]["value"]
+        ops = pos["spectral_ops"]
+        self.assertEqual(ops["illumination"][0]["op"], "dichroic_reflect")
+        self.assertEqual(ops["detection"][0]["op"], "dichroic_transmit")
+        self.assertEqual(ops["illumination"][0]["cut_on_nm"], 505.0)
+
+    def test_filter_cube_position_has_expanded_spectral_ops(self) -> None:
+        """Filter cube positions must carry expanded spectral_ops with sub-roles."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "cube_mechanisms": [
+                            {
+                                "positions": {
+                                    1: {
+                                        "name": "GFP Cube",
+                                        "excitation_filter": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                        "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                                        "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+        cube_options = _runtime_projection(payload)["stages"]["cube"][0]["options"]
+        cube = cube_options[0]["value"]
+        ops = cube["spectral_ops"]
+        # Illumination: excitation_filter + dichroic_reflect
+        self.assertTrue(len(ops["illumination"]) >= 2)
+        sub_roles = [o.get("sub_role") for o in ops["illumination"]]
+        self.assertIn("excitation_filter", sub_roles)
+        self.assertIn("dichroic", sub_roles)
+        # Detection: dichroic_transmit + emission_filter
+        self.assertTrue(len(ops["detection"]) >= 2)
+        sub_roles_det = [o.get("sub_role") for o in ops["detection"]]
+        self.assertIn("dichroic", sub_roles_det)
+        self.assertIn("emission_filter", sub_roles_det)
+
+    def test_analyzer_spectral_ops_are_passthrough_with_unsupported_reason(self) -> None:
+        """Analyzer positions should have passthrough ops with an unsupported_reason."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "analyzer_wheel",
+                            "stage_role": "analyzer",
+                            "element_type": "analyzer",
+                            "positions": {
+                                1: {"component_type": "analyzer", "name": "Polarizer"},
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        pos = stages["analyzer"][0]["options"][0]["value"]
+        ops = pos["spectral_ops"]
+        self.assertEqual(ops["illumination"][0]["op"], "passthrough")
+        self.assertIsNotNone(ops["illumination"][0].get("unsupported_reason"))
+
+    def test_unknown_type_spectral_ops_carry_unsupported_reason(self) -> None:
+        """Unknown component types should carry unsupported_reason."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "optical_path_elements": [
+                        {
+                            "id": "mystery",
+                            "stage_role": "excitation",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                1: {"component_type": "exotic_filter", "name": "Magic"},
+                            },
+                        }
+                    ],
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        pos = stages["excitation"][0]["options"][0]["value"]
+        ops = pos["spectral_ops"]
+        self.assertIn("unsupported_reason", ops["illumination"][0])
+
+    # ── route_steps contract tests ────────────────────────────────────────
+
+    def test_route_steps_are_present_in_light_paths(self) -> None:
+        """Each light_path route should contain a route_steps array."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {"id": "exc_filter", "stage_role": "excitation", "element_type": "filter_wheel", "positions": {1: {"component_type": "bandpass", "center_nm": 470, "width_nm": 40}}},
+                    ],
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "name": "Epi-fluorescence",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "exc_filter"}],
+                        "detection_sequence": [{"endpoint_id": "cam"}],
+                    }
+                ],
+            }
+        )
+        route = payload["light_paths"][0]
+        self.assertIn("route_steps", route)
+        steps = route["route_steps"]
+        self.assertIsInstance(steps, list)
+        self.assertTrue(len(steps) >= 3, "route_steps should have at least source + sample + detector")
+
+    def test_route_steps_have_ordered_phases(self) -> None:
+        """route_steps should be ordered: illumination → sample → detection."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src", "kind": "laser", "wavelength_nm": 488}],
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src"}],
+                        "detection_sequence": [{"endpoint_id": "cam"}],
+                    }
+                ],
+            }
+        )
+        steps = payload["light_paths"][0]["route_steps"]
+        phases = [s["phase"] for s in steps]
+        # Illumination steps come before sample, which comes before detection
+        sample_idx = phases.index("sample")
+        self.assertTrue(all(p == "illumination" for p in phases[:sample_idx]))
+        self.assertTrue(all(p == "detection" for p in phases[sample_idx + 1:]))
+
+    def test_route_steps_include_metadata_from_inventory(self) -> None:
+        """route_steps should carry authored metadata from the hardware inventory."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src", "kind": "laser", "wavelength_nm": 488, "manufacturer": "Coherent", "model": "OBIS 488"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src"}],
+                        "detection_sequence": [],
+                    }
+                ],
+            }
+        )
+        steps = payload["light_paths"][0]["route_steps"]
+        source_steps = [s for s in steps if s["kind"] == "source"]
+        self.assertTrue(len(source_steps) > 0)
+        meta = source_steps[0]["metadata"]
+        self.assertEqual(meta["manufacturer"], "Coherent")
+        self.assertEqual(meta["model"], "OBIS 488")

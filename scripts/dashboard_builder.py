@@ -1594,6 +1594,8 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
             "branch_summary": branch_summary,
             "illumination_traversal": copy.deepcopy(route.get("illumination_traversal") or []),
             "detection_traversal": copy.deepcopy(route.get("detection_traversal") or []),
+            "route_steps": copy.deepcopy(route.get("route_steps") or []),
+            "route_warnings": copy.deepcopy(route.get("route_warnings") or []),
             "illumination_sequence": copy.deepcopy(route.get("illumination_sequence") or []),
             "detection_sequence": copy.deepcopy(route.get("detection_sequence") or []),
         }
