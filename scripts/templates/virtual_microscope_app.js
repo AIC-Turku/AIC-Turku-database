@@ -193,6 +193,49 @@
     DOM.autoConfigStatus.dataset.tone = tone;
   }
 
+  function renderSequentialAcquisitionPlan(steps, activeStepIndex = null) {
+    if (!DOM.autoConfigStatus) return;
+    const planSteps = Array.isArray(steps) ? steps.filter((entry) => entry && entry.configuration) : [];
+    if (!planSteps.length) {
+      setStatusMessage('Sequential acquisition required but no executable plan steps were returned.', 'warning');
+      return;
+    }
+    DOM.autoConfigStatus.innerHTML = '';
+    DOM.autoConfigStatus.dataset.tone = 'warning';
+
+    const intro = document.createElement('div');
+    intro.textContent = 'Sequential acquisition plan required: no single configuration supports all loaded fluorophores. Apply each step in order.';
+    DOM.autoConfigStatus.appendChild(intro);
+
+    const list = document.createElement('ol');
+    planSteps.forEach((entry, index) => {
+      const item = document.createElement('li');
+      const route = cleanString(entry && entry.route) || 'Current route';
+      const detectorSlots = (Array.isArray(entry && entry.detectors) ? entry.detectors : [])
+        .map((detector) => `${cleanString(detector.mechanismId)}@${detector.slot}`)
+        .filter(Boolean);
+      const splitterBranches = (Array.isArray(entry && entry.splitters) ? entry.splitters : [])
+        .map((splitter) => `${cleanString(splitter.mechanismId)}=[${(Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids : []).join(',')}]`)
+        .filter(Boolean);
+      const summary = `Step ${entry.step || (index + 1)} ${cleanString(entry.fluorophoreName) || 'Fluorophore'} (route: ${route}${detectorSlots.length ? `, detectors: ${detectorSlots.join('; ')}` : ''}${splitterBranches.length ? `, splitters: ${splitterBranches.join('; ')}` : ''})`;
+      const summaryText = document.createElement('span');
+      summaryText.textContent = summary + ' ';
+      item.appendChild(summaryText);
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = activeStepIndex === index ? 'Applied' : `Apply step ${entry.step || (index + 1)}`;
+      button.disabled = activeStepIndex === index;
+      button.addEventListener('click', () => {
+        applyOptimizedConfiguration(entry.configuration);
+        renderSequentialAcquisitionPlan(planSteps, index);
+      });
+      item.appendChild(button);
+      list.appendChild(item);
+    });
+    DOM.autoConfigStatus.appendChild(list);
+  }
+
   function setInlineStatus(node, message, tone = 'info') {
     if (!node) return;
     node.textContent = cleanString(message);
@@ -587,15 +630,22 @@
       return;
     }
     if (result.requiresSequentialAcquisition) {
-      const names = result.perFluorophoreConfigs.map((cfg) => cfg.fluorophoreName).join(', ');
-      setStatusMessage(
-        `Sequential acquisition required: no single path supports all fluorophores simultaneously. Individual settings found for: ${names}.`,
-        'warning'
-      );
-      // Apply the first fluorophore's configuration as a starting point.
-      if (result.perFluorophoreConfigs.length) {
-        applyOptimizedConfiguration(result.perFluorophoreConfigs[0].configuration);
+      const steps = Array.isArray(result.sequentialPlan) && result.sequentialPlan.length
+        ? result.sequentialPlan
+        : (Array.isArray(result.perFluorophoreConfigs) ? result.perFluorophoreConfigs.map((entry, index) => ({
+            step: index + 1,
+            fluorophoreName: entry.fluorophoreName,
+            route: entry && entry.configuration ? entry.configuration.route : null,
+            detectors: entry && entry.configuration && Array.isArray(entry.configuration.detectors) ? entry.configuration.detectors : [],
+            splitters: entry && entry.configuration && Array.isArray(entry.configuration.splitters) ? entry.configuration.splitters : [],
+            configuration: entry.configuration,
+          })) : []);
+      if (!steps.length) {
+        setStatusMessage('Sequential acquisition required, but no executable plan steps were produced.', 'warning');
+        return;
       }
+      applyOptimizedConfiguration(steps[0].configuration);
+      renderSequentialAcquisitionPlan(steps, 0);
       return;
     }
     applyOptimizedConfiguration(result);

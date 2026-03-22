@@ -227,12 +227,16 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("requiresSequentialAcquisition", source)
         self.assertIn("perFluorophoreConfigs", source)
+        self.assertIn("sequentialPlan", source)
 
     def test_run_auto_configure_handles_sequential(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("result.requiresSequentialAcquisition", source)
-        self.assertIn("Sequential acquisition required", source)
+        self.assertIn("function renderSequentialAcquisitionPlan(steps, activeStepIndex = null)", source)
+        self.assertIn("button.textContent = activeStepIndex === index ? 'Applied' : `Apply step ${entry.step || (index + 1)}`;", source)
+        self.assertIn("applyOptimizedConfiguration(steps[0].configuration);", source)
+        self.assertIn("renderSequentialAcquisitionPlan(steps, 0);", source)
 
     # ── VM-008: deduplicated detector legends ──
 

@@ -2604,10 +2604,31 @@
     });
 
     if (perFluorophoreConfigs.length >= 2) {
+      const sequentialPlan = perFluorophoreConfigs.map((entry, index) => {
+        const config = entry && entry.configuration ? entry.configuration : {};
+        return {
+          step: index + 1,
+          fluorophoreKey: entry.fluorophoreKey,
+          fluorophoreName: entry.fluorophoreName,
+          route: cleanString(config.route).toLowerCase() || null,
+          detectors: Array.isArray(config.detectors) ? config.detectors.map((detector) => ({
+            mechanismId: detector.mechanismId || '',
+            slot: detector.slot,
+            collection_min_nm: detector.collection_min_nm,
+            collection_max_nm: detector.collection_max_nm,
+          })) : [],
+          splitters: Array.isArray(config.splitters) ? config.splitters.map((splitter) => ({
+            mechanismId: splitter.mechanismId || '',
+            selected_branch_ids: Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids.slice() : [],
+          })) : [],
+          configuration: config,
+        };
+      });
       return {
         requiresSequentialAcquisition: true,
         reason: 'No single optical path simultaneously satisfies all loaded fluorophores. Each fluorophore can be imaged individually with different settings.',
         perFluorophoreConfigs,
+        sequentialPlan,
       };
     }
 

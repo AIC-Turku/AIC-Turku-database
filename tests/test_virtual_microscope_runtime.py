@@ -2340,6 +2340,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             return {
                 isSequential: result ? Boolean(result.requiresSequentialAcquisition) : false,
                 hasPerFluorConfigs: result && Array.isArray(result.perFluorophoreConfigs) ? result.perFluorophoreConfigs.length : 0,
+                hasSequentialPlan: result && Array.isArray(result.sequentialPlan) ? result.sequentialPlan.length : 0,
                 hasReason: result && result.reason ? true : false,
                 isNull: result === null,
             };
@@ -2352,6 +2353,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         elif result["isSequential"]:
             self.assertTrue(result["hasReason"], "sequential result should have a reason")
             self.assertGreaterEqual(result["hasPerFluorConfigs"], 2, "should have per-fluorophore configs")
+            self.assertGreaterEqual(result["hasSequentialPlan"], 2, "sequential result should include ordered plan steps")
         else:
             pass  # Optimizer found a shared config — also acceptable
 
