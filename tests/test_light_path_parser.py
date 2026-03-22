@@ -1370,6 +1370,8 @@ class LightPathParserTests(unittest.TestCase):
         )
         cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
         self.assertFalse(cube.get("_cube_incomplete", False), "Explicit cube should not be flagged incomplete")
+
+    def test_splitter_branches_deduplicated_across_routes(self) -> None:
         """Branches with the same branch_id across routes should be merged, not duplicated."""
         payload = generate_virtual_microscope_payload(
             {

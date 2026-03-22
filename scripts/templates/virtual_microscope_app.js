@@ -2093,7 +2093,7 @@
     if (excitation) expanded.push({ stage: 'excitation', name: `${mechanismName} (Cube Ex)`, component: excitation });
     if (dichroic) expanded.push({ stage: 'dichroic', name: `${mechanismName} (Cube Di)`, component: dichroic });
     if (emission) expanded.push({ stage: 'emission', name: `${mechanismName} (Cube Em)`, component: emission });
-    if (cubePosition._cube_incomplete && expanded.length) {
+    if (cubePosition._cube_incomplete) {
       console.warn(`[VM] Cube "${cubePosition.label || cubePosition.display_label || mechanismName}" has no explicit excitation filter data; simulation uses estimated dichroic + emission only.`);
     }
     return expanded;
