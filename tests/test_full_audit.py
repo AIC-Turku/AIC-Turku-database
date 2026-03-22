@@ -540,8 +540,6 @@ class FullAuditScriptTests(unittest.TestCase):
                 self.skipTest("Audit markdown not generated.")
             md = md_path.read_text(encoding="utf-8")
             self.assertIn("JS runtime execution authority", md)
-            # Category breakdown is only rendered when there are categorized issues
-            # The section header should always appear if there are any issues
 
 
 if __name__ == "__main__":
