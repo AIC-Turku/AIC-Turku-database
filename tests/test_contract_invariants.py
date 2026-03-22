@@ -321,11 +321,9 @@ class ContractInvariantTests(unittest.TestCase):
         runtime_source = RUNTIME_PATH.read_text(encoding="utf-8")
         app_source = APP_PATH.read_text(encoding="utf-8")
 
-        self.assertIn(
-            "normalized.routeOptions = explicitRouteOptions.length\n      ? explicitRouteOptions\n      : (approximationMode ? collectRouteCatalogFallback(normalized) : []);",
-            runtime_source,
-            msg="Strict runtime must not use inferred route catalog fallback when approximation mode is off.",
-        )
+        self.assertNotIn("collectRouteCatalogFallback", runtime_source)
+        self.assertNotIn("adaptLegacyPayloadToCanonicalDto", runtime_source)
+        self.assertIn("missing canonical DTO contract", runtime_source)
         self.assertIn(
             "authoritativeTopologyContract",
             runtime_source,
@@ -336,11 +334,7 @@ class ContractInvariantTests(unittest.TestCase):
             runtime_source,
             msg="Runtime should preserve the canonical hardware index map for downstream numbering.",
         )
-        self.assertIn(
-            "if (!allowApproximation) return [];",
-            runtime_source,
-            msg="Strict runtime must not invent detector targets/virtual detectors.",
-        )
+        self.assertNotIn("inferredDetectorTargets", runtime_source)
         self.assertRegex(
             app_source,
             r"if \(!strictHardwareTruthMode\(\) && autoRepairBlockedPath\(selection, simulation\)\)",

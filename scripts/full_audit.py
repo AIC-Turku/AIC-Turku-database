@@ -283,7 +283,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             continue
         route_steps = route.get("route_steps")
         if not isinstance(route_steps, list):
-            warnings.append(
+            issues.append(
                 {
                     "severity": "warning",
                     "field": f"light_paths[{route_idx}].route_steps",
@@ -291,13 +291,34 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                 }
             )
         elif not route_steps:
-            warnings.append(
+            issues.append(
                 {
                     "severity": "warning",
                     "field": f"light_paths[{route_idx}].route_steps",
                     "message": f"Route '{route.get('id')}' has an empty route_steps array.",
                 }
             )
+        else:
+            for step_idx, step in enumerate(route_steps):
+                if not isinstance(step, dict):
+                    issues.append(
+                        {
+                            "severity": "error",
+                            "field": f"light_paths[{route_idx}].route_steps[{step_idx}]",
+                            "message": "Route step is not an object.",
+                        }
+                    )
+                    continue
+                required_keys = ("step_id", "order", "phase", "kind")
+                missing = [key for key in required_keys if step.get(key) in (None, "")]
+                if missing:
+                    issues.append(
+                        {
+                            "severity": "error",
+                            "field": f"light_paths[{route_idx}].route_steps[{step_idx}]",
+                            "message": f"Route step missing required fields: {', '.join(missing)}.",
+                        }
+                    )
 
     return {
         "instrument_id": instrument.get("id"),

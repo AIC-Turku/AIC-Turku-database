@@ -92,11 +92,13 @@
   }
 
   function normalizeRouteTags(value) {
-    const items = Array.isArray(value) ? value : [value];
+    const items = Array.isArray(value) ? value : (typeof value === 'string' ? [value] : []);
     const tags = [];
+    const seen = new Set();
     items.forEach((item) => {
       const cleaned = cleanString(item).toLowerCase();
-      if (cleaned && ROUTE_TAGS.has(cleaned) && !tags.includes(cleaned)) {
+      if (cleaned && ROUTE_TAGS.has(cleaned) && !seen.has(cleaned)) {
+        seen.add(cleaned);
         tags.push(cleaned);
       }
     });
@@ -280,23 +282,6 @@
     return normalized;
   }
 
-  function simulatorApproximationModeEnabled(metadata, options) {
-    const modeFromOptions = cleanString(options && (options.simulationMode || options.mode)).toLowerCase();
-    if (modeFromOptions === 'approximate' || modeFromOptions === 'simulator_approximation') return true;
-    if (modeFromOptions === 'strict' || modeFromOptions === 'hardware_truth') return false;
-
-    if (options && Object.prototype.hasOwnProperty.call(options, 'strictHardwareTruth')) {
-      return options.strictHardwareTruth === false;
-    }
-
-    const modeFromMetadata = cleanString(metadata && (metadata.simulation_mode || metadata.runtime_mode)).toLowerCase();
-    if (modeFromMetadata === 'approximate' || modeFromMetadata === 'simulator_approximation') return true;
-    if (modeFromMetadata === 'strict' || modeFromMetadata === 'hardware_truth') return false;
-
-    if (metadata && metadata.non_authoritative_simulator_mode === true) return true;
-    return false;
-  }
-
   function normalizeTerminals(rows) {
     return (Array.isArray(rows) ? rows : [])
       .filter((row) => row && typeof row === 'object')
@@ -328,60 +313,35 @@
       });
   }
 
-  function normalizeSplitters(rows, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
+  function normalizeSplitters(rows) {
     return (Array.isArray(rows) ? rows : [])
       .filter((row) => row && typeof row === 'object')
       .map((splitter, index) => {
         const routes = routesFromObject(splitter);
-        // `path1` / `path2` are legacy compatibility fields only. Canonical v2 splitters
-        // should arrive with explicit `branches`; approximation mode may still read these
-        // fields when normalizing older derived payloads.
-        const legacyPath1 = (splitter.path1 && splitter.path1.positions ? splitter.path1.positions[1] || splitter.path1.positions['1'] : null)
-          || (splitter.path_1 && splitter.path_1.emission_filter ? splitter.path_1.emission_filter : null);
-        const legacyPath2 = (splitter.path2 && splitter.path2.positions ? splitter.path2.positions[1] || splitter.path2.positions['1'] : null)
-          || (splitter.path_2 && splitter.path_2.emission_filter ? splitter.path_2.emission_filter : null);
-        const buildBranch = (branch, branchIndex, fallbackMode) => {
-          const mode = cleanString(branch && branch.mode).toLowerCase() || fallbackMode || (branchIndex === 0 ? 'transmitted' : 'reflected');
+        const buildBranch = (branch, branchIndex) => {
+          const mode = cleanString(branch && branch.mode).toLowerCase() || (branchIndex === 0 ? 'transmitted' : 'reflected');
           let component = branch && branch.component && typeof branch.component === 'object' ? { ...branch.component } : null;
           if (!component && branch && branch.emission_filter && typeof branch.emission_filter === 'object') {
             component = { ...branch.emission_filter };
           }
-          if (!component && branch && (branch.component_type || branch.type)) {
-            component = { ...branch };
+          if (!component) {
+            throw new Error('[VM] normalizeSplitters: splitter branch "' + (cleanString(branch && (branch.id || branch.label)) || (`${index + 1}:${branchIndex + 1}`)) + '" is missing parser component payload.');
           }
-          if (!component && allowApproximation) component = { component_type: 'passthrough', label: 'Pass-through' };
-          if (!component) component = {};
           return {
             ...branch,
             id: cleanString(branch && branch.id) || `splitter_${index}_branch_${branchIndex + 1}`,
             label: cleanString(branch && (branch.label || branch.name)) || `Branch ${branchIndex + 1}`,
             mode,
             component,
-            target_ids: normalizeTargetIds(branch && (allowApproximation
-              ? (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint)
-              : branch.target_ids)),
+            target_ids: normalizeTargetIds(branch && branch.target_ids),
             __routes: routesFromObject(branch).length ? routesFromObject(branch) : routes,
           };
         };
 
-        let branches = [];
-        if (Array.isArray(splitter.branches) && splitter.branches.length) {
-          branches = splitter.branches.map((branch, branchIndex) => buildBranch(branch, branchIndex, branchIndex === 0 ? 'transmitted' : 'reflected'));
-        } else if (allowApproximation && (legacyPath1 || legacyPath2 || splitter.path1 || splitter.path2 || splitter.path_1 || splitter.path_2)) {
-          const left = splitter.path1 || splitter.path_1 || {};
-          const right = splitter.path2 || splitter.path_2 || {};
-          branches = [
-            buildBranch({ ...left, component: legacyPath1 || left.component || left.emission_filter }, 0, 'transmitted'),
-            buildBranch({ ...right, component: legacyPath2 || right.component || right.emission_filter }, 1, 'reflected'),
-          ].filter((branch, branchIndex) => branchIndex === 0 || legacyPath2 || right.component || right.emission_filter || cleanString(right.name || right.label));
-        } else if (allowApproximation) {
-          branches = [buildBranch({
-            id: `splitter_${index}_main`,
-            label: cleanString(splitter.name) || 'Primary Path',
-            component: { component_type: 'passthrough', label: 'Pass-through' },
-          }, 0, 'transmitted')];
+        if (!Array.isArray(splitter.branches) || !splitter.branches.length) {
+          throw new Error('[VM] normalizeSplitters: splitter "' + (cleanString(splitter && (splitter.id || splitter.name)) || `splitter_${index + 1}`) + '" is missing canonical branches.');
         }
+        const branches = splitter.branches.map((branch, branchIndex) => buildBranch(branch, branchIndex));
 
         return {
           ...splitter,
@@ -395,32 +355,6 @@
       });
   }
 
-  function collectRouteCatalogFallback(normalizedPayload) {
-    const tags = new Set();
-    const collect = (obj) => {
-      routesFromObject(obj).forEach((route) => {
-        if (route !== 'shared' && route !== 'all') tags.add(route);
-      });
-      if (obj && typeof obj === 'object') {
-        const linkedComponents = obj.linked_components || obj.linkedComponents;
-        if (linkedComponents && typeof linkedComponents === 'object') {
-          Object.values(linkedComponents).forEach(collect);
-        }
-        if (Array.isArray(obj.branches)) obj.branches.forEach(collect);
-        if (obj.component && typeof obj.component === 'object') collect(obj.component);
-      }
-    };
-    ['lightSources', 'cube', 'excitation', 'dichroic', 'emission', 'detectors', 'splitters', 'terminals'].forEach((key) => {
-      (Array.isArray(normalizedPayload[key]) ? normalizedPayload[key] : []).forEach((mechanism) => {
-        collect(mechanism);
-        if (mechanism && mechanism.positions && typeof mechanism.positions === 'object') {
-          Object.values(mechanism.positions).forEach(collect);
-        }
-      });
-    });
-    return normalizeRouteCatalog(Array.from(tags));
-  }
-
   function canonicalElements(rows) {
     return (Array.isArray(rows) ? rows : []).filter((row) => row && typeof row === 'object');
   }
@@ -428,9 +362,10 @@
   function hasCanonicalDtoContract(payload) {
     if (!payload || typeof payload !== 'object') return false;
     return Array.isArray(payload.sources)
-      || Array.isArray(payload.optical_path_elements)
-      || Array.isArray(payload.endpoints)
-      || Array.isArray(payload.light_paths);
+      && Array.isArray(payload.optical_path_elements)
+      && Array.isArray(payload.endpoints)
+      && Array.isArray(payload.light_paths)
+      && payload.light_paths.every((route) => route && typeof route === 'object' && Array.isArray(route.route_steps));
   }
 
   function canonicalTopologyBindings(payload) {
@@ -568,21 +503,19 @@
     return { sourceRoutes, elementBindings, endpointRoutes, splitterBranches, routeCatalog };
   }
 
-  function orderedRoutesFromSet(routeSet, fallbackValue) {
+  function orderedRoutesFromSet(routeSet) {
     const routes = normalizeRouteTags(Array.from(routeSet || []));
     if (routes.length) return routes;
-    return normalizeRouteTags(fallbackValue || []);
+    return [];
   }
 
-  function canonicalElementRoutes(element, topologyBindings, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
+  function canonicalElementRoutes(element, topologyBindings) {
     const binding = topologyBindings && topologyBindings.elementBindings
       ? topologyBindings.elementBindings.get(normalizeIdentifier(element && element.id))
       : null;
     const boundRoutes = orderedRoutesFromSet(binding && binding.routes);
     if (boundRoutes.length) return boundRoutes;
-    if (!allowApproximation) return [];
-    return normalizeRouteTags((element && (element.modalities || element.routes || element.path || element.route)) || []);
+    return [];
   }
 
   function sortByRouteOccurrence(left, right) {
@@ -693,13 +626,13 @@
     };
   }
 
-  function canonicalStagePayload(payload, topologyBindings, options) {
+  function canonicalStagePayload(payload, topologyBindings) {
     const out = { cube: [], excitation: [], dichroic: [], emission: [], analyzer: [] };
     canonicalElements(payload && payload.optical_path_elements).forEach((element) => {
       const stageRole = cleanString(element && element.stage_role).toLowerCase();
       if (!['cube', 'excitation', 'dichroic', 'emission', 'analyzer'].includes(stageRole)) return;
       const mechanism = { ...element, type: element.element_type || element.type || 'mechanism' };
-      const routes = canonicalElementRoutes(element, topologyBindings, options);
+      const routes = canonicalElementRoutes(element, topologyBindings);
       const binding = topologyBindings && topologyBindings.elementBindings
         ? topologyBindings.elementBindings.get(normalizeIdentifier(element && element.id))
         : null;
@@ -739,14 +672,12 @@
     return out;
   }
 
-  function canonicalSourceMechanisms(payload, topologyBindings, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
+  function canonicalSourceMechanisms(payload, topologyBindings) {
     return canonicalElements(payload && payload.sources).map((source, index) => {
       const routes = orderedRoutesFromSet(
         topologyBindings && topologyBindings.sourceRoutes
           ? topologyBindings.sourceRoutes.get(normalizeIdentifier(source && source.id))
-          : null,
-        allowApproximation ? (source && (source.modalities || source.routes || source.path || source.route)) : []
+          : null
       );
       const value = {
         ...(source || {}),
@@ -764,24 +695,22 @@
     });
   }
 
-  function canonicalEndpointPayload(payload, topologyBindings, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
+  function canonicalEndpointPayload(payload, topologyBindings) {
     return canonicalElements(payload && payload.endpoints).map((endpoint) => {
       const routes = orderedRoutesFromSet(
         topologyBindings && topologyBindings.endpointRoutes
           ? topologyBindings.endpointRoutes.get(normalizeIdentifier(endpoint && endpoint.id))
-          : null,
-        allowApproximation ? (endpoint && (endpoint.modalities || endpoint.routes || endpoint.path || endpoint.route)) : []
+          : null
       );
       return { ...(endpoint || {}), __routes: routes };
     });
   }
 
-  function canonicalSplitterPayload(payload, topologyBindings, options) {
+  function canonicalSplitterPayload(payload, topologyBindings) {
     return canonicalElements(payload && payload.optical_path_elements)
       .filter((element) => cleanString(element && element.stage_role).toLowerCase() === 'splitter')
       .map((element, index) => {
-        const routes = canonicalElementRoutes(element, topologyBindings, options);
+        const routes = canonicalElementRoutes(element, topologyBindings);
         const routeBranchBinding = topologyBindings && topologyBindings.splitterBranches
           ? topologyBindings.splitterBranches.get(normalizeIdentifier(element && element.id))
           : null;
@@ -822,105 +751,6 @@
       });
   }
 
-  function collectLegacyRouteCatalog(payload, runtimeProjection, allowApproximation) {
-    const explicitRoutes = normalizeRouteCatalog(
-      payload.available_routes
-      || payload.route_options
-      || (payload.simulation && payload.simulation.route_catalog)
-      || runtimeProjection.available_routes
-      || []
-    );
-    if (explicitRoutes.length) return explicitRoutes;
-    if (!allowApproximation) return [];
-
-    const normalizedPayload = {
-      lightSources: normalizeMechanismList(runtimeProjection.light_sources || payload.light_sources),
-      cube: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).cube)),
-      excitation: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).excitation)),
-      dichroic: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).dichroic)),
-      emission: normalizeMechanismList(((runtimeProjection.stages || payload.stages || {}).emission)),
-      splitters: normalizeSplitters(runtimeProjection.runtime_splitters || runtimeProjection.splitters || payload.runtime_splitters || payload.splitters, { allowApproximation: true }),
-      detectors: normalizeMechanismList(runtimeProjection.detectors || payload.detectors),
-      terminals: normalizeTerminals(runtimeProjection.terminals || payload.terminals || payload.detection_endpoints || []),
-    };
-    return collectRouteCatalogFallback(normalizedPayload);
-  }
-
-  function adaptLegacyPayloadToCanonicalDto(rawPayload, options) {
-    const payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
-    const projections = payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
-    const runtimeProjection = projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
-      ? projections.virtual_microscope
-      : {};
-    const allowApproximation = Boolean(options && options.allowApproximation);
-
-    const sources = [];
-    normalizeMechanismList(runtimeProjection.light_sources || payload.light_sources).forEach((mechanism, mechanismIndex) => {
-      positionValuesForRoute(mechanism, null).forEach((source, sourceIndex) => {
-        sources.push({
-          ...(source || {}),
-          id: cleanString(source && source.id) || `${cleanString(mechanism && mechanism.id) || `legacy_source_${mechanismIndex + 1}`}_${sourceIndex + 1}`,
-        });
-      });
-    });
-
-    const opticalPathElements = [];
-    ['cube', 'excitation', 'dichroic', 'emission'].forEach((stageRole) => {
-      normalizeMechanismList(((runtimeProjection.stages || payload.stages || {})[stageRole])).forEach((mechanism, mechanismIndex) => {
-        opticalPathElements.push({
-          ...(mechanism || {}),
-          id: cleanString(mechanism && mechanism.id) || `${stageRole}_${mechanismIndex + 1}`,
-          stage_role: stageRole,
-          element_type: cleanString(mechanism && (mechanism.element_type || mechanism.type)) || 'mechanism',
-        });
-      });
-    });
-    normalizeSplitters(runtimeProjection.runtime_splitters || runtimeProjection.splitters || payload.runtime_splitters || payload.splitters, { allowApproximation }).forEach((splitter, splitterIndex) => {
-      opticalPathElements.push({
-        ...(splitter || {}),
-        id: cleanString(splitter && splitter.id) || `splitter_${splitterIndex + 1}`,
-        stage_role: 'splitter',
-        element_type: cleanString(splitter && splitter.element_type) || 'splitter',
-      });
-    });
-
-    const endpoints = normalizeTerminals(runtimeProjection.terminals || payload.terminals || payload.detection_endpoints || []).map((endpoint, index) => ({
-      ...(endpoint || {}),
-      id: cleanString(endpoint && endpoint.id) || `endpoint_${index + 1}`,
-    }));
-    normalizeMechanismList(runtimeProjection.detectors || payload.detectors).forEach((mechanism, mechanismIndex) => {
-      positionValuesForRoute(mechanism, null).forEach((detector, detectorIndex) => {
-        endpoints.push({
-          ...(detector || {}),
-          id: cleanString(detector && detector.id) || `${cleanString(mechanism && mechanism.id) || `detector_${mechanismIndex + 1}`}_${detectorIndex + 1}`,
-          endpoint_type: detector.endpoint_type || detector.kind || 'detector',
-        });
-      });
-    });
-
-    const routeCatalog = collectLegacyRouteCatalog(payload, runtimeProjection, allowApproximation);
-    const lightPaths = routeCatalog.map((route) => ({ id: route.id, name: route.label, illumination_sequence: [], detection_sequence: [] }));
-    const simulationMeta = payload.simulation && typeof payload.simulation === 'object' ? payload.simulation : {};
-
-    return {
-      metadata: payload.metadata || {},
-      simulation: {
-        ...simulationMeta,
-        default_route: cleanString(payload.default_route || simulationMeta.default_route || runtimeProjection.default_route).toLowerCase() || null,
-        route_catalog: routeCatalog,
-      },
-      sources,
-      optical_path_elements: opticalPathElements,
-      endpoints,
-      light_paths: lightPaths,
-      projections: {
-        virtual_microscope: {
-          valid_paths: Array.isArray(runtimeProjection.valid_paths || payload.valid_paths) ? (runtimeProjection.valid_paths || payload.valid_paths) : [],
-        },
-      },
-    };
-  }
-
   function terminalsAsDetectorMechanisms(terminals) {
     return (Array.isArray(terminals) ? terminals : []).map((terminal, index) => {
       const routes = terminal.__routes || routesFromObject(terminal);
@@ -942,20 +772,12 @@
     });
   }
 
-  function deriveStageGroupAdapters(payload, topologyBindings, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
-    const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings, { allowApproximation }));
-    const stageSource = canonicalStagePayload(payload, topologyBindings, { allowApproximation });
-    const splitterSource = canonicalSplitterPayload(payload, topologyBindings, { allowApproximation });
-    // Stage-group adapters serve two roles:
-    // 1. The optimizer (optimizeLightPath) enumerates candidate stage positions
-    //    via normalizedInstrument.cube / .excitation / .dichroic / .emission.
-    // 2. The app UI uses lightSources/detectors as fallbacks when route topology
-    //    does not provide explicit source/endpoint mechanisms.
-    // routeTopology + hardwareInventory remain the authoritative topology truth
-    // for pipe rendering, simulation order, and inspector panels.
+  function deriveStageGroupAdapters(payload, topologyBindings) {
+    const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings));
+    const stageSource = canonicalStagePayload(payload, topologyBindings);
+    const splitterSource = canonicalSplitterPayload(payload, topologyBindings);
     return {
-      lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings, { allowApproximation })),
+      lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings)),
       stages: {
         cube: normalizeMechanismList(stageSource && stageSource.cube),
         excitation: normalizeMechanismList(stageSource && stageSource.excitation),
@@ -963,7 +785,7 @@
         emission: normalizeMechanismList(stageSource && stageSource.emission),
         analyzer: normalizeMechanismList(stageSource && stageSource.analyzer),
       },
-      splitters: normalizeSplitters(splitterSource, { allowApproximation }),
+      splitters: normalizeSplitters(splitterSource),
       terminals: normalizedTerminals,
       detectors: terminalsAsDetectorMechanisms(normalizedTerminals),
     };
@@ -971,10 +793,10 @@
 
   function normalizeInstrumentPayload(rawPayload, options) {
     const inputPayload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
-    const approximationMode = simulatorApproximationModeEnabled(inputPayload.metadata || {}, options);
-    const payload = hasCanonicalDtoContract(inputPayload)
-      ? inputPayload
-      : adaptLegacyPayloadToCanonicalDto(inputPayload, { allowApproximation: approximationMode });
+    if (!hasCanonicalDtoContract(inputPayload)) {
+      throw new Error('[VM] normalizeInstrumentPayload: missing canonical DTO contract (sources/optical_path_elements/endpoints/light_paths with route_steps).');
+    }
+    const payload = inputPayload;
     const projections = payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
     const runtimeProjection = projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
       ? projections.virtual_microscope
@@ -982,7 +804,7 @@
     const simulationMeta = payload.simulation && typeof payload.simulation === 'object' ? payload.simulation : {};
     const topologyBindings = canonicalTopologyBindings(payload);
     const routeTopology = canonicalRouteTopology(payload, topologyBindings);
-    const derivedStageAdapters = deriveStageGroupAdapters(payload, topologyBindings, { allowApproximation: approximationMode });
+    const derivedStageAdapters = deriveStageGroupAdapters(payload, topologyBindings);
     const normalized = {
       metadata: payload.metadata || {},
       lightPaths: Array.isArray(payload.light_paths) ? payload.light_paths : [],
@@ -1018,22 +840,16 @@
       validPaths: Array.isArray(runtimeProjection.valid_paths || payload.valid_paths) ? (runtimeProjection.valid_paths || payload.valid_paths) : [],
       routeOptions: [],
       defaultRoute: cleanString(simulationMeta.default_route || payload.default_route || (topologyBindings.routeCatalog[0] && topologyBindings.routeCatalog[0].id)).toLowerCase() || null,
-      strictHardwareTruth: !approximationMode,
-      simulationMode: approximationMode ? 'approximate' : 'strict',
+      strictHardwareTruth: true,
+      simulationMode: 'strict',
     };
     const explicitRouteOptions = normalizeRouteCatalog(
       simulationMeta.route_catalog
       || (Array.isArray(payload.light_paths) ? payload.light_paths.map((route) => ({ id: route.id, label: route.name })) : [])
     );
-    normalized.routeOptions = explicitRouteOptions.length
-      ? explicitRouteOptions
-      : (approximationMode ? collectRouteCatalogFallback(normalized) : []);
+    normalized.routeOptions = explicitRouteOptions;
     if (!normalized.defaultRoute || !normalized.routeOptions.some((entry) => entry.id === normalized.defaultRoute)) {
-      if (!approximationMode) {
-        normalized.defaultRoute = null;
-      } else {
       normalized.defaultRoute = normalized.routeOptions[0] ? normalized.routeOptions[0].id : null;
-      }
     }
     return normalized;
   }
@@ -1739,13 +1555,6 @@
     return masks.reduce((accumulator, mask, index) => (index === 0 ? mask : accumulator.map((value, i) => clamp(value + mask[i], 0, 1))), grid.map(() => 0));
   }
 
-  function sortedCutoffs(cutoffs) {
-    return (Array.isArray(cutoffs) ? cutoffs : [])
-      .map((cutoff) => numberOrNull(cutoff))
-      .filter((cutoff) => cutoff !== null)
-      .sort((left, right) => left - right);
-  }
-
   function normalizedBandMasks(grid, bands) {
     const rows = Array.isArray(bands) ? bands : [];
     return rows
@@ -1758,32 +1567,10 @@
       .filter(Boolean);
   }
 
-  function legacyAlternatingCutoffTransmitMask(grid, cutoffs) {
-    const ordered = sortedCutoffs(cutoffs);
-    if (!ordered.length) return grid.map(() => 1);
-    return grid.map((wavelength) => {
-      let transmit = false;
-      ordered.forEach((cutoff) => {
-        if (wavelength >= cutoff) {
-          transmit = !transmit;
-        }
-      });
-      return transmit ? 1 : 0;
-    });
-  }
-
-  function simpleDichroicTransmitMask(grid, component) {
+  function dichroicTransmitMask(grid, component) {
     const cutOn = numberOrNull(component && component.cut_on_nm);
     if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
 
-    const ordered = sortedCutoffs(component && component.cutoffs_nm);
-    if (ordered.length === 1) {
-      return grid.map((wavelength) => smoothStep(wavelength, ordered[0], 2));
-    }
-    return null;
-  }
-
-  function dichroicTransmitMask(grid, component) {
     const transmissionMasks = normalizedBandMasks(grid, component && component.transmission_bands);
     if (transmissionMasks.length) return sumMasks(transmissionMasks, grid);
 
@@ -1798,11 +1585,7 @@
     const genericBandMasks = normalizedBandMasks(grid, component && component.bands);
     if (genericBandMasks.length) return sumMasks(genericBandMasks, grid);
 
-    const simpleMask = simpleDichroicTransmitMask(grid, component || {});
-    if (simpleMask) return simpleMask;
-
-    // Legacy/approximate fallback for cutoff-only multiband dichroics.
-    return legacyAlternatingCutoffTransmitMask(grid, component && component.cutoffs_nm);
+    throw new Error('[VM] dichroicTransmitMask: parser op missing explicit transmission/reflection band data');
   }
 
   /**
@@ -1887,126 +1670,23 @@
   }
 
   function componentMask(component, grid, context) {
-    // If the parser has provided authoritative spectral_ops, use them
-    // directly without interpreting the component type.
-    if (component && component.spectral_ops && typeof component.spectral_ops === 'object') {
-      const mode = cleanString(context && context.mode).toLowerCase();
-      const phase = (mode === 'excitation' || mode === 'illumination') ? 'illumination' : 'detection';
-      const ops = component.spectral_ops[phase] || component.spectral_ops.detection || component.spectral_ops.illumination;
-      if (Array.isArray(ops) && ops.length) {
-        // For dichroics with explicit branchMode, override the phase-based choice.
-        const branchMode = cleanString((context && context.branchMode) || (component && component.branch_mode)).toLowerCase();
-        if (branchMode === 'reflected' && component.spectral_ops.illumination) {
-          return executeSpectralOps(component.spectral_ops.illumination, grid);
-        }
-        if (branchMode === 'transmitted' && component.spectral_ops.detection) {
-          return executeSpectralOps(component.spectral_ops.detection, grid);
-        }
-        return executeSpectralOps(ops, grid);
-      }
+    if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) {
+      throw new Error('[VM] componentMask: component "' + cleanString(component && (component.id || component.display_label || component.label)) + '" is missing parser spectral_ops.');
     }
-    // Fallback: type-based interpretation for components without spectral_ops.
-    // This path is retained only for backward compatibility with payloads that
-    // pre-date the parser spectral_ops contract.  New payloads should always
-    // carry spectral_ops and never reach this code.
-    const type = cleanString(component && (component.component_type || component.type)).toLowerCase();
-    if (!type || type === 'mirror' || type === 'empty' || type === 'passthrough' || type === 'neutral_density') {
-      return grid.map(() => 1);
+    const mode = cleanString(context && context.mode).toLowerCase();
+    const phase = (mode === 'excitation' || mode === 'illumination') ? 'illumination' : 'detection';
+    const branchMode = cleanString((context && context.branchMode) || (component && component.branch_mode)).toLowerCase();
+    if (branchMode === 'reflected' && Array.isArray(component.spectral_ops.illumination)) {
+      return executeSpectralOps(component.spectral_ops.illumination, grid);
     }
-    if (type === 'analyzer') {
-      console.warn('[VM] componentMask: analyzer "' + cleanString(component.name || component.label) + '" treated as spectrally transparent — polarization effects are not modeled. Results may not reflect polarization-dependent behavior.');
-      return grid.map(() => 1);
+    if (branchMode === 'transmitted' && Array.isArray(component.spectral_ops.detection)) {
+      return executeSpectralOps(component.spectral_ops.detection, grid);
     }
-    if (type === 'block' || type === 'blocker') {
-      return grid.map(() => 0);
+    const ops = component.spectral_ops[phase];
+    if (!Array.isArray(ops) || !ops.length) {
+      throw new Error('[VM] componentMask: component "' + cleanString(component && (component.id || component.display_label || component.label)) + '" has no spectral_ops for phase "' + phase + '".');
     }
-    if (type === 'bandpass') {
-      const center = numberOrNull(component.center_nm);
-      const width = numberOrNull(component.width_nm);
-      if (center === null || width === null) {
-        // Fallback: bands array (YAML bandpass positions that list bands explicitly).
-        const fallbackBands = normalizedBandMasks(grid, component.bands);
-        if (fallbackBands.length) return sumMasks(fallbackBands, grid);
-        return grid.map(() => 1);
-      }
-      return bandMask(grid, center - (width / 2), center + (width / 2), 2);
-    }
-    if (type === 'multiband_bandpass') {
-      return sumMasks(normalizedBandMasks(grid, component.bands), grid);
-    }
-    if (type === 'longpass') {
-      const cutoff = numberOrNull(component.cut_on_nm);
-      return cutoff === null ? grid.map(() => 1) : grid.map((wavelength) => smoothStep(wavelength, cutoff, 2));
-    }
-    if (type === 'shortpass') {
-      const cutoff = numberOrNull(component.cut_off_nm);
-      return cutoff === null ? grid.map(() => 1) : grid.map((wavelength) => 1 - smoothStep(wavelength, cutoff, 2));
-    }
-    if (type === 'notch') {
-      const center = numberOrNull(component.center_nm);
-      const width = numberOrNull(component.width_nm);
-      if (center === null || width === null) return grid.map(() => 1);
-      const blocked = bandMask(grid, center - (width / 2), center + (width / 2), 2);
-      return blocked.map((value) => 1 - value);
-    }
-    if (type === 'tunable') {
-      const start = numberOrNull(component.band_start_nm) ?? numberOrNull(component.min_nm);
-      const end = numberOrNull(component.band_end_nm) ?? numberOrNull(component.max_nm);
-      if (start === null || end === null) return grid.map(() => 1);
-      return bandMask(grid, start, end, 2);
-    }
-    if (type === 'dichroic' || type === 'multiband_dichroic' || type === 'polychroic') {
-      const transmit = dichroicTransmitMask(grid, component || {});
-      const mode = cleanString(context && context.mode).toLowerCase();
-      const branchMode = cleanString((context && context.branchMode) || component.branch_mode).toLowerCase();
-      const wantsReflection = branchMode === 'reflected'
-        ? true
-        : branchMode === 'transmitted'
-          ? false
-          : mode === 'excitation';
-      return wantsReflection ? transmit.map((value) => 1 - value) : transmit;
-    }
-    // filter_cube: use linked sub-components when available for true composite
-    // modeling; fall back to emission-only bands with a warning.
-    if (type === 'filter_cube') {
-      const exc = component.excitation_filter || component.excitation;
-      const di = component.dichroic || component.dichroic_filter;
-      const em = component.emission_filter || component.emission;
-      if (exc || di || em) {
-        const mode = cleanString(context && context.mode).toLowerCase();
-        let mask = grid.map(() => 1);
-        if (mode === 'excitation') {
-          if (exc) mask = mask.map((v, i) => v * componentMask(exc, grid, { mode: 'excitation' })[i]);
-          if (di) mask = mask.map((v, i) => v * componentMask(di, grid, { mode: 'excitation' })[i]);
-        } else {
-          if (di) mask = mask.map((v, i) => v * componentMask(di, grid, { mode: 'emission' })[i]);
-          if (em) mask = mask.map((v, i) => v * componentMask(em, grid, { mode: 'emission' })[i]);
-        }
-        if (component._cube_incomplete) {
-          console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" missing excitation filter data; using estimated dichroic + emission only.');
-        }
-        return mask;
-      }
-      // Flat fallback: retained for backward compatibility with legacy
-      // payloads that lack linked sub-components.  New payloads always carry
-      // spectral_ops and linked_components from the parser, so this path
-      // should not be reached for current data.
-      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no linked sub-components and no spectral_ops; using emission bands only. Upgrade the YAML to include linked_components or regenerate the payload to get parser-provided spectral_ops.');
-      const bands = normalizedBandMasks(grid, component.bands);
-      if (bands.length) return sumMasks(bands, grid);
-      const center = numberOrNull(component.center_nm);
-      const width = numberOrNull(component.width_nm);
-      if (center !== null && width !== null && width > 0) return bandMask(grid, center - (width / 2), center + (width / 2), 2);
-      const cutOn = numberOrNull(component.cut_on_nm);
-      if (cutOn !== null) return grid.map((wavelength) => smoothStep(wavelength, cutOn, 2));
-      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no spectral data at all — returning transparent mask. This indicates missing data in the instrument YAML.');
-      return grid.map(() => 1);
-    }
-    // Unknown component type — error-level warning.
-    if (type) {
-      console.warn('[VM] componentMask: unsupported component type "' + type + '" — no spectral_ops available and type is not recognized. This component will be treated as transparent but may produce incorrect simulation results.');
-    }
-    return grid.map(() => 1);
+    return executeSpectralOps(ops, grid);
   }
 
   function sourceCenters(source) {
@@ -2281,18 +1961,14 @@
     }, inputSpectrum.slice());
   }
 
-  function branchTargetIds(branch, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
-    return normalizeTargetIds(branch && (allowApproximation
-      ? (branch.target_ids || branch.targets || branch.terminal_ids || branch.endpoint_ids || branch.target || branch.endpoint)
-      : branch.target_ids));
+  function branchTargetIds(branch) {
+    return normalizeTargetIds(branch && branch.target_ids);
   }
 
-  function selectedBranchIdsForSplitter(splitter, branchDefs, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
+  function selectedBranchIdsForSplitter(splitter, branchDefs) {
     const selected = new Set(normalizeTargetIds(splitter && (splitter.selected_branch_ids || splitter.selectedBranchIds || splitter.active_branch_ids || splitter.activeBranchIds)));
-    if (allowApproximation && !selected.size && splitter && splitter.branch_selection_required && Array.isArray(branchDefs) && branchDefs.length) {
-      selected.add(normalizeIdentifier(branchDefs[0].id));
+    if (!selected.size && splitter && splitter.branch_selection_required && Array.isArray(branchDefs) && branchDefs.length) {
+      throw new Error('[VM] selectedBranchIdsForSplitter: splitter "' + cleanString(splitter && (splitter.id || splitter.label || splitter.name)) + '" requires explicit selected_branch_ids.');
     }
     return selected;
   }
@@ -2319,8 +1995,7 @@
     }).filter(Boolean), grid, { mode: 'emission' });
   }
 
-  function propagateSplitters(inputSpectrum, splitters, normalizedInstrument, grid, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
+  function propagateSplitters(inputSpectrum, splitters, normalizedInstrument, grid) {
     let branches = [{ id: 'main', label: 'Main Path', spectrum: inputSpectrum.slice(), targetIds: [] }];
     (Array.isArray(splitters) ? splitters : []).forEach((splitter, splitterIndex) => {
       const nextBranches = [];
@@ -2329,10 +2004,11 @@
         : (splitter && splitter.dichroic && typeof splitter.dichroic === 'object' ? splitter.dichroic : null);
       const branchDefs = Array.isArray(splitter && splitter.branches) && splitter.branches.length
         ? splitter.branches
-        : (allowApproximation
-          ? [{ id: `splitter_${splitterIndex}_main`, label: cleanString(splitter && splitter.label) || 'Primary Path', mode: 'transmitted', component: { component_type: 'passthrough' }, target_ids: [] }]
-          : []);
-      const explicitlySelectedBranchIds = selectedBranchIdsForSplitter(splitter, branchDefs, options);
+        : [];
+      if (!branchDefs.length) {
+        throw new Error('[VM] propagateSplitters: splitter "' + cleanString(splitter && (splitter.id || splitter.label || splitter.name)) + '" has no branches.');
+      }
+      const explicitlySelectedBranchIds = selectedBranchIdsForSplitter(splitter, branchDefs);
       const requiresSelection = Boolean(splitter && splitter.branch_selection_required) && branchDefs.length > 1;
 
       branches.forEach((branch) => {
@@ -2345,7 +2021,7 @@
             : branch.spectrum.slice();
           const afterBranchComponent = applyMask(baseSpectrum, componentMask((branchDef && branchDef.component) || {}, grid, { mode: 'emission', branchMode: mode }));
           const branchSpectrum = applyBranchSequenceSpectrum(afterBranchComponent, branchDef, normalizedInstrument, grid);
-          const localTargets = branchTargetIds(branchDef, options);
+          const localTargets = branchTargetIds(branchDef);
           const inheritedTargets = Array.isArray(branch.targetIds) ? branch.targetIds : [];
           const mergedTargets = inheritedTargets.length && localTargets.length
             ? inheritedTargets.filter((id) => localTargets.includes(id))
@@ -2933,37 +2609,16 @@
     };
   }
 
-  function inferredDetectorTargets(normalizedInstrument, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
-    if (!allowApproximation) return [];
-    const catalog = knownDetectorCatalog(normalizedInstrument);
-    const explicitlyDefault = catalog.filter((entry) => entry.default_enabled === true);
-    if (explicitlyDefault.length) return explicitlyDefault;
-    const digital = catalog.filter((entry) => entry.endpoint_type !== 'eyepiece');
-    if (digital.length) return digital;
-    if (catalog.length) return catalog;
-    return [{
-      id: 'virtual_detector',
-      terminal_id: 'virtual_detector',
-      display_label: 'Virtual Detector',
-      name: 'Virtual Detector',
-      kind: 'detector',
-      detector_class: 'detector',
-    }];
-  }
-
-  function branchAcceptsDetector(branch, detector, options) {
-    const allowApproximation = Boolean(options && options.allowApproximation);
+  function branchAcceptsDetector(branch, detector) {
     if (!branch || !branch.splitterId) return true;
-    const targets = Array.isArray(branch && branch.targetIds) ? branch.targetIds : branchTargetIds(branch, options);
-    if (!targets.length) return allowApproximation;
+    const targets = Array.isArray(branch && branch.targetIds) ? branch.targetIds : branchTargetIds(branch);
+    if (!targets.length) return true;
     const ids = detectorIdentifiers(detector);
     return targets.some((target) => ids.has(normalizeIdentifier(target)));
   }
 
   function simulateInstrument(instrument, selection, fluorophores, options) {
     const normalizedInstrument = normalizeInstrumentPayload(instrument, options);
-    const allowApproximation = !normalizedInstrument.strictHardwareTruth;
     const activeRoute = cleanString(options && options.currentRoute).toLowerCase()
       || normalizedInstrument.defaultRoute
       || null;
@@ -2992,12 +2647,15 @@
     const excitationComponents = Array.isArray(selected.excitation) ? selected.excitation : [];
     const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];
     const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
-    const illuminationOrdered = Array.isArray(selected.illuminationComponents) && selected.illuminationComponents.length ? selected.illuminationComponents : null;
-    const detectionOrdered = Array.isArray(selected.detectionComponents) && selected.detectionComponents.length ? selected.detectionComponents : null;
-    const illuminationOrderedRaw = illuminationOrdered ? illuminationOrdered.map((entry) => entry.component) : null;
-    const illuminationOrderedCtx = illuminationOrdered ? ((component, index) => ({ mode: illuminationOrdered[index].mode })) : null;
-    const detectionOrderedRaw = detectionOrdered ? detectionOrdered.map((e) => e.component) : null;
-    const detectionOrderedCtx = detectionOrdered ? ((component, index) => ({ mode: detectionOrdered[index].mode })) : null;
+    const illuminationOrdered = Array.isArray(selected.illuminationComponents) ? selected.illuminationComponents : [];
+    const detectionOrdered = Array.isArray(selected.detectionComponents) ? selected.detectionComponents : [];
+    if (!illuminationOrdered.length || !detectionOrdered.length) {
+      throw new Error('[VM] simulateInstrument: selection is missing ordered traversal components from parser route steps.');
+    }
+    const illuminationOrderedRaw = illuminationOrdered.map((entry) => entry.component);
+    const illuminationOrderedCtx = (component, index) => ({ mode: illuminationOrdered[index].mode });
+    const detectionOrderedRaw = detectionOrdered.map((e) => e.component);
+    const detectionOrderedCtx = (component, index) => ({ mode: detectionOrdered[index].mode });
 
     [
       ['Excitation component', excitationComponents],
@@ -3032,20 +2690,15 @@
       return role !== 'depletion' && role !== 'transmitted_illumination';
     });
     const depletionSources = selectedSources.filter((source) => cleanString(source.role).toLowerCase() === 'depletion');
-    const resolvedDetectors = (explicitDetectorSelections.length ? explicitDetectorSelections : inferredDetectorTargets(normalizedInstrument, { allowApproximation }))
-      .map((detector) => hydrateDetectorSelection(detector, normalizedInstrument));
+    if (!explicitDetectorSelections.length) {
+      throw new Error('[VM] simulateInstrument: no explicit detector selection provided for active route.');
+    }
+    const resolvedDetectors = explicitDetectorSelections.map((detector) => hydrateDetectorSelection(detector, normalizedInstrument));
     const fluorList = Array.isArray(fluorophores) ? fluorophores : [];
 
     const propagatedExcitationSources = excitationSources.map((source) => {
       const weightedSpectrum = scaleArray(sourceSpectrum(source, grid), sourceWeight(source));
-      const atSample = illuminationOrderedRaw
-        ? applyComponentSeries(weightedSpectrum, illuminationOrderedRaw, grid, illuminationOrderedCtx)
-        : applyComponentSeries(
-          applyComponentSeries(weightedSpectrum, excitationComponents, grid, { mode: 'excitation' }),
-          dichroicComponents,
-          grid,
-          { mode: 'excitation' }
-        );
+      const atSample = applyComponentSeries(weightedSpectrum, illuminationOrderedRaw, grid, illuminationOrderedCtx);
       return { source, weightedSpectrum, atSample };
     });
     const combinedExcitation = propagatedExcitationSources.reduce(
@@ -3058,11 +2711,9 @@
       0
     );
     const excitationLeakageBySource = propagatedExcitationSources.map((entry) => {
-      const afterDetectionOptics = detectionOrderedRaw
-        ? applyComponentSeries(entry.atSample, detectionOrderedRaw, grid, detectionOrderedCtx)
-        : applyComponentSeries(applyComponentSeries(entry.atSample, dichroicComponents, grid, { mode: 'emission' }), emissionComponents, grid, { mode: 'emission' });
+      const afterDetectionOptics = applyComponentSeries(entry.atSample, detectionOrderedRaw, grid, detectionOrderedCtx);
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterDetectionOptics, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
+        ? propagateSplitters(afterDetectionOptics, selectedSplitters, normalizedInstrument, grid)
         : [{ id: 'main', label: 'Main Path', spectrum: afterDetectionOptics, targetIds: [] }];
       return {
         sourceLabel: entry.source.display_label || entry.source.name || 'Source',
@@ -3092,11 +2743,9 @@
       const brightnessFactor = fluorophoreBrightnessFactor(fluorophore);
       const generatedEmission = scaleArray(emissionCurve, excitationStrength * sted.suppressionFactor * brightnessFactor);
       const theoreticalBestEmission = scaleArray(emissionCurve, brightnessFactor);
-      const afterEmissionFilters = detectionOrderedRaw
-        ? applyComponentSeries(generatedEmission, detectionOrderedRaw, grid, detectionOrderedCtx)
-        : applyComponentSeries(applyComponentSeries(generatedEmission, dichroicComponents, grid, { mode: 'emission' }), emissionComponents, grid, { mode: 'emission' });
+      const afterEmissionFilters = applyComponentSeries(generatedEmission, detectionOrderedRaw, grid, detectionOrderedCtx);
       const branches = selectedSplitters.length
-        ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid, { allowApproximation })
+        ? propagateSplitters(afterEmissionFilters, selectedSplitters, normalizedInstrument, grid)
         : [{ id: 'main', label: 'Main Path', spectrum: afterEmissionFilters, targetIds: [] }];
       const emissionArea = integrateSpectrum(generatedEmission, grid);
       const theoreticalBestArea = integrateSpectrum(theoreticalBestEmission, grid);
@@ -3114,7 +2763,7 @@
       });
 
       branches.forEach((branch) => {
-        const candidateDetectors = resolvedDetectors.filter((detector) => branchAcceptsDetector(branch, detector, { allowApproximation }));
+        const candidateDetectors = resolvedDetectors.filter((detector) => branchAcceptsDetector(branch, detector));
         if (!candidateDetectors.length) return;
         candidateDetectors.forEach((detector) => {
           const response = detectorResponse(detector, grid);
