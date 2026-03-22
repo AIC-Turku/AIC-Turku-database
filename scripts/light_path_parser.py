@@ -676,7 +676,7 @@ def _import_legacy_light_paths(sources: list[dict[str, Any]], elements: list[dic
         route_ids = {"epi"}
     ordered_routes = sorted(route_ids, key=_route_sort_key)
     routes: list[dict[str, Any]] = []
-    stage_order = {"illumination": ["excitation", "cube", "dichroic"], "detection": ["cube", "dichroic", "emission", "splitter"]}
+    stage_order = {"illumination": ["excitation", "cube", "dichroic"], "detection": ["cube", "dichroic", "emission", "analyzer", "splitter"]}
     for route_id in ordered_routes:
         illumination_sequence = [{"source_id": source["id"]} for source in sources if _modality_match(_normalize_modalities(source.get("modalities") or source.get("path") or source.get("routes")), route_id)]
         for stage_role in stage_order["illumination"]:
@@ -1744,16 +1744,17 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
     if isinstance(raw_positions, dict):
         normalized_positions = sorted(
             (
-                (_coerce_slot_key(slot), component)
+                (_coerce_slot_key(slot), slot, component)
                 for slot, component in raw_positions.items()
             ),
             key=lambda item: (item[0] is None, item[0]),
         )
-        for slot, component in normalized_positions:
+        for slot, original_key, component in normalized_positions:
             if slot is None or not isinstance(component, dict):
                 continue
             component_payload = _component_payload(component)
             component_payload["slot"] = slot
+            component_payload["position_key"] = str(original_key)
             component_payload["display_label"] = f"Slot {slot}: {component_payload.get('label')}"
             positions.append(component_payload)
 
@@ -1855,12 +1856,12 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
     if isinstance(raw_positions, dict):
         normalized_positions = sorted(
             (
-                (_coerce_slot_key(slot), cube_position)
+                (_coerce_slot_key(slot), slot, cube_position)
                 for slot, cube_position in raw_positions.items()
             ),
             key=lambda item: (item[0] is None, item[0]),
         )
-        for slot, cube_position in normalized_positions:
+        for slot, original_key, cube_position in normalized_positions:
             if slot is None or not isinstance(cube_position, dict):
                 continue
 
@@ -1916,6 +1917,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
 
             position_payload: dict[str, Any] = {
                 "slot": slot,
+                "position_key": str(original_key),
                 "type": "cube",
                 "label": cube_label,
                 "display_label": cube_label,

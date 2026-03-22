@@ -258,6 +258,9 @@
     if (numberOrNull(component.collection_min_nm) !== null && numberOrNull(component.collection_max_nm) !== null) {
       rows.push(`Collection: ${Math.round(numberOrNull(component.collection_min_nm))}-${Math.round(numberOrNull(component.collection_max_nm))} nm`);
     }
+    if (component._unsupported_spectral_model) {
+      rows.push('⚠ Spectral model not available — treated as transparent in simulation.');
+    }
     return rows;
   }
 
@@ -586,6 +589,18 @@
     });
     if (!result) {
       setStatusMessage('No compatible zero-leakage configuration was found for the current fluorophores.', 'warning');
+      return;
+    }
+    if (result.requiresSequentialAcquisition) {
+      const names = result.perFluorophoreConfigs.map((cfg) => cfg.fluorophoreName).join(', ');
+      setStatusMessage(
+        `Sequential acquisition required: no single path supports all fluorophores simultaneously. Individual settings found for: ${names}.`,
+        'warning'
+      );
+      // Apply the first fluorophore's configuration as a starting point.
+      if (result.perFluorophoreConfigs.length) {
+        applyOptimizedConfiguration(result.perFluorophoreConfigs[0].configuration);
+      }
       return;
     }
     applyOptimizedConfiguration(result);
@@ -2225,6 +2240,55 @@
     return selection;
   }
 
+  function buildSelectedConfiguration(selection, simulation) {
+    if (!selection || !state.activeInstrument) return null;
+    const inst = state.activeInstrument;
+    const config = {
+      instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
+      route: state.activeRoute || null,
+      timestamp: new Date().toISOString(),
+      sources: (selection.sources || []).map((source) => ({
+        display_label: source.display_label || source.name || source.label || '',
+        wavelength_nm: numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+        kind: cleanString(source.kind || source.type || ''),
+        manufacturer: cleanString(source.manufacturer),
+        model: cleanString(source.model),
+        product_code: cleanString(source.product_code),
+      })),
+      stages: (selection.debugSelections || []).map((entry) => {
+        const comp = entry.component || {};
+        return {
+          stage: entry.stage,
+          name: entry.name || '',
+          component_type: cleanString(comp.component_type || comp.type || ''),
+          display_label: cleanString(comp.display_label || comp.label || comp.name || ''),
+          manufacturer: cleanString(comp.manufacturer),
+          model: cleanString(comp.model),
+          product_code: cleanString(comp.product_code),
+          position_key: cleanString(comp.position_key),
+          slot: comp.slot != null ? comp.slot : null,
+          _unsupported_spectral_model: comp._unsupported_spectral_model || false,
+        };
+      }),
+      splitters: (selection.splitters || []).map((splitter) => ({
+        id: splitter.id || '',
+        display_label: cleanString(splitter.label || splitter.display_label || ''),
+        selected_branch_ids: Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids.slice() : [],
+      })),
+      detectors: (selection.detectors || []).map((detector) => ({
+        display_label: cleanString(detector.display_label || detector.name || detector.label || ''),
+        detector_class: cleanString(detector.detector_class),
+        collection_min_nm: numberOrNull(detector.collection_min_nm),
+        collection_max_nm: numberOrNull(detector.collection_max_nm),
+        manufacturer: cleanString(detector.manufacturer),
+        model: cleanString(detector.model),
+        product_code: cleanString(detector.product_code),
+      })),
+      selectionMap: selection.selectionMap || {},
+    };
+    return config;
+  }
+
   function buildTraversalOrderedComponents(topology, selection, phase) {
     if (!topology || !topology.traversal) return [];
     const entries = phase === 'illumination' ? topology.traversal.illumination : topology.traversal.detection;
@@ -2292,7 +2356,7 @@
         },
         scales: {
           x: { type: 'linear', min: 350, max: 800, title: { display: true, text: 'Wavelength (nm)' } },
-          y: { min: 0, max: 105, title: { display: true, text: yTitle } },
+          y: { min: 0, suggestedMax: 105, title: { display: true, text: yTitle } },
         },
       },
     });
@@ -2348,7 +2412,7 @@
   function chartDatasetFromGrid(label, grid, values, style) {
     return {
       label,
-      data: grid.map((wavelength, index) => ({ x: wavelength, y: Math.min(105, Math.max(0, values[index] || 0)) })),
+      data: grid.map((wavelength, index) => ({ x: wavelength, y: Math.max(0, values[index] || 0) })),
       fill: false,
       pointRadius: 0,
       tension: 0.15,
@@ -2527,8 +2591,13 @@
     const emissionMask = combinedMask([...(selection.dichroic || []), ...(selection.emission || [])], grid, 'emission');
     const datasets = [baselineMaskDataset('Emission passband', grid, emissionMask, 'rgba(5, 150, 105, 0.85)', 0)];
 
+    // Deduplicate detector collection baselines — shared detectors appear once.
+    const seenDetectorLabels = new Set();
     bestPaths.forEach(({ result, path }, index) => {
-      datasets.push(baselineMaskDataset(`${result.detectorLabel} collection`, grid, path.collectionMask || grid.map(() => 0), 'rgba(148, 163, 184, 0.95)', index + 1));
+      const detLabel = result.detectorLabel || 'Detector';
+      if (seenDetectorLabels.has(detLabel)) return;
+      seenDetectorLabels.add(detLabel);
+      datasets.push(baselineMaskDataset(`${detLabel} collection`, grid, path.collectionMask || grid.map(() => 0), 'rgba(148, 163, 184, 0.95)', index + 1));
     });
 
     emissionEntries.forEach((entry) => {

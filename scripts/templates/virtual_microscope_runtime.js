@@ -957,6 +957,7 @@
         excitation: normalizeMechanismList(stageSource && stageSource.excitation),
         dichroic: normalizeMechanismList(stageSource && stageSource.dichroic),
         emission: normalizeMechanismList(stageSource && stageSource.emission),
+        analyzer: normalizeMechanismList(stageSource && stageSource.analyzer),
       },
       splitters: normalizeSplitters(splitterSource, { allowApproximation }),
       terminals: normalizedTerminals,
@@ -1006,6 +1007,7 @@
       excitation: derivedStageAdapters.stages.excitation,
       dichroic: derivedStageAdapters.stages.dichroic,
       emission: derivedStageAdapters.stages.emission,
+      analyzer: derivedStageAdapters.stages.analyzer,
       splitters: derivedStageAdapters.splitters,
       detectors: derivedStageAdapters.detectors,
       terminals: derivedStageAdapters.terminals,
@@ -2726,7 +2728,32 @@
       });
     });
 
-    return bestStrict || bestFallback;
+    const sharedResult = bestStrict || bestFallback;
+    if (sharedResult || fluorList.length <= 1) return sharedResult;
+
+    // No common configuration satisfies all fluorophores simultaneously.
+    // Try optimizing per-fluorophore to detect sequential-acquisition scenarios.
+    const perFluorophoreConfigs = [];
+    fluorList.forEach((fluor) => {
+      const single = optimizeLightPath([fluor], instrument, options);
+      if (single) {
+        perFluorophoreConfigs.push({
+          fluorophoreKey: fluor.key,
+          fluorophoreName: fluor.name || fluor.key,
+          configuration: single,
+        });
+      }
+    });
+
+    if (perFluorophoreConfigs.length >= 2) {
+      return {
+        requiresSequentialAcquisition: true,
+        reason: 'No single optical path simultaneously satisfies all loaded fluorophores. Each fluorophore can be imaged individually with different settings.',
+        perFluorophoreConfigs,
+      };
+    }
+
+    return null;
   }
 
   function selectionIsValid(validPaths, selectionMap) {

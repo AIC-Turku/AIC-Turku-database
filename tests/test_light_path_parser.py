@@ -1840,3 +1840,88 @@ class LightPathParserTests(unittest.TestCase):
             positions[0]["value"].get("_unsupported_spectral_model", False),
             "Bandpass should not have _unsupported_spectral_model flag",
         )
+
+    # ── VM-006: analyzer in legacy detection sequence ──
+
+    def test_analyzer_included_in_legacy_detection_sequence(self) -> None:
+        """Analyzer elements with stage_role=analyzer should appear in detection sequences."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "hal", "kind": "halogen_lamp"}],
+                    "optical_path_elements": [
+                        {
+                            "id": "analyzer_slider",
+                            "name": "DIC Fixed Analyzer",
+                            "stage_role": "analyzer",
+                            "element_type": "slider",
+                            "modalities": ["dic"],
+                            "positions": {
+                                "Pos_1": {"component_type": "analyzer"},
+                            },
+                        },
+                    ],
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                },
+            }
+        )
+        light_paths = payload.get("light_paths", [])
+        dic_routes = [r for r in light_paths if r.get("id") == "dic"]
+        if dic_routes:
+            detection_seq = dic_routes[0].get("detection_sequence", [])
+            analyzer_refs = [s for s in detection_seq if s.get("optical_path_element_id") == "analyzer_slider"]
+            self.assertTrue(len(analyzer_refs) > 0, "Analyzer should appear in DIC detection sequence")
+
+    # ── VM-010: position_key preserved from YAML ──
+
+    def test_position_key_preserved_in_mechanism_payload(self) -> None:
+        """The original YAML position key (e.g. Pos_1) should be preserved as position_key."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "excitation_mechanisms": [
+                            {
+                                "positions": {
+                                    "Pos_1": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                    "Pos_2": {"component_type": "longpass", "cut_on_nm": 500},
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        positions = stages.get("excitation", [{}])[0].get("options", [])
+        self.assertTrue(len(positions) >= 2)
+        position_keys = [p["value"].get("position_key") for p in positions]
+        self.assertIn("Pos_1", position_keys, "Original position key Pos_1 should be preserved")
+        self.assertIn("Pos_2", position_keys, "Original position key Pos_2 should be preserved")
+
+    def test_position_key_preserved_in_cube_mechanism_payload(self) -> None:
+        """Cube position keys should also be preserved."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "light_path": {
+                        "cube_mechanisms": [
+                            {
+                                "positions": {
+                                    "Pos_1": {
+                                        "name": "DAPI",
+                                        "component_type": "filter_cube",
+                                        "bands": [{"center_nm": 460, "width_nm": 50}],
+                                    },
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        )
+        stages = _runtime_projection(payload).get("stages", {})
+        cube_positions = stages.get("cube", [{}])[0].get("options", [])
+        self.assertTrue(len(cube_positions) > 0)
+        position_keys = [p["value"].get("position_key") for p in cube_positions]
+        self.assertIn("Pos_1", position_keys, "Original cube position key should be preserved")

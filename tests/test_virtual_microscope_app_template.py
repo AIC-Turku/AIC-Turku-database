@@ -198,6 +198,68 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("unsupported component type", source)
 
+    # ── VM-006: analyzer stage in deriveStageGroupAdapters ──
+
+    def test_analyzer_stage_in_derive_stage_group_adapters(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("analyzer: normalizeMechanismList(stageSource && stageSource.analyzer)", source)
+
+    def test_analyzer_field_in_normalized_instrument(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("analyzer: derivedStageAdapters.stages.analyzer", source)
+
+    # ── VM-007: sequential acquisition detection ──
+
+    def test_requires_sequential_acquisition_in_optimizer(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("requiresSequentialAcquisition", source)
+        self.assertIn("perFluorophoreConfigs", source)
+
+    def test_run_auto_configure_handles_sequential(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("result.requiresSequentialAcquisition", source)
+        self.assertIn("Sequential acquisition required", source)
+
+    # ── VM-008: deduplicated detector legends ──
+
+    def test_detector_legend_deduplication_in_propagation_panel(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("seenDetectorLabels", source)
+
+    # ── VM-009: chart scaling uses suggestedMax instead of hard max ──
+
+    def test_chart_y_axis_uses_suggested_max(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("suggestedMax: 105", source)
+        self.assertNotIn("max: 105", source)
+
+    def test_chart_dataset_no_hard_clip(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("Math.min(105,", source)
+
+    # ── VM-010: unsupported spectral model surfaced in UI metadata ──
+
+    def test_unsupported_spectral_model_in_format_component_metadata(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("_unsupported_spectral_model", source)
+        self.assertIn("Spectral model not available", source)
+
+    # ── VM-011: buildSelectedConfiguration function exists ──
+
+    def test_build_selected_configuration_function_exists(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function buildSelectedConfiguration(", source)
+        self.assertIn("selectionMap", source)
+
 
 if __name__ == "__main__":
     unittest.main()
