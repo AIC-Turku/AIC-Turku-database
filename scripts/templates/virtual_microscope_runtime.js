@@ -947,9 +947,13 @@
     const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings, { allowApproximation }));
     const stageSource = canonicalStagePayload(payload, topologyBindings, { allowApproximation });
     const splitterSource = canonicalSplitterPayload(payload, topologyBindings, { allowApproximation });
-    // These are compatibility/UI adapters only. They are reconstructed from the
-    // authoritative canonical payload so older stage/group-based consumers can
-    // keep working, but routeTopology + hardwareInventory remain the topology truth.
+    // Stage-group adapters serve two roles:
+    // 1. The optimizer (optimizeLightPath) enumerates candidate stage positions
+    //    via normalizedInstrument.cube / .excitation / .dichroic / .emission.
+    // 2. The app UI uses lightSources/detectors as fallbacks when route topology
+    //    does not provide explicit source/endpoint mechanisms.
+    // routeTopology + hardwareInventory remain the authoritative topology truth
+    // for pipe rendering, simulation order, and inspector panels.
     return {
       lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings, { allowApproximation })),
       stages: {

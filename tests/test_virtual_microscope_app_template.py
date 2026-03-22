@@ -260,6 +260,28 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("function buildSelectedConfiguration(", source)
         self.assertIn("selectionMap", source)
 
+    def test_selected_configuration_is_computed_on_every_refresh(self) -> None:
+        """buildSelectedConfiguration must be called in refreshOutputs so the config is always current."""
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("state.lastSelectedConfiguration = buildSelectedConfiguration(selection, simulation);", source)
+        self.assertIn("state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);", source)
+
+    def test_selected_configuration_exposed_via_public_api(self) -> None:
+        """External consumers must be able to access the selected configuration."""
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("window.getVirtualMicroscopeConfiguration", source)
+        self.assertIn("state.lastSelectedConfiguration", source)
+
+    # ── Stage adapter comment accuracy ──
+
+    def test_stage_adapter_comment_mentions_optimizer_role(self) -> None:
+        """deriveStageGroupAdapters comment must document that the optimizer uses stage groups."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        self.assertIn("optimizer (optimizeLightPath) enumerates candidate stage positions", source)
+
 
 if __name__ == "__main__":
     unittest.main()

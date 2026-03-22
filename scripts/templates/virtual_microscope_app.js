@@ -26,6 +26,7 @@
     splitterBranchSelections: new Map(),
     lastSelection: null,
     lastSimulation: null,
+    lastSelectedConfiguration: null,
     activeInspectorStage: null,
     routeTopology: null,
   };
@@ -2356,6 +2357,9 @@
         },
         scales: {
           x: { type: 'linear', min: 350, max: 800, title: { display: true, text: 'Wavelength (nm)' } },
+          // suggestedMax 105 provides a comfortable visual ceiling for relative-shape
+          // plots (0–100%) while allowing Chart.js to autoscale beyond 105 if data
+          // values exceed that threshold (e.g., bright fluorophores in absolute mode).
           y: { min: 0, suggestedMax: 105, title: { display: true, text: yTitle } },
         },
       },
@@ -2980,6 +2984,7 @@
       });
       state.lastSelection = repairedSelection;
       state.lastSimulation = simulation;
+      state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
       renderReferenceSpectra(repairedSelection, simulation);
       renderPropagationPanel(repairedSelection, simulation);
       updatePipelineBeamColors(repairedSelection, simulation);
@@ -2990,6 +2995,7 @@
     }
     state.lastSelection = selection;
     state.lastSimulation = simulation;
+    state.lastSelectedConfiguration = buildSelectedConfiguration(selection, simulation);
     renderReferenceSpectra(selection, simulation);
     renderPropagationPanel(selection, simulation);
     updatePipelineBeamColors(selection, simulation);
@@ -3418,4 +3424,15 @@
   }
 
   window.addEventListener('load', init);
+
+  /**
+   * Public API: Returns the current exact selected-configuration object.
+   * External consumers (e.g., methods generator) can call this to get the
+   * precise optical settings the user has chosen — cube positions, filters,
+   * splitter branches, detector windows, and identity metadata.
+   * Returns null if no instrument is loaded or no selection has been made.
+   */
+  window.getVirtualMicroscopeConfiguration = function getVirtualMicroscopeConfiguration() {
+    return state.lastSelectedConfiguration || null;
+  };
 })();
