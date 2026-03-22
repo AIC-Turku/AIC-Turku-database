@@ -1,4 +1,7 @@
 import unittest
+from pathlib import Path
+
+import yaml
 
 from scripts.light_path_parser import (
     canonicalize_light_path_model,
@@ -998,6 +1001,110 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(splitter["branches"][1]["mode"], "reflected")
         self.assertEqual(splitter["branches"][0]["component"]["center_nm"], 700.0)
         self.assertEqual(splitter["branches"][1]["component"]["center_nm"], 525.0)
+
+    def test_route_owned_splitter_branch_component_uses_selected_position_payload(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {"id": "camera_splitter", "name": "Camera Splitter", "stage_role": "splitter", "element_type": "splitter"},
+                        {
+                            "id": "emission_selector",
+                            "name": "Emission Selector",
+                            "stage_role": "emission",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                "green": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50, "label": "525/50"},
+                                "red": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75, "label": "700/75"},
+                            },
+                        },
+                    ],
+                    "endpoints": [
+                        {"id": "cam_a", "endpoint_type": "camera_port"},
+                        {"id": "cam_b", "endpoint_type": "camera_port"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "camera_splitter"},
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {"branch_id": "green", "mode": "reflected", "sequence": [{"optical_path_element_id": "emission_selector", "position_id": "green"}, {"endpoint_id": "cam_a"}]},
+                                        {"branch_id": "red", "mode": "transmitted", "sequence": [{"optical_path_element_id": "emission_selector", "position_id": "red"}, {"endpoint_id": "cam_b"}]},
+                                    ],
+                                }
+                            },
+                        ],
+                    }
+                ],
+            }
+        )
+
+        splitter = _runtime_projection(payload)["splitters"][0]
+        self.assertEqual([branch["component"]["center_nm"] for branch in splitter["branches"]], [525.0, 700.0])
+        self.assertEqual([branch["component"]["display_label"] for branch in splitter["branches"]], ["525/50", "700/75"])
+
+    def test_nikon_dual_camera_splitter_branch_optics_are_parser_resolved(self) -> None:
+        instrument = yaml.safe_load(
+            Path("instruments/Nikon Ti2-E Crest V3 Spinning Disk.yaml").read_text(encoding="utf-8")
+        )
+        payload = generate_virtual_microscope_payload(instrument)
+
+        route = next((entry for entry in payload["light_paths"] if entry.get("id") == "confocal_spinning_disk"), None)
+        self.assertIsNotNone(route)
+        routing_step = next(
+            step for step in route["selected_execution"]["steps"]
+            if step.get("kind") == "routing_component" and step.get("phase") == "detection"
+        )
+        branches = routing_step["routing"]["branches"]
+        self.assertTrue(any(item.get("kind") == "optical_component" for item in branches[0]["sequence"]))
+        self.assertTrue(any(item.get("kind") == "optical_component" for item in branches[1]["sequence"]))
+
+        splitter = next(
+            row for row in _runtime_projection(payload)["splitters"]
+            if row.get("id") == "trinocular_port"
+        )
+        branch_map = {branch["id"]: branch for branch in splitter["branches"]}
+        self.assertIn("to_master", branch_map)
+        self.assertIn("to_slave", branch_map)
+        self.assertEqual(branch_map["to_master"]["target_ids"], ["kinetix_master_camera"])
+        self.assertEqual(branch_map["to_slave"]["target_ids"], ["kinetix_slave_camera"])
+        self.assertIn("spectral_ops", branch_map["to_master"]["component"])
+        self.assertIn("spectral_ops", branch_map["to_slave"]["component"])
+
+    def test_oni_internal_emission_splitter_passthrough_is_flagged_when_branch_has_no_optics(self) -> None:
+        instrument = yaml.safe_load(
+            Path("instruments/ONI Nanoimager.yaml").read_text(encoding="utf-8")
+        )
+        payload = generate_virtual_microscope_payload(instrument)
+
+        route = next((entry for entry in payload["light_paths"] if entry.get("id") == "tirf"), None)
+        self.assertIsNotNone(route)
+        routing_step = next(
+            step for step in route["selected_execution"]["steps"]
+            if step.get("kind") == "routing_component" and step.get("phase") == "detection"
+        )
+        self.assertTrue(all(
+            all(seq_step.get("kind") != "optical_component" for seq_step in branch.get("sequence") or [])
+            for branch in routing_step["routing"]["branches"]
+        ))
+
+        splitter = next(
+            row for row in _runtime_projection(payload)["splitters"]
+            if row.get("id") == "internal_emission_splitter"
+        )
+        for branch in splitter["branches"]:
+            component = branch["component"]
+            self.assertEqual(component.get("component_type"), "unknown")
+            detection_ops = component.get("spectral_ops", {}).get("detection") or []
+            self.assertTrue(detection_ops)
+            self.assertIn("unsupported_reason", detection_ops[0])
 
     def test_migration_compatibility_splitter_payload_does_not_fabricate_branches_from_legacy_path_nodes(self) -> None:
         payload = generate_virtual_microscope_payload(

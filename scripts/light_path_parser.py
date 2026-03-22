@@ -2389,14 +2389,20 @@ def _collect_route_owned_splitters(
                     }
                     if branch.get("mode"):
                         branch_payload["mode"] = branch.get("mode")
-                    component = next(
-                        (
-                            _component_payload_from_element_reference(_clean_identifier(step.get("optical_path_element_id")), element_lookup)
-                            for step in branch.get("sequence") or []
-                            if isinstance(step, dict) and step.get("optical_path_element_id")
-                        ),
-                        {},
-                    )
+                    component: dict[str, Any] = {}
+                    for step in branch.get("sequence") or []:
+                        if not isinstance(step, dict):
+                            continue
+                        step_element_id = _clean_identifier(step.get("optical_path_element_id"))
+                        if not step_element_id or step_element_id not in element_lookup:
+                            continue
+                        resolved_component, _, _, _ = _resolve_positioned_component_from_element(
+                            element_lookup[step_element_id],
+                            position_id=_clean_string(step.get("position_id")),
+                        )
+                        if isinstance(resolved_component, dict) and resolved_component:
+                            component = resolved_component
+                            break
                     if component:
                         branch_payload["component"] = component
                     splitter["branches"].append(branch_payload)
