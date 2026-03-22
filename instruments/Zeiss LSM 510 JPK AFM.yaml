@@ -5,119 +5,107 @@ instrument:
   model: LSM 510 JPK AFM
   year_of_purchase: ''
   funding: ''
-  stand_orientation: inverted # CORRECTED: 'inverted' is standard for AFM integrations to allow top-access
+  stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, floor -1 (Basement)
   notes: Confocal laser-scanning microscope with integrated AFM.
   url: ''
-
 modalities:
-  - confocal_point
-  - transmitted_brightfield
-  - afm
-
+- confocal_point
+- transmitted_brightfield
+- afm
 modules:
-  - type: afm # CORRECTED: Changed 'name' to the canonical 'type'
-    notes: 'JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range). Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force Mapping, Force Modulation, and Manipulation.'
-    url: ''
-    manufacturer: JPK
-    model: NanoWizard I with CellHesion
-  - type: incubation # CORRECTED: Changed 'name' to the canonical 'type'
-    notes: Incubation chamber (live-cell environment)
-    url: ''
-    manufacturer: Zeiss
-    model: Live-cell Incubation Chamber
-
+- type: afm_module
+  notes: "JPK NanoWizard I AFM (with CellHesion module, 100x100x15 \xB5m scan range).\
+    \ Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force\
+    \ Mapping, Force Modulation, and Manipulation."
+  url: ''
+  manufacturer: JPK
+  model: NanoWizard I with CellHesion
+- type: incubation
+  notes: Incubation chamber (live-cell environment)
+  url: ''
+  manufacturer: Zeiss
+  model: Live-cell Incubation Chamber
 software:
-  - role: acquisition
-    name: Unknown
-    version: ''
-    url: ''
-
+- role: acquisition
+  name: Unknown
+  version: ''
+  url: ''
 hardware:
   environment:
     temperature_control: true
     notes: Incubation chamber (live-cell environment)
-    
   scanner:
-    type: galvo # CORRECTED: Replaced invalid 'stage_scanning' with the canonical optical scanner type
+    type: galvo
     notes: ''
     url: ''
-    
   detectors:
-    - kind: pmt
-      manufacturer: Zeiss
-      model: Unknown PMT
-      qe_peak_pct: 30 # CORRECTED: Required for confocal modalities; replaced 'null' with standard PMT QE
-      notes: Placeholder detector.
-      url: ''
-      id: detector_1
-
-  eyepieces: # ADDED: Required for trinocular routing
-    - id: eyepieces
-      notes: 'Binocular Eyepieces'
-      
+  - kind: pmt
+    manufacturer: Zeiss
+    model: Unknown PMT
+    qe_peak_pct: 30
+    notes: Placeholder detector.
+    url: ''
+    id: detector_1
+  eyepieces:
+  - id: eyepieces
+    notes: Binocular Eyepieces
   objectives:
-    - id: placeholder_objective
-      manufacturer: Unknown
-      model: Placeholder
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: ''
-      immersion: air # CORRECTED: Replaced empty string with required valid vocabulary
-      correction: plan_achromat # CORRECTED: Replaced empty string with required valid vocabulary
-      afc_compatible: false
-      specialties: []
-      notes: Placeholder objective.
-      url: ''
-      is_installed: true
-      
+  - id: placeholder_objective
+    manufacturer: Unknown
+    model: Placeholder
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: ''
+    immersion: air
+    correction: plan_achromat
+    afc_compatible: false
+    specialties: []
+    notes: Placeholder objective.
+    url: ''
+    is_installed: true
   sources:
-    - kind: laser
-      manufacturer: Unknown
-      model: Placeholder Laser
-      wavelength_nm: 488 # CORRECTED: Changed empty string to a valid numeric placeholder
-      power: ''
-      notes: Placeholder excitation source.
-      url: ''
-      id: source_1
-      modalities:
-        - confocal_point # CORRECTED: Aligned with declared instrument modalities
-      # CORRECTED: Removed legacy 'path: epi' alias
-
-  optical_path_elements:
-    - name: Trinocular Port # ADDED: Required to route light for trinocular stands
-      stage_role: splitter
-      id: trinocular_port
-      element_type: splitter
-      selection_mode: exclusive
-      modalities:
-        - confocal_point
-        - transmitted_brightfield
-      supported_branch_modes:
-        - selected
-      supported_branch_count: 2
-      notes: Routes light between oculars and detector.
-
-  # CORRECTED: Removed the deprecated hardware.endpoints block.
-
-light_paths:
-  - id: confocal_point # CORRECTED: Aligned ID with standard modalities
-    name: Confocal
+  - kind: laser
+    manufacturer: Unknown
+    model: Placeholder Laser
+    wavelength_nm: 488
+    power: ''
+    notes: Placeholder excitation source.
+    url: ''
+    id: source_1
     modalities:
-      - confocal_point
-    illumination_sequence:
-      - source_id: source_1
-    detection_sequence:
-      - optical_path_element_id: trinocular_port
-      - branches: # ADDED: Valid detection routing to endpoints
-          selection_mode: exclusive
-          items:
-            - branch_id: to_pmt
-              label: "To PMT"
-              sequence:
-                - endpoint_id: detector_1
-            - branch_id: to_eyepieces
-              label: "To Eyepieces"
-              sequence:
-                - endpoint_id: eyepieces
+    - confocal_point
+  optical_path_elements:
+  - name: Trinocular Port
+    stage_role: splitter
+    id: trinocular_port
+    element_type: splitter
+    selection_mode: exclusive
+    modalities:
+    - confocal_point
+    - transmitted_brightfield
+    supported_branch_modes:
+    - selected
+    supported_branch_count: 2
+    notes: Routes light between oculars and detector.
+light_paths:
+- id: confocal_point
+  name: Confocal
+  modalities:
+  - confocal_point
+  illumination_sequence:
+  - source_id: source_1
+  detection_sequence:
+  - optical_path_element_id: trinocular_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_pmt
+        label: To PMT
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
