@@ -21,8 +21,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("active route is missing authoritative route_steps", source)
         self.assertIn("function authoritativeRouteSteps(routeRecord)", source)
         self.assertIn("const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;", source)
-        self.assertIn("const selectedSteps = Array.isArray(selectedExecution && selectedExecution.steps) ? selectedExecution.steps : [];", source)
-        self.assertIn("if (selectedSteps.length) return selectedSteps;", source)
+        self.assertIn("const selectedRouteSteps = Array.isArray(selectedExecution && selectedExecution.selected_route_steps) ? selectedExecution.selected_route_steps : [];", source)
+        self.assertIn("if (selectedRouteSteps.length) return selectedRouteSteps;", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence))", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence))", source)
 

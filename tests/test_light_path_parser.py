@@ -2291,10 +2291,72 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(exc_step["spectral_ops"]["illumination"][0]["center_nm"], 640.0)
 
         selected_execution = route["selected_execution"]
-        self.assertEqual(selected_execution["contract_version"], "selected_execution.v1")
-        selected_step = next(step for step in selected_execution["steps"] if step.get("component_id") == "exc_filter")
+        self.assertEqual(selected_execution["contract_version"], "selected_execution.v2")
+        selected_step = next(step for step in selected_execution["selected_route_steps"] if step.get("component_id") == "exc_filter")
+        self.assertEqual(selected_step["selection_state"], "resolved")
+        self.assertEqual(selected_step["selected_position_id"], "Pos_2")
+        self.assertEqual(selected_step["selected_position_key"], "Pos_2")
         self.assertEqual(selected_step["position_id"], "Pos_2")
         self.assertEqual(selected_step["spectral_ops"]["illumination"][0]["center_nm"], 640.0)
+        self.assertEqual(selected_step["route_step_id"], exc_step["step_id"])
+        self.assertEqual(selected_step["route_id"], "epi")
+        self.assertEqual(selected_step["mechanism_id"], "exc_filter")
+        self.assertEqual(selected_step["element_id"], "exc_filter")
+
+    def test_selected_execution_marks_unresolved_multi_position_mechanisms(self) -> None:
+        """When no position_id is authored in the route, multi-position mechanisms must be unresolved."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {
+                            "id": "exc_filter",
+                            "stage_role": "excitation",
+                            "element_type": "filter_wheel",
+                            "positions": {
+                                "Pos_1": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40, "label": "BP 470/40"},
+                                "Pos_2": {"component_type": "bandpass", "center_nm": 640, "width_nm": 30, "label": "BP 640/30"},
+                            },
+                        }
+                    ],
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [
+                            {"source_id": "src_488"},
+                            {"optical_path_element_id": "exc_filter"},  # No position_id!
+                        ],
+                        "detection_sequence": [{"endpoint_id": "cam"}],
+                    }
+                ],
+            }
+        )
+
+        route = payload["light_paths"][0]
+        selected_execution = route["selected_execution"]
+        self.assertEqual(selected_execution["contract_version"], "selected_execution.v2")
+        exc_step = next(
+            step for step in selected_execution["selected_route_steps"]
+            if step.get("component_id") == "exc_filter"
+        )
+        self.assertEqual(exc_step["selection_state"], "unresolved")
+        self.assertIsNone(exc_step["selected_position_id"])
+        self.assertIsNone(exc_step["selected_position_key"])
+        self.assertIsNone(exc_step["spectral_ops"])
+        self.assertIsInstance(exc_step["available_positions"], list)
+        self.assertEqual(len(exc_step["available_positions"]), 2)
+        self.assertEqual(exc_step["available_positions"][0]["position_key"], "Pos_1")
+        self.assertEqual(exc_step["available_positions"][1]["position_key"], "Pos_2")
+        self.assertEqual(exc_step["mechanism_id"], "exc_filter")
+        self.assertEqual(exc_step["route_id"], "epi")
+
+        # route_steps topology should still have the defaulted first position
+        topology_step = next(step for step in route["route_steps"] if step.get("component_id") == "exc_filter")
+        self.assertEqual(topology_step["position_key"], "Pos_1")
+        self.assertIsNotNone(topology_step["spectral_ops"])
 
     def test_route_step_splitter_branches_include_resolved_branch_optics(self) -> None:
         payload = generate_virtual_microscope_payload(

@@ -926,8 +926,8 @@
 
   function authoritativeRouteSteps(routeRecord) {
     const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;
-    const selectedSteps = Array.isArray(selectedExecution && selectedExecution.steps) ? selectedExecution.steps : [];
-    if (selectedSteps.length) return selectedSteps;
+    const selectedRouteSteps = Array.isArray(selectedExecution && selectedExecution.selected_route_steps) ? selectedExecution.selected_route_steps : [];
+    if (selectedRouteSteps.length) return selectedRouteSteps;
     return Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
       ? routeRecord.record.route_steps
       : Array.isArray(routeRecord && routeRecord.route_steps)

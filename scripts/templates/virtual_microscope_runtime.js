@@ -498,8 +498,8 @@
     (Array.isArray(payload && payload.light_paths) ? payload.light_paths : []).forEach((route, routeIndex) => {
       const routeId = normalizeIdentifier(route && (route.id || route.route || route.name));
       if (!routeId) return;
-      const selectedSteps = Array.isArray(route && route.selected_execution && route.selected_execution.steps) && route.selected_execution.steps.length
-        ? route.selected_execution.steps
+      const selectedSteps = Array.isArray(route && route.selected_execution && route.selected_execution.selected_route_steps) && route.selected_execution.selected_route_steps.length
+        ? route.selected_execution.selected_route_steps
         : (Array.isArray(route && route.route_steps) ? route.route_steps : []);
       const routeRoutingContext = {
         illumination: selectedSteps.filter((step) => step && step.kind === 'routing_component' && step.phase === 'illumination'),

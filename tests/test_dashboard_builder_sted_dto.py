@@ -775,13 +775,17 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                     "name": "Epi",
                     "route_steps": [{"step_id": "illumination-step-0", "phase": "illumination", "kind": "source", "component_id": "src"}],
                     "selected_execution": {
-                        "contract_version": "selected_execution.v1",
-                        "steps": [
+                        "contract_version": "selected_execution.v2",
+                        "selected_route_steps": [
                             {
+                                "route_step_id": "illumination-step-1",
                                 "step_id": "illumination-step-1",
                                 "phase": "illumination",
                                 "kind": "optical_component",
                                 "component_id": "wheel",
+                                "selection_state": "resolved",
+                                "selected_position_id": "2",
+                                "selected_position_key": "Pos_2",
                                 "position_id": "2",
                                 "position_key": "Pos_2",
                             }
@@ -800,10 +804,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         }
 
         dto = build_optical_path_dto(lightpath_dto)
-        self.assertEqual(dto["light_paths"][0]["selected_execution"]["contract_version"], "selected_execution.v1")
-        self.assertEqual(dto["light_paths"][0]["selected_execution"]["steps"][0]["position_key"], "Pos_2")
+        self.assertEqual(dto["light_paths"][0]["selected_execution"]["contract_version"], "selected_execution.v2")
+        self.assertEqual(dto["light_paths"][0]["selected_execution"]["selected_route_steps"][0]["selected_position_key"], "Pos_2")
         self.assertEqual(
-            dto["authoritative_route_contract"]["routes"][0]["selected_execution"]["steps"][0]["position_id"],
+            dto["authoritative_route_contract"]["routes"][0]["selected_execution"]["selected_route_steps"][0]["selected_position_id"],
             "2",
         )
 

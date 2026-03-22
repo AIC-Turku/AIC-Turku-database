@@ -1127,7 +1127,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
                     ] } }
                   ],
                   route_steps: routeSteps,
-                  selected_execution: { contract_version: 'selected_execution.v1', steps: routeSteps }
+                  selected_execution: { contract_version: 'selected_execution.v2', selected_route_steps: routeSteps }
                 }
               ]
             });
@@ -1251,7 +1251,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
                     ] } }
                   ],
                   route_steps: routeSteps,
-                  selected_execution: { contract_version: 'selected_execution.v1', steps: routeSteps }
+                  selected_execution: { contract_version: 'selected_execution.v2', selected_route_steps: routeSteps }
                 }
               ]
             };
