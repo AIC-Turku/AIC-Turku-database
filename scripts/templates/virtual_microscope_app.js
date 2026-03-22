@@ -80,6 +80,19 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => {
+      switch (char) {
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        case '\'': return '&#39;';
+        default: return char;
+      }
+    });
+  }
+
   function numberOrNull(value) {
     if (typeof value === 'number' && Number.isFinite(value)) return value;
     if (typeof value === 'string') {
@@ -1596,10 +1609,10 @@
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = Boolean(setting.enabled);
-      checkbox.dataset.routes = normalizeSourceRoutes(source).join(',');
+      checkbox.dataset.routes = normalizeSourceRoutes(source).join(',');      
       checkbox.addEventListener('change', () => {
         setting.enabled = checkbox.checked;
-        pruneConflictingSources();
+        if (checkbox.checked) autoSelectBranchForDetector(detector);
         renderGraphFlow();
         refreshOutputs();
       });
@@ -2288,7 +2301,24 @@
   function collectRuntimeSelection() {
     const topology = state.routeTopology || safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
     if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(authoritativeRouteSteps(topology.routeRecord))) {
-      throw new Error('[VM] collectRuntimeSelection: route topology is missing parser selected route steps.');
+      const message = 'Route topology is unavailable; running degraded simulation without parser-authored route steps.';
+      console.warn(message);
+      setInlineStatus(DOM.searchStatus, message, 'warning');
+      setInlineStatus(DOM.localSearchStatus, message, 'warning');
+      return {
+        sources: [],
+        excitation: [],
+        dichroic: [],
+        emission: [],
+        splitters: [],
+        detectors: [],
+        selectionMap: buildSelectionMapFromDom(),
+        debugSelections: [],
+        selectedComponentByMechanism: {},
+        resolvedExecution: [],
+        illuminationComponents: [],
+        detectionComponents: [],
+      };
     }
     const selection = {
       sources: [],
@@ -2308,9 +2338,11 @@
     sourceMechanisms.forEach((mechanism) => {
       Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((source) => {
         const setting = ensureSourceSetting(source);
-        if (!setting.enabled) return;
+        if (!setting.enabled) return;        
         selection.sources.push({
           ...source,
+          mechanismId: cleanString(mechanism.id),
+          slot: source.slot,
           selected_wavelength_nm: numberOrNull(setting.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
           user_weight: numberOrNull(setting.user_weight) ?? numberOrNull(source.power_weight) ?? 1,
         });
@@ -2401,9 +2433,11 @@ if (block.dataset.mechanismType === 'spectral_array') {
     detectorMechanisms.forEach((mechanism) => {
       Object.values(positionsForRoute(mechanism, state.activeRoute)).forEach((detector) => {
         const setting = ensureDetectorSetting(mechanism, detector);
-        if (!setting.enabled) return;
+        if (!setting.enabled) return;        
         selection.detectors.push({
           ...detector,
+          mechanismId: cleanString(mechanism.id),
+          slot: detector.slot,
           collection_enabled: Boolean(setting.collection_enabled),
           collection_min_nm: numberOrNull(setting.collection_min_nm),
           collection_max_nm: numberOrNull(setting.collection_max_nm),
@@ -2427,10 +2461,12 @@ if (block.dataset.mechanismType === 'spectral_array') {
       scope_id: cleanString(currentInstrumentId || (inst.metadata && inst.metadata.instrument_id) || ''),
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
       route: state.activeRoute || null,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString(),      
       sources: (selection.sources || []).map((source) => ({
+        mechanismId: cleanString(source.mechanismId),
+        slot: source.slot,
         display_label: source.display_label || source.name || source.label || '',
-        wavelength_nm: numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
+        selected_wavelength_nm: numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm),
         kind: cleanString(source.kind || source.type || ''),
         manufacturer: cleanString(source.manufacturer),
         model: cleanString(source.model),
@@ -2464,13 +2500,15 @@ if (block.dataset.mechanismType === 'spectral_array') {
           _cube_incomplete: Boolean(resolved._cube_incomplete || step._cube_incomplete),
           _unsupported_spectral_model: Boolean(resolved._unsupported_spectral_model || step.unsupported_reason === 'unsupported_spectral_model'),
         };
-      }),
+      }),      
       splitters: (selection.splitters || []).map((splitter) => ({
-        id: splitter.id || '',
+        mechanismId: cleanString(splitter.id),
         display_label: cleanString(splitter.label || splitter.display_label || ''),
         selected_branch_ids: Array.isArray(splitter.selected_branch_ids) ? splitter.selected_branch_ids.slice() : [],
-      })),
+      })),      
       detectors: (selection.detectors || []).map((detector) => ({
+        mechanismId: cleanString(detector.mechanismId),
+        slot: detector.slot,
         display_label: cleanString(detector.display_label || detector.name || detector.label || ''),
         id: cleanString(detector.id || detector.terminal_id || '') || null,
         detector_class: cleanString(detector.detector_class),
@@ -2503,75 +2541,114 @@ if (block.dataset.mechanismType === 'spectral_array') {
    * @returns {Array} Steps with all resolvable entries filled in
    *   (selection_state becomes 'user_resolved', spectral_ops populated).
    */
+
   function resolveSelectedExecution(selectedRouteSteps, mechanismSelections) {
     if (!Array.isArray(selectedRouteSteps)) return [];
     const byMechanism = (mechanismSelections && typeof mechanismSelections === 'object')
       ? mechanismSelections
       : {};
-    return selectedRouteSteps.map((step) => {
+  
+    function resolveStep(step) {
       if (!(step && typeof step === 'object')) return step;
-      if (step.selection_state !== 'unresolved') return step;
-      const mechanismId = cleanString(step.mechanism_id).toLowerCase();
-      const selectedComponent = mechanismId ? byMechanism[mechanismId] : null;
-      if (!selectedComponent) return step;
-      const positionKey = cleanString(selectedComponent.position_key);
-      const candidates = Array.isArray(step.available_positions) ? step.available_positions : [];
-      const matched = positionKey
-        ? candidates.find((cand) => cleanString(cand.position_key) === positionKey)
-        : null;
-      const resolvedOps = (matched && matched.spectral_ops) || selectedComponent.spectral_ops || null;
-      const resolvedLabel = cleanString(matched && matched.label) || cleanString(selectedComponent.display_label || selectedComponent.label || selectedComponent.name) || positionKey;
-      const resolvedComponentType = cleanString((matched && matched.component_type) || selectedComponent.component_type || selectedComponent.type).toLowerCase() || null;
-      return {
-        ...step,
-        selection_state: 'user_resolved',
-        selected_position_id: positionKey || String(selectedComponent.slot || ''),
-        selected_position_key: positionKey,
-        selected_position_label: resolvedLabel,
-        position_id: positionKey || String(selectedComponent.slot || ''),
-        position_key: positionKey,
-        position_label: resolvedLabel,
-        component_type: resolvedComponentType,
-        spectral_ops: resolvedOps,
-        _resolved_component: selectedComponent,
-      };
-    });
+  
+      let resolvedStep = step;
+  
+      if (step.selection_state === 'unresolved') {
+        const mechanismId = cleanString(step.mechanism_id).toLowerCase();
+        const selectedComponent = mechanismId ? byMechanism[mechanismId] : null;
+  
+        if (selectedComponent) {
+          const positionKey = cleanString(selectedComponent.position_key);
+          const candidates = Array.isArray(step.available_positions) ? step.available_positions : [];
+          const matched = positionKey
+            ? candidates.find((cand) => cleanString(cand.position_key) === positionKey)
+            : null;
+          const resolvedOps = (matched && matched.spectral_ops) || selectedComponent.spectral_ops || null;
+          const resolvedLabel =
+            cleanString(matched && matched.label)
+            || cleanString(selectedComponent.display_label || selectedComponent.label || selectedComponent.name)
+            || positionKey;
+          const resolvedComponentType =
+            cleanString((matched && matched.component_type) || selectedComponent.component_type || selectedComponent.type).toLowerCase()
+            || null;
+  
+          resolvedStep = {
+            ...step,
+            selection_state: 'user_resolved',
+            selected_position_id: positionKey || String(selectedComponent.slot || ''),
+            selected_position_key: positionKey,
+            selected_position_label: resolvedLabel,
+            position_id: positionKey || String(selectedComponent.slot || ''),
+            position_key: positionKey,
+            position_label: resolvedLabel,
+            component_type: resolvedComponentType,
+            spectral_ops: resolvedOps,
+            _resolved_component: selectedComponent,
+          };
+        }
+      }
+  
+      if (resolvedStep.routing && Array.isArray(resolvedStep.routing.branches)) {
+        resolvedStep = {
+          ...resolvedStep,
+          routing: {
+            ...resolvedStep.routing,
+            branches: resolvedStep.routing.branches.map((branch) => ({
+              ...branch,
+              sequence: Array.isArray(branch && branch.sequence)
+                ? branch.sequence.map(resolveStep)
+                : [],
+            })),
+          },
+        };
+      }
+  
+      return resolvedStep;
+    }
+  
+    return selectedRouteSteps.map(resolveStep);
   }
+    
 
-  /**
-   * Extract ordered component arrays from resolved execution steps for simulation.
-   *
-   * Filters to optical_component steps in the requested phase and builds
-   * component entries compatible with simulateInstrument's illumination/detection
-   * ordered component interface.
-   *
-   * @param {Array} resolvedSteps - Resolved execution steps from resolveSelectedExecution.
-   * @param {'illumination'|'detection'} phase - Optical phase to extract.
-   * @returns {Array<{component: Object, mode: string, routeStepId: string, stageKey: string|null}>}
-   */
   function orderedComponentsFromExecution(resolvedSteps, phase) {
     if (!Array.isArray(resolvedSteps)) return [];
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
-    return resolvedSteps
-      .filter((step) => step && step.phase === phase && step.kind === 'optical_component')
-      .map((step) => {
-        const component = step._resolved_component || {
-          id: step.component_id,
-          display_label: step.display_label,
-          component_type: step.component_type,
-          type: step.component_type,
-          spectral_ops: step.spectral_ops,
-          position_key: step.position_key || step.selected_position_key,
-          _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
-          _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
-        };
-        return {
-          component,
-          mode,
-          routeStepId: step.step_id || step.route_step_id,
-          stageKey: cleanString(step.stage_role).toLowerCase() || null,
-        };
+    const ordered = [];
+  
+    function collect(steps) {
+      (Array.isArray(steps) ? steps : []).forEach((step) => {
+        if (!(step && typeof step === 'object')) return;
+  
+        if (step.phase === phase && step.kind === 'optical_component') {
+          const component = step._resolved_component || {
+            id: step.component_id,
+            display_label: step.display_label,
+            component_type: step.component_type,
+            type: step.component_type,
+            spectral_ops: step.spectral_ops,
+            position_key: step.position_key || step.selected_position_key,
+            _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
+            _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
+          };
+  
+          ordered.push({
+            component,
+            mode,
+            routeStepId: step.step_id || step.route_step_id,
+            stageKey: cleanString(step.stage_role).toLowerCase() || null,
+          });
+        }
+  
+        if (step.routing && Array.isArray(step.routing.branches)) {
+          step.routing.branches.forEach((branch) => {
+            collect(branch && branch.sequence);
+          });
+        }
       });
+    }
+  
+    collect(resolvedSteps);
+    return ordered;
   }
 
 
@@ -3061,6 +3138,7 @@ if (block.dataset.mechanismType === 'spectral_array') {
     return changed;
   }
 
+
   function renderSummary(selection, simulation) {
     const fluorText = mapToArray(state.loadedProteins).map((fluorophore) => {
       const stateSuffix = fluorophore.activeStateName && fluorophore.states && fluorophore.states.length > 1
@@ -3069,11 +3147,13 @@ if (block.dataset.mechanismType === 'spectral_array') {
       const spectraSuffix = fluorophore.spectraSource ? ` • spectra ${describeSpectraSource(fluorophore.spectraSource)}` : '';
       return `${fluorophore.name}${stateSuffix}${spectraSuffix}`;
     }).join(', ') || 'None';
+  
     const sourceText = selection.sources.map((source) => {
       const wavelength = numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm);
       const lambdaText = wavelength !== null ? ` @ ${Math.round(wavelength)} nm` : '';
       return `${source.display_label || source.name || 'Source'}${lambdaText}`;
     }).join(', ') || 'None';
+  
     const detectorText = selection.detectors.map((detector) => {
       const minNm = numberOrNull(detector.collection_min_nm);
       const maxNm = numberOrNull(detector.collection_max_nm);
@@ -3082,35 +3162,45 @@ if (block.dataset.mechanismType === 'spectral_array') {
         : '';
       return `${detector.display_label || detector.name || 'Endpoint'}${window}`;
     }).join(', ') || 'None';
+  
     const opticalStages = selection.debugSelections.map((entry) => entry.name).join(' → ') || 'No stage optics selected';
     const results = Array.isArray(simulation && simulation.results) ? simulation.results : [];
-    const stedText = uniqueTexts(results
-      .filter((result) => result.sted && result.sted.applied)
-      .map((result) => `${result.fluorophoreName}: ${result.sted.label} via ${result.sted.sourceLabel}`))
-      .join('; ') || 'No depletion source selected';
-    const recommendationsText = uniqueTexts(results
-      .slice()
-      .sort((left, right) => (right.planningScore || 0) - (left.planningScore || 0))
-      .filter((result, index, rows) => rows.findIndex((candidate) => candidate.fluorophoreKey === result.fluorophoreKey) === index)
-      .map((result) => `${result.fluorophoreName}: ${result.pathLabel} (${result.qualityLabel})`))
-      .join('; ') || 'Load a fluorophore to rank detector paths';
-    const leakageWarnings = uniqueTexts(results
-      .filter((result) => result.excitationLeakageWarningLevel === 'high' || result.excitationLeakageWarningLevel === 'moderate')
-      .map((result) => `${result.pathLabel}: ${result.laserLeakageNote}`))
-      .join(' ');
+  
+    const stedText = uniqueTexts(
+      results
+        .filter((result) => result.sted && result.sted.applied)
+        .map((result) => `${result.fluorophoreName}: ${result.sted.label} via ${result.sted.sourceLabel}`)
+    ).join('; ') || 'No depletion source selected';
+  
+    const recommendationsText = uniqueTexts(
+      results
+        .slice()
+        .sort((left, right) => (right.planningScore || 0) - (left.planningScore || 0))
+        .filter((result, index, rows) => rows.findIndex((candidate) => candidate.fluorophoreKey === result.fluorophoreKey) === index)
+        .map((result) => `${result.fluorophoreName}: ${result.pathLabel} (${result.qualityLabel})`)
+    ).join('; ') || 'Load a fluorophore to rank detector paths';
+  
+    const leakageWarnings = uniqueTexts(
+      results
+        .filter((result) => result.excitationLeakageWarningLevel === 'high' || result.excitationLeakageWarningLevel === 'moderate')
+        .map((result) => `${result.pathLabel}: ${result.laserLeakageNote}`)
+    ).join(' ');
+  
     const validity = simulation && simulation.validSelection === false
       ? '<span style="color:var(--danger);font-weight:700;">Invalid mechanical path</span>'
       : '<span style="color:var(--primary);font-weight:700;">Valid path</span>';
-
+  
     DOM.summary.innerHTML = [
-      `<div><strong>Route:</strong> ${normalizeRouteLabel(state.activeRoute)} • ${validity}</div>`,
-      `<div><strong>Fluorophores:</strong> ${fluorText}</div>`,
-      `<div><strong>Sources:</strong> ${sourceText}</div>`,
-      `<div><strong>Detectors / endpoints:</strong> ${detectorText}</div>`,
-      `<div><strong>Optical path:</strong> ${opticalStages}</div>`,
-      `<div><strong>STED pairing:</strong> ${stedText}</div>`,
-      `<div><strong>Recommended paths:</strong> ${recommendationsText}</div>`,
-      leakageWarnings ? `<div><strong>Leakage warning:</strong> <span style="color:var(--danger);font-weight:600;">${leakageWarnings}</span></div>` : '',
+      `<div><strong>Route:</strong> ${escapeHtml(normalizeRouteLabel(state.activeRoute))} • ${validity}</div>`,
+      `<div><strong>Fluorophores:</strong> ${escapeHtml(fluorText)}</div>`,
+      `<div><strong>Sources:</strong> ${escapeHtml(sourceText)}</div>`,
+      `<div><strong>Detectors / endpoints:</strong> ${escapeHtml(detectorText)}</div>`,
+      `<div><strong>Optical path:</strong> ${escapeHtml(opticalStages)}</div>`,
+      `<div><strong>STED pairing:</strong> ${escapeHtml(stedText)}</div>`,
+      `<div><strong>Recommended paths:</strong> ${escapeHtml(recommendationsText)}</div>`,
+      leakageWarnings
+        ? `<div><strong>Leakage warning:</strong> <span style="color:var(--danger);font-weight:600;">${escapeHtml(leakageWarnings)}</span></div>`
+        : '',
     ].filter(Boolean).join('');
   }
 
@@ -3138,6 +3228,7 @@ if (block.dataset.mechanismType === 'spectral_array') {
 
   function renderScoreboard(simulation) {
     DOM.scoreboard.innerHTML = '';
+  
     if (!state.loadedProteins.size) {
       DOM.scoreboard.innerHTML = `
         <div class="vm-info-card">
@@ -3146,6 +3237,7 @@ if (block.dataset.mechanismType === 'spectral_array') {
         </div>`;
       return;
     }
+  
     if (!simulation || !Array.isArray(simulation.results) || !simulation.results.length) {
       DOM.scoreboard.innerHTML = `
         <div class="vm-info-card">
@@ -3154,24 +3246,40 @@ if (block.dataset.mechanismType === 'spectral_array') {
         </div>`;
       return;
     }
-
+  
     const qualityColors = { good: 'var(--primary)', usable: '#ca8a04', poor: 'var(--danger)', blocked: 'var(--muted)' };
+  
     simulation.results
       .slice()
       .sort((left, right) => (right.correctnessScore || 0) - (left.correctnessScore || 0))
       .forEach((result) => {
-        const dyeColor = colorHex(mapToArray(state.loadedProteins).find((item) => item.key === result.fluorophoreKey)?.emMax || 520);
+        const dyeColor = colorHex(
+          mapToArray(state.loadedProteins).find((item) => item.key === result.fluorophoreKey)?.emMax || 520
+        );
+  
+        const fluorophoreName = escapeHtml(result.fluorophoreName);
+        const fluorophoreState = escapeHtml(result.fluorophoreState);
+        const pathLabel = escapeHtml(result.pathLabel);
+        const detectorLabel = escapeHtml(result.detectorLabel);
+        const qualityLabel = escapeHtml(result.qualityLabel);
+        const laserLeakageNote = escapeHtml(result.laserLeakageNote);
+  
         const card = document.createElement('div');
         card.className = 'vm-info-card';
         card.style.borderLeft = `4px solid ${dyeColor}`;
-        const depletionText = Number(result.depletionOverlap || 0) > 0 ? `${Math.round((result.depletionOverlap || 0) * 100)}%` : '0%';
+  
+        const depletionText = Number(result.depletionOverlap || 0) > 0
+          ? `${Math.round((result.depletionOverlap || 0) * 100)}%`
+          : '0%';
+  
         const leakPct = ((result.excitationLeakageThroughput || 0) * 100).toFixed(1);
+  
         card.innerHTML = `
-          <div class="vm-info-card-title" style="color:${dyeColor};">${result.fluorophoreName}</div>
-          <div class="vm-info-card-subtitle">${result.fluorophoreState} • ${result.pathLabel}</div>
+          <div class="vm-info-card-title" style="color:${dyeColor};">${fluorophoreName}</div>
+          <div class="vm-info-card-subtitle">${fluorophoreState} • ${pathLabel}</div>
           <div class="vm-info-grid">
-            <div class="vm-info-row"><span>Endpoint</span><strong>${result.detectorLabel}</strong></div>
-            <div class="vm-info-row"><span>Quality</span><strong style="color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${result.qualityLabel}</strong></div>
+            <div class="vm-info-row"><span>Endpoint</span><strong>${detectorLabel}</strong></div>
+            <div class="vm-info-row"><span>Quality</span><strong style="color:${qualityColors[result.qualityLabel] || 'var(--text)'}; text-transform:uppercase;">${qualityLabel}</strong></div>
             <div class="vm-info-row"><span>Recorded</span><strong>${Number(result.recordedIntensity || 0).toFixed(3)}</strong></div>
             <div class="vm-info-row"><span>Path benchmark</span><strong>${Number(result.benchmarkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Theoretical benchmark</span><strong>${Number(result.theoreticalBenchmarkPct || 0).toFixed(1)}%</strong></div>
@@ -3182,8 +3290,9 @@ if (block.dataset.mechanismType === 'spectral_array') {
             <div class="vm-info-row"><span>Depletion overlap</span><strong>${depletionText}</strong></div>
             <div class="vm-info-row"><span>Score</span><strong>${Number(result.correctnessScore || 0).toFixed(1)}</strong></div>
           </div>
-          ${result.laserLeakageNote ? `<div class="vm-mini" style="color:var(--danger); font-weight:700;">${result.laserLeakageNote}</div>` : ''}
+          ${result.laserLeakageNote ? `<div class="vm-mini" style="color:var(--danger); font-weight:700;">${laserLeakageNote}</div>` : ''}
         `;
+  
         DOM.scoreboard.appendChild(card);
       });
   }
