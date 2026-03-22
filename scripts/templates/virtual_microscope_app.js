@@ -2610,7 +2610,7 @@ if (block.dataset.mechanismType === 'spectral_array') {
   }
     
 
-  function orderedComponentsFromExecution(resolvedSteps, phase) {
+  function orderedComponentsFromExecution(resolvedSteps, phase, splitterSelections = new Map()) {
     if (!Array.isArray(resolvedSteps)) return [];
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
     const ordered = [];
@@ -2640,7 +2640,17 @@ if (block.dataset.mechanismType === 'spectral_array') {
         }
   
         if (step.routing && Array.isArray(step.routing.branches)) {
-          step.routing.branches.forEach((branch) => {
+          const selectedBranchIds = new Set(
+            Array.isArray(splitterSelections.get(cleanString(step.component_id).toLowerCase()))
+              ? splitterSelections.get(cleanString(step.component_id).toLowerCase())
+              : []
+          );
+  
+          const branchesToTraverse = step.routing.selection_mode === 'exclusive' && selectedBranchIds.size
+            ? step.routing.branches.filter((branch) => selectedBranchIds.has(cleanString(branch && branch.id)))
+            : step.routing.branches;
+  
+          branchesToTraverse.forEach((branch) => {
             collect(branch && branch.sequence);
           });
         }
