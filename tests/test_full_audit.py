@@ -370,6 +370,179 @@ class FullAuditScriptTests(unittest.TestCase):
             # The repository may currently contain validation failures; the CLI is allowed to exit non-zero.
             self.assertIn(proc.returncode, {0, 1})
 
+    # ── JS runtime authority audit tests ──
+
+    def test_js_runtime_authority_audit_passes_on_current_code(self) -> None:
+        """The JS runtime authority audit should pass on the current (correct) codebase."""
+        from scripts.full_audit import audit_js_runtime_authority
+        result = audit_js_runtime_authority(REPO_ROOT)
+        self.assertEqual(result["status"], "ok", msg=f"JS runtime authority audit failed: {result.get('issues', [])}")
+        self.assertEqual(result["issues"], [])
+
+    def test_js_runtime_authority_detects_missing_resolved_execution(self) -> None:
+        """Audit should fail if resolveSelectedExecution call is absent."""
+        from scripts.full_audit import audit_js_runtime_authority
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            templates_dir = tmpdir_path / "scripts" / "templates"
+            templates_dir.mkdir(parents=True)
+            # Write a minimal app.js that is missing resolveSelectedExecution
+            (templates_dir / "virtual_microscope_app.js").write_text(
+                "function buildSelectedConfiguration(selection) { return {}; }\n",
+                encoding="utf-8",
+            )
+            result = audit_js_runtime_authority(tmpdir_path)
+            self.assertEqual(result["status"], "error")
+            messages = [i["message"] for i in result["issues"]]
+            self.assertTrue(
+                any("resolveSelectedExecution" in m for m in messages),
+                msg=f"Expected resolveSelectedExecution issue, got: {messages}",
+            )
+
+    def test_js_runtime_authority_detects_forbidden_reconstruction(self) -> None:
+        """Audit should fail if buildTraversalOrderedComponents is present in JS."""
+        from scripts.full_audit import audit_js_runtime_authority
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            templates_dir = tmpdir_path / "scripts" / "templates"
+            templates_dir.mkdir(parents=True)
+            (templates_dir / "virtual_microscope_app.js").write_text(
+                "function buildTraversalOrderedComponents() {}\n"
+                "function buildSelectedConfiguration(selection) {\n"
+                "  const resolvedSteps = selection.resolvedExecution;\n"
+                "  return { selected_route_steps: resolvedSteps };\n"
+                "}\n"
+                "selection.resolvedExecution = resolveSelectedExecution(x, y);\n"
+                "orderedComponentsFromExecution(selection.resolvedExecution, 'illumination');\n"
+                "persistSelectedConfiguration();\n"
+                "localStorage.setItem('aic.virtualMicroscope.selectedConfiguration', '');\n",
+                encoding="utf-8",
+            )
+            result = audit_js_runtime_authority(tmpdir_path)
+            self.assertEqual(result["status"], "error")
+            messages = [i["message"] for i in result["issues"]]
+            self.assertTrue(
+                any("buildTraversalOrderedComponents" in m for m in messages),
+                msg=f"Expected buildTraversalOrderedComponents issue, got: {messages}",
+            )
+
+    # ── Issue categorization tests ──
+
+    def test_audit_issues_carry_category_field(self) -> None:
+        """All issues from audit_virtual_microscope_instrument should carry a 'category' field."""
+        instrument = {
+            "id": "cat-test-scope",
+            "display_name": "Category Test Scope",
+            "canonical": {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "role": "excitation", "wavelength_nm": 488}],
+                    "optical_path_elements": [],
+                    "endpoints": [{"id": "cam_a", "kind": "camera", "endpoint_type": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [{"endpoint_id": "cam_a"}],
+                    }
+                ],
+            },
+        }
+        result = audit_virtual_microscope_instrument(instrument)
+        for issue in result.get("issues", []):
+            self.assertIn("category", issue, msg=f"Issue missing 'category': {issue}")
+            self.assertIn(
+                issue["category"],
+                ("topology_completeness", "runtime_execution_authority", "scientific_support_completeness"),
+                msg=f"Unknown category: {issue['category']}",
+            )
+        for warning in result.get("warnings", []):
+            if "category" in warning:
+                self.assertIn(
+                    warning["category"],
+                    ("topology_completeness", "runtime_execution_authority", "scientific_support_completeness"),
+                    msg=f"Unknown category: {warning['category']}",
+                )
+
+    def test_full_audit_report_includes_category_breakdown(self) -> None:
+        """The full audit report summary must include by_category breakdown."""
+        dependency_check = subprocess.run(
+            [sys.executable, "-c", "import yaml"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if dependency_check.returncode != 0:
+            self.skipTest("PyYAML is required for full audit report generation.")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = Path(tmpdir) / "audit.json"
+            md_path = Path(tmpdir) / "audit.md"
+            subprocess.run(
+                ["python", "scripts/full_audit.py", "--repo-root", str(REPO_ROOT),
+                 "--json-out", str(json_path), "--markdown-out", str(md_path)],
+                cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+            )
+            if not json_path.exists():
+                self.skipTest("Audit JSON not generated.")
+            report = json.loads(json_path.read_text(encoding="utf-8"))
+            self.assertIn("by_category", report["summary"])
+            self.assertIsInstance(report["summary"]["by_category"], dict)
+
+    def test_full_audit_report_includes_js_runtime_authority(self) -> None:
+        """The full audit report must include the js_runtime_authority section."""
+        dependency_check = subprocess.run(
+            [sys.executable, "-c", "import yaml"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if dependency_check.returncode != 0:
+            self.skipTest("PyYAML is required for full audit report generation.")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = Path(tmpdir) / "audit.json"
+            md_path = Path(tmpdir) / "audit.md"
+            subprocess.run(
+                ["python", "scripts/full_audit.py", "--repo-root", str(REPO_ROOT),
+                 "--json-out", str(json_path), "--markdown-out", str(md_path)],
+                cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+            )
+            if not json_path.exists():
+                self.skipTest("Audit JSON not generated.")
+            report = json.loads(json_path.read_text(encoding="utf-8"))
+            self.assertIn("js_runtime_authority", report)
+            self.assertIn("status", report["js_runtime_authority"])
+            self.assertIn("issues", report["js_runtime_authority"])
+
+    def test_markdown_report_includes_js_runtime_and_categories(self) -> None:
+        """The markdown report must include JS runtime authority and category sections."""
+        dependency_check = subprocess.run(
+            [sys.executable, "-c", "import yaml"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if dependency_check.returncode != 0:
+            self.skipTest("PyYAML is required for full audit report generation.")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = Path(tmpdir) / "audit.json"
+            md_path = Path(tmpdir) / "audit.md"
+            subprocess.run(
+                ["python", "scripts/full_audit.py", "--repo-root", str(REPO_ROOT),
+                 "--json-out", str(json_path), "--markdown-out", str(md_path)],
+                cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+            )
+            if not md_path.exists():
+                self.skipTest("Audit markdown not generated.")
+            md = md_path.read_text(encoding="utf-8")
+            self.assertIn("JS runtime execution authority", md)
+            # Category breakdown is only rendered when there are categorized issues
+            # The section header should always appear if there are any issues
+
 
 if __name__ == "__main__":
     unittest.main()

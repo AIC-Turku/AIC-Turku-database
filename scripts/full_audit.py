@@ -5,17 +5,24 @@ This script is intentionally conservative:
 - it audits the validated/normalized DTO path consumed by the virtual microscope
 - it emits both machine-readable JSON and a concise Markdown report
 
-The audit is designed to answer four questions:
+The audit is designed to answer five questions:
 1. Do repository YAML files parse and validate?
 2. Where are the main policy/completeness gaps?
 3. Does the virtual microscope payload preserve the metadata required by the simulator?
 4. Is the FPbase/browser runtime contract healthy enough to render usable fluorophore spectra?
+5. Does the JS runtime correctly consume parser-provided execution authority?
+
+Issue categories:
+- topology_completeness: structural presence of route steps, mechanisms, endpoints
+- runtime_execution_authority: semantic correctness of selected_execution, resolved execution flow
+- scientific_support_completeness: spectral_ops, unsupported flags, branch optics
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -215,6 +222,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             {
                 "severity": "error",
                 "field": "light_sources",
+                "category": "topology_completeness",
                 "message": f"Virtual microscope payload source count mismatch: hardware={source_count}, payload={payload_source_count}.",
             }
         )
@@ -223,6 +231,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             {
                 "severity": "error",
                 "field": "detectors",
+                "category": "topology_completeness",
                 "message": f"Virtual microscope payload detector count mismatch: hardware={detector_count}, payload={payload_detector_count}.",
             }
         )
@@ -231,6 +240,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             {
                 "severity": "error",
                 "field": "splitters",
+                "category": "topology_completeness",
                 "message": (
                     "Virtual microscope payload splitter count mismatch: "
                     f"raw_total={raw_splitters['total_distinct_entries']}, payload={payload_splitter_count}."
@@ -251,6 +261,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                 {
                     "severity": "error",
                     "field": f"stages.{stage_name}",
+                    "category": "topology_completeness",
                     "message": (
                         f"Stage payload mismatch for '{stage_name}': "
                         f"hardware={count}, payload={payload_stage_counts.get(stage_name, 0)}."
@@ -264,6 +275,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             {
                 "severity": "warning",
                 "field": "valid_paths",
+                "category": "topology_completeness",
                 "message": "Light-path mechanisms exist but the payload exposes no valid_paths combinations.",
             }
         )
@@ -273,6 +285,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             {
                 "severity": "error",
                 "field": "metadata.wavelength_grid",
+                "category": "scientific_support_completeness",
                 "message": "Virtual microscope payload is missing wavelength grid metadata.",
             }
         )
@@ -287,6 +300,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                 {
                     "severity": "warning",
                     "field": f"light_paths[{route_idx}].route_steps",
+                    "category": "topology_completeness",
                     "message": f"Route '{route.get('id')}' is missing the authoritative route_steps contract.",
                 }
             )
@@ -295,6 +309,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                 {
                     "severity": "warning",
                     "field": f"light_paths[{route_idx}].route_steps",
+                    "category": "topology_completeness",
                     "message": f"Route '{route.get('id')}' has an empty route_steps array.",
                 }
             )
@@ -305,6 +320,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                         {
                             "severity": "error",
                             "field": f"light_paths[{route_idx}].route_steps[{step_idx}]",
+                            "category": "topology_completeness",
                             "message": "Route step is not an object.",
                         }
                     )
@@ -316,6 +332,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                         {
                             "severity": "error",
                             "field": f"light_paths[{route_idx}].route_steps[{step_idx}]",
+                            "category": "topology_completeness",
                             "message": f"Route step missing required fields: {', '.join(missing)}.",
                         }
                     )
@@ -327,6 +344,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                 {
                     "severity": "warning",
                     "field": f"light_paths[{route_idx}].selected_execution",
+                    "category": "runtime_execution_authority",
                     "message": f"Route '{route.get('id')}' is missing the selected_execution contract.",
                 }
             )
@@ -336,6 +354,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                     {
                         "severity": "warning",
                         "field": f"light_paths[{route_idx}].selected_execution.contract_version",
+                        "category": "runtime_execution_authority",
                         "message": f"Route '{route.get('id')}' selected_execution is missing contract_version.",
                     }
                 )
@@ -345,6 +364,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                     {
                         "severity": "warning",
                         "field": f"light_paths[{route_idx}].selected_execution.selected_route_steps",
+                        "category": "runtime_execution_authority",
                         "message": f"Route '{route.get('id')}' selected_execution has no selected_route_steps.",
                     }
                 )
@@ -362,6 +382,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                             {
                                 "severity": "error",
                                 "field": f"light_paths[{route_idx}].selected_execution.selected_route_steps",
+                                "category": "runtime_execution_authority",
                                 "message": (
                                     f"Route '{route.get('id')}' selected_route_steps appears to be a verbatim copy of static route_steps "
                                     f"(no selection_state on any step). The parser must enrich steps with selection_state semantics."
@@ -381,6 +402,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                             {
                                 "severity": "warning",
                                 "field": f"light_paths[{route_idx}].selected_execution.selected_route_steps[{sel_step_idx}]",
+                                "category": "scientific_support_completeness",
                                 "message": f"Optical component step '{sel_step.get('step_id') or sel_step.get('route_step_id')}' has no spectral_ops and no unsupported_reason.",
                             }
                         )
@@ -393,6 +415,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                                 {
                                     "severity": "error",
                                     "field": f"light_paths[{route_idx}].selected_execution.selected_route_steps[{sel_step_idx}]",
+                                    "category": "runtime_execution_authority",
                                     "message": (
                                         f"Unresolved step '{sel_step.get('step_id') or sel_step.get('route_step_id')}' has spectral_ops "
                                         f"despite being unresolved with {len(available)} available positions. "
@@ -423,6 +446,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                                         {
                                             "severity": "warning",
                                             "field": f"light_paths[{route_idx}].selected_execution.routing_branch_optics",
+                                            "category": "scientific_support_completeness",
                                             "message": (
                                                 f"Splitter branch step '{branch_step.get('step_id') or branch_step.get('component_id')}' in route "
                                                 f"'{route.get('id')}' has only a passthrough fallback (reason: {op.get('unsupported_reason')}). "
@@ -519,6 +543,137 @@ def audit_fpbase_runtime_contract(repo_root: Path) -> dict[str, Any]:
         "status": "ok" if ok else "error",
         "message": "mCherry runtime contract passed." if ok else "mCherry runtime contract failed.",
         "result": payload,
+    }
+
+
+def audit_js_runtime_authority(repo_root: Path) -> dict[str, Any]:
+    """Verify JS templates consume parser-selected execution directly, not reconstructed optics.
+
+    This checks that:
+    1. App JS uses resolvedExecution/orderedComponentsFromExecution — not DOM-derived order
+    2. buildSelectedConfiguration sources from resolvedExecution — not debugSelections
+    3. Runtime JS does not contain deleted reconstruction functions
+    4. Methods generator reads selected_route_steps — not stages or route_steps
+    5. Reporting/export uses selected_route_steps — not bare route_steps
+    """
+    app_path = repo_root / "scripts" / "templates" / "virtual_microscope_app.js"
+    runtime_path = repo_root / "scripts" / "templates" / "virtual_microscope_runtime.js"
+    methods_path = repo_root / "scripts" / "templates" / "methods_generator.md.j2"
+    issues: list[dict[str, str]] = []
+
+    if not app_path.exists():
+        return {"status": "error", "issues": [{"severity": "error", "category": "runtime_execution_authority", "message": "virtual_microscope_app.js is missing."}]}
+
+    app_source = app_path.read_text(encoding="utf-8")
+    runtime_source = runtime_path.read_text(encoding="utf-8") if runtime_path.exists() else ""
+    methods_source = methods_path.read_text(encoding="utf-8") if methods_path.exists() else ""
+
+    # ── Check 1: Simulation must use resolvedExecution, not DOM-derived order ──
+    if "selection.resolvedExecution = resolveSelectedExecution(" not in app_source:
+        issues.append({
+            "severity": "error",
+            "category": "runtime_execution_authority",
+            "message": "App JS does not set selection.resolvedExecution via resolveSelectedExecution(). Simulation may use DOM-derived order.",
+        })
+    if "orderedComponentsFromExecution(selection.resolvedExecution," not in app_source:
+        issues.append({
+            "severity": "error",
+            "category": "runtime_execution_authority",
+            "message": "App JS does not call orderedComponentsFromExecution(selection.resolvedExecution). Simulation component order may be reconstructed.",
+        })
+
+    # ── Check 2: Forbidden reconstruction patterns ──
+    if "buildTraversalOrderedComponents" in app_source or "buildTraversalOrderedComponents" in runtime_source:
+        issues.append({
+            "severity": "error",
+            "category": "runtime_execution_authority",
+            "message": "JS still contains buildTraversalOrderedComponents — a deleted function that reconstructs optical execution from DOM state.",
+        })
+    if "buildOrderedComponentsFromDom" in app_source or "buildOrderedComponentsFromDom" in runtime_source:
+        issues.append({
+            "severity": "error",
+            "category": "runtime_execution_authority",
+            "message": "JS contains buildOrderedComponentsFromDom — optical execution must not be reconstructed from DOM.",
+        })
+
+    # ── Check 3: buildSelectedConfiguration must source from resolvedExecution ──
+    fn_match = re.search(r"function buildSelectedConfiguration\([^)]*\)\s*\{", app_source)
+    if fn_match:
+        fn_start = fn_match.start()
+        fn_body = app_source[fn_start:fn_start + 3000]
+        if "selection.resolvedExecution" not in fn_body:
+            issues.append({
+                "severity": "error",
+                "category": "runtime_execution_authority",
+                "message": "buildSelectedConfiguration does not read selection.resolvedExecution. Export may use debugSelections or DOM-derived data.",
+            })
+        if "selected_route_steps:" not in fn_body:
+            issues.append({
+                "severity": "error",
+                "category": "runtime_execution_authority",
+                "message": "buildSelectedConfiguration does not output selected_route_steps. Export contract is broken.",
+            })
+        if "debugSelections" in fn_body:
+            issues.append({
+                "severity": "error",
+                "category": "runtime_execution_authority",
+                "message": "buildSelectedConfiguration reads debugSelections. Export must source from resolvedExecution only.",
+            })
+        # Check for bare route_steps: (not selected_route_steps:)
+        bare_route_steps = re.findall(r"(?<!selected_)route_steps:", fn_body)
+        if bare_route_steps:
+            issues.append({
+                "severity": "error",
+                "category": "runtime_execution_authority",
+                "message": "buildSelectedConfiguration outputs bare route_steps (not selected_route_steps). Export contract must use selected_route_steps.",
+            })
+    else:
+        issues.append({
+            "severity": "error",
+            "category": "runtime_execution_authority",
+            "message": "buildSelectedConfiguration function not found in app JS.",
+        })
+
+    # ── Check 4: Methods generator must read selected_route_steps ──
+    if methods_source:
+        if "selected_route_steps" not in methods_source:
+            issues.append({
+                "severity": "error",
+                "category": "runtime_execution_authority",
+                "message": "Methods generator does not read selected_route_steps. Reporting may use stale stage data.",
+            })
+        if "runtimeConfig.stages" in methods_source:
+            issues.append({
+                "severity": "error",
+                "category": "runtime_execution_authority",
+                "message": "Methods generator reads deprecated runtimeConfig.stages instead of selected_route_steps.",
+            })
+        if "runtimeConfig.route_steps" in methods_source:
+            issues.append({
+                "severity": "error",
+                "category": "runtime_execution_authority",
+                "message": "Methods generator reads static runtimeConfig.route_steps instead of selected_route_steps.",
+            })
+
+    # ── Check 5: Export/reporting persistence uses selected configuration ──
+    if "persistSelectedConfiguration" not in app_source:
+        issues.append({
+            "severity": "error",
+            "category": "runtime_execution_authority",
+            "message": "App JS does not call persistSelectedConfiguration. Reporting will not have access to runtime selections.",
+        })
+    if "aic.virtualMicroscope.selectedConfiguration" not in app_source:
+        issues.append({
+            "severity": "error",
+            "category": "runtime_execution_authority",
+            "message": "App JS does not reference the aic.virtualMicroscope.selectedConfiguration localStorage key.",
+        })
+
+    ok = len(issues) == 0
+    return {
+        "status": "ok" if ok else "error",
+        "message": f"JS runtime authority audit: {len(issues)} issue(s) found." if issues else "JS runtime authority audit passed.",
+        "issues": issues,
     }
 
 
@@ -650,8 +805,11 @@ def generate_full_audit(
                 "instruments": vm_rows,
             },
             "fpbase_runtime": audit_fpbase_runtime_contract(repo_root),
+            "js_runtime_authority": audit_js_runtime_authority(repo_root),
         }
 
+        js_authority = report["js_runtime_authority"]
+        js_authority_error_count = len([i for i in js_authority.get("issues", []) if i.get("severity") == "error"])
         total_error_count = (
             len(active_load_errors)
             + len(retired_load_errors)
@@ -659,6 +817,7 @@ def generate_full_audit(
             + len(event_report.errors)
             + sum(len(row.get("issues", [])) for row in vm_rows)
             + (1 if report["fpbase_runtime"].get("status") == "error" else 0)
+            + js_authority_error_count
         )
         total_warning_count = (
             len(instrument_warnings)
@@ -666,10 +825,20 @@ def generate_full_audit(
             + sum(len(row.get("warnings", [])) for row in vm_rows)
             + (1 if report["fpbase_runtime"].get("status") == "warning" else 0)
         )
+
+        # ── Categorized issue summary ──
+        all_vm_issues = []
+        for row in vm_rows:
+            all_vm_issues.extend(row.get("issues", []))
+            all_vm_issues.extend(row.get("warnings", []))
+        all_vm_issues.extend(js_authority.get("issues", []))
+        category_counts = Counter(issue.get("category", "uncategorized") for issue in all_vm_issues)
+
         report["summary"] = {
             "errors": total_error_count,
             "warnings": total_warning_count,
             "status": "fail" if total_error_count else ("warn" if total_warning_count else "ok"),
+            "by_category": dict(sorted(category_counts.items())),
         }
         return _as_serializable(report)
     finally:
@@ -765,6 +934,31 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         f"- Status: {fpbase.get('status', 'unknown')}",
         f"- {fpbase.get('message', 'No message')}",
         "",
+        "### JS runtime execution authority",
+        "",
+    ])
+    js_auth = report.get("js_runtime_authority", {})
+    js_issues = js_auth.get("issues", [])
+    lines.append(f"- Status: {js_auth.get('status', 'unknown')}")
+    lines.append(f"- {js_auth.get('message', 'No message')}")
+    if js_issues:
+        for issue in js_issues:
+            severity_tag = "ERROR" if issue.get("severity") == "error" else "Warning"
+            lines.append(f"- {severity_tag}: {issue.get('message')}")
+    lines.append("")
+
+    # ── Category breakdown ──
+    by_category = report.get("summary", {}).get("by_category", {})
+    if by_category:
+        lines.extend([
+            "### Issue categories",
+            "",
+        ])
+        for cat, count in sorted(by_category.items()):
+            lines.append(f"- {cat}: {count}")
+        lines.append("")
+
+    lines.extend([
         "## Highest-priority virtual microscope issues",
         "",
     ])
