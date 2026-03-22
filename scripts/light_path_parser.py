@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from itertools import product
 from typing import Any
 
@@ -609,7 +610,7 @@ def _canonicalize_sequence_item(
     if len(populated_ref_keys) != 1:
         return None
     selected_key = populated_ref_keys[0]
-    if any(item.get(key) for key in SEQUENCE_TOPOLOGY_KEYS if key not in {selected_key, "position_id"}):
+    if any(item.get(key) for key in SEQUENCE_TOPOLOGY_KEYS if key != selected_key):
         return None
     normalized_value = _clean_identifier(item.get(selected_key))
     if not normalized_value:
@@ -2986,7 +2987,7 @@ def _build_route_steps(
             component_type = _clean_string(row.get("component_type") or row.get("type") or row.get("element_type") or "").lower()
             stage_role = _clean_string(row.get("stage_role") or row.get("element_type") or "").lower()
             component_payload, position_id, position_key, position_label = _resolved_step_payload(entry)
-            selected_component_type = _clean_string(component_payload.get("component_type") or component_payload.get("type")).lower()
+            resolved_component_type = _clean_string(component_payload.get("component_type") or component_payload.get("type")).lower()
             step = {
                 "step_id": f"{phase}-step-{order}",
                 "order": order,
@@ -2997,7 +2998,7 @@ def _build_route_steps(
                 "detector_id": entry.get("id") if entry_kind == "endpoint" else None,
                 "endpoint_id": entry.get("id") if entry_kind == "endpoint" else None,
                 "hardware_inventory_id": inventory_id or None,
-                "component_type": selected_component_type or component_type or stage_role or None,
+                "component_type": resolved_component_type or component_type or stage_role or None,
                 "stage_role": stage_role or None,
                 "display_label": entry.get("display_label"),
                 "position_id": position_id,
@@ -3341,13 +3342,15 @@ def _build_route_sequences_and_graph(
         "illumination_traversal": illumination_sequence,
         "detection_traversal": detection_sequence,
         "route_steps": route_steps,
-        "selected_execution": {
-            "contract_version": "selected_execution.v1",
-            "steps": json.loads(json.dumps(route_steps)),
-            "warnings": list(route_warnings),
-            "illumination_traversal": json.loads(json.dumps(illumination_sequence)),
-            "detection_traversal": json.loads(json.dumps(detection_sequence)),
-        },
+        "selected_execution": deepcopy(
+            {
+                "contract_version": "selected_execution.v1",
+                "steps": route_steps,
+                "warnings": list(route_warnings),
+                "illumination_traversal": illumination_sequence,
+                "detection_traversal": detection_sequence,
+            }
+        ),
         "route_warnings": route_warnings,
         "branch_blocks": list(usage["branch_blocks"]),
         "endpoints": list(usage["endpoint_inventory_ids"]),

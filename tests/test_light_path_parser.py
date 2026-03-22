@@ -2197,7 +2197,7 @@ class LightPathParserTests(unittest.TestCase):
                             "stage_role": "emission",
                             "element_type": "filter_wheel",
                             "positions": {
-                                1: {"component_type": "bandpass", "center_nm": 525, "width_nm": 50, "label": "525/50"},
+                                "1": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50, "label": "525/50"},
                             },
                         },
                         {
@@ -2205,7 +2205,7 @@ class LightPathParserTests(unittest.TestCase):
                             "stage_role": "emission",
                             "element_type": "filter_wheel",
                             "positions": {
-                                1: {"component_type": "bandpass", "center_nm": 700, "width_nm": 75, "label": "700/75"},
+                                "1": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75, "label": "700/75"},
                             },
                         },
                     ],
