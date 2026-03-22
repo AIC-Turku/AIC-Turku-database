@@ -41,11 +41,11 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("function pipelineSpectrumForStep(stepId, stepSpectra, fallbackSpectra)", source)
         self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation)", source)
         self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);", source)
-        self.assertIn("const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];", source)
-        self.assertIn("const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];", source)
-        self.assertIn("if (!step || step.kind !== 'routing_component') return;", source)
-        self.assertIn("stepSpectra.set(stepId, routedBranchSpectrum);", source)
+        self.assertIn("const resolvedExecution = Array.isArray(selection && selection.resolvedExecution) ? selection.resolvedExecution : [];", source)
+        self.assertIn("step.kind === 'routing_component'", source)
+        self.assertIn("stepSpectra.set(stepId, runningDetect.slice());", source)
         self.assertNotIn("const consumed = { excitation: 0, dichroic: 0, emission: 0 };", source)
+        self.assertNotIn("if (stageKey === 'splitters') return;", source)
 
     def test_source_settings_are_keyed_by_instrument_and_source_identity(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -61,8 +61,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_pipe_buttons_use_route_traversal_entries(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("topology && topology.traversal && Array.isArray(topology.traversal.illumination)", source)
-        self.assertIn("topology && topology.traversal && Array.isArray(topology.traversal.detection)", source)
+        # buildPipelineStages now reads route steps directly; traversal is used by buildDerivedControlGroups
+        self.assertIn("authoritativeRouteSteps(routeRecord)", source)
         self.assertIn("button.dataset.inspectorStage = inspectorStage || stageId;", source)
         self.assertIn("button.dataset.inspectorStage || button.dataset.stageId", source)
 
@@ -70,9 +70,9 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("key: 'pipe:sources:0'", source)
-        self.assertIn("key: 'pipe:illumination:' + index", source)
+        self.assertIn("key: 'pipe:illumination:' + illumIndex", source)
         self.assertIn("key: 'pipe:sample:0'", source)
-        self.assertIn("key: 'pipe:detection:' + index", source)
+        self.assertIn("key: 'pipe:detection:' + detectIndex", source)
         self.assertIn("key: 'pipe:detectors:0'", source)
 
     def test_transmitted_route_detection_covers_all_transmitted_tags(self) -> None:
@@ -115,8 +115,11 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_pipe_stages_use_route_step_ids(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("entry.routeStepId || ('illumination-step-' + index)", source)
-        self.assertIn("entry.routeStepId || ('detection-step-' + index)", source)
+        # buildPipelineStages reads step.step_id from route steps directly
+        pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
+        self.assertIn("cleanString(step.step_id)", pipe_fn)
+        # buildRouteTraversalEntries still uses parser step_ids for traversal entries
+        self.assertIn("routeStepId: step.step_id", source)
 
     def test_derived_control_groups_use_parser_step_ids(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -129,15 +132,18 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("function buildPipelineStages(topology)", source)
         self.assertNotIn("function buildPipelineStages(derivedControlGroups", source)
-        self.assertIn("topology.sourceMechanisms", source)
-        self.assertIn("topology.endpointMechanisms", source)
+        # Pipe stages now read route steps via authoritativeRouteSteps, not traversal or mechanism lists
+        pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
+        self.assertIn("authoritativeRouteSteps(routeRecord)", pipe_fn)
+        self.assertNotIn("topology.traversal", pipe_fn)
 
     def test_endpoint_entries_excluded_from_detection_traversal_stages(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("entry.kind === 'endpoint'", source)
+        # buildPipelineStages excludes detectors via step.kind !== 'detector' filter
         pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
-        self.assertIn("if (entry.kind === 'endpoint') return;", pipe_fn)
+        self.assertIn("step.kind !== 'detector'", pipe_fn)
+        # buildDerivedControlGroups still excludes branch-block and endpoint entries
         groups_fn = source.split("function buildDerivedControlGroups")[1].split("\n  function ")[0]
         self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", groups_fn)
 
@@ -146,7 +152,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
         self.assertIn("flowOrigin: stepId", pipe_fn)
-        self.assertIn("label: entry.kind === 'branch-block' ? 'Routing' : (entry.title || 'Detection')", pipe_fn)
+        self.assertIn("step.kind === 'routing_component' ? 'Routing'", pipe_fn)
         self.assertNotIn("flowOrigin: 'illumination'", pipe_fn)
         self.assertNotIn("flowOrigin: 'detection'", pipe_fn)
 
