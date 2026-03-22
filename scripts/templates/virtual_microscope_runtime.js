@@ -1805,7 +1805,7 @@
       return grid.map(() => 1);
     }
     if (type === 'analyzer') {
-      console.warn('[VM] componentMask: analyzer "' + cleanString(component.name || component.label) + '" treated as spectrally transparent — polarization effects are not modeled.');
+      console.warn('[VM] componentMask: analyzer "' + cleanString(component.name || component.label) + '" treated as spectrally transparent — polarization effects are not modeled. Results may not reflect polarization-dependent behavior.');
       return grid.map(() => 1);
     }
     if (type === 'block' || type === 'blocker') {
@@ -1874,13 +1874,14 @@
           if (em) mask = mask.map((v, i) => v * componentMask(em, grid, { mode: 'emission' })[i]);
         }
         if (component._cube_incomplete) {
-          console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" applied with incomplete sub-component data.');
+          console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" missing excitation filter data; using estimated dichroic + emission only.');
         }
         return mask;
       }
-      // Flat fallback: bands only — this should not happen for properly authored
-      // cubes.  Log a warning so the caller knows the cube was reduced.
-      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no linked sub-components; treating as emission-only filter.');
+      // Flat fallback: bands only — used when a filter_cube reaches componentMask
+      // without having been expanded into sub-components by expandCubeSelection
+      // (e.g. legacy payload or direct componentMask call).
+      console.warn('[VM] componentMask: filter_cube "' + cleanString(component.label || component.name) + '" has no linked sub-components; treating as emission-only filter. Add excitation_filter/dichroic/emission_filter properties for full cube modeling.');
       const bands = normalizedBandMasks(grid, component.bands);
       if (bands.length) return sumMasks(bands, grid);
       const center = numberOrNull(component.center_nm);
