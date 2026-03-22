@@ -3029,6 +3029,12 @@
       });
   }
 
+  function errorMessage(error) {
+    const message = cleanString(error && error.message);
+    if (message) return message;
+    return cleanString(String(error)) || 'Unknown error';
+  }
+
   function refreshOutputs() {
 
     if (!state.activeInstrumentRaw || !state.activeInstrument) return;
@@ -3044,28 +3050,49 @@
     enforceValidStageOptions();
     const selection = collectRuntimeSelection();
     const fluorophores = mapToArray(state.loadedProteins);
-    let simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
-      preferTwoPhoton: state.preferTwoPhoton,
-      currentRoute: state.activeRoute,
-    });
-    if (!strictHardwareTruthMode() && autoRepairBlockedPath(selection, simulation)) {
-      enforceValidStageOptions();
-      const repairedSelection = collectRuntimeSelection();
-      simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {
+    let simulation;
+    try {
+      simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
         preferTwoPhoton: state.preferTwoPhoton,
         currentRoute: state.activeRoute,
       });
-      state.lastSelection = repairedSelection;
-      state.lastSimulation = simulation;
-      state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
-      persistSelectedConfiguration();
-      renderReferenceSpectra(repairedSelection, simulation);
-      renderPropagationPanel(repairedSelection, simulation);
-      updatePipelineBeamColors(repairedSelection, simulation);
-      renderSummary(repairedSelection, simulation);
-      renderDetectionChart(simulation);
-      renderScoreboard(simulation);
-      return;
+      if (!strictHardwareTruthMode() && autoRepairBlockedPath(selection, simulation)) {
+        enforceValidStageOptions();
+        const repairedSelection = collectRuntimeSelection();
+        simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {
+          preferTwoPhoton: state.preferTwoPhoton,
+          currentRoute: state.activeRoute,
+        });
+        state.lastSelection = repairedSelection;
+        state.lastSimulation = simulation;
+        state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
+        persistSelectedConfiguration();
+        renderReferenceSpectra(repairedSelection, simulation);
+        renderPropagationPanel(repairedSelection, simulation);
+        updatePipelineBeamColors(repairedSelection, simulation);
+        renderSummary(repairedSelection, simulation);
+        renderDetectionChart(simulation);
+        renderScoreboard(simulation);
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to refresh simulation outputs', error);
+      const message = `Error loading fluorophore: ${errorMessage(error)}`;
+      setInlineStatus(DOM.searchStatus, message, 'error');
+      setInlineStatus(DOM.localSearchStatus, message, 'error');
+      simulation = {
+        grid: VM.wavelengthGrid(state.activeInstrument && state.activeInstrument.metadata && state.activeInstrument.metadata.wavelength_grid),
+        excitationAtSample: [],
+        emittedSpectra: [],
+        pathSpectra: [],
+        selectedSources: (Array.isArray(selection.sources) ? selection.sources : []).map((source) => source.display_label || source.name || 'Source'),
+        selectedDetectors: (Array.isArray(selection.detectors) ? selection.detectors : []).map((detector) => detector.display_label || detector.name || 'Detector'),
+        validSelection: false,
+        routeViolation: true,
+        routeViolationDetails: [errorMessage(error)],
+        results: [],
+        crosstalkMatrix: {},
+      };
     }
     state.lastSelection = selection;
     state.lastSimulation = simulation;
