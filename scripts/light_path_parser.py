@@ -706,14 +706,7 @@ def _resolve_position_candidate_payload(
     fallback_key: str | None = None,
     fallback_slot: int | None = None,
 ) -> tuple[dict[str, Any], str | None, str | None, str | None]:
-    """Resolve one authored position object into a parser-authoritative payload.
-
-    This helper preserves exact authored position identity whenever available and
-    resolves wrapper-style positions consistently with the rest of the parser.
-
-    Returns:
-        (component_payload, position_id, position_key, position_label)
-    """
+    """Resolve one authored position object into a parser-authoritative payload."""
     if not isinstance(position, dict):
         return {}, None, None, None
 
@@ -730,9 +723,19 @@ def _resolve_position_candidate_payload(
             default_name=default_name,
         )
     elif any(isinstance(position.get(link_key), dict) for link_key in CUBE_LINK_KEYS):
+        linked_components: dict[str, dict[str, Any]] = {}
+        for link_key in CUBE_LINK_KEYS:
+            raw_link = position.get(link_key)
+            if isinstance(raw_link, dict):
+                linked_components[link_key] = _component_payload(
+                    raw_link,
+                    default_name=_resolve_cube_link_label(link_key),
+                )
+
         component_payload = dict(position)
         component_payload.setdefault("component_type", "filter_cube")
         component_payload.setdefault("type", component_payload.get("component_type"))
+        component_payload.setdefault("name", _clean_string(position.get("name")) or default_name)
         component_payload.setdefault(
             "label",
             _clean_string(position.get("label") or position.get("name") or default_name),
@@ -741,7 +744,28 @@ def _resolve_position_candidate_payload(
             "display_label",
             _clean_string(position.get("display_label") or position.get("label") or position.get("name") or default_name),
         )
-        component_payload.setdefault("spectral_ops", _cube_spectral_ops(component_payload))
+        component_payload.setdefault("details", _build_details(position))
+        component_payload["linked_components"] = linked_components
+        for link_key, linked_component in linked_components.items():
+            component_payload[link_key] = linked_component
+
+        routes = _normalize_routes(
+            position.get("path")
+            or position.get("paths")
+            or position.get("route")
+            or position.get("routes")
+            or parent_element.get("path")
+            or parent_element.get("routes")
+        )
+        if routes:
+            component_payload["routes"] = routes
+            component_payload["path"] = routes[0]
+
+        if linked_components and "excitation_filter" not in linked_components:
+            component_payload.setdefault("_cube_incomplete", True)
+            component_payload.setdefault("_unsupported_spectral_model", True)
+
+        component_payload["spectral_ops"] = _cube_spectral_ops(component_payload)
     else:
         component_payload = _component_payload(position, default_name=default_name)
 
@@ -769,7 +793,6 @@ def _resolve_position_candidate_payload(
         position_key or None,
         position_label or None,
     )
-
 
 def _position_id_matches_element(element: dict[str, Any], position_id: Any) -> bool:
     """Return True if *position_id* matches an authored position on *element*."""
@@ -2137,39 +2160,38 @@ def _infer_default_terminals(
             _append_inferred_terminal(terminals, "eyepiece", name="Eyepieces", path=route_hint, default_enabled=default_enable)
 
 def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any]) -> dict[str, Any]:
-    raw_positions = mechanism.get("positions", {})
     positions: list[dict[str, Any]] = []
 
-    if isinstance(raw_positions, dict):
-        normalized_positions = sorted(
-            (
-                (_coerce_slot_key(slot), slot, component)
-                for slot, component in raw_positions.items()
-            ),
-            key=lambda item: (item[0] is None, item[0]),
+    for key_text, slot, position in _iter_element_positions(mechanism):
+        if slot is None or not isinstance(position, dict):
+            continue
+
+        component_payload, authored_position_id, position_key, position_label = _resolve_position_candidate_payload(
+            position,
+            parent_element=mechanism,
+            fallback_key=key_text,
+            fallback_slot=slot,
         )
-        for slot, original_key, position in normalized_positions:
-            if slot is None or not isinstance(position, dict):
-                continue
+        if not component_payload:
+            continue
 
-            component_payload, authored_position_id, position_key, position_label = _resolve_position_candidate_payload(
-                position,
-                parent_element=mechanism,
-                fallback_key=str(original_key),
-                fallback_slot=slot,
-            )
-            if not component_payload:
-                continue
+        component_payload["slot"] = slot
+        component_payload["position_key"] = position_key or key_text or str(slot)
+        if authored_position_id:
+            component_payload["id"] = authored_position_id
+            component_payload["position_id"] = authored_position_id
+        component_payload["display_label"] = (
+            f"Slot {slot}: "
+            f"{position_label or component_payload.get('label') or component_payload.get('display_label') or key_text or str(slot)}"
+        )
+        positions.append(component_payload)
 
-            component_payload["slot"] = slot
-            component_payload["position_key"] = position_key or str(original_key)
-            if authored_position_id:
-                component_payload["id"] = authored_position_id
-                component_payload["position_id"] = authored_position_id
-            component_payload["display_label"] = f"Slot {slot}: {position_label or component_payload.get('label') or component_payload.get('display_label') or str(original_key)}"
-            positions.append(component_payload)
-
-    stage_label = resolve_stage_role_label(stage_prefix) if _active_vocab is not None else stage_prefix.replace("_", " ").title()
+    stage_label_key = {"exc": "excitation", "em": "emission"}.get(stage_prefix, stage_prefix)
+    stage_label = (
+        resolve_stage_role_label(stage_label_key)
+        if _active_vocab is not None
+        else stage_label_key.replace("_", " ").title()
+    )
     mechanism_id = _clean_identifier(mechanism.get("id")) or f"{stage_prefix}_mech_{index}"
 
     mechanism_payload = {
@@ -2268,109 +2290,106 @@ def _estimate_dichroic_cut_on(
 
 
 def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, Any]:
-    raw_positions = mechanism.get("positions", {})
     positions: list[dict[str, Any]] = []
 
-    if isinstance(raw_positions, dict):
-        normalized_positions = sorted(
-            (
-                (_coerce_slot_key(slot), slot, cube_position)
-                for slot, cube_position in raw_positions.items()
-            ),
-            key=lambda item: (item[0] is None, item[0]),
-        )
-        for slot, original_key, cube_position in normalized_positions:
-            if slot is None or not isinstance(cube_position, dict):
-                continue
+    for key_text, slot, cube_position in _iter_element_positions(mechanism):
+        if slot is None or not isinstance(cube_position, dict):
+            continue
 
-            linked_components: dict[str, dict[str, Any]] = {}
-            for link_key in CUBE_LINK_KEYS:
-                component = cube_position.get(link_key)
-                if not isinstance(component, dict):
-                    continue
-                linked_components[link_key] = _component_payload(
-                    component,
-                    default_name=_resolve_cube_link_label(link_key),
+        linked_components: dict[str, dict[str, Any]] = {}
+        for link_key in CUBE_LINK_KEYS:
+            component = cube_position.get(link_key)
+            if not isinstance(component, dict):
+                continue
+            linked_components[link_key] = _component_payload(
+                component,
+                default_name=_resolve_cube_link_label(link_key),
+            )
+
+        cube_label = cube_position.get("name") or f"Cube {slot}"
+        if not linked_components and _clean_string(cube_position.get("component_type")).lower() == "filter_cube":
+            bands = cube_position.get("bands")
+            cut_on_nm = cube_position.get("cut_on_nm")
+            synth: dict[str, Any] = {"name": cube_label}
+
+            if isinstance(bands, list) and len(bands) > 1:
+                synth["component_type"] = "multiband_bandpass"
+                synth["bands"] = bands
+            elif isinstance(bands, list) and len(bands) == 1:
+                synth["component_type"] = "bandpass"
+                synth["bands"] = bands
+                band = bands[0]
+                if isinstance(band, dict):
+                    if band.get("center_nm") is not None:
+                        synth["center_nm"] = band["center_nm"]
+                    if band.get("width_nm") is not None:
+                        synth["width_nm"] = band["width_nm"]
+            elif isinstance(cut_on_nm, list) and cut_on_nm:
+                synth["component_type"] = "longpass"
+                synth["cut_on_nm"] = _coerce_number(cut_on_nm[0])
+            elif _coerce_number(cut_on_nm) is not None:
+                synth["component_type"] = "longpass"
+                synth["cut_on_nm"] = _coerce_number(cut_on_nm)
+            else:
+                synth["component_type"] = "bandpass"
+
+            if synth.get("component_type"):
+                linked_components["emission_filter"] = _component_payload(
+                    synth,
+                    default_name=cube_label,
                 )
 
-            cube_label = cube_position.get("name") or f"Cube {slot}"
-            if not linked_components and _clean_string(cube_position.get("component_type")).lower() == "filter_cube":
-                bands = cube_position.get("bands")
-                cut_on_nm = cube_position.get("cut_on_nm")
-                synth: dict[str, Any] = {"name": cube_label}
-                if isinstance(bands, list) and len(bands) > 1:
-                    synth["component_type"] = "multiband_bandpass"
-                    synth["bands"] = bands
-                elif isinstance(bands, list) and len(bands) == 1:
-                    synth["component_type"] = "bandpass"
-                    synth["bands"] = bands
-                    band = bands[0]
-                    if isinstance(band, dict):
-                        if band.get("center_nm") is not None:
-                            synth["center_nm"] = band["center_nm"]
-                        if band.get("width_nm") is not None:
-                            synth["width_nm"] = band["width_nm"]
-                elif isinstance(cut_on_nm, list) and cut_on_nm:
-                    synth["component_type"] = "longpass"
-                    synth["cut_on_nm"] = _coerce_number(cut_on_nm[0])
-                elif _coerce_number(cut_on_nm) is not None:
-                    synth["component_type"] = "longpass"
-                    synth["cut_on_nm"] = _coerce_number(cut_on_nm)
-                else:
-                    synth["component_type"] = "bandpass"
+            dichroic_cut_on = _estimate_dichroic_cut_on(bands, cut_on_nm)
+            if dichroic_cut_on is not None:
+                linked_components["dichroic"] = _component_payload(
+                    {
+                        "name": f"{cube_label} (dichroic)",
+                        "component_type": "dichroic",
+                        "cut_on_nm": dichroic_cut_on,
+                    },
+                    default_name=f"{cube_label} (dichroic)",
+                )
 
-                if synth.get("component_type"):
-                    linked_components["emission_filter"] = _component_payload(
-                        synth,
-                        default_name=cube_label,
-                    )
+        authored_position_id = (
+            _clean_string(cube_position.get("id"))
+            or _clean_string(cube_position.get("position_key"))
+            or key_text
+            or str(slot)
+        )
+        position_payload: dict[str, Any] = {
+            "id": authored_position_id,
+            "position_id": authored_position_id,
+            "slot": slot,
+            "position_key": _clean_string(cube_position.get("position_key")) or key_text or str(slot),
+            "type": "cube",
+            "component_type": "filter_cube",
+            "label": cube_label,
+            "display_label": cube_label,
+            "details": _build_details(cube_position),
+            "linked_components": linked_components,
+            "excitation_filter": linked_components.get("excitation_filter"),
+            "dichroic": linked_components.get("dichroic"),
+            "emission_filter": linked_components.get("emission_filter"),
+        }
 
-                dichroic_cut_on = _estimate_dichroic_cut_on(bands, cut_on_nm)
-                if dichroic_cut_on is not None:
-                    linked_components["dichroic"] = _component_payload(
-                        {
-                            "name": f"{cube_label} (dichroic)",
-                            "component_type": "dichroic",
-                            "cut_on_nm": dichroic_cut_on,
-                        },
-                        default_name=f"{cube_label} (dichroic)",
-                    )
+        if linked_components and "excitation_filter" not in linked_components:
+            position_payload["_cube_incomplete"] = True
+            position_payload["_unsupported_spectral_model"] = True
 
-            authored_position_id = _clean_string(cube_position.get("id")) or str(original_key)
-            position_payload: dict[str, Any] = {
-                "id": authored_position_id,
-                "position_id": authored_position_id,
-                "slot": slot,
-                "position_key": _clean_string(cube_position.get("position_key")) or str(original_key),
-                "type": "cube",
-                "component_type": "filter_cube",
-                "label": cube_label,
-                "display_label": cube_label,
-                "details": _build_details(cube_position),
-                "linked_components": linked_components,
-                "excitation_filter": linked_components.get("excitation_filter"),
-                "dichroic": linked_components.get("dichroic"),
-                "emission_filter": linked_components.get("emission_filter"),
-            }
+        position_payload["spectral_ops"] = _cube_spectral_ops(position_payload)
 
-            if linked_components and "excitation_filter" not in linked_components:
-                position_payload["_cube_incomplete"] = True
-                position_payload["_unsupported_spectral_model"] = True
+        routes = _normalize_routes(
+            cube_position.get("path")
+            or cube_position.get("paths")
+            or cube_position.get("route")
+            or cube_position.get("routes")
+            or mechanism.get("path")
+        )
+        if routes:
+            position_payload["routes"] = routes
+            position_payload["path"] = routes[0]
 
-            position_payload["spectral_ops"] = _cube_spectral_ops(position_payload)
-
-            routes = _normalize_routes(
-                cube_position.get("path")
-                or cube_position.get("paths")
-                or cube_position.get("route")
-                or cube_position.get("routes")
-                or mechanism.get("path")
-            )
-            if routes:
-                position_payload["routes"] = routes
-                position_payload["path"] = routes[0]
-
-            positions.append(position_payload)
+        positions.append(position_payload)
 
     mechanism_id = _clean_identifier(mechanism.get("id")) or f"cube_mech_{index}"
     mechanism_payload: dict[str, Any] = {
@@ -2400,7 +2419,6 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
         mechanism_payload["notes"] = mechanism["notes"].strip()
 
     return mechanism_payload
-
 
 def _route_tags(selection: dict[str, Any]) -> set[str]:
     tags: set[str] = set()
@@ -3541,6 +3559,16 @@ def _build_route_sequences_and_graph(
     edge_counter = 0
     branch_counter = 0
 
+    def _dedupe_ids(values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for value in values:
+            if not value or value in seen:
+                continue
+            seen.add(value)
+            ordered.append(value)
+        return ordered
+
     def register_usage(inventory_id: str, phase: str) -> None:
         if not inventory_id:
             return
@@ -3632,36 +3660,46 @@ def _build_route_sequences_and_graph(
         sequence: list[dict[str, Any]],
         *,
         phase: str,
-        prev_node_id: str | None,
+        prev_node_ids: list[str],
         column: int,
         lane: int,
-    ) -> tuple[list[dict[str, Any]], str | None, int]:
+    ) -> tuple[list[dict[str, Any]], list[str], int]:
         nonlocal branch_counter
         resolved_steps: list[dict[str, Any]] = []
-        current_prev = prev_node_id
+        current_prev_ids = _dedupe_ids(list(prev_node_ids))
         current_column = column
+
         for step in sequence:
             if not isinstance(step, dict):
                 continue
+
             branch_block = step.get("branches")
             if isinstance(branch_block, dict):
                 branch_counter += 1
                 branch_block_id = f"{route['id']}_branch_block_{branch_counter}"
                 resolved_branches: list[dict[str, Any]] = []
                 branch_columns: list[int] = [current_column]
+                merged_tail_ids: list[str] = []
+
                 for branch_index, branch in enumerate(branch_block.get("items") or [], start=1):
                     if not isinstance(branch, dict):
                         continue
+
                     branch_id = _clean_identifier(branch.get("branch_id")) or f"branch_{branch_index}"
                     branch_label = _clean_string(branch.get("label")) or _resolve_route_label(branch_id)
-                    branch_sequence, branch_tail_id, branch_column = walk_sequence(
+
+                    branch_sequence, branch_tail_ids, branch_column = walk_sequence(
                         branch.get("sequence") or [],
                         phase=phase,
-                        prev_node_id=current_prev,
+                        prev_node_ids=list(current_prev_ids),
                         column=current_column + 1,
                         lane=lane + branch_index - 1,
                     )
                     branch_columns.append(branch_column)
+
+                    effective_tail_ids = _dedupe_ids(branch_tail_ids or list(current_prev_ids))
+                    merged_tail_ids.extend(effective_tail_ids)
+
                     branch_inventory_ids = [
                         item.get("hardware_inventory_id")
                         for item in branch_sequence
@@ -3678,11 +3716,13 @@ def _build_route_sequences_and_graph(
                             "label": branch_label,
                             "mode": _clean_string(branch.get("mode")).lower() or None,
                             "sequence": branch_sequence,
-                            "tail_node_id": branch_tail_id,
+                            "tail_node_id": effective_tail_ids[0] if len(effective_tail_ids) == 1 else None,
+                            "tail_node_ids": effective_tail_ids,
                             "hardware_inventory_ids": branch_inventory_ids,
                             "endpoint_inventory_ids": branch_endpoint_ids,
                         }
                     )
+
                 usage["branch_blocks"].append(
                     {
                         "id": branch_block_id,
@@ -3721,12 +3761,14 @@ def _build_route_sequences_and_graph(
                         ),
                     }
                 )
+                current_prev_ids = _dedupe_ids(merged_tail_ids) or list(current_prev_ids)
                 current_column = max(branch_columns) if branch_columns else current_column
                 continue
 
             ref_key = next((candidate for candidate in ("source_id", "optical_path_element_id", "endpoint_id") if step.get(candidate)), "")
             if not ref_key:
                 continue
+
             resolved = resolve_step(step)
             if ref_key == "optical_path_element_id":
                 element_id = _clean_identifier(step.get("optical_path_element_id"))
@@ -3747,26 +3789,30 @@ def _build_route_sequences_and_graph(
                     resolved["_unsupported_spectral_model"] = True
                 if _clean_string(component_payload.get("component_type")):
                     resolved["component_type"] = _clean_string(component_payload.get("component_type")).lower()
-            if ref_key == "optical_path_element_id":
                 resolved["_authored_position_id"] = _clean_string(step.get("position_id")) or None
+
             node_id = add_graph_node(resolved, phase=phase, column=current_column, lane=lane)
-            if current_prev:
-                add_graph_edge(current_prev, node_id)
+            for prev_id in current_prev_ids:
+                add_graph_edge(prev_id, node_id)
+
             sequence_ref = {ref_key: resolved.get("id")}
             if ref_key == "optical_path_element_id" and _clean_string(step.get("position_id")):
                 sequence_ref["position_id"] = _clean_string(step.get("position_id"))
-            resolved_steps.append({**resolved, "node_id": node_id, "sequence_ref": sequence_ref})
-            current_prev = node_id
-            current_column += 1
-        return resolved_steps, current_prev, current_column
 
-    illumination_sequence, illumination_tail, next_column = walk_sequence(
+            resolved_steps.append({**resolved, "node_id": node_id, "sequence_ref": sequence_ref})
+            current_prev_ids = [node_id]
+            current_column += 1
+
+        return resolved_steps, current_prev_ids, current_column
+
+    illumination_sequence, illumination_tail_ids, next_column = walk_sequence(
         route.get("illumination_sequence") or [],
         phase="illumination",
-        prev_node_id=None,
+        prev_node_ids=[],
         column=0,
         lane=0,
     )
+
     sample_node_id = f"{route['id']}_sample"
     graph_nodes.append(
         {
@@ -3782,12 +3828,13 @@ def _build_route_sequences_and_graph(
             "lane": 0,
         }
     )
-    if illumination_tail:
-        add_graph_edge(illumination_tail, sample_node_id)
+    for tail_id in illumination_tail_ids:
+        add_graph_edge(tail_id, sample_node_id)
+
     detection_sequence, _, _ = walk_sequence(
         route.get("detection_sequence") or [],
         phase="detection",
-        prev_node_id=sample_node_id,
+        prev_node_ids=[sample_node_id],
         column=next_column + 1,
         lane=0,
     )
@@ -3986,11 +4033,21 @@ def _generate_virtual_microscope_payload_inner(instrument_dict: dict, *, include
             detector_group["routes"] = terminal.get("routes")
             detector_group["path"] = terminal.get("path")
         payload["detectors"].append(detector_group)
-
+    
     if include_inferred_terminals:
+        _infer_default_terminals(instrument_dict, payload["splitters"], payload["terminals"])
         payload["metadata"]["uses_inferred_terminals"] = True
-
-    payload["metadata"]["graph_incomplete"] = len(payload["terminals"]) == 0
+    
+    payload["metadata"]["graph_incomplete"] = (
+        len(payload["terminals"]) == 0
+        or any(
+            not branch.get("target_ids")
+            for splitter in payload["splitters"]
+            if isinstance(splitter, dict)
+            for branch in splitter.get("branches", [])
+            if isinstance(branch, dict)
+        )
+    )    
 
     derived_route_splitters = _collect_route_owned_splitters(light_paths, elements, endpoints)
 
