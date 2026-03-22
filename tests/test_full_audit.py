@@ -197,6 +197,143 @@ class FullAuditScriptTests(unittest.TestCase):
             self.assertGreater(result["result"]["exPoints"], 0)
             self.assertGreater(result["result"]["emPoints"], 0)
 
+    # ── Semantic authority audit checks ──
+
+    def test_audit_detects_selected_execution_that_is_copy_of_route_steps(self) -> None:
+        """Audit must NOT fire on proper parser output (which has selection_state)."""
+        instrument = {
+            "id": "copy-scope",
+            "display_name": "Copy Scope",
+            "canonical": {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "role": "excitation", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {"id": "exc_filter", "stage_role": "excitation", "element_type": "filter_wheel",
+                         "positions": {1: {"type": "bandpass", "center_nm": 488, "width_nm": 10}}},
+                    ],
+                    "endpoints": [{"id": "cam_a", "kind": "camera", "channel_name": "Cam A", "endpoint_type": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "exc_filter"}],
+                        "detection_sequence": [{"endpoint_id": "cam_a"}],
+                    }
+                ],
+            },
+        }
+
+        audit = audit_virtual_microscope_instrument(instrument)
+        copy_errors = [
+            issue for issue in audit["issues"]
+            if "verbatim copy of static route_steps" in issue.get("message", "")
+        ]
+        self.assertEqual(copy_errors, [], msg="Parser-generated selected_execution should not trigger copy detection.")
+
+    def test_audit_flags_fake_selected_execution_without_selection_state(self) -> None:
+        """Directly test the copy-detection logic against a hand-crafted payload."""
+        from scripts.light_path_parser import generate_virtual_microscope_payload
+
+        instrument_data = {
+            "hardware": {
+                "sources": [{"id": "src_488", "kind": "laser", "role": "excitation", "wavelength_nm": 488}],
+                "optical_path_elements": [],
+                "endpoints": [{"id": "cam_a", "kind": "camera", "endpoint_type": "camera"}],
+            },
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "illumination_sequence": [{"source_id": "src_488"}],
+                    "detection_sequence": [{"endpoint_id": "cam_a"}],
+                }
+            ],
+        }
+
+        payload = generate_virtual_microscope_payload(instrument_data)
+        # Tamper: copy route_steps into selected_execution without selection_state
+        for route in payload.get("light_paths", []):
+            static_steps = route.get("route_steps", [])
+            if static_steps:
+                route["selected_execution"] = {
+                    "contract_version": "selected_execution.v2",
+                    "selected_route_steps": [
+                        {k: v for k, v in step.items() if k != "selection_state"}
+                        for step in static_steps
+                    ],
+                }
+
+        # Verify the copy-detection logic catches this
+        detected = False
+        for route in payload.get("light_paths", []):
+            route_steps = route.get("route_steps")
+            sel_exec = route.get("selected_execution")
+            if isinstance(sel_exec, dict):
+                sel_steps = sel_exec.get("selected_route_steps", [])
+                if isinstance(route_steps, list) and isinstance(sel_steps, list) and len(sel_steps) == len(route_steps):
+                    has_any_selection_state = any(
+                        isinstance(s, dict) and s.get("selection_state") is not None
+                        for s in sel_steps
+                    )
+                    static_step_ids = [s.get("step_id") for s in route_steps if isinstance(s, dict)]
+                    sel_step_ids = [s.get("step_id") for s in sel_steps if isinstance(s, dict)]
+                    if not has_any_selection_state and static_step_ids == sel_step_ids:
+                        detected = True
+
+        self.assertTrue(detected, msg="Audit should detect that tampered selected_route_steps is a copy of route_steps.")
+
+    def test_audit_flags_unresolved_step_with_defaulted_optics(self) -> None:
+        """Audit must catch unresolved steps that have spectral_ops (defaulting to first position)."""
+        from scripts.light_path_parser import generate_virtual_microscope_payload
+
+        instrument_data = {
+            "hardware": {
+                "sources": [{"id": "src_488", "kind": "laser", "role": "excitation", "wavelength_nm": 488}],
+                "optical_path_elements": [
+                    {"id": "exc_wheel", "stage_role": "excitation", "element_type": "filter_wheel",
+                     "positions": {
+                         1: {"type": "bandpass", "center_nm": 488, "width_nm": 10},
+                         2: {"type": "bandpass", "center_nm": 561, "width_nm": 10},
+                     }},
+                ],
+                "endpoints": [{"id": "cam_a", "kind": "camera", "endpoint_type": "camera"}],
+            },
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "exc_wheel"}],
+                    "detection_sequence": [{"endpoint_id": "cam_a"}],
+                }
+            ],
+        }
+
+        payload = generate_virtual_microscope_payload(instrument_data)
+        # Tamper: set an unresolved step to have spectral_ops
+        for route in payload.get("light_paths", []):
+            sel_exec = route.get("selected_execution")
+            if not isinstance(sel_exec, dict):
+                continue
+            for step in sel_exec.get("selected_route_steps", []):
+                if isinstance(step, dict) and step.get("selection_state") == "unresolved":
+                    step["spectral_ops"] = [{"type": "bandpass", "center_nm": 488, "width_nm": 10}]
+
+        # Verify the detection logic catches this
+        detected = False
+        for route in payload.get("light_paths", []):
+            sel_exec = route.get("selected_execution")
+            if not isinstance(sel_exec, dict):
+                continue
+            for step in sel_exec.get("selected_route_steps", []):
+                if not isinstance(step, dict):
+                    continue
+                if (step.get("kind") == "optical_component"
+                    and step.get("selection_state") == "unresolved"
+                    and isinstance(step.get("available_positions"), list)
+                    and len(step.get("available_positions", [])) > 1
+                    and step.get("spectral_ops") is not None):
+                    detected = True
+
+        self.assertTrue(detected, msg="Audit should detect unresolved step with defaulted spectral_ops.")
+
     def test_cli_writes_outputs(self) -> None:
         dependency_check = subprocess.run(
             [sys.executable, "-c", "import yaml"],

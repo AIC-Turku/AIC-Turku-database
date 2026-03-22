@@ -349,19 +349,87 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                     }
                 )
             else:
+                # ── Semantic check 1: selected_route_steps must not be a copy of static route_steps ──
+                if isinstance(route_steps, list) and len(sel_steps) == len(route_steps):
+                    has_any_selection_state = any(
+                        isinstance(s, dict) and s.get("selection_state") is not None
+                        for s in sel_steps
+                    )
+                    static_step_ids = [s.get("step_id") for s in route_steps if isinstance(s, dict)]
+                    sel_step_ids = [s.get("step_id") for s in sel_steps if isinstance(s, dict)]
+                    if not has_any_selection_state and static_step_ids == sel_step_ids:
+                        issues.append(
+                            {
+                                "severity": "error",
+                                "field": f"light_paths[{route_idx}].selected_execution.selected_route_steps",
+                                "message": (
+                                    f"Route '{route.get('id')}' selected_route_steps appears to be a verbatim copy of static route_steps "
+                                    f"(no selection_state on any step). The parser must enrich steps with selection_state semantics."
+                                ),
+                            }
+                        )
+
                 for sel_step_idx, sel_step in enumerate(sel_steps):
                     if not isinstance(sel_step, dict):
                         continue
                     kind = sel_step.get("kind")
                     state = sel_step.get("selection_state")
-                    if kind == "optical_component" and state != "unresolved" and sel_step.get("spectral_ops") is None and sel_step.get("unsupported_reason") is None:
+
+                    # ── Structural check: resolved/fixed optical steps need spectral_ops or unsupported_reason ──
+                    if kind == "optical_component" and state not in ("unresolved", None) and sel_step.get("spectral_ops") is None and sel_step.get("unsupported_reason") is None:
                         issues.append(
                             {
                                 "severity": "warning",
                                 "field": f"light_paths[{route_idx}].selected_execution.selected_route_steps[{sel_step_idx}]",
-                                "message": f"Optical component step '{sel_step.get('route_step_id')}' has no spectral_ops and no unsupported_reason.",
+                                "message": f"Optical component step '{sel_step.get('step_id') or sel_step.get('route_step_id')}' has no spectral_ops and no unsupported_reason.",
                             }
                         )
+
+                    # ── Semantic check 2: unresolved mechanism steps must not default to first position optics ──
+                    if kind == "optical_component" and state == "unresolved":
+                        available = sel_step.get("available_positions")
+                        if isinstance(available, list) and len(available) > 1 and sel_step.get("spectral_ops") is not None:
+                            issues.append(
+                                {
+                                    "severity": "error",
+                                    "field": f"light_paths[{route_idx}].selected_execution.selected_route_steps[{sel_step_idx}]",
+                                    "message": (
+                                        f"Unresolved step '{sel_step.get('step_id') or sel_step.get('route_step_id')}' has spectral_ops "
+                                        f"despite being unresolved with {len(available)} available positions. "
+                                        f"Unresolved steps must not default to first-position optics."
+                                    ),
+                                }
+                            )
+
+                # ── Semantic check 3: detect unresolved splitter branch-local optics with passthrough fallbacks ──
+                routing_steps = [s for s in sel_steps if isinstance(s, dict) and s.get("kind") == "routing_component"]
+                for rs in routing_steps:
+                    routing = rs.get("routing")
+                    if not isinstance(routing, dict):
+                        continue
+                    for branch in routing.get("branches", []):
+                        if not isinstance(branch, dict):
+                            continue
+                        for branch_step in branch.get("sequence", []):
+                            if not isinstance(branch_step, dict):
+                                continue
+                            if branch_step.get("kind") != "optical_component":
+                                continue
+                            ops = branch_step.get("spectral_ops")
+                            if isinstance(ops, list) and len(ops) == 1:
+                                op = ops[0]
+                                if isinstance(op, dict) and op.get("type") == "passthrough" and op.get("unsupported_reason"):
+                                    warnings.append(
+                                        {
+                                            "severity": "warning",
+                                            "field": f"light_paths[{route_idx}].selected_execution.routing_branch_optics",
+                                            "message": (
+                                                f"Splitter branch step '{branch_step.get('step_id') or branch_step.get('component_id')}' in route "
+                                                f"'{route.get('id')}' has only a passthrough fallback (reason: {op.get('unsupported_reason')}). "
+                                                f"Branch-local optics may be incompletely resolved."
+                                            ),
+                                        }
+                                    )
 
     return {
         "instrument_id": instrument.get("id"),
