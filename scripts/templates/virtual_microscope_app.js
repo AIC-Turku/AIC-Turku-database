@@ -829,8 +829,9 @@
     }
     const buildResolvedTraversal = (steps, phase, prefix, requireStepId) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
       if (!(step && typeof step === 'object')) return [];
-      const stepId = cleanString(step.step_id) || `${prefix}:${phase}:step:${index}`;
-      if (requireStepId && !cleanString(step.step_id)) {
+      const parserStepId = cleanString(step.step_id);
+      const stepId = parserStepId || `${prefix}:${phase}:step:${index}`;
+      if (requireStepId && !parserStepId) {
         throw new Error('[VM] buildRouteTraversalEntries: parser route step is missing step_id for phase "' + phase + '".');
       }
       if (step.kind === 'routing_component') {
