@@ -89,6 +89,10 @@
     return null;
   }
 
+  function componentLabel(component, fallback) {
+    return (component && (component.display_label || component.name)) || fallback;
+  }
+
   function rgbaFromHex(hex, alpha) {
     const cleaned = String(hex || '').replace('#', '');
     if (cleaned.length !== 6) return `rgba(59, 130, 246, ${alpha})`;
@@ -3029,6 +3033,12 @@
       });
   }
 
+  function errorMessage(error) {
+    const message = cleanString(error?.message);
+    if (message) return message;
+    return cleanString(String(error)) || 'Unknown error';
+  }
+
   function refreshOutputs() {
 
     if (!state.activeInstrumentRaw || !state.activeInstrument) return;
@@ -3044,28 +3054,51 @@
     enforceValidStageOptions();
     const selection = collectRuntimeSelection();
     const fluorophores = mapToArray(state.loadedProteins);
-    let simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
-      preferTwoPhoton: state.preferTwoPhoton,
-      currentRoute: state.activeRoute,
-    });
-    if (!strictHardwareTruthMode() && autoRepairBlockedPath(selection, simulation)) {
-      enforceValidStageOptions();
-      const repairedSelection = collectRuntimeSelection();
-      simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {
+    let simulation;
+    try {
+      simulation = VM.simulateInstrument(state.activeInstrumentRaw, selection, fluorophores, {
         preferTwoPhoton: state.preferTwoPhoton,
         currentRoute: state.activeRoute,
       });
-      state.lastSelection = repairedSelection;
-      state.lastSimulation = simulation;
-      state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
-      persistSelectedConfiguration();
-      renderReferenceSpectra(repairedSelection, simulation);
-      renderPropagationPanel(repairedSelection, simulation);
-      updatePipelineBeamColors(repairedSelection, simulation);
-      renderSummary(repairedSelection, simulation);
-      renderDetectionChart(simulation);
-      renderScoreboard(simulation);
-      return;
+      if (!strictHardwareTruthMode() && autoRepairBlockedPath(selection, simulation)) {
+        enforceValidStageOptions();
+        const repairedSelection = collectRuntimeSelection();
+        simulation = VM.simulateInstrument(state.activeInstrumentRaw, repairedSelection, fluorophores, {
+          preferTwoPhoton: state.preferTwoPhoton,
+          currentRoute: state.activeRoute,
+        });
+        state.lastSelection = repairedSelection;
+        state.lastSimulation = simulation;
+        state.lastSelectedConfiguration = buildSelectedConfiguration(repairedSelection, simulation);
+        persistSelectedConfiguration();
+        renderReferenceSpectra(repairedSelection, simulation);
+        renderPropagationPanel(repairedSelection, simulation);
+        updatePipelineBeamColors(repairedSelection, simulation);
+        renderSummary(repairedSelection, simulation);
+        renderDetectionChart(simulation);
+        renderScoreboard(simulation);
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to refresh simulation outputs', error);
+      const message = `Error simulating instrument: ${errorMessage(error)}`;
+      setInlineStatus(DOM.searchStatus, message, 'error');
+      setInlineStatus(DOM.localSearchStatus, message, 'error');
+      simulation = {
+        grid: VM.wavelengthGrid(state.activeInstrument?.metadata?.wavelength_grid),
+        excitationAtSample: [],
+        emittedSpectra: [],
+        pathSpectra: [],
+        selectedSources: (Array.isArray(selection.sources) ? selection.sources : []).map((source) => componentLabel(source, 'Source')),
+        selectedDetectors: (Array.isArray(selection.detectors) ? selection.detectors : []).map((detector) => componentLabel(detector, 'Detector')),
+        validSelection: false,
+        routeViolation: false,
+        routeViolationDetails: [],
+        simulationError: true,
+        simulationErrorMessage: errorMessage(error),
+        results: [],
+        crosstalkMatrix: {},
+      };
     }
     state.lastSelection = selection;
     state.lastSimulation = simulation;

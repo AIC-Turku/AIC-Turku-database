@@ -295,6 +295,16 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("persistSelectedConfiguration", source)
         self.assertIn("aic.virtualMicroscope.selectedConfiguration", source)
 
+    def test_refresh_outputs_catches_simulation_errors_and_sets_inline_status(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("console.error('Failed to refresh simulation outputs', error);", source)
+        self.assertIn("const message = `Error simulating instrument: ${errorMessage(error)}`;", source)
+        self.assertIn("setInlineStatus(DOM.searchStatus, message, 'error');", source)
+        self.assertIn("setInlineStatus(DOM.localSearchStatus, message, 'error');", source)
+        self.assertIn("simulationError: true,", source)
+        self.assertIn("simulationErrorMessage: errorMessage(error),", source)
+
     # ── Stage adapter comment accuracy ──
 
     def test_stage_adapters_no_longer_document_fallback_roles(self) -> None:
