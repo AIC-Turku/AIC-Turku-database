@@ -43,6 +43,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);", source)
         self.assertIn("const illuminationComponents = Array.isArray(selection && selection.illuminationComponents) ? selection.illuminationComponents : [];", source)
         self.assertIn("const detectionComponents = Array.isArray(selection && selection.detectionComponents) ? selection.detectionComponents : [];", source)
+        self.assertIn("if (!step || step.kind !== 'routing_component') return;", source)
+        self.assertIn("stepSpectra.set(stepId, routedBranchSpectrum);", source)
         self.assertNotIn("const consumed = { excitation: 0, dichroic: 0, emission: 0 };", source)
 
     def test_source_settings_are_keyed_by_instrument_and_source_identity(self) -> None:
@@ -144,6 +146,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         pipe_fn = source.split("function buildPipelineStages")[1].split("\n  function ")[0]
         self.assertIn("flowOrigin: stepId", pipe_fn)
+        self.assertIn("label: entry.kind === 'branch-block' ? 'Routing' : (entry.title || 'Detection')", pipe_fn)
         self.assertNotIn("flowOrigin: 'illumination'", pipe_fn)
         self.assertNotIn("flowOrigin: 'detection'", pipe_fn)
 

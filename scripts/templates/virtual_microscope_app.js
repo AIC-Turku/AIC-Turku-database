@@ -157,7 +157,7 @@
     }
     const illumination = topology && topology.traversal && Array.isArray(topology.traversal.illumination) ? topology.traversal.illumination : [];
     illumination.forEach((entry, index) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      if (entry.kind === 'endpoint') return;
       const stepId = entry.routeStepId || ('illumination-step-' + index);
       stages.push({
         id: stepId,
@@ -170,12 +170,14 @@
     stages.push({ id: 'sample', key: 'pipe:sample:0', label: 'Sample', inspectorStage: 'sample', flowOrigin: 'sample' });
     const detection = topology && topology.traversal && Array.isArray(topology.traversal.detection) ? topology.traversal.detection : [];
     detection.forEach((entry, index) => {
-      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') return;
+      if (entry.kind === 'branch-block' || entry.kind === 'endpoint') {
+        if (entry.kind === 'endpoint') return;
+      }
       const stepId = entry.routeStepId || ('detection-step-' + index);
       stages.push({
         id: stepId,
         key: 'pipe:detection:' + index,
-        label: entry.title || 'Detection',
+        label: entry.kind === 'branch-block' ? 'Routing' : (entry.title || 'Detection'),
         inspectorStage: stepId,
         flowOrigin: stepId,
       });
@@ -411,7 +413,7 @@
       empty: grid.map(() => 0),
     };
 
-    const stepSpectra = buildStepSpectra(selection, grid, sourceMixed, generatedEmission);
+    const stepSpectra = buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation);
 
     const pipes = Array.from(DOM.graph.querySelectorAll('.optical-pipe'));
 
@@ -424,6 +426,7 @@
   }
 
   function buildStepSpectra(selection, grid, sourceMixed, generatedEmission) {
+    const simulation = arguments.length > 4 ? arguments[4] : (state.lastSimulation || null);
     const stepSpectra = new Map();
     stepSpectra.set('sources', sourceMixed);
     stepSpectra.set('sample', generatedEmission);
@@ -462,6 +465,27 @@
       if (component) runningDetect = applyComponent(runningDetect, component, 'emission');
       stepSpectra.set(entry.routeStepId, runningDetect.slice());
     });
+
+    const topologyRouteRecord = topology && topology.routeRecord ? topology.routeRecord : null;
+    const detectionRouteSteps = authoritativeRouteSteps(topologyRouteRecord).filter((step) => step && step.phase === 'detection');
+    const routedBranchSpectrum = sumSpectra(
+      Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [],
+      'preDetectorSpectrum',
+      grid
+    );
+    detectionRouteSteps.forEach((step) => {
+      if (!step || step.kind !== 'routing_component') return;
+      const stepId = cleanString(step.step_id);
+      if (!stepId) return;
+      stepSpectra.set(stepId, routedBranchSpectrum);
+    });
+
+    const detectorSpectrum = sumSpectra(
+      Array.isArray(simulation && simulation.pathSpectra) ? simulation.pathSpectra : [],
+      'spectrum',
+      grid
+    );
+    stepSpectra.set('detectors', detectorSpectrum);
 
     return stepSpectra;
   }
