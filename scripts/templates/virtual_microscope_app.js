@@ -2288,8 +2288,10 @@
       });
     });
 
-    selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination');
-    selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection');
+    const selectedRouteSteps = authoritativeRouteSteps(topology.routeRecord);
+    selection.resolvedExecution = resolveSelectedExecution(selectedRouteSteps, selection.selectedComponentByMechanism);
+    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination');
+    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection');
 
     return selection;
   }
@@ -2375,48 +2377,64 @@
     return config;
   }
 
-  function buildTraversalOrderedComponents(topology, selection, phase) {
-    const routeSteps = authoritativeRouteSteps(topology && topology.routeRecord ? topology.routeRecord : null);
-    if (!routeSteps.length) return [];
-    const entries = routeSteps.filter((step) => step && step.phase === phase);
-    if (!entries.length) return [];
-    const mode = phase === 'illumination' ? 'excitation' : 'emission';
-    const result = [];
-    const selectedByMechanism = (selection && selection.selectedComponentByMechanism && typeof selection.selectedComponentByMechanism === 'object')
-      ? selection.selectedComponentByMechanism
+  function resolveSelectedExecution(selectedRouteSteps, mechanismSelections) {
+    if (!Array.isArray(selectedRouteSteps)) return [];
+    const byMechanism = (mechanismSelections && typeof mechanismSelections === 'object')
+      ? mechanismSelections
       : {};
-    const controls = phase === 'illumination'
-      ? ((topology && topology.traversal && Array.isArray(topology.traversal.illumination)) ? topology.traversal.illumination : [])
-      : ((topology && topology.traversal && Array.isArray(topology.traversal.detection)) ? topology.traversal.detection : []);
-    const mechanismByStepId = new Map();
-    controls.forEach((entry) => {
-      if (!(entry && entry.routeStepId && entry.mechanism)) return;
-      mechanismByStepId.set(entry.routeStepId, {
-        mechanism: entry.mechanism,
-        stageKey: entry.stageKey,
-      });
+    return selectedRouteSteps.map((step) => {
+      if (!(step && typeof step === 'object')) return step;
+      if (step.selection_state !== 'unresolved') return step;
+      const mechanismId = cleanString(step.mechanism_id).toLowerCase();
+      const selectedComponent = mechanismId ? byMechanism[mechanismId] : null;
+      if (!selectedComponent) return step;
+      const positionKey = cleanString(selectedComponent.position_key);
+      const candidates = Array.isArray(step.available_positions) ? step.available_positions : [];
+      const matched = positionKey
+        ? candidates.find((cand) => cleanString(cand.position_key) === positionKey)
+        : null;
+      const resolvedOps = (matched && matched.spectral_ops) || selectedComponent.spectral_ops || null;
+      const resolvedLabel = cleanString(matched && matched.label) || cleanString(selectedComponent.display_label || selectedComponent.label || selectedComponent.name) || positionKey;
+      const resolvedComponentType = cleanString((matched && matched.component_type) || selectedComponent.component_type || selectedComponent.type).toLowerCase() || null;
+      return {
+        ...step,
+        selection_state: 'user_resolved',
+        selected_position_id: positionKey || String(selectedComponent.slot || ''),
+        selected_position_key: positionKey,
+        selected_position_label: resolvedLabel,
+        position_id: positionKey || String(selectedComponent.slot || ''),
+        position_key: positionKey,
+        position_label: resolvedLabel,
+        component_type: resolvedComponentType,
+        spectral_ops: resolvedOps,
+        _resolved_component: selectedComponent,
+      };
     });
-    entries.forEach((entry) => {
-      if (!entry || entry.kind === 'source' || entry.kind === 'detector' || entry.kind === 'sample' || entry.kind === 'routing_component') return;
-      const stepId = cleanString(entry.step_id);
-      if (!stepId) {
-        throw new Error('[VM] buildTraversalOrderedComponents: parser route step is missing step_id (phase=' + phase + ').');
-      }
-      const mechanismRef = mechanismByStepId.get(stepId);
-      const mechanism = mechanismRef && mechanismRef.mechanism;
-      const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
-      const selectedComponent = mechanismId ? selectedByMechanism[mechanismId] : null;
-      if (!selectedComponent) {
-        throw new Error('[VM] buildTraversalOrderedComponents: no selected component for parser route step "' + stepId + '" (phase=' + phase + ').');
-      }
-      result.push({
-        component: selectedComponent,
-        mode,
-        routeStepId: stepId,
-        stageKey: cleanString(mechanismRef && mechanismRef.stageKey).toLowerCase() || cleanString(entry.stage_role).toLowerCase() || null,
+  }
+
+  function orderedComponentsFromExecution(resolvedSteps, phase) {
+    if (!Array.isArray(resolvedSteps)) return [];
+    const mode = phase === 'illumination' ? 'excitation' : 'emission';
+    return resolvedSteps
+      .filter((step) => step && step.phase === phase && step.kind === 'optical_component')
+      .map((step) => {
+        const component = step._resolved_component || {
+          id: step.component_id,
+          display_label: step.display_label,
+          component_type: step.component_type,
+          type: step.component_type,
+          spectral_ops: step.spectral_ops,
+          position_key: step.position_key || step.selected_position_key,
+          _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
+          _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
+        };
+        return {
+          component,
+          mode,
+          routeStepId: step.step_id || step.route_step_id,
+          stageKey: cleanString(step.stage_role).toLowerCase() || null,
+        };
       });
-    });
-    return result;
   }
 
 

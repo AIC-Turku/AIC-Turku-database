@@ -2350,6 +2350,10 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(len(exc_step["available_positions"]), 2)
         self.assertEqual(exc_step["available_positions"][0]["position_key"], "Pos_1")
         self.assertEqual(exc_step["available_positions"][1]["position_key"], "Pos_2")
+        # Enriched available_positions must carry component data with spectral_ops.
+        self.assertIn("spectral_ops", exc_step["available_positions"][0])
+        self.assertIsNotNone(exc_step["available_positions"][0]["spectral_ops"])
+        self.assertIn("component_type", exc_step["available_positions"][0])
         self.assertEqual(exc_step["mechanism_id"], "exc_filter")
         self.assertEqual(exc_step["route_id"], "epi")
 

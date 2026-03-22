@@ -159,12 +159,13 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_selection_includes_traversal_ordered_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("function buildTraversalOrderedComponents(topology, selection, phase)", source)
-        self.assertIn("selection.illuminationComponents = buildTraversalOrderedComponents(topology, selection, 'illumination')", source)
-        self.assertIn("selection.detectionComponents = buildTraversalOrderedComponents(topology, selection, 'detection')", source)
+        self.assertIn("function resolveSelectedExecution(selectedRouteSteps, mechanismSelections)", source)
+        self.assertIn("function orderedComponentsFromExecution(resolvedSteps, phase)", source)
+        self.assertIn("selection.resolvedExecution = resolveSelectedExecution(selectedRouteSteps, selection.selectedComponentByMechanism)", source)
+        self.assertIn("selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination')", source)
+        self.assertIn("selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection')", source)
         self.assertIn("selectedComponentByMechanism", source)
-        self.assertIn("const mechanismByStepId = new Map();", source)
-        self.assertIn("mechanismByStepId.set(entry.routeStepId", source)
+        self.assertNotIn("function buildTraversalOrderedComponents(", source)
         self.assertIn("step_id", source)
 
     def test_simulation_uses_traversal_ordered_components(self) -> None:

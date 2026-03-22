@@ -3093,17 +3093,38 @@ def _build_selected_route_steps(
         candidates = _iter_element_positions(element)
         out: list[dict[str, Any]] = []
         for key_text, slot, position in candidates:
+            component = _component_payload(position)
             pos_label = (
-                _clean_string(position.get("display_label"))
-                or _clean_string(position.get("label"))
-                or _clean_string(position.get("name"))
+                _clean_string(component.get("display_label"))
+                or _clean_string(component.get("label"))
+                or _clean_string(component.get("name"))
                 or key_text
             )
-            out.append({
+            entry: dict[str, Any] = {
                 "position_key": key_text,
                 "slot": slot,
                 "label": pos_label,
-            })
+                "component_type": _clean_string(component.get("component_type")).lower() or None,
+                "spectral_ops": component.get("spectral_ops"),
+            }
+            # Preserve identity fields for methods reporting & UI display.
+            for identity_field in ("manufacturer", "model", "product_code", "name"):
+                val = _clean_string(component.get(identity_field))
+                if val:
+                    entry[identity_field] = val
+            # Carry unsupported flags so the runtime can surface them.
+            if component.get("_unsupported_spectral_model"):
+                entry["_unsupported_spectral_model"] = True
+            if component.get("_cube_incomplete"):
+                entry["_cube_incomplete"] = True
+            # For filter_cube positions, include sub-component links.
+            comp_type = _clean_string(component.get("component_type")).lower()
+            if comp_type == "filter_cube":
+                for cube_key in CUBE_LINK_KEYS:
+                    sub = component.get(cube_key)
+                    if isinstance(sub, dict):
+                        entry[cube_key] = sub
+            out.append(entry)
         return out
 
     def _derive_selection_state(step: dict[str, Any]) -> tuple[str, list[dict[str, Any]] | None]:
