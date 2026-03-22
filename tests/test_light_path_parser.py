@@ -1451,6 +1451,9 @@ class LightPathParserTests(unittest.TestCase):
         )
         cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
         self.assertTrue(cube.get("_cube_incomplete"), "Flattened cube without excitation should be flagged incomplete")
+        self.assertTrue(cube.get("_unsupported_spectral_model"), "Flattened incomplete cube should be marked unsupported")
+        self.assertEqual(cube["spectral_ops"]["illumination"][0].get("unsupported_reason"), "filter_cube_incomplete_reconstruction")
+        self.assertEqual(cube["spectral_ops"]["detection"][0].get("unsupported_reason"), "filter_cube_incomplete_reconstruction")
 
     def test_explicit_cube_not_flagged_incomplete(self) -> None:
         """Cubes with explicit excitation_filter should NOT be flagged incomplete."""
@@ -1477,6 +1480,7 @@ class LightPathParserTests(unittest.TestCase):
         )
         cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
         self.assertFalse(cube.get("_cube_incomplete", False), "Explicit cube should not be flagged incomplete")
+        self.assertFalse(cube.get("_unsupported_spectral_model", False), "Explicit cube should remain supported")
 
     def test_splitter_branches_deduplicated_across_routes(self) -> None:
         """Branches with the same branch_id across routes should be merged, not duplicated."""

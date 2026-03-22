@@ -265,6 +265,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("_unsupported_spectral_model", source)
         self.assertIn("Spectral model not available", source)
+        self.assertIn("_cube_incomplete", source)
+        self.assertIn("exact spectral simulation and optimization may be unavailable", source)
 
     # ── VM-011: buildSelectedConfiguration function exists ──
 

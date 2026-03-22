@@ -320,6 +320,9 @@
     if (component._unsupported_spectral_model) {
       rows.push('⚠ Spectral model not available — treated as transparent in simulation.');
     }
+    if (component._cube_incomplete) {
+      rows.push('⚠ Cube position is incomplete/flattened — exact spectral simulation and optimization may be unavailable.');
+    }
     return rows;
   }
 

@@ -2357,6 +2357,19 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         else:
             pass  # Optimizer found a shared config — also acceptable
 
+    def test_optimizer_filters_incomplete_cube_options_in_source(self) -> None:
+        """Runtime optimizer should filter incomplete/unsupported cube options before scoring."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+        self.assertIn("option.value._cube_incomplete", source)
+        self.assertIn("option.value._unsupported_spectral_model", source)
+
+    def test_expand_cube_selection_for_optimization_has_incomplete_guard(self) -> None:
+        """expandCubeSelectionForOptimization should explicitly guard incomplete cubes."""
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+        self.assertIn("expandCubeSelectionForOptimization(component)", source)
+        self.assertIn("component._cube_incomplete || component._unsupported_spectral_model", source)
+        self.assertIn("return [];", source)
+
     # ── executeSpectralOps tests ──────────────────────────────────────
 
     def test_execute_spectral_ops_bandpass(self) -> None:

@@ -1550,6 +1550,17 @@ def _cube_spectral_ops(component: dict[str, Any]) -> dict[str, list[dict[str, An
     if linked_components:
         component["linked_components"] = linked_components
 
+    if component.get("_cube_incomplete"):
+        # Flattened/synthetic cube reconstructions are intentionally treated as
+        # non-authoritative for exact spectral simulation. Return passthrough
+        # ops with an explicit unsupported_reason before deriving any modeled
+        # bandpass/dichroic behavior from incomplete internals.
+        reason = "filter_cube_incomplete_reconstruction"
+        return {
+            "illumination": [{"op": "passthrough", "unsupported_reason": reason}],
+            "detection": [{"op": "passthrough", "unsupported_reason": reason}],
+        }
+
     illumination: list[dict[str, Any]] = []
     detection: list[dict[str, Any]] = []
 
@@ -2115,6 +2126,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
             # can warn users about incomplete cube modeling.
             if linked_components and "excitation_filter" not in linked_components:
                 position_payload["_cube_incomplete"] = True
+                position_payload["_unsupported_spectral_model"] = True
             # Parser-authoritative spectral ops for the browser runtime.
             position_payload["spectral_ops"] = _cube_spectral_ops(position_payload)
             routes = _normalize_routes(cube_position.get("path") or cube_position.get("paths") or cube_position.get("route") or cube_position.get("routes") or mechanism.get("path"))

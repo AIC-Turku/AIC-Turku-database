@@ -2200,6 +2200,12 @@
   }
 
   function expandCubeSelectionForOptimization(component) {
+    if (component && (component._cube_incomplete || component._unsupported_spectral_model)) {
+      // Incomplete/synthetic cube internals are visible in UI but excluded
+      // from exact optimizer modeling so optimization does not claim
+      // authoritative spectral truth for reconstructed cubes.
+      return [];
+    }
     // The parser pre-computes spectral_ops for filter cubes with their
     // sub-components already expanded.  This function retains the legacy
     // expansion for cube positions that lack spectral_ops (e.g. old payloads).
@@ -2485,16 +2491,24 @@
 
     routes.forEach((route) => {
       const sourceSets = sourceCandidateSetsForRoute(normalizedInstrument, fluorList, route);
-      const cubeGroups = topMechanismOptions(normalizedInstrument.cube, route, (value) => {
-        const expanded = expandCubeSelectionForOptimization(value);
-        const ex = expanded.filter((entry) => entry.stage === 'excitation').map((entry) => entry.component);
-        const di = expanded.filter((entry) => entry.stage === 'dichroic').map((entry) => entry.component);
-        const em = expanded.filter((entry) => entry.stage === 'emission').map((entry) => entry.component);
-        return (ex.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 3)
-          + (di.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 2)
-          + (di.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 3)
-          + (em.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 4);
-      }, 3);
+      const cubeGroups = routeMechanismsForOptimization(normalizedInstrument.cube, route).map((mechanism) => {
+        const options = mechanismOptionsForRoute(mechanism, route)
+          .filter((option) => !(option && option.value && (option.value._cube_incomplete || option.value._unsupported_spectral_model)))
+          .map((option) => {
+            const expanded = expandCubeSelectionForOptimization(option.value);
+            const ex = expanded.filter((entry) => entry.stage === 'excitation').map((entry) => entry.component);
+            const di = expanded.filter((entry) => entry.stage === 'dichroic').map((entry) => entry.component);
+            const em = expanded.filter((entry) => entry.stage === 'emission').map((entry) => entry.component);
+            const score = (ex.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 3)
+              + (di.reduce((sum, component) => sum + pointMaskScore(component, exTargets, 'excitation'), 0) * 2)
+              + (di.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 3)
+              + (em.reduce((sum, component) => sum + pointMaskScore(component, emTargets, 'emission'), 0) * 4);
+            return { ...option, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+        return { mechanism, options };
+      });
       const excitationGroups = cubeGroups.length ? [] : topMechanismOptions(normalizedInstrument.excitation, route, (value) => pointMaskScore(value, exTargets, 'excitation') * 5, 3);
       const dichroicGroups = cubeGroups.length ? [] : topMechanismOptions(normalizedInstrument.dichroic, route, (value) => (pointMaskScore(value, exTargets, 'excitation') * 3) + (pointMaskScore(value, emTargets, 'emission') * 4), 3);
       const emissionGroups = topMechanismOptions(normalizedInstrument.emission, route, (value) => (pointMaskScore(value, emTargets, 'emission') * 5) + ((1 - pointMaskScore(value, exTargets, 'emission')) * 2), 3);
