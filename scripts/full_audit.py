@@ -354,7 +354,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                         continue
                     kind = sel_step.get("kind")
                     state = sel_step.get("selection_state")
-                    if kind == "optical_component" and state not in ("unresolved",) and sel_step.get("spectral_ops") is None and sel_step.get("unsupported_reason") is None:
+                    if kind == "optical_component" and state != "unresolved" and sel_step.get("spectral_ops") is None and sel_step.get("unsupported_reason") is None:
                         issues.append(
                             {
                                 "severity": "warning",

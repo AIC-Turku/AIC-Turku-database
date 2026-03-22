@@ -3107,7 +3107,13 @@ def _build_selected_route_steps(
         return out
 
     def _derive_selection_state(step: dict[str, Any]) -> tuple[str, list[dict[str, Any]] | None]:
-        """Return ``(selection_state, available_positions | None)``."""
+        """Return ``(selection_state, available_positions | None)``.
+
+        *step* is a route_step dict produced by ``_build_route_steps``.  The
+        function inspects ``kind``, ``_authored_position_id``, and the element's
+        position count to decide whether the step is ``"fixed"``,
+        ``"resolved"``, or ``"unresolved"``.
+        """
         kind = step.get("kind", "")
         if kind in ("source", "detector", "sample", "routing_component"):
             return "fixed", None

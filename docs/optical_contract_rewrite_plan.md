@@ -2,24 +2,42 @@
 
 ## 1. Single Authoritative Runtime Optical Contract
 
-**Contract:** `selected_execution` (version `selected_execution.v1`)
+**Contract:** `selected_execution` (version `selected_execution.v2`)
 
 - **Location:** `light_paths[].selected_execution` in the DTO produced by
   `light_path_parser.generate_virtual_microscope_payload()`.
 - **Schema:**
   ```yaml
   selected_execution:
-    contract_version: "selected_execution.v1"
-    steps:              # Ordered route steps with spectral_ops
-    warnings:           # Validation warnings from the parser
-    illumination_traversal: [...]
-    detection_traversal:    [...]
+    contract_version: "selected_execution.v2"
+    selected_route_steps:   # Runtime-selected execution model
+      - route_step_id: "illumination-step-7"
+        step_id: "illumination-step-7"      # Backward compat alias
+        route_id: "confocal_spinning_disk"
+        mechanism_id: "crest_excitation_wheel"
+        element_id: "crest_excitation_wheel"
+        selection_state: "unresolved"        # or "resolved" or "fixed"
+        selected_position_id: null           # null when unresolved
+        selected_position_key: null
+        selected_position_label: null
+        spectral_ops: null                   # null when unresolved
+        available_positions:                 # only when unresolved
+          - { position_key: "Pos_1", slot: 1, label: "..." }
+          - { position_key: "Pos_2", slot: 2, label: "..." }
+    warnings:               # Validation warnings from the parser
   ```
 - **Authority:** Python (`light_path_parser.py`) is the sole author of optical
   meaning.  Every `spectral_ops` value on every step is computed at parse-time.
   JavaScript may *execute* pre-computed `spectral_ops` (apply masks to
   wavelength grids for simulation/rendering) but must never *reconstruct* optics
   from raw component metadata.
+- **Selection states:**
+  * `"resolved"` – YAML route authored a `position_id`, fully resolved with
+    spectral_ops.
+  * `"fixed"` – Element has 0-1 positions or is not a positioned step
+    (source/detector/sample/routing).
+  * `"unresolved"` – Multi-position mechanism with no authored selection.
+    `spectral_ops` is null; `available_positions` lists candidates.
 
 ---
 
