@@ -299,9 +299,11 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("console.error('Failed to refresh simulation outputs', error);", source)
-        self.assertIn("const message = `Error loading fluorophore: ${errorMessage(error)}`;", source)
+        self.assertIn("const message = `Error simulating instrument: ${errorMessage(error)}`;", source)
         self.assertIn("setInlineStatus(DOM.searchStatus, message, 'error');", source)
         self.assertIn("setInlineStatus(DOM.localSearchStatus, message, 'error');", source)
+        self.assertIn("simulationError: true,", source)
+        self.assertIn("simulationErrorMessage: errorMessage(error),", source)
 
     # ── Stage adapter comment accuracy ──
 

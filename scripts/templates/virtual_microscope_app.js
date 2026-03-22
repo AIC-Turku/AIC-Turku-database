@@ -89,6 +89,10 @@
     return null;
   }
 
+  function componentLabel(component, fallback) {
+    return component && (component.display_label || component.name) || fallback;
+  }
+
   function rgbaFromHex(hex, alpha) {
     const cleaned = String(hex || '').replace('#', '');
     if (cleaned.length !== 6) return `rgba(59, 130, 246, ${alpha})`;
@@ -3030,7 +3034,7 @@
   }
 
   function errorMessage(error) {
-    const message = cleanString(error && error.message);
+    const message = cleanString(error?.message);
     if (message) return message;
     return cleanString(String(error)) || 'Unknown error';
   }
@@ -3077,7 +3081,7 @@
       }
     } catch (error) {
       console.error('Failed to refresh simulation outputs', error);
-      const message = `Error loading fluorophore: ${errorMessage(error)}`;
+      const message = `Error simulating instrument: ${errorMessage(error)}`;
       setInlineStatus(DOM.searchStatus, message, 'error');
       setInlineStatus(DOM.localSearchStatus, message, 'error');
       simulation = {
@@ -3085,11 +3089,13 @@
         excitationAtSample: [],
         emittedSpectra: [],
         pathSpectra: [],
-        selectedSources: (Array.isArray(selection.sources) ? selection.sources : []).map((source) => source.display_label || source.name || 'Source'),
-        selectedDetectors: (Array.isArray(selection.detectors) ? selection.detectors : []).map((detector) => detector.display_label || detector.name || 'Detector'),
+        selectedSources: (Array.isArray(selection.sources) ? selection.sources : []).map((source) => componentLabel(source, 'Source')),
+        selectedDetectors: (Array.isArray(selection.detectors) ? selection.detectors : []).map((detector) => componentLabel(detector, 'Detector')),
         validSelection: false,
-        routeViolation: true,
-        routeViolationDetails: [errorMessage(error)],
+        routeViolation: false,
+        routeViolationDetails: [],
+        simulationError: true,
+        simulationErrorMessage: errorMessage(error),
         results: [],
         crosstalkMatrix: {},
       };
