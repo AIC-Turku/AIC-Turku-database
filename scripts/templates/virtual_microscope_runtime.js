@@ -652,15 +652,17 @@
     };
   }
 
-  function canonicalStagePayload(payload, topologyBindings) {
+  function canonicalStagePayload(payload, topologyBindings, runtimeProjection) {
     const stageRoles = ['cube', 'excitation', 'dichroic', 'emission', 'analyzer'];
     const out = Object.fromEntries(stageRoles.map((stageRole) => [stageRole, []]));
     const projections = payload && payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
-    const runtimeProjection = projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
+    const vmProjection = runtimeProjection && typeof runtimeProjection === 'object'
+      ? runtimeProjection
+      : (projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
       ? projections.virtual_microscope
-      : {};
-    const projectionStages = runtimeProjection.stages && typeof runtimeProjection.stages === 'object'
-      ? runtimeProjection.stages
+      : {});
+    const projectionStages = vmProjection.stages && typeof vmProjection.stages === 'object'
+      ? vmProjection.stages
       : null;
 
     function sequenceUseForElement(element) {
@@ -775,7 +777,51 @@
     });
   }
 
-  function canonicalSplitterPayload(payload, topologyBindings) {
+  function canonicalSplitterPayload(payload, topologyBindings, runtimeProjection) {
+    const projections = payload && payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
+    const vmProjection = runtimeProjection && typeof runtimeProjection === 'object'
+      ? runtimeProjection
+      : (projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
+      ? projections.virtual_microscope
+      : {});
+    const projectionSplitters = Array.isArray(vmProjection.splitters) ? vmProjection.splitters : null;
+    if (projectionSplitters) {
+      return canonicalElements(projectionSplitters).map((splitter, index) => {
+        const routes = routesFromObject(splitter).length
+          ? routesFromObject(splitter)
+          : canonicalElementRoutes({ ...(splitter || {}), stage_role: 'splitter' }, topologyBindings);
+        const branches = canonicalElements(splitter && splitter.branches).map((branch, branchIndex) => {
+          const payloadBranch = {
+            ...(branch || {}),
+            id: cleanString(branch && branch.id) || `${cleanString(splitter && splitter.id) || 'splitter'}_branch_${branchIndex + 1}`,
+            label: cleanString(branch && (branch.label || branch.name)) || `Branch ${branchIndex + 1}`,
+            mode: cleanString(branch && branch.mode).toLowerCase() || (branchIndex === 0 ? 'transmitted' : 'reflected'),
+            component: branch && branch.component && typeof branch.component === 'object' ? { ...branch.component } : branch && branch.component,
+            target_ids: normalizeTargetIds(branch && (branch.target_ids || branch.targets || branch.endpoint_id || branch.endpoint_ids || [])),
+            sequence: Array.isArray(branch && branch.sequence) ? branch.sequence.map((step) => ({ ...(step || {}) })) : [],
+            __routes: routesFromObject(branch).length ? routesFromObject(branch) : routes,
+          };
+          const branchRoutes = payloadBranch.__routes.length ? payloadBranch.__routes : routes;
+          if (branchRoutes.length) {
+            payloadBranch.routes = branchRoutes;
+            payloadBranch.path = branchRoutes[0];
+          }
+          return payloadBranch;
+        });
+        const row = {
+          ...(splitter || {}),
+          id: cleanString(splitter && splitter.id) || `splitter_${index + 1}`,
+          name: cleanString(splitter && (splitter.name || splitter.display_label)) || `Splitter ${index + 1}`,
+          display_label: cleanString(splitter && (splitter.display_label || splitter.name)) || `Splitter ${index + 1}`,
+          branches,
+        };
+        if (routes.length) {
+          row.routes = routes;
+          row.path = routes[0];
+        }
+        return row;
+      });
+    }
     const passthroughBranchComponent = {
       component_type: 'passthrough',
       type: 'passthrough',
@@ -877,10 +923,10 @@
     });
   }
 
-  function deriveStageGroupAdapters(payload, topologyBindings) {
+  function deriveStageGroupAdapters(payload, topologyBindings, runtimeProjection) {
     const normalizedTerminals = normalizeTerminals(canonicalEndpointPayload(payload, topologyBindings));
-    const stageSource = canonicalStagePayload(payload, topologyBindings);
-    const splitterSource = canonicalSplitterPayload(payload, topologyBindings);
+    const stageSource = canonicalStagePayload(payload, topologyBindings, runtimeProjection);
+    const splitterSource = canonicalSplitterPayload(payload, topologyBindings, runtimeProjection);
     return {
       lightSources: normalizeMechanismList(canonicalSourceMechanisms(payload, topologyBindings)),
       stages: {
@@ -909,7 +955,7 @@
     const simulationMeta = payload.simulation && typeof payload.simulation === 'object' ? payload.simulation : {};
     const topologyBindings = canonicalTopologyBindings(payload);
     const routeTopology = canonicalRouteTopology(payload, topologyBindings);
-    const derivedStageAdapters = deriveStageGroupAdapters(payload, topologyBindings);
+    const derivedStageAdapters = deriveStageGroupAdapters(payload, topologyBindings, runtimeProjection);
     const normalized = {
       metadata: payload.metadata || {},
       lightPaths: Array.isArray(payload.light_paths) ? payload.light_paths : [],
