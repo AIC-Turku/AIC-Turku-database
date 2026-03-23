@@ -188,6 +188,35 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("cubePosition._cube_incomplete", source)
         self.assertIn("has no explicit excitation filter data", source)
 
+    def test_cube_ui_helpers_use_only_canonical_parser_field_names(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        expand_fn = source.split("function expandCubeSelection")[1].split("\n  function ")[0]
+        self.assertIn("cubePosition.excitation_filter", expand_fn)
+        self.assertIn("cubePosition.dichroic", expand_fn)
+        self.assertIn("cubePosition.emission_filter", expand_fn)
+        self.assertNotRegex(expand_fn, r"cubePosition\.(?:ex|excitation|di|dichroic_filter|em|emission)\b")
+
+        notes_fn = source.split("function appendLinkedCubeNotes")[1].split("\n  function ")[0]
+        self.assertIn("cubeValue.dichroic", notes_fn)
+        self.assertIn("cubeValue.emission_filter", notes_fn)
+        self.assertNotRegex(notes_fn, r"cubeValue\.(?:di|dichroic_filter|em|emission)\b")
+
+    def test_unresolved_selected_execution_uses_available_position_spectral_ops(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        resolve_fn = source.split("function resolveSelectedExecution")[1].split("\n  function ")[0]
+        self.assertIn("const candidates = Array.isArray(step.available_positions) ? step.available_positions : [];", resolve_fn)
+        self.assertIn("candidates.find((cand) => cleanString(cand.position_key) === positionKey)", resolve_fn)
+        self.assertIn("const resolvedOps = (matched && matched.spectral_ops) || selectedComponent.spectral_ops || null;", resolve_fn)
+        self.assertIn("spectral_ops: resolvedOps,", resolve_fn)
+        self.assertNotIn("center_nm", resolve_fn)
+        self.assertNotIn("cut_on_nm", resolve_fn)
+        self.assertNotIn("cut_off_nm", resolve_fn)
+        self.assertNotIn("bands:", resolve_fn)
+        self.assertNotIn("transmission_bands", resolve_fn)
+        self.assertNotIn("reflection_bands", resolve_fn)
+
     def test_filter_cube_component_mask_fallback_removed(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 
@@ -274,6 +303,78 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("Spectral model not available", source)
         self.assertIn("_cube_incomplete", source)
         self.assertIn("exact spectral simulation and optimization may be unavailable", source)
+
+    def test_safe_component_mask_helper_only_degrades_missing_parser_spectral_ops(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function safeComponentMask(component, grid, options = {}, context = {})", source)
+        self.assertIn("reason: 'missing_spectral_ops'", source)
+        self.assertIn("if (component && typeof component === 'object' && !component.spectral_ops)", source)
+        self.assertIn("if (cleanString(errorMessage(error)).includes('missing parser spectral_ops'))", source)
+        self.assertIn("throw error;", source)
+
+    def test_chart_masks_use_safe_component_mask_and_warn_inline(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        overlays_fn = source.split("function activeFilterMaskDatasets")[1].split("\n  function ")[0]
+        self.assertIn("const overlayWarnings = [];", overlays_fn)
+        self.assertIn("const result = safeComponentMask(component, grid, { mode }", overlays_fn)
+        self.assertIn("overlayWarnings.push(result.issue);", overlays_fn)
+        self.assertIn("Skipping chart overlays for unsupported parser payloads", overlays_fn)
+
+        combined_fn = source.split("function combinedMask")[1].split("\n  function ")[0]
+        self.assertIn("fallbackMode: 'passthrough'", combined_fn)
+        self.assertIn("return { mask, issues };", combined_fn)
+
+        reference_fn = source.split("function renderReferenceSpectra")[1].split("\n  function ")[0]
+        self.assertIn("const excitationMaskResult = combinedMask", reference_fn)
+        self.assertIn("Reference spectra warning:", reference_fn)
+        self.assertIn("missing parser spectral_ops.", reference_fn)
+
+        propagation_fn = source.split("function renderPropagationPanel")[1].split("\n  function ")[0]
+        self.assertIn("const emissionMaskResult = combinedMask", propagation_fn)
+        self.assertIn("Collection warning:", propagation_fn)
+        self.assertIn("missing parser spectral_ops.", propagation_fn)
+
+    def test_optimizer_excludes_missing_ops_options_from_ranking(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        apply_fn = source.split("function applyComponentsToSpectrum")[1].split("\n  function ")[0]
+        self.assertIn("const result = safeComponentMask(component, grid, { mode }", apply_fn)
+        self.assertIn("unsupported: issues.length > 0", apply_fn)
+
+        score_fn = source.split("function scoreStageOption")[1].split("\n  function ")[0]
+        self.assertIn("if (output.unsupported) return Number.NEGATIVE_INFINITY;", score_fn)
+
+        repair_fn = source.split("function autoRepairBlockedPath")[1].split("\n  function ")[0]
+        self.assertIn("Optimizer skipped unsupported parser payload:", repair_fn)
+
+    def test_selection_components_keep_stage_and_mechanism_metadata_for_missing_ops_warnings(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("_maskStage: stage", source)
+        self.assertIn("_maskMechanismName: name", source)
+        self.assertIn("_maskMechanismName: mechanismName", source)
+
+    def test_missing_spectral_ops_path_degrades_gracefully_instead_of_crashing(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        safe_mask_fn = source.split("function safeComponentMask")[1].split("\n  function ")[0]
+        self.assertIn("if (component && typeof component === 'object' && !component.spectral_ops) {", safe_mask_fn)
+        self.assertIn("return warnMissingOps();", safe_mask_fn)
+        self.assertIn("return warnMissingOps(error);", safe_mask_fn)
+        self.assertIn("throw error;", safe_mask_fn)
+
+        overlays_fn = source.split("function activeFilterMaskDatasets")[1].split("\n  function ")[0]
+        self.assertIn("if (!result.ok && result.reason === 'missing_spectral_ops') {", overlays_fn)
+        self.assertIn("overlayWarnings.push(result.issue);", overlays_fn)
+        self.assertIn("return;", overlays_fn)
+
+        combined_fn = source.split("function combinedMask")[1].split("\n  function ")[0]
+        self.assertIn("if (!result.ok && result.reason === 'missing_spectral_ops') {", combined_fn)
+        self.assertIn("issues.push(result.issue);", combined_fn)
+        self.assertIn("return accumulator;", combined_fn)
+        self.assertIn("return { mask, issues };", combined_fn)
 
     # ── VM-011: buildSelectedConfiguration function exists ──
 

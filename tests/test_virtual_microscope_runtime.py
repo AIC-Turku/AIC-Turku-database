@@ -7,6 +7,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import yaml
+
+from scripts.light_path_parser import generate_virtual_microscope_payload
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_runtime.js"
@@ -67,7 +71,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             self.skipTest("Obsolete after strict parser-only runtime refactor.")
 
     def run_node_json(self, body: str) -> object:
-        script = textwrap.dedent(
+        return self.run_node_script_json(
             f"""
             const rt = require('./scripts/templates/virtual_microscope_runtime.js');
             const result = (() => {{
@@ -76,9 +80,12 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             console.log(JSON.stringify(result));
             """
         )
+
+    def run_node_script_json(self, script: str) -> object:
         proc = subprocess.run(
-            ["node", "-e", script],
+            ["node", "-"],
             cwd=REPO_ROOT,
+            input=textwrap.dedent(script),
             capture_output=True,
             text=True,
             check=False,
@@ -86,6 +93,60 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         if proc.returncode != 0:
             raise AssertionError(f"Node runtime failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}")
         return json.loads(proc.stdout)
+
+    def parser_payload_for_instrument(self, instrument_name: str) -> dict:
+        instrument = yaml.safe_load((REPO_ROOT / "instruments" / instrument_name).read_text(encoding="utf-8"))
+        return generate_virtual_microscope_payload(instrument)
+
+    @staticmethod
+    def _find_stage_option_value(stage_rows: list[dict], target_label: str) -> dict | None:
+        for mechanism in stage_rows:
+            for option in mechanism.get("options") or []:
+                option_label = option.get("display_label") or ""
+                value = option.get("value") if isinstance(option.get("value"), dict) else {}
+                value_label = value.get("display_label") or value.get("label") or value.get("name") or ""
+                slot = option.get("slot")
+                candidate_labels = {
+                    option_label,
+                    value_label,
+                    f"Slot {slot}: {option_label}" if slot is not None and option_label else "",
+                    f"Slot {slot}: {value_label}" if slot is not None and value_label else "",
+                }
+                if target_label in candidate_labels:
+                    return value
+        return None
+
+    def normalized_stage_option_value(self, payload: dict, stage_role: str, target_label: str) -> dict | None:
+        return self.run_node_script_json(
+            f"""
+            const rt = require('./scripts/templates/virtual_microscope_runtime.js');
+            const payload = {json.dumps(payload)};
+            const instrument = rt.normalizeInstrumentPayload(payload);
+            const stageRows = instrument[{json.dumps(stage_role)}] || [];
+            const targetLabel = {json.dumps(target_label)};
+            function findOptionValue(rows, label) {{
+              for (const mechanism of rows) {{
+                for (const option of mechanism.options || []) {{
+                  const optionLabel = option.display_label || '';
+                  const value = option && option.value && typeof option.value === 'object' ? option.value : null;
+                  const valueLabel = value ? (value.display_label || value.label || value.name || '') : '';
+                  const slot = option.slot;
+                  const candidateLabels = new Set([
+                    optionLabel,
+                    valueLabel,
+                    slot !== undefined && optionLabel ? `Slot ${{slot}}: ${{optionLabel}}` : '',
+                    slot !== undefined && valueLabel ? `Slot ${{slot}}: ${{valueLabel}}` : '',
+                  ]);
+                  if (candidateLabels.has(label)) {{
+                    return value;
+                  }}
+                }}
+              }}
+              return null;
+            }}
+            console.log(JSON.stringify(findOptionValue(stageRows, targetLabel)));
+            """
+        )
 
     def test_fpbase_search_results_are_normalized(self) -> None:
         result = self.run_node_json(
@@ -943,6 +1004,94 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["excitationLabels"], ["EX"])
         self.assertEqual(result["detectorLabels"], ["Camera"])
 
+    def test_csu_w1_projection_stage_option_values_preserve_parser_authored_spectral_ops(self) -> None:
+        payload = self.parser_payload_for_instrument("3i CSU-W1 Spinning Disk.yaml")
+        runtime_projection = payload["projections"]["virtual_microscope"]["stages"]
+
+        expected_emission = self._find_stage_option_value(
+            runtime_projection["emission"],
+            "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+        )
+        expected_dichroic = self._find_stage_option_value(
+            runtime_projection["dichroic"],
+            "Slot 1: Quad-band Dichroic",
+        )
+        self.assertIsNotNone(expected_emission)
+        self.assertIsNotNone(expected_dichroic)
+
+        normalized_emission = self.normalized_stage_option_value(
+            payload,
+            "emission",
+            "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+        )
+        normalized_dichroic = self.normalized_stage_option_value(
+            payload,
+            "dichroic",
+            "Slot 1: Quad-band Dichroic",
+        )
+
+        self.assertEqual(normalized_emission["spectral_ops"], expected_emission["spectral_ops"])
+        self.assertEqual(normalized_emission.get("routes"), expected_emission.get("routes"))
+        self.assertEqual(normalized_emission.get("path"), expected_emission.get("path"))
+        self.assertEqual(normalized_dichroic["spectral_ops"], expected_dichroic["spectral_ops"])
+        self.assertEqual(normalized_dichroic.get("routes"), expected_dichroic.get("routes"))
+        self.assertEqual(normalized_dichroic.get("path"), expected_dichroic.get("path"))
+
+    def test_esight_projection_stage_option_values_preserve_parser_authored_cube_payload(self) -> None:
+        payload = self.parser_payload_for_instrument("xCELLigence RTCA eSight.yaml")
+        runtime_projection = payload["projections"]["virtual_microscope"]["stages"]
+
+        expected_blue_channel = self._find_stage_option_value(
+            runtime_projection["cube"],
+            "Slot 1: Blue Channel",
+        )
+        self.assertIsNotNone(expected_blue_channel)
+
+        normalized_blue_channel = self.normalized_stage_option_value(
+            payload,
+            "cube",
+            "Slot 1: Blue Channel",
+        )
+
+        self.assertEqual(normalized_blue_channel["spectral_ops"], expected_blue_channel["spectral_ops"])
+        self.assertEqual(normalized_blue_channel.get("excitation_filter"), expected_blue_channel.get("excitation_filter"))
+        self.assertEqual(normalized_blue_channel.get("dichroic"), expected_blue_channel.get("dichroic"))
+        self.assertEqual(normalized_blue_channel.get("emission_filter"), expected_blue_channel.get("emission_filter"))
+        self.assertEqual(normalized_blue_channel.get("routes"), expected_blue_channel.get("routes"))
+        self.assertEqual(normalized_blue_channel.get("path"), expected_blue_channel.get("path"))
+
+    def test_projection_stage_option_labels_keep_spectral_ops_after_runtime_normalization(self) -> None:
+        cases = [
+            (
+                "3i CSU-W1 Spinning Disk.yaml",
+                "emission",
+                "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+            ),
+            (
+                "3i CSU-W1 Spinning Disk.yaml",
+                "dichroic",
+                "Slot 1: Quad-band Dichroic",
+            ),
+            (
+                "xCELLigence RTCA eSight.yaml",
+                "cube",
+                "Slot 1: Blue Channel",
+            ),
+        ]
+
+        for instrument_name, stage_role, target_label in cases:
+            with self.subTest(instrument=instrument_name, stage=stage_role, label=target_label):
+                payload = self.parser_payload_for_instrument(instrument_name)
+                runtime_projection = payload["projections"]["virtual_microscope"]["stages"]
+                expected_value = self._find_stage_option_value(runtime_projection[stage_role], target_label)
+                self.assertIsNotNone(expected_value)
+                self.assertIsNotNone(expected_value.get("spectral_ops"))
+
+                normalized_value = self.normalized_stage_option_value(payload, stage_role, target_label)
+                self.assertIsNotNone(normalized_value)
+                self.assertIsNotNone(normalized_value.get("spectral_ops"))
+                self.assertEqual(normalized_value["spectral_ops"], expected_value["spectral_ops"])
+
     def test_reused_canonical_optical_path_element_keeps_route_bindings_when_seen_in_both_sequences(self) -> None:
         result = self.run_node_json(
             """
@@ -1143,6 +1292,142 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["splitterCount"], 1)
         self.assertEqual(result["centers"], [525, 700])
         self.assertEqual(result["labels"], ["525/50", "700/75"])
+
+    def test_projection_authored_splitters_are_preferred_over_raw_topology_reconstruction(self) -> None:
+        result = self.run_node_json(
+            """
+            const payload = {
+              metadata: { simulation_mode: 'strict' },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [
+                { id: 'main_splitter', stage_role: 'splitter', element_type: 'splitter', display_label: 'Main splitter', selection_mode: 'exclusive' },
+                {
+                  id: 'wheel_1',
+                  stage_role: 'emission',
+                  element_type: 'filter_wheel',
+                  display_label: 'Emission wheel',
+                  positions: {
+                    1: { component_type: 'bandpass', center_nm: 525, width_nm: 50, label: '525/50' },
+                    2: { component_type: 'bandpass', center_nm: 700, width_nm: 75, label: '700/75' }
+                  }
+                }
+              ],
+              endpoints: [
+                { id: 'cam_a', display_label: 'Cam A', endpoint_type: 'camera' },
+                { id: 'cam_b', display_label: 'Cam B', endpoint_type: 'camera' }
+              ],
+              light_paths: [
+                {
+                  id: 'confocal',
+                  illumination_sequence: [{ source_id: 'src_488' }],
+                  detection_sequence: [
+                    { optical_path_element_id: 'main_splitter' },
+                    { branches: { selection_mode: 'exclusive', items: [
+                      { branch_id: 'green', mode: 'reflected', sequence: [{ optical_path_element_id: 'wheel_1', position_id: '1' }, { endpoint_id: 'cam_a' }] },
+                      { branch_id: 'red', mode: 'transmitted', sequence: [{ optical_path_element_id: 'wheel_1', position_id: '2' }, { endpoint_id: 'cam_b' }] }
+                    ] } }
+                  ],
+                  route_steps: []
+                }
+              ],
+              projections: {
+                virtual_microscope: {
+                  splitters: [
+                    {
+                      id: 'main_splitter',
+                      display_label: 'Main splitter',
+                      routes: ['confocal'],
+                      path: 'confocal',
+                      branches: [
+                        {
+                          id: 'green',
+                          label: 'Green',
+                          mode: 'reflected',
+                          target_ids: ['cam_a'],
+                          routes: ['confocal'],
+                          path: 'confocal',
+                          component: {
+                            component_type: 'bandpass',
+                            center_nm: 610,
+                            width_nm: 40,
+                            display_label: '610/40',
+                            spectral_ops: {
+                              illumination: [{ op: 'bandpass', center_nm: 610, width_nm: 40 }],
+                              detection: [{ op: 'bandpass', center_nm: 610, width_nm: 40 }]
+                            }
+                          }
+                        },
+                        {
+                          id: 'red',
+                          label: 'Red',
+                          mode: 'transmitted',
+                          target_ids: ['cam_b'],
+                          routes: ['confocal'],
+                          path: 'confocal',
+                          component: {
+                            component_type: 'bandpass',
+                            center_nm: 740,
+                            width_nm: 30,
+                            display_label: '740/30',
+                            spectral_ops: {
+                              illumination: [{ op: 'bandpass', center_nm: 740, width_nm: 30 }],
+                              detection: [{ op: 'bandpass', center_nm: 740, width_nm: 30 }]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            };
+            const instrument = rt.normalizeInstrumentPayload(payload);
+            return instrument.splitters.map((splitter) => ({
+              routes: splitter.__routes || splitter.routes || [],
+              branches: (splitter.branches || []).map((branch) => ({
+                id: branch.id,
+                target_ids: branch.target_ids,
+                routes: branch.__routes || branch.routes || [],
+                center_nm: branch.component && branch.component.center_nm,
+                width_nm: branch.component && branch.component.width_nm,
+                display_label: branch.component && branch.component.display_label,
+                spectral_ops: branch.component && branch.component.spectral_ops,
+              })),
+            }));
+            """
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["routes"], ["confocal"])
+        self.assertEqual(
+            result[0]["branches"],
+            [
+                {
+                    "id": "green",
+                    "target_ids": ["cam_a"],
+                    "routes": ["confocal"],
+                    "center_nm": 610,
+                    "width_nm": 40,
+                    "display_label": "610/40",
+                    "spectral_ops": {
+                        "illumination": [{"op": "bandpass", "center_nm": 610, "width_nm": 40}],
+                        "detection": [{"op": "bandpass", "center_nm": 610, "width_nm": 40}],
+                    },
+                },
+                {
+                    "id": "red",
+                    "target_ids": ["cam_b"],
+                    "routes": ["confocal"],
+                    "center_nm": 740,
+                    "width_nm": 30,
+                    "display_label": "740/30",
+                    "spectral_ops": {
+                        "illumination": [{"op": "bandpass", "center_nm": 740, "width_nm": 30}],
+                        "detection": [{"op": "bandpass", "center_nm": 740, "width_nm": 30}],
+                    },
+                },
+            ],
+        )
 
     def test_parser_branch_sequence_optics_drive_splitter_paths(self) -> None:
         result = self.run_node_json(
@@ -2471,6 +2756,15 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertIn("cube.excitation_filter", source)
         self.assertIn("cube.dichroic", source)
         self.assertIn("cube.emission_filter", source)
+
+    def test_runtime_cube_selection_building_uses_only_canonical_parser_field_names(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        runtime_cube_block = source.split("cubeCombo.forEach(({ mechanism, option }) => {", 1)[1].split("exCombo.forEach", 1)[0]
+        self.assertIn("cube.excitation_filter", runtime_cube_block)
+        self.assertIn("cube.dichroic", runtime_cube_block)
+        self.assertIn("cube.emission_filter", runtime_cube_block)
+        self.assertNotRegex(runtime_cube_block, r"cube\.(?:ex|excitation|di|dichroic_filter|em|emission)\b")
 
     # ── executeSpectralOps tests ──────────────────────────────────────
 

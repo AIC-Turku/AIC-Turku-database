@@ -280,6 +280,71 @@
     else delete node.dataset.tone;
   }
 
+  function stageDisplayName(stage) {
+    const normalized = cleanString(stage).toLowerCase();
+    if (!normalized) return 'optical stage';
+    return normalized.replace(/_/g, ' ');
+  }
+
+  function maskIssueSummary(issue) {
+    if (!issue || typeof issue !== 'object') return 'Unnamed optical component';
+    const mechanism = cleanString(issue.mechanismName) || cleanString(issue.componentLabel) || 'Unnamed optical component';
+    const stage = stageDisplayName(issue.stage || issue.mode);
+    return `${mechanism} (${stage})`;
+  }
+
+  function missingSpectralOpsMessage(issue) {
+    return `Missing parser spectral_ops for ${maskIssueSummary(issue)}.`;
+  }
+
+  function safeComponentMask(component, grid, options = {}, context = {}) {
+    const fallbackMode = cleanString(context.fallbackMode).toLowerCase();
+    const issue = {
+      reason: 'missing_spectral_ops',
+      stage: cleanString(context.stage || (component && (component._maskStage || component.stage_role))),
+      mechanismName: cleanString(context.mechanismName || (component && component._maskMechanismName)),
+      componentLabel: cleanString(context.componentLabel || componentLabel(component, 'Optical component')),
+      mode: cleanString(options && options.mode),
+    };
+    const fallbackMask = fallbackMode === 'passthrough'
+      ? (Array.isArray(grid) ? grid.map(() => 1) : [])
+      : null;
+    const warnMissingOps = (error = null) => {
+      const warning = {
+        ...issue,
+        message: missingSpectralOpsMessage(issue),
+        error,
+      };
+      console.warn(`[VM] ${warning.message}`);
+      return {
+        ok: false,
+        unsupported: true,
+        reason: 'missing_spectral_ops',
+        mask: fallbackMask,
+        issue: warning,
+      };
+    };
+
+    if (component && typeof component === 'object' && !component.spectral_ops) {
+      return warnMissingOps();
+    }
+
+    try {
+      return {
+        ok: true,
+        unsupported: false,
+        reason: null,
+        mask: VM.componentMask(component, grid, options),
+        issue: null,
+      };
+    } catch (error) {
+      if (cleanString(errorMessage(error)).includes('missing parser spectral_ops')) {
+        return warnMissingOps(error);
+      }
+      throw error;
+    }
+  }
+
   function formatNumericNm(value) {
     const numeric = numberOrNull(value);
     return numeric === null ? null : `${Math.round(numeric)} nm`;
@@ -441,6 +506,7 @@
     const cubeSelects = Array.from(DOM.graph.querySelectorAll('select[data-stage="cube"]'));
     cubeSelects.forEach((cubeSelect, index) => {
       const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
+      // JS cube-linked notes consume only canonical parser-authored field names.
       const linked = cubeValue && (
         kind === 'dichroic'
           ? cubeValue.dichroic
@@ -621,11 +687,21 @@
 
   function activeFilterMaskDatasets(selection, grid) {
     const datasets = [];
+    const overlayWarnings = [];
     const addMaskSet = (components, stage, color, alpha) => {
       (Array.isArray(components) ? components : []).forEach((component, index) => {
         const label = component.display_label || component.label || `${stage} ${index + 1}`;
         const mode = stage === 'excitation' ? 'excitation' : 'emission';
-        const values = VM.componentMask(component, grid, { mode });
+        const result = safeComponentMask(component, grid, { mode }, {
+          stage,
+          mechanismName: component && component._maskMechanismName,
+          fallbackMode: 'none',
+        });
+        if (!result.ok && result.reason === 'missing_spectral_ops') {
+          overlayWarnings.push(result.issue);
+          return;
+        }
+        const values = result.mask;
         if (!Array.isArray(values) || !values.some((value) => value > 1e-6)) return;
         datasets.push(chartDatasetFromGrid(`${label} mask`, grid, asPercentArray(values, 1), {
           borderColor: color,
@@ -642,6 +718,9 @@
     addMaskSet(selection.excitation, 'excitation', 'rgba(37, 99, 235, 0.75)', 'rgba(37, 99, 235, 0.08)');
     addMaskSet(selection.dichroic, 'dichroic', 'rgba(168, 85, 247, 0.75)', 'rgba(168, 85, 247, 0.07)');
     addMaskSet(selection.emission, 'emission', 'rgba(5, 150, 105, 0.75)', 'rgba(5, 150, 105, 0.08)');
+    if (overlayWarnings.length) {
+      console.warn(`[VM] Skipping chart overlays for unsupported parser payloads: ${overlayWarnings.map((issue) => maskIssueSummary(issue)).join('; ')}`);
+    }
     return datasets;
   }
 
@@ -2281,7 +2360,7 @@
   function expandCubeSelection(cubePosition, mechanismName) {
     // The parser is the single source of truth for cube expansion.
     // This function extracts the already-expanded sub-components using
-    // canonical parser field names (CUBE_LINK_KEYS), preserving spectral_ops.
+    // canonical parser field names only (CUBE_LINK_KEYS), preserving spectral_ops.
     const expanded = [];
     const excitation = cubePosition.excitation_filter;
     const dichroic = cubePosition.dichroic;
@@ -2355,6 +2434,8 @@
         ...component,
         label: component.label || component.display_label || name,
         display_label: component.display_label || component.label || name,
+        _maskStage: stage,
+        _maskMechanismName: name,
       };
       if (stage === 'excitation') selection.excitation.push(enriched);
       else if (stage === 'dichroic') selection.dichroic.push(enriched);
@@ -2806,10 +2887,20 @@ if (block.dataset.mechanismType === 'spectral_array') {
   }
 
   function combinedMask(components, grid, mode) {
-    return (Array.isArray(components) ? components : []).reduce((accumulator, component) => {
-      const mask = VM.componentMask(component, grid, { mode });
-      return accumulator.map((value, index) => value * (mask[index] || 0));
+    const issues = [];
+    const mask = (Array.isArray(components) ? components : []).reduce((accumulator, component) => {
+      const result = safeComponentMask(component, grid, { mode }, {
+        stage: component && component._maskStage,
+        mechanismName: component && component._maskMechanismName,
+        fallbackMode: 'passthrough',
+      });
+      if (!result.ok && result.reason === 'missing_spectral_ops') {
+        issues.push(result.issue);
+        return accumulator;
+      }
+      return accumulator.map((value, index) => value * (result.mask[index] || 0));
     }, grid.map(() => 1));
+    return { mask, issues };
   }
 
   function baselineMaskDataset(label, grid, maskValues, color, rowIndex = 0) {
@@ -2830,13 +2921,13 @@ if (block.dataset.mechanismType === 'spectral_array') {
     };
   }
 
-  function sourceReferenceDatasets(selection, grid) {
+  function sourceReferenceDatasets(selection, grid, excitationMask) {
     const datasets = [];
-    const excitationMask = combinedMask([...(selection.excitation || []), ...(selection.dichroic || [])], grid, 'excitation');
+    const sourceExcitationMask = Array.isArray(excitationMask) ? excitationMask : grid.map(() => 1);
     selection.sources.forEach((source) => {
       const wavelength = numberOrNull(source.selected_wavelength_nm) ?? numberOrNull(source.wavelength_nm);
       const color = source.role === 'depletion' ? '#dc2626' : colorHex(wavelength || 520);
-      const atSample = VM.sourceSpectrum(source, grid).map((value, index) => value * (excitationMask[index] || 0));
+      const atSample = VM.sourceSpectrum(source, grid).map((value, index) => value * (sourceExcitationMask[index] || 0));
       if (!atSample.some((value) => value > 1e-6)) return;
       datasets.push(chartDatasetFromGrid(`${source.display_label || source.name || 'Source'} at sample`, grid, asPercentArray(atSample, 1), {
         borderColor: color,
@@ -2872,8 +2963,9 @@ if (block.dataset.mechanismType === 'spectral_array') {
       ? simulation.grid
       : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
     const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
-    const excitationMask = combinedMask([...(selection.excitation || []), ...(selection.dichroic || [])], grid, 'excitation');
-    const datasets = [baselineMaskDataset('Excitation passband', grid, excitationMask, 'rgba(37, 99, 235, 0.9)', 0), ...sourceReferenceDatasets(selection, grid)];
+    const excitationMaskResult = combinedMask([...(selection.excitation || []), ...(selection.dichroic || [])], grid, 'excitation');
+    const excitationMask = excitationMaskResult.mask;
+    const datasets = [baselineMaskDataset('Excitation passband', grid, excitationMask, 'rgba(37, 99, 235, 0.9)', 0), ...sourceReferenceDatasets(selection, grid, excitationMask)];
 
     emissionEntries.forEach((entry) => {
       const fluor = mapToArray(state.loadedProteins).find((item) => item.key === entry.fluorophoreKey);
@@ -2891,7 +2983,9 @@ if (block.dataset.mechanismType === 'spectral_array') {
     });
 
     const excitationAtSample = Array.isArray(simulation && simulation.excitationAtSample) ? simulation.excitationAtSample : [];
-    if (selection.sources.length && !excitationAtSample.some((value) => value > 1e-6)) {
+    if (excitationMaskResult.issues.length) {
+      setInlineStatus(DOM.referenceStatus, `Reference spectra warning: ${excitationMaskResult.issues.map((issue) => maskIssueSummary(issue)).join('; ')} missing parser spectral_ops.`, 'warning');
+    } else if (selection.sources.length && !excitationAtSample.some((value) => value > 1e-6)) {
       setInlineStatus(DOM.referenceStatus, 'Selected excitation optics block the current source before it reaches the sample.', 'warning');
     } else if (!selection.sources.length) {
       setInlineStatus(DOM.referenceStatus, 'Enable an excitation source to see light at the sample.');
@@ -2911,7 +3005,8 @@ if (block.dataset.mechanismType === 'spectral_array') {
     const grid = Array.isArray(simulation && simulation.grid) ? simulation.grid : VM.wavelengthGrid({ min_nm: 350, max_nm: chartMax, step_nm: 2 });
     const emissionEntries = Array.isArray(simulation && simulation.emittedSpectra) ? simulation.emittedSpectra : [];
     const bestPaths = bestPathEntriesByFluorophore(simulation);
-    const emissionMask = combinedMask([...(selection.dichroic || []), ...(selection.emission || [])], grid, 'emission');
+    const emissionMaskResult = combinedMask([...(selection.dichroic || []), ...(selection.emission || [])], grid, 'emission');
+    const emissionMask = emissionMaskResult.mask;
     const datasets = [baselineMaskDataset('Emission passband', grid, emissionMask, 'rgba(5, 150, 105, 0.85)', 0)];
 
     // Deduplicate detector collection baselines — shared detectors appear once.
@@ -2962,7 +3057,9 @@ if (block.dataset.mechanismType === 'spectral_array') {
       }
     });
 
-    if (!bestPaths.length && emissionEntries.length) {
+    if (emissionMaskResult.issues.length) {
+      setInlineStatus(DOM.emissionStatus, `Collection warning: ${emissionMaskResult.issues.map((issue) => maskIssueSummary(issue)).join('; ')} missing parser spectral_ops.`, 'warning');
+    } else if (!bestPaths.length && emissionEntries.length) {
       setInlineStatus(DOM.emissionStatus, 'No detector path is currently collecting emitted light.', 'warning');
     } else if (!emissionEntries.length) {
       setInlineStatus(DOM.emissionStatus, 'Load a fluorophore and enable excitation to display emission.', 'info');
@@ -3057,17 +3154,31 @@ if (block.dataset.mechanismType === 'spectral_array') {
   function optionComponentsForStage(stage, optionValue, mechanismName) {
     if (!optionValue || typeof optionValue !== 'object') return [];
     if (stage === 'cube') {
-      return expandCubeSelection(optionValue, mechanismName).map((entry) => ({ ...entry.component, __stage: entry.stage }));
+      return expandCubeSelection(optionValue, mechanismName).map((entry) => ({ ...entry.component, _maskStage: entry.stage, _maskMechanismName: entry.name }));
     }
-    return [{ ...optionValue, __stage: stage }];
+    return [{ ...optionValue, _maskStage: stage, _maskMechanismName: mechanismName }];
   }
 
   function applyComponentsToSpectrum(spectrum, components, grid, mode) {
     let values = spectrum.slice();
+    const issues = [];
     (Array.isArray(components) ? components : []).forEach((component) => {
-      values = values.map((value, index) => value * ((VM.componentMask(component, grid, { mode })[index]) || 0));
+      const result = safeComponentMask(component, grid, { mode }, {
+        stage: component && component._maskStage,
+        mechanismName: component && component._maskMechanismName,
+        fallbackMode: 'none',
+      });
+      if (!result.ok && result.reason === 'missing_spectral_ops') {
+        issues.push(result.issue);
+        return;
+      }
+      values = values.map((value, index) => value * (result.mask[index] || 0));
     });
-    return values;
+    return {
+      values,
+      issues,
+      unsupported: issues.length > 0,
+    };
   }
 
   function scoreStageOption(stage, mechanismName, optionValue, excitationSpectrum, emissionSpectrum, grid) {
@@ -3075,15 +3186,18 @@ if (block.dataset.mechanismType === 'spectral_array') {
     if (!components.length) return -1;
     let excitationScore = 0;
     let emissionScore = 0;
-    const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
-    const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
+    const exComponents = components.filter((component) => component._maskStage === 'excitation' || component._maskStage === 'dichroic');
+    const emComponents = components.filter((component) => component._maskStage === 'dichroic' || component._maskStage === 'emission');
     if (excitationSpectrum) {
       const output = applyComponentsToSpectrum(excitationSpectrum, exComponents, grid, 'excitation');
-      excitationScore = integrated(output, grid);
+      // Ranking uses negative infinity to exclude unsupported options without inventing fallback masks.
+      if (output.unsupported) return Number.NEGATIVE_INFINITY;
+      excitationScore = integrated(output.values, grid);
     }
     if (emissionSpectrum) {
       const output = applyComponentsToSpectrum(emissionSpectrum, emComponents, grid, 'emission');
-      emissionScore = integrated(output, grid);
+      if (output.unsupported) return Number.NEGATIVE_INFINITY;
+      emissionScore = integrated(output.values, grid);
     }
     if (stage === 'excitation' || stage === 'cube' || stage === 'dichroic') {
       return (excitationScore * 3) + emissionScore;
@@ -3139,10 +3253,24 @@ if (block.dataset.mechanismType === 'spectral_array') {
         parsedCurrent = null;
       }
       const components = optionComponentsForStage(stage, parsedCurrent, mechanismName);
-      const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
-      const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
-      if (exComponents.length) excitationProbe = applyComponentsToSpectrum(excitationProbe, exComponents, grid, 'excitation');
-      if (emComponents.length) emissionProbe = applyComponentsToSpectrum(emissionProbe, emComponents, grid, 'emission');
+      const exComponents = components.filter((component) => component._maskStage === 'excitation' || component._maskStage === 'dichroic');
+      const emComponents = components.filter((component) => component._maskStage === 'dichroic' || component._maskStage === 'emission');
+      if (exComponents.length) {
+        const excitationResult = applyComponentsToSpectrum(excitationProbe, exComponents, grid, 'excitation');
+        if (excitationResult.unsupported) {
+          setStatusMessage(`Optimizer skipped unsupported parser payload: ${excitationResult.issues.map((issue) => maskIssueSummary(issue)).join('; ')}`, 'warning');
+        } else {
+          excitationProbe = excitationResult.values;
+        }
+      }
+      if (emComponents.length) {
+        const emissionResult = applyComponentsToSpectrum(emissionProbe, emComponents, grid, 'emission');
+        if (emissionResult.unsupported) {
+          setStatusMessage(`Optimizer skipped unsupported parser payload: ${emissionResult.issues.map((issue) => maskIssueSummary(issue)).join('; ')}`, 'warning');
+        } else {
+          emissionProbe = emissionResult.values;
+        }
+      }
     });
 
     return changed;
