@@ -301,8 +301,8 @@
     const fallbackMode = cleanString(context.fallbackMode).toLowerCase();
     const issue = {
       reason: 'missing_spectral_ops',
-      stage: cleanString(context.stage || (component && (component.__stage || component.stage_role))),
-      mechanismName: cleanString(context.mechanismName || (component && component.__mechanismName)),
+      stage: cleanString(context.stage || (component && (component._maskStage || component.stage_role))),
+      mechanismName: cleanString(context.mechanismName || (component && component._maskMechanismName)),
       componentLabel: cleanString(context.componentLabel || componentLabel(component, 'Optical component')),
       mode: cleanString(options && options.mode),
     };
@@ -693,7 +693,7 @@
         const mode = stage === 'excitation' ? 'excitation' : 'emission';
         const result = safeComponentMask(component, grid, { mode }, {
           stage,
-          mechanismName: component && component.__mechanismName,
+          mechanismName: component && component._maskMechanismName,
           fallbackMode: 'none',
         });
         if (!result.ok && result.reason === 'missing_spectral_ops') {
@@ -2433,8 +2433,8 @@
         ...component,
         label: component.label || component.display_label || name,
         display_label: component.display_label || component.label || name,
-        __stage: stage,
-        __mechanismName: name,
+        _maskStage: stage,
+        _maskMechanismName: name,
       };
       if (stage === 'excitation') selection.excitation.push(enriched);
       else if (stage === 'dichroic') selection.dichroic.push(enriched);
@@ -2889,15 +2889,15 @@ if (block.dataset.mechanismType === 'spectral_array') {
     const issues = [];
     const mask = (Array.isArray(components) ? components : []).reduce((accumulator, component) => {
       const result = safeComponentMask(component, grid, { mode }, {
-        stage: component && component.__stage,
-        mechanismName: component && component.__mechanismName,
+        stage: component && component._maskStage,
+        mechanismName: component && component._maskMechanismName,
         fallbackMode: 'passthrough',
       });
       if (!result.ok && result.reason === 'missing_spectral_ops') {
         issues.push(result.issue);
         return accumulator;
       }
-      return accumulator.map((value, index) => value * ((result.mask[index]) || 0));
+      return accumulator.map((value, index) => value * (result.mask[index] || 0));
     }, grid.map(() => 1));
     return { mask, issues };
   }
@@ -3153,9 +3153,9 @@ if (block.dataset.mechanismType === 'spectral_array') {
   function optionComponentsForStage(stage, optionValue, mechanismName) {
     if (!optionValue || typeof optionValue !== 'object') return [];
     if (stage === 'cube') {
-      return expandCubeSelection(optionValue, mechanismName).map((entry) => ({ ...entry.component, __stage: entry.stage, __mechanismName: entry.name }));
+      return expandCubeSelection(optionValue, mechanismName).map((entry) => ({ ...entry.component, _maskStage: entry.stage, _maskMechanismName: entry.name }));
     }
-    return [{ ...optionValue, __stage: stage, __mechanismName: mechanismName }];
+    return [{ ...optionValue, _maskStage: stage, _maskMechanismName: mechanismName }];
   }
 
   function applyComponentsToSpectrum(spectrum, components, grid, mode) {
@@ -3163,15 +3163,15 @@ if (block.dataset.mechanismType === 'spectral_array') {
     const issues = [];
     (Array.isArray(components) ? components : []).forEach((component) => {
       const result = safeComponentMask(component, grid, { mode }, {
-        stage: component && component.__stage,
-        mechanismName: component && component.__mechanismName,
+        stage: component && component._maskStage,
+        mechanismName: component && component._maskMechanismName,
         fallbackMode: 'none',
       });
       if (!result.ok && result.reason === 'missing_spectral_ops') {
         issues.push(result.issue);
         return;
       }
-      values = values.map((value, index) => value * ((result.mask[index]) || 0));
+      values = values.map((value, index) => value * (result.mask[index] || 0));
     });
     return {
       values,
@@ -3185,10 +3185,11 @@ if (block.dataset.mechanismType === 'spectral_array') {
     if (!components.length) return -1;
     let excitationScore = 0;
     let emissionScore = 0;
-    const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
-    const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
+    const exComponents = components.filter((component) => component._maskStage === 'excitation' || component._maskStage === 'dichroic');
+    const emComponents = components.filter((component) => component._maskStage === 'dichroic' || component._maskStage === 'emission');
     if (excitationSpectrum) {
       const output = applyComponentsToSpectrum(excitationSpectrum, exComponents, grid, 'excitation');
+      // Ranking uses negative infinity to exclude unsupported options without inventing fallback masks.
       if (output.unsupported) return Number.NEGATIVE_INFINITY;
       excitationScore = integrated(output.values, grid);
     }
@@ -3251,8 +3252,8 @@ if (block.dataset.mechanismType === 'spectral_array') {
         parsedCurrent = null;
       }
       const components = optionComponentsForStage(stage, parsedCurrent, mechanismName);
-      const exComponents = components.filter((component) => component.__stage === 'excitation' || component.__stage === 'dichroic');
-      const emComponents = components.filter((component) => component.__stage === 'dichroic' || component.__stage === 'emission');
+      const exComponents = components.filter((component) => component._maskStage === 'excitation' || component._maskStage === 'dichroic');
+      const emComponents = components.filter((component) => component._maskStage === 'dichroic' || component._maskStage === 'emission');
       if (exComponents.length) {
         const excitationResult = applyComponentsToSpectrum(excitationProbe, exComponents, grid, 'excitation');
         if (excitationResult.unsupported) {

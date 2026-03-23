@@ -323,9 +323,9 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_selection_components_keep_stage_and_mechanism_metadata_for_missing_ops_warnings(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("__stage: stage", source)
-        self.assertIn("__mechanismName: name", source)
-        self.assertIn("__mechanismName: mechanismName", source)
+        self.assertIn("_maskStage: stage", source)
+        self.assertIn("_maskMechanismName: name", source)
+        self.assertIn("_maskMechanismName: mechanismName", source)
 
     # ── VM-011: buildSelectedConfiguration function exists ──
 
