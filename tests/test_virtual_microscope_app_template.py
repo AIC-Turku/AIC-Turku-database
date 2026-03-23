@@ -202,6 +202,21 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("cubeValue.emission_filter", notes_fn)
         self.assertNotRegex(notes_fn, r"cubeValue\.(?:di|dichroic_filter|em|emission)\b")
 
+    def test_unresolved_selected_execution_uses_available_position_spectral_ops(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        resolve_fn = source.split("function resolveSelectedExecution")[1].split("\n  function ")[0]
+        self.assertIn("const candidates = Array.isArray(step.available_positions) ? step.available_positions : [];", resolve_fn)
+        self.assertIn("candidates.find((cand) => cleanString(cand.position_key) === positionKey)", resolve_fn)
+        self.assertIn("const resolvedOps = (matched && matched.spectral_ops) || selectedComponent.spectral_ops || null;", resolve_fn)
+        self.assertIn("spectral_ops: resolvedOps,", resolve_fn)
+        self.assertNotIn("center_nm", resolve_fn)
+        self.assertNotIn("cut_on_nm", resolve_fn)
+        self.assertNotIn("cut_off_nm", resolve_fn)
+        self.assertNotIn("bands:", resolve_fn)
+        self.assertNotIn("transmission_bands", resolve_fn)
+        self.assertNotIn("reflection_bands", resolve_fn)
+
     def test_filter_cube_component_mask_fallback_removed(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 
@@ -340,6 +355,26 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("_maskStage: stage", source)
         self.assertIn("_maskMechanismName: name", source)
         self.assertIn("_maskMechanismName: mechanismName", source)
+
+    def test_missing_spectral_ops_path_degrades_gracefully_instead_of_crashing(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        safe_mask_fn = source.split("function safeComponentMask")[1].split("\n  function ")[0]
+        self.assertIn("if (component && typeof component === 'object' && !component.spectral_ops) {", safe_mask_fn)
+        self.assertIn("return warnMissingOps();", safe_mask_fn)
+        self.assertIn("return warnMissingOps(error);", safe_mask_fn)
+        self.assertIn("throw error;", safe_mask_fn)
+
+        overlays_fn = source.split("function activeFilterMaskDatasets")[1].split("\n  function ")[0]
+        self.assertIn("if (!result.ok && result.reason === 'missing_spectral_ops') {", overlays_fn)
+        self.assertIn("overlayWarnings.push(result.issue);", overlays_fn)
+        self.assertIn("return;", overlays_fn)
+
+        combined_fn = source.split("function combinedMask")[1].split("\n  function ")[0]
+        self.assertIn("if (!result.ok && result.reason === 'missing_spectral_ops') {", combined_fn)
+        self.assertIn("issues.push(result.issue);", combined_fn)
+        self.assertIn("return accumulator;", combined_fn)
+        self.assertIn("return { mask, issues };", combined_fn)
 
     # ── VM-011: buildSelectedConfiguration function exists ──
 

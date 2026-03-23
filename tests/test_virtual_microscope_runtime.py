@@ -1060,6 +1060,38 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(normalized_blue_channel.get("routes"), expected_blue_channel.get("routes"))
         self.assertEqual(normalized_blue_channel.get("path"), expected_blue_channel.get("path"))
 
+    def test_projection_stage_option_labels_keep_spectral_ops_after_runtime_normalization(self) -> None:
+        cases = [
+            (
+                "3i CSU-W1 Spinning Disk.yaml",
+                "emission",
+                "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+            ),
+            (
+                "3i CSU-W1 Spinning Disk.yaml",
+                "dichroic",
+                "Slot 1: Quad-band Dichroic",
+            ),
+            (
+                "xCELLigence RTCA eSight.yaml",
+                "cube",
+                "Slot 1: Blue Channel",
+            ),
+        ]
+
+        for instrument_name, stage_role, target_label in cases:
+            with self.subTest(instrument=instrument_name, stage=stage_role, label=target_label):
+                payload = self.parser_payload_for_instrument(instrument_name)
+                runtime_projection = payload["projections"]["virtual_microscope"]["stages"]
+                expected_value = self._find_stage_option_value(runtime_projection[stage_role], target_label)
+                self.assertIsNotNone(expected_value)
+                self.assertIsNotNone(expected_value.get("spectral_ops"))
+
+                normalized_value = self.normalized_stage_option_value(payload, stage_role, target_label)
+                self.assertIsNotNone(normalized_value)
+                self.assertIsNotNone(normalized_value.get("spectral_ops"))
+                self.assertEqual(normalized_value["spectral_ops"], expected_value["spectral_ops"])
+
     def test_reused_canonical_optical_path_element_keeps_route_bindings_when_seen_in_both_sequences(self) -> None:
         result = self.run_node_json(
             """
