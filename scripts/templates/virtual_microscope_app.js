@@ -443,8 +443,8 @@
       const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
       const linked = cubeValue && (
         kind === 'dichroic'
-          ? (cubeValue.dichroic_filter || cubeValue.dichroic || cubeValue.di)
-          : (cubeValue.emission_filter || cubeValue.emission || cubeValue.em)
+          ? cubeValue.dichroic
+          : cubeValue.emission_filter
       );
       if (linked) {
         panel.appendChild(
