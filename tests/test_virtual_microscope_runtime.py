@@ -71,7 +71,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             self.skipTest("Obsolete after strict parser-only runtime refactor.")
 
     def run_node_json(self, body: str) -> object:
-        script = textwrap.dedent(
+        return self.run_node_script_json(
             f"""
             const rt = require('./scripts/templates/virtual_microscope_runtime.js');
             const result = (() => {{
@@ -80,10 +80,12 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             console.log(JSON.stringify(result));
             """
         )
+
+    def run_node_script_json(self, script: str) -> object:
         proc = subprocess.run(
             ["node", "-"],
             cwd=REPO_ROOT,
-            input=script,
+            input=textwrap.dedent(script),
             capture_output=True,
             text=True,
             check=False,
@@ -115,8 +117,9 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         return None
 
     def normalized_stage_option_value(self, payload: dict, stage_role: str, target_label: str) -> dict | None:
-        return self.run_node_json(
+        return self.run_node_script_json(
             f"""
+            const rt = require('./scripts/templates/virtual_microscope_runtime.js');
             const payload = {json.dumps(payload)};
             const instrument = rt.normalizeInstrumentPayload(payload);
             const stageRows = instrument[{json.dumps(stage_role)}] || [];
@@ -141,7 +144,7 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
               }}
               return null;
             }}
-            return findOptionValue(stageRows, targetLabel);
+            console.log(JSON.stringify(findOptionValue(stageRows, targetLabel)));
             """
         )
 

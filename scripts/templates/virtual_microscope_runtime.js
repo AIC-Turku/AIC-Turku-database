@@ -362,6 +362,14 @@
     return (Array.isArray(rows) ? rows : []).filter((row) => row && typeof row === 'object');
   }
 
+  function virtualMicroscopeProjection(payload, runtimeProjection) {
+    if (runtimeProjection && typeof runtimeProjection === 'object') return runtimeProjection;
+    const projections = payload && payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
+    return projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
+      ? projections.virtual_microscope
+      : {};
+  }
+
   function hasCanonicalDtoContract(payload) {
     if (!payload || typeof payload !== 'object') return false;
     return Array.isArray(payload.sources)
@@ -655,12 +663,7 @@
   function canonicalStagePayload(payload, topologyBindings, runtimeProjection) {
     const stageRoles = ['cube', 'excitation', 'dichroic', 'emission', 'analyzer'];
     const out = Object.fromEntries(stageRoles.map((stageRole) => [stageRole, []]));
-    const projections = payload && payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
-    const vmProjection = runtimeProjection && typeof runtimeProjection === 'object'
-      ? runtimeProjection
-      : (projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
-      ? projections.virtual_microscope
-      : {});
+    const vmProjection = virtualMicroscopeProjection(payload, runtimeProjection);
     const projectionStages = vmProjection.stages && typeof vmProjection.stages === 'object'
       ? vmProjection.stages
       : null;
@@ -778,14 +781,10 @@
   }
 
   function canonicalSplitterPayload(payload, topologyBindings, runtimeProjection) {
-    const projections = payload && payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
-    const vmProjection = runtimeProjection && typeof runtimeProjection === 'object'
-      ? runtimeProjection
-      : (projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
-      ? projections.virtual_microscope
-      : {});
+    const vmProjection = virtualMicroscopeProjection(payload, runtimeProjection);
     const projectionSplitters = Array.isArray(vmProjection.splitters) ? vmProjection.splitters : null;
     if (projectionSplitters) {
+      // Projection-authored splitter payloads are the authoritative parser contract.
       return canonicalElements(projectionSplitters).map((splitter, index) => {
         const routes = routesFromObject(splitter).length
           ? routesFromObject(splitter)
