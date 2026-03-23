@@ -653,25 +653,68 @@
   }
 
   function canonicalStagePayload(payload, topologyBindings) {
-    const out = { cube: [], excitation: [], dichroic: [], emission: [], analyzer: [] };
-    canonicalElements(payload && payload.optical_path_elements).forEach((element) => {
-      const stageRole = cleanString(element && element.stage_role).toLowerCase();
-      if (!['cube', 'excitation', 'dichroic', 'emission', 'analyzer'].includes(stageRole)) return;
-      const mechanism = { ...element, type: element.element_type || element.type || 'mechanism' };
-      const routes = canonicalElementRoutes(element, topologyBindings);
+    const stageRoles = ['cube', 'excitation', 'dichroic', 'emission', 'analyzer'];
+    const out = Object.fromEntries(stageRoles.map((stageRole) => [stageRole, []]));
+    const projections = payload && payload.projections && typeof payload.projections === 'object' ? payload.projections : {};
+    const runtimeProjection = projections.virtual_microscope && typeof projections.virtual_microscope === 'object'
+      ? projections.virtual_microscope
+      : {};
+    const projectionStages = runtimeProjection.stages && typeof runtimeProjection.stages === 'object'
+      ? runtimeProjection.stages
+      : null;
+
+    function sequenceUseForElement(element) {
       const binding = topologyBindings && topologyBindings.elementBindings
         ? topologyBindings.elementBindings.get(normalizeIdentifier(element && element.id))
         : null;
-      if (routes.length) {
-        mechanism.routes = routes;
-        mechanism.path = routes[0];
-      }
-      mechanism.__sequence_use = {
+      return {
         illumination: Array.isArray(binding && binding.illumination) ? binding.illumination.map((entry) => ({ ...entry })) : [],
         detection: Array.isArray(binding && binding.detection) ? binding.detection.map((entry) => ({ ...entry })) : [],
       };
-      out[stageRole].push(mechanism);
-    });
+    }
+
+    function enrichMechanism(mechanism, stageRole) {
+      const cloned = { ...(mechanism || {}), type: (mechanism && (mechanism.element_type || mechanism.type)) || 'mechanism' };
+      const routes = routesFromObject(cloned).length
+        ? routesFromObject(cloned)
+        : canonicalElementRoutes({ ...(cloned || {}), stage_role: stageRole }, topologyBindings);
+      if (routes.length) {
+        cloned.routes = routes;
+        cloned.path = routes[0];
+        cloned.__routes = routes;
+      }
+      cloned.__sequence_use = sequenceUseForElement(cloned);
+      if (cloned.positions && typeof cloned.positions === 'object') {
+        cloned.positions = Object.fromEntries(
+          Object.entries(positionsToObject(cloned.positions)).map(([slot, value]) => [slot, value && typeof value === 'object' ? { ...value } : value])
+        );
+      }
+      if (Array.isArray(cloned.options)) {
+        cloned.options = cloned.options.map((option) => ({
+          ...(option || {}),
+          value: option && option.value && typeof option.value === 'object'
+            ? {
+                ...option.value,
+                __routes: routesFromObject(option.value).length ? routesFromObject(option.value) : routes,
+              }
+            : option.value,
+        }));
+      }
+      return cloned;
+    }
+
+    if (projectionStages) {
+      stageRoles.forEach((stageRole) => {
+        out[stageRole] = canonicalElements(projectionStages[stageRole]).map((mechanism) => enrichMechanism(mechanism, stageRole));
+      });
+    } else {
+      canonicalElements(payload && payload.optical_path_elements).forEach((element) => {
+        const stageRole = cleanString(element && element.stage_role).toLowerCase();
+        if (!stageRoles.includes(stageRole)) return;
+        out[stageRole].push(enrichMechanism(element, stageRole));
+      });
+    }
+
     Object.keys(out).forEach((stageRole) => {
       out[stageRole].sort((left, right) => {
         const leftUse = left && left.__sequence_use;
