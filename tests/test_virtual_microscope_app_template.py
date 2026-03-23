@@ -188,6 +188,20 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("cubePosition._cube_incomplete", source)
         self.assertIn("has no explicit excitation filter data", source)
 
+    def test_cube_ui_helpers_use_only_canonical_parser_field_names(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        expand_fn = source.split("function expandCubeSelection")[1].split("\n  function ")[0]
+        self.assertIn("cubePosition.excitation_filter", expand_fn)
+        self.assertIn("cubePosition.dichroic", expand_fn)
+        self.assertIn("cubePosition.emission_filter", expand_fn)
+        self.assertNotRegex(expand_fn, r"cubePosition\.(?:ex|excitation|di|dichroic_filter|em|emission)\b")
+
+        notes_fn = source.split("function appendLinkedCubeNotes")[1].split("\n  function ")[0]
+        self.assertIn("cubeValue.dichroic", notes_fn)
+        self.assertIn("cubeValue.emission_filter", notes_fn)
+        self.assertNotRegex(notes_fn, r"cubeValue\.(?:di|dichroic_filter|em|emission)\b")
+
     def test_filter_cube_component_mask_fallback_removed(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 

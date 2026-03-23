@@ -2725,6 +2725,15 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertIn("cube.dichroic", source)
         self.assertIn("cube.emission_filter", source)
 
+    def test_runtime_cube_selection_building_uses_only_canonical_parser_field_names(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
+
+        runtime_cube_block = source.split("cubeCombo.forEach(({ mechanism, option }) => {", 1)[1].split("exCombo.forEach", 1)[0]
+        self.assertIn("cube.excitation_filter", runtime_cube_block)
+        self.assertIn("cube.dichroic", runtime_cube_block)
+        self.assertIn("cube.emission_filter", runtime_cube_block)
+        self.assertNotRegex(runtime_cube_block, r"cube\.(?:ex|excitation|di|dichroic_filter|em|emission)\b")
+
     # ── executeSpectralOps tests ──────────────────────────────────────
 
     def test_execute_spectral_ops_bandpass(self) -> None:

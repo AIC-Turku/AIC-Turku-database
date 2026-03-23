@@ -506,6 +506,7 @@
     const cubeSelects = Array.from(DOM.graph.querySelectorAll('select[data-stage="cube"]'));
     cubeSelects.forEach((cubeSelect, index) => {
       const cubeValue = parseJsonValue(cubeSelect && cubeSelect.value);
+      // JS cube-linked notes consume only canonical parser-authored field names.
       const linked = cubeValue && (
         kind === 'dichroic'
           ? cubeValue.dichroic
@@ -2359,7 +2360,7 @@
   function expandCubeSelection(cubePosition, mechanismName) {
     // The parser is the single source of truth for cube expansion.
     // This function extracts the already-expanded sub-components using
-    // canonical parser field names (CUBE_LINK_KEYS), preserving spectral_ops.
+    // canonical parser field names only (CUBE_LINK_KEYS), preserving spectral_ops.
     const expanded = [];
     const excitation = cubePosition.excitation_filter;
     const dichroic = cubePosition.dichroic;
