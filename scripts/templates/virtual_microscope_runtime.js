@@ -2093,6 +2093,7 @@ function detectorCollectionMask(detector, grid) {
     // Detector collection windows are detector metadata, not parser-authored
     // optical components. Model them directly as a detector-side band mask
     // instead of fabricating synthetic spectral_ops.
+    // Edge steepness 8 (narrower than eyepiece 12) models typical detector QE roll-off.
     return bandMask(grid, bounds.min, bounds.max, 8);
   }
 

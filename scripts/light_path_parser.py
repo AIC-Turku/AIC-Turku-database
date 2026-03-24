@@ -3891,7 +3891,7 @@ def _build_route_sequences_and_graph(
         "selected_execution": {
             "contract_version": "selected_execution.v2",
             "selected_route_steps": deepcopy(selected_route_steps),
-            "steps": deepcopy(selected_route_steps),  # temporary compatibility alias
+            "steps": deepcopy(selected_route_steps),  # TODO: remove once all consumers use selected_route_steps
             "warnings": list(route_warnings),
         },
         "route_warnings": route_warnings,
