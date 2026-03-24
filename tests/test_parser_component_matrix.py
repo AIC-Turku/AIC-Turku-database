@@ -366,5 +366,59 @@ class ParserComponentMatrixTests(unittest.TestCase):
                     self.assertFalse(value.get("_unsupported_spectral_model", False))
 
 
+    def test_upgraded_real_instrument_cubes_are_authoritative(self) -> None:
+        """Upgraded real YAML instruments must parse complete cubes with full spectral_ops."""
+        upgraded_files = [
+            "EVOS fl.yaml",
+            "Nikon Ti2-E Crest V3 Spinning Disk.yaml",
+            "Olympus BX60.yaml",
+            "Leica DM IRBE.yaml",
+            "Leica DM RB.yaml",
+        ]
+        for filename in upgraded_files:
+            yaml_path = INSTRUMENTS_DIR / filename
+            if not yaml_path.exists():
+                continue
+            with self.subTest(instrument=filename):
+                instrument = yaml.safe_load(yaml_path.read_text())
+                warnings = validate_filter_cube_warnings(instrument)
+                self.assertEqual(warnings, [], f"{filename} should have zero cube warnings after upgrade")
+
+                payload = generate_virtual_microscope_payload(instrument)
+                cube_mechanisms = _runtime_projection(payload).get("stages", {}).get("cube", [])
+                self.assertTrue(len(cube_mechanisms) > 0, f"{filename} should have cube mechanisms")
+                for mechanism in cube_mechanisms:
+                    for option in mechanism.get("options") or []:
+                        value = option.get("value") or {}
+                        if str(value.get("component_type", "")).lower() != "filter_cube":
+                            continue
+                        self.assertFalse(value.get("_cube_incomplete", False), f"Cube {value.get('label')} in {filename} should not be incomplete")
+                        self.assertFalse(value.get("_unsupported_spectral_model", False), f"Cube {value.get('label')} in {filename} should have supported spectral model")
+                        spectral_ops = value.get("spectral_ops", {})
+                        self.assertIn("illumination", spectral_ops)
+                        self.assertIn("detection", spectral_ops)
+                        illum_ops = spectral_ops["illumination"]
+                        det_ops = spectral_ops["detection"]
+                        self.assertTrue(len(illum_ops) >= 2, "Illumination should have excitation_filter + dichroic ops")
+                        self.assertTrue(len(det_ops) >= 2, "Detection should have dichroic + emission_filter ops")
+
+    def test_non_upgradeable_cubes_remain_identified(self) -> None:
+        """YAMLs that could not be safely upgraded still emit cube warnings."""
+        still_degraded = [
+            ("Zeiss TIRF.yaml", 4),
+            ("Zeiss AxioZoom V16.yaml", 4),
+            ("xCELLigence RTCA eSight.yaml", 3),
+            ("Nikon Eclipse Ti2-E.yaml", 1),
+        ]
+        for filename, expected_count in still_degraded:
+            yaml_path = INSTRUMENTS_DIR / filename
+            if not yaml_path.exists():
+                continue
+            with self.subTest(instrument=filename):
+                instrument = yaml.safe_load(yaml_path.read_text())
+                warnings = validate_filter_cube_warnings(instrument)
+                self.assertEqual(len(warnings), expected_count, f"{filename} should have {expected_count} non-authoritative cube warning(s)")
+
+
 if __name__ == "__main__":
     unittest.main()

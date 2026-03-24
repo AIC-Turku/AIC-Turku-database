@@ -334,6 +334,10 @@ hardware:
             - center_nm: 810
               width_nm: 80
           notes: 'Quad-band. Excitation: 436/28, 506/21, 578/24, 730/40 nm. Dichroic Cutoffs: 459, 523, 598, 763 nm.'
+          # TODO: Non-authoritative quad-band cube. Upgrade to explicit multiband
+          # excitation_filter (multiband_bandpass), dichroic (polychroic), and
+          # emission_filter (multiband_bandpass) when full band specifications are
+          # available from Leica product documentation for code 11525416.
         Pos_2:
           name: DFT51010
           product_code: '11525418'
@@ -348,6 +352,10 @@ hardware:
             - center_nm: 695
               width_nm: 58
           notes: 'Quad-band. Excitation: 391/32, 479/33, 554/24, 638/31 nm. Dichroic Cutoffs: 415, 500, 572, 660 nm.'
+          # TODO: Non-authoritative quad-band cube. Upgrade to explicit multiband
+          # excitation_filter (multiband_bandpass), dichroic (polychroic), and
+          # emission_filter (multiband_bandpass) when full band specifications are
+          # available from Leica product documentation for code 11525418.
         Pos_3:
           name: CY3
           component_type: filter_cube
@@ -355,6 +363,17 @@ hardware:
             - center_nm: 572
               width_nm: 23
           notes: 'LED: 555. Excitation: 546/10 nm. Dichroic Cutoff: 556 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 546
+            width_nm: 10
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 556
+          emission_filter:
+            component_type: bandpass
+            center_nm: 572
+            width_nm: 23
         Pos_4:
           name: A594
           component_type: filter_cube
@@ -362,6 +381,17 @@ hardware:
             - center_nm: 630
               width_nm: 30
           notes: 'LED: 575. Excitation: 592/21 nm. Dichroic Cutoff: 610 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 592
+            width_nm: 21
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 610
+          emission_filter:
+            component_type: bandpass
+            center_nm: 630
+            width_nm: 30
         Pos_5:
           name: EMP_BF
           product_code: '11525000'

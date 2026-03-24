@@ -374,6 +374,10 @@ hardware:
           name: Standard Cubes
           component_type: filter_cube
           notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
+          # TODO: Non-authoritative cube — no spectral data available. This
+          # position bundles multiple unnamed cubes without individual
+          # specifications. Upgrade when individual cube models and their
+          # excitation_filter, dichroic, and emission_filter specs are identified.
 
     - name: DIC Fixed Analyzer
       stage_role: analyzer

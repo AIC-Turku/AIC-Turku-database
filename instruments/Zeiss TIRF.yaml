@@ -217,6 +217,9 @@ hardware:
             - center_nm: 525
               width_nm: 50
           notes: 'Excitation: 470/40 nm.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
+          # data. Upgrade to explicit excitation_filter, dichroic, and
+          # emission_filter when Zeiss filter set 38 HE datasheet is consulted.
         Pos_2:
           name: Filter set 43 HE (DsRed)
           product_code: 43 HE
@@ -225,6 +228,8 @@ hardware:
             - center_nm: 605
               width_nm: 70
           notes: 'Excitation: 550/25 nm.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
+          # data. Upgrade when Zeiss filter set 43 HE datasheet is consulted.
         Pos_3:
           name: Filter set 76 HE (CFP/GFP/DsRed)
           product_code: 76 HE
@@ -237,6 +242,8 @@ hardware:
             - center_nm: 608
               width_nm: 30
           notes: 'Excitation: TBP 406+489+561 nm. Emission: TBP 459+525+608 nm.'
+          # TODO: Non-authoritative multiband cube — dichroic cutoff not recorded
+          # in local data. Upgrade when Zeiss filter set 76 HE datasheet is consulted.
         Pos_4:
           name: Filter set 77 HE (GFP/mRFP/Alexa 633)
           product_code: 77 HE
@@ -249,6 +256,8 @@ hardware:
             - center_nm: 688
               width_nm: 40
           notes: 'Excitation: TBP 483+564+642 nm. Emission: TBP 526+601+688 nm.'
+          # TODO: Non-authoritative multiband cube — dichroic cutoff not recorded
+          # in local data. Upgrade when Zeiss filter set 77 HE datasheet is consulted.
 
     - name: Trinocular Port # ADDED: Splitting logic for ocular paths
       stage_role: splitter

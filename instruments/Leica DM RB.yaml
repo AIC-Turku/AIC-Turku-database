@@ -143,17 +143,38 @@ hardware:
       positions:
         Pos_1:
           name: Filter Cube A (DAPI/Hoechst)
-          component_type: filter_cube # CORRECTED: Converted to canonical component type
-          cut_on_nm: # CORRECTED: Moved longpass emission to canonical format (list of numbers)
+          component_type: filter_cube
+          cut_on_nm:
             - 425
           notes: 'Excitation: 360/40 nm. Dichroic Cutoff: 400 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 360
+            width_nm: 40
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 400
+          emission_filter:
+            component_type: longpass
+            cut_on_nm: 425
         Pos_2:
           name: Filter Cube EGFP
           component_type: filter_cube
-          bands: # CORRECTED: Moved emission to canonical bands array
+          bands:
             - center_nm: 525
               width_nm: 50
           notes: 'Excitation: 470/40 nm. Dichroic Cutoff: 495 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 470
+            width_nm: 40
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 495
+          emission_filter:
+            component_type: bandpass
+            center_nm: 525
+            width_nm: 50
         Pos_3:
           name: Filter Cube CY3 (TRITC/RFP)
           component_type: filter_cube
@@ -161,6 +182,17 @@ hardware:
             - center_nm: 605
               width_nm: 70
           notes: 'Excitation: 545.5/25 nm. Dichroic Cutoff: 565 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 546
+            width_nm: 25
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 565
+          emission_filter:
+            component_type: bandpass
+            center_nm: 605
+            width_nm: 70
           
     - name: Trinocular Port # CORRECTED: Changed label to reflect its trinocular splitting role
       # CORRECTED: Removed legacy 'type' and 'path' aliases
