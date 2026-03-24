@@ -1451,6 +1451,165 @@ sections:
         used_by: [dashboard, method_generator]
         rationale: Band width for direct multiband position payloads.
 
+      # ── filter_cube structured sub-components ──────────────────────────
+      # When component_type is filter_cube, authors may supply explicit
+      # excitation_filter, dichroic, and emission_filter objects carrying
+      # only the spectral fields the parser needs.  Identity fields
+      # (manufacturer, model, product_code) belong on the cube position
+      # itself, not on each internal optic.  Flattened cubes
+      # (component_type: filter_cube with only top-level bands/cut_on_nm)
+      # remain valid but will be degraded in spectral simulation.
+
+      # ── excitation_filter ──────────────────────────────────────────────
+      - path: hardware.optical_path_elements[].positions{}.excitation_filter
+        title: Filter cube excitation filter
+        status: optional
+        type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit excitation-filter sub-component of a filter_cube position.
+
+      - path: hardware.optical_path_elements[].positions{}.excitation_filter.component_type
+        title: Excitation filter component type
+        status: optional
+        type: string
+        vocab: optical_component_types
+        used_by: [dashboard, method_generator]
+        rationale: Canonical component classifier for the excitation filter sub-component. Inferred by the parser when omitted.
+
+      - path: hardware.optical_path_elements[].positions{}.excitation_filter.center_nm
+        title: Excitation filter center wavelength (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Band center for bandpass-type excitation filters.
+
+      - path: hardware.optical_path_elements[].positions{}.excitation_filter.width_nm
+        title: Excitation filter bandwidth (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Band width for bandpass-type excitation filters.
+
+      - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands
+        title: Excitation filter multiband array
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit multiband pass windows for multiband excitation filters.
+
+      - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands[].center_nm
+        title: Excitation filter band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: hardware.optical_path_elements[].positions{}.excitation_filter.bands[]
+        used_by: [dashboard, method_generator]
+        rationale: Band center for multiband excitation filter sub-component.
+
+      - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands[].width_nm
+        title: Excitation filter band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: hardware.optical_path_elements[].positions{}.excitation_filter.bands[]
+        used_by: [dashboard, method_generator]
+        rationale: Band width for multiband excitation filter sub-component.
+
+      # ── dichroic ───────────────────────────────────────────────────────
+      - path: hardware.optical_path_elements[].positions{}.dichroic
+        title: Filter cube dichroic
+        status: optional
+        type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit dichroic sub-component of a filter_cube position.
+
+      - path: hardware.optical_path_elements[].positions{}.dichroic.component_type
+        title: Dichroic component type
+        status: optional
+        type: string
+        vocab: optical_component_types
+        used_by: [dashboard, method_generator]
+        rationale: Canonical component classifier for the dichroic sub-component. Inferred by the parser when omitted.
+
+      - path: hardware.optical_path_elements[].positions{}.dichroic.cut_on_nm
+        title: Dichroic cut-on wavelength (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Single-edge dichroic cut-on wavelength.
+
+      - path: hardware.optical_path_elements[].positions{}.dichroic.cutoffs_nm
+        title: Dichroic cutoff wavelengths (nm)
+        status: optional
+        type: list
+        item_type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Multi-edge dichroic cutoff wavelength array.
+
+      # ── emission_filter ────────────────────────────────────────────────
+      - path: hardware.optical_path_elements[].positions{}.emission_filter
+        title: Filter cube emission filter
+        status: optional
+        type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit emission-filter sub-component of a filter_cube position.
+
+      - path: hardware.optical_path_elements[].positions{}.emission_filter.component_type
+        title: Emission filter component type
+        status: optional
+        type: string
+        vocab: optical_component_types
+        used_by: [dashboard, method_generator]
+        rationale: Canonical component classifier for the emission filter sub-component. Inferred by the parser when omitted.
+
+      - path: hardware.optical_path_elements[].positions{}.emission_filter.center_nm
+        title: Emission filter center wavelength (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Band center for bandpass-type emission filters.
+
+      - path: hardware.optical_path_elements[].positions{}.emission_filter.width_nm
+        title: Emission filter bandwidth (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Band width for bandpass-type emission filters.
+
+      - path: hardware.optical_path_elements[].positions{}.emission_filter.cut_on_nm
+        title: Emission filter cut-on wavelength (nm)
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Cut-on wavelength for longpass-type emission filters.
+
+      - path: hardware.optical_path_elements[].positions{}.emission_filter.bands
+        title: Emission filter multiband array
+        status: optional
+        type: list
+        item_type: object
+        used_by: [dashboard, method_generator]
+        rationale: Explicit multiband pass windows for multiband emission filters.
+
+      - path: hardware.optical_path_elements[].positions{}.emission_filter.bands[].center_nm
+        title: Emission filter band center (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: hardware.optical_path_elements[].positions{}.emission_filter.bands[]
+        used_by: [dashboard, method_generator]
+        rationale: Band center for multiband emission filter sub-component.
+
+      - path: hardware.optical_path_elements[].positions{}.emission_filter.bands[].width_nm
+        title: Emission filter band width (nm)
+        status: conditional
+        type: positive_number
+        required_if:
+          parent_present: hardware.optical_path_elements[].positions{}.emission_filter.bands[]
+        used_by: [dashboard, method_generator]
+        rationale: Band width for multiband emission filter sub-component.
+
       - path: hardware.eyepieces
         title: Eyepieces
         status: optional

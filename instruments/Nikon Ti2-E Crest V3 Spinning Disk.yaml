@@ -309,11 +309,22 @@ hardware:
         Pos_1:
           name: DAPI Ti2 32mm Cube SB LFOV
           product_code: MXR00714
-          component_type: filter_cube # CORRECTED: Flattened filter components into cube + notes
+          component_type: filter_cube
           bands:
             - center_nm: 447
               width_nm: 60
           notes: 'For widefield imaging with D-LEDI. Excitation: 377/50 nm. Dichroic Cutoff: 409 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 377
+            width_nm: 50
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 409
+          emission_filter:
+            component_type: bandpass
+            center_nm: 447
+            width_nm: 60
         Pos_2:
           name: FITC Ti2 32mm Cube SB LFOV
           product_code: MXR00716
@@ -322,6 +333,17 @@ hardware:
             - center_nm: 525
               width_nm: 50
           notes: 'Excitation: 470/40 nm. Dichroic Cutoff: 495 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 470
+            width_nm: 40
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 495
+          emission_filter:
+            component_type: bandpass
+            center_nm: 525
+            width_nm: 50
         Pos_3:
           name: mCherry Ti2 32mm Cube SB LFOV
           product_code: MXR00719
@@ -330,6 +352,17 @@ hardware:
             - center_nm: 630
               width_nm: 75
           notes: 'Excitation: 560/40 nm. Dichroic Cutoff: 585 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 560
+            width_nm: 40
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 585
+          emission_filter:
+            component_type: bandpass
+            center_nm: 630
+            width_nm: 75
         Pos_4:
           name: Cy5 Ti2 32mm Cube SB LFOV
           product_code: MXR00720
@@ -338,6 +371,17 @@ hardware:
             - center_nm: 700
               width_nm: 75
           notes: 'Excitation: 620/60 nm. Dichroic Cutoff: 660 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 620
+            width_nm: 60
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 660
+          emission_filter:
+            component_type: bandpass
+            center_nm: 700
+            width_nm: 75
           
     - name: Crest Excitation Wheel
       slots: 3

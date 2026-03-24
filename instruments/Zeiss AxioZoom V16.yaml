@@ -139,6 +139,9 @@ hardware:
             - center_nm: 445
               width_nm: 50
           notes: 'Excitation: G365.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
+          # excitation uses Zeiss designation (G365) rather than center/width.
+          # Upgrade when Zeiss filter set 49 datasheet is consulted.
         Pos_2:
           name: Alexa 488 (Filter set 38 HE)
           product_code: 38 HE
@@ -147,6 +150,8 @@ hardware:
             - center_nm: 525
               width_nm: 50
           notes: 'Excitation: BP 470/40.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
+          # data. Upgrade when Zeiss filter set 38 HE datasheet is consulted.
         Pos_3:
           name: Alexa 568 (Filter set 45)
           product_code: '45'
@@ -155,6 +160,8 @@ hardware:
             - center_nm: 630
               width_nm: 75
           notes: 'Excitation: BP 560/40.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
+          # data. Upgrade when Zeiss filter set 45 datasheet is consulted.
         Pos_4:
           name: Alexa 647 (Filter set 50)
           product_code: '50'
@@ -163,6 +170,8 @@ hardware:
             - center_nm: 690
               width_nm: 50
           notes: 'Excitation: BP 640/30.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
+          # data. Upgrade when Zeiss filter set 50 datasheet is consulted.
 
     - name: Trinocular Port # ADDED: Required to split light to cameras or eyepieces
       stage_role: splitter

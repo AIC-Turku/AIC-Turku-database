@@ -137,10 +137,13 @@ hardware:
         Pos_1:
           name: Blue Channel
           component_type: filter_cube
-          bands: # CORRECTED: Converted 427-462 range to canonical bands array
+          bands:
             - center_nm: 445
               width_nm: 35
           notes: 'e.g., DAPI/Hoechst. Excitation: 381-404 nm.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
+          # excitation given as range (381-404 nm) rather than center/width.
+          # Upgrade when Agilent xCELLigence eSight documentation is consulted.
         Pos_2:
           name: Green Channel
           component_type: filter_cube
@@ -148,6 +151,9 @@ hardware:
             - center_nm: 532
               width_nm: 58
           notes: 'e.g., FITC/GFP. Excitation: 473-491 nm.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
+          # excitation given as range (473-491 nm) rather than center/width.
+          # Upgrade when Agilent xCELLigence eSight documentation is consulted.
         Pos_3:
           name: Red Channel
           component_type: filter_cube
@@ -155,6 +161,9 @@ hardware:
             - center_nm: 671
               width_nm: 99
           notes: 'e.g., Cy3/Texas Red. Excitation: 584-605 nm.'
+          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
+          # excitation given as range (584-605 nm) rather than center/width.
+          # Upgrade when Agilent xCELLigence eSight documentation is consulted.
 
 
 light_paths:

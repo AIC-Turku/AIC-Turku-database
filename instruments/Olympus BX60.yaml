@@ -170,10 +170,20 @@ hardware:
         Pos_1:
           name: U-MWU (DAPI)
           product_code: U-MWU
-          component_type: filter_cube # CORRECTED: Converted to canonical component type
-          cut_on_nm: # CORRECTED: Moved longpass emission to canonical format
+          component_type: filter_cube
+          cut_on_nm:
             - 420
           notes: 'Excitation: 355/50 nm. Dichroic Cutoff: 400 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 355
+            width_nm: 50
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 400
+          emission_filter:
+            component_type: longpass
+            cut_on_nm: 420
         Pos_2:
           name: U-MWIB (GFP wide)
           product_code: U-MWIB
@@ -181,6 +191,16 @@ hardware:
           cut_on_nm:
             - 515
           notes: 'Excitation: 475/30 nm. Dichroic Cutoff: 505 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 475
+            width_nm: 30
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 505
+          emission_filter:
+            component_type: longpass
+            cut_on_nm: 515
         Pos_3:
           name: U-MWIG (Alexa 546 / TRITC)
           product_code: U-MWIG
@@ -188,14 +208,35 @@ hardware:
           cut_on_nm:
             - 580
           notes: 'Excitation: 535/30 nm. Dichroic Cutoff: 565 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 535
+            width_nm: 30
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 565
+          emission_filter:
+            component_type: longpass
+            cut_on_nm: 580
         Pos_4:
           name: U-MNIBA2 (GFP narrow)
           product_code: U-MNIBA2
           component_type: filter_cube
-          bands: # CORRECTED: Moved bandpass emission to canonical bands array
+          bands:
             - center_nm: 530
               width_nm: 40
           notes: 'Optional filter cube. Excitation: 480/20 nm. Dichroic Cutoff: 505 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 480
+            width_nm: 20
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 505
+          emission_filter:
+            component_type: bandpass
+            center_nm: 530
+            width_nm: 40
 
     - name: Trinocular Port # ADDED: Required to split light to camera or eyepieces
       stage_role: splitter

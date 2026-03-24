@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from scripts.light_path_parser import generate_virtual_microscope_payload, validate_light_path_warnings
+from scripts.light_path_parser import generate_virtual_microscope_payload, validate_light_path_warnings, validate_filter_cube_warnings
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -240,8 +240,92 @@ class ParserComponentMatrixTests(unittest.TestCase):
             },
             "light_paths": [],
         }
-        warnings = validate_light_path_warnings(instrument)
+        warnings = validate_filter_cube_warnings(instrument)
         self.assertTrue(any("flattened" in warning and "excitation_filter, dichroic, and emission_filter" in warning for warning in warnings))
+
+    def test_complete_filter_cube_emits_no_validation_warning(self) -> None:
+        """Complete cube with all three sub-components emits zero warnings."""
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "component_type": "filter_cube",
+                                "excitation_filter": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                                "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                            }
+                        },
+                    }
+                ]
+            },
+            "light_paths": [],
+        }
+        warnings = validate_filter_cube_warnings(instrument)
+        self.assertEqual(warnings, [], "Complete cubes must emit zero validation warnings")
+
+    def test_partial_filter_cube_missing_one_component_warns(self) -> None:
+        """Cube with excitation_filter + dichroic but no emission_filter warns about the missing component."""
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "name": "Partial Cube",
+                                "component_type": "filter_cube",
+                                "excitation_filter": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                            }
+                        },
+                    }
+                ]
+            },
+            "light_paths": [],
+        }
+        warnings = validate_filter_cube_warnings(instrument)
+        self.assertTrue(len(warnings) >= 1, "Partial cube must emit a warning")
+        self.assertTrue(any("emission_filter" in w and "degraded" in w for w in warnings))
+
+        payload = generate_virtual_microscope_payload(instrument)
+        value = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertTrue(value.get("_cube_incomplete"))
+
+    def test_partial_filter_cube_missing_two_components_warns(self) -> None:
+        """Cube with only emission_filter (missing excitation_filter, dichroic) warns with specific missing list."""
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "name": "Minimal Cube",
+                                "component_type": "filter_cube",
+                                "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                            }
+                        },
+                    }
+                ]
+            },
+            "light_paths": [],
+        }
+        warnings = validate_filter_cube_warnings(instrument)
+        self.assertTrue(len(warnings) >= 1, "Partial cube missing 2 components must emit a warning")
+        self.assertTrue(any("excitation_filter" in w and "dichroic" in w for w in warnings))
+
+        payload = generate_virtual_microscope_payload(instrument)
+        value = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertTrue(value.get("_cube_incomplete"))
 
     def test_authored_complete_filter_cubes_in_repo_do_not_degrade(self) -> None:
         for yaml_path in sorted(INSTRUMENTS_DIR.rglob("*.yaml")):
@@ -280,6 +364,60 @@ class ParserComponentMatrixTests(unittest.TestCase):
                     value = parsed[authored_key]
                     self.assertFalse(value.get("_cube_incomplete", False))
                     self.assertFalse(value.get("_unsupported_spectral_model", False))
+
+
+    def test_upgraded_real_instrument_cubes_are_authoritative(self) -> None:
+        """Upgraded real YAML instruments must parse complete cubes with full spectral_ops."""
+        upgraded_files = [
+            "EVOS fl.yaml",
+            "Nikon Ti2-E Crest V3 Spinning Disk.yaml",
+            "Olympus BX60.yaml",
+            "Leica DM IRBE.yaml",
+            "Leica DM RB.yaml",
+        ]
+        for filename in upgraded_files:
+            yaml_path = INSTRUMENTS_DIR / filename
+            if not yaml_path.exists():
+                continue
+            with self.subTest(instrument=filename):
+                instrument = yaml.safe_load(yaml_path.read_text())
+                warnings = validate_filter_cube_warnings(instrument)
+                self.assertEqual(warnings, [], f"{filename} should have zero cube warnings after upgrade")
+
+                payload = generate_virtual_microscope_payload(instrument)
+                cube_mechanisms = _runtime_projection(payload).get("stages", {}).get("cube", [])
+                self.assertTrue(len(cube_mechanisms) > 0, f"{filename} should have cube mechanisms")
+                for mechanism in cube_mechanisms:
+                    for option in mechanism.get("options") or []:
+                        value = option.get("value") or {}
+                        if str(value.get("component_type", "")).lower() != "filter_cube":
+                            continue
+                        self.assertFalse(value.get("_cube_incomplete", False), f"Cube {value.get('label')} in {filename} should not be incomplete")
+                        self.assertFalse(value.get("_unsupported_spectral_model", False), f"Cube {value.get('label')} in {filename} should have supported spectral model")
+                        spectral_ops = value.get("spectral_ops", {})
+                        self.assertIn("illumination", spectral_ops)
+                        self.assertIn("detection", spectral_ops)
+                        illum_ops = spectral_ops["illumination"]
+                        det_ops = spectral_ops["detection"]
+                        self.assertTrue(len(illum_ops) >= 2, "Illumination should have excitation_filter + dichroic ops")
+                        self.assertTrue(len(det_ops) >= 2, "Detection should have dichroic + emission_filter ops")
+
+    def test_non_upgradeable_cubes_remain_identified(self) -> None:
+        """YAMLs that could not be safely upgraded still emit cube warnings."""
+        still_degraded = [
+            ("Zeiss TIRF.yaml", 4),
+            ("Zeiss AxioZoom V16.yaml", 4),
+            ("xCELLigence RTCA eSight.yaml", 3),
+            ("Nikon Eclipse Ti2-E.yaml", 1),
+        ]
+        for filename, expected_count in still_degraded:
+            yaml_path = INSTRUMENTS_DIR / filename
+            if not yaml_path.exists():
+                continue
+            with self.subTest(instrument=filename):
+                instrument = yaml.safe_load(yaml_path.read_text())
+                warnings = validate_filter_cube_warnings(instrument)
+                self.assertEqual(len(warnings), expected_count, f"{filename} should have {expected_count} non-authoritative cube warning(s)")
 
 
 if __name__ == "__main__":
