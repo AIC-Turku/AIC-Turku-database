@@ -33,7 +33,7 @@ terms:
 
   - id: filter_cube
     label: "Filter Cube"
-    description: "Linked excitation/dichroic/emission cube or filter-set assembly installed as a single selectable position."
+    description: "Linked excitation/dichroic/emission cube or filter-set assembly installed as a single selectable position. Supports explicit excitation_filter, dichroic, and emission_filter sub-component objects for authoritative spectral authoring."
 
   - id: analyzer
     label: "Analyzer"

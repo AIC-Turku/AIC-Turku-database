@@ -1876,5 +1876,132 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertTrue(any(issue.code == 'invalid_light_path' for issue in issues))
         self.assertTrue(any('deprecated hardware-owned routing metadata is not allowed in canonical topology' in issue.message for issue in issues))
 
+    # ── filter_cube structured sub-component schema tests ────────────
+
+    def _filter_cube_policy(self) -> dict:
+        """Minimal policy with filter_cube sub-component rules matching the real schema."""
+        return {
+            'vocab_registry': {},
+            'sections': [{
+                'id': 'optical-elements',
+                'title': 'Optical Elements',
+                'rules': [
+                    {'path': 'hardware.optical_path_elements', 'status': 'optional', 'type': 'list'},
+                    {'path': 'hardware.optical_path_elements[].positions', 'status': 'optional', 'type': 'object', 'example_key': 'Pos_1'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.component_type', 'status': 'optional', 'type': 'string'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.excitation_filter', 'status': 'optional', 'type': 'object'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.excitation_filter.component_type', 'status': 'optional', 'type': 'string'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.excitation_filter.center_nm', 'status': 'optional', 'type': 'positive_number'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.excitation_filter.width_nm', 'status': 'optional', 'type': 'positive_number'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.dichroic', 'status': 'optional', 'type': 'object'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.dichroic.component_type', 'status': 'optional', 'type': 'string'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.dichroic.cut_on_nm', 'status': 'optional', 'type': 'positive_number'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.emission_filter', 'status': 'optional', 'type': 'object'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.emission_filter.component_type', 'status': 'optional', 'type': 'string'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.emission_filter.center_nm', 'status': 'optional', 'type': 'positive_number'},
+                    {'path': 'hardware.optical_path_elements[].positions{}.emission_filter.width_nm', 'status': 'optional', 'type': 'positive_number'},
+                ],
+            }],
+        }
+
+    def test_explicit_filter_cube_with_all_sub_components_validates(self) -> None:
+        """A filter_cube with excitation_filter, dichroic, and emission_filter must pass validation."""
+        self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
+        self._write_json_yaml(
+            'instruments/explicit-cube.yaml',
+            {
+                'instrument': {'instrument_id': 'explicit-cube'},
+                'hardware': {
+                    'optical_path_elements': [{
+                        'positions': {
+                            'Pos_1': {
+                                'component_type': 'filter_cube',
+                                'excitation_filter': {'component_type': 'bandpass', 'center_nm': 470, 'width_nm': 40},
+                                'dichroic': {'component_type': 'dichroic', 'cut_on_nm': 495},
+                                'emission_filter': {'component_type': 'bandpass', 'center_nm': 525, 'width_nm': 50},
+                            }
+                        }
+                    }],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        type_issues = [i for i in issues if i.code == 'invalid_field_type']
+        self.assertEqual(type_issues, [], msg=f"Unexpected type issues: {type_issues}")
+
+    def test_flattened_filter_cube_without_sub_components_validates(self) -> None:
+        """A flattened filter_cube (no explicit sub-components) must remain valid for backward compat."""
+        self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
+        self._write_json_yaml(
+            'instruments/flattened-cube.yaml',
+            {
+                'instrument': {'instrument_id': 'flattened-cube'},
+                'hardware': {
+                    'optical_path_elements': [{
+                        'positions': {
+                            'Pos_1': {
+                                'component_type': 'filter_cube',
+                            }
+                        }
+                    }],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        type_issues = [i for i in issues if i.code == 'invalid_field_type']
+        self.assertEqual(type_issues, [], msg=f"Unexpected type issues: {type_issues}")
+
+    def test_incomplete_filter_cube_missing_excitation_validates(self) -> None:
+        """A filter_cube with only dichroic + emission_filter is schema-valid (parser flags incompleteness)."""
+        self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
+        self._write_json_yaml(
+            'instruments/incomplete-cube.yaml',
+            {
+                'instrument': {'instrument_id': 'incomplete-cube'},
+                'hardware': {
+                    'optical_path_elements': [{
+                        'positions': {
+                            'Pos_1': {
+                                'component_type': 'filter_cube',
+                                'dichroic': {'component_type': 'dichroic', 'cut_on_nm': 495},
+                                'emission_filter': {'component_type': 'bandpass', 'center_nm': 525, 'width_nm': 50},
+                            }
+                        }
+                    }],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        type_issues = [i for i in issues if i.code == 'invalid_field_type']
+        self.assertEqual(type_issues, [], msg=f"Unexpected type issues: {type_issues}")
+
+    def test_resolve_rule_nodes_resolves_filter_cube_sub_component_fields(self) -> None:
+        """Policy paths for nested filter_cube sub-component fields resolve correctly."""
+        payload = {
+            'hardware': {
+                'optical_path_elements': [{
+                    'positions': {
+                        'Pos_1': {
+                            'component_type': 'filter_cube',
+                            'excitation_filter': {'center_nm': 470, 'width_nm': 40},
+                        }
+                    }
+                }]
+            }
+        }
+
+        nodes = _resolve_rule_nodes(
+            payload,
+            'hardware.optical_path_elements[].positions{}.excitation_filter.center_nm',
+        )
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes[0].value, 470)
+
 if __name__ == '__main__':
     unittest.main()

@@ -190,6 +190,43 @@ hardware:
             -
               center_nm: ""  # Optical path position band center (nm): Band center for direct multiband position payloads.
               width_nm: ""  # Optical path position band width (nm): Band width for direct multiband position payloads.
+          excitation_filter:  # Filter cube excitation filter: Explicit excitation-filter sub-component of a filter_cube position. Accepts the same spectral/identity shape as a standalone optical component (component_type, center_nm, width_nm, bands, etc.).
+
+            component_type: ""  # Excitation filter component type: Canonical component classifier for the excitation filter sub-component. Inferred by the parser when omitted. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, filter_cube, analyzer, empty, mirror, block, passthrough, neutral_density
+            manufacturer: ""  # Excitation filter manufacturer: Structured provenance for the excitation filter sub-component.
+            model: ""  # Excitation filter model: Vendor-facing model/designation for the excitation filter sub-component.
+            product_code: ""  # Excitation filter product code: Catalog/SKU code for the excitation filter sub-component.
+            center_nm: ""  # Excitation filter center wavelength (nm): Band center for bandpass-type excitation filters.
+            width_nm: ""  # Excitation filter bandwidth (nm): Band width for bandpass-type excitation filters.
+            cut_on_nm: ""  # Excitation filter cut-on wavelength (nm): Cut-on wavelength for longpass-type excitation filters.
+            cut_off_nm: ""  # Excitation filter cut-off wavelength (nm): Cut-off wavelength for shortpass-type excitation filters.
+            bands:  # Excitation filter multiband array: Explicit multiband pass windows for multiband excitation filters.
+              -
+                center_nm: ""  # Excitation filter band center (nm): Band center for multiband excitation filter sub-component.
+                width_nm: ""  # Excitation filter band width (nm): Band width for multiband excitation filter sub-component.
+          dichroic:  # Filter cube dichroic: Explicit dichroic sub-component of a filter_cube position. Accepts the same spectral/identity shape as a standalone dichroic component (component_type, cut_on_nm, cutoffs_nm, etc.).
+
+            component_type: ""  # Dichroic component type: Canonical component classifier for the dichroic sub-component. Inferred by the parser when omitted. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, filter_cube, analyzer, empty, mirror, block, passthrough, neutral_density
+            manufacturer: ""  # Dichroic manufacturer: Structured provenance for the dichroic sub-component.
+            model: ""  # Dichroic model: Vendor-facing model/designation for the dichroic sub-component.
+            product_code: ""  # Dichroic product code: Catalog/SKU code for the dichroic sub-component.
+            cut_on_nm: ""  # Dichroic cut-on wavelength (nm): Single-edge dichroic cut-on wavelength.
+            cutoffs_nm:  # Dichroic cutoff wavelengths (nm): Multi-edge dichroic cutoff wavelength array.
+              - ""
+          emission_filter:  # Filter cube emission filter: Explicit emission-filter sub-component of a filter_cube position. Accepts the same spectral/identity shape as a standalone optical component (component_type, center_nm, width_nm, bands, etc.).
+
+            component_type: ""  # Emission filter component type: Canonical component classifier for the emission filter sub-component. Inferred by the parser when omitted. | Allowed values (canonical IDs): bandpass, multiband_bandpass, longpass, shortpass, dichroic, multiband_dichroic, polychroic, notch, filter_cube, analyzer, empty, mirror, block, passthrough, neutral_density
+            manufacturer: ""  # Emission filter manufacturer: Structured provenance for the emission filter sub-component.
+            model: ""  # Emission filter model: Vendor-facing model/designation for the emission filter sub-component.
+            product_code: ""  # Emission filter product code: Catalog/SKU code for the emission filter sub-component.
+            center_nm: ""  # Emission filter center wavelength (nm): Band center for bandpass-type emission filters.
+            width_nm: ""  # Emission filter bandwidth (nm): Band width for bandpass-type emission filters.
+            cut_on_nm: ""  # Emission filter cut-on wavelength (nm): Cut-on wavelength for longpass-type emission filters.
+            cut_off_nm: ""  # Emission filter cut-off wavelength (nm): Cut-off wavelength for shortpass-type emission filters.
+            bands:  # Emission filter multiband array: Explicit multiband pass windows for multiband emission filters.
+              -
+                center_nm: ""  # Emission filter band center (nm): Band center for multiband emission filter sub-component.
+                width_nm: ""  # Emission filter band width (nm): Band width for multiband emission filter sub-component.
   eyepieces:  # Eyepieces: Explicit terminal eyepieces addressed directly by light path routing.
     -
       id: ""  # Eyepiece ID: Stable identifier referenced by light_paths.
