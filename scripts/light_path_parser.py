@@ -1056,13 +1056,19 @@ def migrate_instrument_to_light_path_v2(instrument_dict: dict[str, Any]) -> dict
 
 
 def validate_light_path(instrument_dict: dict) -> list[str]:
-    errors, _ = validate_light_path_diagnostics(instrument_dict)
+    errors, _, _ = validate_light_path_diagnostics(instrument_dict)
     return errors
 
 
 def validate_light_path_warnings(instrument_dict: dict) -> list[str]:
-    _, warnings = validate_light_path_diagnostics(instrument_dict)
+    _, warnings, _ = validate_light_path_diagnostics(instrument_dict)
     return warnings
+
+
+def validate_filter_cube_warnings(instrument_dict: dict) -> list[str]:
+    """Return warnings specific to non-authoritative (flattened/incomplete) filter_cube positions."""
+    _, _, cube_warnings = validate_light_path_diagnostics(instrument_dict)
+    return cube_warnings
 
 
 def _sequence_terminates_with_explicit_endpoint(sequence: Any) -> bool:
@@ -1100,8 +1106,11 @@ def _sequence_item_union_message(sequence_key: str, *, allow_branches: bool) -> 
     return f"{context} must declare exactly one of {', '.join(allowed_keys[:-1])}, or {allowed_keys[-1]}." if len(allowed_keys) > 1 else f"{context} must declare {allowed_keys[0]}."
 
 
-def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], list[str]]:
+def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], list[str], list[str]]:
     """Validate canonical YAML-first light-path definitions.
+
+    Returns (errors, warnings, cube_warnings) where *cube_warnings* are
+    specific to non-authoritative (flattened/incomplete) filter_cube positions.
 
     Canonical schema:
     - hardware.sources[]
@@ -1114,6 +1123,7 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
     """
     errors: list[str] = []
     warnings: list[str] = []
+    cube_warnings: list[str] = []
 
     canonical = canonicalize_light_path_model(instrument_dict if isinstance(instrument_dict, dict) else {})
     sources = canonical["sources"]
@@ -1148,13 +1158,13 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
                 if isinstance(cube_position.get(link_key), dict)
             }
             if not authored_links:
-                warnings.append(
+                cube_warnings.append(
                     f"hardware.optical_path_elements[{_clean_string(element.get('id')) or _clean_string(element.get('name')) or 'cube'}].positions[{position_key}]: filter_cube '{label}' is flattened and will be degraded in exact spectral simulation; author explicit excitation_filter, dichroic, and emission_filter for authoritative optics."
                 )
                 continue
             missing_links = [link_key for link_key in CUBE_LINK_KEYS if link_key not in authored_links]
             if missing_links:
-                warnings.append(
+                cube_warnings.append(
                     f"hardware.optical_path_elements[{_clean_string(element.get('id')) or _clean_string(element.get('name')) or 'cube'}].positions[{position_key}]: filter_cube '{label}' is missing {', '.join(missing_links)} and will be degraded in exact spectral simulation."
                 )
 
@@ -1206,7 +1216,7 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
         or _collect_splitters((instrument_dict.get("hardware") or {}), ((instrument_dict.get("hardware") or {}).get("light_path") or {}))
     )
     if not has_topology:
-        return [], []
+        return [], [], []
 
     if not light_paths_for_validation:
         errors.append("light_paths must declare at least one route with illumination_sequence and detection_sequence.")
@@ -1424,7 +1434,7 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
         if selection_mode and selection_mode not in {"fixed", "exclusive", "multiple"}:
             errors.append(f"{context}: selection_mode must be one of fixed, exclusive, multiple.")
 
-    return errors, warnings
+    return errors, warnings, cube_warnings
 
 # ---------------------------------------------------------------------------
 # Payload serialization helpers

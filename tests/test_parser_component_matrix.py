@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from scripts.light_path_parser import generate_virtual_microscope_payload, validate_light_path_warnings
+from scripts.light_path_parser import generate_virtual_microscope_payload, validate_light_path_warnings, validate_filter_cube_warnings
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -240,7 +240,7 @@ class ParserComponentMatrixTests(unittest.TestCase):
             },
             "light_paths": [],
         }
-        warnings = validate_light_path_warnings(instrument)
+        warnings = validate_filter_cube_warnings(instrument)
         self.assertTrue(any("flattened" in warning and "excitation_filter, dichroic, and emission_filter" in warning for warning in warnings))
 
     def test_authored_complete_filter_cubes_in_repo_do_not_degrade(self) -> None:

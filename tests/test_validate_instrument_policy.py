@@ -2003,5 +2003,93 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertEqual(len(nodes), 1)
         self.assertEqual(nodes[0].value, 470)
 
+    # ── non-authoritative filter_cube validation warning tests ────────
+
+    def test_complete_filter_cube_does_not_emit_non_authoritative_warning(self) -> None:
+        """A complete filter_cube with all three sub-components must not emit a non_authoritative_filter_cube warning."""
+        self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
+        self._write_json_yaml(
+            'instruments/complete-cube.yaml',
+            {
+                'instrument': {'instrument_id': 'complete-cube'},
+                'hardware': {
+                    'optical_path_elements': [{
+                        'id': 'cube_turret',
+                        'stage_role': 'cube',
+                        'element_type': 'turret',
+                        'positions': {
+                            'Pos_1': {
+                                'component_type': 'filter_cube',
+                                'excitation_filter': {'component_type': 'bandpass', 'center_nm': 470, 'width_nm': 40},
+                                'dichroic': {'component_type': 'dichroic', 'cut_on_nm': 495},
+                                'emission_filter': {'component_type': 'bandpass', 'center_nm': 525, 'width_nm': 50},
+                            }
+                        }
+                    }],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        cube_warnings = [w for w in warnings if w.code == 'non_authoritative_filter_cube']
+        self.assertEqual(cube_warnings, [], msg=f"Complete cube should not emit non_authoritative_filter_cube: {cube_warnings}")
+
+    def test_flattened_filter_cube_emits_non_authoritative_warning(self) -> None:
+        """A flattened filter_cube (no sub-components, only bands) must emit a non_authoritative_filter_cube warning."""
+        self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
+        self._write_json_yaml(
+            'instruments/flattened-cube.yaml',
+            {
+                'instrument': {'instrument_id': 'flattened-cube'},
+                'hardware': {
+                    'optical_path_elements': [{
+                        'id': 'cube_turret',
+                        'stage_role': 'cube',
+                        'element_type': 'turret',
+                        'positions': {
+                            'Pos_1': {
+                                'component_type': 'filter_cube',
+                            }
+                        }
+                    }],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        cube_warnings = [w for w in warnings if w.code == 'non_authoritative_filter_cube']
+        self.assertTrue(len(cube_warnings) >= 1, msg="Flattened cube must emit non_authoritative_filter_cube warning")
+        self.assertIn('flattened', cube_warnings[0].message)
+
+    def test_partial_filter_cube_emits_non_authoritative_warning(self) -> None:
+        """A partial filter_cube (only dichroic + emission_filter, missing excitation_filter) must emit a non_authoritative_filter_cube warning."""
+        self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
+        self._write_json_yaml(
+            'instruments/partial-cube.yaml',
+            {
+                'instrument': {'instrument_id': 'partial-cube'},
+                'hardware': {
+                    'optical_path_elements': [{
+                        'id': 'cube_turret',
+                        'stage_role': 'cube',
+                        'element_type': 'turret',
+                        'positions': {
+                            'Pos_1': {
+                                'component_type': 'filter_cube',
+                                'dichroic': {'component_type': 'dichroic', 'cut_on_nm': 495},
+                                'emission_filter': {'component_type': 'bandpass', 'center_nm': 525, 'width_nm': 50},
+                            }
+                        }
+                    }],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        cube_warnings = [w for w in warnings if w.code == 'non_authoritative_filter_cube']
+        self.assertTrue(len(cube_warnings) >= 1, msg="Partial cube must emit non_authoritative_filter_cube warning")
+        self.assertIn('missing', cube_warnings[0].message)
+        self.assertIn('excitation_filter', cube_warnings[0].message)
+
 if __name__ == '__main__':
     unittest.main()
