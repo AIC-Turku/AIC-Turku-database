@@ -1109,9 +1109,6 @@ def _sequence_item_union_message(sequence_key: str, *, allow_branches: bool) -> 
 def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], list[str], list[str]]:
     """Validate canonical YAML-first light-path definitions.
 
-    Returns (errors, warnings, cube_warnings) where *cube_warnings* are
-    specific to non-authoritative (flattened/incomplete) filter_cube positions.
-
     Canonical schema:
     - hardware.sources[]
     - hardware.optical_path_elements[]
@@ -1120,6 +1117,12 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
 
     Legacy hardware.light_path structures are normalized through the migration layer
     so validation remains centralized here.
+
+    Returns:
+        errors: Hard validation errors (malformed routes, missing sequences, etc.).
+        warnings: General light-path warnings (missing endpoints, branch issues, etc.).
+        cube_warnings: Warnings specific to non-authoritative (flattened/incomplete)
+            filter_cube positions that will degrade in exact spectral simulation.
     """
     errors: list[str] = []
     warnings: list[str] = []
