@@ -181,6 +181,17 @@ hardware:
             - center_nm: 447
               width_nm: 60
           notes: 'Included with base unit. Excitation: 357/44 nm. Dichroic Cutoff: 400 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 357
+            width_nm: 44
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 400
+          emission_filter:
+            component_type: bandpass
+            center_nm: 447
+            width_nm: 60
         Pos_2:
           name: CFP
           component_type: filter_cube
@@ -189,6 +200,17 @@ hardware:
             - center_nm: 510
               width_nm: 42
           notes: 'Excitation: 445/45 nm. Dichroic Cutoff: 480 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 445
+            width_nm: 45
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 480
+          emission_filter:
+            component_type: bandpass
+            center_nm: 510
+            width_nm: 42
         Pos_3:
           name: GFP/Alexa 488
           component_type: filter_cube
@@ -197,6 +219,17 @@ hardware:
             - center_nm: 510
               width_nm: 42
           notes: 'Included with base unit. Excitation: 470/22 nm. Dichroic Cutoff: 495 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 470
+            width_nm: 22
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 495
+          emission_filter:
+            component_type: bandpass
+            center_nm: 510
+            width_nm: 42
         Pos_4:
           name: RFP/Alexa 555
           component_type: filter_cube
@@ -205,6 +238,17 @@ hardware:
             - center_nm: 593
               width_nm: 40
           notes: 'Included with base unit. Excitation: 531/40 nm. Dichroic Cutoff: 560 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 531
+            width_nm: 40
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 560
+          emission_filter:
+            component_type: bandpass
+            center_nm: 593
+            width_nm: 40
         Pos_5:
           name: Cy5/Alexa 647
           component_type: filter_cube
@@ -213,6 +257,17 @@ hardware:
             - center_nm: 692
               width_nm: 40
           notes: 'Excitation: 628/40 nm. Dichroic Cutoff: 660 nm.'
+          excitation_filter:
+            component_type: bandpass
+            center_nm: 628
+            width_nm: 40
+          dichroic:
+            component_type: dichroic
+            cut_on_nm: 660
+          emission_filter:
+            component_type: bandpass
+            center_nm: 692
+            width_nm: 40
           
   endpoints: [] 
 
