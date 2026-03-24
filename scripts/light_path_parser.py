@@ -1130,6 +1130,34 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
         for parse_warning in route.get("_parse_warnings") or []:
             errors.append(parse_warning)
 
+    for element in elements:
+        if not isinstance(element, dict):
+            continue
+        if _clean_string(element.get("stage_role")).lower() != "cube":
+            continue
+        positions = element.get("positions") if isinstance(element.get("positions"), dict) else {}
+        for position_key, cube_position in positions.items():
+            if not isinstance(cube_position, dict):
+                continue
+            if _clean_string(cube_position.get("component_type")).lower() != "filter_cube":
+                continue
+            label = _clean_string(cube_position.get("name")) or _clean_string(position_key) or _clean_string(element.get("name")) or "filter_cube"
+            authored_links = {
+                link_key: cube_position.get(link_key)
+                for link_key in CUBE_LINK_KEYS
+                if isinstance(cube_position.get(link_key), dict)
+            }
+            if not authored_links:
+                warnings.append(
+                    f"hardware.optical_path_elements[{_clean_string(element.get('id')) or _clean_string(element.get('name')) or 'cube'}].positions[{position_key}]: filter_cube '{label}' is flattened and will be degraded in exact spectral simulation; author explicit excitation_filter, dichroic, and emission_filter for authoritative optics."
+                )
+                continue
+            missing_links = [link_key for link_key in CUBE_LINK_KEYS if link_key not in authored_links]
+            if missing_links:
+                warnings.append(
+                    f"hardware.optical_path_elements[{_clean_string(element.get('id')) or _clean_string(element.get('name')) or 'cube'}].positions[{position_key}]: filter_cube '{label}' is missing {', '.join(missing_links)} and will be degraded in exact spectral simulation."
+                )
+
     hardware_inventory, hardware_index_map = _build_hardware_inventory(sources, elements, endpoints)
     inventory_lookup = {item["id"]: item for item in hardware_inventory if isinstance(item, dict) and item.get("id")}
     source_lookup = {entry.get("id"): entry for entry in sources if isinstance(entry, dict) and entry.get("id")}
