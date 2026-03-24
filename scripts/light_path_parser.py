@@ -940,15 +940,18 @@ def _canonical_light_path_model(
 
 
 def _has_canonical_light_path_input(instrument_dict: dict[str, Any]) -> bool:
-    """Return True only when the canonical v2 contract is meaningfully present.
+    """Return True when canonical v2 authoring is present enough to trust.
 
-    This is intentionally stricter than "any canonical-looking field exists".
-    A partially migrated instrument should not shadow a complete legacy topology
-    just because one canonical list is present.
+    Canonical hardware-only payloads (for example, stage fixtures without
+    authored light_paths yet) must still be parsed canonically instead of
+    falling back to the legacy importer.
     """
     hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
 
     raw_light_paths = instrument_dict.get("light_paths")
+    if not isinstance(raw_light_paths, list):
+        # Also check inside hardware for canonical fixtures that nest light_paths there.
+        raw_light_paths = hardware.get("light_paths")
     has_light_paths = isinstance(raw_light_paths, list) and bool(raw_light_paths)
 
     has_sources = isinstance(hardware.get("sources"), list) and bool(hardware.get("sources"))
@@ -957,8 +960,20 @@ def _has_canonical_light_path_input(instrument_dict: dict[str, Any]) -> bool:
         isinstance(hardware.get(key), list) and bool(hardware.get(key))
         for key in CANONICAL_ENDPOINT_COLLECTION_KEYS
     )
+    has_any_canonical_hardware = has_sources or has_elements or has_endpoints
 
-    return has_light_paths and (has_sources or has_elements or has_endpoints)
+    legacy_light_path = hardware.get("light_path")
+    has_legacy_light_path = isinstance(legacy_light_path, dict) and bool(legacy_light_path)
+
+    if has_light_paths and has_any_canonical_hardware:
+        return True
+
+    # Important: canonical stage-only fixtures should still parse canonically
+    # when there is no legacy topology to import.
+    if has_any_canonical_hardware and not has_legacy_light_path:
+        return True
+
+    return False
 
 
 
@@ -979,6 +994,9 @@ def parse_canonical_light_path_model(instrument_dict: dict[str, Any]) -> dict[st
     elements = _parse_canonical_optical_path_elements(hardware)
     endpoints = _parse_canonical_endpoint_rows(hardware)
     raw_light_paths = instrument_dict.get("light_paths") if isinstance(instrument_dict.get("light_paths"), list) else []
+    if not raw_light_paths:
+        # Fallback: some canonical fixtures nest light_paths inside hardware.
+        raw_light_paths = hardware.get("light_paths") if isinstance(hardware.get("light_paths"), list) else []
     light_paths = _parse_canonical_light_paths(raw_light_paths, sources, elements, endpoints)
     return _canonical_light_path_model(
         sources=sources,
@@ -2187,10 +2205,17 @@ def _mechanism_payload(stage_prefix: str, index: int, mechanism: dict[str, Any])
         positions.append(component_payload)
 
     stage_label_key = {"exc": "excitation", "em": "emission"}.get(stage_prefix, stage_prefix)
+    default_stage_labels = {
+        "exc": "Exc",
+        "em": "Em",
+        "dichroic": "Dichroic",
+        "cube": "Cube",
+        "analyzer": "Analyzer",
+    }
     stage_label = (
         resolve_stage_role_label(stage_label_key)
         if _active_vocab is not None
-        else stage_label_key.replace("_", " ").title()
+        else default_stage_labels.get(stage_prefix, stage_label_key.replace("_", " ").title())
     )
     mechanism_id = _clean_identifier(mechanism.get("id")) or f"{stage_prefix}_mech_{index}"
 
@@ -3866,6 +3891,7 @@ def _build_route_sequences_and_graph(
         "selected_execution": {
             "contract_version": "selected_execution.v2",
             "selected_route_steps": deepcopy(selected_route_steps),
+            "steps": deepcopy(selected_route_steps),  # TODO: remove once all consumers use selected_route_steps
             "warnings": list(route_warnings),
         },
         "route_warnings": route_warnings,

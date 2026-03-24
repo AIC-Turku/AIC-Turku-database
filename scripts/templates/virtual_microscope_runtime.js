@@ -2082,24 +2082,19 @@ function detectorCollectionMask(detector, grid) {
     const className = detector && detector.detector_class ? detector.detector_class : detectorClass(detector && (detector.kind || detector.endpoint_type));
     if (className === 'camera' || className === 'camera_port') return grid.map(() => 1);
     if (detector && detector.collection_enabled === false) return grid.map(() => 1);
+
     const bounds = detectorCollectionBounds(detector);
     if (bounds.min === null || bounds.max === null) return grid.map(() => 1);
+
     if (className === 'eyepiece') {
       return bandMask(grid, bounds.min, bounds.max, 12);
     }
-    
-    // FIX: Add synthetic spectral_ops to prevent crash
-    const center = (bounds.min + bounds.max) / 2;
-    const width = Math.max(4, bounds.max - bounds.min);
-    return componentMask({
-      component_type: 'bandpass',
-      center_nm: center,
-      width_nm: width,
-      spectral_ops: {
-        illumination: [{ op: 'bandpass', center_nm: center, width_nm: width }],
-        detection: [{ op: 'bandpass', center_nm: center, width_nm: width }]
-      }
-    }, grid, { mode: 'emission' });
+
+    // Detector collection windows are detector metadata, not parser-authored
+    // optical components. Model them directly as a detector-side band mask
+    // instead of fabricating synthetic spectral_ops.
+    // Edge steepness 8 (narrower than eyepiece 12) models typical detector QE roll-off.
+    return bandMask(grid, bounds.min, bounds.max, 8);
   }
 
   function leakageWarningLevel(leakageThroughput) {
@@ -2135,6 +2130,15 @@ function detectorCollectionMask(detector, grid) {
   function applyComponentSeries(inputSpectrum, components, grid, contextFactory) {
     return (Array.isArray(components) ? components : []).reduce((spectrum, component, index) => {
       if (!component || typeof component !== 'object') return spectrum;
+
+      const stageRole = cleanString(component && (component._maskStage || component.stage_role)).toLowerCase();
+      const componentType = cleanString(component && (component.component_type || component.type)).toLowerCase();
+
+      // Splitter route controls are never spectral mask components.
+      if (stageRole === 'splitter' || componentType === 'splitter') {
+        return spectrum;
+      }
+
       const context = typeof contextFactory === 'function' ? contextFactory(component, index) : contextFactory;
       return applyMask(spectrum, componentMask(component, grid, context || {}));
     }, inputSpectrum.slice());

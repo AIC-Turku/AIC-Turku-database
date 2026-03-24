@@ -2695,12 +2695,18 @@ if (block.dataset.mechanismType === 'spectral_array') {
     if (!Array.isArray(resolvedSteps)) return [];
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
     const ordered = [];
-  
+
     function collect(steps) {
       (Array.isArray(steps) ? steps : []).forEach((step) => {
         if (!(step && typeof step === 'object')) return;
-  
+
         if (step.phase === phase && step.kind === 'optical_component') {
+          const stageKey = cleanString(step.stage_role).toLowerCase();
+          const componentType = cleanString(step.component_type).toLowerCase();
+
+          // Splitter route controls are routing hardware, not spectral mask components.
+          if (stageKey === 'splitter' || componentType === 'splitter') return;
+
           const component = step._resolved_component || {
             id: step.component_id,
             display_label: step.display_label,
@@ -2711,33 +2717,36 @@ if (block.dataset.mechanismType === 'spectral_array') {
             _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
             _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
           };
-  
+
+          // Parser-authored spectral_ops is the contract for maskable optics.
+          if (!(component && component.spectral_ops)) return;
+
           ordered.push({
             component,
             mode,
             routeStepId: step.step_id || step.route_step_id,
-            stageKey: cleanString(step.stage_role).toLowerCase() || null,
+            stageKey: stageKey || null,
           });
         }
-  
+
         if (step.routing && Array.isArray(step.routing.branches)) {
           const selectedBranchIds = new Set(
             Array.isArray(splitterSelections.get(cleanString(step.component_id).toLowerCase()))
               ? splitterSelections.get(cleanString(step.component_id).toLowerCase())
               : []
           );
-  
+
           const branchesToTraverse = step.routing.selection_mode === 'exclusive' && selectedBranchIds.size
             ? step.routing.branches.filter((branch) => selectedBranchIds.has(cleanString(branch && branch.id)))
             : step.routing.branches;
-  
+
           branchesToTraverse.forEach((branch) => {
             collect(branch && branch.sequence);
           });
         }
       });
     }
-  
+
     collect(resolvedSteps);
     return ordered;
   }

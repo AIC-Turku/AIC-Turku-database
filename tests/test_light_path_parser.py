@@ -1059,7 +1059,7 @@ class LightPathParserTests(unittest.TestCase):
         route = next((entry for entry in payload["light_paths"] if entry.get("id") == "confocal_spinning_disk"), None)
         self.assertIsNotNone(route)
         routing_step = next(
-            step for step in route["selected_execution"]["steps"]
+            step for step in route["selected_execution"]["selected_route_steps"]
             if step.get("kind") == "routing_component" and step.get("phase") == "detection"
         )
         branches = routing_step["routing"]["branches"]
@@ -1087,7 +1087,7 @@ class LightPathParserTests(unittest.TestCase):
         route = next((entry for entry in payload["light_paths"] if entry.get("id") == "tirf"), None)
         self.assertIsNotNone(route)
         routing_step = next(
-            step for step in route["selected_execution"]["steps"]
+            step for step in route["selected_execution"]["selected_route_steps"]
             if step.get("kind") == "routing_component" and step.get("phase") == "detection"
         )
         self.assertTrue(all(
@@ -1843,12 +1843,12 @@ class LightPathParserTests(unittest.TestCase):
         stages = _runtime_projection(payload).get("stages", {})
         self.assertIn("analyzer", stages)
         self.assertEqual(len(stages["analyzer"]), 1)
-        self.assertEqual(stages["analyzer"][0]["id"], "analyzer_mech_0")
+        self.assertEqual(stages["analyzer"][0]["id"], "analyzer_slider")
         self.assertEqual(stages["analyzer"][0]["name"], "DIC Fixed Analyzer")
 
         valid_paths = _runtime_projection(payload).get("valid_paths", [])
         self.assertTrue(len(valid_paths) > 0)
-        self.assertIn("analyzer_mech_0", valid_paths[0])
+        self.assertIn("analyzer_slider", valid_paths[0])
 
     def test_render_kind_covers_all_vocabulary_component_types(self) -> None:
         """Every component_type in the vocabulary must produce a recognised render_kind (not 'other')."""
@@ -1905,6 +1905,7 @@ class LightPathParserTests(unittest.TestCase):
         payload = generate_virtual_microscope_payload(
             {
                 "hardware": {
+                    "sources": [{"id": "src", "kind": "halogen_lamp"}],
                     "optical_path_elements": [
                         {
                             "id": "analyzer_slider",
@@ -1916,9 +1917,17 @@ class LightPathParserTests(unittest.TestCase):
                             },
                         },
                     ],
-                    "light_path": {
-                        "detection_mechanisms": [{"optical_path_element_id": "analyzer_slider"}],
-                    },
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                    "light_paths": [
+                        {
+                            "id": "dic",
+                            "illumination_sequence": [{"source_id": "src"}],
+                            "detection_sequence": [
+                                {"optical_path_element_id": "analyzer_slider"},
+                                {"endpoint_id": "cam"},
+                            ],
+                        }
+                    ],
                 }
             }
         )

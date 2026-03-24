@@ -145,7 +145,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("step.kind !== 'detector'", pipe_fn)
         # buildDerivedControlGroups still excludes branch-block and endpoint entries
         groups_fn = source.split("function buildDerivedControlGroups")[1].split("\n  function ")[0]
-        self.assertIn("entry.kind === 'branch-block' || entry.kind === 'endpoint'", groups_fn)
+        self.assertIn("entry.kind !== 'detector' && entry.kind !== 'endpoint'", groups_fn)
 
     def test_pipe_stages_use_step_id_as_flow_origin(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
@@ -166,13 +166,17 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("function resolveSelectedExecution(selectedRouteSteps, mechanismSelections)", source)
-        self.assertIn("function orderedComponentsFromExecution(resolvedSteps, phase)", source)
+        self.assertIn("function orderedComponentsFromExecution(resolvedSteps, phase, splitterSelections = new Map())", source)
         self.assertIn("selection.resolvedExecution = resolveSelectedExecution(selectedRouteSteps, selection.selectedComponentByMechanism)", source)
         self.assertIn("selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination')", source)
         self.assertIn("selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection')", source)
         self.assertIn("selectedComponentByMechanism", source)
         self.assertNotIn("function buildTraversalOrderedComponents(", source)
         self.assertIn("step_id", source)
+
+        ordered_fn = source.split("function orderedComponentsFromExecution")[1].split("\n  function ")[0]
+        self.assertIn("stageKey === 'splitter' || componentType === 'splitter'", ordered_fn)
+        self.assertIn("if (!(component && component.spectral_ops)) return;", ordered_fn)
 
     def test_simulation_uses_traversal_ordered_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
