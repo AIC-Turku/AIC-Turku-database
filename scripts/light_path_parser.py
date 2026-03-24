@@ -761,7 +761,7 @@ def _resolve_position_candidate_payload(
             component_payload["routes"] = routes
             component_payload["path"] = routes[0]
 
-        if linked_components and "excitation_filter" not in linked_components:
+        if linked_components and any(k not in linked_components for k in CUBE_LINK_KEYS):
             component_payload.setdefault("_cube_incomplete", True)
             component_payload.setdefault("_unsupported_spectral_model", True)
 
@@ -2438,7 +2438,7 @@ def _cube_mechanism_payload(index: int, mechanism: dict[str, Any]) -> dict[str, 
             "emission_filter": linked_components.get("emission_filter"),
         }
 
-        if linked_components and "excitation_filter" not in linked_components:
+        if linked_components and any(k not in linked_components for k in CUBE_LINK_KEYS):
             position_payload["_cube_incomplete"] = True
             position_payload["_unsupported_spectral_model"] = True
 

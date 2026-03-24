@@ -243,6 +243,90 @@ class ParserComponentMatrixTests(unittest.TestCase):
         warnings = validate_filter_cube_warnings(instrument)
         self.assertTrue(any("flattened" in warning and "excitation_filter, dichroic, and emission_filter" in warning for warning in warnings))
 
+    def test_complete_filter_cube_emits_no_validation_warning(self) -> None:
+        """Complete cube with all three sub-components emits zero warnings."""
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "component_type": "filter_cube",
+                                "excitation_filter": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                                "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                            }
+                        },
+                    }
+                ]
+            },
+            "light_paths": [],
+        }
+        warnings = validate_filter_cube_warnings(instrument)
+        self.assertEqual(warnings, [], "Complete cubes must emit zero validation warnings")
+
+    def test_partial_filter_cube_missing_one_component_warns(self) -> None:
+        """Cube with excitation_filter + dichroic but no emission_filter warns about the missing component."""
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "name": "Partial Cube",
+                                "component_type": "filter_cube",
+                                "excitation_filter": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                            }
+                        },
+                    }
+                ]
+            },
+            "light_paths": [],
+        }
+        warnings = validate_filter_cube_warnings(instrument)
+        self.assertTrue(len(warnings) >= 1, "Partial cube must emit a warning")
+        self.assertTrue(any("emission_filter" in w and "degraded" in w for w in warnings))
+
+        payload = generate_virtual_microscope_payload(instrument)
+        value = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertTrue(value.get("_cube_incomplete"))
+
+    def test_partial_filter_cube_missing_two_components_warns(self) -> None:
+        """Cube with only emission_filter (missing excitation_filter, dichroic) warns with specific missing list."""
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "name": "Minimal Cube",
+                                "component_type": "filter_cube",
+                                "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                            }
+                        },
+                    }
+                ]
+            },
+            "light_paths": [],
+        }
+        warnings = validate_filter_cube_warnings(instrument)
+        self.assertTrue(len(warnings) >= 1, "Partial cube missing 2 components must emit a warning")
+        self.assertTrue(any("excitation_filter" in w and "dichroic" in w for w in warnings))
+
+        payload = generate_virtual_microscope_payload(instrument)
+        value = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
+        self.assertTrue(value.get("_cube_incomplete"))
+
     def test_authored_complete_filter_cubes_in_repo_do_not_degrade(self) -> None:
         for yaml_path in sorted(INSTRUMENTS_DIR.rglob("*.yaml")):
             instrument = yaml.safe_load(yaml_path.read_text())
