@@ -25,6 +25,8 @@ theme:
 plugins:
 - search
 markdown_extensions:
+- toc:
+    toc_depth: 1  # Only <h1> headings will be tracked
 - admonition
 - attr_list
 - md_in_html
