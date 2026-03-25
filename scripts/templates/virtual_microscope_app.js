@@ -1185,6 +1185,17 @@
     if (routeId) {
       const explicit = routes.find((entry) => cleanString(entry && entry.id).toLowerCase() === routeId);
       if (explicit) return explicit;
+      const byModality = routes.find((entry) => {
+        const modalities = VM.normalizeRouteTags(
+          (entry && entry.record && entry.record.route_identity && entry.record.route_identity.modalities)
+          || (entry && entry.record && entry.record.modalities)
+          || (entry && entry.route_identity && entry.route_identity.modalities)
+          || (entry && entry.modalities)
+          || []
+        );
+        return modalities.includes(routeId);
+      });
+      if (byModality) return byModality;
     }
     const fallbackId = cleanString(instrument && instrument.defaultRoute).toLowerCase();
     if (fallbackId) {
