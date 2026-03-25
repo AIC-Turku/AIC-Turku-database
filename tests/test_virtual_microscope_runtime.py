@@ -787,6 +787,316 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertGreater(rows[("green", "Main Path -> Green path -> Cam A")], rows[("green", "Main Path -> Red path -> Cam B")])
         self.assertGreater(rows[("red", "Main Path -> Red path -> Cam B")], rows[("red", "Main Path -> Green path -> Cam A")])
 
+    def test_simulate_instrument_materializes_reused_cube_traversal_from_selection_map(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor() {
+              return {
+                key: 'green',
+                name: 'Green',
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [488, 100], [530, 0]],
+                  ex2p: [],
+                  em: [[500, 0], [525, 100], [560, 0]]
+                },
+                exMax: 488,
+                emMax: 525
+              };
+            }
+            const cubePositions = {
+              1: {
+                slot: 1,
+                position_key: '1',
+                display_label: '405 cube',
+                component_type: 'filter_cube',
+                spectral_ops: {
+                  illumination: [{ op: 'bandpass', center_nm: 405, width_nm: 20 }],
+                  detection: [{ op: 'bandpass', center_nm: 450, width_nm: 30 }]
+                }
+              },
+              2: {
+                slot: 2,
+                position_key: '2',
+                display_label: '488 cube',
+                component_type: 'filter_cube',
+                spectral_ops: {
+                  illumination: [{ op: 'bandpass', center_nm: 488, width_nm: 20 }],
+                  detection: [{ op: 'bandpass', center_nm: 525, width_nm: 40 }]
+                }
+              }
+            };
+            const availablePositions = Object.values(cubePositions).map((entry) => ({
+              position_key: entry.position_key,
+              label: entry.display_label,
+              component_type: entry.component_type,
+              spectral_ops: entry.spectral_ops
+            }));
+            const routeSteps = [
+              { step_id: 'illumination-source', order: 0, phase: 'illumination', kind: 'source', source_id: 'src_488', component_id: 'src_488' },
+              {
+                step_id: 'illumination-cube',
+                order: 1,
+                phase: 'illumination',
+                kind: 'optical_component',
+                component_id: 'filter_cube',
+                mechanism_id: 'filter_cube',
+                stage_role: 'cube',
+                selection_state: 'unresolved',
+                available_positions: availablePositions
+              },
+              { step_id: 'sample', order: 2, phase: 'sample', kind: 'sample', component_id: 'sample_plane' },
+              {
+                step_id: 'detection-cube',
+                order: 3,
+                phase: 'detection',
+                kind: 'optical_component',
+                component_id: 'filter_cube',
+                mechanism_id: 'filter_cube',
+                stage_role: 'cube',
+                selection_state: 'unresolved',
+                available_positions: availablePositions
+              },
+              { step_id: 'detector', order: 4, phase: 'detection', kind: 'detector', detector_id: 'cam_1', endpoint_id: 'cam_1', component_id: 'cam_1' }
+            ];
+            const instrument = {
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'confocal', wavelength_grid: { min_nm: 430, max_nm: 700, step_nm: 2 } },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [
+                {
+                  id: 'filter_cube',
+                  stage_role: 'cube',
+                  element_type: 'filter_cube_turret',
+                  display_label: 'Filter cube turret',
+                  positions: cubePositions
+                }
+              ],
+              endpoints: [{ id: 'cam_1', display_label: 'Cam 1', endpoint_type: 'camera' }],
+              light_paths: [{
+                id: 'confocal',
+                illumination_sequence: [{ source_id: 'src_488' }, { optical_path_element_id: 'filter_cube', position_id: '2' }],
+                detection_sequence: [{ optical_path_element_id: 'filter_cube', position_id: '2' }, { endpoint_id: 'cam_1' }],
+                route_steps: routeSteps,
+                selected_execution: { contract_version: 'selected_execution.v2', selected_route_steps: routeSteps }
+              }]
+            };
+            function summarize(slot) {
+              const simulation = rt.simulateInstrument(
+                instrument,
+                {
+                  sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+                  detectors: [{ id: 'cam_1', display_label: 'Cam 1', endpoint_type: 'camera' }],
+                  selectionMap: { filter_cube: slot }
+                },
+                [fluor()],
+                { currentRoute: 'confocal' }
+              );
+              return {
+                validSelection: simulation.validSelection,
+                resultCount: simulation.results.length,
+                intensity: simulation.results[0] ? simulation.results[0].detectorWeightedIntensity : 0
+              };
+            }
+            return { blocked: summarize(1), open: summarize(2) };
+            """
+        )
+
+        self.assertTrue(result["blocked"]["validSelection"])
+        self.assertTrue(result["open"]["validSelection"])
+        self.assertEqual(result["blocked"]["resultCount"], 1)
+        self.assertEqual(result["open"]["resultCount"], 1)
+        self.assertGreater(result["open"]["intensity"], result["blocked"]["intensity"])
+
+    def test_optimize_light_path_materializes_traversal_for_splitter_routes(self) -> None:
+        result = self.run_node_json(
+            """
+            function fluor() {
+              return {
+                key: 'green',
+                name: 'Green',
+                activeStateName: 'Default',
+                spectra: {
+                  ex1p: [[450, 0], [488, 100], [530, 0]],
+                  ex2p: [],
+                  em: [[500, 0], [525, 100], [560, 0]]
+                },
+                exMax: 488,
+                emMax: 525
+              };
+            }
+            const cubePositions = {
+              1: {
+                slot: 1,
+                position_key: '1',
+                display_label: '405 cube',
+                component_type: 'filter_cube',
+                spectral_ops: {
+                  illumination: [{ op: 'bandpass', center_nm: 405, width_nm: 20 }],
+                  detection: [{ op: 'bandpass', center_nm: 450, width_nm: 30 }]
+                }
+              },
+              2: {
+                slot: 2,
+                position_key: '2',
+                display_label: '488 cube',
+                component_type: 'filter_cube',
+                spectral_ops: {
+                  illumination: [{ op: 'bandpass', center_nm: 488, width_nm: 20 }],
+                  detection: [{ op: 'bandpass', center_nm: 525, width_nm: 40 }]
+                }
+              }
+            };
+            const availablePositions = Object.values(cubePositions).map((entry) => ({
+              position_key: entry.position_key,
+              label: entry.display_label,
+              component_type: entry.component_type,
+              spectral_ops: entry.spectral_ops
+            }));
+            const routeSteps = [
+              { step_id: 'illumination-source', order: 0, phase: 'illumination', kind: 'source', source_id: 'src_488', component_id: 'src_488' },
+              {
+                step_id: 'illumination-cube',
+                order: 1,
+                phase: 'illumination',
+                kind: 'optical_component',
+                component_id: 'filter_cube',
+                mechanism_id: 'filter_cube',
+                stage_role: 'cube',
+                selection_state: 'unresolved',
+                available_positions: availablePositions
+              },
+              { step_id: 'sample', order: 2, phase: 'sample', kind: 'sample', component_id: 'sample_plane' },
+              {
+                step_id: 'detection-cube',
+                order: 3,
+                phase: 'detection',
+                kind: 'optical_component',
+                component_id: 'filter_cube',
+                mechanism_id: 'filter_cube',
+                stage_role: 'cube',
+                selection_state: 'unresolved',
+                available_positions: availablePositions
+              },
+              { step_id: 'splitter', order: 4, phase: 'detection', kind: 'optical_component', component_id: 'main_splitter', stage_role: 'splitter', component_type: 'splitter' },
+              {
+                step_id: 'routing',
+                order: 5,
+                phase: 'detection',
+                kind: 'routing_component',
+                component_id: 'main_splitter',
+                routing: {
+                  selection_mode: 'exclusive',
+                  branches: [
+                    { branch_id: 'green', label: 'Green path', mode: 'reflected', sequence: [{ kind: 'detector', detector_id: 'cam_a', endpoint_id: 'cam_a', component_id: 'cam_a' }] },
+                    { branch_id: 'red', label: 'Red path', mode: 'transmitted', sequence: [{ kind: 'detector', detector_id: 'cam_b', endpoint_id: 'cam_b', component_id: 'cam_b' }] }
+                  ]
+                }
+              }
+            ];
+            const instrument = {
+              metadata: { simulation_mode: 'strict' },
+              simulation: { default_route: 'confocal', wavelength_grid: { min_nm: 430, max_nm: 760, step_nm: 2 } },
+              sources: [{ id: 'src_488', display_label: '488 laser', kind: 'laser', role: 'excitation', wavelength_nm: 488, spectral_mode: 'line' }],
+              optical_path_elements: [
+                {
+                  id: 'filter_cube',
+                  stage_role: 'cube',
+                  element_type: 'filter_cube_turret',
+                  display_label: 'Filter cube turret',
+                  positions: cubePositions
+                },
+                { id: 'main_splitter', stage_role: 'splitter', element_type: 'splitter', display_label: 'Main splitter', selection_mode: 'exclusive' }
+              ],
+              endpoints: [
+                { id: 'cam_a', display_label: 'Cam A', endpoint_type: 'camera' },
+                { id: 'cam_b', display_label: 'Cam B', endpoint_type: 'camera' }
+              ],
+              light_paths: [{
+                id: 'confocal',
+                illumination_sequence: [{ source_id: 'src_488' }, { optical_path_element_id: 'filter_cube', position_id: '2' }],
+                detection_sequence: [
+                  { optical_path_element_id: 'filter_cube', position_id: '2' },
+                  { optical_path_element_id: 'main_splitter' },
+                  {
+                    branches: {
+                      selection_mode: 'exclusive',
+                      items: [
+                        { branch_id: 'green', label: 'Green path', mode: 'reflected', sequence: [{ endpoint_id: 'cam_a' }] },
+                        { branch_id: 'red', label: 'Red path', mode: 'transmitted', sequence: [{ endpoint_id: 'cam_b' }] }
+                      ]
+                    }
+                  }
+                ],
+                route_steps: routeSteps,
+                selected_execution: { contract_version: 'selected_execution.v2', selected_route_steps: routeSteps }
+              }],
+              projections: {
+                virtual_microscope: {
+                  splitters: [{
+                    id: 'main_splitter',
+                    display_label: 'Main splitter',
+                    routes: ['confocal'],
+                    path: 'confocal',
+                    branches: [
+                      {
+                        id: 'green',
+                        label: 'Green path',
+                        mode: 'reflected',
+                        target_ids: ['cam_a'],
+                        routes: ['confocal'],
+                        path: 'confocal',
+                        component: {
+                          component_type: 'bandpass',
+                          center_nm: 525,
+                          width_nm: 40,
+                          display_label: '525/40',
+                          spectral_ops: {
+                            illumination: [{ op: 'bandpass', center_nm: 525, width_nm: 40 }],
+                            detection: [{ op: 'bandpass', center_nm: 525, width_nm: 40 }]
+                          }
+                        }
+                      },
+                      {
+                        id: 'red',
+                        label: 'Red path',
+                        mode: 'transmitted',
+                        target_ids: ['cam_b'],
+                        routes: ['confocal'],
+                        path: 'confocal',
+                        component: {
+                          component_type: 'bandpass',
+                          center_nm: 700,
+                          width_nm: 75,
+                          display_label: '700/75',
+                          spectral_ops: {
+                            illumination: [{ op: 'bandpass', center_nm: 700, width_nm: 75 }],
+                            detection: [{ op: 'bandpass', center_nm: 700, width_nm: 75 }]
+                          }
+                        }
+                      }
+                    ]
+                  }]
+                }
+              }
+            };
+            const optimized = rt.optimizeLightPath([fluor()], instrument, { currentRoute: 'confocal' });
+            return optimized ? {
+              route: optimized.route,
+              score: optimized.score,
+              splitters: optimized.splitters,
+              detectors: optimized.detectors
+            } : null;
+            """
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["route"], "confocal")
+        self.assertGreater(result["score"], 0)
+        self.assertEqual(result["splitters"][0]["mechanismId"], "main_splitter")
+        self.assertEqual(result["splitters"][0]["selected_branch_ids"], ["green", "red"])
+        self.assertGreaterEqual(len(result["detectors"]), 1)
+
     def test_normalize_terminals_preserves_undefined_default_enabled(self) -> None:
         result = self.run_node_json(
             """
