@@ -1,26 +1,10 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import json
-import sys
-import types
-
-yaml_stub = types.ModuleType('yaml')
-
-
-class _YamlError(Exception):
-    pass
-
-
-def _safe_load(value):
-    return json.loads(value)
-
-
-yaml_stub.safe_load = _safe_load
-yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault('yaml', yaml_stub)
 
 
 from scripts.validate import (
@@ -40,8 +24,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.prev_cwd = Path.cwd()
         os.chdir(self.repo)
         (self.repo / 'schema').mkdir(parents=True, exist_ok=True)
+        self._yaml_safe_load_patcher = patch(
+            'scripts.validate.yaml.safe_load',
+            side_effect=json.loads,
+        )
+        self._yaml_safe_load_patcher.start()
 
     def tearDown(self) -> None:
+        self._yaml_safe_load_patcher.stop()
         os.chdir(self.prev_cwd)
         self._tmpdir.cleanup()
 
