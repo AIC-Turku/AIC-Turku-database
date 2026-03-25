@@ -2643,7 +2643,13 @@ function detectorCollectionMask(detector, grid) {
   }
 
   function materializeTraversalSelection(instrument, selection, options) {
-    const normalizedInstrument = normalizeInstrumentPayload(instrument, options);
+    const normalizedInstrument = instrument
+      && typeof instrument === 'object'
+      && instrument.routeTopology
+      && Array.isArray(instrument.routeTopology.routes)
+      && Array.isArray(instrument.lightSources)
+      ? instrument
+      : normalizeInstrumentPayload(instrument, options);
     const activeRoute = cleanString(options && options.currentRoute).toLowerCase()
       || normalizedInstrument.defaultRoute
       || null;
