@@ -178,7 +178,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("step_id", source)
 
         ordered_fn = source.split("function orderedComponentsFromExecution")[1].split("\n  function ")[0]
-        self.assertIn("stageKey === 'splitter' || componentType === 'splitter'", ordered_fn)
+        self.assertIn("stageKey === 'splitter'", ordered_fn)
+        self.assertIn("componentType === 'splitter'", ordered_fn)
         self.assertIn("stageKey === 'port_selector'", ordered_fn)
         self.assertIn("componentType === 'port_selector'", ordered_fn)
         self.assertIn("stageKey === 'route_control'", ordered_fn)
