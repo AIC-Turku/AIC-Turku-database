@@ -1921,6 +1921,39 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         type_issues = [i for i in issues if i.code == 'invalid_field_type']
         self.assertEqual(type_issues, [], msg=f"Unexpected type issues: {type_issues}")
 
+    def test_structured_filter_cube_with_wrong_internal_component_types_fails_validation(self) -> None:
+        """Structured cubes must reject mis-typed excitation/dichroic/emission internals."""
+        self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
+        self._write_json_yaml(
+            'instruments/invalid-cube.yaml',
+            {
+                'instrument': {'instrument_id': 'invalid-cube'},
+                'hardware': {
+                    'optical_path_elements': [{
+                        'id': 'cube_turret',
+                        'stage_role': 'cube',
+                        'element_type': 'turret',
+                        'positions': {
+                            'Pos_1': {
+                                'component_type': 'filter_cube',
+                                'excitation_filter': {'component_type': 'dichroic', 'center_nm': 470, 'width_nm': 40},
+                                'dichroic': {'component_type': 'bandpass', 'cut_on_nm': 495},
+                                'emission_filter': {'component_type': 'dichroic', 'center_nm': 525, 'width_nm': 50},
+                            }
+                        }
+                    }],
+                },
+            },
+        )
+
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+
+        self.assertEqual([w for w in warnings if w.code == 'non_authoritative_filter_cube'], [])
+        invalid_light_path_issues = [i for i in issues if i.code == 'invalid_light_path']
+        self.assertTrue(any('excitation_filter must use a filter-compatible component_type' in i.message for i in invalid_light_path_issues))
+        self.assertTrue(any('dichroic must use a dichroic-compatible component_type' in i.message for i in invalid_light_path_issues))
+        self.assertTrue(any('emission_filter must use a filter-compatible component_type' in i.message for i in invalid_light_path_issues))
+
     def test_flattened_filter_cube_without_sub_components_validates(self) -> None:
         """A flattened filter_cube (no explicit sub-components) must remain valid for backward compat."""
         self._write_json_yaml('schema/instrument_policy.yaml', self._filter_cube_policy())
@@ -2047,6 +2080,11 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         )
 
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        invalid_light_path_issues = [i for i in issues if i.code == 'invalid_light_path']
+        self.assertFalse(
+            any('filter_cube' in i.message for i in invalid_light_path_issues),
+            msg=f"Flattened legacy cube should stay tolerated: {invalid_light_path_issues}",
+        )
         cube_warnings = [w for w in warnings if w.code == 'non_authoritative_filter_cube']
         self.assertTrue(len(cube_warnings) >= 1, msg="Flattened cube must emit non_authoritative_filter_cube warning")
         self.assertIn('flattened', cube_warnings[0].message)
