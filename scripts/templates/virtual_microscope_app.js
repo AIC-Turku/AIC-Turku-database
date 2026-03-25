@@ -688,6 +688,7 @@
 
     function applyStepComponent(spectrum, step, mode) {
       const component = componentForStep(step);
+      // Beam coloring must fail closed when parser-authored optics are absent.
       if (!component || !component.spectral_ops) return emptySpectrum.slice();
       return spectrum.map((value, i) => value * ((VM.componentMask(component, grid, { mode })[i]) || 0));
     }
