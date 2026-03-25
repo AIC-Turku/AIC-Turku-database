@@ -858,15 +858,80 @@
     return true;
   }
 
+  function unsupportedTraversalIssues(selection) {
+    const resolvedExecution = Array.isArray(selection && selection.resolvedExecution) ? selection.resolvedExecution : [];
+    return resolvedExecution.reduce((issues, step) => {
+      if (!(step && typeof step === 'object') || step.kind !== 'optical_component') return issues;
+      const component = step._resolved_component || {
+        id: step.component_id,
+        display_label: step.display_label,
+        component_type: step.component_type,
+        type: step.component_type,
+        spectral_ops: step.spectral_ops,
+        position_key: step.position_key || step.selected_position_key,
+        _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
+        _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
+      };
+      const stageRole = cleanString(step.stage_role || (component && component.stage_role)).toLowerCase();
+      const componentType = cleanString((component && (component.component_type || component.type)) || step.component_type || step.type).toLowerCase();
+      if (
+        stageRole === 'splitter'
+        || componentType === 'splitter'
+        || stageRole === 'port_selector'
+        || componentType === 'port_selector'
+        || stageRole === 'route_control'
+        || componentType === 'route_control'
+      ) return issues;
+      if (
+        step.unsupported_reason
+        || step._cube_incomplete
+        || step._unsupported_spectral_model
+        || (component && (component._cube_incomplete || component._unsupported_spectral_model))
+        || !(component && component.spectral_ops && typeof component.spectral_ops === 'object')
+      ) {
+        issues.push({
+          stage: stageRole || componentType || step.phase,
+          mechanismName: cleanString(step.display_label || (component && component.display_label) || (component && component.label)),
+          componentLabel: componentLabel(component, 'Optical component'),
+        });
+      }
+      return issues;
+    }, []);
+  }
+
   function runAutoConfigure() {
     if (!state.activeInstrumentRaw || !state.loadedProteins.size) {
       setStatusMessage('Load at least one fluorophore before auto-configuring.', 'warning');
       return;
     }
-    const result = VM.optimizeLightPath(mapToArray(state.loadedProteins), state.activeInstrumentRaw, {
-      preferTwoPhoton: state.preferTwoPhoton,
-      currentRoute: state.activeRoute,
-    });
+    let selection = state.lastSelection;
+    try {
+      selection = collectRuntimeSelection();
+    } catch (error) {
+      console.error('Auto-configure failed while reading the active route', error);
+      setStatusMessage(`Auto-configure failed: ${errorMessage(error)}`, 'error');
+      return;
+    }
+    const unsupportedIssues = unsupportedTraversalIssues(selection);
+    if (unsupportedIssues.length) {
+      setStatusMessage(`Auto-configure unavailable: active route contains unsupported parser optics (${uniqueTexts(unsupportedIssues.map((issue) => maskIssueSummary(issue))).join('; ')}).`, 'warning');
+      return;
+    }
+    let result;
+    try {
+      result = VM.optimizeLightPath(mapToArray(state.loadedProteins), state.activeInstrumentRaw, {
+        preferTwoPhoton: state.preferTwoPhoton,
+        currentRoute: state.activeRoute,
+      });
+    } catch (error) {
+      console.error('Auto-configure failed', error);
+      setStatusMessage(`Auto-configure failed: ${errorMessage(error)}`, 'error');
+      return;
+    }
+    if (result && result.unsupported) {
+      setStatusMessage(`Auto-configure unavailable: ${cleanString(result.reason) || 'active route contains unsupported parser optics.'}`, 'warning');
+      return;
+    }
     if (!result) {
       setStatusMessage('No compatible zero-leakage configuration was found for the current fluorophores.', 'warning');
       return;

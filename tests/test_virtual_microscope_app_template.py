@@ -295,6 +295,19 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("applyOptimizedConfiguration(steps[0].configuration);", source)
         self.assertIn("renderSequentialAcquisitionPlan(steps, 0);", source)
 
+    def test_run_auto_configure_surfaces_unsupported_and_optimizer_errors(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        run_auto_fn = source.split("function runAutoConfigure()")[1].split("\n  function ")[0]
+        self.assertIn("selection = collectRuntimeSelection();", run_auto_fn)
+        self.assertIn("const unsupportedIssues = unsupportedTraversalIssues(selection);", run_auto_fn)
+        self.assertIn("Auto-configure unavailable: active route contains unsupported parser optics", run_auto_fn)
+        self.assertIn("result = VM.optimizeLightPath", run_auto_fn)
+        self.assertIn("catch (error)", run_auto_fn)
+        self.assertIn("setStatusMessage(`Auto-configure failed: ${errorMessage(error)}`, 'error');", run_auto_fn)
+        self.assertIn("if (result && result.unsupported)", run_auto_fn)
+        self.assertIn("applyOptimizedConfiguration(result);", run_auto_fn)
+
     # ── VM-008: deduplicated detector legends ──
 
     def test_detector_legend_deduplication_in_propagation_panel(self) -> None:
