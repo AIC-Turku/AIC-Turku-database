@@ -6,6 +6,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -118,6 +119,7 @@ class FullAuditScriptTests(unittest.TestCase):
         self.assertEqual(audit["readiness"], "ok")
         self.assertEqual(audit["counts"]["hardware_sources"], 2)
         self.assertEqual(audit["counts"]["payload_splitters"], 1)
+        self.assertEqual(audit["counts"]["non_spectral_routing_controls"], 0)
         self.assertGreater(audit["counts"]["valid_paths"], 0)
 
     def test_generate_full_audit_returns_report_and_markdown(self) -> None:
@@ -333,6 +335,117 @@ class FullAuditScriptTests(unittest.TestCase):
                     detected = True
 
         self.assertTrue(detected, msg="Audit should detect unresolved step with defaulted spectral_ops.")
+
+    def test_audit_exempts_splitter_routing_controls_from_missing_spectral_ops(self) -> None:
+        from scripts.light_path_parser import generate_virtual_microscope_payload
+
+        instrument = {
+            "id": "splitter-routing-scope",
+            "display_name": "Splitter Routing Scope",
+            "canonical": {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "role": "excitation", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {
+                            "id": "exc_filter",
+                            "stage_role": "excitation",
+                            "element_type": "filter_wheel",
+                            "positions": {1: {"type": "bandpass", "center_nm": 488, "width_nm": 10}},
+                        }
+                    ],
+                    "endpoints": [{"id": "cam_a", "kind": "camera", "endpoint_type": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "exc_filter"}],
+                        "detection_sequence": [{"endpoint_id": "cam_a"}],
+                    }
+                ],
+            },
+        }
+        payload = generate_virtual_microscope_payload(instrument["canonical"])
+        payload["light_paths"][0]["selected_execution"]["selected_route_steps"].append(
+            {
+                "step_id": "detection-step-splitter",
+                "order": 99,
+                "phase": "detection",
+                "kind": "optical_component",
+                "selection_state": "fixed",
+                "component_id": "det_splitter",
+                "component_type": "splitter",
+                "stage_role": "splitter",
+                "spectral_ops": None,
+                "unsupported_reason": None,
+            }
+        )
+
+        with patch("scripts.full_audit.generate_virtual_microscope_payload", return_value=payload):
+            audit = audit_virtual_microscope_instrument(instrument)
+
+        self.assertEqual(audit["counts"]["non_spectral_routing_controls"], 1)
+        self.assertFalse(
+            any(
+                "detection-step-splitter" in issue.get("message", "")
+                and "has no spectral_ops and no unsupported_reason" in issue.get("message", "")
+                for issue in audit["issues"]
+            )
+        )
+
+    def test_audit_still_flags_real_optical_missing_spectral_ops(self) -> None:
+        from scripts.light_path_parser import generate_virtual_microscope_payload
+
+        instrument = {
+            "id": "real-optics-scope",
+            "display_name": "Real Optics Scope",
+            "canonical": {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "role": "excitation", "wavelength_nm": 488}],
+                    "optical_path_elements": [
+                        {
+                            "id": "exc_filter",
+                            "stage_role": "excitation",
+                            "element_type": "filter_wheel",
+                            "positions": {1: {"type": "bandpass", "center_nm": 488, "width_nm": 10}},
+                        }
+                    ],
+                    "endpoints": [{"id": "cam_a", "kind": "camera", "endpoint_type": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "exc_filter"}],
+                        "detection_sequence": [{"endpoint_id": "cam_a"}],
+                    }
+                ],
+            },
+        }
+        payload = generate_virtual_microscope_payload(instrument["canonical"])
+        payload["light_paths"][0]["selected_execution"]["selected_route_steps"].append(
+            {
+                "step_id": "illumination-step-excitation",
+                "order": 100,
+                "phase": "illumination",
+                "kind": "optical_component",
+                "selection_state": "fixed",
+                "component_id": "broken_exc_filter",
+                "component_type": "bandpass",
+                "stage_role": "excitation",
+                "spectral_ops": None,
+                "unsupported_reason": None,
+            }
+        )
+
+        with patch("scripts.full_audit.generate_virtual_microscope_payload", return_value=payload):
+            audit = audit_virtual_microscope_instrument(instrument)
+
+        self.assertTrue(
+            any(
+                "illumination-step-excitation" in issue.get("message", "")
+                and "has no spectral_ops and no unsupported_reason" in issue.get("message", "")
+                for issue in audit["issues"]
+            )
+        )
 
     def test_cli_writes_outputs(self) -> None:
         dependency_check = subprocess.run(

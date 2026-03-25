@@ -105,6 +105,12 @@ def _splitter_count(hardware: dict[str, Any], light_path: dict[str, Any]) -> dic
     }
 
 
+def _is_non_spectral_routing_control_step(step: dict[str, Any]) -> bool:
+    stage_role = str(step.get("stage_role") or "").strip().lower()
+    component_type = str(step.get("component_type") or "").strip().lower()
+    return stage_role in {"splitter", "port_selector"} or component_type in {"splitter", "port_selector"}
+
+
 def _source_readiness_issue(index: int, source: dict[str, Any]) -> list[dict[str, str]]:
     label = source.get("model") or source.get("manufacturer") or source.get("name") or f"source_{index + 1}"
     issues: list[dict[str, str]] = []
@@ -202,6 +208,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
     issues: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     infos: list[dict[str, str]] = []
+    non_spectral_routing_controls = 0
 
     for index, source in enumerate(source_rows):
         for issue in _source_readiness_issue(index, source):
@@ -395,9 +402,16 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                         continue
                     kind = sel_step.get("kind")
                     state = sel_step.get("selection_state")
+                    is_non_spectral_routing_control = _is_non_spectral_routing_control_step(sel_step)
 
                     # ── Structural check: resolved/fixed optical steps need spectral_ops or unsupported_reason ──
-                    if kind == "optical_component" and state not in ("unresolved", None) and sel_step.get("spectral_ops") is None and sel_step.get("unsupported_reason") is None:
+                    if (
+                        kind == "optical_component"
+                        and state not in ("unresolved", None)
+                        and sel_step.get("spectral_ops") is None
+                        and sel_step.get("unsupported_reason") is None
+                        and not is_non_spectral_routing_control
+                    ):
                         issues.append(
                             {
                                 "severity": "warning",
@@ -406,6 +420,14 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                                 "message": f"Optical component step '{sel_step.get('step_id') or sel_step.get('route_step_id')}' has no spectral_ops and no unsupported_reason.",
                             }
                         )
+                    elif (
+                        kind == "optical_component"
+                        and state not in ("unresolved", None)
+                        and sel_step.get("spectral_ops") is None
+                        and sel_step.get("unsupported_reason") is None
+                        and is_non_spectral_routing_control
+                    ):
+                        non_spectral_routing_controls += 1
 
                     # ── Semantic check 2: unresolved mechanism steps must not default to first position optics ──
                     if kind == "optical_component" and state == "unresolved":
@@ -465,6 +487,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
             "payload_detectors": payload_detector_count,
             "raw_splitters": raw_splitters,
             "payload_splitters": payload_splitter_count,
+            "non_spectral_routing_controls": non_spectral_routing_controls,
             "hardware_stage_mechanisms": stage_counts,
             "payload_stage_mechanisms": payload_stage_counts,
             "valid_paths": len(runtime_projection.get("valid_paths", [])),
