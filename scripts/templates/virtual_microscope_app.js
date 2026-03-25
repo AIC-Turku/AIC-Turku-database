@@ -586,6 +586,14 @@
     light.dataset.empty = color === 'rgba(0,0,0,0)' ? 'true' : 'false';
   }
 
+  function emptySpectrumForGrid(grid) {
+    return Array.isArray(grid) ? grid.map(() => 0) : [];
+  }
+
+  function spectrumHasMeaningfulThroughput(spectrum) {
+    return Array.isArray(spectrum) && spectrum.some((value) => Number(value || 0) > 1e-9);
+  }
+
   function updatePipelineBeamColors(selection, simulation) {
     const grid = Array.isArray(simulation && simulation.grid)
       ? simulation.grid
@@ -602,10 +610,16 @@
       generatedEmission,
       postEmission,
       branchEmission,
-      empty: grid.map(() => 0),
+      empty: emptySpectrumForGrid(grid),
     };
 
-    const stepSpectra = buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation);
+    const beamState = buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation);
+    const stepSpectra = beamState && beamState.stepSpectra instanceof Map ? beamState.stepSpectra : new Map();
+    const shouldBlankAll = Boolean(
+      (simulation && simulation.simulationError)
+      || (simulation && simulation.validSelection === false)
+      || (simulation && simulation.routeViolation)
+    );
 
     const pipes = Array.from(DOM.graph.querySelectorAll('.optical-pipe'));
 
@@ -613,18 +627,36 @@
       const key = pipe.dataset.pipeKey;
       if (!key) return;
       const fromNode = key.split('->')[0];
-      setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);
+      const spectrum = shouldBlankAll
+        ? fallbackSpectra.empty
+        : pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra);
+      if (
+        shouldBlankAll
+        || (beamState && beamState.untrustworthyStepIds && beamState.untrustworthyStepIds.has(fromNode))
+        || !spectrumHasMeaningfulThroughput(spectrum)
+      ) {
+        setPipeSpectrumColor(key, fallbackSpectra.empty, grid);
+        return;
+      }
+      setPipeSpectrumColor(key, spectrum, grid);
     });
   }
 
   function buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation) {
     const resolvedSimulation = simulation || state.lastSimulation || null;
+    const emptySpectrum = emptySpectrumForGrid(grid);
     const stepSpectra = new Map();
     stepSpectra.set('sources', sourceMixed);
     stepSpectra.set('sample', generatedEmission);
 
     const resolvedExecution = Array.isArray(selection && selection.resolvedExecution) ? selection.resolvedExecution : [];
-    if (!resolvedExecution.length) return stepSpectra;
+    if (!resolvedExecution.length) {
+      return {
+        stepSpectra,
+        unsupportedActiveTraversal: false,
+        untrustworthyStepIds: new Set(),
+      };
+    }
 
     function componentForStep(step) {
       return step._resolved_component || {
@@ -637,37 +669,76 @@
       };
     }
 
+    function stepHasUnsupportedOptics(step) {
+      if (!(step && typeof step === 'object') || step.kind !== 'optical_component') return false;
+      const component = componentForStep(step);
+      const stageRole = cleanString(step.stage_role || (component && component.stage_role)).toLowerCase();
+      const componentType = cleanString((component && (component.component_type || component.type)) || step.component_type || step.type).toLowerCase();
+      if (stageRole === 'splitter' || componentType === 'splitter' || stageRole === 'port_selector' || componentType === 'port_selector') {
+        return false;
+      }
+      return Boolean(
+        step.unsupported_reason
+        || step._cube_incomplete
+        || step._unsupported_spectral_model
+        || (component && (component._cube_incomplete || component._unsupported_spectral_model))
+        || !(component && component.spectral_ops)
+      );
+    }
+
     function applyStepComponent(spectrum, step, mode) {
       const component = componentForStep(step);
-      if (!component || !component.spectral_ops) return spectrum;
+      // Beam coloring must fail closed when parser-authored optics are absent.
+      if (!component || !component.spectral_ops) return emptySpectrum.slice();
       return spectrum.map((value, i) => value * ((VM.componentMask(component, grid, { mode })[i]) || 0));
     }
 
+    const untrustworthyStepIds = new Set();
+    let illuminationTrustBroken = false;
     let runningIllum = sourceMixed.slice();
     resolvedExecution
       .filter((step) => step && step.phase === 'illumination' && step.kind !== 'source')
       .forEach((step) => {
         const stepId = cleanString(step.step_id);
         if (!stepId) return;
-        if (step.kind === 'optical_component') {
+        if (illuminationTrustBroken) {
+          runningIllum = emptySpectrum.slice();
+        } else if (stepHasUnsupportedOptics(step)) {
+          illuminationTrustBroken = true;
+          runningIllum = emptySpectrum.slice();
+          untrustworthyStepIds.add(stepId);
+        } else if (step.kind === 'optical_component') {
           runningIllum = applyStepComponent(runningIllum, step, 'excitation');
         }
         stepSpectra.set(stepId, runningIllum.slice());
       });
 
-    let runningDetect = generatedEmission.slice();
+    let detectionTrustBroken = illuminationTrustBroken;
+    if (illuminationTrustBroken) {
+      stepSpectra.set('sample', emptySpectrum.slice());
+    }
+    let runningDetect = illuminationTrustBroken ? emptySpectrum.slice() : generatedEmission.slice();
     resolvedExecution
       .filter((step) => step && step.phase === 'detection' && step.kind !== 'detector')
       .forEach((step) => {
         const stepId = cleanString(step.step_id);
         if (!stepId) return;
-        if (step.kind === 'routing_component') {
+        if (detectionTrustBroken) {
+          runningDetect = emptySpectrum.slice();
+          untrustworthyStepIds.add(stepId);
+          stepSpectra.set(stepId, runningDetect.slice());
+        } else if (step.kind === 'routing_component') {
           const routedBranchSpectrum = sumSpectra(
             Array.isArray(resolvedSimulation && resolvedSimulation.pathSpectra) ? resolvedSimulation.pathSpectra : [],
             'preDetectorSpectrum',
             grid
           );
           runningDetect = routedBranchSpectrum;
+          stepSpectra.set(stepId, runningDetect.slice());
+        } else if (stepHasUnsupportedOptics(step)) {
+          detectionTrustBroken = true;
+          runningDetect = emptySpectrum.slice();
+          untrustworthyStepIds.add(stepId);
           stepSpectra.set(stepId, runningDetect.slice());
         } else if (step.kind === 'optical_component') {
           runningDetect = applyStepComponent(runningDetect, step, 'emission');
@@ -680,9 +751,13 @@
       'spectrum',
       grid
     );
-    stepSpectra.set('detectors', detectorSpectrum);
+    stepSpectra.set('detectors', detectionTrustBroken ? emptySpectrum.slice() : detectorSpectrum);
 
-    return stepSpectra;
+    return {
+      stepSpectra,
+      unsupportedActiveTraversal: untrustworthyStepIds.size > 0,
+      untrustworthyStepIds,
+    };
   }
 
   function activeFilterMaskDatasets(selection, grid) {
@@ -783,15 +858,80 @@
     return true;
   }
 
+  function unsupportedTraversalIssues(selection) {
+    const resolvedExecution = Array.isArray(selection && selection.resolvedExecution) ? selection.resolvedExecution : [];
+    return resolvedExecution.reduce((issues, step) => {
+      if (!(step && typeof step === 'object') || step.kind !== 'optical_component') return issues;
+      const component = step._resolved_component || {
+        id: step.component_id,
+        display_label: step.display_label,
+        component_type: step.component_type,
+        type: step.component_type,
+        spectral_ops: step.spectral_ops,
+        position_key: step.position_key || step.selected_position_key,
+        _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
+        _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
+      };
+      const stageRole = cleanString(step.stage_role || (component && component.stage_role)).toLowerCase();
+      const componentType = cleanString((component && (component.component_type || component.type)) || step.component_type || step.type).toLowerCase();
+      if (
+        stageRole === 'splitter'
+        || componentType === 'splitter'
+        || stageRole === 'port_selector'
+        || componentType === 'port_selector'
+        || stageRole === 'route_control'
+        || componentType === 'route_control'
+      ) return issues;
+      if (
+        step.unsupported_reason
+        || step._cube_incomplete
+        || step._unsupported_spectral_model
+        || (component && (component._cube_incomplete || component._unsupported_spectral_model))
+        || !(component && component.spectral_ops && typeof component.spectral_ops === 'object')
+      ) {
+        issues.push({
+          stage: stageRole || componentType || step.phase,
+          mechanismName: cleanString(step.display_label || (component && component.display_label) || (component && component.label)),
+          componentLabel: componentLabel(component, 'Optical component'),
+        });
+      }
+      return issues;
+    }, []);
+  }
+
   function runAutoConfigure() {
     if (!state.activeInstrumentRaw || !state.loadedProteins.size) {
       setStatusMessage('Load at least one fluorophore before auto-configuring.', 'warning');
       return;
     }
-    const result = VM.optimizeLightPath(mapToArray(state.loadedProteins), state.activeInstrumentRaw, {
-      preferTwoPhoton: state.preferTwoPhoton,
-      currentRoute: state.activeRoute,
-    });
+    let selection = state.lastSelection;
+    try {
+      selection = collectRuntimeSelection();
+    } catch (error) {
+      console.error('Auto-configure failed while reading the active route', error);
+      setStatusMessage(`Auto-configure failed: ${errorMessage(error)}`, 'error');
+      return;
+    }
+    const unsupportedIssues = unsupportedTraversalIssues(selection);
+    if (unsupportedIssues.length) {
+      setStatusMessage(`Auto-configure unavailable: active route contains unsupported parser optics (${uniqueTexts(unsupportedIssues.map((issue) => maskIssueSummary(issue))).join('; ')}).`, 'warning');
+      return;
+    }
+    let result;
+    try {
+      result = VM.optimizeLightPath(mapToArray(state.loadedProteins), state.activeInstrumentRaw, {
+        preferTwoPhoton: state.preferTwoPhoton,
+        currentRoute: state.activeRoute,
+      });
+    } catch (error) {
+      console.error('Auto-configure failed', error);
+      setStatusMessage(`Auto-configure failed: ${errorMessage(error)}`, 'error');
+      return;
+    }
+    if (result && result.unsupported) {
+      setStatusMessage(`Auto-configure unavailable: ${cleanString(result.reason) || 'active route contains unsupported parser optics.'}`, 'warning');
+      return;
+    }
     if (!result) {
       setStatusMessage('No compatible zero-leakage configuration was found for the current fluorophores.', 'warning');
       return;
@@ -2703,9 +2843,20 @@ if (block.dataset.mechanismType === 'spectral_array') {
         if (step.phase === phase && step.kind === 'optical_component') {
           const stageKey = cleanString(step.stage_role).toLowerCase();
           const componentType = cleanString(step.component_type).toLowerCase();
+          const normalizedStepType = cleanString(step.type).toLowerCase();
 
-          // Splitter route controls are routing hardware, not spectral mask components.
-          if (stageKey === 'splitter' || componentType === 'splitter') return;
+          // Splitter and route-control hardware are traversal controls, not spectral mask components.
+          if (
+            stageKey === 'splitter'
+            || componentType === 'splitter'
+            || normalizedStepType === 'splitter'
+            || stageKey === 'port_selector'
+            || componentType === 'port_selector'
+            || normalizedStepType === 'port_selector'
+            || stageKey === 'route_control'
+            || componentType === 'route_control'
+            || normalizedStepType === 'route_control'
+          ) return;
 
           const component = step._resolved_component || {
             id: step.component_id,
@@ -2718,14 +2869,26 @@ if (block.dataset.mechanismType === 'spectral_array') {
             _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
           };
 
+          const resolvedStageKey = cleanString(component && (component.stage_role || stageKey)).toLowerCase();
+          const resolvedType = cleanString(component && (component.component_type || component.type || componentType || normalizedStepType)).toLowerCase();
+
+          if (
+            resolvedStageKey === 'splitter'
+            || resolvedType === 'splitter'
+            || resolvedStageKey === 'port_selector'
+            || resolvedType === 'port_selector'
+            || resolvedStageKey === 'route_control'
+            || resolvedType === 'route_control'
+          ) return;
+
           // Parser-authored spectral_ops is the contract for maskable optics.
-          if (!(component && component.spectral_ops)) return;
+          if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) return;
 
           ordered.push({
             component,
             mode,
             routeStepId: step.step_id || step.route_step_id,
-            stageKey: stageKey || null,
+            stageKey: resolvedStageKey || stageKey || null,
           });
         }
 

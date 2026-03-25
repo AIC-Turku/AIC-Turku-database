@@ -1482,6 +1482,94 @@ class LightPathParserTests(unittest.TestCase):
         self.assertFalse(cube.get("_cube_incomplete", False), "Explicit cube should not be flagged incomplete")
         self.assertFalse(cube.get("_unsupported_spectral_model", False), "Explicit cube should remain supported")
 
+    def test_validate_light_path_accepts_shape_complete_structured_cube(self) -> None:
+        instrument = {
+            "hardware": {
+                "sources": [{"id": "src_488", "kind": "laser"}],
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "name": "FITC Cube",
+                                "component_type": "filter_cube",
+                                "excitation_filter": {"center_nm": 470, "width_nm": 40},
+                                "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                                "emission_filter": {"component_type": "longpass", "cut_on_nm": 510},
+                            }
+                        },
+                    }
+                ],
+                "endpoints": [{"id": "cam_a", "endpoint_type": "camera"}],
+            },
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "illumination_sequence": [{"source_id": "src_488"}],
+                    "detection_sequence": [{"endpoint_id": "cam_a"}],
+                }
+            ],
+        }
+
+        self.assertEqual(validate_light_path(instrument), [])
+
+    def test_validate_light_path_rejects_mistyped_structured_cube_links(self) -> None:
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "name": "Broken Cube",
+                                "component_type": "filter_cube",
+                                "excitation_filter": {"component_type": "dichroic", "cut_on_nm": 470},
+                                "dichroic": {"component_type": "bandpass", "center_nm": 495, "width_nm": 20},
+                                "emission_filter": {"component_type": "dichroic", "cut_on_nm": 520},
+                            }
+                        },
+                    }
+                ]
+            }
+        }
+
+        errors = validate_light_path(instrument)
+
+        self.assertTrue(any("excitation_filter must use a filter-compatible component_type" in error for error in errors))
+        self.assertTrue(any("dichroic must use a dichroic-compatible component_type" in error for error in errors))
+        self.assertTrue(any("emission_filter must use a filter-compatible component_type" in error for error in errors))
+
+    def test_validate_light_path_rejects_shape_incomplete_structured_cube_links(self) -> None:
+        instrument = {
+            "hardware": {
+                "optical_path_elements": [
+                    {
+                        "id": "cube_turret",
+                        "stage_role": "cube",
+                        "element_type": "turret",
+                        "positions": {
+                            "Pos_1": {
+                                "name": "Shape Broken Cube",
+                                "component_type": "filter_cube",
+                                "excitation_filter": {"component_type": "bandpass", "center_nm": 470},
+                                "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                                "emission_filter": {"component_type": "longpass"},
+                            }
+                        },
+                    }
+                ]
+            }
+        }
+
+        errors = validate_light_path(instrument)
+
+        self.assertTrue(any("excitation_filter bandpass shape requires both center_nm and width_nm" in error for error in errors))
+        self.assertTrue(any("emission_filter longpass shape requires cut_on_nm" in error for error in errors))
+
     def test_splitter_branches_deduplicated_across_routes(self) -> None:
         """Branches with the same branch_id across routes should be merged, not duplicated."""
         payload = generate_virtual_microscope_payload(

@@ -30,6 +30,7 @@ from scripts.display_labels import (
 
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
 NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough", "neutral_density"}
+CUBE_FILTER_COMPONENT_TYPES = {"bandpass", "multiband_bandpass", "longpass", "shortpass", "notch", "tunable"}
 ROUTE_TAGS = {"epi", "widefield_fluorescence", "tirf", "confocal", "confocal_point", "confocal_spinning_disk", "multiphoton", "light_sheet", "transmitted", "transmitted_brightfield", "phase_contrast", "darkfield", "dic", "reflected_brightfield", "optical_sectioning", "spectral_imaging", "flim", "fcs", "ism", "smlm", "spt", "fret", "shared", "all"}
 ROUTE_LABELS = {
     "confocal": "Confocal",
@@ -1106,6 +1107,68 @@ def _sequence_item_union_message(sequence_key: str, *, allow_branches: bool) -> 
     return f"{context} must declare exactly one of {', '.join(allowed_keys[:-1])}, or {allowed_keys[-1]}." if len(allowed_keys) > 1 else f"{context} must declare {allowed_keys[0]}."
 
 
+def _component_has_valid_band_list(component: dict[str, Any], field_name: str = "bands") -> bool:
+    bands = component.get(field_name)
+    if not isinstance(bands, list) or not bands:
+        return False
+    for band in bands:
+        if not isinstance(band, dict):
+            return False
+        if _coerce_number(band.get("center_nm")) is None or _coerce_number(band.get("width_nm")) is None:
+            return False
+    return True
+
+
+def _structured_cube_link_errors(link_key: str, authored_component: dict[str, Any]) -> list[str]:
+    component = _component_payload(authored_component, default_name=_resolve_cube_link_label(link_key))
+    component_type = _clean_string(component.get("component_type") or component.get("type")).lower() or "unknown"
+    errors: list[str] = []
+
+    if link_key == "dichroic":
+        if component_type not in DICHROIC_TYPES:
+            return [f"{link_key} must use a dichroic-compatible component_type; got '{component_type}'."]
+        if not any(
+            (
+                _component_has_valid_band_list(component, "transmission_bands"),
+                _component_has_valid_band_list(component, "reflection_bands"),
+                _component_has_valid_band_list(component, "bands"),
+                _coerce_number(component.get("cut_on_nm")) is not None,
+                isinstance(component.get("cutoffs_nm"), list) and bool(component.get("cutoffs_nm")),
+            )
+        ):
+            return [f"{link_key} must declare dichroic spectral data via cut_on_nm, cutoffs_nm, bands, transmission_bands, or reflection_bands."]
+        return []
+
+    if component_type not in CUBE_FILTER_COMPONENT_TYPES:
+        return [f"{link_key} must use a filter-compatible component_type; got '{component_type}'."]
+
+    if component_type == "bandpass":
+        if _coerce_number(component.get("center_nm")) is not None or _coerce_number(component.get("width_nm")) is not None:
+            if _coerce_number(component.get("center_nm")) is None or _coerce_number(component.get("width_nm")) is None:
+                errors.append(f"{link_key} bandpass shape requires both center_nm and width_nm.")
+        elif not _component_has_valid_band_list(component):
+            errors.append(f"{link_key} bandpass shape requires center_nm/width_nm or a bands array with center_nm and width_nm.")
+    elif component_type == "multiband_bandpass":
+        if not _component_has_valid_band_list(component):
+            errors.append(f"{link_key} multiband_bandpass shape requires a bands array with center_nm and width_nm in every band.")
+    elif component_type == "longpass":
+        if _coerce_number(component.get("cut_on_nm")) is None:
+            errors.append(f"{link_key} longpass shape requires cut_on_nm.")
+    elif component_type == "shortpass":
+        if _coerce_number(component.get("cut_off_nm")) is None:
+            errors.append(f"{link_key} shortpass shape requires cut_off_nm.")
+    elif component_type == "notch":
+        if _coerce_number(component.get("center_nm")) is None or _coerce_number(component.get("width_nm")) is None:
+            errors.append(f"{link_key} notch shape requires both center_nm and width_nm.")
+    elif component_type == "tunable":
+        start = _coerce_number(component.get("band_start_nm")) or _coerce_number(component.get("min_nm"))
+        end = _coerce_number(component.get("band_end_nm")) or _coerce_number(component.get("max_nm"))
+        if start is None or end is None:
+            errors.append(f"{link_key} tunable shape requires band_start_nm/band_end_nm or min_nm/max_nm.")
+
+    return errors
+
+
 def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], list[str], list[str]]:
     """Validate canonical YAML-first light-path definitions.
 
@@ -1170,6 +1233,11 @@ def validate_light_path_diagnostics(instrument_dict: dict) -> tuple[list[str], l
                 cube_warnings.append(
                     f"hardware.optical_path_elements[{_clean_string(element.get('id')) or _clean_string(element.get('name')) or 'cube'}].positions[{position_key}]: filter_cube '{label}' is missing {', '.join(missing_links)} and will be degraded in exact spectral simulation."
                 )
+            for link_key, authored_component in authored_links.items():
+                for cube_error in _structured_cube_link_errors(link_key, authored_component):
+                    errors.append(
+                        f"hardware.optical_path_elements[{_clean_string(element.get('id')) or _clean_string(element.get('name')) or 'cube'}].positions[{position_key}].{link_key}: filter_cube '{label}' {cube_error}"
+                    )
 
     hardware_inventory, hardware_index_map = _build_hardware_inventory(sources, elements, endpoints)
     inventory_lookup = {item["id"]: item for item in hardware_inventory if isinstance(item, dict) and item.get("id")}

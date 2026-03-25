@@ -40,10 +40,13 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         self.assertIn("function pipelineSpectrumForStep(stepId, stepSpectra, fallbackSpectra)", source)
         self.assertIn("function buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation)", source)
-        self.assertIn("setPipeSpectrumColor(key, pipelineSpectrumForStep(fromNode, stepSpectra, fallbackSpectra), grid);", source)
+        self.assertIn("const beamState = buildStepSpectra(selection, grid, sourceMixed, generatedEmission, simulation);", source)
+        self.assertIn("const stepSpectra = beamState && beamState.stepSpectra instanceof Map ? beamState.stepSpectra : new Map();", source)
+        self.assertIn("setPipeSpectrumColor(key, spectrum, grid);", source)
         self.assertIn("const resolvedExecution = Array.isArray(selection && selection.resolvedExecution) ? selection.resolvedExecution : [];", source)
         self.assertIn("step.kind === 'routing_component'", source)
         self.assertIn("stepSpectra.set(stepId, runningDetect.slice());", source)
+        self.assertIn("unsupportedActiveTraversal: untrustworthyStepIds.size > 0,", source)
         self.assertNotIn("const consumed = { excitation: 0, dichroic: 0, emission: 0 };", source)
         self.assertNotIn("if (stageKey === 'splitters') return;", source)
 
@@ -175,8 +178,22 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("step_id", source)
 
         ordered_fn = source.split("function orderedComponentsFromExecution")[1].split("\n  function ")[0]
-        self.assertIn("stageKey === 'splitter' || componentType === 'splitter'", ordered_fn)
-        self.assertIn("if (!(component && component.spectral_ops)) return;", ordered_fn)
+        self.assertIn("stageKey === 'splitter'", ordered_fn)
+        self.assertIn("componentType === 'splitter'", ordered_fn)
+        self.assertIn("stageKey === 'port_selector'", ordered_fn)
+        self.assertIn("componentType === 'port_selector'", ordered_fn)
+        self.assertIn("stageKey === 'route_control'", ordered_fn)
+        self.assertIn("componentType === 'route_control'", ordered_fn)
+        self.assertIn("normalizedStepType === 'splitter'", ordered_fn)
+        self.assertIn("normalizedStepType === 'port_selector'", ordered_fn)
+        self.assertIn("normalizedStepType === 'route_control'", ordered_fn)
+        self.assertIn("resolvedStageKey === 'splitter'", ordered_fn)
+        self.assertIn("resolvedType === 'splitter'", ordered_fn)
+        self.assertIn("resolvedStageKey === 'port_selector'", ordered_fn)
+        self.assertIn("resolvedType === 'port_selector'", ordered_fn)
+        self.assertIn("resolvedStageKey === 'route_control'", ordered_fn)
+        self.assertIn("resolvedType === 'route_control'", ordered_fn)
+        self.assertIn("if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) return;", ordered_fn)
 
     def test_simulation_uses_traversal_ordered_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
@@ -277,6 +294,19 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("button.textContent = activeStepIndex === index ? 'Applied' : `Apply step ${entry.step || (index + 1)}`;", source)
         self.assertIn("applyOptimizedConfiguration(steps[0].configuration);", source)
         self.assertIn("renderSequentialAcquisitionPlan(steps, 0);", source)
+
+    def test_run_auto_configure_surfaces_unsupported_and_optimizer_errors(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        run_auto_fn = source.split("function runAutoConfigure()")[1].split("\n  function ")[0]
+        self.assertIn("selection = collectRuntimeSelection();", run_auto_fn)
+        self.assertIn("const unsupportedIssues = unsupportedTraversalIssues(selection);", run_auto_fn)
+        self.assertIn("Auto-configure unavailable: active route contains unsupported parser optics", run_auto_fn)
+        self.assertIn("result = VM.optimizeLightPath", run_auto_fn)
+        self.assertIn("catch (error)", run_auto_fn)
+        self.assertIn("setStatusMessage(`Auto-configure failed: ${errorMessage(error)}`, 'error');", run_auto_fn)
+        self.assertIn("if (result && result.unsupported)", run_auto_fn)
+        self.assertIn("applyOptimizedConfiguration(result);", run_auto_fn)
 
     # ── VM-008: deduplicated detector legends ──
 
@@ -379,6 +409,36 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("issues.push(result.issue);", combined_fn)
         self.assertIn("return accumulator;", combined_fn)
         self.assertIn("return { mask, issues };", combined_fn)
+
+    def test_blocked_pipeline_paths_blank_downstream_colors(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        update_fn = source.split("function updatePipelineBeamColors")[1].split("\n  function ")[0]
+        self.assertIn("simulation && simulation.simulationError", update_fn)
+        self.assertIn("simulation && simulation.validSelection === false", update_fn)
+        self.assertIn("simulation && simulation.routeViolation", update_fn)
+        self.assertIn("setPipeSpectrumColor(key, fallbackSpectra.empty, grid);", update_fn)
+        self.assertIn("!spectrumHasMeaningfulThroughput(spectrum)", update_fn)
+
+    def test_unsupported_cube_stops_exact_downstream_beam_coloring(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        build_fn = source.split("function buildStepSpectra")[1].split("\n  function ")[0]
+        self.assertIn("function stepHasUnsupportedOptics(step)", build_fn)
+        self.assertIn("step._cube_incomplete", build_fn)
+        self.assertIn("step._unsupported_spectral_model", build_fn)
+        self.assertIn("!(component && component.spectral_ops)", build_fn)
+        self.assertIn("runningIllum = emptySpectrum.slice();", build_fn)
+        self.assertIn("stepSpectra.set('sample', emptySpectrum.slice());", build_fn)
+        self.assertIn("stepSpectra.set('detectors', detectionTrustBroken ? emptySpectrum.slice() : detectorSpectrum);", build_fn)
+
+    def test_valid_pipeline_paths_still_render_normal_colors(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        update_fn = source.split("function updatePipelineBeamColors")[1].split("\n  function ")[0]
+        self.assertIn("const spectrum = shouldBlankAll", update_fn)
+        self.assertIn("setPipeSpectrumColor(key, spectrum, grid);", update_fn)
+        self.assertIn("|| !spectrumHasMeaningfulThroughput(spectrum)", update_fn)
 
     # ── VM-011: buildSelectedConfiguration function exists ──
 

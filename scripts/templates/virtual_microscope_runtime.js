@@ -2479,6 +2479,199 @@ function detectorCollectionMask(detector, grid) {
     );
   }
 
+  const TRAVERSAL_MASKABLE_STAGE_KEYS = new Set(['cube', 'excitation', 'dichroic', 'emission', 'analyzer']);
+
+  function selectedRouteStepsForRecord(routeRecord) {
+    const record = routeRecord && typeof routeRecord === 'object'
+      ? routeRecord
+      : null;
+    const selectedExecution = record && record.selected_execution && typeof record.selected_execution === 'object'
+      ? record.selected_execution
+      : (record && record.selectedExecution && typeof record.selectedExecution === 'object'
+          ? record.selectedExecution
+          : null);
+    if (Array.isArray(selectedExecution && selectedExecution.selected_route_steps)) {
+      return selectedExecution.selected_route_steps.map((step) => ({ ...(step || {}) }));
+    }
+    if (Array.isArray(record && record.route_steps)) {
+      return record.route_steps.map((step) => ({ ...(step || {}) }));
+    }
+    return null;
+  }
+
+  function selectedComponentForMechanism(mechanism, slot) {
+    if (!mechanism || slot === undefined || slot === null) return null;
+    const option = mechanismOptionsForRoute(mechanism, null).find((entry) => {
+      if (!(entry && typeof entry === 'object')) return false;
+      const optionSlot = entry.slot ?? (entry.value && entry.value.slot);
+      if (String(optionSlot) === String(slot)) return true;
+      const positionKey = cleanString(entry.value && (entry.value.position_key || entry.value.position_id));
+      return positionKey && positionKey === cleanString(slot);
+    });
+    const value = option && option.value && typeof option.value === 'object'
+      ? option.value
+      : pickPositionValue(mechanism, slot);
+    if (!(value && typeof value === 'object')) return null;
+    const selectedSlot = numberOrNull(value.slot) ?? numberOrNull(slot) ?? slot;
+    const positionKey = cleanString(value.position_key || value.position_id) || cleanString(selectedSlot);
+    return {
+      ...value,
+      slot: selectedSlot,
+      position_key: positionKey || undefined,
+      position_id: cleanString(value.position_id) || positionKey || undefined,
+      stage_role: cleanString(value.stage_role) || cleanString(mechanism.stage_role) || undefined,
+      component_type: cleanString(value.component_type || value.type) || undefined,
+    };
+  }
+
+  function mechanismSelectionsFromSelection(normalizedInstrument, selection) {
+    const catalog = new Map();
+    ['cube', 'excitation', 'dichroic', 'emission', 'analyzer'].forEach((stageKey) => {
+      (Array.isArray(normalizedInstrument && normalizedInstrument[stageKey]) ? normalizedInstrument[stageKey] : []).forEach((mechanism) => {
+        const mechanismId = normalizeIdentifier(mechanism && mechanism.id);
+        if (mechanismId) catalog.set(mechanismId, mechanism);
+      });
+    });
+    return Object.fromEntries(
+      Object.entries((selection && selection.selectionMap) || {}).map(([mechanismId, slot]) => {
+        const normalizedId = normalizeIdentifier(mechanismId);
+        const mechanism = normalizedId ? catalog.get(normalizedId) : null;
+        const component = selectedComponentForMechanism(mechanism, slot);
+        return component ? [normalizedId, component] : null;
+      }).filter(Boolean)
+    );
+  }
+
+  function resolveTraversalExecution(selectedRouteSteps, mechanismSelections) {
+    if (!Array.isArray(selectedRouteSteps)) return [];
+    const byMechanism = mechanismSelections && typeof mechanismSelections === 'object'
+      ? mechanismSelections
+      : {};
+
+    function resolveStep(step) {
+      if (!(step && typeof step === 'object')) return step;
+
+      let resolvedStep = { ...step };
+      if (resolvedStep.selection_state === 'unresolved') {
+        const mechanismId = normalizeIdentifier(resolvedStep.mechanism_id);
+        const selectedComponent = mechanismId ? byMechanism[mechanismId] : null;
+        if (selectedComponent) {
+          const positionKey = cleanString(selectedComponent.position_key || selectedComponent.position_id || selectedComponent.slot);
+          const candidates = Array.isArray(resolvedStep.available_positions) ? resolvedStep.available_positions : [];
+          const matched = positionKey
+            ? candidates.find((candidate) => cleanString(candidate && candidate.position_key) === positionKey)
+            : null;
+          const resolvedOps = (matched && matched.spectral_ops) || selectedComponent.spectral_ops || null;
+          const resolvedLabel = cleanString(matched && matched.label)
+            || cleanString(selectedComponent.display_label || selectedComponent.label || selectedComponent.name)
+            || positionKey;
+          const resolvedType = cleanString((matched && matched.component_type) || selectedComponent.component_type || selectedComponent.type).toLowerCase() || null;
+
+          resolvedStep = {
+            ...resolvedStep,
+            selection_state: 'user_resolved',
+            selected_position_id: positionKey || String(selectedComponent.slot || ''),
+            selected_position_key: positionKey,
+            selected_position_label: resolvedLabel,
+            position_id: positionKey || String(selectedComponent.slot || ''),
+            position_key: positionKey,
+            position_label: resolvedLabel,
+            component_type: resolvedType,
+            spectral_ops: resolvedOps,
+            _resolved_component: selectedComponent,
+          };
+        }
+      }
+
+      if (resolvedStep.routing && Array.isArray(resolvedStep.routing.branches)) {
+        resolvedStep = {
+          ...resolvedStep,
+          routing: {
+            ...resolvedStep.routing,
+            branches: resolvedStep.routing.branches.map((branch) => ({
+              ...branch,
+              sequence: Array.isArray(branch && branch.sequence)
+                ? branch.sequence.map(resolveStep)
+                : [],
+            })),
+          },
+        };
+      }
+
+      return resolvedStep;
+    }
+
+    return selectedRouteSteps.map(resolveStep);
+  }
+
+  function orderedTraversalComponentsFromExecution(resolvedSteps, phase) {
+    if (!Array.isArray(resolvedSteps)) return [];
+    const mode = phase === 'illumination' ? 'excitation' : 'emission';
+    const ordered = [];
+
+    (Array.isArray(resolvedSteps) ? resolvedSteps : []).forEach((step) => {
+      if (!(step && typeof step === 'object')) return;
+      if (step.phase !== phase || step.kind !== 'optical_component') return;
+
+      const stageKey = cleanString(step.stage_role).toLowerCase();
+      const componentType = cleanString(step.component_type || step.type).toLowerCase();
+      if (!TRAVERSAL_MASKABLE_STAGE_KEYS.has(stageKey)) return;
+      if (stageKey === 'splitter' || componentType === 'splitter' || componentType === 'port_selector') return;
+
+      const component = step._resolved_component || {
+        id: step.component_id,
+        display_label: step.display_label || step.position_label,
+        component_type: step.component_type,
+        type: step.component_type,
+        spectral_ops: step.spectral_ops,
+        position_id: step.position_id || step.selected_position_id,
+        position_key: step.position_key || step.selected_position_key,
+        _unsupported_spectral_model: step.unsupported_reason === 'unsupported_spectral_model' || undefined,
+        _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
+      };
+      if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) return;
+
+      ordered.push({
+        component,
+        mode,
+        routeStepId: step.step_id || step.route_step_id,
+        stageKey: stageKey || null,
+      });
+    });
+
+    return ordered;
+  }
+
+  function materializeTraversalSelection(instrument, selection, options) {
+    const normalizedInstrument = instrument
+      && typeof instrument === 'object'
+      && instrument.routeTopology
+      && Array.isArray(instrument.routeTopology.routes)
+      && Array.isArray(instrument.lightSources)
+      ? instrument
+      : normalizeInstrumentPayload(instrument, options);
+    const activeRoute = cleanString(options && options.currentRoute).toLowerCase()
+      || normalizedInstrument.defaultRoute
+      || null;
+    const routeEntry = (Array.isArray(normalizedInstrument && normalizedInstrument.routeTopology && normalizedInstrument.routeTopology.routes)
+      ? normalizedInstrument.routeTopology.routes
+      : []).find((route) => normalizeIdentifier(route && route.id) === normalizeIdentifier(activeRoute)) || null;
+    const selectedRouteSteps = routeEntry
+      ? selectedRouteStepsForRecord(routeEntry.record || routeEntry)
+      : (Array.isArray(selection && selection.resolvedExecution) ? selection.resolvedExecution.map((step) => ({ ...(step || {}) })) : null);
+    if (!Array.isArray(selectedRouteSteps)) return null;
+
+    const resolvedExecution = resolveTraversalExecution(
+      selectedRouteSteps,
+      mechanismSelectionsFromSelection(normalizedInstrument, selection)
+    );
+    return {
+      resolvedExecution,
+      illuminationComponents: orderedTraversalComponentsFromExecution(resolvedExecution, 'illumination'),
+      detectionComponents: orderedTraversalComponentsFromExecution(resolvedExecution, 'detection'),
+    };
+  }
+
   function evaluateConfigurationScore(simulation, fluorophores, tolerance) {
     if (!simulation || simulation.validSelection === false || !Array.isArray(simulation.results) || !simulation.results.length) {
       return null;
@@ -2648,7 +2841,19 @@ function detectorCollectionMask(detector, grid) {
                     selection.emission.push({ ...(option.value || {}) });
                   });
                   if (!selectionIsValid(normalizedInstrument.validPaths, selectionMap)) return;
-                  const simulation = simulateInstrument(instrument, selection, fluorList, options || {});
+                  const traversalSelection = materializeTraversalSelection(
+                    normalizedInstrument,
+                    selection,
+                    { ...(options || {}), currentRoute: route }
+                  );
+                  const simulation = simulateInstrument(
+                    instrument,
+                    traversalSelection
+                      ? { ...selection, ...traversalSelection }
+                      : selection,
+                    fluorList,
+                    { ...(options || {}), currentRoute: route }
+                  );
                   const evaluated = evaluateConfigurationScore(simulation, fluorList, tolerance);
                   if (!evaluated) return;
                   const descriptor = {
@@ -2854,9 +3059,21 @@ function detectorCollectionMask(detector, grid) {
     const excitationComponents = Array.isArray(selected.excitation) ? selected.excitation : [];
     const dichroicComponents = Array.isArray(selected.dichroic) ? selected.dichroic : [];
     const emissionComponents = Array.isArray(selected.emission) ? selected.emission : [];
-    const illuminationOrdered = Array.isArray(selected.illuminationComponents) ? selected.illuminationComponents : [];
-    const detectionOrdered = Array.isArray(selected.detectionComponents) ? selected.detectionComponents : [];
+    let resolvedExecution = Array.isArray(selected.resolvedExecution) ? selected.resolvedExecution : [];
+    let illuminationOrdered = Array.isArray(selected.illuminationComponents) ? selected.illuminationComponents : [];
+    let detectionOrdered = Array.isArray(selected.detectionComponents) ? selected.detectionComponents : [];
     if (!illuminationOrdered.length || !detectionOrdered.length) {
+      const traversalSelection = materializeTraversalSelection(normalizedInstrument, selected, { ...(options || {}), currentRoute: activeRoute });
+      if (traversalSelection) {
+        if (!resolvedExecution.length) resolvedExecution = traversalSelection.resolvedExecution;
+        if (!illuminationOrdered.length) illuminationOrdered = traversalSelection.illuminationComponents;
+        if (!detectionOrdered.length) detectionOrdered = traversalSelection.detectionComponents;
+      }
+    }
+    if ((!Array.isArray(selected.illuminationComponents) && !Array.isArray(selected.detectionComponents))
+        && !illuminationOrdered.length
+        && !detectionOrdered.length
+        && !resolvedExecution.length) {
       throw new Error('[VM] simulateInstrument: selection is missing ordered traversal components from parser route steps.');
     }
     const illuminationOrderedRaw = illuminationOrdered.map((entry) => entry.component);
