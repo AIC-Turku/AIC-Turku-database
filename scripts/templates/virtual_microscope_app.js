@@ -2778,9 +2778,20 @@ if (block.dataset.mechanismType === 'spectral_array') {
         if (step.phase === phase && step.kind === 'optical_component') {
           const stageKey = cleanString(step.stage_role).toLowerCase();
           const componentType = cleanString(step.component_type).toLowerCase();
+          const normalizedStepType = cleanString(step.type).toLowerCase();
 
-          // Splitter route controls are routing hardware, not spectral mask components.
-          if (stageKey === 'splitter' || componentType === 'splitter') return;
+          // Splitter and route-control hardware are traversal controls, not spectral mask components.
+          if (
+            stageKey === 'splitter'
+            || componentType === 'splitter'
+            || normalizedStepType === 'splitter'
+            || stageKey === 'port_selector'
+            || componentType === 'port_selector'
+            || normalizedStepType === 'port_selector'
+            || stageKey === 'route_control'
+            || componentType === 'route_control'
+            || normalizedStepType === 'route_control'
+          ) return;
 
           const component = step._resolved_component || {
             id: step.component_id,
@@ -2793,14 +2804,26 @@ if (block.dataset.mechanismType === 'spectral_array') {
             _cube_incomplete: step.unsupported_reason === 'filter_cube_incomplete_reconstruction' || undefined,
           };
 
+          const resolvedStageKey = cleanString(component && (component.stage_role || stageKey)).toLowerCase();
+          const resolvedType = cleanString(component && (component.component_type || component.type || componentType || normalizedStepType)).toLowerCase();
+
+          if (
+            resolvedStageKey === 'splitter'
+            || resolvedType === 'splitter'
+            || resolvedStageKey === 'port_selector'
+            || resolvedType === 'port_selector'
+            || resolvedStageKey === 'route_control'
+            || resolvedType === 'route_control'
+          ) return;
+
           // Parser-authored spectral_ops is the contract for maskable optics.
-          if (!(component && component.spectral_ops)) return;
+          if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) return;
 
           ordered.push({
             component,
             mode,
             routeStepId: step.step_id || step.route_step_id,
-            stageKey: stageKey || null,
+            stageKey: resolvedStageKey || stageKey || null,
           });
         }
 

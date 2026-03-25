@@ -179,7 +179,20 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
         ordered_fn = source.split("function orderedComponentsFromExecution")[1].split("\n  function ")[0]
         self.assertIn("stageKey === 'splitter' || componentType === 'splitter'", ordered_fn)
-        self.assertIn("if (!(component && component.spectral_ops)) return;", ordered_fn)
+        self.assertIn("stageKey === 'port_selector'", ordered_fn)
+        self.assertIn("componentType === 'port_selector'", ordered_fn)
+        self.assertIn("stageKey === 'route_control'", ordered_fn)
+        self.assertIn("componentType === 'route_control'", ordered_fn)
+        self.assertIn("normalizedStepType === 'splitter'", ordered_fn)
+        self.assertIn("normalizedStepType === 'port_selector'", ordered_fn)
+        self.assertIn("normalizedStepType === 'route_control'", ordered_fn)
+        self.assertIn("resolvedStageKey === 'splitter'", ordered_fn)
+        self.assertIn("resolvedType === 'splitter'", ordered_fn)
+        self.assertIn("resolvedStageKey === 'port_selector'", ordered_fn)
+        self.assertIn("resolvedType === 'port_selector'", ordered_fn)
+        self.assertIn("resolvedStageKey === 'route_control'", ordered_fn)
+        self.assertIn("resolvedType === 'route_control'", ordered_fn)
+        self.assertIn("if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) return;", ordered_fn)
 
     def test_simulation_uses_traversal_ordered_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
