@@ -259,6 +259,84 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertNotIn("canonical", dto)
         self.assertNotIn("methods_generation", dto)
 
+    def test_quarep_light_path_recommendation_is_suppressed_when_route_optics_are_deterministic(self) -> None:
+        inst = {
+            "id": "scope-structured",
+            "display_name": "Structured Scope",
+            "canonical": {"instrument": {"manufacturer": "Acme", "model": "S1"}, "software": [], "modalities": [], "modules": [], "hardware": {}},
+        }
+        lightpath_dto = {
+            "light_paths": [
+                {
+                    "id": "widefield",
+                    "selected_execution": {
+                        "selected_route_steps": [
+                            {
+                                "selected_or_selectable_emission_filters": [
+                                    {
+                                        "display_label": "GFP cube",
+                                        "selected_position_key": "Pos_1",
+                                        "excitation_filter": {"display_label": "470/40"},
+                                        "dichroic": {"display_label": "495LP"},
+                                        "emission_filter": {"display_label": "525/50"},
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                }
+            ],
+            "hardware_inventory": [],
+            "route_hardware_usage": [],
+            "normalized_endpoints": [],
+        }
+        dto = build_instrument_mega_dto(self.vocabulary, inst, lightpath_dto)
+        self.assertFalse(dto["methods"]["quarep_light_path_recommendation_needed"])
+        self.assertEqual(dto["methods"]["quarep_light_path_recommendation"], "")
+
+    def test_quarep_light_path_recommendation_keeps_caveat_for_incomplete_flattened_cube(self) -> None:
+        inst = {
+            "id": "scope-flattened",
+            "display_name": "Flattened Scope",
+            "canonical": {"instrument": {"manufacturer": "Acme", "model": "S1"}, "software": [], "modalities": [], "modules": [], "hardware": {}},
+        }
+        lightpath_dto = {
+            "light_paths": [
+                {
+                    "id": "xcelligence",
+                    "selected_execution": {
+                        "selected_route_steps": [
+                            {
+                                "selected_or_selectable_excitation_filters": [
+                                    {
+                                        "display_label": "DAPI channel",
+                                        "_cube_incomplete": True,
+                                        "_unsupported_spectral_model": True,
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                }
+            ],
+            "hardware_inventory": [],
+            "route_hardware_usage": [],
+            "normalized_endpoints": [],
+        }
+        dto = build_instrument_mega_dto(self.vocabulary, inst, lightpath_dto)
+        self.assertTrue(dto["methods"]["quarep_light_path_recommendation_needed"])
+        self.assertIn("[CAVEAT:", dto["methods"]["quarep_light_path_recommendation"])
+
+    def test_quarep_light_path_recommendation_keeps_placeholder_when_route_optics_missing(self) -> None:
+        inst = {
+            "id": "scope-missing",
+            "display_name": "Missing Optics Scope",
+            "canonical": {"instrument": {"manufacturer": "Acme", "model": "S1"}, "software": [], "modalities": [], "modules": [], "hardware": {}},
+        }
+        dto = build_instrument_mega_dto(self.vocabulary, inst, {"light_paths": [], "hardware_inventory": [], "route_hardware_usage": [], "normalized_endpoints": []})
+        self.assertTrue(dto["methods"]["quarep_light_path_recommendation_needed"])
+        self.assertIn("[PLEASE VERIFY:", dto["methods"]["quarep_light_path_recommendation"])
+
     def test_each_new_renderable_contains_required_dto_fields(self) -> None:
         inst = {
             "canonical": {
@@ -657,6 +735,145 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             payload["active_microscopes"][0]["llm_context"]["authoritative_route_contract"]["routes"][0]["relevant_hardware"]["filters"][0]["display_label"],
             "Pinhole",
         )
+        self.assertEqual(
+            payload["active_microscopes"][0]["llm_context"]["route_planning_summary"]["authoritative_source"],
+            "llm_context.authoritative_route_contract.routes",
+        )
+
+    def test_llm_route_planning_summary_preserves_structured_cube_internals(self) -> None:
+        payload = build_llm_inventory_payload(
+            {"short_name": "Core"},
+            [
+                {
+                    "dto": {
+                        "id": "scope-structured",
+                        "display_name": "Structured",
+                        "hardware": {
+                            "objectives": [{"id": "obj_60", "display_label": "60x Oil", "is_installed": True}],
+                            "optical_path": {
+                                "authoritative_route_contract": {
+                                    "routes": [
+                                        {
+                                            "id": "widefield",
+                                            "display_label": "Widefield",
+                                            "illumination_mode": "widefield_fluorescence",
+                                            "route_optical_facts": {
+                                                "selected_or_selectable_emission_filters": [
+                                                    {
+                                                        "display_label": "GFP Cube",
+                                                        "selected_position_key": "Pos_1",
+                                                        "product_code": "49002",
+                                                        "excitation_filter": {"display_label": "470/40"},
+                                                        "dichroic": {"display_label": "495LP"},
+                                                        "emission_filter": {"display_label": "525/50"},
+                                                    }
+                                                ]
+                                            },
+                                            "relevant_hardware": {"filters": [{"id": "optical_element:cube", "display_label": "Cube turret"}]},
+                                        }
+                                    ]
+                                }
+                            },
+                        },
+                    },
+                    "canonical": {"policy": {}},
+                }
+            ],
+        )
+
+        route_summary = payload["active_microscopes"][0]["llm_context"]["route_planning_summary"]["routes"][0]
+        cube = route_summary["planning_optics"]["selected_or_selectable_emission_filters"][0]
+        self.assertEqual(cube["product_code"], "49002")
+        self.assertEqual(cube["excitation_filter"]["display_label"], "470/40")
+        self.assertEqual(cube["dichroic"]["display_label"], "495LP")
+        self.assertEqual(cube["emission_filter"]["display_label"], "525/50")
+        self.assertFalse(route_summary["known_vs_unknown"]["has_incomplete_or_unsupported_spectral_model"])
+
+    def test_llm_route_planning_summary_exposes_flattened_cube_caveats_and_unknowns(self) -> None:
+        payload = build_llm_inventory_payload(
+            {"short_name": "Core"},
+            [
+                {
+                    "dto": {
+                        "id": "scope-flat",
+                        "display_name": "Flat",
+                        "hardware": {
+                            "optical_path": {
+                                "authoritative_route_contract": {
+                                    "routes": [
+                                        {
+                                            "id": "xcelligence",
+                                            "display_label": "xCELL route",
+                                            "route_optical_facts": {
+                                                "selected_or_selectable_excitation_filters": [
+                                                    {
+                                                        "display_label": "DAPI channel",
+                                                        "_cube_incomplete": True,
+                                                        "_unsupported_spectral_model": True,
+                                                        "available_positions": [{"display_label": "DAPI", "position_key": "Pos_1"}],
+                                                    }
+                                                ]
+                                            },
+                                            "relevant_hardware": {"filters": [{"id": "optical_element:legacy_cube", "display_label": "Legacy cube turret"}]},
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                    },
+                    "canonical": {"policy": {}},
+                }
+            ],
+        )
+        route_summary = payload["active_microscopes"][0]["llm_context"]["route_planning_summary"]["routes"][0]
+        self.assertTrue(route_summary["known_vs_unknown"]["has_incomplete_or_unsupported_spectral_model"])
+        self.assertTrue(route_summary["known_vs_unknown"]["has_missing_route_optics"])
+        self.assertTrue(route_summary["caveat_flags"]["cube_incomplete"])
+        self.assertIn("unsupported spectral-model", route_summary["known_vs_unknown"]["actionable_note"])
+
+    def test_llm_route_planning_summary_separates_route_specific_facts_from_generic_hardware(self) -> None:
+        payload = build_llm_inventory_payload(
+            {"short_name": "Core"},
+            [
+                {
+                    "dto": {
+                        "id": "scope-separation",
+                        "display_name": "Separation",
+                        "hardware": {
+                            "light_sources": [{"id": "source:488", "display_label": "488 nm laser"}],
+                            "optical_path": {
+                                "authoritative_route_contract": {
+                                    "routes": [
+                                        {
+                                            "id": "confocal",
+                                            "route_optical_facts": {
+                                                "selected_or_selectable_sources": [{"id": "source:488", "display_label": "488 nm laser"}],
+                                                "selected_or_selectable_endpoints": [{"id": "endpoint:hyd", "display_label": "HyD"}],
+                                            },
+                                            "relevant_hardware": {
+                                                "sources": [{"id": "source:488", "display_label": "488 nm laser"}],
+                                                "endpoints": [{"id": "endpoint:hyd", "display_label": "HyD"}],
+                                            },
+                                        }
+                                    ]
+                                }
+                            },
+                        },
+                    },
+                    "canonical": {"policy": {}},
+                }
+            ],
+        )
+        route_summary = payload["active_microscopes"][0]["llm_context"]["route_planning_summary"]["routes"][0]
+        self.assertEqual(
+            route_summary["route_specific_vs_generic"]["route_specific_facts_source"],
+            "route_optical_facts",
+        )
+        self.assertEqual(
+            route_summary["route_specific_vs_generic"]["generic_installed_hardware_reference"]["sources"][0]["id"],
+            "source:488",
+        )
+        self.assertIn("missing_categories", route_summary["known_vs_unknown"])
 
     def test_json_script_data_escapes_script_terminators_and_round_trips(self) -> None:
         payload = {"text": 'Quote "line"\n</script><script>alert(1)</script>'}
@@ -810,6 +1027,145 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             dto["authoritative_route_contract"]["routes"][0]["selected_execution"]["selected_route_steps"][0]["selected_position_id"],
             "2",
         )
+
+    def test_route_optical_facts_preserve_selected_route_steps_fields(self) -> None:
+        lightpath_dto = {
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "name": "Epi",
+                    "selected_execution": {
+                        "contract_version": "selected_execution.v2",
+                        "stages": [
+                            {
+                                "selected_or_selectable_sources": [
+                                    {"id": "deprecated-stage-source", "display_label": "Do Not Use"}
+                                ]
+                            }
+                        ],
+                        "selected_route_steps": [
+                            {
+                                "route_step_id": "illumination-step-0",
+                                "selected_or_selectable_sources": [
+                                    {"id": "src_488", "display_label": "488 laser"}
+                                ],
+                                "selected_or_selectable_branch_selectors": [
+                                    {
+                                        "id": "camera_selector",
+                                        "available_positions": [
+                                            {"position_id": "1", "position_key": "Pos_1", "display_label": "Camera A"},
+                                            {"position_id": "2", "position_key": "Pos_2", "display_label": "Camera B"},
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                }
+            ],
+            "hardware_inventory": [],
+            "hardware_index_map": {},
+            "route_hardware_usage": [],
+            "normalized_endpoints": [],
+            "optical_path_elements": [],
+            "splitters": [],
+            "stages": {},
+            "terminals": [],
+        }
+
+        dto = build_optical_path_dto(lightpath_dto)
+        route_facts = dto["authoritative_route_contract"]["routes"][0]["route_optical_facts"]
+        self.assertEqual(route_facts["selected_or_selectable_sources"][0]["id"], "src_488")
+        self.assertEqual(
+            route_facts["selected_or_selectable_branch_selectors"][0]["available_positions"][1]["position_key"],
+            "Pos_2",
+        )
+        self.assertNotIn("deprecated-stage-source", json.dumps(route_facts))
+
+    def test_route_optical_facts_preserve_structured_cube_internals(self) -> None:
+        lightpath_dto = {
+            "light_paths": [
+                {
+                    "id": "widefield",
+                    "selected_execution": {
+                        "selected_route_steps": [
+                            {
+                                "route_step_id": "cube-step",
+                                "selected_or_selectable_emission_filters": [
+                                    {
+                                        "id": "cube_pos_1",
+                                        "component_type": "filter_cube",
+                                        "product_code": "49002",
+                                        "excitation_filter": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40},
+                                        "dichroic": {"component_type": "dichroic", "cut_on_nm": 495},
+                                        "emission_filter": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50},
+                                    }
+                                ],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "hardware_inventory": [],
+            "hardware_index_map": {},
+            "route_hardware_usage": [],
+            "normalized_endpoints": [],
+            "optical_path_elements": [],
+            "splitters": [],
+            "stages": {},
+            "terminals": [],
+        }
+
+        dto = build_optical_path_dto(lightpath_dto)
+        cube = dto["authoritative_route_contract"]["routes"][0]["route_optical_facts"]["selected_or_selectable_emission_filters"][0]
+        self.assertEqual(cube["product_code"], "49002")
+        self.assertEqual(cube["excitation_filter"]["center_nm"], 470)
+        self.assertEqual(cube["dichroic"]["cut_on_nm"], 495)
+        self.assertEqual(cube["emission_filter"]["center_nm"], 525)
+
+    def test_route_optical_facts_preserve_flattened_cube_caveats_and_positions(self) -> None:
+        lightpath_dto = {
+            "light_paths": [
+                {
+                    "id": "xcelligence",
+                    "selected_execution": {
+                        "selected_route_steps": [
+                            {
+                                "route_step_id": "cube-step",
+                                "selected_or_selectable_excitation_filters": [
+                                    {
+                                        "id": "legacy_cube",
+                                        "display_label": "DAPI channel",
+                                        "channel_label": "DAPI",
+                                        "_cube_incomplete": True,
+                                        "_unsupported_spectral_model": True,
+                                        "available_positions": [
+                                            {"position_key": "Pos_1", "display_label": "DAPI"},
+                                            {"position_key": "Pos_2", "display_label": "FITC"},
+                                        ],
+                                    }
+                                ],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "hardware_inventory": [],
+            "hardware_index_map": {},
+            "route_hardware_usage": [],
+            "normalized_endpoints": [],
+            "optical_path_elements": [],
+            "splitters": [],
+            "stages": {},
+            "terminals": [],
+        }
+
+        dto = build_optical_path_dto(lightpath_dto)
+        cube = dto["authoritative_route_contract"]["routes"][0]["route_optical_facts"]["selected_or_selectable_excitation_filters"][0]
+        self.assertTrue(cube["_cube_incomplete"])
+        self.assertTrue(cube["_unsupported_spectral_model"])
+        self.assertEqual(cube["available_positions"][0]["position_key"], "Pos_1")
+        self.assertEqual(cube["available_positions"][1]["display_label"], "FITC")
 
     def test_build_instrument_mega_dto_uses_canonical_identity_as_source_of_truth(self) -> None:
         inst = {

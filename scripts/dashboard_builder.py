@@ -227,6 +227,8 @@ def build_plan_experiments_page_config(facility: dict[str, Any]) -> dict[str, An
 def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str, Any]:
     dto = copy.deepcopy(inst.get("dto") or {})
     dto["methods_generation"] = copy.deepcopy(inst.get("methods_generation") or {})
+    # Runtime-selected optical truth is exported on the DTO and should be the
+    # primary source for methods text when present (localStorage is fallback-only).
     dto["runtime_selected_configuration"] = copy.deepcopy(inst.get("runtime_selected_configuration"))
     return dto
 
@@ -313,7 +315,7 @@ def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict
         "policy": {
             "intent": "LLM-safe experiment planning inventory",
             "grounding_requirement": "Only use fields explicitly present in this JSON file.",
-            "llm_usage_note": "Use hardware_focus_summary for quick screening, but use llm_context.authoritative_route_contract as the primary route-planning contract and cite raw hardware fields only when you need extra hardware detail.",
+            "llm_usage_note": "Use hardware_focus_summary for quick screening, then use llm_context.authoritative_route_contract as primary route truth; llm_context.route_planning_summary is a convenience view derived from that truth. Cite raw hardware fields only for supplemental detail.",
             "do_not_infer_constraints": [
                 "Do not invent hardware specifications, accessories, wavelengths, objectives, detector performance, or automation features that are not explicitly listed.",
                 "Treat null values and listed missing fields as unknown. Unknown does not mean available.",
@@ -346,10 +348,135 @@ def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict
         )
         llm_context = dto.get("llm_context") if isinstance(dto.get("llm_context"), dict) else {}
         llm_context["authoritative_route_contract"] = authoritative_route_contract
+        llm_context["route_planning_summary"] = _build_route_planning_summary(dto, authoritative_route_contract)
         dto["llm_context"] = llm_context
         llm_payload["active_microscopes"].append(dto)
 
     return llm_payload
+
+
+def _build_route_planning_summary(dto: dict[str, Any], authoritative_route_contract: dict[str, Any]) -> dict[str, Any]:
+    routes = authoritative_route_contract.get("routes") if isinstance(authoritative_route_contract.get("routes"), list) else []
+    hardware = dto.get("hardware") if isinstance(dto.get("hardware"), dict) else {}
+    installed_objectives = [
+        {
+            "id": clean_text(obj.get("id")),
+            "display_label": clean_text(obj.get("display_label") or obj.get("name") or obj.get("model") or obj.get("id")),
+            "manufacturer": clean_text(obj.get("manufacturer")),
+            "model": clean_text(obj.get("model")),
+            "product_code": clean_text(obj.get("product_code")),
+        }
+        for obj in (hardware.get("objectives") or [])
+        if isinstance(obj, dict) and obj.get("is_installed") is not False
+    ]
+
+    route_rows: list[dict[str, Any]] = []
+    for route in routes:
+        if not isinstance(route, dict):
+            continue
+        route_facts = route.get("route_optical_facts") if isinstance(route.get("route_optical_facts"), dict) else {}
+
+        def fact_rows(key: str) -> list[dict[str, Any]]:
+            return [copy.deepcopy(item) for item in (route_facts.get(key) or []) if isinstance(item, dict)]
+
+        sources = fact_rows("selected_or_selectable_sources")
+        excitation_filters = fact_rows("selected_or_selectable_excitation_filters")
+        dichroics = fact_rows("selected_or_selectable_dichroics")
+        emission_filters = fact_rows("selected_or_selectable_emission_filters")
+        splitters = fact_rows("selected_or_selectable_splitters")
+        branch_selectors = fact_rows("selected_or_selectable_branch_selectors")
+        endpoints = fact_rows("selected_or_selectable_endpoints")
+        modulators = fact_rows("selected_or_selectable_modulators")
+
+        all_fact_rows = [
+            *sources,
+            *excitation_filters,
+            *dichroics,
+            *emission_filters,
+            *splitters,
+            *branch_selectors,
+            *endpoints,
+            *modulators,
+        ]
+        has_incomplete_or_unsupported = any(
+            row.get("_cube_incomplete") or row.get("_unsupported_spectral_model")
+            for row in all_fact_rows
+        )
+        has_unresolved_selectors = any(
+            clean_text(row.get("selection_state")).lower() in {"unresolved", "selectable"}
+            or (
+                isinstance(row.get("available_positions"), list)
+                and len(row.get("available_positions")) > 1
+                and not clean_text(row.get("selected_position_key") or row.get("position_key"))
+            )
+            for row in all_fact_rows
+        )
+        has_route_specific_facts = bool(all_fact_rows)
+
+        missing_categories = [
+            label
+            for label, values in (
+                ("sources", sources),
+                ("excitation_filters", excitation_filters),
+                ("dichroics", dichroics),
+                ("emission_filters", emission_filters),
+                ("splitters", splitters),
+                ("branch_selectors", branch_selectors),
+                ("endpoints", endpoints),
+            )
+            if not values
+        ]
+        has_missing_route_optics = not has_route_specific_facts or len(missing_categories) > 0
+
+        if has_incomplete_or_unsupported:
+            actionable_note = "Route optics include incomplete or unsupported spectral-model elements; use known labels/positions and report unknown cube internals explicitly."
+        elif has_unresolved_selectors:
+            actionable_note = "Route selectors have multiple available positions but no resolved position; ask for the exact selected wheel/turret/splitter slot."
+        elif not has_route_specific_facts:
+            actionable_note = "No route-specific optics were exported for this route; ask follow-up questions before planning."
+        else:
+            actionable_note = "Route optics are deterministically specified in exported route facts."
+
+        route_rows.append({
+            "route_id": clean_text(route.get("id")),
+            "route_label": clean_text(route.get("display_label") or route.get("id")),
+            "illumination_mode": clean_text(route.get("illumination_mode") or route.get("id")),
+            "route_identity": copy.deepcopy(route.get("route_identity") or {}),
+            "planning_optics": {
+                "selected_or_selectable_sources": sources,
+                "selected_or_selectable_excitation_filters": excitation_filters,
+                "selected_or_selectable_dichroics": dichroics,
+                "selected_or_selectable_emission_filters": emission_filters,
+                "selected_or_selectable_splitters": splitters,
+                "selected_or_selectable_branch_selectors": branch_selectors,
+                "selected_or_selectable_endpoints": endpoints,
+                "selected_or_selectable_modulators": modulators,
+                "highly_relevant_installed_objectives": copy.deepcopy(installed_objectives),
+            },
+            "route_specific_vs_generic": {
+                "route_specific_facts_source": "route_optical_facts",
+                "generic_installed_hardware_reference": copy.deepcopy(route.get("relevant_hardware") or {}),
+            },
+            "known_vs_unknown": {
+                "is_deterministic": has_route_specific_facts and not has_incomplete_or_unsupported and not has_unresolved_selectors,
+                "has_incomplete_or_unsupported_spectral_model": has_incomplete_or_unsupported,
+                "has_unresolved_selectors": has_unresolved_selectors,
+                "has_missing_route_optics": has_missing_route_optics,
+                "missing_categories": missing_categories,
+                "actionable_note": actionable_note,
+            },
+            "caveat_flags": {
+                "cube_incomplete": any(bool(row.get("_cube_incomplete")) for row in all_fact_rows),
+                "unsupported_spectral_model": any(bool(row.get("_unsupported_spectral_model")) for row in all_fact_rows),
+            },
+        })
+
+    return {
+        "contract_version": "route_planning_summary.v1",
+        "authoritative_source": "llm_context.authoritative_route_contract.routes",
+        "usage_note": "Use this summary for route planning convenience, but treat llm_context.authoritative_route_contract as the source of truth.",
+        "routes": route_rows,
+    }
 
 
 def vocab_label(vocabulary: Vocabulary, vocab_name: str, term_id: str) -> str:
@@ -1388,6 +1515,50 @@ def _route_branch_summary(route: dict[str, Any], usage: dict[str, Any]) -> dict[
     }
 
 
+def _build_route_optical_facts(selected_execution: dict[str, Any]) -> dict[str, Any]:
+    fact_keys = [
+        "selected_or_selectable_sources",
+        "selected_or_selectable_excitation_filters",
+        "selected_or_selectable_dichroics",
+        "selected_or_selectable_emission_filters",
+        "selected_or_selectable_splitters",
+        "selected_or_selectable_endpoints",
+        "selected_or_selectable_modulators",
+        "selected_or_selectable_branch_selectors",
+    ]
+    selected_route_steps = (
+        selected_execution.get("selected_route_steps")
+        if isinstance(selected_execution.get("selected_route_steps"), list)
+        else []
+    )
+
+    facts: dict[str, list[Any]] = {key: [] for key in fact_keys}
+    seen_serializations: dict[str, set[str]] = {key: set() for key in fact_keys}
+
+    for step in selected_route_steps:
+        if not isinstance(step, dict):
+            continue
+        for fact_key in fact_keys:
+            raw_value = step.get(fact_key)
+            if raw_value is None:
+                continue
+            candidate_rows = raw_value if isinstance(raw_value, list) else [raw_value]
+            for candidate in candidate_rows:
+                if candidate is None:
+                    continue
+                serialized = json.dumps(candidate, sort_keys=True, default=str)
+                if serialized in seen_serializations[fact_key]:
+                    continue
+                seen_serializations[fact_key].add(serialized)
+                facts[fact_key].append(copy.deepcopy(candidate))
+
+    return {
+        "contract_version": "route_optical_facts.v1",
+        "selected_route_step_count": len(selected_route_steps),
+        **facts,
+    }
+
+
 def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str, Any] | None = None, vocabulary: Vocabulary | None = None) -> dict[str, Any]:
     """
     Build the downstream optical-path DTO.
@@ -1744,6 +1915,7 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
         route_identity = route_renderable.get("route_identity") if isinstance(route_renderable.get("route_identity"), dict) else {}
         route_label = clean_text(route_renderable.get("name") or route_renderable.get("id"))
         illumination_mode = clean_text(route_identity.get("modality") or route_id)
+        selected_execution = copy.deepcopy(route_renderable.get("selected_execution") or {})
         authoritative_route_contract_routes.append({
             "id": route_id,
             "display_label": route_label,
@@ -1789,7 +1961,8 @@ def build_optical_path_dto(lightpath_dto: dict[str, Any], raw_hardware: dict[str
                     if isinstance(edge, dict)
                 ],
             },
-            "selected_execution": copy.deepcopy(route_renderable.get("selected_execution") or {}),
+            "selected_execution": selected_execution,
+            "route_optical_facts": _build_route_optical_facts(selected_execution),
             "method_sentence": (
                 f"The {route_label} illumination mode / route was used."
                 if route_label
@@ -1986,6 +2159,72 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     stand = clean_text(canonical_instrument.get("stand_orientation"))
     stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
     base_sentence = f"Images were acquired using the {microscope_identity} {stand_label.lower()} microscope, controlled by {acquisition_software}." if microscope_identity and stand_label else f"Images were acquired using the {microscope_identity} microscope, controlled by {acquisition_software}."
+    route_contract = (
+        hardware_dto["optical_path"].get("authoritative_route_contract")
+        if isinstance(hardware_dto["optical_path"].get("authoritative_route_contract"), dict)
+        else {}
+    )
+    route_rows = route_contract.get("routes") if isinstance(route_contract.get("routes"), list) else []
+
+    def _route_optics_quarep_recommendation(routes: list[dict[str, Any]]) -> tuple[bool, str]:
+        if not routes:
+            return (
+                True,
+                "[PLEASE VERIFY: Route-specific optical selections are missing; report each filter, dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
+            )
+
+        saw_any_route_facts = False
+        saw_incomplete_or_unsupported = False
+        saw_unresolved_selectors = False
+        for route in routes:
+            if not isinstance(route, dict):
+                continue
+            route_facts = route.get("route_optical_facts") if isinstance(route.get("route_optical_facts"), dict) else {}
+            fact_rows = []
+            for key in (
+                "selected_or_selectable_sources",
+                "selected_or_selectable_excitation_filters",
+                "selected_or_selectable_dichroics",
+                "selected_or_selectable_emission_filters",
+                "selected_or_selectable_splitters",
+                "selected_or_selectable_endpoints",
+                "selected_or_selectable_modulators",
+                "selected_or_selectable_branch_selectors",
+            ):
+                value = route_facts.get(key)
+                if isinstance(value, list):
+                    fact_rows.extend(item for item in value if isinstance(item, dict))
+
+            if fact_rows:
+                saw_any_route_facts = True
+
+            for row in fact_rows:
+                if row.get("_cube_incomplete") or row.get("_unsupported_spectral_model"):
+                    saw_incomplete_or_unsupported = True
+                selection_state = clean_text(row.get("selection_state")).lower()
+                if selection_state in {"unresolved", "selectable"}:
+                    saw_unresolved_selectors = True
+                if isinstance(row.get("available_positions"), list) and len(row.get("available_positions")) > 1 and not clean_text(row.get("selected_position_key") or row.get("position_key")):
+                    saw_unresolved_selectors = True
+
+        if saw_incomplete_or_unsupported:
+            return (
+                True,
+                "[CAVEAT: Some route-specific optics are incomplete or use an unsupported spectral model (for example flattened cubes); report known channel labels/positions and confirm uncertain cube internals].",
+            )
+        if saw_unresolved_selectors:
+            return (
+                True,
+                "[PLEASE VERIFY: Some route selectors remain unresolved; report the exact selected wheel/turret/splitter positions used for acquisition].",
+            )
+        if saw_any_route_facts:
+            return (False, "")
+        return (
+            True,
+            "[PLEASE VERIFY: Route-specific optical selections are missing; report each filter, dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
+        )
+
+    quarep_recommendation_needed, quarep_recommendation_text = _route_optics_quarep_recommendation(route_rows)
 
     dto = {
         "retired": bool(inst.get("retired")),
@@ -2050,7 +2289,8 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 if clean_text(row.get("method_sentence"))
             ],
             "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
-            "quarep_light_path_recommendation": "[PLEASE VERIFY: For each filter, dichroic, splitter, and modulator, report manufacturer and model/catalog number when available to align with QUAREP-LiMi hardware reporting recommendations].",
+            "quarep_light_path_recommendation_needed": quarep_recommendation_needed,
+            "quarep_light_path_recommendation": quarep_recommendation_text,
             "specimen_preparation_recommendation": "[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)].",
             "acquisition_settings_recommendation": "[PLEASE SPECIFY: Exposure time(s), excitation power(s), detector gain/offset, camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable].",
             "nyquist_recommendation": "Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile.",

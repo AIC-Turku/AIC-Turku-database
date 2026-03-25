@@ -41,7 +41,11 @@ jinja2_stub.Environment = _DummyEnvironment
 jinja2_stub.FileSystemLoader = _DummyLoader
 sys.modules.setdefault("jinja2", jinja2_stub)
 
-from scripts.dashboard_builder import build_methods_generator_instrument_export, build_llm_inventory_payload
+from scripts.dashboard_builder import (
+    build_llm_inventory_payload,
+    build_methods_generator_instrument_export,
+    build_optical_path_dto,
+)
 from scripts.generate_templates import build_template
 from scripts.light_path_parser import generate_virtual_microscope_payload
 
@@ -54,6 +58,12 @@ RUNTIME_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_runtime
 APP_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_app.js"
 METHODS_TEMPLATE_PATH = REPO_ROOT / "scripts" / "templates" / "methods_generator.md.j2"
 PLAN_TEMPLATE_PATH = REPO_ROOT / "scripts" / "templates" / "plan_experiments.md.j2"
+EXAMPLE_INSTRUMENTS = [
+    REPO_ROOT / "instruments" / "3i CSU-W1 Spinning Disk.yaml",
+    REPO_ROOT / "instruments" / "xCELLigence RTCA eSight.yaml",
+    REPO_ROOT / "instruments" / "EVOS fl.yaml",
+    REPO_ROOT / "instruments" / "Nikon Ti2-E Crest V3 Spinning Disk.yaml",
+]
 
 
 def _schema_paths() -> set[str]:
@@ -307,6 +317,87 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertEqual(microscope["manufacturer"], "DTO Manufacturer")
         self.assertEqual(microscope["hardware"]["light_sources"][0]["display_label"], "DTO Laser")
 
+    def test_methods_export_preserves_structured_cube_route_facts(self) -> None:
+        inst = {
+            "dto": {
+                "id": "scope-structured-cube",
+                "hardware": {
+                    "optical_path": {
+                        "authoritative_route_contract": {
+                            "routes": [
+                                {
+                                    "id": "widefield",
+                                    "route_optical_facts": {
+                                        "selected_or_selectable_emission_filters": [
+                                            {
+                                                "display_label": "GFP cube",
+                                                "product_code": "49002",
+                                                "excitation_filter": {"display_label": "470/40"},
+                                                "dichroic": {"display_label": "495LP"},
+                                                "emission_filter": {"display_label": "525/50"},
+                                            }
+                                        ]
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                },
+            },
+            "methods_generation": {},
+            "canonical": {"policy": {}},
+        }
+        exported = build_methods_generator_instrument_export(inst)
+        route = exported["hardware"]["optical_path"]["authoritative_route_contract"]["routes"][0]
+        cube = route["route_optical_facts"]["selected_or_selectable_emission_filters"][0]
+        self.assertEqual(cube["product_code"], "49002")
+        self.assertEqual(cube["excitation_filter"]["display_label"], "470/40")
+        self.assertEqual(cube["dichroic"]["display_label"], "495LP")
+        self.assertEqual(cube["emission_filter"]["display_label"], "525/50")
+
+    def test_llm_inventory_route_truth_and_planning_summary_are_both_present_and_actionable(self) -> None:
+        payload = build_llm_inventory_payload(
+            {"short_name": "Core"},
+            [
+                {
+                    "dto": {
+                        "id": "scope-llm-truth",
+                        "hardware": {
+                            "optical_path": {
+                                "authoritative_route_contract": {
+                                    "routes": [
+                                        {
+                                            "id": "confocal",
+                                            "illumination_mode": "confocal",
+                                            "route_optical_facts": {
+                                                "selected_or_selectable_sources": [{"id": "source:561", "display_label": "561 laser"}],
+                                                "selected_or_selectable_endpoints": [{"id": "endpoint:hyd", "display_label": "HyD"}],
+                                            },
+                                            "relevant_hardware": {"sources": [{"id": "source:561"}]},
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                    },
+                    "canonical": {"policy": {}},
+                }
+            ],
+        )
+        microscope = payload["active_microscopes"][0]
+        self.assertEqual(microscope["llm_context"]["authoritative_route_contract"]["routes"][0]["id"], "confocal")
+        planning = microscope["llm_context"]["route_planning_summary"]["routes"][0]
+        self.assertEqual(planning["route_specific_vs_generic"]["route_specific_facts_source"], "route_optical_facts")
+        self.assertIn("actionable_note", planning["known_vs_unknown"])
+        self.assertIn("missing_categories", planning["known_vs_unknown"])
+
+    def test_example_instruments_for_route_truth_regression_suite_exist(self) -> None:
+        for instrument_path in EXAMPLE_INSTRUMENTS:
+            self.assertTrue(
+                instrument_path.exists(),
+                msg=f"Expected regression example instrument is missing: {instrument_path}",
+            )
+
     def test_identity_fields_do_not_conflate_model_with_name_in_authoritative_dto_builders(self) -> None:
         builder_source = (REPO_ROOT / "scripts" / "dashboard_builder.py").read_text(encoding="utf-8")
         forbidden_fallbacks = [
@@ -395,6 +486,49 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertNotIn("runtimeConfig.stages", methods_source)
         # Must not read static route_steps as optical truth
         self.assertNotIn("runtimeConfig.route_steps", methods_source)
+
+    def test_methods_template_keeps_exported_runtime_primary_and_legacy_fallback_only(self) -> None:
+        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("Exported runtime selection is authoritative for this page", methods_source)
+        self.assertIn("localStorage is legacy fallback", methods_source)
+        self.assertNotIn("paragraphRuntimeSelectedConfig", methods_source)
+
+    def test_authoritative_route_contract_route_optical_facts_source_selected_route_steps(self) -> None:
+        dto = build_optical_path_dto(
+            {
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "selected_execution": {
+                            "stages": [
+                                {
+                                    "selected_or_selectable_sources": [
+                                        {"id": "deprecated_stage_source"}
+                                    ]
+                                }
+                            ],
+                            "selected_route_steps": [
+                                {
+                                    "route_step_id": "illumination-step-0",
+                                    "selected_or_selectable_sources": [{"id": "src_561"}],
+                                }
+                            ],
+                        },
+                    }
+                ],
+                "hardware_inventory": [],
+                "hardware_index_map": {},
+                "route_hardware_usage": [],
+                "normalized_endpoints": [],
+                "optical_path_elements": [],
+                "splitters": [],
+                "stages": {},
+                "terminals": [],
+            }
+        )
+        facts = dto["authoritative_route_contract"]["routes"][0]["route_optical_facts"]
+        self.assertEqual(facts["selected_or_selectable_sources"][0]["id"], "src_561")
+        self.assertNotIn("deprecated_stage_source", json.dumps(facts))
 
     def test_acquisition_plan_wording_does_not_overstate_execution(self) -> None:
         """Sequential acquisition must be described as planned, not as executed."""
@@ -496,10 +630,16 @@ class ContractInvariantTests(unittest.TestCase):
         rendered = PLAN_TEMPLATE_PATH.read_text(encoding="utf-8")
 
         self.assertIn("llm_context.authoritative_route_contract", rendered)
-        self.assertIn("hardware.optical_path.primary_rendering_contract", rendered)
-        self.assertIn("branch_summary", rendered)
-        self.assertIn("graph_nodes", rendered)
-        self.assertIn("graph_edges", rendered)
+        self.assertIn("llm_context.route_planning_summary", rendered)
+        self.assertIn("required procedure in order", rendered)
+        self.assertIn("Eliminate unavailable or incompatible instruments first", rendered)
+        self.assertIn("Choose one best route on the top instrument and one backup route/instrument", rendered)
+        self.assertIn("Raw hardware lists are secondary context and must not override route contract truth", rendered)
+        self.assertIn("known vs unknown facts", rendered)
+        self.assertIn("selected route", rendered)
+        self.assertIn("detector/endpoint", rendered)
+        self.assertIn("objective(s)", rendered)
+        self.assertIn("branch/splitter handling", rendered)
         self.assertNotIn("Using the \\`hardware.light_path\\` topological data", rendered)
         self.assertNotIn("\\`excitation_mechanisms\\`", rendered)
         self.assertNotIn("Path 1 vs Path 2", rendered)

@@ -553,7 +553,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertIn("Exact virtual microscope runtime-selected configuration used route confocal_spinning_disk.", result["output"])
+        self.assertIn("Exact runtime-selected configuration (browser fallback) used route confocal_spinning_disk.", result["output"])
         self.assertIn("Selected wheel/turret positions:", result["output"])
         self.assertIn("Filter wheel @ Pos_1", result["output"])
         self.assertIn("Selected splitter branches:", result["output"])
@@ -563,6 +563,533 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("Flattened/incomplete optics were present", result["output"])
         self.assertIn("Unsupported spectral model flags were present", result["output"])
         self.assertIn("Sequential acquisition is planned", result["output"])
+
+    def test_runtime_selected_configuration_prefers_exported_dto_over_local_storage(self) -> None:
+        instrument = {
+            "id": "scope-runtime-exported",
+            "display_name": "Scope Runtime Exported",
+            "retired": False,
+            "runtime_selected_configuration": {
+                "route": "dto_route",
+                "sources": [{"display_label": "DTO Laser", "wavelength_nm": 488}],
+                "selected_route_steps": [{"kind": "optical_component", "display_label": "DTO Wheel", "position_key": "Pos_1"}],
+            },
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {"filters": [], "splitters": []},
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            globalThis.localStorage = {
+              getItem(key) {
+                if (key !== 'aic.virtualMicroscope.selectedConfiguration') return null;
+                return JSON.stringify({
+                  scope_id: 'scope-runtime-exported',
+                  route: 'local_storage_route',
+                  sources: [{ display_label: 'LS Laser', wavelength_nm: 561 }],
+                  selected_route_steps: [{ kind: 'optical_component', display_label: 'LS Wheel', position_key: 'Pos_9' }],
+                });
+              }
+            };
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-runtime-exported';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+
+        self.assertIn("Exact runtime-selected configuration (exported DTO) used route dto_route.", result["output"])
+        self.assertIn("DTO Laser (488 nm)", result["output"])
+        self.assertNotIn("local_storage_route", result["output"])
+        self.assertNotIn("LS Laser", result["output"])
+
+    def test_structured_cube_route_facts_are_rendered_in_methods_text(self) -> None:
+        instrument = {
+            "id": "scope-cube-structured",
+            "display_name": "Scope Cube Structured",
+            "retired": False,
+            "runtime_selected_configuration": {"route": "widefield"},
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "filters": [],
+                    "splitters": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "widefield",
+                                "route_optical_facts": {
+                                    "selected_or_selectable_emission_filters": [
+                                        {
+                                            "display_label": "GFP Cube",
+                                            "position_key": "Pos_1",
+                                            "product_code": "49002",
+                                            "excitation_filter": {"display_label": "470/40"},
+                                            "dichroic": {"display_label": "495LP"},
+                                            "emission_filter": {"display_label": "525/50"},
+                                        }
+                                    ]
+                                },
+                            }
+                        ]
+                    },
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-cube-structured';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+
+        self.assertIn("Route-specific optical selections/facts:", result["output"])
+        self.assertIn("GFP Cube @ Pos_1", result["output"])
+        self.assertIn("cube internals (EX 470/40; DI 495LP; EM 525/50)", result["output"])
+        self.assertIn("product code 49002", result["output"])
+
+    def test_flattened_cube_route_facts_render_without_local_storage(self) -> None:
+        instrument = {
+            "id": "scope-cube-flattened",
+            "display_name": "Scope Cube Flattened",
+            "retired": False,
+            "runtime_selected_configuration": {
+                "route": "xcelligence_route",
+                "selected_route_steps": [],
+            },
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "filters": [],
+                    "splitters": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "xcelligence_route",
+                                "route_optical_facts": {
+                                    "selected_or_selectable_excitation_filters": [
+                                        {
+                                            "display_label": "DAPI channel",
+                                            "channel_label": "DAPI",
+                                            "available_positions": [
+                                                {"display_label": "DAPI", "position_key": "Pos_1"},
+                                                {"display_label": "FITC", "position_key": "Pos_2"},
+                                            ],
+                                            "_cube_incomplete": True,
+                                            "_unsupported_spectral_model": True,
+                                        }
+                                    ]
+                                },
+                            }
+                        ]
+                    },
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            globalThis.localStorage = { getItem() { return null; } };
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-cube-flattened';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+
+        self.assertIn("Exact runtime-selected configuration (exported DTO) used route xcelligence_route.", result["output"])
+        self.assertIn("channel DAPI", result["output"])
+        self.assertIn("selectable positions: DAPI and FITC", result["output"])
+        self.assertIn("caveats: incomplete cube and unsupported spectral model", result["output"])
+
+    def test_semantic_dedupe_prefers_runtime_selected_source_over_generic_source_sentence(self) -> None:
+        instrument = {
+            "id": "scope-source-dedupe",
+            "display_name": "Scope Source Dedupe",
+            "retired": False,
+            "runtime_selected_configuration": {
+                "route": "route_1",
+                "sources": [{"display_label": "Laser 488", "wavelength_nm": 488}],
+                "selected_route_steps": [],
+            },
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [
+                        {
+                            "id": "source:laser_488",
+                            "inventory_class": "light_source",
+                            "display_label": "Laser 488",
+                            "method_sentence": "Excitation was provided by Laser 488.",
+                        }
+                    ],
+                    "authoritative_route_contract": {"routes": [{"id": "route_1"}]},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-source-dedupe';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('light-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        self.assertIn("Selected sources: Laser 488 (488 nm).", result["output"])
+        self.assertNotIn("Excitation was provided by Laser 488.", result["output"])
+
+    def test_semantic_dedupe_suppresses_generic_optical_sentence_when_runtime_selection_is_more_specific(self) -> None:
+        instrument = {
+            "id": "scope-filter-dedupe",
+            "display_name": "Scope Filter Dedupe",
+            "retired": False,
+            "runtime_selected_configuration": {
+                "route": "route_2",
+                "sources": [],
+                "selected_route_steps": [{"kind": "optical_component", "display_label": "Filter wheel", "position_key": "Pos_2"}],
+            },
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [
+                        {
+                            "id": "filter:wheel",
+                            "inventory_class": "optical_element",
+                            "display_label": "Filter wheel",
+                            "method_sentence": "The optical path included Filter wheel.",
+                        }
+                    ],
+                    "authoritative_route_contract": {"routes": [{"id": "route_2"}]},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-filter-dedupe';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('filter-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        self.assertIn("Selected wheel/turret positions: Filter wheel @ Pos_2.", result["output"])
+        self.assertNotIn("The optical path included Filter wheel.", result["output"])
+
+    def test_duplicate_endpoint_prose_with_same_label_is_non_duplicative(self) -> None:
+        instrument = {
+            "id": "scope-endpoint-dedupe",
+            "display_name": "Scope Endpoint Dedupe",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [
+                        {
+                            "id": "endpoint:cam_a",
+                            "inventory_class": "endpoint",
+                            "display_label": "Kinetix",
+                            "method_sentence": "Detected or observed light terminated at Kinetix.",
+                        },
+                        {
+                            "id": "endpoint:cam_b",
+                            "inventory_class": "endpoint",
+                            "display_label": "Kinetix",
+                            "method_sentence": "Detected or observed light terminated at Kinetix.",
+                        },
+                    ],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-endpoint-dedupe';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('det-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
+            document.getElementById('add-btn').listeners.click();
+            const output = document.getElementById('output-text').value;
+            const count = (output.match(/Detected or observed light terminated at Kinetix\\./g) || []).length;
+            return { output, count };
+            """,
+        )
+        self.assertEqual(result["count"], 1)
+
+    def test_quarep_placeholder_is_only_appended_when_export_marks_it_needed(self) -> None:
+        instrument = {
+            "id": "scope-quarep-flag",
+            "display_name": "Scope Quarep Flag",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {
+                "base_sentence": "Base method block.",
+                "quarep_light_path_recommendation_needed": False,
+                "quarep_light_path_recommendation": "[PLEASE VERIFY: this should not be shown].",
+            },
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {"filters": [], "splitters": [], "authoritative_route_contract": {"routes": []}},
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-quarep-flag';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        self.assertIn("Base method block.", result["output"])
+        self.assertNotIn("this should not be shown", result["output"])
+
+    def test_methods_text_keeps_route_fact_field_when_present_upstream(self) -> None:
+        """Regression guard: upstream route fact fields (e.g. product_code) must survive to final methods text."""
+        instrument = {
+            "id": "scope-field-survival",
+            "display_name": "Scope Field Survival",
+            "retired": False,
+            "runtime_selected_configuration": {"route": "widefield"},
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "widefield",
+                                "route_optical_facts": {
+                                    "selected_or_selectable_emission_filters": [
+                                        {
+                                            "display_label": "FITC cube",
+                                            "position_key": "Pos_2",
+                                            "product_code": "A1-49002",
+                                        }
+                                    ]
+                                },
+                            }
+                        ]
+                    }
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-field-survival';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        self.assertIn("FITC cube @ Pos_2", result["output"])
+        self.assertIn("product code A1-49002", result["output"])
+
+    def test_route_specific_and_runtime_selected_configuration_sentences_are_not_duplicated(self) -> None:
+        instrument = {
+            "id": "scope-no-dup-route-runtime",
+            "display_name": "Scope No Dup",
+            "retired": False,
+            "runtime_selected_configuration": {
+                "route": "route_main",
+                "selected_route_steps": [{"kind": "optical_component", "display_label": "Filter wheel", "position_key": "Pos_1"}],
+            },
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "route_main",
+                                "route_optical_facts": {
+                                    "selected_or_selectable_emission_filters": [
+                                        {"display_label": "Filter wheel", "position_key": "Pos_1"}
+                                    ]
+                                },
+                            }
+                        ]
+                    }
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-no-dup-route-runtime';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            const output = document.getElementById('output-text').value;
+            return {
+              output,
+              routeCount: (output.match(/Exact runtime-selected configuration/g) || []).length,
+              wheelCount: (output.match(/Selected wheel\\/turret positions:/g) || []).length
+            };
+            """,
+        )
+        self.assertEqual(result["routeCount"], 1)
+        self.assertEqual(result["wheelCount"], 1)
+
+    def test_xcelligence_style_flattened_channel_facts_render_without_cube_internals(self) -> None:
+        """Regression guard for xCELLigence-style flattened cubes: known channel/positions must still render."""
+        instrument = {
+            "id": "scope-agilent-rtca-esight",
+            "display_name": "Agilent xCELLigence RTCA eSight",
+            "retired": False,
+            "runtime_selected_configuration": {"route": "xcelligence_route"},
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Base method block."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "xcelligence_route",
+                                "route_optical_facts": {
+                                    "selected_or_selectable_excitation_filters": [
+                                        {
+                                            "display_label": "DAPI channel",
+                                            "channel_label": "DAPI",
+                                            "available_positions": [
+                                                {"display_label": "DAPI", "position_key": "Pos_1"},
+                                                {"display_label": "FITC", "position_key": "Pos_2"},
+                                            ],
+                                            "_cube_incomplete": True,
+                                            "_unsupported_spectral_model": True,
+                                        }
+                                    ]
+                                },
+                            }
+                        ]
+                    }
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-agilent-rtca-esight';
+            systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        self.assertIn("channel DAPI", result["output"])
+        self.assertIn("selectable positions: DAPI and FITC", result["output"])
+        self.assertIn("caveats: incomplete cube and unsupported spectral model", result["output"])
 
 
 if __name__ == "__main__":
