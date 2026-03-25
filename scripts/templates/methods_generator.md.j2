@@ -166,6 +166,45 @@ document.addEventListener("DOMContentLoaded", async () => {
         }, []);
     }
 
+    function normalizeSentenceKey(value) {
+        return cleanText(value)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .trim();
+    }
+
+    function buildSentenceFact({ text, channel, key, specificity = 1 }) {
+        const cleanedText = cleanText(text);
+        const cleanedChannel = cleanText(channel) || "generic";
+        const cleanedKey = normalizeSentenceKey(key || cleanedText);
+        if (!cleanedText || !cleanedKey) return null;
+        return {
+            text: cleanedText,
+            channel: cleanedChannel,
+            key: cleanedKey,
+            specificity: Number.isFinite(Number(specificity)) ? Number(specificity) : 1,
+        };
+    }
+
+    function dedupeSentenceFacts(facts) {
+        const byIdentity = new Map();
+        (Array.isArray(facts) ? facts : []).forEach((fact) => {
+            if (!fact || typeof fact !== "object") return;
+            const normalizedFact = buildSentenceFact(fact);
+            if (!normalizedFact) return;
+            const identity = `${normalizedFact.channel}::${normalizedFact.key}`;
+            const existing = byIdentity.get(identity);
+            if (!existing || normalizedFact.specificity > existing.specificity) {
+                byIdentity.set(identity, normalizedFact);
+                return;
+            }
+            if (normalizedFact.specificity === existing.specificity && normalizedFact.text.length > existing.text.length) {
+                byIdentity.set(identity, normalizedFact);
+            }
+        });
+        return dedupeSentences(Array.from(byIdentity.values()).map((fact) => fact.text));
+    }
+
     function humanJoin(values) {
         const items = uniqueTexts(values);
         if (!items.length) return "";
@@ -308,21 +347,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return opticalPathInventory(dto).filter(item => wanted.has(cleanText(item?.inventory_class)));
     }
 
-    function mergeHardwareRows(groups) {
-        const merged = [];
-        const seen = new Set();
-        (Array.isArray(groups) ? groups : []).forEach(group => {
-            (Array.isArray(group) ? group : []).forEach(item => {
-                if (!item || typeof item !== 'object') return;
-                const key = cleanText(item.id || item.display_label);
-                if (!key || seen.has(key)) return;
-                seen.add(key);
-                merged.push(item);
-            });
-        });
-        return merged;
-    }
-
     function updateHardwareVisibility(dto) {
         const checkedModalityIds = new Set(getCheckedIds("modality"));
         const routeViews = routeViewsForInstrument(dto);
@@ -423,24 +447,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
     }
 
-    function buildSelectionSignature(dto) {
-        return JSON.stringify({
-            instrumentId: dto.id,
-            modality: getCheckedIds("modality"),
-            module: getCheckedIds("module"),
-            scanner: getCheckedIds("scanner"),
-            obj: getCheckedIds("obj"),
-            light: getCheckedIds("light"),
-            filter: getCheckedIds("filter"),
-            splitter: getCheckedIds("splitter"),
-            det: getCheckedIds("det"),
-            magnificationChanger: getCheckedIds("magnification-changer"),
-            opticalModulator: getCheckedIds("optical-modulator"),
-            illuminationLogic: getCheckedIds("illumination-logic"),
-        });
+    function selectionChannel(prefix) {
+        if (prefix === "light") return "source";
+        if (prefix === "filter") return "optical_element";
+        if (prefix === "det") return "endpoint";
+        if (prefix === "splitter") return "splitter";
+        if (prefix === "optical-modulator") return "modulator";
+        if (prefix === "illumination-logic") return "illumination_logic";
+        return "generic";
     }
 
-    function getRuntimeSelectedConfiguration() {
+    function sentenceFactsFromSelections(prefix, selections, specificity = 1) {
+        const channel = selectionChannel(prefix);
+        return (Array.isArray(selections) ? selections : [])
+            .map((item) => buildSentenceFact({
+                text: item?.methodSentence,
+                channel,
+                key: item?.displayLabel || item?.id,
+                specificity,
+            }))
+            .filter(Boolean);
+    }
+
+    function getExportedRuntimeSelectedConfiguration(dto) {
+        const candidate = dto?.runtime_selected_configuration;
+        return candidate && typeof candidate === "object" ? candidate : null;
+    }
+
+    function getRuntimeSelectedConfigurationFromLocalStorage() {
         if (typeof window === "undefined" || !window.localStorage) return null;
         try {
             const raw = window.localStorage.getItem("aic.virtualMicroscope.selectedConfiguration");
@@ -462,18 +496,107 @@ document.addEventListener("DOMContentLoaded", async () => {
         return false;
     }
 
+    function resolveRuntimeSelectedConfiguration(dto) {
+        const exported = getExportedRuntimeSelectedConfiguration(dto);
+        // Exported runtime selection is authoritative for this page. Browser
+        // localStorage is legacy fallback when no exported runtime config exists.
+        if (exported) {
+            return { source: "exported_dto", config: exported };
+        }
+        const localStorageFallback = getRuntimeSelectedConfigurationFromLocalStorage();
+        if (localStorageFallback && runtimeConfigurationMatchesInstrument(dto, localStorageFallback)) {
+            return { source: "local_storage", config: localStorageFallback };
+        }
+        return { source: "", config: null };
+    }
+
+    function routeFactsSummarySentence(routeFacts) {
+        if (!routeFacts || typeof routeFacts !== "object") return "";
+        const factsByKey = [
+            "selected_or_selectable_sources",
+            "selected_or_selectable_excitation_filters",
+            "selected_or_selectable_dichroics",
+            "selected_or_selectable_emission_filters",
+            "selected_or_selectable_splitters",
+            "selected_or_selectable_endpoints",
+            "selected_or_selectable_modulators",
+            "selected_or_selectable_branch_selectors",
+        ];
+        const allRows = factsByKey.flatMap((key) => Array.isArray(routeFacts[key]) ? routeFacts[key] : []);
+        if (!allRows.length) return "";
+
+        const lineForRow = (row) => {
+            if (!row || typeof row !== "object") return "";
+            const label = cleanText(row.display_label || row.label || row.name || row.id || row.component_type);
+            const position = cleanText(row.selected_position_key || row.position_key || row.selected_position_id || row.position_id);
+
+            const channel = cleanText(row.channel_label || row.channel_name);
+            const caveats = [];
+            if (row._cube_incomplete) caveats.push("incomplete cube");
+            if (row._unsupported_spectral_model) caveats.push("unsupported spectral model");
+
+            const availablePositions = Array.isArray(row.available_positions)
+                ? row.available_positions
+                    .map((pos) => cleanText(pos?.display_label || pos?.label || pos?.position_key || pos?.position_id))
+                    .filter(Boolean)
+                : [];
+            const selectableText = availablePositions.length ? `selectable positions: ${humanJoin(availablePositions)}` : "";
+
+            const cubeBits = [
+                row.excitation_filter ? `EX ${cleanText(row.excitation_filter.display_label || row.excitation_filter.label || row.excitation_filter.component_type || "filter")}` : "",
+                row.dichroic ? `DI ${cleanText(row.dichroic.display_label || row.dichroic.label || row.dichroic.component_type || "dichroic")}` : "",
+                row.emission_filter ? `EM ${cleanText(row.emission_filter.display_label || row.emission_filter.label || row.emission_filter.component_type || "filter")}` : "",
+            ].filter(Boolean);
+            const productCode = cleanText(row.product_code);
+
+            const details = [
+                channel ? `channel ${channel}` : "",
+                cubeBits.length ? `cube internals (${cubeBits.join("; ")})` : "",
+                productCode ? `product code ${productCode}` : "",
+                selectableText,
+                caveats.length ? `caveats: ${humanJoin(caveats)}` : "",
+            ].filter(Boolean);
+
+            const base = label ? `${label}${position ? ` @ ${position}` : ""}` : "";
+            return [base, ...details].filter(Boolean).join(" — ");
+        };
+
+        const lines = dedupeSentences(allRows.map(lineForRow));
+        return lines.length ? `Route-specific optical selections/facts: ${humanJoin(lines)}.` : "";
+    }
+
+    function findRouteFactsForRuntimeRoute(dto, routeNameOrId) {
+        const routeViews = routeViewsForInstrument(dto);
+        const target = cleanText(routeNameOrId);
+        if (!target) return null;
+        return routeViews.find((route) =>
+            cleanText(route?.id) === target ||
+            cleanText(route?.illumination_mode) === target ||
+            cleanText(route?.display_label) === target
+        ) || null;
+    }
+
     function runtimeConfigurationSentence(dto) {
-        const runtimeConfig = getRuntimeSelectedConfiguration();
-        if (!runtimeConfigurationMatchesInstrument(dto, runtimeConfig)) return "";
+        const resolved = resolveRuntimeSelectedConfiguration(dto);
+        const runtimeConfig = resolved.config;
+        if (!runtimeConfig) return { text: "", sentenceFacts: [], hasRuntimeSelection: false };
 
         const route = cleanText(runtimeConfig.route) || "unspecified route";
+        const matchedRoute = findRouteFactsForRuntimeRoute(dto, route);
+        const routeFacts = matchedRoute?.route_optical_facts || null;
         const sourceLabels = uniqueTexts((Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).map((source) => {
             const label = cleanText(source?.display_label || source?.name || source?.id);
             const wavelength = source?.wavelength_nm;
             return label ? `${label}${Number.isFinite(Number(wavelength)) ? ` (${Number(wavelength)} nm)` : ""}` : "";
         }));
+        const runtimeSourceKeys = uniqueTexts((Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).map((source) =>
+            cleanText(source?.display_label || source?.name || source?.id)
+        ));
         const routeSteps = Array.isArray(runtimeConfig.selected_route_steps) ? runtimeConfig.selected_route_steps : [];
         const opticalSteps = routeSteps.filter((step) => step?.kind === "optical_component");
+        const runtimeOpticalKeys = uniqueTexts(opticalSteps.map((step) =>
+            cleanText(step?.display_label || step?.position_label || step?.component_type)
+        ));
         const stageSelections = uniqueTexts(opticalSteps.map((step) => {
             const label = cleanText(step?.display_label || step?.position_label || step?.component_type);
             const position = cleanText(step?.position_key) || cleanText(step?.position_id) || "";
@@ -484,11 +607,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             const branches = Array.isArray(splitter?.selected_branch_ids) ? splitter.selected_branch_ids.filter(Boolean) : [];
             return label ? `${label}${branches.length ? ` [${branches.join(", ")}]` : ""}` : "";
         }));
+        const runtimeSplitterKeys = uniqueTexts((Array.isArray(runtimeConfig.splitters) ? runtimeConfig.splitters : []).map((splitter) =>
+            cleanText(splitter?.display_label || splitter?.id)
+        ));
         const detectorSelections = uniqueTexts((Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).map((detector) => {
             const label = cleanText(detector?.display_label || detector?.id);
             const hasWindow = Number.isFinite(Number(detector?.collection_min_nm)) && Number.isFinite(Number(detector?.collection_max_nm));
             return label ? `${label}${hasWindow ? ` (${Number(detector.collection_min_nm)}–${Number(detector.collection_max_nm)} nm)` : ""}` : "";
         }));
+        const runtimeEndpointKeys = uniqueTexts((Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).map((detector) =>
+            cleanText(detector?.display_label || detector?.id)
+        ));
         const flattenedIncomplete = routeSteps.filter((step) => step?._cube_incomplete).map((step) => cleanText(step?.display_label || step?.position_label || step?.component_type)).filter(Boolean);
         const unsupportedComponents = routeSteps.filter((step) => step?._unsupported_spectral_model).map((step) => cleanText(step?.display_label || step?.position_label || step?.component_type)).filter(Boolean);
         const unsupportedReasons = routeSteps
@@ -518,15 +647,37 @@ document.addEventListener("DOMContentLoaded", async () => {
             notes.push(`Unsupported spectral model flags were present (${humanJoin([...unsupportedComponents, ...unsupportedReasons])}).`);
         }
 
-        return dedupeSentences([
-            `Exact virtual microscope runtime-selected configuration used route ${route}.`,
-            sourceLabels.length ? `Selected sources: ${humanJoin(sourceLabels)}.` : "",
-            stageSelections.length ? `Selected wheel/turret positions: ${humanJoin(stageSelections)}.` : "",
-            splitterSelections.length ? `Selected splitter branches: ${humanJoin(splitterSelections)}.` : "",
-            detectorSelections.length ? `Selected endpoints/detectors: ${humanJoin(detectorSelections)}.` : "",
-            acquisitionSentence,
-            ...notes,
-        ]).join(" ");
+        const summarySentence = `Exact runtime-selected configuration (${resolved.source === "exported_dto" ? "exported DTO" : "browser fallback"}) used route ${route}.`;
+        const routeFactsSentence = routeFactsSummarySentence(routeFacts);
+        const sourceSentence = sourceLabels.length ? `Selected sources: ${humanJoin(sourceLabels)}.` : "";
+        const opticalSentence = stageSelections.length ? `Selected wheel/turret positions: ${humanJoin(stageSelections)}.` : "";
+        const splitterSentence = splitterSelections.length ? `Selected splitter branches: ${humanJoin(splitterSelections)}.` : "";
+        const endpointSentence = detectorSelections.length ? `Selected endpoints/detectors: ${humanJoin(detectorSelections)}.` : "";
+        const noteSentences = dedupeSentences([acquisitionSentence, ...notes]);
+
+        const sentenceFacts = dedupeSentenceFacts([
+            buildSentenceFact({ text: sourceSentence, channel: "source", key: sourceLabels.join("|"), specificity: 3 }),
+            buildSentenceFact({ text: opticalSentence, channel: "optical_element", key: stageSelections.join("|"), specificity: 3 }),
+            buildSentenceFact({ text: splitterSentence, channel: "splitter", key: splitterSelections.join("|"), specificity: 3 }),
+            buildSentenceFact({ text: endpointSentence, channel: "endpoint", key: detectorSelections.join("|"), specificity: 3 }),
+            buildSentenceFact({ text: summarySentence, channel: "runtime_selection", key: route, specificity: 3 }),
+            buildSentenceFact({ text: routeFactsSentence, channel: "route_summary", key: route, specificity: 3 }),
+            ...noteSentences.map((text, idx) => buildSentenceFact({ text, channel: "runtime_note", key: `${route}-${idx}`, specificity: 3 })),
+        ].filter(Boolean));
+
+        return {
+            text: sentenceFacts.join(" "),
+            sentenceFacts: [
+                ...runtimeSourceKeys.map((label) => buildSentenceFact({ text: sourceSentence, channel: "source", key: label, specificity: 3 })),
+                ...runtimeOpticalKeys.map((label) => buildSentenceFact({ text: opticalSentence, channel: "optical_element", key: label, specificity: 3 })),
+                ...runtimeSplitterKeys.map((label) => buildSentenceFact({ text: splitterSentence, channel: "splitter", key: label, specificity: 3 })),
+                ...runtimeEndpointKeys.map((label) => buildSentenceFact({ text: endpointSentence, channel: "endpoint", key: label, specificity: 3 })),
+                buildSentenceFact({ text: summarySentence, channel: "runtime_selection", key: route, specificity: 3 }),
+                buildSentenceFact({ text: routeFactsSentence, channel: "route_summary", key: route, specificity: 3 }),
+                ...noteSentences.map((text, idx) => buildSentenceFact({ text, channel: "runtime_note", key: `${route}-${idx}`, specificity: 3 })),
+            ].filter(Boolean),
+            hasRuntimeSelection: true,
+        };
     }
 
     function instrumentTriggersXcelligence(nameOrId) {
@@ -635,7 +786,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const specialistSelections = dedupeSentences([
             ...getCheckedSelections("optical-modulator").map(item => item.methodSentence),
             ...getCheckedSelections("illumination-logic").map(item => item.methodSentence),
-            ...getCheckedSelections("splitter").map(item => item.methodSentence),
         ]);
 
         const paragraphHardware = dedupeSentences([
@@ -651,14 +801,27 @@ document.addEventListener("DOMContentLoaded", async () => {
             dto.methods?.triggering_sentence,
         ]).join(" ");
 
-        const paragraphLightPath = dedupeSentences([
-            groupedLabelSentence("light", getCheckedSelections("light")),
-            groupedLabelSentence("det", getCheckedSelections("det")),
-            groupedLabelSentence("filter", getCheckedSelections("filter")),
-            ...specialistSelections,
-            dto.methods?.quarep_light_path_recommendation,
-        ]).join(" ");
-        const paragraphRuntimeSelectedConfig = runtimeConfigurationSentence(dto);
+        const runtimeDetails = runtimeConfigurationSentence(dto);
+
+        const genericOpticalFacts = [
+            ...sentenceFactsFromSelections("light", getCheckedSelections("light"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
+            ...sentenceFactsFromSelections("det", getCheckedSelections("det"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
+            ...sentenceFactsFromSelections("filter", getCheckedSelections("filter"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
+            ...sentenceFactsFromSelections("splitter", getCheckedSelections("splitter"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
+        ];
+        const combinedOpticalSentences = dedupeSentenceFacts([
+            ...genericOpticalFacts,
+            ...(runtimeDetails.sentenceFacts || []),
+            ...specialistSelections.map((text, idx) => buildSentenceFact({ text, channel: "specialist", key: `specialist-${idx}`, specificity: 2 })),
+            buildSentenceFact({
+                text: dto.methods?.quarep_light_path_recommendation_needed ? dto.methods?.quarep_light_path_recommendation : "",
+                channel: "route_summary",
+                key: "quarep-recommendation",
+                specificity: 0,
+            }),
+        ]);
+
+        const paragraphLightPath = combinedOpticalSentences.join(" ");
 
         const paragraphAcquisition = dedupeSentences([
             ...(dto.methods?.processing_sentences || []),
@@ -675,7 +838,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const textParts = [
             paragraphHardware,
             paragraphLightPath,
-            paragraphRuntimeSelectedConfig,
             paragraphAcquisition,
             paragraphDeposition,
             paragraphMissingMetadata,

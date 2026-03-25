@@ -94,18 +94,31 @@ Here is what I want to do:
     const basePromptBottom = `
 
 Recommend the best 1 or 2 microscopes from the attached file for this experiment.
-Please:
-- Exclude systems that are offline or have listed issues that make them unsuitable.
-- Explain why each recommended system fits the experiment.
-- Mention the relevant modality, route, objective(s), excitation light source(s), and detector(s).
-- **Provide a precise optical configuration:** Use each microscope's \`llm_context.authoritative_route_contract\` as the primary route-planning contract. It compactly exposes \`available_routes\`, normalized \`hardware_inventory\`, \`route_hardware_usage\`, normalized endpoints, per-route relevant hardware groups, endpoint summaries, branch summaries, and compact route topology (\`graph_nodes\` / \`graph_edges\`). Cross-check against \`hardware.optical_path.primary_rendering_contract\` and the underlying raw component collections only when you need extra labels or specs.
-- **Handle selectors and splitters explicitly:** If the recommended system uses branching elements, rely on the route's \`branch_summary\` and \`topology\` inside \`llm_context.authoritative_route_contract.routes[]\` to explain which branch is selected, describe any branch-local optics, and identify the final endpoint or detector reached by each branch sequence.
-- Mention useful supporting features such as incubation, autofocus, detector type, adaptive illumination, or piezo only when they are explicitly present in the inventory.
-- For every key requirement, label evidence as known vs unknown based on inventory completeness metadata.
-- Keep the recommendation hardware focused and concise; do not add generic microscopy background unless it directly affects the route or hardware choice.
-- Clearly state any important tradeoffs or uncertainty, and do not fill gaps with ungrounded assumptions.
-- Indicate which system is the top choice and which is the backup, if applicable.
-- Conclude your response by strongly encouraging me to discuss these recommendations with the ${facilityShortName} core facility staff before booking, as they can provide final validation and training.`;
+Follow this required procedure in order:
+1) Eliminate unavailable or incompatible instruments first (offline, blocked, or missing critical required capabilities).
+2) For each remaining instrument, identify candidate route(s)/modality from \`llm_context.authoritative_route_contract\` first. Use \`llm_context.route_planning_summary\` only as a convenience view derived from that same truth.
+3) Choose one best route on the top instrument and one backup route/instrument.
+4) For each recommended route, extract key optics (sources, excitation/dichroic/emission optics, modulators), detector/endpoint, and relevant objective(s).
+5) If splitters/branch selectors exist, explicitly state branch handling and final endpoint per branch.
+6) Separate known facts from unknowns/assumptions/caveats using inventory completeness metadata and route caveat fields.
+
+Route-truth rules (mandatory):
+- Route truth comes from \`llm_context.authoritative_route_contract.routes[]\` (primary).
+- Raw hardware lists are secondary context and must not override route contract truth.
+- If route fields are missing or unresolved, report uncertainty and ask focused follow-up questions.
+
+Output requirements (must include all):
+- best instrument(s) with brief reasoned ranking (top choice + backup),
+- selected route for each recommendation,
+- key optics,
+- detector/endpoint,
+- objective(s),
+- branch/splitter handling,
+- known vs unknown facts (explicitly separated),
+- key tradeoffs and uncertainties.
+
+Keep the recommendation concise, hardware-focused, and grounded in the attached JSON only.
+Conclude by encouraging discussion with the ${facilityShortName} core facility staff before booking for final validation and training.`;
 
     function updatePrompt() {
       const userText = inputArea.value.trim();
