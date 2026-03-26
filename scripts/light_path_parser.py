@@ -641,6 +641,7 @@ def _parse_canonical_light_paths(
     endpoints: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     routes: list[dict[str, Any]] = []
+    seen_route_ids: set[str] = set()
     for index, route in enumerate(raw_light_paths, start=1):
         if not isinstance(route, dict):
             continue
@@ -648,6 +649,9 @@ def _parse_canonical_light_paths(
         route_id = _clean_identifier(route.get("id") or route.get("name") or f"route_{index}")
         if not route_id:
             continue
+        if route_id in seen_route_ids:
+            route_id = f"{route_id}_{index}"
+        seen_route_ids.add(route_id)
 
         parse_warnings: list[str] = []
 
@@ -1942,7 +1946,7 @@ def _cube_spectral_ops(component: dict[str, Any]) -> dict[str, list[dict[str, An
 
 
 def _light_source_display_label(source: dict[str, Any]) -> str:
-    raw_kind = _clean_string(source.get("kind") or source.get("type") or "source")
+    raw_kind = _normalize_light_source_kind(source.get("kind") or source.get("type") or "source")
     kind = _resolve_light_source_kind(raw_kind)
     manufacturer = _clean_string(source.get("manufacturer"))
     model = _clean_string(source.get("model"))
@@ -1957,6 +1961,40 @@ def _light_source_display_label(source: dict[str, Any]) -> str:
     elif isinstance(wavelength, str) and wavelength.strip():
         prefix = wavelength.strip()
     return " ".join(part for part in [prefix, kind, manufacturer, model] if part).strip() or model or _resolve_light_source_kind(raw_kind) or "Light Source"
+
+
+_LIGHT_SOURCE_KIND_ALIASES = {
+    "laser_diode": "laser",
+    "laser_dpss": "laser",
+    "diode": "laser",
+    "dpss": "laser",
+    "wll": "white_light_laser",
+    "tunable_laser": "white_light_laser",
+    "mercury_lamp": "arc_lamp",
+    "xenon_lamp": "arc_lamp",
+    "tungsten_halogen": "halogen_lamp",
+    "quartz_halogen": "halogen_lamp",
+    "ti_sapphire": "multiphoton_laser",
+    "fs_laser": "multiphoton_laser",
+    "white_supercontinuum_laser": "supercontinuum",
+}
+
+_CANONICAL_LIGHT_SOURCE_KINDS = {
+    "laser",
+    "white_light_laser",
+    "led",
+    "arc_lamp",
+    "metal_halide",
+    "halogen_lamp",
+    "multiphoton_laser",
+    "supercontinuum",
+}
+
+
+def _normalize_light_source_kind(value: Any) -> str:
+    normalized = _clean_identifier(value) or "light_source"
+    normalized = _LIGHT_SOURCE_KIND_ALIASES.get(normalized, normalized)
+    return normalized if normalized in _CANONICAL_LIGHT_SOURCE_KINDS else normalized
 
 
 
@@ -2022,7 +2060,7 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
 
     wavelength = source.get("wavelength_nm")
     width_nm = source.get("width_nm")
-    kind = _clean_string(source.get("kind") or source.get("type") or "light_source").lower() or "light_source"
+    kind = _normalize_light_source_kind(source.get("kind") or source.get("type") or "light_source")
     display_label = _light_source_display_label({**source, "tunable_min_nm": tunable_min, "tunable_max_nm": tunable_max})
     role = _source_role(source)
     position = {
@@ -2775,7 +2813,14 @@ def _collect_route_owned_splitters(
                 if not isinstance(branch, dict):
                     continue
                 branch_id = _clean_identifier(branch.get("branch_id")) or f"branch_{branch_position}"
-                dedupe_key = branch_id
+                dedupe_key = json.dumps(
+                    {
+                        "branch_id": branch_id,
+                        "mode": _clean_string(branch.get("mode")).lower(),
+                        "sequence": branch.get("sequence") or [],
+                    },
+                    sort_keys=True,
+                )
                 if dedupe_key in branch_index:
                     branch_payload = splitter["branches"][branch_index[dedupe_key]]
                 else:
