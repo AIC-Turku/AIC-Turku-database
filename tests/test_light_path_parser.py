@@ -2534,3 +2534,141 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(green_component["position_key"], "1")
         self.assertEqual(green_component["position_label"], "525/50")
         self.assertEqual(green_component["spectral_ops"]["detection"][0]["center_nm"], 525.0)
+
+    def test_multi_route_records_remain_isolated_per_authored_light_path(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [
+                        {"id": "src_488", "kind": "laser", "wavelength_nm": 488},
+                        {"id": "src_561", "kind": "laser", "wavelength_nm": 561},
+                    ],
+                    "optical_path_elements": [
+                        {"id": "shared_di", "stage_role": "dichroic", "element_type": "filter"},
+                        {"id": "em_gfp", "stage_role": "emission", "element_type": "filter"},
+                        {"id": "em_rfp", "stage_role": "emission", "element_type": "filter"},
+                    ],
+                    "endpoints": [
+                        {"id": "cam_gfp", "endpoint_type": "detector"},
+                        {"id": "cam_rfp", "endpoint_type": "detector"},
+                        {"id": "cam_wf", "endpoint_type": "detector"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "gfp_route",
+                        "illumination_sequence": [{"source_id": "src_488"}, {"optical_path_element_id": "shared_di"}],
+                        "detection_sequence": [{"optical_path_element_id": "em_gfp"}, {"endpoint_id": "cam_gfp"}],
+                    },
+                    {
+                        "id": "rfp_route",
+                        "illumination_sequence": [{"source_id": "src_561"}, {"optical_path_element_id": "shared_di"}],
+                        "detection_sequence": [{"optical_path_element_id": "em_rfp"}, {"endpoint_id": "cam_rfp"}],
+                    },
+                    {
+                        "id": "widefield_detection_only",
+                        "illumination_sequence": [],
+                        "detection_sequence": [{"endpoint_id": "cam_wf"}],
+                    },
+                ],
+            }
+        )
+        light_paths = payload["light_paths"]
+        self.assertEqual(len(light_paths), 3)
+
+        by_id = {route["id"]: route for route in light_paths}
+        gfp = by_id["gfp_route"]
+        rfp = by_id["rfp_route"]
+        wf = by_id["widefield_detection_only"]
+
+        self.assertEqual([step["id"] for step in gfp["illumination_traversal"] if step.get("kind") == "source"], ["src_488"])
+        self.assertEqual([step["id"] for step in rfp["illumination_traversal"] if step.get("kind") == "source"], ["src_561"])
+        self.assertEqual([step["id"] for step in wf["illumination_traversal"] if step.get("kind") == "source"], [])
+
+        self.assertEqual([step["id"] for step in gfp["detection_traversal"] if step.get("kind") == "endpoint"], ["cam_gfp"])
+        self.assertEqual([step["id"] for step in rfp["detection_traversal"] if step.get("kind") == "endpoint"], ["cam_rfp"])
+        self.assertEqual([step["id"] for step in wf["detection_traversal"] if step.get("kind") == "endpoint"], ["cam_wf"])
+
+        gfp_selected = gfp["selected_execution"]["selected_route_steps"]
+        rfp_selected = rfp["selected_execution"]["selected_route_steps"]
+        wf_selected = wf["selected_execution"]["selected_route_steps"]
+        self.assertIn("src_488", [step.get("source_id") for step in gfp_selected])
+        self.assertIn("src_561", [step.get("source_id") for step in rfp_selected])
+        self.assertNotIn("src_488", [step.get("source_id") for step in wf_selected])
+        self.assertNotIn("src_561", [step.get("source_id") for step in wf_selected])
+
+        usage_by_route = {entry["route_id"]: entry for entry in payload["route_hardware_usage"]}
+        self.assertIn("source:src_488", usage_by_route["gfp_route"]["hardware_inventory_ids"])
+        self.assertNotIn("source:src_561", usage_by_route["gfp_route"]["hardware_inventory_ids"])
+        self.assertIn("source:src_561", usage_by_route["rfp_route"]["hardware_inventory_ids"])
+        self.assertIn("endpoint:cam_wf", usage_by_route["widefield_detection_only"]["hardware_inventory_ids"])
+        self.assertNotIn("endpoint:cam_gfp", usage_by_route["widefield_detection_only"]["hardware_inventory_ids"])
+
+    def test_supported_light_source_kinds_are_normalized_and_keep_properties(self) -> None:
+        source_rows = [
+            {"id": "laser_1", "kind": "laser", "wavelength_nm": 488},
+            {"id": "wll_1", "kind": "WLL", "tunable_min_nm": 440, "tunable_max_nm": 730},
+            {"id": "led_1", "kind": "led", "wavelength_nm": 470, "width_nm": 30},
+            {"id": "arc_1", "kind": "arc_lamp"},
+            {"id": "hal_1", "kind": "halogen_lamp"},
+            {"id": "mp_1", "kind": "ti:sapphire", "tunable_min_nm": 700, "tunable_max_nm": 1040, "timing_mode": "pulsed", "pulse_width_ps": 120, "repetition_rate_mhz": 80},
+            {"id": "sc_1", "kind": "white supercontinuum laser", "tunable_min_nm": 420, "tunable_max_nm": 2400, "depletion_targets_nm": [592, 775], "power": "2 W"},
+        ]
+        payload = generate_virtual_microscope_payload({"hardware": {"sources": source_rows}})
+        positions = _runtime_projection(payload)["light_sources"][0]["positions"]
+        ordered = [positions[str(index + 1)] for index in range(len(source_rows))]
+        by_index = {source_rows[index]["id"]: ordered[index] for index in range(len(source_rows))}
+
+        self.assertEqual(by_index["laser_1"]["kind"], "laser")
+        self.assertEqual(by_index["laser_1"]["component_type"], "laser")
+        self.assertEqual(by_index["laser_1"]["spectral_mode"], "line")
+
+        self.assertEqual(by_index["wll_1"]["kind"], "white_light_laser")
+        self.assertEqual(by_index["wll_1"]["spectral_mode"], "tunable_line")
+        self.assertEqual(by_index["wll_1"]["tunable_min_nm"], 440.0)
+        self.assertEqual(by_index["wll_1"]["tunable_max_nm"], 730.0)
+
+        self.assertEqual(by_index["led_1"]["kind"], "led")
+        self.assertEqual(by_index["led_1"]["spectral_mode"], "band")
+
+        self.assertEqual(by_index["arc_1"]["kind"], "arc_lamp")
+        self.assertEqual(by_index["arc_1"]["spectral_mode"], "broadband")
+        self.assertEqual(by_index["hal_1"]["kind"], "halogen_lamp")
+        self.assertEqual(by_index["hal_1"]["spectral_mode"], "broadband")
+
+        self.assertEqual(by_index["mp_1"]["kind"], "multiphoton_laser")
+        self.assertEqual(by_index["mp_1"]["spectral_mode"], "tunable_line")
+        self.assertEqual(by_index["mp_1"]["timing_mode"], "pulsed")
+        self.assertEqual(by_index["mp_1"]["pulse_width_ps"], 120.0)
+        self.assertEqual(by_index["mp_1"]["repetition_rate_mhz"], 80.0)
+
+        self.assertEqual(by_index["sc_1"]["kind"], "supercontinuum")
+        self.assertEqual(by_index["sc_1"]["spectral_mode"], "tunable_line")
+        self.assertEqual(by_index["sc_1"]["depletion_targets_nm"], [592, 775])
+        self.assertEqual(by_index["sc_1"]["power"], "2 W")
+
+    def test_andor_bc43_yaml_validates_and_parser_understands_all_authored_routes(self) -> None:
+        instrument_path = Path("instruments/Andor BC43 Benchtop Confocal.yaml")
+        instrument = yaml.safe_load(instrument_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(validate_light_path(instrument), [])
+        self.assertEqual(validate_light_path_warnings(instrument), [])
+
+        payload = generate_virtual_microscope_payload(instrument)
+        authored_route_ids = [route["id"] for route in instrument["light_paths"]]
+        parsed_route_ids = [route["id"] for route in payload["light_paths"]]
+        self.assertEqual(parsed_route_ids, authored_route_ids)
+
+        by_id = {route["id"]: route for route in payload["light_paths"]}
+        self.assertEqual(
+            [step["id"] for step in by_id["confocal_spinning_disk"]["illumination_traversal"] if step.get("kind") == "source"],
+            ["borealis_illumination", "borealis_illumination_2", "borealis_illumination_3", "borealis_illumination_4"],
+        )
+        self.assertEqual(
+            [step["id"] for step in by_id["transmitted_brightfield"]["illumination_traversal"] if step.get("kind") == "source"],
+            ["transmitted_light_illuminator"],
+        )
+        self.assertEqual(
+            [step["id"] for step in by_id["widefield_fluorescence"]["detection_traversal"] if step.get("kind") == "endpoint"],
+            ["detector_1"],
+        )
