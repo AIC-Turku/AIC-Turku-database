@@ -1724,8 +1724,7 @@
   function appendTraversalEntries(panel, entries) {
     (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
       if (entry.kind === 'control') {
-        if (entry.stageKey === 'splitters') panel.appendChild(createSplitterControl(entry.mechanism));
-        else panel.appendChild(createMechanismControl(entry.stageKey, entry.mechanism, index));
+        if (entry.stageKey !== 'splitters') panel.appendChild(createMechanismControl(entry.stageKey, entry.mechanism, index));
         return;
       }
       if (entry.kind === 'branch-block') {
@@ -2101,7 +2100,6 @@
     block.appendChild(metadata);
 
     const branches = Array.isArray(mechanism.branches) ? mechanism.branches : [];
-    const selectedBranches = ensureSplitterBranchSelection(mechanism);
     const branchList = document.createElement('div');
     branchList.className = 'vm-branch-list';
 
@@ -2135,30 +2133,6 @@
       targetMeta.textContent = `Targets: ${targetText}`;
       row.appendChild(targetMeta);
      
-      if (mechanism.branch_selection_required) {
-        const branchId = cleanString(branch.id || '');
-        const chooser = document.createElement('label');
-        chooser.className = 'vm-mini';
-        chooser.style.display = 'flex';
-        chooser.style.alignItems = 'center';
-        chooser.style.gap = '6px';
-      
-        const input = document.createElement('input');
-        input.type = 'radio';
-        input.name = `splitter-${cleanString(mechanism.id || mechanism.name || mechanism.display_label)}`;
-        input.checked = selectedBranches.includes(branchId) || (!selectedBranches.length && branches[0] === branch);
-      
-        input.addEventListener('change', () => {
-          if (!branchId) return;
-          state.splitterBranchSelections.set(splitterBranchSelectionKey(mechanism), [branchId]);
-          refreshOutputs();
-        });
-      
-        chooser.appendChild(input);
-        chooser.appendChild(document.createTextNode('Use this branch'));
-        row.appendChild(chooser);
-      }
-
       branchList.appendChild(row);
     });
 

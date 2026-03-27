@@ -195,6 +195,18 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("resolvedType === 'route_control'", ordered_fn)
         self.assertIn("if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) return;", ordered_fn)
 
+    def test_splitter_branch_buttons_are_not_rendered(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+        append_fn = source.split("function appendTraversalEntries")[1].split("\n  function ")[0]
+        self.assertIn("if (entry.stageKey !== 'splitters') panel.appendChild(createMechanismControl(entry.stageKey, entry.mechanism, index));", append_fn)
+        self.assertNotIn("panel.appendChild(createSplitterControl(entry.mechanism));", append_fn)
+        self.assertNotIn("Use this branch", source)
+
+    def test_detector_controls_still_auto_select_splitter_branch(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+        detector_fn = source.split("function createDetectorControl(mechanism, detector)")[1].split("\n  function ")[0]
+        self.assertIn("if (checkbox.checked) autoSelectBranchForDetector(detector);", detector_fn)
+
     def test_simulation_uses_traversal_ordered_components(self) -> None:
         source = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
 

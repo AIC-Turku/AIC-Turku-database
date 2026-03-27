@@ -235,6 +235,70 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         bright_peaks = [entry for entry in result["peaks"] if entry["value"] >= 0.49]
         self.assertEqual(len(bright_peaks), 5)
 
+    def test_route_topology_keeps_route_local_endpoints_with_splitter_branches(self) -> None:
+        result = self.run_node_json(
+            """
+            const payload = {
+              dto_schema: 'light_paths_v2',
+              metadata: {},
+              simulation: {},
+              sources: [{ id: 'src_488', kind: 'laser' }],
+              optical_path_elements: [
+                { id: 'main_splitter', stage_role: 'splitter', element_type: 'splitter' },
+                { id: 'em_green', stage_role: 'emission', element_type: 'filter_wheel' },
+                { id: 'em_red', stage_role: 'emission', element_type: 'filter_wheel' },
+              ],
+              endpoints: [
+                { id: 'det_green', endpoint_type: 'detector' },
+                { id: 'det_red', endpoint_type: 'detector' },
+              ],
+              hardware_inventory: [],
+              hardware_index_map: {},
+              route_hardware_usage: [
+                { route_id: 'green_route', hardware_inventory_ids: ['endpoint:det_green'], endpoint_inventory_ids: ['endpoint:det_green'] },
+                { route_id: 'red_route', hardware_inventory_ids: ['endpoint:det_red'], endpoint_inventory_ids: ['endpoint:det_red'] },
+              ],
+              light_paths: [
+                {
+                  id: 'green_route',
+                  name: 'Green',
+                  route_steps: [],
+                  selected_execution: { selected_route_steps: [] },
+                  illumination_sequence: [{ source_id: 'src_488' }],
+                  detection_sequence: [
+                    { optical_path_element_id: 'main_splitter' },
+                    { branches: { selection_mode: 'exclusive', items: [{ branch_id: 'green', sequence: [{ optical_path_element_id: 'em_green' }, { endpoint_id: 'det_green' }] }] } },
+                  ],
+                },
+                {
+                  id: 'red_route',
+                  name: 'Red',
+                  route_steps: [],
+                  selected_execution: { selected_route_steps: [] },
+                  illumination_sequence: [{ source_id: 'src_488' }],
+                  detection_sequence: [
+                    { optical_path_element_id: 'main_splitter' },
+                    { branches: { selection_mode: 'exclusive', items: [{ branch_id: 'red', sequence: [{ optical_path_element_id: 'em_red' }, { endpoint_id: 'det_red' }] }] } },
+                  ],
+                },
+              ],
+              projections: { virtual_microscope: { splitters: [] } },
+            };
+            const instrument = rt.normalizeInstrumentPayload(payload);
+            const routes = instrument.routeTopology.routes.map((route) => ({
+              id: route.id,
+              explicitEndpointIds: route.explicitEndpointIds,
+              hardwareEndpoints: (route.routeLocalHardwareUsage && route.routeLocalHardwareUsage.endpoint_inventory_ids) || [],
+            }));
+            return routes;
+            """
+        )
+        by_id = {row["id"]: row for row in result}
+        self.assertEqual(by_id["green_route"]["explicitEndpointIds"], ["det_green"])
+        self.assertEqual(by_id["red_route"]["explicitEndpointIds"], ["det_red"])
+        self.assertEqual(by_id["green_route"]["hardwareEndpoints"], ["endpoint:det_green"])
+        self.assertEqual(by_id["red_route"]["hardwareEndpoints"], ["endpoint:det_red"])
+
     def test_mcherry_recorded_fpbase_bundle_normalizes_to_usable_spectra(self) -> None:
         fixture = json.loads((FIXTURE_DIR / "fpbase_mcherry_bundle.json").read_text())
         result = self.run_node_json(
