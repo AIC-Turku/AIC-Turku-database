@@ -1,0 +1,50 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-nikon-crest-v3_20260302_vendor_service_dualcam_realignment_and_cleaning
+microscope: scope-nikon-crest-v3
+service_provider: vendor
+company: CrestOptics / Nikon
+reference: March 2026 on-site service report
+started_utc: '2026-03-02T07:45:00Z'
+ended_utc: '2026-03-04T13:00:00Z'
+reason: problem
+reason_details: 'Service visit initiated to investigate reported dual-camera acquisition issues and
+  possible dust contamination in the Crest V3 spinning disk unit.
+
+  '
+action: service
+action_details: 'Completed a full system computer check, cleaning, and update; verified USB ports and
+  NIS dongle operation and installed an additional PCI-Express card to connect the
+  dongle directly due to configuration/power-save behavior. Confirmed NIS software
+  configuration. Troubleshot dual-camera acquisition and resolved issues by checking
+  cables, configuration, and hardware; validated operation in single- and dual-camera
+  modes with customer testing. Inspected and removed the Crest V3 spinning disk for
+  internal contamination assessment, then performed full re-installation. Performed
+  illumination alignment, focus adjustment, image position alignment, and dual-camera
+  calibration/alignment. Cleaned main dichroic mirror, excitation/emission filters,
+  and inspected/cleaned beam splitters. Cleaned spinning disk box in clean chamber.
+  Verified image quality in live mode across all filter/DM/beam-splitter combinations,
+  with and without disk; full field of view confirmed clean. Set Köhler illumination
+  on D-LEDI and Ti2 microscope and cleaned 40x objective. Advised customer to use
+  lens tissue paper for routine optics cleaning.
+
+  '
+microscope_status_after: in_service
+downtime_hours: 53.2
+tags:
+- dual_camera
+- spinning_disk
+- cleaning
+- alignment
+- calibration
+- objective_cleaning
+followup: 'Customer was advised to continue routine optics care using approved lens tissue.
+
+  '
+notes: 'Visit schedule provided in service report: Monday 07:45-18:00, Tuesday 08:00-18:00,
+  Wednesday 08:15-13:00. Report also references before/after pictures as attachments,
+  but files were not provided in this repository update.
+
+  '
+status_notes: System returned to full operation in both single- and dual-camera acquisition
+  modes after cleaning, reinstallation, and alignment/calibration work
