@@ -45,7 +45,7 @@ hide:
   </div>
 
   {% if payload.get('record_type') == 'qc_session' or payload.get('evaluation') %}
-  <div class="aic-card">
+  <div class="aic-card aic-card--full">
     <div class="aic-card__body">
       <div class="aic-card__title">QC Summary & Evaluation</div>
       
@@ -75,7 +75,7 @@ hide:
   {% endif %}
 
   {% if is_maintenance or payload.get('action') or payload.get('action_details') %}
-  <div class="aic-card">
+  <div class="aic-card aic-card--full">
     <div class="aic-card__body">
       <div class="aic-card__title">Maintenance Action</div>
 
