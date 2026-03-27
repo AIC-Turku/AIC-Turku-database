@@ -1,4 +1,5 @@
 import ast
+import importlib.util
 import json
 import re
 import subprocess
@@ -22,7 +23,9 @@ def _safe_load(value):
 
 yaml_stub.safe_load = _safe_load
 yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault("yaml", yaml_stub)
+_yaml_spec = importlib.util.find_spec("yaml")
+if _yaml_spec is None:
+    sys.modules["yaml"] = yaml_stub
 
 jinja2_stub = types.ModuleType("jinja2")
 
@@ -39,7 +42,9 @@ class _DummyLoader:
 
 jinja2_stub.Environment = _DummyEnvironment
 jinja2_stub.FileSystemLoader = _DummyLoader
-sys.modules.setdefault("jinja2", jinja2_stub)
+_jinja2_spec = importlib.util.find_spec("jinja2")
+if _jinja2_spec is None:
+    sys.modules["jinja2"] = jinja2_stub
 
 from scripts.dashboard_builder import (
     build_llm_inventory_payload,
