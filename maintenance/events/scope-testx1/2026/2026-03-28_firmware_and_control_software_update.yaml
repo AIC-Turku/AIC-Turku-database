@@ -37,3 +37,5 @@ notes: 'Two legacy macros required manual edits due to deprecated command names.
 
   '
 contact: 'Remote engineer: J. Lehtinen'
+status_notes: High-speed acquisition remains supervised until trigger/autofocus stability
+  is confirmed

@@ -1,22 +1,20 @@
 record_type: maintenance_event
 microscope: scope-3i-csu-w1-spinning-disk
 maintenance_id: maint-2025-04-02-zdrive
-
 started_utc: '2025-03-06T10:00:00Z'
 completed_utc: '2025-04-02T13:21:00Z'
 status: completed
-
 reason: repair
 action: part_replacement
-action_details: >
-  The z-drive of the Zeiss Axio Observer Z1 stand was failing. When changing the objective, 
-  the objective would not move down and up, and the Definite Focus could not compensate. 
-  A remote troubleshooting session confirmed the breakdown. 
-  Resolution: The Z-guide mot assy was physically replaced onsite. The microscope was tested 
-  and is ready for use.
+action_details: 'The z-drive of the Zeiss Axio Observer Z1 stand was failing. When
+  changing the objective,  the objective would not move down and up, and the Definite
+  Focus could not compensate.  A remote troubleshooting session confirmed the breakdown.  Resolution:
+  The Z-guide mot assy was physically replaced onsite. The microscope was tested  and
+  is ready for use.
 
+  '
 service_provider: vendor
 company: Zeiss
 contact: Zeiss Field Service Engineer
-
-notes: 
+notes: null
+status_notes: Fully functional
