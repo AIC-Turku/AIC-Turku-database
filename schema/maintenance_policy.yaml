@@ -180,6 +180,13 @@ field_rules:
     used_by: [dashboard, operations]
     rationale: Operational outcome after the intervention is essential.
 
+  - path: status_notes
+    status: required
+    type: text
+    written_by: human
+    used_by: [dashboard, reports, operations]
+    rationale: Short dashboard-ready sentence describing current condition after maintenance, either confirming full functionality or listing remaining issues.
+
   - path: downtime_hours
     status: optional
     type: number
