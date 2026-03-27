@@ -1,0 +1,30 @@
+schema_version: 1
+record_type: "maintenance_event"
+maintenance_id: "maint_scope-3i-csu-w1-spinning-disk_20260327_objective-change-fix"
+microscope: "scope-3i-csu-w1-spinning-disk"
+service_provider: "vendor"
+company: ""
+contact: ""
+reference: ""
+started_utc: "2026-03-27T08:30:00Z"
+ended_utc: "2026-03-27T13:00:00Z"
+system_down_since_utc: "2026-03-27T08:30:00Z"
+reason: "problem"
+reason_details: "Objective change and z-drive operation produced abnormal noise and intermittent jamming."
+action: "repair"
+action_details: "Inspected the objective and z-drive system, found and replaced one cable with a bad connection, re-seated the PFS mirror that had shifted out of position and caused mechanical jamming, and cleaned accumulated dirt from the affected mechanism."
+microscope_status_before: "limited"
+microscope_status_after: "limited"
+downtime_hours: 4.5
+related_qc: []
+related_maintenance:
+  - "maint-2025-04-02-zdrive"
+attachments: []
+tags:
+  - "objective"
+  - "z-drive"
+  - "pfs"
+  - "cleaning"
+followup: "Objective/z-drive issue resolved, but system remains limited pending separate diagnostics for laser startup delay, intermittent camera errors, and SlideBook Y-direction montage bug."
+next_due_date: ""
+notes: "Maintenance report: objective change issue is fixed. The system was checked end-to-end. A faulty cable connection was identified and replaced. The issue was reproducible until the root cause was confirmed as a displaced PFS mirror that intermittently jammed the mechanism. After re-seating the mirror and cleaning dirt from the assembly, movement returned to smooth operation. The microscope remains in limited status due to separate unresolved issues: increasing laser startup delay, occasional camera errors, and a SlideBook montage definition problem in the Y-direction."
