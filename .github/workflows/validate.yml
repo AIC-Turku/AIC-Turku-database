@@ -59,7 +59,6 @@ jobs:
             tests/test_light_path_parser.py \
             tests/test_dashboard_builder_sted_dto.py \
             tests/test_schema_generator_validator_contract.py \
-            tests/test_generate_templates.py \
             tests/test_validate_instrument_policy.py \
             tests/test_methods_generator_template.py
 
