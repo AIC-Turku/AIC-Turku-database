@@ -2,11 +2,11 @@ terms:
   - id: in_service
     label: "In Service"
     description: "Instrument is fully available for use."
-    synonyms: ["operational", "available"]
+    synonyms: ["operational", "available", "fully functional"]
   - id: limited
     label: "Limited Service"
     description: "Instrument is partially available with restrictions."
-    synonyms: ["restricted", "degraded"]
+    synonyms: ["restricted", "degraded", "remaining issue"]
   - id: out_of_service
     label: "Out of Service"
     description: "Instrument is unavailable for use."

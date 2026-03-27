@@ -92,6 +92,11 @@ microscope_status_before: ""  # Microscope Status Before: Good context but not a
 microscope_status_after: ""  # Microscope Status After: Operational outcome after the intervention is essential. | Allowed values (canonical IDs): in_service, limited, out_of_service
 
 # -----------------------------------------------------------------------------
+# STATUS NOTES
+# -----------------------------------------------------------------------------
+status_notes: ""  # Status Notes: Short dashboard-ready sentence describing current condition after maintenance, either confirming full functionality or listing remaining issues.
+
+# -----------------------------------------------------------------------------
 # DOWNTIME HOURS
 # -----------------------------------------------------------------------------
 downtime_hours: 0.0  # Downtime Hours: Useful KPI, but can be derived from timestamps when both are present.

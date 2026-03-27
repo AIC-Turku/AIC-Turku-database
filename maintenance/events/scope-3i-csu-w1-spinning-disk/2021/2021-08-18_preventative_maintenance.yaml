@@ -14,3 +14,4 @@ artifacts:
   type: service_report
   path: Report-2021_Saari-Turku_18-Aug.pdf
 action: other
+status_notes: Fully functional
