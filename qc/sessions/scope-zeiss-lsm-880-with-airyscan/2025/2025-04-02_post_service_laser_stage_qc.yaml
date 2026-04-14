@@ -1,0 +1,185 @@
+schema_version: 1
+record_type: qc_session
+qc_id: qc_scope-zeiss-lsm-880-with-airyscan_20250402T1200Z_post_service_laser_stage_v1
+microscope: scope-zeiss-lsm-880-with-airyscan
+started_utc: '2025-04-02T12:00:00Z'
+performed_by: Zeiss
+reason: post_service_preventive_maintenance
+summary: Vendor PM QC documented end-of-life argon performance, low objective-plane
+  power for the argon lines, stage tile-scan error within spec, and detector SNR testing
+  deferred until argon replacement.
+notes: Laser power checks in the signed checklist were marked not in order. Argon
+  ex-fiber measurement reached 12.54 mW at max with 8.27 A tube current, but the engineer
+  noted the argon laser was at end of life and could not complete all tasks. Objective-plane
+  values were recorded at 100% output in spot scan. Detector SNR testing was deferred
+  because 488 nm power was under spec. Manual stage control passed and the 3x3 tile
+  scan had total error 4 px (<6 px), but the service report also notes occasional
+  non-smooth stage movement / hiccups. 
+performed:
+- qc_type: laser_power
+  details: Single-point laser power checks transcribed from the vendor preventive-maintenance
+    checklist. Objective-plane values are structured below; ex-fiber values are preserved
+    in manual inputs and notes.
+  artifacts:
+  - art_service_report_pdf
+  - art_maintenance_checklist_pdf
+- qc_type: stage
+  details: Manual XY stage function check and 3x3 tile-scan position error test (TileScanRotation.lvb,
+    512 px frame).
+  artifacts:
+  - art_maintenance_checklist_pdf
+- qc_type: alignment
+  details: Preventive-maintenance calibration checks passed for detector response,
+    spectral calibration, beam profile, AOTF/laser power linearization, scan field,
+    pinhole/MBS, and Airyscan alignment.
+  artifacts:
+  - art_maintenance_checklist_pdf
+inputs_human:
+- metric_id: laser.fiber.argon.max_power_mw
+  metric_class: laser_power
+  value: 12.54
+  unit: mW
+  details: Argon ex-fiber power at max output from checklist section 7.1.
+- metric_id: laser.fiber.argon.max_tube_current_a
+  metric_class: laser_power
+  value: 8.27
+  unit: A
+  details: Argon tube current at maximum output from checklist section 7.1.
+- metric_id: laser.fiber.argon.optimal_power_mw
+  metric_class: laser_power
+  value: 7.62
+  unit: mW
+  details: Argon ex-fiber power at the documented optimal setting (286 mV) from checklist
+    section 7.1.
+- metric_id: laser.fiber.argon.optimal_tube_current_a
+  metric_class: laser_power
+  value: 6.2
+  unit: A
+  details: Argon tube current at the documented optimal setting from checklist section
+    7.1.
+- metric_id: laser.fiber.405.power_mw
+  metric_class: laser_power
+  value: 13.21
+  unit: mW
+  details: 405 nm ex-fiber power from checklist section 7.2.
+- metric_id: laser.fiber.543.power_mw
+  metric_class: laser_power
+  value: 1.15
+  unit: mW
+  details: 543 nm ex-fiber power from checklist section 7.2.
+- metric_id: laser.fiber.633.power_mw
+  metric_class: laser_power
+  value: 5.63
+  unit: mW
+  details: 633 nm ex-fiber power from checklist section 7.2.
+- metric_id: stage.tile_scan_error_x_px
+  metric_class: stage_repeatability
+  value: 2
+  unit: px
+  details: 3x3 tile-scan error in X direction before stitching.
+- metric_id: stage.tile_scan_error_y_px
+  metric_class: stage_repeatability
+  value: 0
+  unit: px
+  details: 3x3 tile-scan error in Y direction before stitching.
+- metric_id: stage.tile_scan_error_total_px
+  metric_class: stage_repeatability
+  value: 4
+  unit: px
+  details: Calculated total tile-scan error; vendor spec noted as <6 px.
+- metric_id: signal_to_noise.detector_snr_test_status
+  metric_class: signal_to_noise
+  value: deferred
+  unit: ''
+  details: SNR test deferred until argon laser change because 488 nm power was under
+    spec.
+laser_inputs_human:
+  measurement_position: at_objective
+  measurement_position_details: Objective-plane measurements were recorded at 100%
+    output in spot scan using the standard vendor PM procedure (Plan-Neofluar 10x
+    test objective). Ex-fiber values were also reported in the same service paperwork
+    and are preserved above as manual inputs.
+  single_point_measurements:
+  - laser: '405'
+    setpoint: 100
+    setpoint_units: percent
+    power: 3.73
+    power_units: mW
+    details: Objective-plane power from checklist section 7.2 / 9.1.
+  - laser: '458'
+    setpoint: 100
+    setpoint_units: percent
+    power: 0.11
+    power_units: mW
+    details: Objective-plane argon-line power from checklist section 7.2 / 9.1; low
+      output.
+  - laser: '488'
+    setpoint: 100
+    setpoint_units: percent
+    power: 0.53
+    power_units: mW
+    details: Objective-plane argon-line power from checklist section 7.2 / 9.1; engineer
+      states 488 power was under spec and prevented SNR test.
+  - laser: '543'
+    setpoint: 100
+    setpoint_units: percent
+    power: 0.34
+    power_units: mW
+    details: Objective-plane power from checklist section 7.2 / 9.1.
+  - laser: '633'
+    setpoint: 100
+    setpoint_units: percent
+    power: 1.17
+    power_units: mW
+    details: Objective-plane power from checklist section 7.2 / 9.1.
+  linearity_series:
+  - laser: '405'
+    setpoint_units: percent
+    power_units: mW
+    points:
+    - setpoint: 100
+      power: 3.73
+    details: Single-point 100% objective-plane measurement transcribed from the vendor
+      PM checklist.
+  - laser: '458'
+    setpoint_units: percent
+    power_units: mW
+    points:
+    - setpoint: 100
+      power: 0.11
+    details: Single-point 100% objective-plane measurement transcribed from the vendor
+      PM checklist; low argon output.
+  - laser: '488'
+    setpoint_units: percent
+    power_units: mW
+    points:
+    - setpoint: 100
+      power: 0.53
+    details: Single-point 100% objective-plane measurement transcribed from the vendor
+      PM checklist; under spec per engineer note.
+  - laser: '543'
+    setpoint_units: percent
+    power_units: mW
+    points:
+    - setpoint: 100
+      power: 0.34
+    details: Single-point 100% objective-plane measurement transcribed from the vendor
+      PM checklist.
+  - laser: '633'
+    setpoint_units: percent
+    power_units: mW
+    points:
+    - setpoint: 100
+      power: 1.17
+    details: Single-point 100% objective-plane measurement transcribed from the vendor
+      PM checklist.
+  stability_series: []
+artifacts:
+- artifact_id: art_service_report_pdf
+  role: report
+  uri: maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Service_report_8583415960-10_2025-04-02_13-55.pdf
+  description: Zeiss field service report for service order 8583415960 / 10.
+- artifact_id: art_maintenance_checklist_pdf
+  role: report
+  uri: maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Signed_MaintenanceChecklist_LSM880_2018-09-25.pdf
+  description: Signed Zeiss preventive maintenance checklist for the LSM 880.
