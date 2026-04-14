@@ -1,0 +1,49 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-zeiss-lsm-880-with-airyscan_20250402_preventive_maintenance
+microscope: scope-zeiss-lsm-880-with-airyscan
+service_provider: vendor
+company: Carl Zeiss Oy
+contact: field service engineer
+reference: Service order 8583415960 / 10; external reference CCC-001568
+started_utc: '2025-04-02T12:00:00Z'
+reason: scheduled
+reason_details: Annual preventive maintenance visit for the Zeiss LSM 880 / Axio Observer
+  7. The visit was triggered by the routine vendor PM schedule and included follow-up
+  on reported stage movement irregularities and reduced argon laser performance.
+action: service
+action_details: Vendor preventive maintenance was performed according to the Zeiss
+  protocol. Checks passed for environment, cabling, system startup, anti-vibration
+  table, air filters, surge protectors, ECU voltages, electrical and laser safety,
+  PC ventilation, microscope general function, liquid-cooling related items, detector/calibration
+  routines, beam profile, AOTF, scan field, pinhole/MBS, and Airyscan alignment. MBS
+  filter wheel axles were cleaned and lubricated. Maincontroller battery was checked
+  at 3.03 V and not replaced. Manual stage control and tile-scan test were completed,
+  but stage motion was reported as occasionally not smooth. The argon laser output
+  was low and the engineer documented it as end of life, so some maintenance tasks
+  including the SNR test could not be completed and were deferred until after argon
+  laser replacement.
+microscope_status_after: limited
+status_notes: Usable, but limited by end-of-life argon output and occasional stage
+  movement hiccups.
+related_qc:
+- qc_scope-zeiss-lsm-880-with-airyscan_20250402T1200Z_post_service_laser_stage_v1
+attachments:
+- maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Service_report_8583415960-10_2025-04-02_13-55.pdf
+- maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Signed_MaintenanceChecklist_LSM880_2018-09-25.pdf
+tags:
+- scheduled
+- vendor
+- argon-laser
+- stage
+- airyscan
+notes: 'Timeline anchored to the field service report completion date (2025-04-02).
+  The signed maintenance checklist header shows 2025-03-24, so the repository timestamp
+  was normalized to 2025-04-02T12:00:00Z because the source documents do not provide
+  an authoritative visit start time. Final remarks state that the instrument is not
+  fully operational: argon lines 488/514 are low and out of spec, and the stage may
+  have a mechanical issue. Additional documented context: ZEN 2.3 SP1 FP3 HF 29 FP3,
+  CanCheck 13.0.19.1, RT PC MICO HS, user PC RAM 192 GB, Windows 7 64-bit. Recommended
+  follow-up: Replace the argon laser, then repeat the pending maintenance tasks and
+  detector SNR test. Review stage mechanics with PI and decide between service/maintenance
+  by PI or replacement with a new stage.'
