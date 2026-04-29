@@ -5,32 +5,10 @@
   }
   root.VirtualMicroscopeRuntime = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
-  const ROUTE_TAGS = new Set(['epi', 'widefield_fluorescence', 'tirf', 'confocal', 'confocal_point', 'confocal_spinning_disk', 'multiphoton', 'light_sheet', 'transmitted', 'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic', 'reflected_brightfield', 'optical_sectioning', 'spectral_imaging', 'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret', 'shared', 'all']);
-  const ROUTE_LABELS = {
-    confocal: 'Confocal',
-    confocal_point: 'Point-Scanning Confocal',
-    confocal_spinning_disk: 'Spinning-Disk Confocal',
-    epi: 'Epi-fluorescence',
-    widefield_fluorescence: 'Epi-fluorescence',
-    tirf: 'TIRF',
-    multiphoton: 'Multiphoton',
-    light_sheet: 'Light Sheet',
-    transmitted: 'Transmitted light',
-    transmitted_brightfield: 'Transmitted Brightfield',
-    phase_contrast: 'Phase Contrast',
-    darkfield: 'Darkfield',
-    dic: 'DIC',
-    reflected_brightfield: 'Reflected Brightfield',
-    optical_sectioning: 'Optical Sectioning',
-    spectral_imaging: 'Spectral Imaging',
-    flim: 'FLIM',
-    fcs: 'FCS',
-    ism: 'ISM',
-    smlm: 'SMLM',
-    spt: 'SPT',
-    fret: 'FRET',
-  };
-  const ROUTE_SORT_ORDER = ['confocal', 'confocal_point', 'confocal_spinning_disk', 'epi', 'widefield_fluorescence', 'tirf', 'multiphoton', 'light_sheet', 'transmitted', 'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic', 'reflected_brightfield', 'optical_sectioning', 'spectral_imaging', 'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret'];
+  const RESERVED_ROUTE_TAGS = new Set(['shared', 'all']);
+  // Route identifiers, labels, and ordering are DTO-owned. The runtime may
+  // normalize strings for matching, but must not constrain routes to a fixed
+  // modality vocabulary or invent route names beyond displaying the DTO id.
   const CAMERA_KINDS = new Set(['camera', 'scmos', 'cmos', 'ccd', 'emccd']);
   const HYBRID_KINDS = new Set(['hyd']);
   const APD_KINDS = new Set(['apd', 'spad']);
@@ -99,7 +77,7 @@
     const seenTags = new Set();
     items.forEach((item) => {
       const cleaned = cleanString(item).toLowerCase();
-      if (cleaned && ROUTE_TAGS.has(cleaned) && !seenTags.has(cleaned)) {
+      if (cleaned && !seenTags.has(cleaned)) {
         seenTags.add(cleaned);
         tags.push(cleaned);
       }
@@ -107,36 +85,25 @@
     return tags;
   }
 
-  function routeSortKey(route) {
-    const index = ROUTE_SORT_ORDER.indexOf(route);
-    return [index >= 0 ? index : ROUTE_SORT_ORDER.length, route];
-  }
-
-  function routeLabel(route) {
-    const normalized = cleanString(route).toLowerCase();
-    if (!normalized) return '';
-    return ROUTE_LABELS[normalized] || normalized.replace(/_/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
-  }
-
   function normalizeRouteCatalog(rawRoutes) {
     const catalog = [];
     const seen = new Set();
     (Array.isArray(rawRoutes) ? rawRoutes : []).forEach((entry) => {
       const routeId = cleanString(typeof entry === 'string' ? entry : (entry && (entry.id || entry.route || entry.value))).toLowerCase();
-      if (!routeId || !ROUTE_TAGS.has(routeId) || routeId === 'shared' || routeId === 'all' || seen.has(routeId)) return;
+      if (!routeId || RESERVED_ROUTE_TAGS.has(routeId) || seen.has(routeId)) return;
       seen.add(routeId);
+      const dtoLabel = typeof entry === 'string' ? '' : cleanString(entry && (entry.label || entry.name || entry.display_label));
       catalog.push({
         id: routeId,
-        label: cleanString(entry && entry.label) || routeLabel(routeId),
+        label: dtoLabel || routeId,
       });
     });
-    catalog.sort((left, right) => {
-      const [leftIndex, leftRoute] = routeSortKey(left.id);
-      const [rightIndex, rightRoute] = routeSortKey(right.id);
-      if (leftIndex !== rightIndex) return leftIndex - rightIndex;
-      return leftRoute.localeCompare(rightRoute);
-    });
     return catalog;
+  }
+
+
+  function routeLabel(route) {
+    return cleanString(route).toLowerCase();
   }
 
   function routesFromObject(obj) {
@@ -146,14 +113,14 @@
 
   function routeMatches(itemRoutes, activeRoute) {
     if (!activeRoute) return true;
-    if (!Array.isArray(itemRoutes) || itemRoutes.length === 0) return true;
+    if (!Array.isArray(itemRoutes) || itemRoutes.length === 0) return false;
     return itemRoutes.includes(activeRoute) || itemRoutes.includes('shared') || itemRoutes.includes('all');
   }
 
   function componentMatchesActiveRoute(component, route) {
     if (!route) return true;
     const tags = routesFromObject(component);
-    return !tags.length || routeMatches(tags, route);
+    return routeMatches(tags, route);
   }
 
   function detectorClass(kind) {
@@ -458,7 +425,7 @@
               splitterBinding.branchIndex.set(dedupeKey, splitterBinding.branches.length);
               splitterBinding.branches.push({
                 id: branchId,
-                label: cleanString(branch.label) || routeLabel(branchId),
+                label: cleanString(branch.label) || branchId,
                 mode: cleanString(branch.mode).toLowerCase() || '',
                 sequence: resolvedSequence,
                 target_ids: [],
@@ -466,9 +433,9 @@
               });
             }
             const entry = splitterBinding.branches[splitterBinding.branchIndex.get(dedupeKey)];
-            // Prefer an explicit label over the auto-generated routeLabel fallback.
+            // Prefer an explicit DTO label over the branch id.
             // The first route to provide a real label wins; subsequent routes keep it.
-            if (!entry.label || entry.label === routeLabel(branchId)) {
+            if (!entry.label || entry.label === branchId) {
               const candidateLabel = cleanString(branch.label);
               if (candidateLabel) entry.label = candidateLabel;
             }
@@ -517,7 +484,7 @@
       };
       routeCatalog.push({
         id: routeId,
-        label: cleanString(route && route.name) || routeLabel(routeId),
+        label: cleanString(route && (route.name || route.label || route.display_label)) || routeId,
         order: routeIndex,
       });
 
@@ -615,7 +582,7 @@
         ].filter((value, index, items) => items.indexOf(value) === index);
         return {
           id: routeId,
-          label: cleanString(route.name) || routeLabel(routeId),
+          label: cleanString(route.name || route.label || route.display_label) || routeId,
           order: routeIndex,
           record: { ...route },
           topology: {
@@ -3388,6 +3355,5 @@ function detectorCollectionMask(detector, grid) {
     selectionIsValid,
     simulateInstrument,
     optimizeLightPath,
-    ROUTE_SORT_ORDER: Array.from(ROUTE_SORT_ORDER),
   };
 });

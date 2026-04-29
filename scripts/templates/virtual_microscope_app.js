@@ -166,7 +166,7 @@
   function buildPipelineStages(topology) {
     const stages = [];
     const routeRecord = topology && topology.routeRecord ? topology.routeRecord : null;
-    const routeSteps = authoritativeRouteSteps(routeRecord);
+    const routeSteps = topologyRouteSteps(routeRecord);
     if (!routeSteps.length) return stages;
 
     if (routeSteps.some((step) => step && step.kind === 'source')) {
@@ -1174,35 +1174,41 @@
     );
   }
 
+  function normalizeRouteRecord(entry) {
+    if (!entry || typeof entry !== 'object') return null;
+    const record = entry.record && typeof entry.record === 'object' ? entry.record : entry;
+    const id = cleanString(entry.id || record.id).toLowerCase();
+    if (!id) return null;
+    return {
+      ...entry,
+      id,
+      label: cleanString(entry.label || record.name || record.label || record.display_label) || id,
+      record,
+      routeHardwareUsage: Array.isArray(entry.routeHardwareUsage) ? entry.routeHardwareUsage : [],
+      routeLocalHardwareUsage: Array.isArray(entry.routeLocalHardwareUsage) ? entry.routeLocalHardwareUsage : [],
+    };
+  }
+
   function routeRecordForInstrument(instrument, route) {
     const routeId = cleanString(route).toLowerCase();
-    const authoritativeRoutes = instrument && instrument.routeTopology && Array.isArray(instrument.routeTopology.routes)
-      ? instrument.routeTopology.routes
+    const routes = (instrument && instrument.routeTopology && Array.isArray(instrument.routeTopology.routes))
+      ? instrument.routeTopology.routes.map(normalizeRouteRecord).filter(Boolean)
       : [];
-    const routes = authoritativeRoutes.length
-      ? authoritativeRoutes
-      : (Array.isArray(instrument && instrument.lightPaths) ? instrument.lightPaths : []);
-    if (routeId) {
-      const explicit = routes.find((entry) => cleanString(entry && entry.id).toLowerCase() === routeId);
-      if (explicit) return explicit;
-      const byModality = routes.find((entry) => {
-        const modalities = VM.normalizeRouteTags(
-          (entry && entry.record && entry.record.route_identity && entry.record.route_identity.modalities)
-          || (entry && entry.record && entry.record.modalities)
-          || (entry && entry.route_identity && entry.route_identity.modalities)
-          || (entry && entry.modalities)
-          || []
-        );
-        return modalities.includes(routeId);
-      });
-      if (byModality) return byModality;
+    if (!routes.length) {
+      throw new Error('[VM] routeRecordForInstrument: DTO routeTopology.routes is required. Legacy lightPaths fallback is disabled.');
     }
-    const fallbackId = cleanString(instrument && instrument.defaultRoute).toLowerCase();
-    if (fallbackId) {
-      const fallback = routes.find((entry) => cleanString(entry && entry.id).toLowerCase() === fallbackId);
-      if (fallback) return fallback;
+    if (!routeId) {
+      const defaultId = cleanString(instrument && instrument.defaultRoute).toLowerCase();
+      if (!defaultId) throw new Error('[VM] routeRecordForInstrument: active route and DTO defaultRoute are missing.');
+      const defaultRoute = routes.find((entry) => entry.id === defaultId);
+      if (!defaultRoute) throw new Error('[VM] routeRecordForInstrument: DTO defaultRoute "' + defaultId + '" is not present in routeTopology.routes.');
+      return defaultRoute;
     }
-    return routes[0] || null;
+    const explicit = routes.find((entry) => entry.id === routeId);
+    if (!explicit) {
+      throw new Error('[VM] routeRecordForInstrument: active route "' + routeId + '" is not present in DTO routeTopology.routes.');
+    }
+    return explicit;
   }
 
   function detectorMechanismsForEndpointIds(instrument, endpointIds, route) {
@@ -1231,23 +1237,37 @@
     return catalog;
   }
 
+  function routeRecordPayload(routeRecord) {
+    return routeRecord && routeRecord.record && typeof routeRecord.record === 'object'
+      ? routeRecord.record
+      : routeRecord;
+  }
+
+  function topologyRouteSteps(routeRecord) {
+    const record = routeRecordPayload(routeRecord);
+    return Array.isArray(record && record.route_steps) ? record.route_steps : [];
+  }
+
+  function selectedRouteSteps(routeRecord) {
+    const record = routeRecordPayload(routeRecord);
+    const selectedExecution = record && record.selected_execution && typeof record.selected_execution === 'object'
+      ? record.selected_execution
+      : null;
+    return Array.isArray(selectedExecution && selectedExecution.selected_route_steps)
+      ? selectedExecution.selected_route_steps
+      : [];
+  }
+
   function authoritativeRouteSteps(routeRecord) {
-    const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;
-    const selectedRouteSteps = Array.isArray(selectedExecution && selectedExecution.selected_route_steps) ? selectedExecution.selected_route_steps : [];
-    if (selectedRouteSteps.length) return selectedRouteSteps;
-    return Array.isArray(routeRecord && routeRecord.record && routeRecord.record.route_steps)
-      ? routeRecord.record.route_steps
-      : Array.isArray(routeRecord && routeRecord.route_steps)
-        ? routeRecord.route_steps
-        : [];
+    return topologyRouteSteps(routeRecord);
   }
 
   function buildRouteTraversalEntries(instrument, routeRecord, route) {
     const catalog = opticalMechanismCatalog(instrument, route);
     const seenControlIds = new Set();
-    const routeSteps = authoritativeRouteSteps(routeRecord);
+    const routeSteps = topologyRouteSteps(routeRecord);
     if (!routeSteps.length) {
-      throw new Error('[VM] buildRouteTraversalEntries: active route is missing authoritative route_steps.');
+      throw new Error('[VM] buildRouteTraversalEntries: active route is missing DTO route_steps.');
     }
     const buildResolvedTraversal = (steps, phase, prefix, requireStepId) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
       if (!(step && typeof step === 'object')) return [];
@@ -1480,7 +1500,9 @@
   }
 
   function activeRouteOrder() {
-    return VM.ROUTE_SORT_ORDER || ['confocal', 'confocal_point', 'confocal_spinning_disk', 'epi', 'widefield_fluorescence', 'tirf', 'multiphoton', 'light_sheet', 'transmitted', 'transmitted_brightfield', 'phase_contrast', 'darkfield', 'dic', 'reflected_brightfield', 'optical_sectioning', 'spectral_imaging', 'flim', 'fcs', 'ism', 'smlm', 'spt', 'fret'];
+    return Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
+      ? state.activeInstrument.routeOptions.map((entry) => cleanString(entry && entry.id).toLowerCase()).filter(Boolean)
+      : [];
   }
 
   function inferRouteFromSourceSettings() {
@@ -1500,7 +1522,11 @@
 
   function normalizeRouteLabel(route) {
     if (!route) return 'Any compatible route';
-    return VM.routeLabel ? VM.routeLabel(route) : route.toUpperCase();
+    const routeId = cleanString(route).toLowerCase();
+    const match = (Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
+      ? state.activeInstrument.routeOptions
+      : []).find((entry) => cleanString(entry && entry.id).toLowerCase() === routeId);
+    return cleanString(match && match.label) || routeId;
   }
 
   function describeSpectraSource(sourceId) {
@@ -2504,25 +2530,13 @@
 
   function collectRuntimeSelection() {
     const topology = state.routeTopology || safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
-    if (!topology || !topology.routeRecord || !topology.routeRecord.record || !Array.isArray(authoritativeRouteSteps(topology.routeRecord))) {
-      const message = 'Route topology is unavailable; running degraded simulation without parser-authored route steps.';
-      console.warn(message);
-      setInlineStatus(DOM.searchStatus, message, 'warning');
-      setInlineStatus(DOM.localSearchStatus, message, 'warning');
-      return {
-        sources: [],
-        excitation: [],
-        dichroic: [],
-        emission: [],
-        splitters: [],
-        detectors: [],
-        selectionMap: buildSelectionMapFromDom(),
-        debugSelections: [],
-        selectedComponentByMechanism: {},
-        resolvedExecution: [],
-        illuminationComponents: [],
-        detectionComponents: [],
-      };
+    const selectedSteps = selectedRouteSteps(topology && topology.routeRecord);
+    if (!topology || !topology.routeRecord || !topologyRouteSteps(topology.routeRecord).length || !selectedSteps.length) {
+      const message = 'Route topology is unavailable or missing selected_execution; strict DTO-driven simulation cannot run.';
+      console.error(message);
+      setInlineStatus(DOM.searchStatus, message, 'error');
+      setInlineStatus(DOM.localSearchStatus, message, 'error');
+      throw new Error('[VM] collectRuntimeSelection: DTO route_steps and selected_execution.selected_route_steps are required.');
     }
     const selection = {
       sources: [],
@@ -2651,10 +2665,16 @@ if (block.dataset.mechanismType === 'spectral_array') {
       });
     });
 
-    const selectedRouteSteps = authoritativeRouteSteps(topology.routeRecord);
-    selection.resolvedExecution = resolveSelectedExecution(selectedRouteSteps, selection.selectedComponentByMechanism);
-    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination');
-    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection');
+    const selectedExecutionSteps = selectedRouteSteps(topology.routeRecord);
+    selection.resolvedExecution = resolveSelectedExecution(selectedExecutionSteps, selection.selectedComponentByMechanism);
+    const splitterSelectionMap = new Map(
+      (selection.splitters || []).map((splitter) => [
+        cleanString(splitter && splitter.id).toLowerCase(),
+        Array.isArray(splitter && splitter.selected_branch_ids) ? splitter.selected_branch_ids : [],
+      ])
+    );
+    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination', splitterSelectionMap);
+    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection', splitterSelectionMap);
 
     return selection;
   }
@@ -2818,6 +2838,7 @@ if (block.dataset.mechanismType === 'spectral_array') {
 
   function orderedComponentsFromExecution(resolvedSteps, phase, splitterSelections = new Map()) {
     if (!Array.isArray(resolvedSteps)) return [];
+    const branchIdentifier = (branch) => cleanString(branch && (branch.branch_id || branch.id)).toLowerCase();
     const mode = phase === 'illumination' ? 'excitation' : 'emission';
     const ordered = [];
 
@@ -2885,7 +2906,7 @@ if (block.dataset.mechanismType === 'spectral_array') {
           );
 
           const branchesToTraverse = step.routing.selection_mode === 'exclusive' && selectedBranchIds.size
-            ? step.routing.branches.filter((branch) => selectedBranchIds.has(cleanString(branch && branch.id)))
+            ? step.routing.branches.filter((branch) => selectedBranchIds.has(branchIdentifier(branch)))
             : step.routing.branches;
 
           branchesToTraverse.forEach((branch) => {
