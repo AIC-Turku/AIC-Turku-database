@@ -2,42 +2,8 @@ import unittest
 from unittest import mock
 import json
 import os
-import sys
 import tempfile
-import types
 from pathlib import Path
-
-yaml_stub = types.ModuleType("yaml")
-
-
-class _YamlError(Exception):
-    pass
-
-
-def _safe_load(value):
-    return json.loads(value)
-
-
-yaml_stub.safe_load = _safe_load
-yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault("yaml", yaml_stub)
-
-jinja2_stub = types.ModuleType("jinja2")
-
-
-class _DummyEnvironment:
-    def __init__(self, *args, **kwargs):
-        pass
-
-
-class _DummyLoader:
-    def __init__(self, *args, **kwargs):
-        pass
-
-
-jinja2_stub.Environment = _DummyEnvironment
-jinja2_stub.FileSystemLoader = _DummyLoader
-sys.modules.setdefault("jinja2", jinja2_stub)
 
 from scripts.dashboard_builder import (
     build_hardware_dto,

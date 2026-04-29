@@ -1,24 +1,5 @@
 import copy
-import json
-import sys
-import types
 import unittest
-
-
-yaml_stub = types.ModuleType("yaml")
-
-
-class _YamlError(Exception):
-    pass
-
-
-def _safe_load(value):
-    return json.loads(value)
-
-
-yaml_stub.safe_load = _safe_load
-yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault("yaml", yaml_stub)
 
 from scripts.build_context import build_instrument_context
 from scripts.light_path_parser import migrate_instrument_to_light_path_v2

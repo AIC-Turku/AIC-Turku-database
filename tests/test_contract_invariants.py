@@ -62,6 +62,7 @@ VALIDATE_PATH = REPO_ROOT / "scripts" / "validate.py"
 RUNTIME_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_runtime.js"
 APP_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_app.js"
 METHODS_TEMPLATE_PATH = REPO_ROOT / "scripts" / "templates" / "methods_generator.md.j2"
+METHODS_APP_PATH = REPO_ROOT / "assets" / "javascripts" / "methods_generator_app.js"
 PLAN_TEMPLATE_PATH = REPO_ROOT / "scripts" / "templates" / "plan_experiments.md.j2"
 EXAMPLE_INSTRUMENTS = [
     REPO_ROOT / "instruments" / "3i CSU-W1 Spinning Disk.yaml",
@@ -440,7 +441,7 @@ class ContractInvariantTests(unittest.TestCase):
         )
 
     def test_methods_and_plan_consumers_keep_authoritative_route_contract_as_primary_input(self) -> None:
-        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+        methods_source = METHODS_APP_PATH.read_text(encoding="utf-8")
         plan_source = PLAN_TEMPLATE_PATH.read_text(encoding="utf-8")
 
         self.assertIn("authoritative_route_contract?.routes", methods_source)
@@ -484,7 +485,7 @@ class ContractInvariantTests(unittest.TestCase):
 
     def test_methods_generator_reads_selected_route_steps_not_stages(self) -> None:
         """Methods generator must read selected_route_steps, not deprecated stages or static route_steps."""
-        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+        methods_source = METHODS_APP_PATH.read_text(encoding="utf-8")
 
         self.assertIn("selected_route_steps", methods_source)
         # Must not read deprecated 'stages' field from runtime config
@@ -493,7 +494,7 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertNotIn("runtimeConfig.route_steps", methods_source)
 
     def test_methods_template_keeps_exported_runtime_primary_and_legacy_fallback_only(self) -> None:
-        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+        methods_source = METHODS_APP_PATH.read_text(encoding="utf-8")
         self.assertIn("Exported runtime selection is authoritative for this page", methods_source)
         self.assertIn("localStorage is legacy fallback", methods_source)
         self.assertNotIn("paragraphRuntimeSelectedConfig", methods_source)
@@ -537,7 +538,7 @@ class ContractInvariantTests(unittest.TestCase):
 
     def test_acquisition_plan_wording_does_not_overstate_execution(self) -> None:
         """Sequential acquisition must be described as planned, not as executed."""
-        methods_source = METHODS_TEMPLATE_PATH.read_text(encoding="utf-8")
+        methods_source = METHODS_APP_PATH.read_text(encoding="utf-8")
 
         # Must not claim sequential acquisition "was executed"
         self.assertNotIn("was required and executed", methods_source)
