@@ -56,7 +56,6 @@ ROUTE_LABELS = {
     "spt": "SPT",
     "fret": "FRET",
 }
-ROUTE_SORT_ORDER = ("confocal", "confocal_point", "confocal_spinning_disk", "epi", "widefield_fluorescence", "tirf", "multiphoton", "light_sheet", "transmitted", "transmitted_brightfield", "phase_contrast", "darkfield", "dic", "reflected_brightfield", "optical_sectioning", "spectral_imaging", "flim", "fcs", "ism", "smlm", "spt", "fret")
 CUBE_LINK_KEYS = ("excitation_filter", "dichroic", "emission_filter")
 CAMERA_DETECTOR_KINDS = {"camera", "scmos", "cmos", "ccd", "emccd"}
 POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}
@@ -981,6 +980,17 @@ def _has_canonical_light_path_input(instrument_dict: dict[str, Any]) -> bool:
     return False
 
 
+def has_legacy_light_path_input(instrument_dict: dict[str, Any]) -> bool:
+    """Return True when legacy-only topology structures are present."""
+    hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
+    legacy_light_path = hardware.get("light_path")
+    legacy_light_sources = hardware.get("light_sources")
+    return (
+        (isinstance(legacy_light_path, dict) and bool(legacy_light_path))
+        or (isinstance(legacy_light_sources, list) and bool(legacy_light_sources))
+    )
+
+
 
 def parse_canonical_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, Any]:
     """Parse the explicit canonical v2 authoring contract only.
@@ -1043,6 +1053,18 @@ def canonicalize_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, 
     if _has_canonical_light_path_input(payload):
         return parse_canonical_light_path_model(payload)
     return import_legacy_light_path_model(payload)
+
+
+def canonicalize_light_path_model_strict(instrument_dict: dict[str, Any]) -> dict[str, Any]:
+    """Production strict canonicalizer.
+
+    Only explicit canonical v2 topology is accepted. Legacy topology is for
+    migration/audit compatibility tooling only.
+    """
+    payload = instrument_dict if isinstance(instrument_dict, dict) else {}
+    if not _has_canonical_light_path_input(payload):
+        raise ValueError("Legacy-only topology is not allowed in strict production mode.")
+    return parse_canonical_light_path_model(payload)
 
 
 def migrate_instrument_to_light_path_v2(instrument_dict: dict[str, Any]) -> dict[str, Any]:
@@ -2631,10 +2653,9 @@ def _choice_positions(mechanism: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _route_sort_key(route_id: str) -> tuple[int, str]:
-    try:
-        return ROUTE_SORT_ORDER.index(route_id), route_id
-    except ValueError:
-        return len(ROUTE_SORT_ORDER), route_id
+    # Display-only stable fallback ordering for compatibility paths.
+    # Production canonical route order should come from authored light_paths[] order.
+    return (0, route_id)
 
 
 def _endpoint_ids_in_sequence(sequence: list[dict[str, Any]]) -> list[str]:
