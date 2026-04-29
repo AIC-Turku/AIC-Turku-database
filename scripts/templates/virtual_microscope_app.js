@@ -166,7 +166,7 @@
   function buildPipelineStages(topology) {
     const stages = [];
     const routeRecord = topology && topology.routeRecord ? topology.routeRecord : null;
-    const routeSteps = topologyRouteSteps(routeRecord);
+    const routeSteps = authoritativeRouteSteps(routeRecord);
     if (!routeSteps.length) return stages;
 
     if (routeSteps.some((step) => step && step.kind === 'source')) {
@@ -1259,6 +1259,9 @@
   }
 
   function authoritativeRouteSteps(routeRecord) {
+    const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;
+    const selectedRouteSteps = Array.isArray(selectedExecution && selectedExecution.selected_route_steps) ? selectedExecution.selected_route_steps : [];
+    if (selectedRouteSteps.length) return selectedRouteSteps;
     return topologyRouteSteps(routeRecord);
   }
 
@@ -1267,7 +1270,7 @@
     const seenControlIds = new Set();
     const routeSteps = topologyRouteSteps(routeRecord);
     if (!routeSteps.length) {
-      throw new Error('[VM] buildRouteTraversalEntries: active route is missing DTO route_steps.');
+      throw new Error('[VM] buildRouteTraversalEntries: active route is missing authoritative route_steps.');
     }
     const buildResolvedTraversal = (steps, phase, prefix, requireStepId) => (Array.isArray(steps) ? steps : []).flatMap((step, index) => {
       if (!(step && typeof step === 'object')) return [];
@@ -1500,9 +1503,19 @@
   }
 
   function activeRouteOrder() {
-    return Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)
-      ? state.activeInstrument.routeOptions.map((entry) => cleanString(entry && entry.id).toLowerCase()).filter(Boolean)
-      : [];
+    if (!Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)) return [];
+    const routeIds = state.activeInstrument.routeOptions
+      .map((entry) => cleanString(entry && entry.id).toLowerCase())
+      .filter(Boolean);
+    if (Array.isArray(VM.ROUTE_SORT_ORDER)) {
+      const sortOrder = VM.ROUTE_SORT_ORDER;
+      routeIds.sort((a, b) => {
+        const ai = sortOrder.indexOf(a);
+        const bi = sortOrder.indexOf(b);
+        return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+      });
+    }
+    return routeIds;
   }
 
   function inferRouteFromSourceSettings() {
@@ -2530,7 +2543,7 @@
 
   function collectRuntimeSelection() {
     const topology = state.routeTopology || safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
-    const selectedSteps = selectedRouteSteps(topology && topology.routeRecord);
+    const selectedSteps = authoritativeRouteSteps(topology && topology.routeRecord);
     if (!topology || !topology.routeRecord || !topologyRouteSteps(topology.routeRecord).length || !selectedSteps.length) {
       const message = 'Route topology is unavailable or missing selected_execution; strict DTO-driven simulation cannot run.';
       console.error(message);
@@ -2665,16 +2678,16 @@ if (block.dataset.mechanismType === 'spectral_array') {
       });
     });
 
-    const selectedExecutionSteps = selectedRouteSteps(topology.routeRecord);
-    selection.resolvedExecution = resolveSelectedExecution(selectedExecutionSteps, selection.selectedComponentByMechanism);
+    const selectedRouteSteps = authoritativeRouteSteps(topology.routeRecord);
+    selection.resolvedExecution = resolveSelectedExecution(selectedRouteSteps, selection.selectedComponentByMechanism);
     const splitterSelectionMap = new Map(
       (selection.splitters || []).map((splitter) => [
         cleanString(splitter && splitter.id).toLowerCase(),
         Array.isArray(splitter && splitter.selected_branch_ids) ? splitter.selected_branch_ids : [],
       ])
     );
-    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination', splitterSelectionMap);
-    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection', splitterSelectionMap);
+    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination');
+    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection');
 
     return selection;
   }

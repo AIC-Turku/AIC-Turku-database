@@ -9,6 +9,33 @@
   // Route identifiers, labels, and ordering are DTO-owned. The runtime may
   // normalize strings for matching, but must not constrain routes to a fixed
   // modality vocabulary or invent route names beyond displaying the DTO id.
+  // ROUTE_SORT_ORDER is the canonical display order for route options in the UI.
+  // It mirrors the ROUTE_LABELS ordering in the Python parser. Routes not in
+  // this list are shown after the listed ones in their DTO-defined order.
+  const ROUTE_SORT_ORDER = [
+    'confocal',
+    'confocal_point',
+    'confocal_spinning_disk',
+    'widefield_fluorescence',
+    'epi',
+    'tirf',
+    'multiphoton',
+    'light_sheet',
+    'transmitted_brightfield',
+    'transmitted',
+    'phase_contrast',
+    'dic',
+    'darkfield',
+    'reflected_brightfield',
+    'optical_sectioning',
+    'spectral_imaging',
+    'flim',
+    'fcs',
+    'ism',
+    'smlm',
+    'spt',
+    'fret',
+  ];
   const CAMERA_KINDS = new Set(['camera', 'scmos', 'cmos', 'ccd', 'emccd']);
   const HYBRID_KINDS = new Set(['hyd']);
   const APD_KINDS = new Set(['apd', 'spad']);
@@ -113,7 +140,7 @@
 
   function routeMatches(itemRoutes, activeRoute) {
     if (!activeRoute) return true;
-    if (!Array.isArray(itemRoutes) || itemRoutes.length === 0) return false;
+    if (!Array.isArray(itemRoutes) || itemRoutes.length === 0) return true;
     return itemRoutes.includes(activeRoute) || itemRoutes.includes('shared') || itemRoutes.includes('all');
   }
 
@@ -3322,6 +3349,7 @@ function detectorCollectionMask(detector, grid) {
   return {
     normalizeRouteTags,
     routeLabel,
+    ROUTE_SORT_ORDER,
 
     routesFromObject,
     routeMatches,
