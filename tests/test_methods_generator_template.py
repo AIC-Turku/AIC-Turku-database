@@ -16,6 +16,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         if shutil.which("node") is None:
             raise unittest.SkipTest("Node.js is required for methods generator template tests.")
+        external_script = REPO_ROOT / "assets" / "javascripts" / "methods_generator_app.js"
+        if external_script.exists():
+            cls.script_source = external_script.read_text(encoding="utf-8")
+            return
         content = TEMPLATE_PATH.read_text(encoding="utf-8")
         scripts = re.findall(r"<script(?: [^>]*)?>(.*?)</script>", content, flags=re.S)
         if not scripts:
@@ -149,6 +153,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
 
             globalThis.document = document;
             globalThis.window = globalThis;
+            globalThis.listeners = {{}};
+            globalThis.addEventListener = function(name, fn) {{ this.listeners[name] = fn; }};
             globalThis.navigator = {{ clipboard: {{ writeText: async () => undefined }} }};
             globalThis.setTimeout = (fn) => {{ if (typeof fn === 'function') fn(); return 0; }};
             globalThis.fetch = async () => {{
@@ -160,7 +166,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             eval(scriptSource);
 
             (async () => {{
-              await document.listeners.DOMContentLoaded();
+              const domReady = document.listeners.DOMContentLoaded || globalThis.listeners.DOMContentLoaded;
+              if (typeof domReady === 'function') {{
+                await domReady();
+              }}
               const result = await (async () => {{
                 {actions_js}
               }})();
@@ -181,6 +190,11 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         if proc.returncode != 0:
             raise AssertionError(f"Node template run failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}")
         return json.loads(proc.stdout)
+
+    def test_methods_app_does_not_invent_missing_capabilities(self) -> None:
+        self.assertNotIn("Unknown objective", self.script_source)
+        self.assertNotIn("Unknown detector", self.script_source)
+        self.assertNotIn("Unknown source", self.script_source)
 
     def test_xcelligence_acknowledgement_is_emitted_when_matching_instrument_is_used(self) -> None:
         instrument = {

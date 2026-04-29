@@ -2,42 +2,8 @@ import unittest
 from unittest import mock
 import json
 import os
-import sys
 import tempfile
-import types
 from pathlib import Path
-
-yaml_stub = types.ModuleType("yaml")
-
-
-class _YamlError(Exception):
-    pass
-
-
-def _safe_load(value):
-    return json.loads(value)
-
-
-yaml_stub.safe_load = _safe_load
-yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault("yaml", yaml_stub)
-
-jinja2_stub = types.ModuleType("jinja2")
-
-
-class _DummyEnvironment:
-    def __init__(self, *args, **kwargs):
-        pass
-
-
-class _DummyLoader:
-    def __init__(self, *args, **kwargs):
-        pass
-
-
-jinja2_stub.Environment = _DummyEnvironment
-jinja2_stub.FileSystemLoader = _DummyLoader
-sys.modules.setdefault("jinja2", jinja2_stub)
 
 from scripts.dashboard_builder import (
     build_hardware_dto,
@@ -46,6 +12,7 @@ from scripts.dashboard_builder import (
     build_methods_generator_instrument_export,
     build_methods_generator_page_config,
     build_optical_path_dto,
+    build_optical_path_view_dto,
     json_script_data,
     normalize_hardware,
     normalize_instrument_dto,
@@ -152,6 +119,12 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         logic = hardware["illumination_logic"][0]
         self.assertIn("Adaptive illumination", logic["method_sentence"])
         self.assertIn("Default enabled", "\n".join(logic["spec_lines"]))
+
+    def test_optical_path_view_reports_missing_canonical_fields(self) -> None:
+        view = build_optical_path_view_dto({}, vocabulary=self.vocabulary)
+        diagnostics = view.get("view_diagnostics") if isinstance(view, dict) else []
+        self.assertTrue(any(item.get("code") == "missing_hardware_inventory" for item in diagnostics))
+        self.assertTrue(any(item.get("code") == "missing_light_paths" for item in diagnostics))
 
 
 
@@ -639,6 +612,17 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                 "route": "epi",
                 "sources": [{"display_label": "Laser 488"}],
             },
+            "canonical": {
+                "hardware": {
+                    "objectives": [{"id": "obj_63x", "model": "63x Oil"}],
+                    "sources": [{"id": "src_488", "model": "488 laser"}],
+                    "detectors": [{"id": "det_hyd", "model": "HyD"}],
+                },
+                "software": [{"id": "sw1", "name": "LAS X"}],
+            },
+            "lightpath_dto": {
+                "light_paths": [{"id": "epi", "name": "Epi"}, {"id": "confocal", "name": "Confocal"}]
+            },
         }
 
         exported = build_methods_generator_instrument_export(instrument)
@@ -651,6 +635,24 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             exported["hardware"]["optical_path"]["authoritative_route_contract"]["available_routes"][0]["id"],
             "epi",
         )
+        self.assertEqual(exported["methods_view_dto"]["routes"][0]["id"], "epi")
+        self.assertEqual(exported["methods_view_dto"]["routes"][1]["id"], "confocal")
+        self.assertEqual(exported["methods_view_dto"]["objectives"][0]["id"], "obj_63x")
+        self.assertEqual(exported["methods_view_dto"]["light_sources"][0]["id"], "src_488")
+        self.assertEqual(exported["methods_view_dto"]["detectors"][0]["id"], "det_hyd")
+        self.assertEqual(exported["methods_view_dto"]["software"][0]["name"], "LAS X")
+
+    def test_methods_generator_export_reports_missing_canonical_data(self) -> None:
+        exported = build_methods_generator_instrument_export(
+            {
+                "dto": {"id": "scope-missing"},
+                "canonical": {},
+                "lightpath_dto": {},
+            }
+        )
+        diagnostics = exported["methods_view_dto"]["diagnostics"]
+        self.assertTrue(any(item["code"] == "missing_canonical_hardware" for item in diagnostics))
+        self.assertTrue(any(item["code"] == "missing_canonical_routes" for item in diagnostics))
 
     def test_llm_inventory_payload_includes_policy_grounding_metadata(self) -> None:
         payload = build_llm_inventory_payload(
@@ -875,6 +877,40 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         )
         self.assertIn("missing_categories", route_summary["known_vs_unknown"])
 
+    def test_custom_route_ids_and_authored_order_are_preserved_in_methods_and_llm_exports(self) -> None:
+        instrument = {
+            "dto": {
+                "id": "scope-custom-order",
+                "display_name": "Custom Order Scope",
+                "hardware": {
+                    "optical_path": {
+                        "authoritative_route_contract": {
+                            "available_routes": [
+                                {"id": "route_zeta", "display_label": "Zeta"},
+                                {"id": "route_alpha", "display_label": "Alpha"},
+                            ],
+                            "routes": [{"id": "route_zeta"}, {"id": "route_alpha"}],
+                        }
+                    }
+                },
+            },
+            "canonical": {
+                "hardware": {"objectives": [], "sources": [], "detectors": []},
+                "software": [],
+                "policy": {},
+            },
+            "lightpath_dto": {
+                "light_paths": [{"id": "route_zeta", "name": "Zeta"}, {"id": "route_alpha", "name": "Alpha"}]
+            },
+        }
+
+        methods_export = build_methods_generator_instrument_export(instrument)
+        self.assertEqual([r["id"] for r in methods_export["methods_view_dto"]["routes"]], ["route_zeta", "route_alpha"])
+
+        llm_export = build_llm_inventory_payload({"short_name": "Core"}, [instrument])
+        route_rows = llm_export["active_microscopes"][0]["llm_context"]["authoritative_route_contract"]["available_routes"]
+        self.assertEqual([r["id"] for r in route_rows], ["route_zeta", "route_alpha"])
+
     def test_json_script_data_escapes_script_terminators_and_round_trips(self) -> None:
         payload = {"text": 'Quote "line"\n</script><script>alert(1)</script>'}
         encoded = json_script_data(payload)
@@ -926,9 +962,13 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
     def test_methods_and_plan_templates_reference_authoritative_route_contract(self) -> None:
         methods_template = Path("scripts/templates/methods_generator.md.j2").read_text(encoding="utf-8")
+        methods_script = Path("assets/javascripts/methods_generator_app.js").read_text(encoding="utf-8")
         plan_template = Path("scripts/templates/plan_experiments.md.j2").read_text(encoding="utf-8")
 
-        self.assertIn("authoritative_route_contract", methods_template)
+        self.assertTrue(
+            ("authoritative_route_contract" in methods_template)
+            or ("authoritative_route_contract" in methods_script)
+        )
         self.assertIn("llm_context.authoritative_route_contract", plan_template)
 
     def test_optical_path_dto_marks_missing_explicit_terminals_as_incomplete(self) -> None:

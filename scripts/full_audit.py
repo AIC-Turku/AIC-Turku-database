@@ -36,7 +36,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.dashboard_builder import YamlLoadError, load_instruments, validated_instrument_selection
-from scripts.light_path_parser import canonicalize_light_path_model, generate_virtual_microscope_payload, infer_light_source_role
+from scripts.light_path_parser import canonicalize_light_path_model, generate_virtual_microscope_payload, infer_light_source_role, has_legacy_light_path_input
 from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     build_instrument_completeness_report,
@@ -182,6 +182,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
     canonical = instrument.get("canonical") if isinstance(instrument.get("canonical"), dict) else {}
     hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
     light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
+    legacy_topology_detected = has_legacy_light_path_input(canonical)
     payload = generate_virtual_microscope_payload(canonical)
     runtime_projection = (
         ((payload.get("projections") or {}).get("virtual_microscope") or {})
@@ -478,6 +479,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                                     )
 
     return {
+        "legacy_topology_detected": legacy_topology_detected,
         "instrument_id": instrument.get("id"),
         "display_name": instrument.get("display_name"),
         "counts": {
@@ -582,6 +584,7 @@ def audit_js_runtime_authority(repo_root: Path) -> dict[str, Any]:
     app_path = repo_root / "scripts" / "templates" / "virtual_microscope_app.js"
     runtime_path = repo_root / "scripts" / "templates" / "virtual_microscope_runtime.js"
     methods_path = repo_root / "scripts" / "templates" / "methods_generator.md.j2"
+    methods_app_path = repo_root / "assets" / "javascripts" / "methods_generator_app.js"
     issues: list[dict[str, str]] = []
 
     if not app_path.exists():
@@ -590,6 +593,8 @@ def audit_js_runtime_authority(repo_root: Path) -> dict[str, Any]:
     app_source = app_path.read_text(encoding="utf-8")
     runtime_source = runtime_path.read_text(encoding="utf-8") if runtime_path.exists() else ""
     methods_source = methods_path.read_text(encoding="utf-8") if methods_path.exists() else ""
+    methods_app_source = methods_app_path.read_text(encoding="utf-8") if methods_app_path.exists() else ""
+    methods_combined = f"{methods_source}\n{methods_app_source}"
 
     # ── Check 1: Simulation must use resolvedExecution, not DOM-derived order ──
     if "selection.resolvedExecution = resolveSelectedExecution(" not in app_source:
@@ -658,20 +663,20 @@ def audit_js_runtime_authority(repo_root: Path) -> dict[str, Any]:
         })
 
     # ── Check 4: Methods generator must read selected_route_steps ──
-    if methods_source:
-        if "selected_route_steps" not in methods_source:
+    if methods_combined.strip():
+        if "selected_route_steps" not in methods_combined:
             issues.append({
                 "severity": "error",
                 "category": "runtime_execution_authority",
                 "message": "Methods generator does not read selected_route_steps. Reporting may use stale stage data.",
             })
-        if "runtimeConfig.stages" in methods_source:
+        if "runtimeConfig.stages" in methods_combined:
             issues.append({
                 "severity": "error",
                 "category": "runtime_execution_authority",
                 "message": "Methods generator reads deprecated runtimeConfig.stages instead of selected_route_steps.",
             })
-        if "runtimeConfig.route_steps" in methods_source:
+        if "runtimeConfig.route_steps" in methods_combined:
             issues.append({
                 "severity": "error",
                 "category": "runtime_execution_authority",
