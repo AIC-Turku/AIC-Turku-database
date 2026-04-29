@@ -2,6 +2,8 @@
 
 This repository is a YAML-driven source tree for a microscopy facility dashboard.
 
+**Public dashboard:** https://aic-turku.github.io/AIC-Turku-database/
+
 It does four things:
 
 1. stores instrument, QC, maintenance, vocabulary, and policy data as versioned YAML,
