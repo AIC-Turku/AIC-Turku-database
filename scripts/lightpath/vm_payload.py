@@ -552,6 +552,13 @@ def _generate_virtual_microscope_payload_inner(
             splitter_payload.get("selection_mode") == "exclusive"
             and len(splitter_payload.get("branches", [])) > 1
         )
+        # Keep options value consistent with the overridden branch_selection_required.
+        if splitter_payload.get("options") and isinstance(
+            splitter_payload["options"][0].get("value"), dict
+        ):
+            splitter_payload["options"][0]["value"]["branch_selection_required"] = (
+                splitter_payload["branch_selection_required"]
+            )
 
         for branch_index, branch in enumerate(splitter_payload.get("branches", [])):
             source_branch = (
@@ -571,7 +578,12 @@ def _generate_virtual_microscope_payload_inner(
                 branch["label"] = component.get("display_label") or component.get("label") or branch.get("id") or f"Branch {branch_index + 1}"
 
         branches = [b for b in splitter_payload.get("branches", []) if isinstance(b, dict)]
-        if splitter_payload.get("branch_selection_required") and branches:
+        has_authored_selection = bool(
+            splitter_payload.get("selected_branch_id")
+            or splitter_payload.get("default_branch_id")
+            or splitter_payload.get("selected_branch_ids")
+        )
+        if splitter_payload.get("branch_selection_required") and branches and not has_authored_selection:
             selected_branch_id = next((b.get("id") for b in branches if b.get("target_ids")), None) or branches[0].get("id")
             if selected_branch_id:
                 splitter_payload["default_branch_id"] = selected_branch_id
@@ -580,7 +592,7 @@ def _generate_virtual_microscope_payload_inner(
                 splitter_payload["auto_defaulted_branch_selection"] = True
                 splitter_payload["auto_defaulted_branch_id"] = selected_branch_id
                 splitter_payload["branch_selection_default_source"] = "runtime_projection_first_targeted_branch"
-        elif splitter_payload.get("selected_branch_id") or splitter_payload.get("default_branch_id") or splitter_payload.get("selected_branch_ids"):
+        elif has_authored_selection:
             splitter_payload["branch_selection_default_source"] = "authored"
 
         if routes:

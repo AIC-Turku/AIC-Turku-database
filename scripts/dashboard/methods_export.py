@@ -136,14 +136,14 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
 
     dto: dict[str, Any] = copy.deepcopy(inst.get("dto") if isinstance(inst.get("dto"), dict) else {})
     dto["id"] = clean_text(
-        dto.get("id")
-        or inst.get("id")
+        inst.get("id")
         or canonical_instrument.get("instrument_id")
+        or dto.get("id")
     )
     dto["display_name"] = clean_text(
-        dto.get("display_name")
-        or inst.get("display_name")
+        inst.get("display_name")
         or canonical_instrument.get("display_name")
+        or dto.get("display_name")
     )
 
     diagnostics: list[dict[str, str]] = []

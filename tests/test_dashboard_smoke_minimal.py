@@ -50,6 +50,20 @@ class DashboardSmokeMinimalTests(unittest.TestCase):
         self.assertIsNone(out["runtime_selected_configuration"])
         self.assertEqual(inst["dto"], baseline)
 
+    def test_methods_export_canonical_id_takes_precedence_over_stale_dto_id(self) -> None:
+        # Invariant 2: canonical/methods-derived data must win over stale dashboard baseline.
+        inst = {
+            "id": "canonical-id",
+            "display_name": "Canonical Name",
+            "dto": {"id": "stale-id", "display_name": "Stale Name"},
+            "lightpath_dto": {"light_paths": []},
+        }
+        out = build_methods_generator_instrument_export(inst)
+        self.assertEqual(out["id"], "canonical-id")
+        self.assertEqual(out["display_name"], "Canonical Name")
+        # Original dto must not be mutated.
+        self.assertEqual(inst["dto"]["id"], "stale-id")
+
     def test_vm_export_deepcopy_and_display_name(self) -> None:
         inst = {
             'id': 'scope-1',

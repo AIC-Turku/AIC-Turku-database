@@ -534,6 +534,11 @@ class LightPathParserTests(unittest.TestCase):
         self.assertTrue(splitter["auto_defaulted_branch_selection"])
         self.assertEqual(splitter["auto_defaulted_branch_id"], splitter["selected_branch_id"])
         self.assertEqual(splitter["branch_selection_default_source"], "runtime_projection_first_targeted_branch")
+        # options[0].value.branch_selection_required must agree with top-level
+        self.assertEqual(
+            splitter["options"][0]["value"]["branch_selection_required"],
+            splitter["branch_selection_required"],
+        )
         for branch in splitter["branches"]:
             self.assertEqual(branch["id"], branch["branch_id"])
             self.assertNotIn("unknown (missing vocabulary translation)", (branch.get("label") or "").lower())
