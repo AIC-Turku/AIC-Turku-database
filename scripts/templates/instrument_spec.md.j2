@@ -15,7 +15,7 @@ hide:
 {%- set hw = dto.hardware -%}
 {%- set identity = dto.identity if dto.identity else {} -%}
 {%- set optical_path = hw.optical_path if hw.optical_path else {} -%}
-{%- set route_graphs = optical_path.light_paths or optical_path.route_renderables or optical_path.routes or [] -%}
+{%- set route_graphs = optical_path.light_paths or [] -%}
 {%- set hardware_inventory = optical_path.hardware_inventory or [] -%}
 {%- set hardware_index_map = optical_path.hardware_index_map if optical_path.hardware_index_map else {} -%}
 

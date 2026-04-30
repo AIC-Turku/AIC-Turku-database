@@ -183,7 +183,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
     hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
     light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
     legacy_topology_detected = has_legacy_light_path_input(canonical)
-    payload = generate_virtual_microscope_payload(canonical)
+    payload = generate_virtual_microscope_payload(canonical, compatibility_mode=True)
     runtime_projection = (
         ((payload.get("projections") or {}).get("virtual_microscope") or {})
         if isinstance(payload, dict)

@@ -50,30 +50,37 @@ class DataflowContractE2ETests(unittest.TestCase):
             vocabulary=self.vocabulary,
             build_dashboard_view_dto=build_instrument_mega_dto,
             build_methods_view_dto=build_methods_generator_instrument_export,
-            build_llm_inventory_record=lambda i: {"id": i["id"]},
+            build_llm_inventory_record=lambda i: build_llm_inventory_payload({"short_name": "Core"}, [i])["active_microscopes"][0],
         )
-        inst["dto"] = ctx.dashboard_view_dto
-        inst["lightpath_dto"] = ctx.canonical_lightpath_dto
-        methods = build_methods_generator_instrument_export(inst)
-        llm = build_llm_inventory_payload({"short_name": "Core"}, [inst])["active_microscopes"][0]
+        methods = ctx.methods_export_dto
+        llm = ctx.llm_inventory_record
         vm = ctx.vm_payload
 
         self.assertEqual(ctx.instrument_id, methods["id"])
         self.assertEqual(methods["display_name"], llm["display_name"])
+        self.assertEqual(ctx.instrument_id, ctx.dashboard_view_dto["id"])
+        self.assertEqual(ctx.instrument_id, vm["instrument"]["instrument_id"])
 
-        canonical_routes = [r["id"] for r in inst["lightpath_dto"]["light_paths"]]
+        canonical_routes = [r["id"] for r in ctx.canonical_lightpath_dto["light_paths"]]
         self.assertEqual(canonical_routes, [r["id"] for r in methods["methods_view_dto"]["routes"]])
         self.assertEqual(canonical_routes, [r["id"] for r in vm["light_paths"]])
+        self.assertEqual(canonical_routes, [r["id"] for r in llm["llm_context"]["authoritative_route_contract"]["routes"]])
 
-        canonical_source_ids = {s["id"] for s in inst["canonical"]["hardware"]["sources"]}
+        canonical_source_ids = {s["id"] for s in ctx.canonical_instrument_dto["hardware"]["sources"]}
         methods_source_ids = {s["id"] for s in methods["methods_view_dto"]["light_sources"]}
         vm_source_ids = {s["id"] for s in vm["sources"]}
+        dto_source_ids = {s["id"] for s in ctx.dashboard_view_dto.get("hardware", {}).get("sources", [])}
         self.assertEqual(canonical_source_ids, methods_source_ids)
         self.assertEqual(canonical_source_ids, vm_source_ids)
+        self.assertEqual(canonical_source_ids, dto_source_ids)
 
-        canonical_endpoint_ids = {e["id"] for e in inst["canonical"]["hardware"]["endpoints"]}
+        canonical_endpoint_ids = {e["id"] for e in ctx.canonical_instrument_dto["hardware"]["endpoints"]}
         vm_endpoint_ids = {e["id"] for e in vm["endpoints"]}
+        dto_endpoint_ids = {e["id"] for e in ctx.dashboard_view_dto.get("hardware", {}).get("endpoints", [])}
+        methods_endpoint_ids = {d["id"] for d in methods["methods_view_dto"]["detectors"]}
         self.assertEqual(canonical_endpoint_ids, vm_endpoint_ids)
+        self.assertEqual(canonical_endpoint_ids, dto_endpoint_ids)
+        self.assertEqual(canonical_endpoint_ids, methods_endpoint_ids)
 
     def test_negative_missing_canonical_data_produces_diagnostics(self):
         inst = {"id": "scope-bad", "canonical": {}, "dto": {"id": "scope-bad"}, "lightpath_dto": {}}
@@ -85,6 +92,22 @@ class DataflowContractE2ETests(unittest.TestCase):
             build_llm_inventory_record=lambda *_args, **_kwargs: {},
         )
         self.assertTrue(ctx.diagnostics)
+
+    def test_missing_selected_execution_blocks_exports(self):
+        inst = self._fixture_inst()
+        inst["canonical"]["light_paths"] = [{"id": "route_custom", "name": "Route Custom"}]
+        ctx = build_instrument_context(
+            inst,
+            vocabulary=self.vocabulary,
+            build_dashboard_view_dto=build_instrument_mega_dto,
+            build_methods_view_dto=build_methods_generator_instrument_export,
+            build_llm_inventory_record=lambda i: build_llm_inventory_payload({"short_name": "Core"}, [i])["active_microscopes"][0],
+        )
+        self.assertTrue(any(d.get("code") == "missing_selected_execution" for d in ctx.diagnostics))
+        self.assertIn("export_diagnostics", ctx.vm_payload)
+        self.assertIn("export_diagnostics", ctx.dashboard_view_dto)
+        self.assertIn("export_diagnostics", ctx.methods_export_dto)
+        self.assertIn("export_diagnostics", ctx.llm_inventory_record)
 
     def test_custom_route_id_and_name_preserved(self):
         inst = self._fixture_inst()

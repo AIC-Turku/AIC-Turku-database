@@ -5,37 +5,9 @@
   }
   root.VirtualMicroscopeRuntime = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
-  const RESERVED_ROUTE_TAGS = new Set(['shared', 'all']);
   // Route identifiers, labels, and ordering are DTO-owned. The runtime may
   // normalize strings for matching, but must not constrain routes to a fixed
   // modality vocabulary or invent route names beyond displaying the DTO id.
-  // ROUTE_SORT_ORDER is the canonical display order for route options in the UI.
-  // It mirrors the ROUTE_LABELS ordering in the Python parser. Routes not in
-  // this list are shown after the listed ones in their DTO-defined order.
-  const ROUTE_SORT_ORDER = [
-    'confocal',
-    'confocal_point',
-    'confocal_spinning_disk',
-    'widefield_fluorescence',
-    'epi',
-    'tirf',
-    'multiphoton',
-    'light_sheet',
-    'transmitted_brightfield',
-    'transmitted',
-    'phase_contrast',
-    'dic',
-    'darkfield',
-    'reflected_brightfield',
-    'optical_sectioning',
-    'spectral_imaging',
-    'flim',
-    'fcs',
-    'ism',
-    'smlm',
-    'spt',
-    'fret',
-  ];
   const CAMERA_KINDS = new Set(['camera', 'scmos', 'cmos', 'ccd', 'emccd']);
   const HYBRID_KINDS = new Set(['hyd']);
   const APD_KINDS = new Set(['apd', 'spad']);
@@ -117,7 +89,7 @@
     const seen = new Set();
     (Array.isArray(rawRoutes) ? rawRoutes : []).forEach((entry) => {
       const routeId = cleanString(typeof entry === 'string' ? entry : (entry && (entry.id || entry.route || entry.value))).toLowerCase();
-      if (!routeId || RESERVED_ROUTE_TAGS.has(routeId) || seen.has(routeId)) return;
+      if (!routeId || seen.has(routeId)) return;
       seen.add(routeId);
       const dtoLabel = typeof entry === 'string' ? '' : cleanString(entry && (entry.label || entry.name || entry.display_label));
       catalog.push({
@@ -140,8 +112,8 @@
 
   function routeMatches(itemRoutes, activeRoute) {
     if (!activeRoute) return true;
-    if (!Array.isArray(itemRoutes) || itemRoutes.length === 0) return true;
-    return itemRoutes.includes(activeRoute) || itemRoutes.includes('shared') || itemRoutes.includes('all');
+    if (!Array.isArray(itemRoutes) || itemRoutes.length === 0) return false;
+    return itemRoutes.includes(activeRoute);
   }
 
   function componentMatchesActiveRoute(component, route) {
@@ -501,9 +473,9 @@
     (Array.isArray(payload && payload.light_paths) ? payload.light_paths : []).forEach((route, routeIndex) => {
       const routeId = normalizeIdentifier(route && (route.id || route.route || route.name));
       if (!routeId) return;
-      const selectedSteps = Array.isArray(route && route.selected_execution && route.selected_execution.selected_route_steps) && route.selected_execution.selected_route_steps.length
+      const selectedSteps = Array.isArray(route && route.selected_execution && route.selected_execution.selected_route_steps)
         ? route.selected_execution.selected_route_steps
-        : (Array.isArray(route && route.route_steps) ? route.route_steps : []);
+        : [];
       const routeRoutingContext = {
         illumination: selectedSteps.filter((step) => step && step.kind === 'routing_component' && step.phase === 'illumination'),
         detection: selectedSteps.filter((step) => step && step.kind === 'routing_component' && step.phase === 'detection'),
@@ -2197,7 +2169,7 @@ function detectorCollectionMask(detector, grid) {
 
       branches.forEach((branch) => {
         branchDefs.forEach((branchDef, branchIndex) => {
-          const normalizedBranchId = normalizeIdentifier(branchDef && branchDef.id) || `splitter_${splitterIndex}_branch_${branchIndex + 1}`;
+          const normalizedBranchId = normalizeIdentifier(branchDef && (branchDef.branch_id || branchDef.id)) || `splitter_${splitterIndex}_branch_${branchIndex + 1}`;
           if ((requiresSelection || explicitlySelectedBranchIds.size) && !explicitlySelectedBranchIds.has(normalizedBranchId)) return;
           const mode = cleanString(branchDef && branchDef.mode).toLowerCase() || (branchIndex === 0 ? 'transmitted' : 'reflected');
           const baseSpectrum = splitterDichroic
@@ -2487,10 +2459,7 @@ function detectorCollectionMask(detector, grid) {
     if (Array.isArray(selectedExecution && selectedExecution.selected_route_steps)) {
       return selectedExecution.selected_route_steps.map((step) => ({ ...(step || {}) }));
     }
-    if (Array.isArray(record && record.route_steps)) {
-      return record.route_steps.map((step) => ({ ...(step || {}) }));
-    }
-    return null;
+    return [];
   }
 
   function selectedComponentForMechanism(mechanism, slot) {
@@ -3349,7 +3318,6 @@ function detectorCollectionMask(detector, grid) {
   return {
     normalizeRouteTags,
     routeLabel,
-    ROUTE_SORT_ORDER,
 
     routesFromObject,
     routeMatches,

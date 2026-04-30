@@ -230,9 +230,13 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
     Methods export must not infer undocumented capabilities. Missing canonical fields
     are surfaced as diagnostics instead of invented fallback text.
     """
-    dto = copy.deepcopy(inst.get("dto") or {})
-    canonical = copy.deepcopy(inst.get("canonical") or {})
-    lightpath = copy.deepcopy(inst.get("lightpath_dto") or {})
+    canonical = copy.deepcopy(inst.get("canonical_instrument_dto") or inst.get("canonical") or {})
+    lightpath = copy.deepcopy(inst.get("canonical_lightpath_dto") or inst.get("lightpath_dto") or {})
+    canonical_instrument = canonical.get("instrument") if isinstance(canonical.get("instrument"), dict) else {}
+    dto = {
+        "id": clean_text(inst.get("id") or canonical_instrument.get("instrument_id")),
+        "display_name": clean_text(inst.get("display_name") or canonical_instrument.get("display_name")),
+    }
 
     diagnostics: list[dict[str, str]] = []
 
@@ -256,6 +260,8 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
     ]
     if not canonical_routes:
         diagnostics.append({"severity": "warning", "code": "missing_canonical_routes", "path": "lightpath_dto.light_paths", "message": "missing in DTO: lightpath_dto.light_paths", "source": "methods_export", "affected_export": "methods"})
+    if any(not isinstance(route.get("selected_execution"), dict) for route in (lightpath.get("light_paths") or []) if isinstance(route, dict)):
+        diagnostics.append({"severity": "error", "code": "missing_selected_execution", "path": "lightpath_dto.light_paths[].selected_execution", "message": "missing in DTO: selected_execution.selected_route_steps", "source": "methods_export", "affected_export": "methods"})
 
     methods_view_dto = {
         "objectives": copy.deepcopy(canonical_hardware.get("objectives") or []),
@@ -270,7 +276,7 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
     dto["methods_view_dto"] = methods_view_dto
     # Runtime-selected optical truth is exported on the DTO and should be the
     # primary source for methods text when present (localStorage is fallback-only).
-    dto["runtime_selected_configuration"] = copy.deepcopy(inst.get("runtime_selected_configuration"))
+    dto["runtime_selected_configuration"] = None if any(d.get("code") == "missing_selected_execution" for d in diagnostics) else copy.deepcopy(inst.get("runtime_selected_configuration"))
     return dto
 
 
@@ -305,12 +311,6 @@ def _build_hardware_focus_summary(
         else {}
     ) or {}
     route_rows = authoritative_route_contract.get("available_routes") if isinstance(authoritative_route_contract.get("available_routes"), list) else []
-    if not route_rows:
-        optical_path = hardware.get("optical_path") if isinstance(hardware.get("optical_path"), dict) else {}
-        route_rows = optical_path.get("available_routes") if isinstance(optical_path.get("available_routes"), list) else []
-        if not route_rows:
-            fallback_contract = optical_path.get("authoritative_route_contract") if isinstance(optical_path.get("authoritative_route_contract"), dict) else {}
-            route_rows = fallback_contract.get("available_routes") if isinstance(fallback_contract.get("available_routes"), list) else []
     route_labels = [
         clean_text(route.get("label") or route.get("display_label") or route.get("id"))
         for route in route_rows
@@ -375,11 +375,19 @@ def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict
     }
 
     for inst in instruments:
-        canonical_lightpath_dto = copy.deepcopy((inst.get("lightpath_dto") or {}))
-        canonical_instrument_dto = copy.deepcopy((inst.get("dto") or {}))
-        known_fields, missing_fields = _collect_known_missing_paths(canonical_instrument_dto)
-        policy = ((inst.get("canonical") or {}).get("policy") or {}) if isinstance(inst, dict) else {}
-        canonical_instrument_dto["inventory_completeness"] = {
+        canonical_lightpath_dto = copy.deepcopy((inst.get("canonical_lightpath_dto") or inst.get("lightpath_dto") or {}))
+        canonical_instrument_dto = copy.deepcopy((inst.get("canonical_instrument_dto") or inst.get("canonical") or {}))
+        llm_record = {
+            "id": clean_text(inst.get("id") or ((canonical_instrument_dto.get("instrument") or {}).get("instrument_id"))),
+            "display_name": clean_text(((canonical_instrument_dto.get("instrument") or {}).get("display_name")) or inst.get("display_name")),
+            "hardware": copy.deepcopy(canonical_instrument_dto.get("hardware") or {}),
+            "methods": copy.deepcopy(canonical_instrument_dto.get("methods") or {}),
+            "modalities": copy.deepcopy(canonical_instrument_dto.get("modalities") or []),
+            "software": copy.deepcopy(canonical_instrument_dto.get("software") or []),
+        }
+        known_fields, missing_fields = _collect_known_missing_paths(llm_record)
+        policy = ((canonical_instrument_dto.get("policy") or {}) if isinstance(canonical_instrument_dto, dict) else {})
+        llm_record["inventory_completeness"] = {
             "known_fields": sorted(known_fields),
             "missing_fields": sorted(missing_fields),
             "known_field_count": len(known_fields),
@@ -389,27 +397,26 @@ def build_llm_inventory_payload(facility: dict[str, Any], instruments: list[dict
             "alias_fallbacks": copy.deepcopy(policy.get("alias_fallbacks") or []),
             "uncertainty_note": "Missing fields are unknown and must not be assumed.",
         }
-        canonical_instrument_dto["hardware_focus_summary"] = _build_hardware_focus_summary(
-            canonical_instrument_dto,
+        llm_record["hardware_focus_summary"] = _build_hardware_focus_summary(
+            llm_record,
             canonical_lightpath_dto,
-            inventory_completeness=canonical_instrument_dto["inventory_completeness"],
+            inventory_completeness=llm_record["inventory_completeness"],
             status=inst.get("status") if isinstance(inst.get("status"), dict) else {},
         )
         authoritative_route_contract = copy.deepcopy((((canonical_lightpath_dto.get("projections") or {}).get("llm")) or {}).get("authoritative_route_contract") or {})
-        if not authoritative_route_contract:
-            optical_path = canonical_instrument_dto.get("hardware", {}).get("optical_path") if isinstance(canonical_instrument_dto.get("hardware"), dict) else {}
-            authoritative_route_contract = copy.deepcopy(optical_path.get("authoritative_route_contract") or {}) if isinstance(optical_path, dict) else {}
-        llm_context = canonical_instrument_dto.get("llm_context") if isinstance(canonical_instrument_dto.get("llm_context"), dict) else {}
-        llm_context["diagnostics"] = copy.deepcopy(inst.get("dto", {}).get("diagnostics") or [])
+        llm_context = llm_record.get("llm_context") if isinstance(llm_record.get("llm_context"), dict) else {}
+        llm_context["diagnostics"] = copy.deepcopy(inst.get("diagnostics") or inst.get("dto", {}).get("diagnostics") or [])
+        if any(not isinstance(route.get("selected_execution"), dict) for route in (canonical_lightpath_dto.get("light_paths") or []) if isinstance(route, dict)):
+            llm_context["diagnostics"].append({"severity": "error", "code": "missing_selected_execution", "source": "llm_export"})
         llm_context["authoritative_route_contract"] = authoritative_route_contract
         llm_context["derived_summaries"] = {
-            "route_planning_summary": _build_route_planning_summary(canonical_instrument_dto, authoritative_route_contract),
-            "hardware_focus_summary": copy.deepcopy(canonical_instrument_dto.get("hardware_focus_summary") or {}),
-            "methods_summary": copy.deepcopy(((canonical_instrument_dto.get("methods") or {}) if isinstance(canonical_instrument_dto.get("methods"), dict) else {})),
+            "route_planning_summary": _build_route_planning_summary(llm_record, authoritative_route_contract) if not any(d.get("code") == "missing_selected_execution" for d in llm_context["diagnostics"]) else {"status": "blocked", "reason": "missing_selected_execution"},
+            "hardware_focus_summary": copy.deepcopy(llm_record.get("hardware_focus_summary") or {}),
+            "methods_summary": copy.deepcopy(((llm_record.get("methods") or {}) if isinstance(llm_record.get("methods"), dict) else {})),
         }
         llm_context["route_planning_summary"] = copy.deepcopy(llm_context["derived_summaries"]["route_planning_summary"])
-        canonical_instrument_dto["llm_context"] = llm_context
-        llm_payload["active_microscopes"].append(canonical_instrument_dto)
+        llm_record["llm_context"] = llm_context
+        llm_payload["active_microscopes"].append(llm_record)
 
     return llm_payload
 
@@ -2371,6 +2378,11 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     return dto
 
 
+def build_dashboard_instrument_view(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_dto: dict[str, Any]) -> dict[str, Any]:
+    """Explicitly named dashboard view DTO builder derived from canonical DTOs."""
+    return build_instrument_mega_dto(vocabulary, inst, lightpath_dto)
+
+
 def slugify(value: str) -> str:
     s = value.lower().strip()
     s = re.sub(r"\s+", "-", s)
@@ -3349,7 +3361,7 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
     json_path.parent.mkdir(parents=True, exist_ok=True) 
     json_payload = {
         "instruments": [
-            build_methods_generator_instrument_export(inst)
+            copy.deepcopy((inst.get("build_context").methods_export_dto if inst.get("build_context") else build_methods_generator_instrument_export(inst)))
             for inst in sorted([*instruments, *retired_instruments], key=lambda item: item.get("id", ""))
         ],
     }
@@ -3357,7 +3369,14 @@ def main(strict: bool = True, allowed_record_types: tuple[str, ...] = DEFAULT_AL
 
     # Export AI/LLM Optimized Decision-Support Inventory
     llm_inventory_path = docs_root / "assets" / "llm_inventory.json"
-    llm_payload = build_llm_inventory_payload(facility, instruments)
+    llm_records = []
+    for inst in instruments:
+        context = inst.get("build_context")
+        if context and isinstance(context.llm_inventory_record, dict) and context.llm_inventory_record:
+            llm_records.append(copy.deepcopy(context.llm_inventory_record))
+        else:
+            llm_records.append(copy.deepcopy(inst))
+    llm_payload = build_llm_inventory_payload(facility, llm_records)
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
     # Render Methods Generator page

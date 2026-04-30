@@ -92,8 +92,8 @@ class BuildContextTests(unittest.TestCase):
             "optical_path_elements": [{"id": "elem_a"}],
             "endpoints": [{"id": "end_a"}],
             "light_paths": [
-                {"id": "route_custom_2", "selected_execution": {"route_id": "route_custom_2"}},
-                {"id": "route_custom_1", "selected_execution": {"route_id": "route_custom_1"}},
+                {"id": "route_custom_2", "selected_execution": {"route_id": "route_custom_2", "selected_route_steps": []}},
+                {"id": "route_custom_1", "selected_execution": {"route_id": "route_custom_1", "selected_route_steps": []}},
             ],
         }
         try:
@@ -114,6 +114,7 @@ class BuildContextTests(unittest.TestCase):
         self.assertIn("light_paths", context.vm_payload)
         self.assertEqual([route["id"] for route in context.vm_payload["light_paths"]], ["route_custom_2", "route_custom_1"])
         self.assertTrue(all("selected_execution" in route for route in context.vm_payload["light_paths"]))
+        self.assertTrue(all(isinstance(route["selected_execution"].get("selected_route_steps"), list) for route in context.vm_payload["light_paths"]))
         self.assertNotEqual(context.vm_payload, context.dashboard_view_dto["hardware"]["optical_path"])
 
     def test_legacy_only_instrument_fails_strict_production_build_context(self) -> None:

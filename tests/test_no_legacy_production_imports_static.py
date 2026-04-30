@@ -48,6 +48,11 @@ class NoLegacyProductionImportsStaticTests(unittest.TestCase):
                     # Only enforce on production scripts directory; tests/docs handled separately.
                     self.assertFalse(path.as_posix().startswith("scripts/dashboard"), f"Unexpected legacy marker in production dashboard module: {path}")
 
+    def test_vm_payload_generator_defaults_to_strict_parser(self) -> None:
+        src = Path("scripts/light_path_parser.py").read_text(encoding="utf-8")
+        section = src.split("def _generate_virtual_microscope_payload_inner", 1)[1].split("def _build_route_sequences_and_graph", 1)[0]
+        self.assertIn("parse_strict_canonical_light_path_model", section)
+
 
 if __name__ == "__main__":
     unittest.main()

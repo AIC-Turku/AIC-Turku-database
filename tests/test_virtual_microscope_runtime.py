@@ -1272,27 +1272,13 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(state.get("ex_max"), 587)
         self.assertEqual(state.get("em_max"), 610)
 
-    def test_route_sort_order_is_exported_and_matches_python(self) -> None:
+    def test_route_sort_order_is_not_exported(self) -> None:
         result = self.run_node_json(
             """
-            return rt.ROUTE_SORT_ORDER;
+            return Object.prototype.hasOwnProperty.call(rt, 'ROUTE_SORT_ORDER');
             """
         )
-
-        self.assertIsInstance(result, list)
-        self.assertGreater(len(result), 5, "ROUTE_SORT_ORDER should contain all route tags, not just 5")
-        self.assertIn("confocal", result)
-        self.assertIn("confocal_point", result)
-        self.assertIn("confocal_spinning_disk", result)
-        self.assertIn("widefield_fluorescence", result)
-        self.assertIn("tirf", result)
-        self.assertIn("light_sheet", result)
-        self.assertIn("flim", result)
-        self.assertIn("ism", result)
-        self.assertIn("transmitted_brightfield", result)
-        self.assertIn("darkfield", result)
-        self.assertIn("phase_contrast", result)
-        self.assertIn("dic", result)
+        self.assertFalse(result)
 
     def test_all_route_tags_accepted_by_normalize(self) -> None:
         result = self.run_node_json(
@@ -1314,6 +1300,24 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         dropped = input_set - output_set
         self.assertEqual(len(result["input"]), len(result["output"]),
                          f"All route tags should be accepted; dropped: {dropped}")
+
+    def test_route_matching_requires_explicit_route_membership(self) -> None:
+        result = self.run_node_json(
+            """
+            return {
+              explicit: rt.componentMatchesActiveRoute({ routes: ['confocal'] }, 'confocal'),
+              emptyRoutes: rt.componentMatchesActiveRoute({ routes: [] }, 'confocal'),
+              missingRoutes: rt.componentMatchesActiveRoute({}, 'confocal'),
+              legacySharedTag: rt.componentMatchesActiveRoute({ routes: ['shared'] }, 'confocal'),
+              legacyAllTag: rt.componentMatchesActiveRoute({ routes: ['all'] }, 'confocal')
+            };
+            """
+        )
+        self.assertTrue(result["explicit"])
+        self.assertFalse(result["emptyRoutes"])
+        self.assertFalse(result["missingRoutes"])
+        self.assertFalse(result["legacySharedTag"])
+        self.assertFalse(result["legacyAllTag"])
 
     def test_eyepiece_detector_response_honors_dto_bounds(self) -> None:
         result = self.run_node_json(

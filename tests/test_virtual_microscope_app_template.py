@@ -22,7 +22,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("function authoritativeRouteSteps(routeRecord)", source)
         self.assertIn("const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;", source)
         self.assertIn("const selectedRouteSteps = Array.isArray(selectedExecution && selectedExecution.selected_route_steps) ? selectedExecution.selected_route_steps : [];", source)
-        self.assertIn("if (selectedRouteSteps.length) return selectedRouteSteps;", source)
+        self.assertIn("return selectedRouteSteps;", source)
+        self.assertNotIn("return topologyRouteSteps(routeRecord);", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.illumination_sequence))", source)
         self.assertNotIn("buildPhase((routeRecord && (routeRecord.record && routeRecord.record.detection_sequence))", source)
 
@@ -94,7 +95,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_active_route_order_uses_runtime_sort_order(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("VM.ROUTE_SORT_ORDER", source)
+        self.assertNotIn("VM.ROUTE_SORT_ORDER", source)
         self.assertNotIn(
             "return ['confocal', 'epi', 'tirf', 'multiphoton', 'transmitted'];",
             source,
@@ -171,8 +172,8 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("function resolveSelectedExecution(selectedRouteSteps, mechanismSelections)", source)
         self.assertIn("function orderedComponentsFromExecution(resolvedSteps, phase, splitterSelections = new Map())", source)
         self.assertIn("selection.resolvedExecution = resolveSelectedExecution(selectedRouteSteps, selection.selectedComponentByMechanism)", source)
-        self.assertIn("selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination')", source)
-        self.assertIn("selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection')", source)
+        self.assertIn("selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination', splitterSelectionMap)", source)
+        self.assertIn("selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection', splitterSelectionMap)", source)
         self.assertIn("selectedComponentByMechanism", source)
         self.assertNotIn("function buildTraversalOrderedComponents(", source)
         self.assertIn("step_id", source)
@@ -191,9 +192,11 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("resolvedType === 'splitter'", ordered_fn)
         self.assertIn("resolvedStageKey === 'port_selector'", ordered_fn)
         self.assertIn("resolvedType === 'port_selector'", ordered_fn)
-        self.assertIn("resolvedStageKey === 'route_control'", ordered_fn)
-        self.assertIn("resolvedType === 'route_control'", ordered_fn)
-        self.assertIn("if (!(component && component.spectral_ops && typeof component.spectral_ops === 'object')) return;", ordered_fn)
+
+    def test_splitter_selection_requires_explicit_branch_choice(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+        self.assertIn("requires explicit selected branch selection", source)
+        self.assertIn("const defaults = [];", source)
 
     def test_splitter_branch_buttons_are_not_rendered(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
