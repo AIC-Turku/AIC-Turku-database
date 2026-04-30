@@ -746,9 +746,19 @@ def _build_route_steps(
             return payload, None, None, None
 
         element_row = row if isinstance(row, dict) else {}
+        # If the walk_sequence phase resolved a valid position the entry carries
+        # it in "position_id".  When the authored position_id was *invalid*, the
+        # walk_sequence critical-fix returns None so "position_id" is absent but
+        # "_authored_position_id" is still set.  We must pass the authored value
+        # through so that _resolve_positioned_component_from_element can trigger
+        # its own invalid-position guard and return ({}, None, None, None) instead
+        # of silently falling back to the first available position.
+        effective_position_id = _clean_string(entry.get("position_id")) or _clean_string(
+            entry.get("_authored_position_id")
+        )
         component_payload, position_id, position_key, position_label = _resolve_positioned_component_from_element(
             element_row,
-            position_id=_clean_string(entry.get("position_id")),
+            position_id=effective_position_id,
         )
         return component_payload, position_id, position_key, position_label
 
