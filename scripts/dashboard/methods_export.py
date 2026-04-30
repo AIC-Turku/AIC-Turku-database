@@ -134,16 +134,17 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
         else {}
     )
 
-    dto: dict[str, Any] = {
-        "id": clean_text(
-            inst.get("id")
-            or canonical_instrument.get("instrument_id")
-        ),
-        "display_name": clean_text(
-            inst.get("display_name")
-            or canonical_instrument.get("display_name")
-        ),
-    }
+    dto: dict[str, Any] = copy.deepcopy(inst.get("dto") if isinstance(inst.get("dto"), dict) else {})
+    dto["id"] = clean_text(
+        inst.get("id")
+        or canonical_instrument.get("instrument_id")
+        or dto.get("id")
+    )
+    dto["display_name"] = clean_text(
+        inst.get("display_name")
+        or canonical_instrument.get("display_name")
+        or dto.get("display_name")
+    )
 
     diagnostics: list[dict[str, str]] = []
 
@@ -239,6 +240,14 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
 
     dto["methods_generation"] = copy.deepcopy(inst.get("methods_generation") or {})
     dto["methods_view_dto"] = methods_view_dto
+    # Keep methods-specific DTO explicit while also exporting top-level fields
+    # required by methods_generator_app.js runtime contract.
+    dto["objectives"] = copy.deepcopy(methods_view_dto["objectives"])
+    dto["detectors"] = copy.deepcopy(methods_view_dto["detectors"])
+    dto["light_sources"] = copy.deepcopy(methods_view_dto["light_sources"])
+    dto["software"] = copy.deepcopy(methods_view_dto["software"])
+    dto["routes"] = copy.deepcopy(methods_view_dto["routes"])
+    dto["diagnostics"] = copy.deepcopy(methods_view_dto["diagnostics"])
 
     # Runtime-selected optical truth is exported on the DTO and should be the
     # primary source for methods text when present. localStorage is fallback-only.

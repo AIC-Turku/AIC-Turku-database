@@ -527,6 +527,61 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(splitter["options"][0]["slot"], 1)
         self.assertEqual(splitter["branches"][0]["sequence"][0]["optical_path_element_id"], "green_filter")
         self.assertEqual(splitter["branches"][0]["target_ids"], ["detector_1"])
+        self.assertTrue(splitter["branch_selection_required"])
+        self.assertIn(splitter["selected_branch_id"], [b["id"] for b in splitter["branches"]])
+        self.assertIn(splitter["default_branch_id"], [b["branch_id"] for b in splitter["branches"]])
+        self.assertEqual(splitter["selected_branch_ids"], [splitter["selected_branch_id"]])
+        self.assertTrue(splitter["auto_defaulted_branch_selection"])
+        self.assertEqual(splitter["auto_defaulted_branch_id"], splitter["selected_branch_id"])
+        self.assertEqual(splitter["branch_selection_default_source"], "runtime_projection_first_targeted_branch")
+        # options[0].value.branch_selection_required must agree with top-level
+        self.assertEqual(
+            splitter["options"][0]["value"]["branch_selection_required"],
+            splitter["branch_selection_required"],
+        )
+        for branch in splitter["branches"]:
+            self.assertEqual(branch["id"], branch["branch_id"])
+            self.assertNotIn("unknown (missing vocabulary translation)", (branch.get("label") or "").lower())
+
+    def test_splitter_non_exclusive_modes_not_forced_to_branch_required(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [{"id": "s1", "name": "S1", "stage_role": "splitter", "element_type": "splitter", "selection_mode": "multi"}],
+                    "endpoints": [{"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"}],
+                },
+                "light_paths": [{"id": "r1", "illumination_sequence": [{"source_id": "src_488"}], "detection_sequence": [{"optical_path_element_id": "s1"}]}],
+            }
+        )
+        splitter = _runtime_projection(payload)["splitters"][0]
+        self.assertFalse(splitter.get("branch_selection_required", False))
+        self.assertNotIn("auto_defaulted_branch_selection", splitter)
+
+    def test_legacy_splitter_branches_have_branch_id_alias(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [
+                        {"id": "legacy_splitter", "name": "Legacy Splitter", "stage_role": "splitter", "element_type": "splitter", "selection_mode": "exclusive",
+                         "branches": [
+                             {"id": "legacy_a", "label": "Path A", "target_ids": ["detector_1"], "component": {"component_type": "bandpass", "center_nm": 525, "width_nm": 50}},
+                             {"id": "legacy_b", "label": "Path B", "target_ids": ["detector_2"], "component": {"component_type": "bandpass", "center_nm": 700, "width_nm": 75}},
+                         ]},
+                    ],
+                    "endpoints": [
+                        {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
+                        {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
+                    ],
+                },
+                "light_paths": [{"id": "r1", "illumination_sequence": [{"source_id": "src_488"}], "detection_sequence": [{"optical_path_element_id": "legacy_splitter"}]}],
+            }
+        )
+        splitter = _runtime_projection(payload)["splitters"][0]
+        self.assertEqual(splitter["id"], "legacy_splitter")
+        for branch in splitter["branches"]:
+            self.assertEqual(branch["id"], branch["branch_id"])
 
 
     def test_validate_light_path_ignores_policy_owned_component_shape_requirements(self) -> None:
