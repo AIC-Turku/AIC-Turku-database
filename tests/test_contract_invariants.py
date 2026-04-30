@@ -256,6 +256,7 @@ class ContractInvariantTests(unittest.TestCase):
                     }
                 },
             },
+            compatibility_mode=True,
             include_inferred_terminals=False,
         )
 
@@ -304,73 +305,74 @@ class ContractInvariantTests(unittest.TestCase):
         inst = {
             "manufacturer": "RAW Manufacturer",
             "hardware": {"light_sources": [{"name": "RAW Laser"}]},
-            "dto": {
-                "id": "scope-1",
-                "manufacturer": "DTO Manufacturer",
-                "hardware": {"light_sources": [{"display_label": "DTO Laser"}]},
+            "canonical": {
+                "instrument": {"instrument_id": "scope-1", "display_name": "Canonical Scope"},
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser", "display_label": "Canonical Laser"}],
+                },
+                "software": [],
+                "policy": {"missing_required": [], "missing_conditional": [], "alias_fallbacks": []},
             },
-            "methods_generation": {"base_sentence": "DTO sentence"},
-            "canonical": {"policy": {"missing_required": [], "missing_conditional": [], "alias_fallbacks": []}},
         }
 
         methods_export = build_methods_generator_instrument_export(inst)
-        self.assertEqual(methods_export["manufacturer"], "DTO Manufacturer")
-        self.assertEqual(methods_export["hardware"]["light_sources"][0]["display_label"], "DTO Laser")
+        # Methods export must read from canonical hardware (sources), not raw YAML or dto
+        self.assertEqual(methods_export["methods_view_dto"]["light_sources"][0]["display_label"], "Canonical Laser")
         self.assertNotIn("RAW Manufacturer", str(methods_export))
+        self.assertNotIn("RAW Laser", str(methods_export))
 
         llm_payload = build_llm_inventory_payload({"short_name": "Core"}, [inst])
         microscope = llm_payload["active_microscopes"][0]
-        self.assertEqual(microscope["manufacturer"], "DTO Manufacturer")
-        self.assertEqual(microscope["hardware"]["light_sources"][0]["display_label"], "DTO Laser")
+        # LLM export must read from canonical hardware, not raw YAML
+        self.assertEqual(microscope["hardware"]["sources"][0]["display_label"], "Canonical Laser")
+        self.assertNotIn("RAW Manufacturer", str(microscope))
+        self.assertNotIn("RAW Laser", str(microscope))
 
-    def test_methods_export_preserves_structured_cube_route_facts(self) -> None:
+    def test_methods_export_exposes_canonical_lightpath_routes(self) -> None:
         inst = {
-            "dto": {
-                "id": "scope-structured-cube",
+            "canonical": {
                 "hardware": {
-                    "optical_path": {
-                        "authoritative_route_contract": {
-                            "routes": [
-                                {
-                                    "id": "widefield",
-                                    "route_optical_facts": {
-                                        "selected_or_selectable_emission_filters": [
-                                            {
-                                                "display_label": "GFP cube",
-                                                "product_code": "49002",
-                                                "excitation_filter": {"display_label": "470/40"},
-                                                "dichroic": {"display_label": "495LP"},
-                                                "emission_filter": {"display_label": "525/50"},
-                                            }
-                                        ]
-                                    },
-                                }
-                            ]
-                        }
-                    }
+                    "sources": [],
+                    "optical_path_elements": [],
+                    "endpoints": [{"id": "cam_a", "endpoint_type": "camera"}],
                 },
+                "software": [],
+                "policy": {},
             },
-            "methods_generation": {},
-            "canonical": {"policy": {}},
+            "lightpath_dto": {
+                "light_paths": [
+                    {
+                        "id": "widefield",
+                        "name": "Widefield",
+                        "selected_execution": {"selected_route_steps": []},
+                    }
+                ],
+            },
         }
         exported = build_methods_generator_instrument_export(inst)
-        route = exported["hardware"]["optical_path"]["authoritative_route_contract"]["routes"][0]
-        cube = route["route_optical_facts"]["selected_or_selectable_emission_filters"][0]
-        self.assertEqual(cube["product_code"], "49002")
-        self.assertEqual(cube["excitation_filter"]["display_label"], "470/40")
-        self.assertEqual(cube["dichroic"]["display_label"], "495LP")
-        self.assertEqual(cube["emission_filter"]["display_label"], "525/50")
+        routes = exported["methods_view_dto"]["routes"]
+        self.assertEqual(len(routes), 1)
+        self.assertEqual(routes[0]["id"], "widefield")
+        self.assertEqual(routes[0]["display_label"], "Widefield")
 
     def test_llm_inventory_route_truth_and_planning_summary_are_both_present_and_actionable(self) -> None:
         payload = build_llm_inventory_payload(
             {"short_name": "Core"},
             [
                 {
-                    "dto": {
-                        "id": "scope-llm-truth",
-                        "hardware": {
-                            "optical_path": {
+                    "id": "scope-llm-truth",
+                    "canonical": {"policy": {}},
+                    "lightpath_dto": {
+                        "light_paths": [
+                            {
+                                "id": "confocal",
+                                "selected_execution": {"selected_route_steps": []},
+                            }
+                        ],
+                        "projections": {
+                            "llm": {
                                 "authoritative_route_contract": {
+                                    "available_routes": [{"id": "confocal", "display_label": "Confocal route"}],
                                     "routes": [
                                         {
                                             "id": "confocal",
@@ -381,12 +383,11 @@ class ContractInvariantTests(unittest.TestCase):
                                             },
                                             "relevant_hardware": {"sources": [{"id": "source:561"}]},
                                         }
-                                    ]
+                                    ],
                                 }
                             }
                         },
                     },
-                    "canonical": {"policy": {}},
                 }
             ],
         )

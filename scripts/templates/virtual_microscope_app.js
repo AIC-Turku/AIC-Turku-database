@@ -1,3 +1,6 @@
+// MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
+// docs/refactor_extraction_plan.md. New business logic should go in
+// assets/javascripts/virtual_microscope/ submodules, not here.
 (function () {
   const VM = window.VirtualMicroscopeRuntime;
   if (!VM) {
@@ -1028,9 +1031,7 @@
     const key = splitterBranchSelectionKey(mechanism);
     if (!state.splitterBranchSelections.has(key)) {
       const branches = Array.isArray(mechanism && mechanism.branches) ? mechanism.branches : [];
-      const defaults = mechanism && mechanism.branch_selection_required && branches.length
-        ? [cleanString(branches[0].id || '')]
-        : [];
+      const defaults = [];
       state.splitterBranchSelections.set(key, defaults.filter(Boolean));
     }
     return state.splitterBranchSelections.get(key);
@@ -1048,7 +1049,7 @@
         return targets.some((tid) => cleanString(tid).toLowerCase() === detectorId);
       });
       if (match) {
-        const branchId = cleanString(match.id || '');
+        const branchId = cleanString(match.branch_id || match.id || '');
         if (branchId) {
           state.splitterBranchSelections.set(splitterBranchSelectionKey(mechanism), [branchId]);
         }
@@ -1261,8 +1262,7 @@
   function authoritativeRouteSteps(routeRecord) {
     const selectedExecution = routeRecord && routeRecord.record && routeRecord.record.selected_execution;
     const selectedRouteSteps = Array.isArray(selectedExecution && selectedExecution.selected_route_steps) ? selectedExecution.selected_route_steps : [];
-    if (selectedRouteSteps.length) return selectedRouteSteps;
-    return topologyRouteSteps(routeRecord);
+    return selectedRouteSteps;
   }
 
   function buildRouteTraversalEntries(instrument, routeRecord, route) {
@@ -1504,18 +1504,9 @@
 
   function activeRouteOrder() {
     if (!Array.isArray(state.activeInstrument && state.activeInstrument.routeOptions)) return [];
-    const routeIds = state.activeInstrument.routeOptions
+    return state.activeInstrument.routeOptions
       .map((entry) => cleanString(entry && entry.id).toLowerCase())
       .filter(Boolean);
-    if (Array.isArray(VM.ROUTE_SORT_ORDER)) {
-      const sortOrder = VM.ROUTE_SORT_ORDER;
-      routeIds.sort((a, b) => {
-        const ai = sortOrder.indexOf(a);
-        const bi = sortOrder.indexOf(b);
-        return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
-      });
-    }
-    return routeIds;
   }
 
   function inferRouteFromSourceSettings() {
@@ -2545,7 +2536,7 @@
     const topology = state.routeTopology || safeDeriveRouteTopology(state.activeInstrument, state.activeRoute);
     const selectedSteps = authoritativeRouteSteps(topology && topology.routeRecord);
     if (!topology || !topology.routeRecord || !topologyRouteSteps(topology.routeRecord).length || !selectedSteps.length) {
-      const message = 'Route topology is unavailable or missing selected_execution; strict DTO-driven simulation cannot run.';
+      const message = 'Route selected_execution.selected_route_steps is required; strict DTO-driven simulation cannot run.';
       console.error(message);
       setInlineStatus(DOM.searchStatus, message, 'error');
       setInlineStatus(DOM.localSearchStatus, message, 'error');
@@ -2647,6 +2638,10 @@ if (block.dataset.mechanismType === 'spectral_array') {
       .map((entry) => entry.mechanism);
     splitterMechanisms.forEach((mechanism) => {
       const selectedBranchIds = ensureSplitterBranchSelection(mechanism);
+      if (Boolean(mechanism && mechanism.branch_selection_required) && !(Array.isArray(selectedBranchIds) && selectedBranchIds.length)) {
+        const splitterName = cleanString(mechanism && (mechanism.display_label || mechanism.name || mechanism.id)) || 'Splitter';
+        throw new Error(`[VM] collectRuntimeSelection: splitter "${splitterName}" requires explicit selected branch selection.`);
+      }
       const mechanismId = cleanString(mechanism && mechanism.id).toLowerCase();
       if (mechanismId) selection.selectedComponentByMechanism[mechanismId] = mechanism;
       selection.splitters.push({
@@ -2686,8 +2681,8 @@ if (block.dataset.mechanismType === 'spectral_array') {
         Array.isArray(splitter && splitter.selected_branch_ids) ? splitter.selected_branch_ids : [],
       ])
     );
-    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination');
-    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection');
+    selection.illuminationComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'illumination', splitterSelectionMap);
+    selection.detectionComponents = orderedComponentsFromExecution(selection.resolvedExecution, 'detection', splitterSelectionMap);
 
     return selection;
   }

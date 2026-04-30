@@ -6,7 +6,7 @@ class InstrumentSpecTemplateTests(unittest.TestCase):
     def test_instrument_spec_template_prefers_route_graph_dto_inputs(self) -> None:
         template = Path("scripts/templates/instrument_spec.md.j2").read_text(encoding="utf-8")
 
-        self.assertIn("optical_path.light_paths or optical_path.route_renderables or optical_path.routes", template)
+        self.assertIn("optical_path.light_paths or []", template)
         self.assertIn("hardware_inventory = optical_path.hardware_inventory", template)
         self.assertIn("hardware_index_map = optical_path.hardware_index_map", template)
         self.assertIn("Optical Path Elements", template)

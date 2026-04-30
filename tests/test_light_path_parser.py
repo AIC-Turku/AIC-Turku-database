@@ -586,7 +586,8 @@ class LightPathParserTests(unittest.TestCase):
                     ],
                     "light_path": {},
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         source = _runtime_projection(payload)["light_sources"][0]["options"][0]["value"]
@@ -626,7 +627,8 @@ class LightPathParserTests(unittest.TestCase):
                     ],
                     "light_path": {},
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         detector = _runtime_projection(payload)["detectors"][0]["options"][0]["value"]
@@ -662,7 +664,8 @@ class LightPathParserTests(unittest.TestCase):
                         "detection_sequence": [{"endpoint_id": "detector_1"}],
                     }
                 ],
-            }
+            },
+            compatibility_mode=True,
         )
 
         runtime = _runtime_projection(payload)
@@ -1120,7 +1123,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         self.assertEqual(_runtime_projection(payload)["splitters"][0]["branches"], [])
@@ -1148,7 +1152,8 @@ class LightPathParserTests(unittest.TestCase):
                         ],
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         self.assertEqual(_runtime_projection(payload)["splitters"][0]["branches"][0]["target_ids"], [])
@@ -1214,7 +1219,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         cube = _runtime_projection(payload)["stages"]["cube"][0]["options"][0]["value"]
@@ -1655,7 +1661,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         dichroic = _runtime_projection(payload)["stages"]["dichroic"][0]["options"][0]["value"]
@@ -1681,7 +1688,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         dichroic = _runtime_projection(payload)["splitters"][0]["dichroic"]["positions"]["1"]
@@ -1722,7 +1730,8 @@ class LightPathParserTests(unittest.TestCase):
                         ],
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         dichroic = _runtime_projection(payload)["stages"]["dichroic"][0]["options"][0]["value"]
@@ -1765,7 +1774,8 @@ class LightPathParserTests(unittest.TestCase):
                         ],
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         excitation_slots = [position["slot"] for position in _runtime_projection(payload)["stages"]["excitation"][0]["positions"]]
@@ -1806,7 +1816,8 @@ class LightPathParserTests(unittest.TestCase):
                         ],
                     },
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         self.assertEqual([entry["id"] for entry in _runtime_projection(payload)["available_routes"]], ["confocal", "epi"])
@@ -1823,6 +1834,7 @@ class LightPathParserTests(unittest.TestCase):
                     "light_path": {},
                 },
             },
+            compatibility_mode=True,
             include_inferred_terminals=False,
         )
 
@@ -1837,7 +1849,8 @@ class LightPathParserTests(unittest.TestCase):
                         {"kind": "halogen_lamp", "path": "transmitted", "name": "Lamp"},
                     ]
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         source = _runtime_projection(payload)["light_sources"][0]["options"][0]["value"]
@@ -1854,7 +1867,8 @@ class LightPathParserTests(unittest.TestCase):
                         "endpoints": [{"id": "ep-1", "endpoint_type": "detector", "model": "Endpoint Model", "name": "Endpoint"}],
                     },
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         source = _runtime_projection(payload)["light_sources"][0]["options"][0]["value"]
@@ -1872,7 +1886,8 @@ class LightPathParserTests(unittest.TestCase):
                     "detectors": [{"id": "det-1", "kind": "hyd", "name": "Detector Legacy Name"}],
                     "light_path": {},
                 }
-            }
+            },
+            compatibility_mode=True,
         )
 
         detector = _runtime_projection(payload)["detectors"][0]["options"][0]["value"]
@@ -1973,7 +1988,8 @@ class LightPathParserTests(unittest.TestCase):
                             ]
                         }
                     }
-                }
+                },
+                compatibility_mode=True,
             )
             stages = _runtime_projection(payload).get("stages", {})
             positions = stages.get("excitation", [{}])[0].get("options", [])
@@ -2039,7 +2055,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
         stages = _runtime_projection(payload).get("stages", {})
         positions = stages.get("excitation", [{}])[0].get("options", [])
@@ -2098,7 +2115,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
         stages = _runtime_projection(payload).get("stages", {})
         positions = stages.get("excitation", [{}])[0].get("options", [])
@@ -2126,7 +2144,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
         stages = _runtime_projection(payload).get("stages", {})
         cube_positions = stages.get("cube", [{}])[0].get("options", [])
@@ -2209,7 +2228,8 @@ class LightPathParserTests(unittest.TestCase):
                         ]
                     }
                 }
-            }
+            },
+            compatibility_mode=True,
         )
         cube_options = _runtime_projection(payload)["stages"]["cube"][0]["options"]
         cube = cube_options[0]["value"]

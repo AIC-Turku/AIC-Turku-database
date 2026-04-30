@@ -1,60 +1,79 @@
+import re
 import unittest
 from pathlib import Path
 
 
+PRODUCTION_SCAN_FILES = [
+    "scripts/light_path_parser.py",
+    "scripts/dashboard_builder.py",
+    "scripts/build_context.py",
+    "scripts/dashboard/vm_export.py",
+    "scripts/dashboard/llm_export.py",
+    "scripts/dashboard/methods_export.py",
+    "scripts/templates/virtual_microscope_runtime.js",
+    "scripts/templates/virtual_microscope_app.js",
+    "assets/javascripts/methods_generator_app.js",
+]
+
+# Explicit whitelist: migration/audit compatibility only.
+LEGACY_IMPORT_WHITELIST = {
+    "scripts/light_path_parser.py",
+    "scripts/lightpath/legacy_import.py",
+    "scripts/lightpath/model.py",
+    "scripts/lightpath/__init__.py",
+    "scripts/migrate_light_paths.py",
+    "scripts/full_audit.py",
+    "scripts/validate.py",
+}
+
+
+def _violations_for_source(source: str) -> list[str]:
+    violations: list[str] = []
+    if 'vm_payload = copy.deepcopy((dashboard_view_dto.get("hardware")' in source:
+        violations.append("vm_from_dashboard_optical_path")
+    if "hardware.get(\"optical_path\")" in source:
+        violations.append("dashboard_optical_path_as_authority")
+    if "ROUTE_SORT_ORDER" in source or "ROUTE_LABELS" in source or "ROUTE_TAGS" in source or "RESERVED_ROUTE_TAGS" in source:
+        violations.append("route_constant_hardcoding")
+    if "itemRoutes.includes('shared')" in source or "itemRoutes.includes('all')" in source:
+        violations.append("route_magic_shared_all")
+    if "record.route_steps" in source and "function selectedRouteStepsForRecord" in source:
+        violations.append("selected_steps_fallback_to_route_steps")
+    if "optical_path.light_paths or optical_path.route_renderables or optical_path.routes" in source:
+        violations.append("dashboard_optical_path_compat_chain")
+    return violations
+
+
 class NoProductionFallbacksStaticTests(unittest.TestCase):
-    """Static guardrails against split dataflow regressions in production paths."""
+    def test_violation_detector_catches_deliberate_forbidden_examples(self) -> None:
+        fake = "function selectedRouteStepsForRecord(){ return record.route_steps; } const x=itemRoutes.includes('shared');"
+        violations = _violations_for_source(fake)
+        self.assertIn("selected_steps_fallback_to_route_steps", violations)
+        self.assertIn("route_magic_shared_all", violations)
 
-    def test_vm_export_not_sourced_from_dashboard_optical_path(self) -> None:
-        src = Path("scripts/build_context.py").read_text(encoding="utf-8")
-        self.assertIn("vm_payload = copy.deepcopy(canonical_lightpath_dto", src)
-        self.assertNotIn('vm_payload = copy.deepcopy((dashboard_view_dto.get("hardware")', src)
-
-    def test_methods_export_not_using_vm_payload(self) -> None:
-        src = Path("scripts/dashboard_builder.py").read_text(encoding="utf-8")
-        section = src.split("def build_methods_generator_instrument_export", 1)[1].split("def _display_labels", 1)[0]
-        self.assertNotIn("vm_payload", section)
-
-    def test_llm_export_not_using_vm_payload_source_of_truth(self) -> None:
-        src = Path("scripts/dashboard_builder.py").read_text(encoding="utf-8")
-        section = src.split("def build_llm_inventory_payload", 1)[1].split("def _build_route_planning_summary", 1)[0]
-        self.assertNotIn("vm_payload", section)
-
-    def test_production_build_context_uses_strict_parser(self) -> None:
-        src = Path("scripts/build_context.py").read_text(encoding="utf-8")
-        self.assertIn("canonicalize_light_path_model_strict", src)
-
-    def test_route_sort_order_not_hardcoded_in_python_parser(self) -> None:
-        src = Path("scripts/light_path_parser.py").read_text(encoding="utf-8")
-        self.assertNotIn("ROUTE_SORT_ORDER", src)
-
-    def test_no_silent_unknown_as_authoritative_data(self) -> None:
-        # Display-only unknown labels are allowed in templates/tests, but not as
-        # authoritative export contracts in production parser/build-context paths.
-        for file_path in ["scripts/build_context.py", "scripts/light_path_parser.py"]:
+    def test_production_files_have_no_forbidden_fallback_patterns(self) -> None:
+        for file_path in PRODUCTION_SCAN_FILES:
             src = Path(file_path).read_text(encoding="utf-8")
-            self.assertNotIn('"Unknown"', src)
+            violations = _violations_for_source(src)
+            self.assertEqual([], violations, f"{file_path} contains forbidden production fallback patterns: {violations}")
 
-    def test_selected_execution_not_replaced_by_route_steps_in_vm_runtime(self) -> None:
-        src = Path("scripts/templates/virtual_microscope_runtime.js").read_text(encoding="utf-8")
-        self.assertIn("selected_execution", src)
-        self.assertIn("selected_route_steps", src)
+    def test_methods_and_llm_export_sections_do_not_use_vm_or_dashboard_view_as_authority(self) -> None:
+        src = Path("scripts/dashboard_builder.py").read_text(encoding="utf-8")
+        methods_section = src.split("def build_methods_generator_instrument_export", 1)[1].split("def _display_labels", 1)[0]
+        self.assertNotIn("vm_payload", methods_section)
+        self.assertNotIn("dashboard_view_dto", methods_section)
+        self.assertNotIn("hardware.optical_path", methods_section)
 
-    def test_whitelisted_legacy_compatibility_locations_only(self) -> None:
-        # Whitelist rationale:
-        # - migration script explicitly upgrades legacy YAML
-        # - audit script may detect/report legacy topology
-        whitelist = {
-            "scripts/light_path_parser.py",
-            "scripts/migrate_light_paths.py",
-            "scripts/full_audit.py",
-            "scripts/validate.py",
-        }
-        for path in Path("scripts").glob("*.py"):
+        llm_section = src.split("def build_llm_inventory_payload", 1)[1].split("def _build_route_planning_summary", 1)[0]
+        self.assertNotIn("vm_payload", llm_section)
+        self.assertNotIn("dashboard_view_dto", llm_section)
+        self.assertNotIn("hardware.get(\"optical_path\")", llm_section)
+
+    def test_legacy_import_usage_is_whitelisted(self) -> None:
+        for path in Path("scripts").rglob("*.py"):
             src = path.read_text(encoding="utf-8")
-            mentions_legacy = "import_legacy_light_path_model" in src or "has_legacy_light_path_input" in src
-            if mentions_legacy:
-                self.assertIn(path.as_posix(), whitelist)
+            if "import_legacy_light_path_model" in src or re.search(r"\bcanonicalize_light_path_model\(", src):
+                self.assertIn(path.as_posix(), LEGACY_IMPORT_WHITELIST)
 
 
 if __name__ == "__main__":

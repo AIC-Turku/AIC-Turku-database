@@ -1,5 +1,9 @@
 """Utilities for validating and serializing microscope light-path definitions.
 
+MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
+docs/refactor_extraction_plan.md for the staged split plan. New business logic
+should be added to scripts/lightpath/ submodules, not here.
+
 The virtual microscope consumes a validated, normalized hardware payload generated from
 instrument YAML. This module keeps that payload browser-friendly while preserving enough
 metadata for route-aware spectral simulation.
@@ -31,31 +35,6 @@ from scripts.display_labels import (
 DICHROIC_TYPES = {"dichroic", "multiband_dichroic", "polychroic"}
 NO_WAVELENGTH_TYPES = {"empty", "mirror", "block", "passthrough", "neutral_density"}
 CUBE_FILTER_COMPONENT_TYPES = {"bandpass", "multiband_bandpass", "longpass", "shortpass", "notch", "tunable"}
-ROUTE_TAGS = {"epi", "widefield_fluorescence", "tirf", "confocal", "confocal_point", "confocal_spinning_disk", "multiphoton", "light_sheet", "transmitted", "transmitted_brightfield", "phase_contrast", "darkfield", "dic", "reflected_brightfield", "optical_sectioning", "spectral_imaging", "flim", "fcs", "ism", "smlm", "spt", "fret", "shared", "all"}
-ROUTE_LABELS = {
-    "confocal": "Confocal",
-    "confocal_point": "Point-Scanning Confocal",
-    "confocal_spinning_disk": "Spinning-Disk Confocal",
-    "epi": "Epi-fluorescence",
-    "widefield_fluorescence": "Epi-fluorescence",
-    "tirf": "TIRF",
-    "multiphoton": "Multiphoton",
-    "light_sheet": "Light Sheet",
-    "transmitted": "Transmitted light",
-    "transmitted_brightfield": "Transmitted Brightfield",
-    "phase_contrast": "Phase Contrast",
-    "darkfield": "Darkfield",
-    "dic": "DIC",
-    "reflected_brightfield": "Reflected Brightfield",
-    "optical_sectioning": "Optical Sectioning",
-    "spectral_imaging": "Spectral Imaging",
-    "flim": "FLIM",
-    "fcs": "FCS",
-    "ism": "ISM",
-    "smlm": "SMLM",
-    "spt": "SPT",
-    "fret": "FRET",
-}
 CUBE_LINK_KEYS = ("excitation_filter", "dichroic", "emission_filter")
 CAMERA_DETECTOR_KINDS = {"camera", "scmos", "cmos", "ccd", "emccd"}
 POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}
@@ -71,12 +50,12 @@ _active_vocab: VocabLookup | None = None
 
 
 def _resolve_route_label(route_id: str, explicit_name: str | None = None) -> str:
-    """Resolve a display label for a route id using vocab or ROUTE_LABELS fallback."""
+    """Resolve a display label for a route id using explicit DTO name/vocab/ID."""
     if explicit_name:
         return explicit_name
     if _active_vocab is not None:
         return resolve_route_label(route_id, _active_vocab)
-    return ROUTE_LABELS.get(route_id, route_id.replace("_", " ").title())
+    return route_id
 
 
 def _resolve_component_type_label(component_type: str) -> str:
@@ -335,12 +314,10 @@ def _normalize_endpoint_type(value: Any) -> str:
 
 
 def _routes_overlap(left: list[str], right: list[str]) -> bool:
-    left_set = {tag for tag in left if tag != "all"}
-    right_set = {tag for tag in right if tag != "all"}
+    left_set = {tag for tag in left if isinstance(tag, str) and tag.strip()}
+    right_set = {tag for tag in right if isinstance(tag, str) and tag.strip()}
     if not left_set or not right_set:
-        return True
-    if "shared" in left_set or "shared" in right_set:
-        return True
+        return False
     return bool(left_set & right_set)
 
 
@@ -357,7 +334,7 @@ def _normalize_modalities(value: Any) -> list[str]:
     modalities: list[str] = []
     for item in items:
         cleaned = _clean_string(item).lower()
-        if cleaned and cleaned in ROUTE_TAGS and cleaned not in {"shared", "all"} and cleaned not in modalities:
+        if cleaned and cleaned not in modalities:
             modalities.append(cleaned)
     return modalities
 
@@ -838,7 +815,7 @@ def _import_legacy_light_paths(sources: list[dict[str, Any]], elements: list[dic
             route_ids.update(_normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes")))
     if not route_ids:
         route_ids = {"epi"}
-    ordered_routes = sorted(route_ids, key=_route_sort_key)
+    ordered_routes = sorted(route_ids)
     routes: list[dict[str, Any]] = []
     stage_order = {"illumination": ["excitation", "cube", "dichroic"], "detection": ["cube", "dichroic", "emission", "analyzer", "splitter"]}
     for route_id in ordered_routes:
@@ -1065,6 +1042,15 @@ def canonicalize_light_path_model_strict(instrument_dict: dict[str, Any]) -> dic
     if not _has_canonical_light_path_input(payload):
         raise ValueError("Legacy-only topology is not allowed in strict production mode.")
     return parse_canonical_light_path_model(payload)
+
+
+def parse_strict_canonical_light_path_model(instrument_dict: dict[str, Any]) -> dict[str, Any]:
+    """Strict production parser entry point.
+
+    This is the authoritative parser for production DTO/export flows. It rejects
+    legacy-only topology and does not invoke legacy import adapters.
+    """
+    return canonicalize_light_path_model_strict(instrument_dict)
 
 
 def migrate_instrument_to_light_path_v2(instrument_dict: dict[str, Any]) -> dict[str, Any]:
@@ -1659,7 +1645,7 @@ def _normalize_routes(value: Any) -> list[str]:
     routes: list[str] = []
     for candidate in candidates:
         cleaned = _clean_string(candidate).lower()
-        if cleaned and cleaned in ROUTE_TAGS and cleaned not in routes:
+        if cleaned and cleaned not in routes:
             routes.append(cleaned)
     return routes
 
@@ -2633,7 +2619,7 @@ def _route_tags(selection: dict[str, Any]) -> set[str]:
 
 
 def _routes_compatible(route_tags: set[str]) -> bool:
-    constrained = {tag for tag in route_tags if tag not in {"all", "shared"}}
+    constrained = {tag for tag in route_tags if isinstance(tag, str) and tag.strip()}
     return len(constrained) <= 1
 
 
@@ -2650,12 +2636,6 @@ def _choice_positions(mechanism: dict[str, Any]) -> list[dict[str, Any]]:
             if normalized_slot is not None and isinstance(position, dict)
         ]
     return []
-
-
-def _route_sort_key(route_id: str) -> tuple[int, str]:
-    # Display-only stable fallback ordering for compatibility paths.
-    # Production canonical route order should come from authored light_paths[] order.
-    return (0, route_id)
 
 
 def _endpoint_ids_in_sequence(sequence: list[dict[str, Any]]) -> list[str]:
@@ -2893,15 +2873,14 @@ def _collect_route_owned_splitters(
 
 
 def _route_catalog_entries(payload: dict[str, Any]) -> list[dict[str, str]]:
-    constrained_routes: set[str] = set()
+    constrained_routes: list[str] = []
 
     def collect_from_component(component: Any) -> None:
         if not isinstance(component, dict):
             return
-        constrained_routes.update(
-            route for route in _normalize_routes(component.get("routes") or component.get("path") or component.get("paths") or component.get("route"))
-            if route not in {"shared", "all"}
-        )
+        for route in _normalize_routes(component.get("routes") or component.get("path") or component.get("paths") or component.get("route")):
+            if isinstance(route, str) and route and route not in constrained_routes:
+                constrained_routes.append(route)
         linked_components = component.get("linked_components")
         if isinstance(linked_components, dict):
             for linked in linked_components.values():
@@ -2943,7 +2922,7 @@ def _route_catalog_entries(payload: dict[str, Any]) -> list[dict[str, str]]:
             "id": route_id,
             "label": _resolve_route_label(route_id),
         }
-        for route_id in sorted(constrained_routes, key=_route_sort_key)
+        for route_id in constrained_routes
     ]
 
 
@@ -4066,7 +4045,6 @@ def _build_route_sequences_and_graph(
         "selected_execution": {
             "contract_version": "selected_execution.v2",
             "selected_route_steps": deepcopy(selected_route_steps),
-            "steps": deepcopy(selected_route_steps),  # TODO: remove once all consumers use selected_route_steps
             "warnings": list(route_warnings),
         },
         "route_warnings": route_warnings,
@@ -4084,7 +4062,13 @@ def _build_route_sequences_and_graph(
     return resolved_route, usage
 
 
-def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferred_terminals: bool = False, vocab: VocabLookup | None = None) -> dict:
+def generate_virtual_microscope_payload(
+    instrument_dict: dict,
+    *,
+    include_inferred_terminals: bool = False,
+    vocab: VocabLookup | None = None,
+    compatibility_mode: bool = False,
+) -> dict:
     """Build the authoritative canonical DTO plus explicit downstream projections.
 
     Top-level DTO fields are the canonical contract consumed across the repository:
@@ -4101,14 +4085,28 @@ def generate_virtual_microscope_payload(instrument_dict: dict, *, include_inferr
     _prev_vocab = _active_vocab
     _active_vocab = vocab
     try:
-        return _generate_virtual_microscope_payload_inner(instrument_dict, include_inferred_terminals=include_inferred_terminals)
+        return _generate_virtual_microscope_payload_inner(
+            instrument_dict,
+            include_inferred_terminals=include_inferred_terminals,
+            compatibility_mode=compatibility_mode,
+        )
     finally:
         _active_vocab = _prev_vocab
 
 
-def _generate_virtual_microscope_payload_inner(instrument_dict: dict, *, include_inferred_terminals: bool = False) -> dict:
+def _generate_virtual_microscope_payload_inner(
+    instrument_dict: dict,
+    *,
+    include_inferred_terminals: bool = False,
+    compatibility_mode: bool = False,
+) -> dict:
     """Inner implementation — always runs within a vocab context set by the public wrapper."""
-    canonical = canonicalize_light_path_model(instrument_dict if isinstance(instrument_dict, dict) else {})
+    parser_input = instrument_dict if isinstance(instrument_dict, dict) else {}
+    canonical = (
+        canonicalize_light_path_model(parser_input)
+        if compatibility_mode
+        else parse_strict_canonical_light_path_model(parser_input)
+    )
     hardware = instrument_dict.get("hardware") if isinstance(instrument_dict.get("hardware"), dict) else {}
     sources = canonical["sources"]
     elements = canonical["optical_path_elements"]

@@ -1,4 +1,9 @@
-"""Validation helpers and CLI for dashboard source ledgers."""
+"""Validation helpers and CLI for dashboard source ledgers.
+
+MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
+docs/refactor_extraction_plan.md for the staged split plan. New validation
+logic should be added to scripts/validation/ submodules, not here.
+"""
 
 from __future__ import annotations
 
