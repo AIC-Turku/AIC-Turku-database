@@ -120,12 +120,22 @@ def build_instrument_context(
 
     dashboard_view_dto = build_dashboard_view_dto(vocabulary, build_input, build_input["lightpath_dto"])
     build_input["dto"] = copy.deepcopy(dashboard_view_dto if isinstance(dashboard_view_dto, dict) else {})
+    # Propagate authoritative_route_contract from dashboard view into lightpath_dto.projections.llm
+    # so LLM and methods exports can access it from a consistent location without re-reading the dashboard view.
+    if isinstance(dashboard_view_dto, dict) and isinstance(build_input.get("lightpath_dto"), dict):
+        _optical_path = ((dashboard_view_dto.get("hardware") or {}).get("optical_path") or {}) if isinstance((dashboard_view_dto.get("hardware") or {}).get("optical_path"), dict) else {}
+        _arc = _optical_path.get("authoritative_route_contract") if isinstance(_optical_path.get("authoritative_route_contract"), dict) else None
+        if _arc:
+            build_input["lightpath_dto"].setdefault("projections", {}).setdefault("llm", {})["authoritative_route_contract"] = copy.deepcopy(_arc)
     methods_export_dto = build_methods_view_dto(build_input)
     llm_inventory_record = build_llm_inventory_record(build_input)
 
     # VM payload must consume the canonical parser DTO directly. Dashboard view DTOs
     # are display-only and must not be used as VM authority.
     vm_payload = _build_vm_payload_from_canonical_lightpath(canonical_lightpath_dto, diagnostics)
+    # Inject instrument identity so downstream code can identify the source instrument.
+    if isinstance(vm_payload, dict) and isinstance(canonical_payload.get("instrument"), dict):
+        vm_payload["instrument"] = copy.deepcopy(canonical_payload["instrument"])
     light_paths = vm_payload.get("light_paths") if isinstance(vm_payload.get("light_paths"), list) else []
     for index, route in enumerate(light_paths):
         if not isinstance(route, dict):

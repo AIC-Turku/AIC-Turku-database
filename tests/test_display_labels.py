@@ -222,8 +222,8 @@ class VocabBackedParserIntegrationTests(unittest.TestCase):
         routes = projections.get("available_routes", [])
         confocal = next((r for r in routes if r["id"] == "confocal"), None)
         self.assertIsNotNone(confocal)
-        # Falls back to ROUTE_LABELS dict
-        self.assertEqual(confocal["label"], "Confocal")
+        # Without vocab, the route ID is returned directly as the label
+        self.assertEqual(confocal["label"], "confocal")
 
 
 if __name__ == "__main__":

@@ -28,20 +28,24 @@ class DataflowContractE2ETests(unittest.TestCase):
                 "objectives": [{"id": "obj_60", "model": "60x"}],
                 "optical_path_elements": [{"id": "cube_1", "stage_role": "cube", "element_type": "filter_cube_turret"}],
                 "endpoints": [{"id": "det_cam", "endpoint_type": "camera"}],
+                "light_paths": [
+                    {
+                        "id": "route_custom",
+                        "name": "Route Custom",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [{"endpoint_id": "det_cam"}],
+                    },
+                    {
+                        "id": "route_secondary",
+                        "name": "Route Secondary",
+                        "illumination_sequence": [{"source_id": "src_488"}],
+                        "detection_sequence": [{"endpoint_id": "det_cam"}],
+                    },
+                ],
             },
             "policy": {},
         }
-        lightpath_dto = {
-            "sources": [{"id": "src_488"}],
-            "optical_path_elements": [{"id": "cube_1"}],
-            "endpoints": [{"id": "det_cam"}],
-            "light_paths": [
-                {"id": "route_custom", "name": "Route Custom", "selected_execution": {"selected_route_steps": []}},
-                {"id": "route_secondary", "name": "Route Secondary", "selected_execution": {"selected_route_steps": []}},
-            ],
-            "projections": {"llm": {"authoritative_route_contract": {"available_routes": [{"id": "route_custom", "display_label": "Route Custom"}, {"id": "route_secondary", "display_label": "Route Secondary"}], "routes": [{"id": "route_custom"}, {"id": "route_secondary"}]}}}
-        }
-        return {"id": "scope-e2e", "display_name": "Scope E2E", "canonical": canonical, "lightpath_dto": lightpath_dto, "dto": {"id": "scope-e2e", "display_name": "Scope E2E"}}
+        return {"id": "scope-e2e", "display_name": "Scope E2E", "canonical": canonical, "dto": {"id": "scope-e2e", "display_name": "Scope E2E"}}
 
     def test_e2e_contract_alignment(self):
         inst = self._fixture_inst()
@@ -94,15 +98,30 @@ class DataflowContractE2ETests(unittest.TestCase):
         self.assertTrue(ctx.diagnostics)
 
     def test_missing_selected_execution_blocks_exports(self):
+        import scripts.build_context as bc
+
         inst = self._fixture_inst()
-        inst["canonical"]["light_paths"] = [{"id": "route_custom", "name": "Route Custom"}]
-        ctx = build_instrument_context(
-            inst,
-            vocabulary=self.vocabulary,
-            build_dashboard_view_dto=build_instrument_mega_dto,
-            build_methods_view_dto=build_methods_generator_instrument_export,
-            build_llm_inventory_record=lambda i: build_llm_inventory_payload({"short_name": "Core"}, [i])["active_microscopes"][0],
-        )
+        original_gen = bc.generate_virtual_microscope_payload
+
+        # Patch vm payload generator to return routes without selected_execution
+        # to verify that the build context detects and diagnoses missing execution contract
+        bc.generate_virtual_microscope_payload = lambda *args, **kwargs: {
+            "sources": [],
+            "optical_path_elements": [],
+            "endpoints": [],
+            "light_paths": [{"id": "route_custom", "name": "Route Custom"}],
+        }
+        try:
+            ctx = build_instrument_context(
+                inst,
+                vocabulary=self.vocabulary,
+                build_dashboard_view_dto=build_instrument_mega_dto,
+                build_methods_view_dto=build_methods_generator_instrument_export,
+                build_llm_inventory_record=lambda i: build_llm_inventory_payload({"short_name": "Core"}, [i])["active_microscopes"][0],
+            )
+        finally:
+            bc.generate_virtual_microscope_payload = original_gen
+
         self.assertTrue(any(d.get("code") == "missing_selected_execution" for d in ctx.diagnostics))
         self.assertIn("export_diagnostics", ctx.vm_payload)
         self.assertIn("export_diagnostics", ctx.dashboard_view_dto)
@@ -111,7 +130,15 @@ class DataflowContractE2ETests(unittest.TestCase):
 
     def test_custom_route_id_and_name_preserved(self):
         inst = self._fixture_inst()
-        methods = build_methods_generator_instrument_export(inst)
+        # Use build_instrument_context to exercise the canonical pipeline end-to-end
+        ctx = build_instrument_context(
+            inst,
+            vocabulary=self.vocabulary,
+            build_dashboard_view_dto=build_instrument_mega_dto,
+            build_methods_view_dto=build_methods_generator_instrument_export,
+            build_llm_inventory_record=lambda i: build_llm_inventory_payload({"short_name": "Core"}, [i])["active_microscopes"][0],
+        )
+        methods = ctx.methods_export_dto
         self.assertEqual(methods["methods_view_dto"]["routes"][0]["id"], "route_custom")
         self.assertEqual(methods["methods_view_dto"]["routes"][0]["display_label"], "Route Custom")
 

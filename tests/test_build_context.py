@@ -13,7 +13,7 @@ class BuildContextTests(unittest.TestCase):
             "source_payload": {"instrument": {"instrument_id": "scope-testx1"}},
             "canonical": {
                 "instrument": {"instrument_id": "scope-testx1", "display_name": "Test Scope"},
-                "hardware": {"sources": [], "optical_path_elements": [], "endpoints": []},
+                "hardware": {"sources": [{"id": "src_a", "kind": "laser"}], "optical_path_elements": [], "endpoints": []},
             },
             "dto": {"id": "scope-testx1"},
         }
