@@ -18,7 +18,14 @@ def main(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build MkDocs Material dashboard pages from YAML ledgers.")
-    parser.add_argument(
+    strict_group = parser.add_mutually_exclusive_group()
+    strict_group.add_argument(
+        "--strict",
+        action="store_true",
+        default=False,
+        help="Enable strict validator gate (default behaviour; kept for CI compatibility).",
+    )
+    strict_group.add_argument(
         "--no-strict",
         action="store_true",
         help="Skip strict validator gate and load all parseable instrument YAML files.",
