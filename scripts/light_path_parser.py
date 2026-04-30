@@ -811,7 +811,7 @@ def _import_legacy_light_paths(sources: list[dict[str, Any]], elements: list[dic
             route_ids.update(_normalize_modalities(row.get("modalities") or row.get("path") or row.get("routes")))
     if not route_ids:
         route_ids = {"epi"}
-    ordered_routes = sorted(route_ids, key=_route_sort_key)
+    ordered_routes = sorted(route_ids)
     routes: list[dict[str, Any]] = []
     stage_order = {"illumination": ["excitation", "cube", "dichroic"], "detection": ["cube", "dichroic", "emission", "analyzer", "splitter"]}
     for route_id in ordered_routes:

@@ -595,17 +595,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
     def test_methods_generator_export_carries_blockers_without_changing_main_dto(self) -> None:
         instrument = {
+            "id": "scope-1",
             "dto": {
                 "id": "scope-1",
                 "display_name": "Scope 1",
-                "hardware": {
-                    "optical_path": {
-                        "authoritative_route_contract": {
-                            "available_routes": [{"id": "epi", "display_label": "Epi"}],
-                            "routes": [{"id": "epi", "display_label": "Epi"}],
-                        }
-                    }
-                },
             },
             "methods_generation": {"is_blocked": True, "blockers": [{"path": "software[0].version"}]},
             "runtime_selected_configuration": {
@@ -621,7 +614,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                 "software": [{"id": "sw1", "name": "LAS X"}],
             },
             "lightpath_dto": {
-                "light_paths": [{"id": "epi", "name": "Epi"}, {"id": "confocal", "name": "Confocal"}]
+                "light_paths": [
+                    {"id": "epi", "name": "Epi", "selected_execution": {"selected_route_steps": []}},
+                    {"id": "confocal", "name": "Confocal", "selected_execution": {"selected_route_steps": []}},
+                ]
             },
         }
 
@@ -631,10 +627,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertIn("methods_generation", exported)
         self.assertTrue(exported["methods_generation"]["is_blocked"])
         self.assertEqual(exported["runtime_selected_configuration"]["route"], "epi")
-        self.assertEqual(
-            exported["hardware"]["optical_path"]["authoritative_route_contract"]["available_routes"][0]["id"],
-            "epi",
-        )
+        self.assertEqual(exported["methods_view_dto"]["routes"][0]["id"], "epi")
         self.assertEqual(exported["methods_view_dto"]["routes"][0]["id"], "epi")
         self.assertEqual(exported["methods_view_dto"]["routes"][1]["id"], "confocal")
         self.assertEqual(exported["methods_view_dto"]["objectives"][0]["id"], "obj_63x")
@@ -686,15 +679,21 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                     "dto": {
                         "id": "scope-1",
                         "display_name": "Scope 1",
-                        "modalities": [{"display_label": "Confocal"}],
+                    },
+                    "canonical": {
+                        "policy": {},
+                        "modalities": [{"id": "confocal", "display_label": "Confocal"}],
                         "hardware": {
                             "objectives": [{"display_label": "63x Oil", "is_installed": True}],
                             "light_sources": [{"display_label": "488 nm laser"}],
                             "detectors": [{"display_label": "HyD"}],
                             "optical_modulators": [{"display_label": "SLM"}],
                             "illumination_logic": [{"display_label": "Adaptive illumination"}],
-                            "optical_path": {
-                                "available_routes": [{"label": "Confocal route"}],
+                        },
+                    },
+                    "lightpath_dto": {
+                        "projections": {
+                            "llm": {
                                 "authoritative_route_contract": {
                                     "available_routes": [{"id": "confocal", "display_label": "Confocal route"}],
                                     "routes": [
@@ -713,11 +712,13 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                                             "topology": {"graph_nodes": [], "graph_edges": []},
                                         }
                                     ],
-                                },
-                            },
+                                }
+                            }
                         },
+                        "light_paths": [
+                            {"id": "confocal", "selected_execution": {"selected_route_steps": []}}
+                        ],
                     },
-                    "canonical": {"policy": {}},
                 }
             ],
         )
@@ -747,12 +748,16 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             {"short_name": "Core"},
             [
                 {
-                    "dto": {
-                        "id": "scope-structured",
-                        "display_name": "Structured",
+                    "dto": {"id": "scope-structured", "display_name": "Structured"},
+                    "canonical": {
+                        "policy": {},
                         "hardware": {
                             "objectives": [{"id": "obj_60", "display_label": "60x Oil", "is_installed": True}],
-                            "optical_path": {
+                        },
+                    },
+                    "lightpath_dto": {
+                        "projections": {
+                            "llm": {
                                 "authoritative_route_contract": {
                                     "routes": [
                                         {
@@ -775,10 +780,9 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                                         }
                                     ]
                                 }
-                            },
+                            }
                         },
                     },
-                    "canonical": {"policy": {}},
                 }
             ],
         )
@@ -796,11 +800,11 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             {"short_name": "Core"},
             [
                 {
-                    "dto": {
-                        "id": "scope-flat",
-                        "display_name": "Flat",
-                        "hardware": {
-                            "optical_path": {
+                    "dto": {"id": "scope-flat", "display_name": "Flat"},
+                    "canonical": {"policy": {}},
+                    "lightpath_dto": {
+                        "projections": {
+                            "llm": {
                                 "authoritative_route_contract": {
                                     "routes": [
                                         {
@@ -823,7 +827,6 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                             }
                         },
                     },
-                    "canonical": {"policy": {}},
                 }
             ],
         )
@@ -838,12 +841,11 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             {"short_name": "Core"},
             [
                 {
-                    "dto": {
-                        "id": "scope-separation",
-                        "display_name": "Separation",
-                        "hardware": {
-                            "light_sources": [{"id": "source:488", "display_label": "488 nm laser"}],
-                            "optical_path": {
+                    "dto": {"id": "scope-separation", "display_name": "Separation"},
+                    "canonical": {"policy": {}},
+                    "lightpath_dto": {
+                        "projections": {
+                            "llm": {
                                 "authoritative_route_contract": {
                                     "routes": [
                                         {
@@ -859,10 +861,9 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                                         }
                                     ]
                                 }
-                            },
+                            }
                         },
                     },
-                    "canonical": {"policy": {}},
                 }
             ],
         )
@@ -882,8 +883,15 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "dto": {
                 "id": "scope-custom-order",
                 "display_name": "Custom Order Scope",
-                "hardware": {
-                    "optical_path": {
+            },
+            "canonical": {
+                "hardware": {"objectives": [], "sources": [], "detectors": []},
+                "software": [],
+                "policy": {},
+            },
+            "lightpath_dto": {
+                "projections": {
+                    "llm": {
                         "authoritative_route_contract": {
                             "available_routes": [
                                 {"id": "route_zeta", "display_label": "Zeta"},
@@ -893,14 +901,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                         }
                     }
                 },
-            },
-            "canonical": {
-                "hardware": {"objectives": [], "sources": [], "detectors": []},
-                "software": [],
-                "policy": {},
-            },
-            "lightpath_dto": {
-                "light_paths": [{"id": "route_zeta", "name": "Zeta"}, {"id": "route_alpha", "name": "Alpha"}]
+                "light_paths": [
+                    {"id": "route_zeta", "name": "Zeta", "selected_execution": {"selected_route_steps": []}},
+                    {"id": "route_alpha", "name": "Alpha", "selected_execution": {"selected_route_steps": []}},
+                ],
             },
         }
 
