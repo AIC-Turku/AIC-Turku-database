@@ -1,5 +1,9 @@
 """Build MkDocs Material dashboard pages from YAML ledgers.
 
+MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
+docs/refactor_extraction_plan.md for the staged split plan. New business logic
+should be added to scripts/dashboard/ submodules, not here.
+
 Pipeline
 --------
 - instruments/*.yaml

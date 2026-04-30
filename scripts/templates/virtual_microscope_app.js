@@ -1,3 +1,6 @@
+// MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
+// docs/refactor_extraction_plan.md. New business logic should go in
+// assets/javascripts/virtual_microscope/ submodules, not here.
 (function () {
   const VM = window.VirtualMicroscopeRuntime;
   if (!VM) {

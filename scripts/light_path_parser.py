@@ -1,5 +1,9 @@
 """Utilities for validating and serializing microscope light-path definitions.
 
+MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
+docs/refactor_extraction_plan.md for the staged split plan. New business logic
+should be added to scripts/lightpath/ submodules, not here.
+
 The virtual microscope consumes a validated, normalized hardware payload generated from
 instrument YAML. This module keeps that payload browser-friendly while preserving enough
 metadata for route-aware spectral simulation.

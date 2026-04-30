@@ -1,3 +1,6 @@
+// MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
+// docs/refactor_extraction_plan.md. New business logic should go in
+// assets/javascripts/virtual_microscope/ submodules, not here.
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) {
@@ -342,7 +345,14 @@
       && Array.isArray(payload.optical_path_elements)
       && Array.isArray(payload.endpoints)
       && Array.isArray(payload.light_paths)
-      && payload.light_paths.every((route) => route && typeof route === 'object' && Array.isArray(route.route_steps));
+      && payload.light_paths.every((route) =>
+        route && typeof route === 'object'
+        && (
+          Array.isArray(route.route_steps)
+          || (route.selected_execution && typeof route.selected_execution === 'object'
+              && Array.isArray(route.selected_execution.selected_route_steps))
+        )
+      );
   }
 
   function canonicalTopologyBindings(payload) {
@@ -3005,17 +3015,23 @@ function detectorCollectionMask(detector, grid) {
 
     const routeViolations = [];
     selectedSources.forEach((source) => {
-      if (!componentMatchesActiveRoute(source, activeRoute)) {
+      // Only check route membership when the selection object has explicit routes set.
+      // Selection objects without routes are user-provided choices that are
+      // route-agnostic; route filtering is enforced through traversal steps.
+      const tags = routesFromObject(source);
+      if (tags.length > 0 && !componentMatchesActiveRoute(source, activeRoute)) {
         routeViolations.push(`Source ${source.display_label || source.name || 'Source'} is not on route ${activeRoute}.`);
       }
     });
     explicitDetectorSelections.forEach((detector) => {
-      if (!componentMatchesActiveRoute(detector, activeRoute)) {
+      const tags = routesFromObject(detector);
+      if (tags.length > 0 && !componentMatchesActiveRoute(detector, activeRoute)) {
         routeViolations.push(`Detector ${detector.display_label || detector.name || 'Detector'} is not on route ${activeRoute}.`);
       }
     });
     selectedSplitters.forEach((splitter) => {
-      if (!componentMatchesActiveRoute(splitter, activeRoute)) {
+      const tags = routesFromObject(splitter);
+      if (tags.length > 0 && !componentMatchesActiveRoute(splitter, activeRoute)) {
         routeViolations.push(`Splitter ${splitter.display_label || splitter.name || splitter.id || 'Splitter'} is not on route ${activeRoute}.`);
       }
     });
@@ -3321,6 +3337,7 @@ function detectorCollectionMask(detector, grid) {
 
     routesFromObject,
     routeMatches,
+    componentMatchesActiveRoute,
     detectorClass,
     normalizeMechanismList,
     normalizeSplitters,
