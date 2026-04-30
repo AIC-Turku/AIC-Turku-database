@@ -479,6 +479,13 @@ def _generate_virtual_microscope_payload_inner(
 
         splitter_payload = _splitter_payload(index, raw_splitter, payload["terminals"])
         splitter_payload["id"] = element.get("id") or splitter_payload.get("id")
+        splitter_payload["selection_mode"] = element.get("selection_mode") or splitter_payload.get("selection_mode")
+        for branch_index, branch in enumerate(splitter_payload.get("branches", [])):
+            if branch.get("id") and not branch.get("branch_id"):
+                branch["branch_id"] = branch["id"]
+            if not branch.get("label"):
+                component = branch.get("component") if isinstance(branch.get("component"), dict) else {}
+                branch["label"] = component.get("display_label") or component.get("label") or branch.get("id") or f"Branch {branch_index + 1}"
 
         if routes:
             splitter_payload["routes"] = routes
@@ -540,8 +547,9 @@ def _generate_virtual_microscope_payload_inner(
 
         splitter_payload = _splitter_payload(index, raw_splitter, payload["terminals"])
         splitter_payload["id"] = splitter.get("id") or splitter_payload.get("id")
+        splitter_payload["selection_mode"] = splitter.get("selection_mode") or splitter_payload.get("selection_mode")
         splitter_payload["branch_selection_required"] = (
-            splitter.get("selection_mode") == "exclusive"
+            splitter_payload.get("selection_mode") == "exclusive"
             and len(splitter_payload.get("branches", [])) > 1
         )
 
@@ -555,6 +563,25 @@ def _generate_virtual_microscope_payload_inner(
                 branch["sequence"] = _json_clone(source_branch.get("sequence") or [])
                 if source_branch.get("__routes"):
                     branch["__routes"] = list(source_branch.get("__routes") or [])
+            # Runtime expects both id and branch_id compatibility fields.
+            if branch.get("id") and not branch.get("branch_id"):
+                branch["branch_id"] = branch["id"]
+            if not branch.get("label"):
+                component = branch.get("component") if isinstance(branch.get("component"), dict) else {}
+                branch["label"] = component.get("display_label") or component.get("label") or branch.get("id") or f"Branch {branch_index + 1}"
+
+        branches = [b for b in splitter_payload.get("branches", []) if isinstance(b, dict)]
+        if splitter_payload.get("branch_selection_required") and branches:
+            selected_branch_id = next((b.get("id") for b in branches if b.get("target_ids")), None) or branches[0].get("id")
+            if selected_branch_id:
+                splitter_payload["default_branch_id"] = selected_branch_id
+                splitter_payload["selected_branch_id"] = selected_branch_id
+                splitter_payload["selected_branch_ids"] = [selected_branch_id]
+                splitter_payload["auto_defaulted_branch_selection"] = True
+                splitter_payload["auto_defaulted_branch_id"] = selected_branch_id
+                splitter_payload["branch_selection_default_source"] = "runtime_projection_first_targeted_branch"
+        elif splitter_payload.get("selected_branch_id") or splitter_payload.get("default_branch_id") or splitter_payload.get("selected_branch_ids"):
+            splitter_payload["branch_selection_default_source"] = "authored"
 
         if routes:
             splitter_payload["routes"] = routes
