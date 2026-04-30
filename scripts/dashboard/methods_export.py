@@ -11,7 +11,7 @@ Authoritative production dataflow:
        dashboard_view
        llm_inventory
        methods_export
-       vm_payload
+       virtual_microscope_payload
 
 This module must not import scripts.dashboard_builder.
 """

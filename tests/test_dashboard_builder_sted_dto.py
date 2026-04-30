@@ -5,19 +5,16 @@ import os
 import tempfile
 from pathlib import Path
 
-from scripts.dashboard_builder import (
-    build_hardware_dto,
-    build_instrument_mega_dto,
-    build_llm_inventory_payload,
+from scripts.build_context import normalize_hardware, normalize_instrument_dto
+from scripts.dashboard.instrument_view import build_hardware_dto, build_instrument_mega_dto
+from scripts.dashboard.llm_export import build_llm_inventory_payload
+from scripts.dashboard.methods_export import (
     build_methods_generator_instrument_export,
     build_methods_generator_page_config,
-    build_optical_path_dto,
-    build_optical_path_view_dto,
-    json_script_data,
-    normalize_hardware,
-    normalize_instrument_dto,
-    load_instruments,
 )
+from scripts.dashboard.optical_path_view import build_optical_path_dto, build_optical_path_view_dto
+from scripts.dashboard.site_render import json_script_data
+from scripts.dashboard.loaders import load_instruments
 from scripts.validate import Vocabulary
 
 
@@ -1252,7 +1249,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "hardware": {},
         }
 
-        with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+        with mock.patch("scripts.build_context.build_instrument_completeness_report") as report_builder:
             report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
             normalized = normalize_instrument_dto(payload, Path("instruments/scope-legacy.yaml"), retired=False)
 
@@ -1277,7 +1274,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             prev = Path.cwd()
             try:
                 os.chdir(root)
-                with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+                with mock.patch("scripts.build_context.build_instrument_completeness_report") as report_builder:
                     report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
                     instruments = load_instruments(
                         "instruments",
@@ -1349,7 +1346,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             },
         }
 
-        with mock.patch("scripts.dashboard_builder._vocab_display", return_value="Hardware Autofocus"):
+        with mock.patch("scripts.dashboard.instrument_view._vocab_display", return_value="Hardware Autofocus"):
             dto = build_instrument_mega_dto(self.vocabulary, inst, EMPTY_LIGHTPATH)
 
         self.assertEqual(dto["modules"][0]["display_label"], "Hardware Autofocus")
@@ -1378,7 +1375,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "hardware": {},
         }
 
-        with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+        with mock.patch("scripts.build_context.build_instrument_completeness_report") as report_builder:
             report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
             normalized = normalize_instrument_dto(payload, Path("instruments/scope-1.yaml"), retired=False)
 
@@ -1393,7 +1390,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "hardware": {},
         }
 
-        with mock.patch("scripts.dashboard_builder.build_instrument_completeness_report") as report_builder:
+        with mock.patch("scripts.build_context.build_instrument_completeness_report") as report_builder:
             report_builder.return_value = mock.Mock(sections=[], missing_required=[], missing_conditional=[], alias_fallbacks=[])
             normalized = normalize_instrument_dto(payload, Path("instruments/scope-2.yaml"), retired=False)
 

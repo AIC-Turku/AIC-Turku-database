@@ -35,7 +35,7 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.dashboard_builder import YamlLoadError, load_instruments, validated_instrument_selection
+from scripts.dashboard.loaders import YamlLoadError, load_instruments, validated_instrument_selection
 from scripts.light_path_parser import canonicalize_light_path_model, generate_virtual_microscope_payload, infer_light_source_role, has_legacy_light_path_input
 from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,

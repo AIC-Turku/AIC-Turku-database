@@ -64,6 +64,12 @@ def _bool_display(value: Any) -> str:
     return "—"
 
 
+def clean_string_list(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    return [cleaned for item in values if (cleaned := clean_text(item))]
+
+
 def _human_list(items: list[str]) -> str:
     cleaned = [clean_text(item) for item in items if clean_text(item)]
     if not cleaned:
@@ -609,6 +615,10 @@ def build_software_dto(vocabulary: Vocabulary, software: dict[str, Any]) -> dict
         "display_label": display_label,
         "display_subtitle": role_label,
         "spec_lines": spec_lines,
+        "method_sentence": method_sentence,
+    }
+
+
 def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_dto: dict[str, Any]) -> dict[str, Any]:
     canonical_hardware = ((inst.get("canonical") or {}).get("hardware") or {})
     scanner = canonical_hardware.get("scanner") or {}

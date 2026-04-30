@@ -59,7 +59,7 @@ class InstrumentSpecTemplateTests(unittest.TestCase):
 
 class DashboardBuilderOpticalPathTests(unittest.TestCase):
     def test_optical_element_position_pairs_dict(self) -> None:
-        from scripts.dashboard_builder import _optical_element_position_pairs
+        from scripts.dashboard.optical_path_view import _optical_element_position_pairs
 
         # YAML position keys use underscores (e.g. "Pos_1"); the helper converts them to
         # title-case display labels with spaces (e.g. "Pos 1").
@@ -81,7 +81,7 @@ class DashboardBuilderOpticalPathTests(unittest.TestCase):
         self.assertIn("605/70 nm", pairs[1][1])
 
     def test_optical_element_position_pairs_list(self) -> None:
-        from scripts.dashboard_builder import _optical_element_position_pairs
+        from scripts.dashboard.optical_path_view import _optical_element_position_pairs
 
         element = {
             "positions": [
@@ -96,14 +96,14 @@ class DashboardBuilderOpticalPathTests(unittest.TestCase):
         self.assertIn("435/26 nm", pairs[0][1])
 
     def test_optical_element_position_pairs_empty(self) -> None:
-        from scripts.dashboard_builder import _optical_element_position_pairs
+        from scripts.dashboard.optical_path_view import _optical_element_position_pairs
 
         self.assertEqual(_optical_element_position_pairs({}), [])
         self.assertEqual(_optical_element_position_pairs({"positions": None}), [])
         self.assertEqual(_optical_element_position_pairs({"positions": {}}), [])
 
     def test_format_position_value(self) -> None:
-        from scripts.dashboard_builder import _format_position_value
+        from scripts.dashboard.optical_path_view import _format_position_value
 
         pos = {"name": "Filter set 38 HE", "product_code": "38 HE", "bands": [{"center_nm": 525, "width_nm": 50}], "notes": "Excitation: 470/40 nm."}
         result = _format_position_value(pos)
@@ -113,7 +113,7 @@ class DashboardBuilderOpticalPathTests(unittest.TestCase):
         self.assertIn("470/40 nm", result)
 
     def test_format_position_value_no_name(self) -> None:
-        from scripts.dashboard_builder import _format_position_value
+        from scripts.dashboard.optical_path_view import _format_position_value
 
         self.assertEqual(_format_position_value({}), "")
         self.assertEqual(_format_position_value({"product_code": "XY"}), "XY")
@@ -122,7 +122,7 @@ class DashboardBuilderOpticalPathTests(unittest.TestCase):
 
     def test_optical_path_element_card_includes_positions(self) -> None:
         """Integration test: optical path element DTO must include position spec_lines."""
-        from scripts.dashboard_builder import build_optical_path_dto
+        from scripts.dashboard.optical_path_view import build_optical_path_dto
 
         lightpath_dto = {
             "optical_path_elements": [
