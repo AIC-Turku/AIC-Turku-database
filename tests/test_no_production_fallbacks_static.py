@@ -27,6 +27,7 @@ LEGACY_IMPORT_WHITELIST = {
     "scripts/migrate_light_paths.py",
     "scripts/full_audit.py",
     "scripts/validate.py",
+    "scripts/validation/instrument.py",
 }
 
 
