@@ -3,7 +3,8 @@ from pathlib import Path
 
 import yaml
 
-from scripts.light_path_parser import generate_virtual_microscope_payload, validate_light_path_warnings, validate_filter_cube_warnings
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
+from scripts.lightpath.validate_contract import validate_light_path_warnings, validate_filter_cube_warnings
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

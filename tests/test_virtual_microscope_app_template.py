@@ -528,7 +528,7 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
 
     def test_parser_spectral_ops_present_in_component_payload(self) -> None:
         """_component_payload should include spectral_ops."""
-        source = Path("scripts/light_path_parser.py").read_text(encoding="utf-8")
+        source = Path("scripts/lightpath/spectral_ops.py").read_text(encoding="utf-8")
         self.assertIn("_spectral_ops_for_component", source)
         self.assertIn('"spectral_ops"', source)
 

@@ -47,6 +47,19 @@ from scripts.lightpath.model import (
 )
 
 
+def _iter_mechanisms(light_path: dict[str, Any], stage_key: str) -> list[dict[str, Any]]:
+    raw_mechanisms = light_path.get(stage_key, [])
+    if isinstance(raw_mechanisms, list):
+        return [entry for entry in raw_mechanisms if isinstance(entry, dict)]
+    if isinstance(raw_mechanisms, dict):
+        return [
+            entry
+            for _, entry in sorted(raw_mechanisms.items(), key=lambda item: str(item[0]))
+            if isinstance(entry, dict)
+        ]
+    return []
+
+
 def _band_strings(component: dict[str, Any], key: str) -> list[str]:
     raw_bands = component.get(key)
     if not isinstance(raw_bands, list):

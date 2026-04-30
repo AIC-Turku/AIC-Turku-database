@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 import yaml
 
-from scripts.light_path_parser import migrate_instrument_to_light_path_v2
+from scripts.lightpath.legacy_import import migrate_instrument_to_light_path_v2
 
 
 def migrate_file(path: Path) -> bool:

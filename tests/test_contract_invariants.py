@@ -50,7 +50,7 @@ from scripts.dashboard.llm_export import build_llm_inventory_payload
 from scripts.dashboard.methods_export import build_methods_generator_instrument_export
 from scripts.dashboard.optical_path_view import build_optical_path_dto
 from scripts.generate_templates import build_template
-from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

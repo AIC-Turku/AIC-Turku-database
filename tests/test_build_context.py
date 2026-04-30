@@ -2,7 +2,7 @@ import copy
 import unittest
 
 from scripts.build_context import build_instrument_context
-from scripts.light_path_parser import migrate_instrument_to_light_path_v2
+from scripts.lightpath.legacy_import import migrate_instrument_to_light_path_v2
 
 
 class BuildContextTests(unittest.TestCase):

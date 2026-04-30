@@ -124,7 +124,19 @@ def _build_selected_route_steps(
 
         authored = step.get("_authored_position_id")
         if authored:
-            return "resolved", None
+            # Only mark as resolved when the position was actually found.
+            # If the authored position_id did not match any position,
+            # walk_sequence leaves "position_id" absent while still recording
+            # "_authored_position_id".  In that case the authored position was
+            # invalid: expose it as unresolved so the browser can surface the
+            # issue and show available positions rather than silently resolving
+            # to a wrong component.
+            if step.get("position_id"):
+                return "resolved", None
+            # Authored but invalid/unresolved — expose available positions.
+            element_id = _clean_identifier(step.get("component_id"))
+            element_row = element_lookup.get(element_id, {})
+            return "unresolved", _available_positions_for_element(element_row)
 
         element_id = _clean_identifier(step.get("component_id"))
         element_row = element_lookup.get(element_id, {})

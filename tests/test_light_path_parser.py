@@ -10,6 +10,7 @@ from scripts.light_path_parser import (
     infer_light_source_role,
     parse_canonical_light_path_model,
     validate_light_path,
+    validate_light_path_diagnostics,
     validate_light_path_warnings,
 )
 
@@ -2692,3 +2693,147 @@ class LightPathParserTests(unittest.TestCase):
             [step["id"] for step in by_id["widefield_fluorescence"]["detection_traversal"] if step.get("kind") == "endpoint"],
             ["detector_1"],
         )
+
+    # ------------------------------------------------------------------
+    # Strict-mode / compatibility-mode dataflow contract tests
+    # ------------------------------------------------------------------
+
+    def test_strict_parser_rejects_legacy_only_topology(self) -> None:
+        """parse_strict_canonical_light_path_model must raise ValueError for legacy-only input."""
+        from scripts.lightpath.parse_canonical import parse_strict_canonical_light_path_model
+
+        legacy_instrument = {
+            "hardware": {
+                "light_sources": [{"kind": "laser", "wavelength_nm": 488}],
+                "light_path": {"cube_mechanisms": []},
+            }
+        }
+        with self.assertRaises(ValueError):
+            parse_strict_canonical_light_path_model(legacy_instrument)
+
+    def test_generate_vm_payload_strict_mode_rejects_legacy_only_input(self) -> None:
+        """generate_virtual_microscope_payload must reject legacy-only topology when compatibility_mode=False (default)."""
+        legacy_instrument = {
+            "hardware": {
+                "light_sources": [{"kind": "laser", "wavelength_nm": 488}],
+                "light_path": {"cube_mechanisms": []},
+            }
+        }
+        with self.assertRaises(ValueError):
+            generate_virtual_microscope_payload(legacy_instrument)
+
+    def test_generate_vm_payload_compatibility_mode_accepts_legacy_only_input(self) -> None:
+        """generate_virtual_microscope_payload must succeed for legacy-only topology when compatibility_mode=True."""
+        legacy_instrument = {
+            "hardware": {
+                "light_sources": [{"kind": "laser", "wavelength_nm": 488}],
+                "light_path": {
+                    "cube_mechanisms": [
+                        {"positions": {1: {"name": "GFP", "component_type": "filter_cube"}}}
+                    ]
+                },
+            }
+        }
+        payload = generate_virtual_microscope_payload(legacy_instrument, compatibility_mode=True)
+        self.assertIn("light_paths", payload)
+        self.assertIn("projections", payload)
+        self.assertIn("virtual_microscope", payload["projections"])
+
+    # ------------------------------------------------------------------
+    # Invalid position_id must not silently fall back to first position
+    # ------------------------------------------------------------------
+
+    def test_invalid_authored_position_id_does_not_silently_use_first_position(self) -> None:
+        """When an authored position_id does not match any element position the
+        route_step must carry position_id=None, not silently resolve to the first
+        position.  The selected_execution step must be marked as unresolved and
+        expose available_positions so the browser can surface the problem.
+        Validation must also produce a hard error for the invalid position_id.
+        """
+        instrument = {
+            "hardware": {
+                "sources": [{"id": "src_488", "kind": "laser", "wavelength_nm": 488}],
+                "optical_path_elements": [
+                    {
+                        "id": "exc_filter",
+                        "stage_role": "excitation",
+                        "element_type": "filter_wheel",
+                        "positions": {
+                            "Pos_1": {"component_type": "bandpass", "center_nm": 470, "width_nm": 40, "label": "BP 470/40"},
+                            "Pos_2": {"component_type": "bandpass", "center_nm": 640, "width_nm": 30, "label": "BP 640/30"},
+                        },
+                    }
+                ],
+                "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+            },
+            "light_paths": [
+                {
+                    "id": "epi",
+                    "illumination_sequence": [
+                        {"source_id": "src_488"},
+                        {"optical_path_element_id": "exc_filter", "position_id": "DOES_NOT_EXIST"},
+                    ],
+                    "detection_sequence": [{"endpoint_id": "cam"}],
+                }
+            ],
+        }
+
+        payload = generate_virtual_microscope_payload(instrument)
+        route = payload["light_paths"][0]
+
+        # route_step must NOT silently resolve to the first position.
+        exc_step = next(
+            s for s in route["route_steps"] if s.get("component_id") == "exc_filter"
+        )
+        self.assertIsNone(
+            exc_step.get("position_id"),
+            "route_step must not silently use first position when authored position_id is invalid",
+        )
+        self.assertEqual(exc_step.get("_authored_position_id"), "DOES_NOT_EXIST")
+        self.assertIsNone(exc_step.get("component_type"))
+        self.assertIsNone(exc_step.get("spectral_ops"))
+
+        # selected_execution must not mark the step as resolved.
+        sel_step = next(
+            s for s in route["selected_execution"]["selected_route_steps"]
+            if s.get("component_id") == "exc_filter"
+        )
+        self.assertEqual(sel_step.get("selection_state"), "unresolved")
+        self.assertIsNone(sel_step.get("position_id"))
+        self.assertIsNone(sel_step.get("spectral_ops"))
+        self.assertIsInstance(sel_step.get("available_positions"), list)
+        self.assertEqual(len(sel_step["available_positions"]), 2)
+
+        # Validation must produce a hard error for the unknown position_id.
+        errors, _warnings, _cube_warnings = validate_light_path_diagnostics(instrument)
+        self.assertTrue(
+            any("DOES_NOT_EXIST" in e for e in errors),
+            f"Expected validation error for unknown position_id; got errors={errors}",
+        )
+
+    # ------------------------------------------------------------------
+    # selected_execution contract: no legacy "steps" alias
+    # ------------------------------------------------------------------
+
+    def test_selected_execution_has_no_steps_alias(self) -> None:
+        """selected_execution must carry selected_route_steps; legacy 'steps' alias must be absent."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src", "kind": "laser", "wavelength_nm": 488}],
+                    "endpoints": [{"id": "cam", "endpoint_type": "camera_port"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [{"source_id": "src"}],
+                        "detection_sequence": [{"endpoint_id": "cam"}],
+                    }
+                ],
+            }
+        )
+        route = payload["light_paths"][0]
+        sel = route["selected_execution"]
+        self.assertIn("selected_route_steps", sel)
+        self.assertNotIn("steps", sel, "Legacy 'steps' alias must not be present in selected_execution")
+        self.assertEqual(sel.get("contract_version"), "selected_execution.v2")

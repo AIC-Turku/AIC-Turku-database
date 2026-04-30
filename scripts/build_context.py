@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from scripts.light_path_parser import generate_virtual_microscope_payload, canonicalize_light_path_model_strict
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
+from scripts.lightpath.parse_canonical import canonicalize_light_path_model_strict
 from scripts.validate import build_instrument_completeness_report
 
 
