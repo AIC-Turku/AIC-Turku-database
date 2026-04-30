@@ -9,11 +9,12 @@ from scripts.validation.events import YEAR_PATTERN
 from scripts.validation.model import InstrumentCompletenessReport, PolicyRule, ValidationIssue
 from scripts.lightpath.parse_canonical import canonicalize_light_path_model
 from scripts.lightpath.validate_contract import validate_filter_cube_warnings, validate_light_path, validate_light_path_warnings
-from scripts.validation.io import _iter_yaml_files, _load_yaml
+from scripts.validation.io import _iter_yaml_files, _is_non_empty_string, _is_number, _load_yaml
 from scripts.validation.policy import (
     _build_item_field_vocab_index,
     _context_item_alias_present,
     _evaluate_required_if,
+    _get_software_roles,
     _list_context_path,
     _load_instrument_policy,
     _nodes_have_present_value,
@@ -27,16 +28,6 @@ INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
 
 def _is_valid_instrument_id(value: str) -> bool:
     return bool(INSTRUMENT_ID_PATTERN.fullmatch(value))
-
-
-
-def _is_non_empty_string(value: Any) -> bool:
-    return isinstance(value, str) and bool(value.strip())
-
-
-
-def _is_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 
@@ -79,43 +70,6 @@ def _is_valid_wavelength(value: Any) -> bool:
 
 def _is_descriptive_wavelength(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip()) and not _is_valid_wavelength(value)
-
-
-
-_NAME_MODEL_REDUNDANCY_PATHS: tuple[str, ...] = (
-    'hardware.sources',
-    'hardware.detectors',
-    'hardware.objectives',
-    'hardware.optical_modulators',
-    'hardware.illumination_logic',
-    'hardware.magnification_changers',
-    'hardware.stages',
-    'hardware.endpoints',
-    'hardware.optical_path_elements',
-)
-
-
-
-def _get_software_roles(payload: dict[str, Any]) -> set[str]:
-    software_nodes = _resolve_path_nodes(payload, 'software')
-    roles: set[str] = set()
-    for node in software_nodes:
-        software_value = node.value
-        if isinstance(software_value, list):
-            roles.update(
-                str(item.get('role')).strip().lower()
-                for item in software_value
-                if isinstance(item, dict) and isinstance(item.get('role'), str)
-            )
-        elif isinstance(software_value, dict):
-            roles.update(
-                str(role_key).strip().lower()
-                for role_key in software_value.keys()
-                if isinstance(role_key, str)
-            )
-    return roles
-
-
 
 
 
@@ -365,38 +319,6 @@ def _append_name_model_redundancy_warnings(
                     )
 
 
-
-
-
-_NAME_MODEL_REDUNDANCY_PATHS: tuple[str, ...] = (
-    'hardware.sources',
-    'hardware.detectors',
-    'hardware.objectives',
-    'hardware.optical_modulators',
-    'hardware.illumination_logic',
-    'hardware.magnification_changers',
-    'hardware.stages',
-    'hardware.endpoints',
-    'hardware.optical_path_elements',
-)
-
-_PRODUCT_CODE_REDUNDANCY_PATHS: tuple[str, ...] = (
-    'hardware.sources',
-    'hardware.detectors',
-    'hardware.objectives',
-    'hardware.optical_path_elements',
-)
-
-
-_LEGACY_INSTRUMENT_TOPOLOGY_PATHS: tuple[str, ...] = (
-    'hardware.light_sources',
-    'hardware.light_path.endpoints',
-    'hardware.light_path.splitters',
-    'hardware.light_path.cube_mechanisms',
-    'hardware.light_path.excitation_mechanisms',
-    'hardware.light_path.dichroic_mechanisms',
-    'hardware.light_path.emission_mechanisms',
-)
 
 
 def _build_canonical_instrument_payload(payload: dict[str, Any]) -> dict[str, Any]:

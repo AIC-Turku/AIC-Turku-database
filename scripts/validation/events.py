@@ -4,9 +4,7 @@ from pathlib import Path
 import re
 from typing import Any, Iterable
 
-import yaml
-
-from scripts.validation.io import _iter_yaml_files, _load_yaml
+from scripts.validation.io import _iter_yaml_files, _is_non_empty_string, _is_number, _load_yaml
 from scripts.validation.model import EventValidationReport, ValidationIssue
 from scripts.validation.policy import _evaluate_event_required_if, _load_event_policy, _resolve_path_nodes
 from scripts.validation.vocabulary import Vocabulary
@@ -30,14 +28,6 @@ def _get_started_year(payload: dict[str, Any], event_file: Path) -> str | None:
 
     return None
 
-
-
-def _is_non_empty_string(value: Any) -> bool:
-    return isinstance(value, str) and bool(value.strip())
-
-
-def _is_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _check_event_type(value: Any, field_type: str) -> bool:

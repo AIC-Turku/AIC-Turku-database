@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import yaml
-
+from scripts.validation.io import _load_yaml
 from scripts.validation.model import VocabularyTerm
 
 
@@ -138,17 +137,3 @@ class Vocabulary:
 
     def get_term(self, vocab_name: str, canonical_id: str) -> VocabularyTerm | None:
         return self.terms_by_vocab.get(vocab_name, {}).get(canonical_id)
-
-
-def _load_yaml(path: Path) -> tuple[dict[str, Any] | None, str | None]:
-    try:
-        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as exc:
-        return None, str(exc)
-
-    if payload is None:
-        return None, "YAML document is empty."
-    if not isinstance(payload, dict):
-        return None, f"Expected YAML mapping/object at top level, found {type(payload).__name__}."
-
-    return payload, None

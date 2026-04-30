@@ -20,10 +20,7 @@ from scripts.validation.instrument import (
     _check_rule_validation,
     _check_type,
     _coerce_number,
-    _get_software_roles,
     _is_descriptive_wavelength,
-    _is_non_empty_string,
-    _is_number,
     _is_numeric_string,
     _is_positive_number,
     _is_positive_number_or_numeric_string,
@@ -33,6 +30,7 @@ from scripts.validation.instrument import (
     build_instrument_completeness_report,
     validate_instrument_ledgers,
 )
+from scripts.validation.io import _is_non_empty_string, _is_number
 from scripts.validation.model import (
     EventPolicy,
     EventValidationReport,
@@ -48,6 +46,7 @@ from scripts.validation.policy import (
     _context_item_alias_present,
     _evaluate_event_required_if,
     _evaluate_required_if,
+    _get_software_roles,
     _list_context_path,
     _load_event_policy,
     _load_instrument_policy,

@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 
+from scripts.validation.io import _is_non_empty_string
 from scripts.validation.model import EventPolicy, InstrumentPolicy, PolicyRule, ResolvedNode
 from scripts.validation.vocabulary import Vocabulary
 
@@ -402,10 +403,6 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
     if has_simple_conditions:
         return simple_result
     return isinstance(all_of, list) or isinstance(any_of, list)
-
-
-def _is_non_empty_string(value: Any) -> bool:
-    return isinstance(value, str) and bool(value.strip())
 
 
 def _evaluate_event_required_if(required_if: dict[str, Any], *, payload: dict[str, Any], item_context: dict[str, Any] | None) -> tuple[bool | None, str | None]:
