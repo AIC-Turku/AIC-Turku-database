@@ -256,6 +256,7 @@ class ContractInvariantTests(unittest.TestCase):
                     }
                 },
             },
+            compatibility_mode=True,
             include_inferred_terminals=False,
         )
 
