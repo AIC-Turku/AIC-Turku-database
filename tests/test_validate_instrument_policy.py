@@ -24,14 +24,16 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.prev_cwd = Path.cwd()
         os.chdir(self.repo)
         (self.repo / 'schema').mkdir(parents=True, exist_ok=True)
-        self._yaml_safe_load_patcher = patch(
-            'scripts.validate.yaml.safe_load',
-            side_effect=json.loads,
-        )
-        self._yaml_safe_load_patcher.start()
+        self._patchers = [
+            patch('scripts.validation.policy.yaml.safe_load', side_effect=json.loads),
+            patch('scripts.validation.io.yaml.safe_load', side_effect=json.loads),
+        ]
+        for p in self._patchers:
+            p.start()
 
     def tearDown(self) -> None:
-        self._yaml_safe_load_patcher.stop()
+        for p in reversed(self._patchers):
+            p.stop()
         os.chdir(self.prev_cwd)
         self._tmpdir.cleanup()
 
