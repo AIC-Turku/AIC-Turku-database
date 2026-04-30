@@ -17,67 +17,6 @@ from scripts.light_path_parser import generate_virtual_microscope_payload, canon
 from scripts.validate import build_instrument_completeness_report
 
 
-def clean_text(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value.strip()
-    return str(value).strip()
-
-
-def _normalized_light_source_payload(raw: dict[str, Any]) -> dict[str, str]:
-    payload: dict[str, str] = {
-        "id": clean_text(raw.get("id")),
-        "name": clean_text(raw.get("name")),
-        "type": clean_text(raw.get("type")),
-        "wavelength": clean_text(raw.get("wavelength")),
-        "manufacturer": clean_text(raw.get("manufacturer")),
-        "model": clean_text(raw.get("model")),
-        "product_code": clean_text(raw.get("product_code")),
-        "notes": clean_text(raw.get("notes")),
-    }
-    if not payload["name"]:
-        payload["name"] = payload["id"] or payload["model"]
-    return payload
-
-
-def _normalized_detector_payload(raw: dict[str, Any]) -> dict[str, str]:
-    payload: dict[str, str] = {
-        "id": clean_text(raw.get("id")),
-        "name": clean_text(raw.get("name")),
-        "type": clean_text(raw.get("type")),
-        "manufacturer": clean_text(raw.get("manufacturer")),
-        "model": clean_text(raw.get("model")),
-        "product_code": clean_text(raw.get("product_code")),
-        "notes": clean_text(raw.get("notes")),
-    }
-    if not payload["name"]:
-        payload["name"] = payload["id"] or payload["model"]
-    return payload
-
-
-INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-
-
-def is_valid_instrument_id(value: str) -> bool:
-    return bool(INSTRUMENT_ID_PATTERN.fullmatch(value))
-
-
-def strip_empty_values(data: Any) -> Any:
-    if isinstance(data, dict):
-        out: dict[str, Any] = {}
-        for k, v in data.items():
-            cleaned = strip_empty_values(v)
-            if cleaned in ("", None, [], {}):
-                continue
-            out[k] = cleaned
-        return out
-    if isinstance(data, list):
-        out_list = [strip_empty_values(v) for v in data]
-        return [v for v in out_list if v not in ("", None, [], {})]
-    return data
-
-
 @dataclass
 class InstrumentBuildContext:
     """Single source build context for one instrument.
@@ -240,7 +179,6 @@ def build_instrument_context(
     )
 
 
-# Migrated canonical-normalization helpers from dashboard_builder.py
 def _normalized_light_source_payload(light_source: dict[str, Any], get_val: Any) -> dict[str, Any]:
     return {
         "id": get_val(light_source, "id"),

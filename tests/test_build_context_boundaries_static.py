@@ -48,6 +48,32 @@ class TestBuildContextBoundariesStatic(unittest.TestCase):
     def test_no_dashboard_impl_file(self) -> None:
         self.assertFalse(Path('scripts/dashboard/_impl.py').exists())
 
+    def test_no_orphaned_dashboard_build_context(self) -> None:
+        """Ensure scripts/dashboard/build_context.py does not exist as an orphaned duplicate."""
+        self.assertFalse(
+            Path('scripts/dashboard/build_context.py').exists(),
+            "scripts/dashboard/build_context.py is an orphaned duplicate; "
+            "canonical build context must live in scripts/build_context.py only.",
+        )
+
+    def test_no_duplicate_toplevel_definitions_in_build_context(self) -> None:
+        """Ensure scripts/build_context.py has no duplicate top-level function or class definitions."""
+        tree = ast.parse(Path('scripts/build_context.py').read_text(encoding='utf-8'))
+        seen: dict[str, int] = {}
+        duplicates: list[str] = []
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.name in seen:
+                    duplicates.append(
+                        f"{node.name!r} defined at lines {seen[node.name]} and {node.lineno}"
+                    )
+                else:
+                    seen[node.name] = node.lineno
+        self.assertEqual(
+            duplicates, [],
+            f"Duplicate top-level definitions found in scripts/build_context.py: {duplicates}",
+        )
+
 
 
 
