@@ -1,11 +1,9 @@
 import unittest
 
 from scripts.build_context import build_instrument_context
-from scripts.dashboard_builder import (
-    build_instrument_mega_dto,
-    build_llm_inventory_payload,
-    build_methods_generator_instrument_export,
-)
+from scripts.dashboard.instrument_view import build_instrument_mega_dto
+from scripts.dashboard.llm_export import build_llm_inventory_payload
+from scripts.dashboard.methods_export import build_methods_generator_instrument_export
 from scripts.validate import Vocabulary
 
 

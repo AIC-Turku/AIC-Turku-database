@@ -2,7 +2,8 @@ import copy
 import unittest
 
 from scripts.build_context import build_instrument_context
-from scripts.dashboard_builder import build_methods_generator_instrument_export, build_llm_inventory_payload
+from scripts.dashboard.methods_export import build_methods_generator_instrument_export
+from scripts.dashboard.llm_export import build_llm_inventory_payload
 
 
 class DiagnosticsModelTests(unittest.TestCase):

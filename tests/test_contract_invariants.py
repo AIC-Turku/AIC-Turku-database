@@ -46,11 +46,9 @@ _jinja2_spec = importlib.util.find_spec("jinja2")
 if _jinja2_spec is None:
     sys.modules["jinja2"] = jinja2_stub
 
-from scripts.dashboard_builder import (
-    build_llm_inventory_payload,
-    build_methods_generator_instrument_export,
-    build_optical_path_dto,
-)
+from scripts.dashboard.llm_export import build_llm_inventory_payload
+from scripts.dashboard.methods_export import build_methods_generator_instrument_export
+from scripts.dashboard.optical_path_view import build_optical_path_dto
 from scripts.generate_templates import build_template
 from scripts.light_path_parser import generate_virtual_microscope_payload
 

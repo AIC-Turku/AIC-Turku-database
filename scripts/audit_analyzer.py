@@ -10,7 +10,7 @@ import re
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.dashboard_builder import load_instruments
+from scripts.dashboard.loaders import load_instruments
 
 
 _WAVELENGTH_BAND_PATTERN = re.compile(r"^\d+(?:\.\d+)?/\d+(?:\.\d+)?$")

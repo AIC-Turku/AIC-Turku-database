@@ -58,13 +58,12 @@ class NoProductionFallbacksStaticTests(unittest.TestCase):
             self.assertEqual([], violations, f"{file_path} contains forbidden production fallback patterns: {violations}")
 
     def test_methods_and_llm_export_sections_do_not_use_vm_or_dashboard_view_as_authority(self) -> None:
-        src = Path("scripts/dashboard_builder.py").read_text(encoding="utf-8")
-        methods_section = src.split("def build_methods_generator_instrument_export", 1)[1].split("def _display_labels", 1)[0]
+        methods_section = Path("scripts/dashboard/methods_export.py").read_text(encoding="utf-8")
         self.assertNotIn("vm_payload", methods_section)
         self.assertNotIn("dashboard_view_dto", methods_section)
         self.assertNotIn("hardware.optical_path", methods_section)
 
-        llm_section = src.split("def build_llm_inventory_payload", 1)[1].split("def _build_route_planning_summary", 1)[0]
+        llm_section = Path("scripts/dashboard/llm_export.py").read_text(encoding="utf-8")
         self.assertNotIn("vm_payload", llm_section)
         self.assertNotIn("dashboard_view_dto", llm_section)
         self.assertNotIn("hardware.get(\"optical_path\")", llm_section)
