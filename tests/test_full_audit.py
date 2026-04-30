@@ -234,7 +234,7 @@ class FullAuditScriptTests(unittest.TestCase):
 
     def test_audit_flags_fake_selected_execution_without_selection_state(self) -> None:
         """Directly test the copy-detection logic against a hand-crafted payload."""
-        from scripts.light_path_parser import generate_virtual_microscope_payload
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
         instrument_data = {
             "hardware": {
@@ -285,7 +285,7 @@ class FullAuditScriptTests(unittest.TestCase):
 
     def test_audit_flags_unresolved_step_with_defaulted_optics(self) -> None:
         """Audit must catch unresolved steps that have spectral_ops (defaulting to first position)."""
-        from scripts.light_path_parser import generate_virtual_microscope_payload
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
         instrument_data = {
             "hardware": {
@@ -337,7 +337,7 @@ class FullAuditScriptTests(unittest.TestCase):
         self.assertTrue(detected, msg="Audit should detect unresolved step with defaulted spectral_ops.")
 
     def test_audit_exempts_splitter_routing_controls_from_missing_spectral_ops(self) -> None:
-        from scripts.light_path_parser import generate_virtual_microscope_payload
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
         instrument = {
             "id": "splitter-routing-scope",
@@ -393,7 +393,7 @@ class FullAuditScriptTests(unittest.TestCase):
         )
 
     def test_audit_still_flags_real_optical_missing_spectral_ops(self) -> None:
-        from scripts.light_path_parser import generate_virtual_microscope_payload
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
         instrument = {
             "id": "real-optics-scope",

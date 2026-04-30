@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_PATH = REPO_ROOT / "scripts" / "templates" / "virtual_microscope_runtime.js"

@@ -169,7 +169,7 @@ class VocabBackedParserIntegrationTests(unittest.TestCase):
     """Verify that the parser uses vocab labels when vocab is provided."""
 
     def test_available_routes_use_vocab_label(self) -> None:
-        from scripts.light_path_parser import generate_virtual_microscope_payload
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
         vocab = _vocab_with(
             optical_routes={"confocal": "Confocal (vocab)"},
@@ -201,7 +201,7 @@ class VocabBackedParserIntegrationTests(unittest.TestCase):
         self.assertEqual(confocal["label"], "Confocal (vocab)")
 
     def test_no_vocab_uses_route_labels_fallback(self) -> None:
-        from scripts.light_path_parser import generate_virtual_microscope_payload
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
         instrument = {
             "hardware": {

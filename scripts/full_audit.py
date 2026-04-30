@@ -36,7 +36,10 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.dashboard.loaders import YamlLoadError, load_instruments, validated_instrument_selection
-from scripts.light_path_parser import canonicalize_light_path_model, generate_virtual_microscope_payload, infer_light_source_role, has_legacy_light_path_input
+from scripts.lightpath.parse_canonical import canonicalize_light_path_model
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
+from scripts.lightpath.spectral_ops import infer_light_source_role
+from scripts.lightpath.legacy_import import has_legacy_light_path_input
 from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     build_instrument_completeness_report,

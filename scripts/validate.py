@@ -16,7 +16,8 @@ from typing import Any, Iterable
 
 import yaml
 
-from scripts.light_path_parser import canonicalize_light_path_model, validate_light_path, validate_light_path_warnings, validate_filter_cube_warnings
+from scripts.lightpath.parse_canonical import canonicalize_light_path_model
+from scripts.lightpath.validate_contract import validate_light_path, validate_light_path_warnings, validate_filter_cube_warnings
 
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")

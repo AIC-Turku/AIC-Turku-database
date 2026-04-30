@@ -19,8 +19,11 @@ PRODUCTION_SCAN_FILES = [
 LEGACY_IMPORT_WHITELIST = {
     "scripts/light_path_parser.py",
     "scripts/lightpath/legacy_import.py",
+    "scripts/lightpath/parse_canonical.py",
     "scripts/lightpath/model.py",
     "scripts/lightpath/__init__.py",
+    "scripts/lightpath/vm_payload.py",
+    "scripts/lightpath/validate_contract.py",
     "scripts/migrate_light_paths.py",
     "scripts/full_audit.py",
     "scripts/validate.py",
