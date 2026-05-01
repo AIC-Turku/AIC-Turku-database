@@ -1030,9 +1030,16 @@
   function ensureSplitterBranchSelection(mechanism) {
     const key = splitterBranchSelectionKey(mechanism);
     if (!state.splitterBranchSelections.has(key)) {
-      const branches = Array.isArray(mechanism && mechanism.branches) ? mechanism.branches : [];
-      const defaults = [];
-      state.splitterBranchSelections.set(key, defaults.filter(Boolean));
+      // Seed the initial selection from the payload's projected defaults so that
+      // authored/runtime-projected selected_branch_ids survive the first
+      // collectRuntimeSelection call before any user interaction.
+      let payloadIds = [];
+      if (Array.isArray(mechanism && mechanism.selected_branch_ids) && mechanism.selected_branch_ids.length) {
+        payloadIds = mechanism.selected_branch_ids.map((id) => cleanString(id)).filter(Boolean);
+      } else if (mechanism && mechanism.default_branch_id) {
+        payloadIds = [cleanString(mechanism.default_branch_id)].filter(Boolean);
+      }
+      state.splitterBranchSelections.set(key, payloadIds);
     }
     return state.splitterBranchSelections.get(key);
   }

@@ -210,6 +210,31 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(branch_block["items"][0]["branch_id"], "cam_a")
         self.assertEqual(branch_block["items"][0]["sequence"], [{"endpoint_id": "detector_1"}])
 
+    def test_canonical_parser_preserves_branch_default_branch_id(self) -> None:
+        canonical = parse_canonical_light_path_model(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"}],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}, {"id": "detector_2", "kind": "camera"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "epi",
+                        "illumination_sequence": [],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "det_splitter"},
+                            {"branches": {"selection_mode": "exclusive", "default_branch_id": "cam_b", "items": [
+                                {"branch_id": "cam_a", "sequence": [{"endpoint_id": "detector_1"}]},
+                                {"branch_id": "cam_b", "sequence": [{"endpoint_id": "detector_2"}]},
+                            ]}},
+                        ],
+                    }
+                ],
+            }
+        )
+        block = canonical["light_paths"][0]["detection_sequence"][1]["branches"]
+        self.assertEqual(block["default_branch_id"], "cam_b")
+
     def test_migration_compatibility_legacy_import_adapter_remains_explicit_and_available(self) -> None:
         canonical = import_legacy_light_path_model(
             {
@@ -557,6 +582,38 @@ class LightPathParserTests(unittest.TestCase):
         splitter = _runtime_projection(payload)["splitters"][0]
         self.assertFalse(splitter.get("branch_selection_required", False))
         self.assertNotIn("auto_defaulted_branch_selection", splitter)
+
+    def test_splitter_authored_default_is_preserved_without_auto_default_flags(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_488", "kind": "laser"}],
+                    "optical_path_elements": [{"id": "s1", "name": "S1", "stage_role": "splitter", "element_type": "splitter", "selection_mode": "exclusive"}],
+                    "endpoints": [
+                        {"id": "detector_1", "endpoint_type": "detector", "display_label": "Detector 1"},
+                        {"id": "detector_2", "endpoint_type": "detector", "display_label": "Detector 2"},
+                    ],
+                },
+                "light_paths": [{
+                    "id": "r1",
+                    "illumination_sequence": [{"source_id": "src_488"}],
+                    "detection_sequence": [
+                        {"optical_path_element_id": "s1"},
+                        {"branches": {"selection_mode": "exclusive", "default_branch_id": "b", "items": [
+                            {"branch_id": "a", "sequence": [{"endpoint_id": "detector_1"}]},
+                            {"branch_id": "b", "sequence": [{"endpoint_id": "detector_2"}]},
+                        ]}},
+                    ],
+                }],
+            }
+        )
+        splitter = _runtime_projection(payload)["splitters"][0]
+        self.assertEqual(splitter["default_branch_id"], "b")
+        self.assertEqual(splitter["selected_branch_id"], "b")
+        self.assertEqual(splitter["selected_branch_ids"], ["b"])
+        self.assertEqual(splitter["branch_selection_default_source"], "authored")
+        self.assertNotIn("auto_defaulted_branch_selection", splitter)
+        self.assertNotIn("auto_defaulted_branch_id", splitter)
 
     def test_legacy_splitter_branches_have_branch_id_alias(self) -> None:
         payload = generate_virtual_microscope_payload(
@@ -940,6 +997,25 @@ class LightPathParserTests(unittest.TestCase):
         )
 
         self.assertTrue(any(".sequence: must be a non-empty list." in error for error in errors))
+
+    def test_invalid_default_branch_id_is_rejected(self) -> None:
+        errors = validate_light_path(
+            {
+                "hardware": {
+                    "optical_path_elements": [{"id": "det_splitter", "stage_role": "splitter", "element_type": "splitter"}],
+                    "detectors": [{"id": "detector_1", "kind": "camera"}],
+                },
+                "light_paths": [{
+                    "id": "epi",
+                    "illumination_sequence": [],
+                    "detection_sequence": [
+                        {"optical_path_element_id": "det_splitter"},
+                        {"branches": {"selection_mode": "exclusive", "default_branch_id": "bad", "items": [{"branch_id": "cam_a", "sequence": [{"endpoint_id": "detector_1"}]}]}},
+                    ],
+                }],
+            }
+        )
+        self.assertTrue(any("default_branch_id `bad` must match one of branches.items[].branch_id." in error for error in errors))
 
     def test_deprecated_hardware_owned_branch_routing_is_rejected_in_canonical_mode(self) -> None:
         errors = validate_light_path(

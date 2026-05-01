@@ -517,6 +517,11 @@ def _canonicalize_sequence_item(
             "branches": {
                 "selection_mode": selection_mode,
                 "items": normalized_items,
+                **(
+                    {"default_branch_id": _clean_identifier(raw_branches.get("default_branch_id"))}
+                    if _clean_identifier(raw_branches.get("default_branch_id"))
+                    else {}
+                ),
             }
         }
 

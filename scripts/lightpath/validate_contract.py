@@ -640,6 +640,19 @@ def validate_light_path_diagnostics(
                     )
                     local_errors.extend(branch_errors)
 
+            default_branch_id = _clean_identifier(branch_block.get("default_branch_id"))
+            if default_branch_id:
+                if selection_mode != "exclusive":
+                    local_errors.append(
+                        f"{route_context}.{sequence_key}[{item_index}].branches.default_branch_id: "
+                        "is only allowed when branches.selection_mode is exclusive."
+                    )
+                if default_branch_id not in seen_branch_ids:
+                    local_errors.append(
+                        f"{route_context}.{sequence_key}[{item_index}].branches.default_branch_id "
+                        f"`{default_branch_id}` must match one of branches.items[].branch_id."
+                    )
+
             return previous_element_id, local_errors
 
         source_id = _clean_identifier(item.get("source_id"))

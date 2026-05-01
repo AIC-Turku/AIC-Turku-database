@@ -374,6 +374,9 @@ def _collect_route_owned_splitters(
             if not isinstance(branch_block, dict) or not last_element_id:
                 continue
             splitter = ensure_splitter(last_element_id, _clean_string(branch_block.get("selection_mode")).lower(), route_id)
+            default_branch_id = _clean_identifier(branch_block.get("default_branch_id"))
+            if default_branch_id:
+                splitter["default_branch_id"] = default_branch_id
             branch_index: dict[str, int] = splitter["__branch_index"]
             for branch_position, branch in enumerate(branch_block.get("items") or [], start=1):
                 if not isinstance(branch, dict):
@@ -856,6 +859,7 @@ def _build_route_steps(
             if entry.get("kind") == "branch_block":
                 step_payload["routing"] = {
                     "selection_mode": entry.get("selection_mode"),
+                    "default_branch_id": entry.get("default_branch_id"),
                     "branches": [
                         {
                             "branch_id": branch.get("branch_id"),
@@ -1091,6 +1095,7 @@ def _build_route_sequences_and_graph(
                     {
                         "id": branch_block_id,
                         "selection_mode": _clean_string(branch_block.get("selection_mode")).lower() or "exclusive",
+                        "default_branch_id": _clean_identifier(branch_block.get("default_branch_id")) or None,
                         "branches": resolved_branches,
                     }
                 )
@@ -1133,6 +1138,7 @@ def _build_route_sequences_and_graph(
                         "display_label": "Branch selector",
                         "node_id": block_node_id,
                         "selection_mode": _clean_string(branch_block.get("selection_mode")).lower() or "exclusive",
+                        "default_branch_id": _clean_identifier(branch_block.get("default_branch_id")) or None,
                         "branches": resolved_branches,
                     }
                 )

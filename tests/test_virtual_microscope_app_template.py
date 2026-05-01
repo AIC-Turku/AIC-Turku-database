@@ -196,7 +196,10 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_splitter_selection_requires_explicit_branch_choice(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
         self.assertIn("requires explicit selected branch selection", source)
-        self.assertIn("const defaults = [];", source)
+        # ensureSplitterBranchSelection must seed from payload selected_branch_ids / default_branch_id
+        # so that the runtime does not throw for splitters with projected Python defaults.
+        self.assertIn("mechanism.selected_branch_ids", source)
+        self.assertIn("mechanism.default_branch_id", source)
 
     def test_splitter_branch_buttons_are_not_rendered(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
