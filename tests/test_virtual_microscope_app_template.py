@@ -535,6 +535,28 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("_spectral_ops_for_component", source)
         self.assertIn('"spectral_ops"', source)
 
+    def test_traversal_builder_handles_endpoint_kind_steps_without_missing_fallback(self) -> None:
+        """buildRouteTraversalEntries must handle kind='endpoint' (eyepiece) steps as endpoint
+        traversal entries, not fall through to the 'missing control' path."""
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        traversal_fn = source.split("function buildRouteTraversalEntries")[1].split("\n  function ")[0]
+        # The traversal builder must check for both 'detector' and 'endpoint' step kinds
+        self.assertIn("step.kind === 'detector' || step.kind === 'endpoint'", traversal_fn,
+                      "buildRouteTraversalEntries must handle kind='endpoint' steps to avoid 'missing control' for eyepieces")
+
+    def test_derive_route_topology_includes_branch_local_detector_endpoint_ids(self) -> None:
+        """deriveRouteTopology must extract endpoint IDs from branch-local detector steps,
+        not only from top-level route steps."""
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        topology_fn = source.split("function deriveRouteTopology")[1].split("\n  function ")[0]
+        # Must look inside routing.branches for kind='detector' entries
+        self.assertIn("routing.branches", topology_fn,
+                      "deriveRouteTopology must scan branch sequences for detector endpoint IDs")
+        self.assertIn("entry.endpoint_id || entry.detector_id || entry.component_id", topology_fn,
+                      "deriveRouteTopology must extract endpoint IDs from branch-local detector entries")
+
 
 if __name__ == "__main__":
     unittest.main()

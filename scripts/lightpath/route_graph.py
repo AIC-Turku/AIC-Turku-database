@@ -720,7 +720,12 @@ def _build_route_steps(
         if kind == "source":
             return "source"
         if kind == "endpoint":
-            return "detector"
+            endpoint_type = _normalize_endpoint_type(
+                entry.get("endpoint_type")
+                or entry.get("type")
+                or entry.get("kind")
+            )
+            return "detector" if endpoint_type == "detector" else "endpoint"
         if kind == "branch_block":
             return "routing_component"
         return "optical_component"
@@ -785,10 +790,16 @@ def _build_route_steps(
                     )
                     continue
                 if seq_kind == "endpoint":
+                    endpoint_type = _normalize_endpoint_type(
+                        seq_step.get("endpoint_type")
+                        or seq_step.get("type")
+                        or seq_step.get("kind")
+                    )
+                    step_kind = "detector" if endpoint_type == "detector" else "endpoint"
                     normalized.append(
                         {
-                            "kind": "detector",
-                            "detector_id": seq_id or None,
+                            "kind": step_kind,
+                            "detector_id": seq_id or None if step_kind == "detector" else None,
                             "endpoint_id": seq_id or None,
                             "component_id": seq_id or None,
                             "display_label": seq_step.get("display_label"),
@@ -854,8 +865,9 @@ def _build_route_steps(
             if entry.get("kind") == "source":
                 step_payload["source_id"] = component_id
             if entry.get("kind") == "endpoint":
-                step_payload["detector_id"] = component_id
                 step_payload["endpoint_id"] = component_id
+                if kind == "detector":
+                    step_payload["detector_id"] = component_id
             if entry.get("kind") == "branch_block":
                 step_payload["routing"] = {
                     "selection_mode": entry.get("selection_mode"),

@@ -119,7 +119,7 @@ def _build_selected_route_steps(
     ) -> tuple[str, list[dict[str, Any]] | None]:
         kind = step.get("kind", "")
 
-        if kind in {"source", "detector", "sample", "routing_component"}:
+        if kind in {"source", "detector", "endpoint", "sample", "routing_component"}:
             return "fixed", None
 
         authored = step.get("_authored_position_id")
@@ -159,7 +159,7 @@ def _build_selected_route_steps(
             kind = branch_step.get("kind", "")
             available: list[dict[str, Any]] | None = None
 
-            if kind in {"source", "detector"}:
+            if kind in {"source", "detector", "endpoint"}:
                 selection_state = "fixed"
             else:
                 authored = branch_step.get("_authored_position_id")
@@ -206,6 +206,8 @@ def _build_selected_route_steps(
                 entry["source_id"] = branch_step.get("source_id")
             elif kind == "detector":
                 entry["detector_id"] = branch_step.get("detector_id")
+                entry["endpoint_id"] = branch_step.get("endpoint_id")
+            elif kind == "endpoint":
                 entry["endpoint_id"] = branch_step.get("endpoint_id")
 
             resolved_seq.append(entry)
