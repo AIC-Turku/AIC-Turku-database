@@ -1671,7 +1671,7 @@ def _splitter_payload(
             if isinstance(branch.get("component"), dict)
             else ""
         )
-        if branch_label:
+        if branch_label and "missing vocabulary translation" not in str(branch_label).lower():
             display_parts.append(f"{branch.get('label')}: {branch_label}")
 
     # path1/path2 remain only as a compatibility adapter for older runtime/app
