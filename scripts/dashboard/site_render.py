@@ -100,6 +100,32 @@ def json_script_data(payload: Any) -> str:
     )
 
 
+def _build_llm_inventory_record_from_build_input(instrument: dict[str, Any]) -> dict[str, Any]:
+    """Build LLM inventory record from full build input, preserving canonical context."""
+    if not isinstance(instrument, dict):
+        return {}
+
+    return {
+        "id": copy.deepcopy(instrument.get("id")),
+        "display_name": copy.deepcopy(instrument.get("display_name")),
+        "status": copy.deepcopy(instrument.get("status")),
+        "canonical": copy.deepcopy(instrument.get("canonical") or {}),
+        "canonical_instrument_dto": copy.deepcopy(
+            instrument.get("canonical_instrument_dto")
+            or instrument.get("canonical")
+            or {}
+        ),
+        "lightpath_dto": copy.deepcopy(instrument.get("lightpath_dto") or {}),
+        "canonical_lightpath_dto": copy.deepcopy(
+            instrument.get("canonical_lightpath_dto")
+            or instrument.get("lightpath_dto")
+            or {}
+        ),
+        "dto": copy.deepcopy(instrument.get("dto") or {}),
+        "diagnostics": copy.deepcopy(instrument.get("diagnostics") or []),
+    }
+
+
 def build_nav(
     instruments: list[dict[str, Any]],
     retired_instruments: list[dict[str, Any]],
@@ -546,7 +572,7 @@ def render_site(
             vocabulary=vocabulary,
             build_dashboard_view_dto=build_instrument_mega_dto,
             build_methods_view_dto=build_methods_generator_instrument_export,
-            build_llm_inventory_record=lambda instrument: copy.deepcopy(instrument.get("dto") or {}),
+            build_llm_inventory_record=_build_llm_inventory_record_from_build_input,
         )
         inst["build_context"] = context
         inst["lightpath_dto"] = context.canonical_lightpath_dto
@@ -735,6 +761,7 @@ __all__ = [
     "METRIC_NAMES",
     "json_script_data",
     "build_nav",
+    "_build_llm_inventory_record_from_build_input",
     "build_vocabulary_dictionary_markdown",
     "build_mkdocs_config",
     "render_site",

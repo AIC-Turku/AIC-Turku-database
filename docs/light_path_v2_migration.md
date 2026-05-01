@@ -1,7 +1,7 @@
 # Canonical light-path v2 architecture
 
 This document defines the repository's canonical light-path model.
-It is intended to be the implementation contract for schema cleanup, validator behavior, DTO generation, consumer updates, and future tests.
+It is the implementation contract for schema, validator behavior, DTO generation, consumers, and tests.
 
 ## 1) Canonical YAML structure
 
@@ -181,7 +181,8 @@ It declares the installed source inventory, optical path elements, endpoints, an
 
 ### Schema / validator
 
-`schema/instrument_policy.yaml` and `scripts/validate.py` together define and enforce the canonical authoring contract.
+`schema/instrument_policy.yaml` and `scripts/validation/*` (via the `scripts/validate.py`
+compatibility façade) define and enforce the canonical authoring contract.
 
 Responsibilities:
 
@@ -189,7 +190,7 @@ Responsibilities:
 - validate structural correctness
 - validate controlled vocabulary use
 - validate explicit route references
-- report migration/deprecation usage where legacy fields still appear
+- report legacy or deprecated field usage where present
 
 ### DTO
 
@@ -245,19 +246,19 @@ Current consumer layers include:
 
 These layers should treat the DTO as authoritative consumer input.
 
-## 4) What is no longer canonical
+## 4) What is not canonical
 
-The following structures are migration-only compatibility layers and must not be treated as canonical authoring targets:
+The following structures are legacy compatibility layers and must not be treated as canonical authoring targets:
 
 - legacy `hardware.light_path.*` mechanism trees
 - deprecated flat filter/splitter structures
 - alias-only field spellings retained solely for compatibility
 
-Compatibility behavior may remain temporarily in migration helpers, validators, or parser normalization code, but:
+Compatibility behavior is limited to legacy import helpers and validator audit paths:
 
-- new authoring should target the canonical v2 model
-- new tests should primarily assert canonical v2 behavior
-- cleanup work should remove assumptions that legacy topology is a co-equal source of truth
+- new authoring must target the canonical v2 model
+- new tests must primarily assert canonical v2 behavior
+- canonical `light_paths[]` sequences are the authoritative topology truth
 
 ## 5) Implementation consequences
 
@@ -269,24 +270,19 @@ This documentation implies the following repository rules:
 4. DTO generation must preserve explicit routing and branch semantics without inventing hidden topology.
 5. Consumer code must rely on the DTO contract instead of raw-YAML inference.
 
-## 6) Migration note
+## 6) Retained compatibility layers
 
-Legacy structures may still be normalized during cutover so existing records can be migrated safely.
-That migration path is transitional only.
+Remaining compatibility layers are intentionally narrow and must not be used as new authoring targets:
 
-Remaining compatibility layers are intentionally narrow:
+- `scripts/lightpath/legacy_import.py` — explicit legacy import adapter (migration/audit tooling only).
+- `scripts/validate.py` — compatibility façade; implementations in `scripts/validation/*`.
+- Validator schema coverage that still recognizes legacy paths for audit-only diagnostics.
+- Derived runtime splitter compatibility fields such as `path1` / `path2`, kept only so
+  approximation-mode projections can consume older payloads without treating them as canonical.
 
-- the explicit legacy import/migration helpers in `scripts/light_path_parser.py`
-- validator/schema coverage that still recognizes legacy paths for migration-only audits
-- derived runtime splitter compatibility fields such as `path1` / `path2`, kept only so
-  approximation-mode projections can consume old payloads without teaching them as canonical
+Current production state:
 
-None of the above compatibility paths should be used as new authoring targets.
-
-The end state is:
-
-- canonical YAML authoring in v2 structure
-- schema/validator aligned to v2
-- DTO aligned to v2
-- consumers aligned to DTO
-- tests written against the canonical model
+- canonical YAML authoring is in v2 structure
+- schema/validator is aligned to v2
+- DTO is aligned to v2
+- consumers use the DTO contract
