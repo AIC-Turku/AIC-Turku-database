@@ -1,0 +1,55 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-leica-stellaris-8-falcon-flim-resonant_20251222_wll_replacement
+microscope: scope-leica-stellaris-8-falcon-flim-resonant
+
+service_provider: vendor
+company: Leica Microsystems
+contact: Leica Microsystems field service engineer
+reference: 'Case CS-00401027; Work order WO-00279399; Appointment SA-223726; SAP service order 002000646116; contract 43295213'
+
+started_utc: '2025-12-22T08:00:00Z'
+ended_utc: '2025-12-23T09:00:00Z'
+
+reason: problem
+reason_details: >-
+  Vendor service visit for an ongoing White Light Laser (WLL) issue on the Leica
+  STELLARIS FALCON system. The service report describes the complaint as "WLL
+  replacement" and notes that the issue had been ongoing in Finland for several
+  months, with a related earlier case referenced as CS 397993.
+
+action: replace
+action_details: >-
+  Leica Microsystems replaced/integrated a new White Light Laser into the system.
+  The service report states: "New WLL has been integrated to the system. All
+  laser lines of the WLL are totally in spec."
+
+microscope_status_before: limited
+microscope_status_after: in_service
+status_notes: >-
+  WLL replacement completed by Leica Microsystems. The service report states that
+  All WLL laser lines were in specification after integration, and the system
+  was fully tested and passed all applicable acceptance criteria.
+
+downtime_hours: 25.0
+
+attachments:
+  - maintenance/attachments/scope-leica-stellaris-8-falcon-flim-resonant/2025/SA-223726_V1.pdf
+
+tags:
+  - WLL
+  - white_light_laser
+  - laser
+  - vendor_service
+  - warranty_extension
+
+notes: >-
+  Source document: Leica Microsystems Technical Report SA-223726_V1.pdf. Reported
+  asset details: Equipment STELLARIS FALCON - 13334341, serial number 8300000681,
+  product 158305100, product family X01. The report lists operations CALL4 and
+  TRVL4, signed by Alexander Ponomarev on 2025-12-23 06:23. The report does not
+  provide measured laser powers, so this maintenance event records the vendor
+  statement only and does not create structured laser-power QC values. No specific
+  follow-up action was stated in the service report; continue routine laser/QC
+  monitoring and record measured WLL line powers in a QC session if local
+  measurements are performed.
