@@ -22,10 +22,12 @@ The generated site is built from repository data. The browser UI does not invent
 - `maintenance/events/**` — maintenance ledgers.
 - `vocab/*.yaml` — controlled vocabularies.
 - `schema/instrument_policy.yaml` — policy for required / conditional / optional instrument metadata.
-- `scripts/validate.py` — schema + vocabulary validation and completeness auditing.
-- `scripts/light_path_parser.py` — normalized light-path to virtual-microscope payload builder.
-- `scripts/dashboard_builder.py` — site builder and JSON export generator.
-- `docs/light_path_v2_migration.md` — canonical v2 light-path architecture and migration contract.
+- `scripts/validate.py` — validation CLI / compatibility façade; implementations in `scripts/validation/*`.
+- `scripts/light_path_parser.py` — light-path compatibility shim; implementations in `scripts/lightpath/*`.
+- `scripts/dashboard_builder.py` — site-builder CLI / compatibility shim; implementations in `scripts/dashboard/*`.
+- `scripts/build_context.py` — canonical build context and DTO transfer hub.
+- `docs/light_path_v2_migration.md` — canonical v2 light-path architecture contract.
+- `docs/dataflow_contract.md` — authoritative production dataflow and module map.
 - `scripts/templates/virtual_microscope.html.j2` — virtual microscope page shell.
 - `scripts/templates/virtual_microscope_app.js` — browser app logic.
 - `scripts/templates/virtual_microscope_runtime.js` — route normalization, spectra handling, and propagation model.
@@ -49,7 +51,7 @@ Important consequences:
 
 ### Canonical light-path architecture
 
-The repository's canonical light-path authoring model is now documented in `docs/light_path_v2_migration.md`.
+The repository's canonical light-path authoring model is documented in `docs/light_path_v2_migration.md`.
 
 Canonical authoring structure:
 
@@ -67,7 +69,7 @@ Interpretation rules:
 - ordered sequences are the primary topology source of truth,
 - `modalities` on sources/elements/endpoints are validation aids only,
 - branching/selectors/splitters must remain explicitly representable through `YAML -> schema/validator -> DTO -> consumers`,
-- legacy `hardware.light_path.*` structures are migration-only compatibility layers, not canonical authoring targets.
+- legacy `hardware.light_path.*` structures are compatibility-only layers, not canonical authoring targets.
 
 ## Virtual microscope
 
@@ -148,7 +150,7 @@ Legacy `cutoffs_nm` remains supported for simple single-edge dichroics and backw
 fallbacks, but should not be treated as the authoritative model for modern spinning-disk multiband
 dichroics.
 
-See `docs/dichroic_migration_note.md` for migration guidance and compatibility details.
+See `docs/dichroic_migration_note.md` for encoding guidance and compatibility details.
 
 ## Methods generator
 
@@ -192,7 +194,19 @@ The page-level facility strings are injected through a JSON config block rather 
 
 ## Validation and completeness auditing
 
-`python scripts/validate.py` and the builder use `schema/instrument_policy.yaml` plus `vocab/*.yaml`.
+Run validation:
+
+```bash
+python -m scripts.validate
+```
+
+or directly:
+
+```bash
+python scripts/validate.py
+```
+
+Both use `schema/instrument_policy.yaml` plus `vocab/*.yaml`.
 
 The completeness audit is intended to report what is missing, not just fail without context. Missing entries now carry audit metadata such as:
 
