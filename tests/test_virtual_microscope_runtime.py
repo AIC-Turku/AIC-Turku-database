@@ -1482,5 +1482,168 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["fromName"], [], "name should not be parsed")
         self.assertEqual(result["fromExplicit"], [488])
 
+    # ── VM-WLL: white-light laser boundary handling ──────────────────────
+
+    def test_wll_untuned_spectrum_bounded_by_tunable_range(self) -> None:
+        """Untuned WLL should display broadband bounded by [tunable_min_nm, tunable_max_nm],
+        not a narrow midpoint gaussian."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 350, max_nm: 900, step_nm: 2 });
+            const wll = {
+              kind: 'white_light_laser',
+              spectral_mode: 'tunable_line',
+              tunable_min_nm: 440,
+              tunable_max_nm: 790,
+            };
+            const spectrum = rt.sourceSpectrum(wll, grid);
+            const nonzeroWavelengths = grid.filter((nm, i) => spectrum[i] > 0.001);
+            const idx350 = grid.indexOf(350);
+            const idx430 = grid.indexOf(430);
+            const idx500 = grid.indexOf(500);
+            const idx615 = grid.indexOf(614) >= 0 ? grid.indexOf(614) : grid.indexOf(616);
+            const idx800 = grid.indexOf(800);
+            const idx850 = grid.indexOf(850);
+            return {
+              at350: spectrum[idx350],
+              at430: spectrum[idx430],
+              at500: spectrum[idx500],
+              at800: spectrum[idx800],
+              at850: spectrum[idx850],
+              nonzeroMin: nonzeroWavelengths.length ? nonzeroWavelengths[0] : null,
+              nonzeroMax: nonzeroWavelengths.length ? nonzeroWavelengths[nonzeroWavelengths.length - 1] : null,
+              nonzeroCount: nonzeroWavelengths.length,
+              sourceCenters: rt.sourceCenters(wll),
+            };
+            """
+        )
+        # Spectrum must be zero outside the tunable range
+        self.assertEqual(result["at350"], 0, "WLL should be zero below tunable_min_nm (350 < 440)")
+        self.assertEqual(result["at430"], 0, "WLL should be zero just below tunable_min_nm (430 < 440)")
+        self.assertEqual(result["at800"], 0, "WLL should be zero just above tunable_max_nm (800 > 790)")
+        self.assertEqual(result["at850"], 0, "WLL should be zero above tunable_max_nm (850 > 790)")
+        # Interior wavelengths must be non-zero (broadband, not midpoint artefact)
+        self.assertGreater(result["at500"], 0, "WLL should have non-zero spectrum at 500 nm within range")
+        # Non-zero range must be bounded within [440, 790]
+        self.assertGreaterEqual(result["nonzeroMin"], 440, "Broadband WLL non-zero should start at or after 440 nm")
+        self.assertLessEqual(result["nonzeroMax"], 790, "Broadband WLL non-zero should end at or before 790 nm")
+        # The untuned WLL has no selected center
+        self.assertEqual(result["sourceCenters"], [], "Untuned WLL has no selected center")
+
+    def test_wll_tuned_spectrum_shows_narrow_line_at_selected_wavelength(self) -> None:
+        """Tuned WLL (selected_wavelength_nm set) must show narrow gaussian at that wavelength."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 350, max_nm: 900, step_nm: 2 });
+            const wll = {
+              kind: 'white_light_laser',
+              spectral_mode: 'tunable_line',
+              tunable_min_nm: 440,
+              tunable_max_nm: 790,
+              selected_wavelength_nm: 561,
+            };
+            const spectrum = rt.sourceSpectrum(wll, grid);
+            const nonzeroWavelengths = grid.filter((nm, i) => spectrum[i] > 0.001);
+            const idx440 = grid.indexOf(440);
+            const idx790 = grid.indexOf(790);
+            return {
+              at440: spectrum[idx440],
+              at790: spectrum[idx790],
+              sourceCenters: rt.sourceCenters(wll),
+              nonzeroMin: nonzeroWavelengths.length ? nonzeroWavelengths[0] : null,
+              nonzeroMax: nonzeroWavelengths.length ? nonzeroWavelengths[nonzeroWavelengths.length - 1] : null,
+            };
+            """
+        )
+        # Tuned WLL should have a single center at the selected wavelength
+        self.assertEqual(result["sourceCenters"], [561], "Tuned WLL center must match selected_wavelength_nm")
+        # The narrow peak should be far from the tunable range boundaries
+        self.assertAlmostEqual(result["at440"], 0, places=5, msg="Tuned WLL at 440 nm should be near zero")
+        self.assertAlmostEqual(result["at790"], 0, places=5, msg="Tuned WLL at 790 nm should be near zero")
+        # Non-zero range should be a tight window around 561 nm (within ±10 nm)
+        self.assertIsNotNone(result["nonzeroMin"])
+        self.assertIsNotNone(result["nonzeroMax"])
+        self.assertGreaterEqual(result["nonzeroMin"], 550, "Tuned WLL peak should not extend below 550 nm")
+        self.assertLessEqual(result["nonzeroMax"], 572, "Tuned WLL peak should not extend above 572 nm")
+
+    def test_wll_fallback_broadband_uses_default_range_when_no_tunable_bounds(self) -> None:
+        """WLL without tunable_min/max falls back to broadband over the default visible range."""
+        result = self.run_node_json(
+            """
+            const grid = rt.wavelengthGrid({ min_nm: 350, max_nm: 900, step_nm: 2 });
+            const wll_no_range = { kind: 'white_light_laser' };
+            const spectrum = rt.sourceSpectrum(wll_no_range, grid);
+            const nonzeroWavelengths = grid.filter((nm, i) => spectrum[i] > 0.001);
+            return {
+              sourceCenters: rt.sourceCenters(wll_no_range),
+              nonzeroMin: nonzeroWavelengths.length ? nonzeroWavelengths[0] : null,
+              nonzeroMax: nonzeroWavelengths.length ? nonzeroWavelengths[nonzeroWavelengths.length - 1] : null,
+            };
+            """
+        )
+        # WLL with no tunable range should still produce a broadband visible spectrum
+        self.assertEqual(result["sourceCenters"], [], "WLL with no range has no centers")
+        self.assertIsNotNone(result["nonzeroMin"], "WLL fallback should have non-zero spectrum")
+        self.assertLessEqual(result["nonzeroMin"], 420, "WLL fallback should start in the visible blue range")
+        self.assertGreaterEqual(result["nonzeroMax"], 700, "WLL fallback should extend into red")
+
+    def test_stellaris8_wll_payload_has_correct_tunable_bounds(self) -> None:
+        """Leica STELLARIS 8 WLL in the VM payload has tunable_min=440 and tunable_max=790."""
+        import yaml
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
+
+        instrument = yaml.safe_load(
+            Path("instruments/Leica STELLARIS 8 FALCON FLIM.yaml").read_text(encoding="utf-8")
+        )
+        payload = generate_virtual_microscope_payload(instrument)
+        payload_json = __import__("json").dumps(payload)
+
+        result = self.run_node_json(
+            f"""
+            const payload = {payload_json};
+            // Access the WLL from the VM projection's light_sources options
+            const lsMechs = (payload.projections && payload.projections.virtual_microscope &&
+                              payload.projections.virtual_microscope.light_sources) || [];
+            let wllPos = null;
+            for (const mech of lsMechs) {{
+              for (const opt of (mech.options || [])) {{
+                if (opt.value && opt.value.kind === 'white_light_laser') {{
+                  wllPos = opt.value;
+                  break;
+                }}
+              }}
+              if (wllPos) break;
+            }}
+            if (!wllPos) return {{ error: 'WLL not found' }};
+
+            const grid = rt.wavelengthGrid({{ min_nm: 350, max_nm: 900, step_nm: 2 }});
+            const spectrum = rt.sourceSpectrum(wllPos, grid);
+            const nonzeroWavelengths = grid.filter((nm, i) => spectrum[i] > 0.001);
+            return {{
+              kind: wllPos.kind,
+              spectralMode: wllPos.spectral_mode,
+              tunableMin: wllPos.tunable_min_nm,
+              tunableMax: wllPos.tunable_max_nm,
+              spectrumBoundsMin: nonzeroWavelengths.length ? nonzeroWavelengths[0] : null,
+              spectrumBoundsMax: nonzeroWavelengths.length ? nonzeroWavelengths[nonzeroWavelengths.length - 1] : null,
+              at350: spectrum[grid.indexOf(350)],
+              at850: spectrum[grid.indexOf(850)],
+            }};
+            """
+        )
+        self.assertNotIn("error", result, result.get("error", ""))
+        self.assertEqual(result["kind"], "white_light_laser")
+        self.assertEqual(result["spectralMode"], "tunable_line")
+        self.assertEqual(result["tunableMin"], 440)
+        self.assertEqual(result["tunableMax"], 790)
+        # Spectrum must be bounded within [440, 790]
+        self.assertEqual(result["at350"], 0, "STELLARIS 8 WLL spectrum must be zero at 350 nm")
+        self.assertEqual(result["at850"], 0, "STELLARIS 8 WLL spectrum must be zero at 850 nm")
+        self.assertGreaterEqual(result["spectrumBoundsMin"], 440,
+                                "STELLARIS 8 WLL untuned spectrum must not extend below 440 nm")
+        self.assertLessEqual(result["spectrumBoundsMax"], 790,
+                              "STELLARIS 8 WLL untuned spectrum must not extend above 790 nm")
+
+
 if __name__ == "__main__":
     unittest.main()
