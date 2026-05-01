@@ -17,6 +17,7 @@ modalities:
   - darkfield
 
 modules: []
+software_status: not_applicable
 software: []
 
 hardware:

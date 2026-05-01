@@ -128,3 +128,14 @@ Rules:
 - Canonical `light_paths` remain topology truth.
 - Compatibility entrypoints are retained for CI/API compatibility, not implementation
   ownership.
+
+## Software metadata semantics
+
+- `software_status` is an optional canonical instrument field with supported values:
+  - `documented`: software entries are expected in `software[]`.
+  - `not_applicable`: no acquisition/control software applies (manual/standalone instrument).
+  - `unknown`: software applicability has not yet been curated.
+- Backward compatibility: if `software_status` is omitted, existing `software[]`-driven behavior remains unchanged.
+- Use `not_applicable` only when instrument records confirm manual/standalone usage with no acquisition/control software workflow.
+- Use `unknown` when applicability is not yet curated; do not treat it as `not_applicable`.
+- `software[]` entries still follow existing conditional requirements (`role`, `name`, `version`).

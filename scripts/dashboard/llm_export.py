@@ -455,7 +455,12 @@ def build_llm_inventory_payload(
             "methods": copy.deepcopy(canonical_instrument_dto.get("methods") or {}),
             "modalities": copy.deepcopy(canonical_instrument_dto.get("modalities") or []),
             "software": copy.deepcopy(canonical_instrument_dto.get("software") or []),
+            "software_status": clean_text(canonical_instrument_dto.get("software_status")).lower(),
         }
+        if llm_record["software_status"] == "not_applicable":
+            llm_record["software_status_caveat"] = (
+                "No acquisition/control software is part of this instrument record."
+            )
 
         known_fields, missing_fields = _collect_known_missing_paths(llm_record)
 

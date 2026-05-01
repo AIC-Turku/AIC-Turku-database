@@ -325,8 +325,6 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                 }
             )
         cleaned_rows = [strip_empty_values(r) for r in rows]
-        return [r for r in cleaned_rows if isinstance(r, dict) and r]
-
     if isinstance(raw, dict):
         for role_or_name, payload in raw.items():
             normalized_role = normalize_role(role_or_name)
@@ -351,6 +349,13 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
         return [cleaned_row] if isinstance(cleaned_row, dict) and cleaned_row else []
 
     return []
+
+
+def normalize_software_status(raw: Any) -> str:
+    value = clean_text(raw).lower()
+    if value in {"documented", "not_applicable", "unknown"}:
+        return value
+    return ""
 
 
 def normalize_hardware(raw: Any) -> dict[str, Any]:
@@ -491,6 +496,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         modalities = []
 
     software = strip_empty_values(normalize_software(payload.get("software")))
+    software_status = normalize_software_status(payload.get("software_status"))
     raw_hardware = payload.get("hardware") or {}
     if not isinstance(raw_hardware, dict):
         raw_hardware = {}
@@ -574,6 +580,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "modules": copy.deepcopy(modules),
         "notes": notes_raw,
         "software": software,
+        "software_status": software_status,
         "hardware": hardware,
         "light_paths": copy.deepcopy(payload.get("light_paths") or []),
         "policy": {
@@ -607,6 +614,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "modalities": copy.deepcopy(canonical["modalities"]),
         "modules": copy.deepcopy(canonical["modules"]),
         "software": copy.deepcopy(canonical["software"]),
+        "software_status": canonical.get("software_status", ""),
         "image_filename": _discover_image_filename(instrument_id),
         "url": canonical_instrument["url"],
         "canonical": canonical,

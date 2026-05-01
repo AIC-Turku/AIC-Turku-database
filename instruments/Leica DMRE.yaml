@@ -16,6 +16,7 @@ modalities:
   - dic
 
 modules: []
+software_status: not_applicable
 software: []
 
 hardware:
@@ -166,4 +167,3 @@ light_paths:
               label: "To Eyepieces"
               sequence:
                 - endpoint_id: eyepieces
-
