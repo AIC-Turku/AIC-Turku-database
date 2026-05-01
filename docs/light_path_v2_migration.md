@@ -181,7 +181,7 @@ It declares the installed source inventory, optical path elements, endpoints, an
 
 ### Schema / validator
 
-`schema/instrument_policy.yaml` and `scripts/validate.py` together define and enforce the canonical authoring contract.
+`schema/instrument_policy.yaml` and `scripts/validation/*` (via the `scripts/validate.py` compatibility façade) define and enforce the canonical authoring contract.
 
 Responsibilities:
 

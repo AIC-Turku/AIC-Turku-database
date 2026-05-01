@@ -1,3 +1,5 @@
+> Historical note: this plan reflects an earlier rewrite phase and is retained for provenance. Current production light-path implementations live in `scripts/lightpath/*`, with `scripts/light_path_parser.py` retained as a compatibility shim.
+
 # Optical Contract Rewrite Plan
 
 ## 1. Single Authoritative Runtime Optical Contract
@@ -5,7 +7,7 @@
 **Contract:** `selected_execution` (version `selected_execution.v2`)
 
 - **Location:** `light_paths[].selected_execution` in the DTO produced by
-  `light_path_parser.generate_virtual_microscope_payload()`.
+  `scripts/lightpath/vm_payload.py` (compat-imported by `scripts/light_path_parser.py`).
 - **Schema:**
   ```yaml
   selected_execution:
@@ -26,7 +28,7 @@
           - { position_key: "Pos_2", slot: 2, label: "..." }
     warnings:               # Validation warnings from the parser
   ```
-- **Authority:** Python (`light_path_parser.py`) is the sole author of optical
+- **Authority:** Python (`scripts/lightpath/*`, compatibility-exported via `scripts/light_path_parser.py`) is the sole author of optical
   meaning.  Every `spectral_ops` value on every step is computed at parse-time.
   JavaScript may *execute* pre-computed `spectral_ops` (apply masks to
   wavelength grids for simulation/rendering) but must never *reconstruct* optics
