@@ -865,8 +865,9 @@ def _build_route_steps(
             if entry.get("kind") == "source":
                 step_payload["source_id"] = component_id
             if entry.get("kind") == "endpoint":
-                step_payload["detector_id"] = component_id
                 step_payload["endpoint_id"] = component_id
+                if kind == "detector":
+                    step_payload["detector_id"] = component_id
             if entry.get("kind") == "branch_block":
                 step_payload["routing"] = {
                     "selection_mode": entry.get("selection_mode"),

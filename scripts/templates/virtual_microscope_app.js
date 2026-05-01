@@ -1312,7 +1312,7 @@
         }];
       }
       const elementId = cleanString(step.component_id).toLowerCase();
-      if (step.kind === 'detector') {
+      if (step.kind === 'detector' || step.kind === 'endpoint') {
         return [{
           kind: 'endpoint',
           key: `${prefix}:${phase}:endpoint:${index}`,
@@ -1392,6 +1392,17 @@
     const endpointIds = routeSteps
       .filter((step) => step && step.kind === 'detector')
       .map((step) => step.endpoint_id || step.detector_id || step.component_id)
+      .concat(
+        routeSteps.flatMap((step) => {
+          const branches = step && step.routing && Array.isArray(step.routing.branches) ? step.routing.branches : [];
+          return branches.flatMap((branch) => {
+            const sequence = Array.isArray(branch && branch.sequence) ? branch.sequence : [];
+            return sequence
+              .filter((entry) => entry && entry.kind === 'detector')
+              .map((entry) => entry.endpoint_id || entry.detector_id || entry.component_id);
+          });
+        })
+      )
       .filter(Boolean);
     return {
       route: cleanString(routeRecord && routeRecord.id).toLowerCase() || cleanString(route).toLowerCase() || null,

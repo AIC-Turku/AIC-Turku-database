@@ -3129,3 +3129,42 @@ class LightPathParserTests(unittest.TestCase):
                 route_has_detector_terminal,
                 f"Expected detector terminal steps in selected_execution for {instrument_file}.",
             )
+
+    def test_direct_route_eyepiece_endpoint_has_no_detector_id(self) -> None:
+        """Eyepiece endpoint in a direct (non-branch) route must not carry detector_id."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src", "kind": "laser", "wavelength_nm": 488}],
+                    "endpoints": [
+                        {"id": "cam", "endpoint_type": "detector", "display_label": "Camera"},
+                        {"id": "eyes", "endpoint_type": "eyepiece", "display_label": "Eyepieces"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "to_cam",
+                        "illumination_sequence": [{"source_id": "src"}],
+                        "detection_sequence": [{"endpoint_id": "cam"}],
+                    },
+                    {
+                        "id": "to_eyes",
+                        "illumination_sequence": [{"source_id": "src"}],
+                        "detection_sequence": [{"endpoint_id": "eyes"}],
+                    },
+                ],
+            }
+        )
+        routes_by_id = {lp["id"]: lp for lp in payload["light_paths"]}
+
+        # Detector route: kind='detector', detector_id is set
+        cam_steps = routes_by_id["to_cam"]["selected_execution"]["selected_route_steps"]
+        cam_terminal = next(s for s in cam_steps if s.get("kind") == "detector")
+        self.assertEqual(cam_terminal["detector_id"], "cam")
+        self.assertEqual(cam_terminal["endpoint_id"], "cam")
+
+        # Eyepiece route: kind='endpoint', detector_id must be absent/None
+        eyes_steps = routes_by_id["to_eyes"]["selected_execution"]["selected_route_steps"]
+        eyes_terminal = next(s for s in eyes_steps if s.get("kind") == "endpoint")
+        self.assertIsNone(eyes_terminal.get("detector_id"), "Eyepiece endpoint must not carry detector_id")
+        self.assertEqual(eyes_terminal["endpoint_id"], "eyes")
