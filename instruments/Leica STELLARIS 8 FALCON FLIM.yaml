@@ -454,14 +454,14 @@ hardware:
           model: Filter cube LED 405
           product_code: '15525338'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 405
             width_nm: 60
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 455
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 470
             width_nm: 40
           notes: >-
@@ -475,14 +475,14 @@ hardware:
           model: Filter Cube GFP
           product_code: '15525314'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 470
             width_nm: 40
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 495
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 525
             width_nm: 50
           notes: >-
@@ -495,14 +495,14 @@ hardware:
           model: Filter Cube TXR
           product_code: '15525310'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 560
             width_nm: 40
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 585
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 630
             width_nm: 75
           notes: >-
@@ -515,14 +515,14 @@ hardware:
           model: Filter cube Cy5 narrow excitation, size P
           product_code: '11536078'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 640
             width_nm: 30
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 660
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 690
             width_nm: 50
           notes: >-
@@ -565,7 +565,7 @@ hardware:
         Physical default is not authored.
 
 light_paths:
-  - id: confocal_spectral_flim_fcs
+  - id: confocal_point
     name: Confocal spectral / FALCON FLIM / FCS
     modalities:
       - confocal_point
@@ -603,7 +603,7 @@ light_paths:
               sequence:
                 - endpoint_id: hyd_r_sp_pos_5
 
-  - id: widefield_led_observation
+  - id: widefield_fluorescence
     name: LED / filter-cube observation
     modalities:
       - widefield_fluorescence
