@@ -206,7 +206,16 @@
       detectIndex++;
     });
 
-    if (routeSteps.some((step) => step && step.kind === 'detector')) {
+    const hasDetectorTerminal = routeSteps.some((step) => step && step.kind === 'detector')
+      || routeSteps.some((step) => {
+        const branches = step && step.routing && Array.isArray(step.routing.branches) ? step.routing.branches : [];
+        return branches.some((branch) => {
+          const sequence = Array.isArray(branch && branch.sequence) ? branch.sequence : [];
+          return sequence.some((entry) => entry && entry.kind === 'detector');
+        });
+      });
+
+    if (hasDetectorTerminal) {
       stages.push({ id: 'detectors', key: 'pipe:detectors:0', label: 'Detectors', inspectorStage: 'detectors', flowOrigin: 'detectors' });
     }
 

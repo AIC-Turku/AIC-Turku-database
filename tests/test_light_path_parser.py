@@ -2968,3 +2968,164 @@ class LightPathParserTests(unittest.TestCase):
         self.assertIn("selected_route_steps", sel)
         self.assertNotIn("steps", sel, "Legacy 'steps' alias must not be present in selected_execution")
         self.assertEqual(sel.get("contract_version"), "selected_execution.v2")
+
+    def test_selected_execution_preserves_non_detector_endpoints_as_endpoint_kind(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src", "kind": "laser", "wavelength_nm": 488}],
+                    "endpoints": [
+                        {"id": "cam", "endpoint_type": "detector", "display_label": "Camera"},
+                        {"id": "eyes", "endpoint_type": "eyepiece", "display_label": "Eyepieces"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "mixed",
+                        "illumination_sequence": [{"source_id": "src"}],
+                        "detection_sequence": [
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {"branch_id": "to_cam", "sequence": [{"endpoint_id": "cam"}]},
+                                        {"branch_id": "to_eyes", "sequence": [{"endpoint_id": "eyes"}]},
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+        steps = payload["light_paths"][0]["selected_execution"]["selected_route_steps"]
+        branch_selector = next(step for step in steps if step.get("kind") == "routing_component")
+        branches = branch_selector["routing"]["branches"]
+        branch_kinds = {
+            branch["branch_id"]: [item.get("kind") for item in (branch.get("sequence") or [])]
+            for branch in branches
+        }
+        self.assertEqual(branch_kinds["to_cam"], ["detector"])
+        self.assertEqual(branch_kinds["to_eyes"], ["endpoint"])
+
+    def test_branch_detector_endpoints_remain_present_in_selected_execution(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src", "kind": "laser", "wavelength_nm": 561}],
+                    "endpoints": [
+                        {"id": "detector_1", "endpoint_type": "detector"},
+                        {"id": "detector_2", "endpoint_type": "detector"},
+                    ],
+                },
+                "light_paths": [
+                    {
+                        "id": "branch_detectors",
+                        "illumination_sequence": [{"source_id": "src"}],
+                        "detection_sequence": [
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [
+                                        {"branch_id": "a", "sequence": [{"endpoint_id": "detector_1"}]},
+                                        {"branch_id": "b", "sequence": [{"endpoint_id": "detector_2"}]},
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+        steps = payload["light_paths"][0]["selected_execution"]["selected_route_steps"]
+        branch_selector = next(step for step in steps if step.get("kind") == "routing_component")
+        branch_endpoint_ids = {
+            branch["branch_id"]: [item.get("endpoint_id") for item in (branch.get("sequence") or [])]
+            for branch in branch_selector["routing"]["branches"]
+        }
+        self.assertEqual(branch_endpoint_ids["a"], ["detector_1"])
+        self.assertEqual(branch_endpoint_ids["b"], ["detector_2"])
+
+    def test_real_instrument_mixed_detector_and_eyepiece_terminals_are_distinct(self) -> None:
+        instrument = yaml.safe_load(
+            Path("instruments/Leica STELLARIS 8 FALCON FLIM.yaml").read_text(encoding="utf-8")
+        )
+        payload = generate_virtual_microscope_payload(instrument)
+        route = next(r for r in payload["light_paths"] if r.get("id") == "confocal_point")
+        selected_steps = route["selected_execution"]["selected_route_steps"]
+        branch_selector = next(step for step in selected_steps if step.get("kind") == "routing_component")
+        branch_terminal_steps = [
+            seq_step
+            for branch in (branch_selector.get("routing", {}).get("branches") or [])
+            for seq_step in (branch.get("sequence") or [])
+            if isinstance(seq_step, dict)
+        ]
+        detector_steps = [step for step in branch_terminal_steps if step.get("kind") == "detector"]
+        endpoint_steps = [step for step in branch_terminal_steps if step.get("kind") == "endpoint"]
+
+        self.assertTrue(detector_steps, "Expected at least one detector terminal step.")
+        self.assertTrue(endpoint_steps, "Expected at least one non-detector endpoint terminal step.")
+        self.assertTrue(all(step.get("endpoint_id") for step in detector_steps))
+
+        endpoints_by_id = {
+            item.get("id"): item
+            for item in payload.get("endpoints", [])
+            if isinstance(item, dict) and item.get("id")
+        }
+        self.assertTrue(
+            all(endpoints_by_id.get(step["endpoint_id"], {}).get("source_section") == "detectors" for step in detector_steps),
+            "Detector terminal labels/identity must resolve from normalized detector endpoints.",
+        )
+
+    def test_real_instrument_detector_terminals_present_in_selected_execution_for_vm_consumers(self) -> None:
+        instrument_files = [
+            "instruments/Leica STELLARIS 8 FALCON FLIM.yaml",
+            "instruments/Zeiss AxioZoom V16.yaml",
+            "instruments/Abberior STED.yaml",
+        ]
+        for instrument_file in instrument_files:
+            instrument = yaml.safe_load(Path(instrument_file).read_text(encoding="utf-8"))
+            payload = generate_virtual_microscope_payload(instrument)
+            endpoint_ids = {
+                item.get("id")
+                for item in payload.get("endpoints", [])
+                if isinstance(item, dict) and item.get("source_section") == "detectors"
+            }
+            self.assertTrue(endpoint_ids, f"Expected normalized detector endpoints in {instrument_file}.")
+
+            route_has_detector_terminal = False
+            for route in payload.get("light_paths", []):
+                selected_steps = (
+                    route.get("selected_execution", {}).get("selected_route_steps", [])
+                    if isinstance(route, dict)
+                    else []
+                )
+                for step in selected_steps:
+                    if not isinstance(step, dict):
+                        continue
+                    if step.get("kind") == "detector" and step.get("endpoint_id") in endpoint_ids:
+                        route_has_detector_terminal = True
+                        break
+                    routing = step.get("routing") if isinstance(step.get("routing"), dict) else {}
+                    for branch in routing.get("branches") or []:
+                        if not isinstance(branch, dict):
+                            continue
+                        for branch_step in branch.get("sequence") or []:
+                            if (
+                                isinstance(branch_step, dict)
+                                and branch_step.get("kind") == "detector"
+                                and branch_step.get("endpoint_id") in endpoint_ids
+                            ):
+                                route_has_detector_terminal = True
+                                break
+                        if route_has_detector_terminal:
+                            break
+                    if route_has_detector_terminal:
+                        break
+                if route_has_detector_terminal:
+                    break
+
+            self.assertTrue(
+                route_has_detector_terminal,
+                f"Expected detector terminal steps in selected_execution for {instrument_file}.",
+            )
