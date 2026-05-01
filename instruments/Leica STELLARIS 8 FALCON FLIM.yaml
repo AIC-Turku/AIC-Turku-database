@@ -449,6 +449,7 @@ hardware:
         - widefield_fluorescence
       positions:
         led_405_cube:
+          slot: 1
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter cube LED 405
@@ -470,6 +471,7 @@ hardware:
             treating as measured local truth.
 
         gfp_cube:
+          slot: 2
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter Cube GFP
@@ -490,6 +492,7 @@ hardware:
             if exact bands matter.
 
         txr_cube:
+          slot: 3
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter Cube TXR
@@ -510,6 +513,7 @@ hardware:
             if exact bands matter.
 
         cy5_narrow_cube:
+          slot: 4
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter cube Cy5 narrow excitation, size P
@@ -530,6 +534,7 @@ hardware:
             against installed cube label if exact bands matter.
 
         icr_reflector_cube:
+          slot: 5
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: 'Reflector cube ICR: 45° dichroic mirror with fixed crossed polarizer/analyzer'

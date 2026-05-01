@@ -3051,7 +3051,7 @@ class LightPathParserTests(unittest.TestCase):
             Path("instruments/Leica STELLARIS 8 FALCON FLIM.yaml").read_text(encoding="utf-8")
         )
         payload = generate_virtual_microscope_payload(instrument)
-        route = next(r for r in payload["light_paths"] if r.get("id") == "confocal_point")
+        route = next(r for r in payload["light_paths"] if r.get("id") == "widefield_fluorescence")
         selected_steps = route["selected_execution"]["selected_route_steps"]
         branch_selector = next(step for step in selected_steps if step.get("kind") == "routing_component")
         branch_terminal_steps = [

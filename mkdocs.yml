@@ -8,6 +8,7 @@ theme:
   - navigation.tabs
   - navigation.sections
   - navigation.top
+  - toc.integrate
   - search.suggest
   - search.highlight
   - content.code.copy
@@ -25,8 +26,6 @@ theme:
 plugins:
 - search
 markdown_extensions:
-- toc:
-    toc_depth: 1  # Only <h1> headings will be tracked
 - admonition
 - attr_list
 - md_in_html
@@ -55,7 +54,7 @@ nav:
   - Leica DM IRBE: instruments/scope-leica-dm-irbe/index.md
   - Leica DM RB: instruments/scope-leica-dm-rb/index.md
   - Leica DM RE: instruments/scope-leica-dmre/index.md
-  - Leica STELLARIS 8: instruments/scope-leica-stellaris-8-falcon-flim-resonant/index.md
+  - Leica STELLARIS 8 FALCON FLIM: instruments/scope-leica-stellaris-8-falcon-flim-resonant/index.md
   - Leica Thunder: instruments/scope-leica-thunder/index.md
   - MSquared Aurora Airy Beam: instruments/scope-msquared-aurora-airy-beam/index.md
   - Nikon Ti2-E Crest V3: instruments/scope-nikon-crest-v3/index.md
