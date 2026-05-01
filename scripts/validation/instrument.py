@@ -752,9 +752,38 @@ def validate_instrument_ledgers(
         has_digital_detector = bool(detector_kinds & digital_detector_kinds)
 
         software_roles = _get_software_roles(canonical_payload)
+        software_status = str(canonical_payload.get("software_status") or "").strip().lower()
+        software_entries = canonical_payload.get("software")
+        has_software_entries = isinstance(software_entries, list) and len(software_entries) > 0
+
+        if software_status == "not_applicable" and has_software_entries:
+            warnings.append(
+                ValidationIssue(
+                    code='software_status_conflict',
+                    path=instrument_file.as_posix(),
+                    message=(
+                        "software_status is 'not_applicable' but software[] contains entries; "
+                        "either remove software entries or set software_status to 'documented'."
+                    ),
+                )
+            )
+        if software_status == "documented" and not has_software_entries:
+            warnings.append(
+                ValidationIssue(
+                    code='software_status_conflict',
+                    path=instrument_file.as_posix(),
+                    message=(
+                        "software_status is 'documented' but software[] is empty; "
+                        "add software entries or set software_status to 'unknown' or 'not_applicable'."
+                    ),
+                )
+            )
 
         has_acquisition_role = 'acquisition' in software_roles
-        if has_digital_detector and not has_acquisition_role:
+        allow_not_applicable_without_acquisition = (
+            software_status == "not_applicable" and not has_software_entries
+        )
+        if has_digital_detector and not has_acquisition_role and not allow_not_applicable_without_acquisition:
             if not is_retired_instrument:
                 warnings.append(
                     ValidationIssue(
@@ -891,4 +920,3 @@ def validate_instrument_ledgers(
         )
 
     return instrument_ids, issues, warnings
-

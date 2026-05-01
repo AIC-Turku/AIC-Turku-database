@@ -390,6 +390,17 @@ sections:
   - id: software
     title: Software
     rules:
+      - path: software_status
+        title: Software status
+        status: optional
+        type: string
+        allowed:
+          - documented
+          - not_applicable
+          - unknown
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Declares whether software metadata is documented, unknown, or not applicable for manual/standalone instruments.
+
       - path: software[]
         title: Software entries
         status: optional

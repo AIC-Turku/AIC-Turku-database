@@ -706,6 +706,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     canonical = inst.get("canonical") if isinstance(inst.get("canonical"), dict) else {}
     canonical_instrument = canonical.get("instrument") if isinstance(canonical.get("instrument"), dict) else {}
     canonical_software = canonical.get("software") if isinstance(canonical.get("software"), list) else []
+    software_status = clean_text(canonical.get("software_status")).lower()
     canonical_modalities = canonical.get("modalities") if isinstance(canonical.get("modalities"), list) else []
     canonical_modules = canonical.get("modules") if isinstance(canonical.get("modules"), list) else []
 
@@ -741,6 +742,10 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         )
 
     acquisition_software = next((row["display_label"] for row in software_rows if clean_text(row.get("role")).lower() == "acquisition" and clean_text(row.get("display_label"))), "[MISSING ACQUISITION SOFTWARE NAME AND VERSION]")
+    if software_status == "not_applicable":
+        acquisition_software = "no acquisition/control software (manual or standalone system)"
+    elif software_status == "unknown":
+        acquisition_software = "software applicability not yet curated"
     microscope_identity = " ".join(part for part in [clean_text(canonical_instrument.get("manufacturer")), clean_text(canonical_instrument.get("model"))] if part).strip()
     stand = clean_text(canonical_instrument.get("stand_orientation"))
     stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
@@ -841,6 +846,14 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         "modalities": modalities,
         "modules": modules,
         "software": software_rows,
+        "software_status": software_status,
+        "software_status_message": (
+            "No acquisition/control software — manual or standalone system."
+            if software_status == "not_applicable"
+            else "Software applicability has not yet been curated."
+            if software_status == "unknown"
+            else ""
+        ),
         "hardware": hardware_dto,
         "llm_context": {
             "hardware_inventory": copy.deepcopy(hardware_dto["optical_path"].get("hardware_inventory") or []),

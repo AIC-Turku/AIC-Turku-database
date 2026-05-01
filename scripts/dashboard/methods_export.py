@@ -158,6 +158,7 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
         if isinstance(canonical.get("software"), list)
         else []
     )
+    software_status = clean_text(canonical.get("software_status")).lower()
 
     if not canonical_hardware:
         diagnostics.append(
@@ -171,7 +172,7 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
             }
         )
 
-    if not canonical_software:
+    if not canonical_software and software_status != "not_applicable":
         diagnostics.append(
             {
                 "severity": "warning",
@@ -234,6 +235,7 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
             or []
         ),
         "software": copy.deepcopy(canonical_software),
+        "software_status": software_status,
         "routes": canonical_routes,
         "diagnostics": diagnostics,
     }
