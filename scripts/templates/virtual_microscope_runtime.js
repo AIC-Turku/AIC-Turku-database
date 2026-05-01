@@ -1912,11 +1912,18 @@
       return bandMask(grid, center - (safeWidth / 2), center + (safeWidth / 2), 3);
     }
     if (tunableMin !== null && tunableMax !== null) {
-      const chosen = center !== null ? center : ((tunableMin + tunableMax) / 2);
-      if (mode === 'tunable_band') {
-        return bandMask(grid, chosen - ((width || 30) / 2), chosen + ((width || 30) / 2), 3);
+      if (center !== null) {
+        if (mode === 'tunable_band') {
+          return bandMask(grid, center - ((width || 30) / 2), center + ((width || 30) / 2), 3);
+        }
+        return gaussianSpectrum(grid, center, width || 2);
       }
-      return gaussianSpectrum(grid, chosen, width || 2);
+      // Untuned tunable source: display broadband bounded by the authored tunable range so
+      // the user can see the full accessible excitation range, not a midpoint artefact.
+      if (mode === 'tunable_band') {
+        return bandMask(grid, tunableMin, tunableMax, 3);
+      }
+      return broadbandSpectrum(grid, { ...source, min_nm: tunableMin, max_nm: tunableMax });
     }
     if (center !== null) {
       return width && width > 2

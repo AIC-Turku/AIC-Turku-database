@@ -449,19 +449,20 @@ hardware:
         - widefield_fluorescence
       positions:
         led_405_cube:
+          slot: 1
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter cube LED 405
           product_code: '15525338'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 405
             width_nm: 60
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 455
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 470
             width_nm: 40
           notes: >-
@@ -470,19 +471,20 @@ hardware:
             treating as measured local truth.
 
         gfp_cube:
+          slot: 2
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter Cube GFP
           product_code: '15525314'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 470
             width_nm: 40
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 495
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 525
             width_nm: 50
           notes: >-
@@ -490,19 +492,20 @@ hardware:
             if exact bands matter.
 
         txr_cube:
+          slot: 3
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter Cube TXR
           product_code: '15525310'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 560
             width_nm: 40
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 585
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 630
             width_nm: 75
           notes: >-
@@ -510,19 +513,20 @@ hardware:
             if exact bands matter.
 
         cy5_narrow_cube:
+          slot: 4
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: Filter cube Cy5 narrow excitation, size P
           product_code: '11536078'
           excitation_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 640
             width_nm: 30
           dichroic:
-            component_type: dichroic_mirror
+            component_type: dichroic
             cut_on_nm: 660
           emission_filter:
-            component_type: bandpass_filter
+            component_type: bandpass
             center_nm: 690
             width_nm: 50
           notes: >-
@@ -530,6 +534,7 @@ hardware:
             against installed cube label if exact bands matter.
 
         icr_reflector_cube:
+          slot: 5
           component_type: filter_cube
           manufacturer: Leica Microsystems
           model: 'Reflector cube ICR: 45° dichroic mirror with fixed crossed polarizer/analyzer'
@@ -565,7 +570,7 @@ hardware:
         Physical default is not authored.
 
 light_paths:
-  - id: confocal_spectral_flim_fcs
+  - id: confocal_point
     name: Confocal spectral / FALCON FLIM / FCS
     modalities:
       - confocal_point
@@ -603,7 +608,7 @@ light_paths:
               sequence:
                 - endpoint_id: hyd_r_sp_pos_5
 
-  - id: widefield_led_observation
+  - id: widefield_fluorescence
     name: LED / filter-cube observation
     modalities:
       - widefield_fluorescence
