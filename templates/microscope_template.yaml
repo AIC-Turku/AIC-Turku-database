@@ -36,6 +36,11 @@ modules:  # Installed modules: Only present when installed modules materially ch
     model: ""  # Module model: Vendor-facing module model/designation used as primary structured identity for the installed module.
 
 # -----------------------------------------------------------------------------
+# SOFTWARE STATUS
+# -----------------------------------------------------------------------------
+software_status: ""  # Software status: Declares whether software metadata is documented, unknown, or not applicable for manual/standalone instruments.
+
+# -----------------------------------------------------------------------------
 # SOFTWARE
 # -----------------------------------------------------------------------------
 software:  # Software entries: Software is represented as extensible role-tagged entries.
