@@ -63,7 +63,6 @@ nav:
   - ONI Nanoimager: instruments/scope-oni-nanoimager/index.md
   - Zeiss AxioZoom.V16: instruments/scope-zeiss-axiozoom-v16/index.md
   - Zeiss LSM 510 JPK AFM: instruments/scope-zeiss-lsm-510-jpk-afm/index.md
-  - Zeiss LSM 880 with AiryScan: instruments/scope-zeiss-lsm-880-with-airyscan/index.md
   - Zeiss TIRF: instruments/scope-zeiss-tirf/index.md
 - Plan Your Experiments: plan_experiments.md
 - Virtual Microscope: virtual_microscope.md
