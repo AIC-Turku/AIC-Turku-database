@@ -78,6 +78,7 @@ hardware:
       read_noise_e: ""  # Detector read noise (e-): Capability metadata.
       notes: ""  # Detector notes: Useful for channel assignments or operating modes.
       supports_time_gating: false  # Detector supports time gating: Instrument-level capability flag indicating whether detector time-gating is available.
+      time_gating_defaults_known: false  # Detector time-gating defaults known: Indicates whether facility-authored default gating delay/width values are documented for this detector.
       default_gating_delay_ns: ""  # Detector default gating delay (ns): Facility default detector gating delay setting used for instrument characterization, not experiment truth.
       default_gate_width_ns: ""  # Detector default gate width (ns): Facility default detector gate width setting used for instrument characterization, not experiment truth.
       collection_min_nm: ""  # Detector collection window minimum wavelength (nm): Explicit lower bound of detector collection window for virtual microscope response modeling.

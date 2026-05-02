@@ -629,6 +629,13 @@ sections:
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Instrument-level capability flag indicating whether detector time-gating is available.
 
+      - path: hardware.detectors[].time_gating_defaults_known
+        title: Detector time-gating defaults known
+        status: optional
+        type: boolean
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Indicates whether facility-authored default gating delay/width values are documented for this detector.
+
       - path: hardware.detectors[].default_gating_delay_ns
         title: Detector default gating delay (ns)
         status: conditional
@@ -636,6 +643,7 @@ sections:
         required_if:
           item_field_in:
             supports_time_gating: [true]
+            time_gating_defaults_known: [true]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Facility default detector gating delay setting used for instrument characterization, not experiment truth.
 
@@ -646,6 +654,7 @@ sections:
         required_if:
           item_field_in:
             supports_time_gating: [true]
+            time_gating_defaults_known: [true]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Facility default detector gate width setting used for instrument characterization, not experiment truth.
 
