@@ -409,13 +409,22 @@ class RouteReadoutPropagationTests(unittest.TestCase):
         )
 
     def test_readout_terms_not_used_as_light_path_ids(self) -> None:
-        """Readout-axis terms must not appear as light_paths[].id in any active instrument YAML."""
+        """Readout-axis terms must not appear as light_paths[].id in any active instrument YAML.
+
+        The valid readout IDs are loaded from vocab/measurement_readouts.yaml to stay
+        in sync with the authoritative vocabulary.
+        """
         import yaml  # type: ignore[import]
 
-        READOUT_TERMS = {
-            "flim", "fcs", "fret", "frap", "spectral_imaging",
-            "photoactivation", "photobleaching",
+        # Load readout term IDs from the canonical vocabulary file
+        readout_vocab_path = REPO_ROOT / "vocab" / "measurement_readouts.yaml"
+        readout_vocab = yaml.safe_load(readout_vocab_path.read_text(encoding="utf-8"))
+        readout_terms = {
+            str(term["id"])
+            for term in (readout_vocab.get("terms") or [])
+            if isinstance(term, dict) and term.get("id")
         }
+
         invalid: list[str] = []
         for yaml_path in sorted(INSTRUMENTS_DIR.glob("*.yaml")):
             data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
@@ -425,7 +434,7 @@ class RouteReadoutPropagationTests(unittest.TestCase):
                 if not isinstance(lp, dict):
                     continue
                 route_id = (lp.get("id") or "").strip()
-                if route_id in READOUT_TERMS:
+                if route_id in readout_terms:
                     invalid.append(f"{yaml_path.name}: light_path id={route_id!r}")
         self.assertFalse(
             invalid,

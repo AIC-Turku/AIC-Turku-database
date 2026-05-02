@@ -25,6 +25,10 @@ from scripts.display_labels import (
 from scripts.validate import Vocabulary
 
 
+_MAX_READOUT_ACRONYM_LENGTH = 5
+"""Readout IDs with ≤ this many non-space characters are rendered as UPPERCASE acronyms."""
+
+
 def _readout_vocab_label(readout_id: str, vocabulary: Vocabulary | None) -> str:
     """Return a display label for a measurement readout vocabulary term.
 
@@ -39,9 +43,9 @@ def _readout_vocab_label(readout_id: str, vocabulary: Vocabulary | None) -> str:
             label = getattr(term, "label", None)
             if label:
                 return label
-    # Fallback: short uppercase acronyms (≤ 5 chars) else title-case
+    # Fallback: short uppercase acronyms (≤ _MAX_READOUT_ACRONYM_LENGTH non-space chars) else title-case
     slug = readout_id.replace("_", " ")
-    return slug.upper() if len(slug.replace(" ", "")) <= 5 else slug.title()
+    return slug.upper() if len(slug.replace(" ", "")) <= _MAX_READOUT_ACRONYM_LENGTH else slug.title()
 
 
 def _compact_join(parts: Iterable[str]) -> str:
