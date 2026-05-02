@@ -283,6 +283,15 @@ hardware:
     modalities:
     - confocal_point
     - ism
+  - kind: halogen
+    manufacturer: Zeiss
+    model: Transmitted light illumination (HAL 100 / LED)
+    role: transmitted_illumination
+    notes: Transmitted brightfield illumination source for the inverted stand.
+    url: ''
+    id: transmitted_illumination
+    modalities:
+    - transmitted_brightfield
 
   optical_path_elements:
   - name: AiryScan Emission Wheel
@@ -414,6 +423,27 @@ light_paths:
         - endpoint_id: eyepieces
   readouts:
   - spectral_imaging
+
+- id: transmitted_brightfield
+  name: Transmitted Brightfield
+  modalities:
+  - transmitted_brightfield
+  illumination_sequence:
+  - source_id: transmitted_illumination
+  detection_sequence:
+  - optical_path_element_id: trinocular_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_transmitted_pmt
+        label: "To Transmitted Light PMT"
+        sequence:
+        - endpoint_id: detector_3
+      - branch_id: to_eyepieces
+        label: "To Eyepieces"
+        sequence:
+        - endpoint_id: eyepieces
+
 capabilities:
   imaging_modes:
   - confocal_point

@@ -152,8 +152,8 @@ hardware:
 
 
 light_paths:
-- id: flim   # Canonical route identifier for the installed FLIM detection path
-  name: FLIM / Epi-fluorescence
+- id: widefield_fluorescence   # Optical route is widefield fluorescence; FLIM is a readout, not a route type
+  name: Epi-fluorescence (FLIM)
   modalities:
   - widefield_fluorescence
   - flim

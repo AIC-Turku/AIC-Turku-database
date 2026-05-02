@@ -533,7 +533,69 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertTrue(any(path.endswith('light_paths[4].route_type') for path in unknown_paths))
         self.assertTrue(any(path.endswith('light_paths[5].route_type') for path in unknown_paths))
 
-
+    def test_light_path_id_not_in_optical_routes_emits_warning(self) -> None:
+        """A light path whose id is a readout/modality term (e.g. 'flim') and has no explicit
+        route_type should trigger light_path_id_not_in_optical_routes."""
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'optical_routes': {'source': 'inline', 'allowed_values': ['confocal_point', 'widefield_fluorescence']},
+                    'measurement_readouts': {'source': 'inline', 'allowed_values': ['flim', 'fcs']},
+                    'modalities': {'source': 'inline', 'allowed_values': ['confocal_point', 'widefield_fluorescence', 'flim']},
+                },
+                'sections': [{
+                    'id': 'instrument',
+                    'title': 'Instrument',
+                    'rules': [
+                        {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                        {'path': 'capabilities', 'status': 'optional', 'type': 'object'},
+                        {'path': 'light_paths', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                        {'path': 'light_paths[].id', 'status': 'required', 'type': 'slug'},
+                    ],
+                }],
+            },
+        )
+        # Route id 'flim' is a measurement readout term, not an optical route term.
+        self._write_json_yaml('instruments/bad_route_id.yaml', {
+            'instrument': {'instrument_id': 'scope-bad-route'},
+            'modalities': ['widefield_fluorescence', 'flim'],
+            'capabilities': {'imaging_modes': ['widefield_fluorescence'], 'readouts': ['flim']},
+            'light_paths': [
+                {
+                    'id': 'flim',
+                    'modalities': ['widefield_fluorescence', 'flim'],
+                    'illumination_sequence': [],
+                    'detection_sequence': [],
+                    'readouts': ['flim'],
+                },
+            ],
+        })
+        # Also include a valid instrument so we test only the invalid one.
+        self._write_json_yaml('instruments/valid_route_id.yaml', {
+            'instrument': {'instrument_id': 'scope-valid-route'},
+            'modalities': ['widefield_fluorescence'],
+            'capabilities': {'imaging_modes': ['widefield_fluorescence']},
+            'light_paths': [
+                {
+                    'id': 'widefield_fluorescence',
+                    'modalities': ['widefield_fluorescence'],
+                    'illumination_sequence': [],
+                    'detection_sequence': [],
+                },
+            ],
+        })
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        warning_codes = [w.code for w in warnings]
+        # Invalid route ID 'flim' should be flagged.
+        self.assertIn('light_path_id_not_in_optical_routes', warning_codes,
+                      f"Expected 'light_path_id_not_in_optical_routes' in warnings; got: {warning_codes}")
+        # Valid route ID 'widefield_fluorescence' should NOT produce this warning.
+        invalid_paths = [w.path for w in warnings if w.code == 'light_path_id_not_in_optical_routes']
+        self.assertTrue(
+            all('bad_route_id' in p or 'bad_route' in p for p in invalid_paths),
+            f"Warning should only come from bad_route_id.yaml; got paths: {invalid_paths}",
+        )
 
     def test_instrument_readout_without_route_readout_emits_warning(self) -> None:
         self._write_json_yaml(
