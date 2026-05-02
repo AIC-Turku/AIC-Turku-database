@@ -8,292 +8,304 @@ instrument:
   stand_orientation: upright
   ocular_availability: trinocular
   location: ''
-  notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast.'
+  notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence
+    (epifluorescence), Phase contrast.'
   url: ''
 
 modalities:
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - phase_contrast
+- widefield_fluorescence
+- transmitted_brightfield
+- phase_contrast
 
 modules: []
 software:
-  - role: acquisition
-    name: Olympus Cell^D
-    version: ''
-    url: ''
+- role: acquisition
+  name: Olympus Cell^D
+  version: ''
+  url: ''
 
 hardware:
   scanner:
     type: none
     notes: ''
     url: ''
-    
   detectors:
-    - kind: ccd
-      manufacturer: Olympus
-      model: DP71
-      pixel_pitch_um: 6.45
-      sensor_format_px: 4080 x 3072
-      notes: 1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel resolution.
-      url: ''
-      id: detector_1
+  - kind: ccd
+    manufacturer: Olympus
+    model: DP71
+    pixel_pitch_um: 6.45
+    sensor_format_px: 4080 x 3072
+    notes: 1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel
+      resolution.
+    url: ''
+    id: detector_1
 
   eyepieces: # ADDED: Required to support trinocular routing
-    - id: eyepieces
-      notes: 'Binocular Eyepieces'
-      
+  - id: eyepieces
+    notes: 'Binocular Eyepieces'
   objectives:
-    - id: 4x_air
-      manufacturer: Olympus
-      model: PlanC 4x/0.10
-      product_code: ''
-      magnification: 4.0
-      numerical_aperture: 0.1
-      working_distance: 18.5 mm
-      immersion: air
-      correction: plan_achromat
-      afc_compatible: false
-      specialties: []
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 10x_air
-      manufacturer: Olympus
-      model: UPlanFl 10x/0.30 Ph1
-      product_code: ''
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: 10.0 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - phase
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Olympus
-      model: UPlanFl 20x/0.50 Ph1
-      product_code: ''
-      magnification: 20.0
-      numerical_aperture: 0.5
-      working_distance: 2.1 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - phase
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 40x_air
-      manufacturer: Olympus
-      model: UPlanFl 40x/0.75 Ph2
-      product_code: ''
-      magnification: 40.0
-      numerical_aperture: 0.75
-      working_distance: 0.51 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - phase
-      notes: ''
-      url: ''
-      is_installed: true
-    - id: 100x_oil
-      manufacturer: Olympus
-      model: UPlanApo 100x/1.35 Oil Iris Ph3
-      product_code: ''
-      magnification: 100.0
-      numerical_aperture: 1.35
-      working_distance: 0.17 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - phase
-      notes: Includes adjustable iris
-      url: ''
-      is_installed: true
-    - id: 60x_oil
-      manufacturer: Olympus
-      model: UPlanFl 60x/1.25 Oil Iris Ph3
-      product_code: ''
-      magnification: 60.0
-      numerical_aperture: 1.25
-      working_distance: ''
-      immersion: oil
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties:
-        - phase
-      notes: Optional objective. Includes adjustable iris.
-      url: ''
-      is_installed: false
-      
-  sources:
-    - kind: halogen_lamp
-      manufacturer: Olympus
-      model: 12V 100W halogen bulb
-      # CORRECTED: Removed invalid 'wavelength_nm: broadband' string and legacy 'path' alias
-      power: 100 W
-      role: transmitted_illumination
-      notes: Transmitted brightfield and phase contrast source. Broadband illumination.
-      url: ''
-      id: 12v_100w_halogen_bulb
-      modalities:
-        - transmitted_brightfield
-        - phase_contrast
-    - kind: arc_lamp
-      manufacturer: Osram
-      model: HBO 103W short arc bulb
-      # CORRECTED: Removed invalid 'wavelength_nm: broadband' string and legacy 'path' alias
-      power: 103 W
-      notes: Fluorescence excitation source. Broadband illumination.
-      url: ''
-      id: hbo_103w_short_arc_bulb
-      modalities:
-        - widefield_fluorescence
-        
-  optical_path_elements:
-    - name: Fluorescence Turret
-      # CORRECTED: Removed legacy 'type' and 'path' aliases
-      stage_role: cube
-      id: fluorescence_turret
-      element_type: turret
-      modalities:
-        - widefield_fluorescence
-      positions:
-        Pos_1:
-          name: U-MWU (DAPI)
-          product_code: U-MWU
-          component_type: filter_cube
-          cut_on_nm:
-            - 420
-          notes: 'Excitation: 355/50 nm. Dichroic Cutoff: 400 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 355
-            width_nm: 50
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 400
-          emission_filter:
-            component_type: longpass
-            cut_on_nm: 420
-        Pos_2:
-          name: U-MWIB (GFP wide)
-          product_code: U-MWIB
-          component_type: filter_cube
-          cut_on_nm:
-            - 515
-          notes: 'Excitation: 475/30 nm. Dichroic Cutoff: 505 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 475
-            width_nm: 30
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 505
-          emission_filter:
-            component_type: longpass
-            cut_on_nm: 515
-        Pos_3:
-          name: U-MWIG (Alexa 546 / TRITC)
-          product_code: U-MWIG
-          component_type: filter_cube
-          cut_on_nm:
-            - 580
-          notes: 'Excitation: 535/30 nm. Dichroic Cutoff: 565 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 535
-            width_nm: 30
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 565
-          emission_filter:
-            component_type: longpass
-            cut_on_nm: 580
-        Pos_4:
-          name: U-MNIBA2 (GFP narrow)
-          product_code: U-MNIBA2
-          component_type: filter_cube
-          bands:
-            - center_nm: 530
-              width_nm: 40
-          notes: 'Optional filter cube. Excitation: 480/20 nm. Dichroic Cutoff: 505 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 480
-            width_nm: 20
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 505
-          emission_filter:
-            component_type: bandpass
-            center_nm: 530
-            width_nm: 40
+  - id: 4x_air
+    manufacturer: Olympus
+    model: PlanC 4x/0.10
+    product_code: ''
+    magnification: 4.0
+    numerical_aperture: 0.1
+    working_distance: 18.5 mm
+    immersion: air
+    correction: plan_achromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 10x_air
+    manufacturer: Olympus
+    model: UPlanFl 10x/0.30 Ph1
+    product_code: ''
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: 10.0 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Olympus
+    model: UPlanFl 20x/0.50 Ph1
+    product_code: ''
+    magnification: 20.0
+    numerical_aperture: 0.5
+    working_distance: 2.1 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: Olympus
+    model: UPlanFl 40x/0.75 Ph2
+    product_code: ''
+    magnification: 40.0
+    numerical_aperture: 0.75
+    working_distance: 0.51 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Olympus
+    model: UPlanApo 100x/1.35 Oil Iris Ph3
+    product_code: ''
+    magnification: 100.0
+    numerical_aperture: 1.35
+    working_distance: 0.17 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: Includes adjustable iris
+    url: ''
+    is_installed: true
+  - id: 60x_oil
+    manufacturer: Olympus
+    model: UPlanFl 60x/1.25 Oil Iris Ph3
+    product_code: ''
+    magnification: 60.0
+    numerical_aperture: 1.25
+    working_distance: ''
+    immersion: oil
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: Optional objective. Includes adjustable iris.
+    url: ''
+    is_installed: false
 
-    - name: Trinocular Port # ADDED: Required to split light to camera or eyepieces
-      stage_role: splitter
-      id: trinocular_port
-      element_type: splitter
-      selection_mode: exclusive
-      modalities:
-        - widefield_fluorescence
-        - transmitted_brightfield
-        - phase_contrast
-      supported_branch_modes:
-        - selected
-      supported_branch_count: 2
-      notes: Splits light between the eyepieces and the camera.
+  sources:
+  - kind: halogen_lamp
+    manufacturer: Olympus
+    model: 12V 100W halogen bulb
+      # CORRECTED: Removed invalid 'wavelength_nm: broadband' string and legacy 'path' alias
+    power: 100 W
+    role: transmitted_illumination
+    notes: Transmitted brightfield and phase contrast source. Broadband 
+      illumination.
+    url: ''
+    id: 12v_100w_halogen_bulb
+    modalities:
+    - transmitted_brightfield
+    - phase_contrast
+  - kind: arc_lamp
+    manufacturer: Osram
+    model: HBO 103W short arc bulb
+      # CORRECTED: Removed invalid 'wavelength_nm: broadband' string and legacy 'path' alias
+    power: 103 W
+    notes: Fluorescence excitation source. Broadband illumination.
+    url: ''
+    id: hbo_103w_short_arc_bulb
+    modalities:
+    - widefield_fluorescence
+
+  optical_path_elements:
+  - name: Fluorescence Turret
+      # CORRECTED: Removed legacy 'type' and 'path' aliases
+    stage_role: cube
+    id: fluorescence_turret
+    element_type: turret
+    modalities:
+    - widefield_fluorescence
+    positions:
+      Pos_1:
+        name: U-MWU (DAPI)
+        product_code: U-MWU
+        component_type: filter_cube
+        cut_on_nm:
+        - 420
+        notes: 'Excitation: 355/50 nm. Dichroic Cutoff: 400 nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 355
+          width_nm: 50
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 400
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 420
+      Pos_2:
+        name: U-MWIB (GFP wide)
+        product_code: U-MWIB
+        component_type: filter_cube
+        cut_on_nm:
+        - 515
+        notes: 'Excitation: 475/30 nm. Dichroic Cutoff: 505 nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 475
+          width_nm: 30
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 505
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 515
+      Pos_3:
+        name: U-MWIG (Alexa 546 / TRITC)
+        product_code: U-MWIG
+        component_type: filter_cube
+        cut_on_nm:
+        - 580
+        notes: 'Excitation: 535/30 nm. Dichroic Cutoff: 565 nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 535
+          width_nm: 30
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 565
+        emission_filter:
+          component_type: longpass
+          cut_on_nm: 580
+      Pos_4:
+        name: U-MNIBA2 (GFP narrow)
+        product_code: U-MNIBA2
+        component_type: filter_cube
+        bands:
+        - center_nm: 530
+          width_nm: 40
+        notes: 'Optional filter cube. Excitation: 480/20 nm. Dichroic Cutoff: 505
+          nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 480
+          width_nm: 20
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 505
+        emission_filter:
+          component_type: bandpass
+          center_nm: 530
+          width_nm: 40
+
+  - name: Trinocular Port   # ADDED: Required to split light to camera or eyepieces
+    stage_role: splitter
+    id: trinocular_port
+    element_type: splitter
+    selection_mode: exclusive
+    modalities:
+    - widefield_fluorescence
+    - transmitted_brightfield
+    - phase_contrast
+    supported_branch_modes:
+    - selected
+    supported_branch_count: 2
+    notes: Splits light between the eyepieces and the camera.
 
   # CORRECTED: Removed the deprecated hardware.endpoints block.
 
 light_paths:
-  - id: widefield_fluorescence # CORRECTED: Aligned ID with standard modalities
-    name: Epi-fluorescence
-    modalities:
-      - widefield_fluorescence
-    illumination_sequence:
-      - source_id: hbo_103w_short_arc_bulb
-      - optical_path_element_id: fluorescence_turret
-    detection_sequence:
-      - optical_path_element_id: fluorescence_turret
-      - optical_path_element_id: trinocular_port
-      - branches: # ADDED: Valid detection routing to endpoints
-          selection_mode: exclusive
-          items:
-            - branch_id: to_camera
-              label: "To DP71 Camera"
-              sequence:
-                - endpoint_id: detector_1
-            - branch_id: to_eyepieces
-              label: "To Eyepieces"
-              sequence:
-                - endpoint_id: eyepieces
-                
-  - id: transmitted_brightfield # CORRECTED: Aligned ID with standard modalities
-    name: Transmitted Brightfield
-    modalities:
-      - transmitted_brightfield
-      - phase_contrast
-    illumination_sequence:
-      - source_id: 12v_100w_halogen_bulb
-    detection_sequence:
-      - optical_path_element_id: trinocular_port
-      - branches:
-          selection_mode: exclusive
-          items:
-            - branch_id: to_camera
-              label: "To DP71 Camera"
-              sequence:
-                - endpoint_id: detector_1
-            - branch_id: to_eyepieces
-              label: "To Eyepieces"
-              sequence:
-                - endpoint_id: eyepieces
+- id: widefield_fluorescence   # CORRECTED: Aligned ID with standard modalities
+  name: Epi-fluorescence
+  modalities:
+  - widefield_fluorescence
+  illumination_sequence:
+  - source_id: hbo_103w_short_arc_bulb
+  - optical_path_element_id: fluorescence_turret
+  detection_sequence:
+  - optical_path_element_id: fluorescence_turret
+  - optical_path_element_id: trinocular_port
+  - branches:     # ADDED: Valid detection routing to endpoints
+      selection_mode: exclusive
+      items:
+      - branch_id: to_camera
+        label: "To DP71 Camera"
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_eyepieces
+        label: "To Eyepieces"
+        sequence:
+        - endpoint_id: eyepieces
+
+- id: transmitted_brightfield   # CORRECTED: Aligned ID with standard modalities
+  name: Transmitted Brightfield
+  modalities:
+  - transmitted_brightfield
+  - phase_contrast
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: trinocular_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_camera
+        label: "To DP71 Camera"
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_eyepieces
+        label: "To Eyepieces"
+        sequence:
+        - endpoint_id: eyepieces
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []

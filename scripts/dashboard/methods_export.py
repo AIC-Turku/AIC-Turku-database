@@ -193,6 +193,8 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
                 or route.get("id")
             ),
             "route_order": index,
+            "route_type": clean_text(route.get("route_type")) or clean_text(route.get("id")),
+            "readouts": [clean_text(r) for r in (route.get("readouts") or []) if isinstance(r, str) and clean_text(r)],
         }
         for index, route in enumerate(lightpath.get("light_paths") or [])
         if isinstance(route, dict) and clean_text(route.get("id"))
@@ -248,6 +250,7 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
     dto["detectors"] = copy.deepcopy(methods_view_dto["detectors"])
     dto["light_sources"] = copy.deepcopy(methods_view_dto["light_sources"])
     dto["software"] = copy.deepcopy(methods_view_dto["software"])
+    dto["capabilities"] = copy.deepcopy((canonical.get("capabilities") if isinstance(canonical.get("capabilities"), dict) else {}))
     dto["routes"] = copy.deepcopy(methods_view_dto["routes"])
     dto["diagnostics"] = copy.deepcopy(methods_view_dto["diagnostics"])
 

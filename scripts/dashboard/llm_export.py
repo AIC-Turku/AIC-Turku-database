@@ -454,6 +454,7 @@ def build_llm_inventory_payload(
             "hardware": copy.deepcopy(canonical_instrument_dto.get("hardware") or {}),
             "methods": copy.deepcopy(canonical_instrument_dto.get("methods") or {}),
             "modalities": copy.deepcopy(canonical_instrument_dto.get("modalities") or []),
+            "capabilities": copy.deepcopy(canonical_instrument_dto.get("capabilities") or {}),
             "software": copy.deepcopy(canonical_instrument_dto.get("software") or []),
             "software_status": clean_text(canonical_instrument_dto.get("software_status")).lower(),
         }

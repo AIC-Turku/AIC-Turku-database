@@ -20,8 +20,25 @@ instrument:
 # -----------------------------------------------------------------------------
 # IMAGING MODALITIES
 # -----------------------------------------------------------------------------
-modalities:  # Imaging modalities: Core reporting category in QUAREP/JCB-style instrumentation metadata. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield
+modalities:  # Imaging modalities: Core reporting category in QUAREP/JCB-style instrumentation metadata. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
   - ""
+
+# -----------------------------------------------------------------------------
+# CAPABILITIES
+# -----------------------------------------------------------------------------
+capabilities:  # Capability axes: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.
+  imaging_modes:  # Capability imaging modes: Canonical imaging-mode capability axis (not a route identifier). | Allowed values (canonical IDs): confocal_point, confocal_spinning_disk, widefield_fluorescence, tirf, multiphoton, light_sheet, sim, sted, resolft, smlm, ism
+    - ""
+  contrast_methods:  # Capability contrast methods: Canonical contrast-method capability axis. | Allowed values (canonical IDs): transmitted_brightfield, reflected_brightfield, phase_contrast, dic, darkfield, polarized_light, optical_sectioning
+    - ""
+  readouts:  # Capability measurement readouts: Canonical measurement-readout capability axis. | Allowed values (canonical IDs): spectral_imaging, flim, fcs, fret
+    - ""
+  workflows:  # Capability workflow tags: Workflow/application tags; not optical route types. | Allowed values (canonical IDs): live_cell_imaging, high_content_screening, super_resolution, single_molecule, single_particle_tracking
+    - ""
+  assay_operations:  # Capability assay operations: Assay-operation capabilities such as FRAP/photoactivation; distinct from readout-only axes. | Allowed values (canonical IDs): frap, photoactivation, photobleaching, uncaging
+    - ""
+  non_optical:  # Capability non-optical: Non-optical capability tags; not optical light-path route types. | Allowed values (canonical IDs): afm, impedance_cytometry
+    - ""
 
 # -----------------------------------------------------------------------------
 # HARDWARE MODULES
@@ -169,7 +186,7 @@ hardware:
       tunable_min_nm: ""  # Source tunable minimum wavelength: Lower tunable wavelength bound for tunable or white-light sources.
       tunable_max_nm: ""  # Source tunable maximum wavelength: Upper tunable wavelength bound for tunable or white-light sources.
       simultaneous_lines_max: ""  # Source simultaneous line count: Maximum simultaneously active lines for multi-line sources.
-      modalities:  # Source modalities: Validation-only route guards for installed sources. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, widefield_fluorescence, tirf, confocal, confocal_point, confocal_spinning_disk, multiphoton, light_sheet, transmitted, transmitted_brightfield, phase_contrast, darkfield, dic, reflected_brightfield, optical_sectioning, spectral_imaging, flim, fcs, ism, smlm, spt, fret, shared, all
+      modalities:  # Source modalities: Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
         - ""
       notes: ""  # Source notes: Free-text source notes for operational caveats.
       url: ""  # Source URL: Reference link only.
@@ -184,7 +201,7 @@ hardware:
       supported_branch_modes:  # Supported branch modes: Inventory-level capability metadata describing which branch modes a selector/splitter can support. | Allowed values (canonical IDs): transmitted, reflected, selected, passthrough
         - ""
       supported_branch_count: ""  # Supported branch count: Inventory-level capability metadata describing how many branches a selector/splitter can support.
-      modalities:  # Optical path element modalities: Validation-only route guards for optical path elements. Ordered light_paths sequences remain authoritative. | Allowed values (canonical IDs): epi, widefield_fluorescence, tirf, confocal, confocal_point, confocal_spinning_disk, multiphoton, light_sheet, transmitted, transmitted_brightfield, phase_contrast, darkfield, dic, reflected_brightfield, optical_sectioning, spectral_imaging, flim, fcs, ism, smlm, spt, fret, shared, all
+      modalities:  # Optical path element modalities: Legacy compatibility modality hints for optical path elements. Ordered light_paths and route_type remain authoritative. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
         - ""
       positions:  # Optical path element positions: Position map for installed filter wheels, turrets, sliders, or cubes.
         Pos_1:
@@ -236,7 +253,10 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
   -
     id: ""  # Light path ID: Stable route identifier used by simulator, UI, and graph rendering.
     name: ""  # Light path name: Human-readable route label shown in UI and exported DTO route catalogs.
-    modalities:  # Light path modalities: Canonical modality IDs explicitly mapped to this route. When light_paths are declared, every populated route must define a non-empty modalities list so route-aware consumers never have to infer modality coverage. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield
+    route_type: ""  # Light path route type: Controlled optical route type. light_paths[].id remains a stable local identifier and may be descriptive. | Allowed values (canonical IDs): epi, widefield_fluorescence, tirf, confocal, confocal_point, confocal_spinning_disk, multiphoton, light_sheet, transmitted, transmitted_brightfield, phase_contrast, darkfield, dic, reflected_brightfield, optical_sectioning, sim, sted, resolft, ism, smlm
+    readouts:  # Light path readouts: Optional per-route measurement/readout tags associated with a route traversal. | Allowed values (canonical IDs): spectral_imaging, flim, fcs, fret
+      - ""
+    modalities:  # Light path modalities: Canonical modality IDs explicitly mapped to this route. When light_paths are declared, every populated route must define a non-empty modalities list so route-aware consumers never have to infer modality coverage. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
       - ""
     illumination_sequence:  # Illumination sequence: Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id.
       -

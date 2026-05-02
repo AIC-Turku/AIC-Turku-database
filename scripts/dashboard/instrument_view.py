@@ -709,6 +709,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     software_status = clean_text(canonical.get("software_status")).lower()
     canonical_modalities = canonical.get("modalities") if isinstance(canonical.get("modalities"), list) else []
     canonical_modules = canonical.get("modules") if isinstance(canonical.get("modules"), list) else []
+    canonical_capabilities = canonical.get("capabilities") if isinstance(canonical.get("capabilities"), dict) else {}
 
     software_rows = [build_software_dto(vocabulary, sw) for sw in canonical_software if isinstance(sw, dict)]
     hardware_dto = build_hardware_dto(vocabulary, inst, lightpath_dto)
@@ -720,6 +721,33 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         }
         for modality_id in canonical_modalities
     ]
+    capabilities = {
+        "imaging_modes": [
+            {"id": m, "display_label": _vocab_display(vocabulary, "imaging_modes", m)}
+            for m in (canonical_capabilities.get("imaging_modes") or [])
+        ],
+        "contrast_methods": [
+            {"id": m, "display_label": _vocab_display(vocabulary, "contrast_methods", m)}
+            for m in (canonical_capabilities.get("contrast_methods") or [])
+        ],
+        "readouts": [
+            {"id": m, "display_label": _vocab_display(vocabulary, "measurement_readouts", m)}
+            for m in (canonical_capabilities.get("readouts") or [])
+        ],
+        "workflows": [
+            {"id": m, "display_label": _vocab_display(vocabulary, "workflow_tags", m)}
+            for m in (canonical_capabilities.get("workflows") or [])
+        ],
+        "assay_operations": [
+            {"id": m, "display_label": _vocab_display(vocabulary, "assay_operations", m)}
+            for m in (canonical_capabilities.get("assay_operations") or [])
+        ],
+        "non_optical": [
+            {"id": m, "display_label": _vocab_display(vocabulary, "non_optical_capabilities", m)}
+            for m in (canonical_capabilities.get("non_optical") or [])
+        ],
+    }
+
     modules = []
     for module in canonical_modules:
         if not isinstance(module, dict):
@@ -844,6 +872,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             "location": clean_text(canonical_instrument.get("location")),
         },
         "modalities": modalities,
+        "capabilities": capabilities,
         "modules": modules,
         "software": software_rows,
         "software_status": software_status,

@@ -124,3 +124,13 @@ terms:
     label: "Reflected Brightfield"
     description: "Uses incident reflected light rather than transmitted illumination to visualize opaque or thick specimens in brightfield mode."
     synonyms: ["epi brightfield", "reflected light brightfield"]
+
+  - id: epi
+    label: "Epi (Legacy Route Alias)"
+    description: "Legacy compatibility route alias used in older source/element modality hints."
+  - id: confocal
+    label: "Confocal (Legacy Route Alias)"
+    description: "Legacy compatibility route alias used in older modality hints."
+  - id: transmitted
+    label: "Transmitted (Legacy Route Alias)"
+    description: "Legacy compatibility transmitted-route alias used in older modality hints."

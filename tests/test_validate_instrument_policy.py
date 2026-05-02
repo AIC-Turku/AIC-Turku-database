@@ -385,6 +385,205 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.assertIn('light_path_modality_not_in_instrument', warning_codes)
         self.assertIn('top_level_modality_uncovered_by_light_paths', warning_codes)
 
+
+    def test_validate_instrument_ledgers_accepts_capability_axes_and_route_type(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'imaging_modes': {'source': 'inline', 'allowed_values': ['confocal_point']},
+                    'contrast_methods': {'source': 'inline', 'allowed_values': ['transmitted_brightfield']},
+                    'measurement_readouts': {'source': 'inline', 'allowed_values': ['spectral_imaging', 'flim']},
+                    'workflow_tags': {'source': 'inline', 'allowed_values': ['live_cell_imaging']},
+                    'assay_operations': {'source': 'inline', 'allowed_values': ['frap']},
+                    'non_optical_capabilities': {'source': 'inline', 'allowed_values': ['afm']},
+                    'optical_routes': {'source': 'inline', 'allowed_values': ['confocal_point']},
+                },
+                'sections': [{
+                    'id': 'instrument',
+                    'title': 'Instrument',
+                    'rules': [
+                        {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                        {'path': 'capabilities.imaging_modes', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'imaging_modes'},
+                        {'path': 'capabilities.contrast_methods', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'contrast_methods'},
+                        {'path': 'capabilities.readouts', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'measurement_readouts'},
+                        {'path': 'capabilities.workflows', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'workflow_tags'},
+                        {'path': 'capabilities.assay_operations', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'assay_operations'},
+                        {'path': 'capabilities.non_optical', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'non_optical_capabilities'},
+                        {'path': 'light_paths', 'status': 'required', 'type': 'list', 'item_type': 'object', 'min_items': 1},
+                        {'path': 'light_paths[].id', 'status': 'required', 'type': 'slug'},
+                        {'path': 'light_paths[].route_type', 'status': 'optional', 'type': 'string', 'vocab': 'optical_routes'},
+                        {'path': 'light_paths[].readouts', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'measurement_readouts'},
+                        {'path': 'light_paths[].illumination_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                        {'path': 'light_paths[].detection_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                    ],
+                }],
+            },
+        )
+        self._write_json_yaml('instruments/example.yaml', {
+            'instrument': {'instrument_id': 'scope-1'},
+            'capabilities': {
+                'imaging_modes': ['confocal_point'],
+                'contrast_methods': ['transmitted_brightfield'],
+                'readouts': ['spectral_imaging', 'flim'],
+                'workflows': ['live_cell_imaging'],
+                'assay_operations': ['frap'],
+                'non_optical': ['afm'],
+            },
+            'light_paths': [{
+                'id': 'confocal_spectral_flim_fcs',
+                'route_type': 'confocal_point',
+                'readouts': ['spectral_imaging', 'flim'],
+                'illumination_sequence': [],
+                'detection_sequence': [],
+            }],
+        })
+        _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertEqual(issues, [])
+        self.assertTrue(all(w.code != 'unknown_vocab_term' for w in warnings))
+        self.assertTrue(all(w.code != 'light_path_modalities_missing' for w in warnings))
+
+    def test_validate_instrument_ledgers_rejects_invalid_new_capability_axis_terms(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'workflow_tags': {'source': 'inline', 'allowed_values': ['live_cell_imaging']},
+                    'non_optical_capabilities': {'source': 'inline', 'allowed_values': ['afm']},
+                    'optical_routes': {'source': 'inline', 'allowed_values': ['confocal_point']},
+                },
+                'sections': [{
+                    'id': 'instrument',
+                    'title': 'Instrument',
+                    'rules': [
+                        {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                        {'path': 'capabilities.workflows', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'workflow_tags'},
+                        {'path': 'capabilities.non_optical', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'non_optical_capabilities'},
+                        {'path': 'light_paths', 'status': 'required', 'type': 'list', 'item_type': 'object', 'min_items': 1},
+                        {'path': 'light_paths[].id', 'status': 'required', 'type': 'slug'},
+                        {'path': 'light_paths[].route_type', 'status': 'optional', 'type': 'string', 'vocab': 'optical_routes'},
+                        {'path': 'light_paths[].illumination_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                        {'path': 'light_paths[].detection_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                    ],
+                }],
+            },
+        )
+        self._write_json_yaml('instruments/example.yaml', {
+            'instrument': {'instrument_id': 'scope-1'},
+            'capabilities': {'workflows': ['confocal_point'], 'non_optical': ['tirf']},
+            'light_paths': [{'id': 'local_id', 'route_type': 'confocal_point', 'illumination_sequence': [], 'detection_sequence': []}],
+        })
+        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        issue_paths = {i.path for i in issues if i.code == 'unknown_vocab_term'}
+        self.assertTrue(any(path.endswith('instruments/example.yaml:capabilities.workflows[0]') for path in issue_paths))
+        self.assertTrue(any(path.endswith('instruments/example.yaml:capabilities.non_optical[0]') for path in issue_paths))
+
+
+    def test_route_type_rejects_wrong_axis_terms_but_capability_axes_accept_them(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'optical_routes': {'source': 'inline', 'allowed_values': ['confocal_point', 'widefield_fluorescence', 'transmitted_brightfield']},
+                    'measurement_readouts': {'source': 'inline', 'allowed_values': ['flim', 'fcs', 'spectral_imaging']},
+                    'workflow_tags': {'source': 'inline', 'allowed_values': ['single_particle_tracking']},
+                    'assay_operations': {'source': 'inline', 'allowed_values': ['frap']},
+                    'non_optical_capabilities': {'source': 'inline', 'allowed_values': ['afm', 'impedance_cytometry']},
+                },
+                'sections': [{
+                    'id': 'instrument',
+                    'title': 'Instrument',
+                    'rules': [
+                        {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                        {'path': 'capabilities.readouts', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'measurement_readouts'},
+                        {'path': 'capabilities.workflows', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'workflow_tags'},
+                        {'path': 'capabilities.assay_operations', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'assay_operations'},
+                        {'path': 'capabilities.non_optical', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'non_optical_capabilities'},
+                        {'path': 'light_paths', 'status': 'required', 'type': 'list', 'item_type': 'object', 'min_items': 1},
+                        {'path': 'light_paths[].id', 'status': 'required', 'type': 'slug'},
+                        {'path': 'light_paths[].route_type', 'status': 'required', 'type': 'string', 'vocab': 'optical_routes'},
+                        {'path': 'light_paths[].illumination_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                        {'path': 'light_paths[].detection_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                    ],
+                }],
+            },
+        )
+        self._write_json_yaml('instruments/example.yaml', {
+            'instrument': {'instrument_id': 'scope-1'},
+            'capabilities': {
+                'readouts': ['flim', 'fcs', 'spectral_imaging'],
+                'workflows': ['single_particle_tracking'],
+                'assay_operations': ['frap'],
+                'non_optical': ['afm'],
+            },
+            'light_paths': [
+                {'id': 'r1', 'route_type': 'confocal_point', 'illumination_sequence': [], 'detection_sequence': []},
+                {'id': 'r2', 'route_type': 'flim', 'illumination_sequence': [], 'detection_sequence': []},
+                {'id': 'r3', 'route_type': 'live_cell_imaging', 'illumination_sequence': [], 'detection_sequence': []},
+                {'id': 'r4', 'route_type': 'afm', 'illumination_sequence': [], 'detection_sequence': []},
+                {'id': 'r5', 'route_type': 'impedance_cytometry', 'illumination_sequence': [], 'detection_sequence': []},
+                {'id': 'r6', 'route_type': 'spt', 'illumination_sequence': [], 'detection_sequence': []},
+            ],
+        })
+        _, issues, _ = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        unknown_paths = [i.path for i in issues if i.code == 'unknown_vocab_term']
+        self.assertTrue(any(path.endswith('light_paths[1].route_type') for path in unknown_paths))
+        self.assertTrue(any(path.endswith('light_paths[2].route_type') for path in unknown_paths))
+        self.assertTrue(any(path.endswith('light_paths[3].route_type') for path in unknown_paths))
+        self.assertTrue(any(path.endswith('light_paths[4].route_type') for path in unknown_paths))
+        self.assertTrue(any(path.endswith('light_paths[5].route_type') for path in unknown_paths))
+
+
+
+    def test_instrument_readout_without_route_readout_emits_warning(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'measurement_readouts': {'source': 'inline', 'allowed_values': ['flim']},
+                    'optical_routes': {'source': 'inline', 'allowed_values': ['confocal_point']},
+                },
+                'sections': [
+                    {'id': 'instrument', 'title': 'Instrument', 'rules': [
+                        {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                        {'path': 'capabilities', 'status': 'optional', 'type': 'object'},
+                        {'path': 'capabilities.readouts', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'measurement_readouts'},
+                        {'path': 'light_paths', 'status': 'required', 'type': 'list', 'item_type': 'object', 'min_items': 1},
+                        {'path': 'light_paths[].id', 'status': 'required', 'type': 'slug'},
+                        {'path': 'light_paths[].route_type', 'status': 'optional', 'type': 'string', 'vocab': 'optical_routes'},
+                        {'path': 'light_paths[].illumination_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                        {'path': 'light_paths[].detection_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
+                    ]}
+                ],
+            },
+        )
+        self._write_json_yaml('instruments/example.yaml', {
+            'instrument': {'instrument_id': 'scope-1'},
+            'capabilities': {'readouts': ['flim']},
+            'light_paths': [{'id': 'route_a', 'route_type': 'confocal_point', 'illumination_sequence': [], 'detection_sequence': []}],
+        })
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertTrue(any(w.code == 'instrument_readout_uncovered_by_route_readouts' for w in warnings))
+
+    def test_active_instrument_missing_capabilities_emits_warning(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {'modalities': {'source': 'inline', 'allowed_values': ['confocal_point']}},
+                'sections': [
+                    {'id': 'instrument', 'title': 'Instrument', 'rules': [
+                        {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                        {'path': 'modalities', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'modalities'},
+                        {'path': 'capabilities', 'status': 'optional', 'type': 'object'},
+                        {'path': 'light_paths', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                    ]}
+                ],
+            },
+        )
+        self._write_json_yaml('instruments/example.yaml', {'instrument': {'instrument_id': 'scope-1'}, 'modalities': ['confocal_point']})
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertTrue(any(w.code == 'missing_capabilities_object' for w in warnings))
+
     def test_validate_instrument_ledgers_reports_legacy_topology_as_migration_only(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
@@ -398,7 +597,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                             {'path': 'hardware.sources', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
                             {'path': 'hardware.optical_path_elements', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
                             {'path': 'hardware.endpoints', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
-                            {'path': 'light_paths', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
+                            {'path': 'capabilities', 'status': 'optional', 'type': 'object'},
+                        {'path': 'light_paths', 'status': 'optional', 'type': 'list', 'item_type': 'object'},
                         ],
                     }
                 ],
