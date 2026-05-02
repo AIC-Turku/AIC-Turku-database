@@ -19,11 +19,11 @@ hide:
   </div>
 
   <div class="aic-fleetbar__group">
-    <label class="aic-label" for="aicModality">Modality</label>
+    <label class="aic-label" for="aicModality">Capability</label>
     <select id="aicModality" class="aic-select">
       <option value="all">All</option>
-      {% for mod in all_modalities %}
-      <option value="{{ mod.id | lower }}">{{ mod.label }}</option>
+      {% for capability in capability_filter_options %}
+      <option value="{{ capability.id | lower }}">{{ capability.label }}</option>
       {% endfor %}
     </select>
   </div>
@@ -41,7 +41,7 @@ hide:
      data-name="{{ inst.display_name | lower }}"
      data-manufacturer="{{ inst.manufacturer | lower }}"
      data-model="{{ inst.model | lower }}"
-     data-modalities="{{ inst.modalities | join(',') | lower }}"
+     data-capabilities="{{ (inst.capabilities_primary_ids | default([])) | join(',') | lower }}"
      aria-label="Open {{ inst.display_name }}">
 
     <div class="aic-card__media">
@@ -55,11 +55,11 @@ hide:
       <div class="aic-card__meta">{{ inst.manufacturer }}{% if inst.model %} · {{ inst.model }}{% endif %}</div>
 
       <div class="aic-chiprow">
-        {% for mod in inst.modalities_display[:4] %}
-          <span class="aic-chip">{{ mod }}</span>
+        {% for cap in (inst.capabilities_primary | default([]))[:4] %}
+          <span class="aic-chip">{{ cap.label }}</span>
         {% endfor %}
-        {% if inst.modalities_display | length > 4 %}
-          <span class="aic-chip aic-chip--muted">+{{ (inst.modalities_display | length) - 4 }}</span>
+        {% if (inst.capabilities_primary | default([])) | length > 4 %}
+          <span class="aic-chip aic-chip--muted">+{{ ((inst.capabilities_primary | default([])) | length) - 4 }}</span>
         {% endif %}
       </div>
     </div>
@@ -70,17 +70,17 @@ hide:
 
 <script>
 (function() {
-  const modalityEl = document.getElementById('aicModality');
+  const capabilityEl = document.getElementById('aicModality');
   const searchEl = document.getElementById('aicSearch');
   const cards = Array.from(document.querySelectorAll('.aic-card'));
 
   function applyFilters() {
-    const mod = (modalityEl.value || 'all').toLowerCase();
+    const selectedCapability = (capabilityEl.value || 'all').toLowerCase();
     const q = (searchEl.value || '').trim().toLowerCase();
 
     cards.forEach(card => {
       // FIXED: Split string into array for exact matching to prevent substring false-positives
-      const cardModsStr = card.getAttribute('data-modalities') || '';
+      const cardModsStr = card.getAttribute('data-capabilities') || '';
       const cardModsList = cardModsStr ? cardModsStr.split(',').map(s => s.trim()) : [];
       
       const hay = [
@@ -89,14 +89,14 @@ hide:
         card.getAttribute('data-model') || ''
       ].join(' ');
 
-      const matchesMod = (mod === 'all') || cardModsList.includes(mod);
+      const matchesCapability = (selectedCapability === 'all') || cardModsList.includes(selectedCapability);
       const matchesQ = (!q) || hay.includes(q);
       
-      card.style.display = (matchesMod && matchesQ) ? '' : 'none';
+      card.style.display = (matchesCapability && matchesQ) ? '' : 'none';
     });
   }
 
-  modalityEl.addEventListener('change', applyFilters);
+  capabilityEl.addEventListener('change', applyFilters);
   searchEl.addEventListener('input', applyFilters);
 })();
 </script>

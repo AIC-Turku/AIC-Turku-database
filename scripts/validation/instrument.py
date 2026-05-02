@@ -383,12 +383,20 @@ def _append_light_path_modality_warnings(
     instrument_file: Path,
     vocabulary: Vocabulary,
     canonical_modalities: set[str],
+    capabilities: dict[str, set[str]] | None = None,
 ) -> None:
     light_paths = payload.get('light_paths')
     if not isinstance(light_paths, list) or not light_paths:
         return
 
-    covered_modalities: set[str] = set()
+    capabilities = capabilities or {}
+    required_route_coverage = set(canonical_modalities)
+    required_route_coverage.update(capabilities.get('imaging_modes', set()))
+    required_route_coverage.update(capabilities.get('contrast_methods', set()))
+
+    covered_route_terms: set[str] = set()
+    instrument_readouts = set(capabilities.get('readouts', set()))
+    covered_readouts: set[str] = set()
 
     for index, light_path in enumerate(light_paths):
         if not isinstance(light_path, dict):
@@ -397,90 +405,71 @@ def _append_light_path_modality_warnings(
         route_id = light_path.get('id')
         route_label = route_id.strip() if isinstance(route_id, str) and route_id.strip() else f'light_paths[{index}]'
         route_path = f"{instrument_file.as_posix()}:light_paths[{index}]"
+        route_type_raw = light_path.get('route_type')
+        route_type = route_type_raw.strip() if isinstance(route_type_raw, str) and route_type_raw.strip() else ''
+        route_key = route_type or (route_id.strip() if isinstance(route_id, str) and route_id.strip() else '')
+        if route_key:
+            resolved_route = vocabulary.resolve_canonical('optical_routes', route_key) or route_key
+            covered_route_terms.add(resolved_route)
+
+        # Validate route_id against optical_routes vocabulary when explicit route_type is absent.
+        # Using a readout/modality term (e.g. "flim") as a route ID conflates route type with readout semantics.
+        if isinstance(route_id, str) and route_id.strip():
+            known_route_ids = vocabulary.valid_ids_by_vocab.get('optical_routes', set())
+            if known_route_ids and route_id.strip() not in known_route_ids:
+                resolved_as_route = vocabulary.resolve_canonical('optical_routes', route_id.strip())
+                if resolved_as_route is None:
+                    warnings.append(ValidationIssue(
+                        code='light_path_id_not_in_optical_routes',
+                        path=f"{route_path}:id",
+                        message=(
+                            f"Instrument '{instrument_file.stem}' light path id '{route_id.strip()}' is not a "
+                            f"recognized optical route vocabulary term. Use a canonical route type from "
+                            f"vocab/optical_routes.yaml (e.g. confocal_point, widefield_fluorescence, tirf) "
+                            f"and move readout-type terms (flim, fcs, spectral_imaging) to light_paths[].readouts."
+                        ),
+                    ))
+
         raw_modalities = light_path.get('modalities')
-
         if raw_modalities is None:
-            warnings.append(
-                ValidationIssue(
-                    code='light_path_modalities_missing',
-                    path=route_path,
-                    message=(
-                        f"Instrument '{instrument_file.stem}' light path '{route_label}' is missing "
-                        "light_paths[].modalities; add a non-empty canonical modality list for this route."
-                    ),
-                )
-            )
-            continue
+            if not route_type:
+                warnings.append(ValidationIssue(code='light_path_modalities_missing', path=route_path, message=(f"Instrument '{instrument_file.stem}' light path '{route_label}' is missing light_paths[].modalities; add a non-empty canonical modality list for this route or declare route_type.")))
+        elif not isinstance(raw_modalities, list) or not raw_modalities:
+            warnings.append(ValidationIssue(code='light_path_modalities_empty', path=f"{route_path}:modalities", message=(f"Instrument '{instrument_file.stem}' light path '{route_label}' has an empty or invalid modalities value; route modalities must be a non-empty YAML list.")))
+        else:
+            seen_modalities: set[str] = set()
+            duplicate_modalities: set[str] = set()
+            for modality_index, raw_value in enumerate(raw_modalities):
+                if not isinstance(raw_value, str) or not raw_value.strip():
+                    continue
+                resolved_value = vocabulary.resolve_canonical('modalities', raw_value)
+                raw_cleaned = raw_value.strip()
+                known_modalities = vocabulary.valid_ids_by_vocab.get('modalities', set())
+                if resolved_value is None and known_modalities and raw_cleaned not in known_modalities:
+                    continue
+                canonical_value = (resolved_value or raw_cleaned).strip()
+                covered_route_terms.add(canonical_value)
+                if canonical_value in seen_modalities:
+                    duplicate_modalities.add(canonical_value)
+                else:
+                    seen_modalities.add(canonical_value)
+                if canonical_modalities and canonical_value not in canonical_modalities:
+                    warnings.append(ValidationIssue(code='light_path_modality_not_in_instrument', path=f"{route_path}:modalities[{modality_index}]", message=(f"Instrument '{instrument_file.stem}' light path '{route_label}' declares modality '{canonical_value}', but that value is not present in the instrument-level modalities list.")))
+            for duplicate_value in sorted(duplicate_modalities):
+                warnings.append(ValidationIssue(code='light_path_modalities_duplicate', path=f"{route_path}:modalities", message=(f"Instrument '{instrument_file.stem}' light path '{route_label}' repeats modality '{duplicate_value}' in light_paths[].modalities; keep each route modality only once.")))
 
-        if not isinstance(raw_modalities, list) or not raw_modalities:
-            warnings.append(
-                ValidationIssue(
-                    code='light_path_modalities_empty',
-                    path=f"{route_path}:modalities",
-                    message=(
-                        f"Instrument '{instrument_file.stem}' light path '{route_label}' has an empty or invalid "
-                        "modalities value; route modalities must be a non-empty YAML list."
-                    ),
-                )
-            )
-            continue
+        route_readouts = light_path.get('readouts')
+        if isinstance(route_readouts, list):
+            for readout in route_readouts:
+                if isinstance(readout, str) and readout.strip():
+                    canonical_readout = vocabulary.resolve_canonical('measurement_readouts', readout) or readout.strip()
+                    covered_readouts.add(canonical_readout)
 
-        seen_modalities: set[str] = set()
-        duplicate_modalities: set[str] = set()
+    for modality in sorted(required_route_coverage - covered_route_terms):
+        warnings.append(ValidationIssue(code='top_level_modality_uncovered_by_light_paths', path=f"{instrument_file.as_posix()}:modalities", message=(f"Instrument '{instrument_file.stem}' top-level modality/capability '{modality}' is not covered by any light path route_type/id/modalities mapping; add an explicit route mapping or keep this as manual follow-up.")))
 
-        for modality_index, raw_value in enumerate(raw_modalities):
-            if not isinstance(raw_value, str) or not raw_value.strip():
-                continue
-            resolved_value = vocabulary.resolve_canonical('modalities', raw_value)
-            raw_cleaned = raw_value.strip()
-            known_modalities = vocabulary.valid_ids_by_vocab.get('modalities', set())
-            if resolved_value is None and known_modalities and raw_cleaned not in known_modalities:
-                continue
-            canonical_value = (resolved_value or raw_cleaned).strip()
-
-            if canonical_value in seen_modalities:
-                duplicate_modalities.add(canonical_value)
-            else:
-                seen_modalities.add(canonical_value)
-
-            if canonical_value in canonical_modalities:
-                covered_modalities.add(canonical_value)
-                continue
-
-            warnings.append(
-                ValidationIssue(
-                    code='light_path_modality_not_in_instrument',
-                    path=f"{route_path}:modalities[{modality_index}]",
-                    message=(
-                        f"Instrument '{instrument_file.stem}' light path '{route_label}' declares modality "
-                        f"'{canonical_value}', but that value is not present in the instrument-level modalities list."
-                    ),
-                )
-            )
-
-        for duplicate_value in sorted(duplicate_modalities):
-            warnings.append(
-                ValidationIssue(
-                    code='light_path_modalities_duplicate',
-                    path=f"{route_path}:modalities",
-                    message=(
-                        f"Instrument '{instrument_file.stem}' light path '{route_label}' repeats modality "
-                        f"'{duplicate_value}' in light_paths[].modalities; keep each route modality only once."
-                    ),
-                )
-            )
-
-    for modality in sorted(canonical_modalities - covered_modalities):
-        warnings.append(
-            ValidationIssue(
-                code='top_level_modality_uncovered_by_light_paths',
-                path=f"{instrument_file.as_posix()}:modalities",
-                message=(
-                    f"Instrument '{instrument_file.stem}' top-level modality '{modality}' is not covered by any "
-                    "light_paths[].modalities entry; add an explicit route mapping or keep this as manual follow-up."
-                ),
-            )
-        )
+    for readout in sorted(instrument_readouts - covered_readouts):
+        warnings.append(ValidationIssue(code='instrument_readout_uncovered_by_route_readouts', path=f"{instrument_file.as_posix()}:capabilities.readouts", message=(f"Instrument '{instrument_file.stem}' capability readout '{readout}' is not covered by any light_paths[].readouts entry.")))
 
 
 def validate_instrument_ledgers(
@@ -811,12 +800,39 @@ def validate_instrument_ledgers(
                 if isinstance(canonical, str)
             }
 
+        capabilities_raw = canonical_payload.get('capabilities') if isinstance(canonical_payload.get('capabilities'), dict) else {}
+        policy_declares_capabilities = any(rule.path == 'capabilities' or rule.path.startswith('capabilities.') for rule in policy.rules)
+        if policy_declares_capabilities and not is_retired_instrument and not capabilities_raw:
+            warnings.append(
+                ValidationIssue(
+                    code='missing_capabilities_object',
+                    path=f"{instrument_file.as_posix()}:capabilities",
+                    message="Active instrument is missing canonical capabilities object; add capabilities.* axes explicitly instead of relying on legacy modalities.",
+                )
+            )
+        capability_axes = {
+            'imaging_modes': set(),
+            'contrast_methods': set(),
+            'readouts': set(),
+            'workflows': set(),
+            'assay_operations': set(),
+            'non_optical': set(),
+        }
+        for axis in capability_axes:
+            values = capabilities_raw.get(axis)
+            if isinstance(values, list):
+                capability_axes[axis] = {
+                    (vocabulary.resolve_canonical('measurement_readouts' if axis == 'readouts' else axis if axis not in {'workflows','non_optical'} else ('workflow_tags' if axis=='workflows' else 'non_optical_capabilities'), value) or value)
+                    for value in values if isinstance(value, str)
+                }
+
         _append_light_path_modality_warnings(
             warnings=warnings,
             payload=payload,
             instrument_file=instrument_file,
             vocabulary=vocabulary,
             canonical_modalities=canonical_modalities,
+            capabilities=capability_axes,
         )
 
         if 'sted' in canonical_modalities and not is_retired_instrument:

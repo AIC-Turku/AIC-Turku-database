@@ -8,39 +8,42 @@ instrument:
   stand_orientation: benchtop
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: 'Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage drive.'
+  notes: 'Benchtop microlens-spinning disk confocal with Borealis illumination and
+    ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage
+    drive.'
   url: https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope
 
 modalities:
-  - confocal_spinning_disk
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - phase_contrast
+- confocal_spinning_disk
+- widefield_fluorescence
+- transmitted_brightfield
+- phase_contrast
 
 modules:
-  - type: hardware_autofocus 
-    notes: Dual function Focus Seek and Lock
-    url: ''
-    manufacturer: Andor
-    model: Focus Seek and Lock
-  - type: incubation 
-    notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
-    url: ''
-    manufacturer: Andor
-    model: TOPSTAGE-ANDOR-BL3 Incubator Bundle
+- type: hardware_autofocus
+  notes: Dual function Focus Seek and Lock
+  url: ''
+  manufacturer: Andor
+  model: Focus Seek and Lock
+- type: incubation
+  notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
+  url: ''
+  manufacturer: Andor
+  model: TOPSTAGE-ANDOR-BL3 Incubator Bundle
 
 software:
-  - role: acquisition
-    name: Fusion BC43
-    version: 2.7.0
-    developer: Andor
-    url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
-  - role: analysis
-    name: Imaris Quant
-    version: ''
-    developer: Oxford Instruments / Andor
-    notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
-    url: ''
+- role: acquisition
+  name: Fusion BC43
+  version: 2.7.0
+  developer: Andor
+  url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
+- role: analysis
+  name: Imaris Quant
+  version: ''
+  developer: Oxford Instruments / Andor
+  notes: Offline license for high-quality snapshots, movie creation, isosurface 
+    reconstructions, and traditional intensity-based/AI metric characterization.
+  url: ''
 
 hardware:
   environment:
@@ -48,270 +51,282 @@ hardware:
     co2_control: true
     humidity_control: true
     notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
-    
+
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-    
+
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with optimized spacing for deep tissue imaging.
+    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes 
+      with optimized spacing for deep tissue imaging.
     url: ''
-    
   detectors:
-    - kind: scmos
-      manufacturer: Andor
-      model: 4.1 MP sCMOS
-      pixel_pitch_um: 6.5
-      collection_min_nm: 425
-      collection_max_nm: 710
-      collection_center_nm: 567.5
-      collection_width_nm: 285
-      qe_peak_pct: 82
-      notes: 16-bit. 18.4 mm field of view.
-      url: ''
-      id: detector_1
-      
+  - kind: scmos
+    manufacturer: Andor
+    model: 4.1 MP sCMOS
+    pixel_pitch_um: 6.5
+    collection_min_nm: 425
+    collection_max_nm: 710
+    collection_center_nm: 567.5
+    collection_width_nm: 285
+    qe_peak_pct: 82
+    notes: 16-bit. 18.4 mm field of view.
+    url: ''
+    id: detector_1
+
   objectives:
-    - id: 10x_air
-      manufacturer: Nikon
-      model: 10X Plan Apo LD Air
-      product_code: INS-OBJ-10D-045
-      magnification: 10.0
-      numerical_aperture: 0.45
-      working_distance: 4.0 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Included in base BC43 CF. Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: Nikon
-      model: 20X Plan Apo LD Air
-      product_code: INS-OBJ-20D-080
-      magnification: 20.0
-      numerical_aperture: 0.8
-      working_distance: 0.8 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 40x_air
-      manufacturer: Nikon
-      model: 40X Plan Apo LD Air
-      product_code: INS-OBJ-40D-095
-      magnification: 40.0
-      numerical_aperture: 0.95
-      working_distance: 0.21 mm
-      immersion: air
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 40x_silicone
-      manufacturer: Nikon
-      model: 40X Plan Apo LS Sil Oil
-      product_code: INS-OBJ-40S-125-SIL
-      magnification: 40.0
-      numerical_aperture: 1.25
-      working_distance: 0.3 mm
-      immersion: silicone
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda S.'
-      url: ''
-      is_installed: true
-    - id: 60x_oil
-      manufacturer: Nikon
-      model: 60X Plan Apo LD Oil
-      product_code: INS-OBJ-60D-142-0
-      magnification: 60.0
-      numerical_aperture: 1.42
-      working_distance: 0.15 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-    - id: 100x_oil
-      manufacturer: Nikon
-      model: 100x Plan Apo LD Oil
-      product_code: INS-OBJ-100D-145-0
-      magnification: 100.0
-      numerical_aperture: 1.45
-      working_distance: 0.13 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: true
-      specialties: []
-      notes: 'Optical family: Lambda D.'
-      url: ''
-      is_installed: true
-      
+  - id: 10x_air
+    manufacturer: Nikon
+    model: 10X Plan Apo LD Air
+    product_code: INS-OBJ-10D-045
+    magnification: 10.0
+    numerical_aperture: 0.45
+    working_distance: 4.0 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Included in base BC43 CF. Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: Nikon
+    model: 20X Plan Apo LD Air
+    product_code: INS-OBJ-20D-080
+    magnification: 20.0
+    numerical_aperture: 0.8
+    working_distance: 0.8 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: Nikon
+    model: 40X Plan Apo LD Air
+    product_code: INS-OBJ-40D-095
+    magnification: 40.0
+    numerical_aperture: 0.95
+    working_distance: 0.21 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 40x_silicone
+    manufacturer: Nikon
+    model: 40X Plan Apo LS Sil Oil
+    product_code: INS-OBJ-40S-125-SIL
+    magnification: 40.0
+    numerical_aperture: 1.25
+    working_distance: 0.3 mm
+    immersion: silicone
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda S.'
+    url: ''
+    is_installed: true
+  - id: 60x_oil
+    manufacturer: Nikon
+    model: 60X Plan Apo LD Oil
+    product_code: INS-OBJ-60D-142-0
+    magnification: 60.0
+    numerical_aperture: 1.42
+    working_distance: 0.15 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Nikon
+    model: 100x Plan Apo LD Oil
+    product_code: INS-OBJ-100D-145-0
+    magnification: 100.0
+    numerical_aperture: 1.45
+    working_distance: 0.13 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: true
+    specialties: []
+    notes: 'Optical family: Lambda D.'
+    url: ''
+    is_installed: true
+
   sources:
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 405
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-      id: borealis_illumination
-      modalities:
-        - confocal_spinning_disk
-        - widefield_fluorescence
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 488
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-      id: borealis_illumination_2
-      modalities:
-        - confocal_spinning_disk
-        - widefield_fluorescence
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 561
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-      id: borealis_illumination_3
-      modalities:
-        - confocal_spinning_disk
-        - widefield_fluorescence
-    - kind: laser
-      manufacturer: Andor
-      model: Borealis Illumination
-      wavelength_nm: 638
-      power: ''
-      notes: Part of BC43 excitation lines
-      url: ''
-      id: borealis_illumination_4
-      modalities:
-        - confocal_spinning_disk
-        - widefield_fluorescence
-    - kind: led
-      manufacturer: Andor
-      model: Transmitted Light Illuminator
-      role: transmitted_illumination
-      notes: Used for Brightfield and Differential Phase Contrast (DPC). Broadband white LED.
-      url: ''
-      id: transmitted_light_illuminator
-      modalities:
-        - transmitted_brightfield
-        - phase_contrast
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 405
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination
+    modalities:
+    - confocal_spinning_disk
+    - widefield_fluorescence
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 488
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination_2
+    modalities:
+    - confocal_spinning_disk
+    - widefield_fluorescence
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 561
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination_3
+    modalities:
+    - confocal_spinning_disk
+    - widefield_fluorescence
+  - kind: laser
+    manufacturer: Andor
+    model: Borealis Illumination
+    wavelength_nm: 638
+    power: ''
+    notes: Part of BC43 excitation lines
+    url: ''
+    id: borealis_illumination_4
+    modalities:
+    - confocal_spinning_disk
+    - widefield_fluorescence
+  - kind: led
+    manufacturer: Andor
+    model: Transmitted Light Illuminator
+    role: transmitted_illumination
+    notes: Used for Brightfield and Differential Phase Contrast (DPC). Broadband
+      white LED.
+    url: ''
+    id: transmitted_light_illuminator
+    modalities:
+    - transmitted_brightfield
+    - phase_contrast
 
   optical_path_elements:
-    - name: BC43 Internal Dichroic
-      stage_role: dichroic
-      id: bc43_internal_dichroic
-      element_type: fixed
-      modalities:
-        - confocal_spinning_disk
-        - widefield_fluorescence
-        - transmitted_brightfield
-      positions:
-        Pos_1:
-          component_type: multiband_dichroic
-          bands: 
-            - center_nm: 450
-              width_nm: 50
-            - center_nm: 525
-              width_nm: 50
-            - center_nm: 600
-              width_nm: 50
-            - center_nm: 685
-              width_nm: 50
-          notes: 'Built-in multiband dichroic for standard 4-line excitation. Explicit transmission windows are aligned to the installed emission channels.'
-          
-    - name: BC43 Internal Emission Filters
-      slots: 4
-      stage_role: emission
-      id: bc43_internal_emission_filters
-      element_type: filter_wheel
-      modalities:
-        - confocal_spinning_disk
-        - widefield_fluorescence
-        - transmitted_brightfield
-      positions:
-        Pos_1:
-          name: DAPI
-          component_type: bandpass
-          bands: 
-            - center_nm: 450
-              width_nm: 50
-        Pos_2:
-          name: GFP
-          component_type: bandpass
-          bands:
-            - center_nm: 525
-              width_nm: 50
-        Pos_3:
-          name: mCherry
-          component_type: bandpass
-          bands:
-            - center_nm: 600
-              width_nm: 50
-        Pos_4:
-          name: CY5
-          component_type: bandpass
-          bands:
-            - center_nm: 685
-              width_nm: 50              
+  - name: BC43 Internal Dichroic
+    stage_role: dichroic
+    id: bc43_internal_dichroic
+    element_type: fixed
+    modalities:
+    - confocal_spinning_disk
+    - widefield_fluorescence
+    - transmitted_brightfield
+    positions:
+      Pos_1:
+        component_type: multiband_dichroic
+        bands:
+        - center_nm: 450
+          width_nm: 50
+        - center_nm: 525
+          width_nm: 50
+        - center_nm: 600
+          width_nm: 50
+        - center_nm: 685
+          width_nm: 50
+        notes: 'Built-in multiband dichroic for standard 4-line excitation. Explicit
+          transmission windows are aligned to the installed emission channels.'
+  - name: BC43 Internal Emission Filters
+    slots: 4
+    stage_role: emission
+    id: bc43_internal_emission_filters
+    element_type: filter_wheel
+    modalities:
+    - confocal_spinning_disk
+    - widefield_fluorescence
+    - transmitted_brightfield
+    positions:
+      Pos_1:
+        name: DAPI
+        component_type: bandpass
+        bands:
+        - center_nm: 450
+          width_nm: 50
+      Pos_2:
+        name: GFP
+        component_type: bandpass
+        bands:
+        - center_nm: 525
+          width_nm: 50
+      Pos_3:
+        name: mCherry
+        component_type: bandpass
+        bands:
+        - center_nm: 600
+          width_nm: 50
+      Pos_4:
+        name: CY5
+        component_type: bandpass
+        bands:
+        - center_nm: 685
+          width_nm: 50
 
 light_paths:
-  - id: confocal_spinning_disk
-    name: Confocal Spinning Disk
-    modalities:
-      - confocal_spinning_disk
-    illumination_sequence:
-      - source_id: borealis_illumination
-      - source_id: borealis_illumination_2
-      - source_id: borealis_illumination_3
-      - source_id: borealis_illumination_4
-      - optical_path_element_id: bc43_internal_dichroic
-    detection_sequence:
-      - optical_path_element_id: bc43_internal_dichroic
-      - optical_path_element_id: bc43_internal_emission_filters
-      - endpoint_id: detector_1 
+- id: confocal_spinning_disk
+  name: Confocal Spinning Disk
+  modalities:
+  - confocal_spinning_disk
+  illumination_sequence:
+  - source_id: borealis_illumination
+  - source_id: borealis_illumination_2
+  - source_id: borealis_illumination_3
+  - source_id: borealis_illumination_4
+  - optical_path_element_id: bc43_internal_dichroic
+  detection_sequence:
+  - optical_path_element_id: bc43_internal_dichroic
+  - optical_path_element_id: bc43_internal_emission_filters
+  - endpoint_id: detector_1
 
-  - id: widefield_fluorescence
-    name: Widefield Fluorescence
-    modalities:
-      - widefield_fluorescence
-    illumination_sequence:
-      - source_id: borealis_illumination
-      - source_id: borealis_illumination_2
-      - source_id: borealis_illumination_3
-      - source_id: borealis_illumination_4
-      - optical_path_element_id: bc43_internal_dichroic
-    detection_sequence:
-      - optical_path_element_id: bc43_internal_dichroic
-      - optical_path_element_id: bc43_internal_emission_filters
-      - endpoint_id: detector_1 
+- id: widefield_fluorescence
+  name: Widefield Fluorescence
+  modalities:
+  - widefield_fluorescence
+  illumination_sequence:
+  - source_id: borealis_illumination
+  - source_id: borealis_illumination_2
+  - source_id: borealis_illumination_3
+  - source_id: borealis_illumination_4
+  - optical_path_element_id: bc43_internal_dichroic
+  detection_sequence:
+  - optical_path_element_id: bc43_internal_dichroic
+  - optical_path_element_id: bc43_internal_emission_filters
+  - endpoint_id: detector_1
 
-  - id: transmitted_brightfield
-    name: Transmitted Brightfield
-    modalities:
-      - transmitted_brightfield
-      - phase_contrast
-    illumination_sequence:
-      - source_id: transmitted_light_illuminator
-    detection_sequence:
-      - optical_path_element_id: bc43_internal_dichroic
-      - optical_path_element_id: bc43_internal_emission_filters
-      - endpoint_id: detector_1
+- id: transmitted_brightfield
+  name: Transmitted Brightfield
+  modalities:
+  - transmitted_brightfield
+  - phase_contrast
+  illumination_sequence:
+  - source_id: transmitted_light_illuminator
+  detection_sequence:
+  - optical_path_element_id: bc43_internal_dichroic
+  - optical_path_element_id: bc43_internal_emission_filters
+  - endpoint_id: detector_1
+capabilities:
+  imaging_modes:
+  - confocal_spinning_disk
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []

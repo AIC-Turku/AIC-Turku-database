@@ -632,6 +632,11 @@ def _parse_canonical_light_paths(
             "id": route_id,
             "name": _clean_string(route.get("name")) or _resolve_route_label(route_id),
             "modalities": route_modalities or [route_id],
+            "readouts": [
+                r.strip()
+                for r in (route.get("readouts") or [])
+                if isinstance(r, str) and r.strip()
+            ],
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
         }

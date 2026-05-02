@@ -31,6 +31,36 @@ vocab_registry:
     path: vocab/modules.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
+  imaging_modes:
+    source: file
+    path: vocab/imaging_modes.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  contrast_methods:
+    source: file
+    path: vocab/contrast_methods.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  measurement_readouts:
+    source: file
+    path: vocab/measurement_readouts.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  workflow_tags:
+    source: file
+    path: vocab/workflow_tags.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  assay_operations:
+    source: file
+    path: vocab/assay_operations.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
+  non_optical_capabilities:
+    source: file
+    path: vocab/non_optical_capabilities.yaml
+    canonical_ids_only: true
+    allow_synonyms_on_input: true
   scanner_types:
     source: file
     path: vocab/scanner_types.yaml
@@ -327,6 +357,67 @@ sections:
         vocab: modalities
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Core reporting category in QUAREP/JCB-style instrumentation metadata.
+
+      - path: capabilities
+        title: Capability axes
+        status: optional
+        type: object
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.
+
+      - path: capabilities.imaging_modes
+        title: Capability imaging modes
+        status: optional
+        type: list
+        item_type: string
+        vocab: imaging_modes
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Canonical imaging-mode capability axis (not a route identifier).
+
+      - path: capabilities.contrast_methods
+        title: Capability contrast methods
+        status: optional
+        type: list
+        item_type: string
+        vocab: contrast_methods
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Canonical contrast-method capability axis.
+
+      - path: capabilities.readouts
+        title: Capability measurement readouts
+        status: optional
+        type: list
+        item_type: string
+        vocab: measurement_readouts
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Canonical measurement-readout capability axis.
+
+      - path: capabilities.workflows
+        title: Capability workflow tags
+        status: optional
+        type: list
+        item_type: string
+        vocab: workflow_tags
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Workflow/application tags; not optical route types.
+
+      - path: capabilities.assay_operations
+        title: Capability assay operations
+        status: optional
+        type: list
+        item_type: string
+        vocab: assay_operations
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Assay-operation capabilities such as FRAP/photoactivation; distinct from readout-only axes.
+
+      - path: capabilities.non_optical
+        title: Capability non-optical
+        status: optional
+        type: list
+        item_type: string
+        vocab: non_optical_capabilities
+        used_by: [audit_pdf, method_generator, dashboard]
+        rationale: Non-optical capability tags; not optical light-path route types.
 
       - path: modules
         title: Installed modules
@@ -1309,9 +1400,9 @@ sections:
         status: optional
         type: list
         item_type: string
-        vocab: optical_routes
+        vocab: modalities
         used_by: [dashboard, method_generator]
-        rationale: Validation-only route guards for installed sources. Ordered light_paths sequences remain authoritative.
+        rationale: Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative.
         aliases: ["hardware.light_sources[].modalities", "hardware.light_sources[].path", "hardware.light_sources[].paths", "hardware.light_sources[].route", "hardware.light_sources[].routes"]
 
       - path: hardware.sources[].notes
@@ -1404,9 +1495,9 @@ sections:
         status: optional
         type: list
         item_type: string
-        vocab: optical_routes
+        vocab: modalities
         used_by: [dashboard, method_generator]
-        rationale: Validation-only route guards for optical path elements. Ordered light_paths sequences remain authoritative.
+        rationale: Legacy compatibility modality hints for optical path elements. Ordered light_paths and route_type remain authoritative.
 
       - path: hardware.optical_path_elements[].positions
         title: Optical path element positions
@@ -1745,6 +1836,23 @@ sections:
         type: string
         used_by: [dashboard, method_generator]
         rationale: Human-readable route label shown in UI and exported DTO route catalogs.
+
+      - path: light_paths[].route_type
+        title: Light path route type
+        status: optional
+        type: string
+        vocab: optical_routes
+        used_by: [dashboard, method_generator]
+        rationale: Controlled optical route type. light_paths[].id remains a stable local identifier and may be descriptive.
+
+      - path: light_paths[].readouts
+        title: Light path readouts
+        status: optional
+        type: list
+        item_type: string
+        vocab: measurement_readouts
+        used_by: [dashboard, method_generator]
+        rationale: Optional per-route measurement/readout tags associated with a route traversal.
 
       - path: light_paths[].modalities
         title: Light path modalities

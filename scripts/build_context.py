@@ -456,6 +456,42 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
     return cleaned if isinstance(cleaned, dict) else {}
 
 
+
+
+def _derive_capabilities_from_legacy_modalities(modalities: list[str]) -> dict[str, list[str]]:
+    imaging = {'confocal_point','confocal_spinning_disk','widefield_fluorescence','tirf','multiphoton','light_sheet','sim','sted','resolft','smlm','ism'}
+    contrast = {'transmitted_brightfield','reflected_brightfield','phase_contrast','dic','darkfield','polarized_light','optical_sectioning'}
+    readouts = {'spectral_imaging','flim','fcs','fret'}
+    workflows = {'live_cell_imaging'}
+    assay = {'frap','photoactivation'}
+    non_opt = {'afm','impedance_cytometry'}
+    out={'imaging_modes':[], 'contrast_methods':[], 'readouts':[], 'workflows':[], 'assay_operations':[], 'non_optical':[]}
+    for m in modalities:
+        if m in imaging: out['imaging_modes'].append(m)
+        elif m in contrast: out['contrast_methods'].append(m)
+        elif m in readouts: out['readouts'].append(m)
+        elif m in workflows: out['workflows'].append(m)
+        elif m in assay: out['assay_operations'].append(m)
+        elif m in non_opt: out['non_optical'].append(m)
+    return out
+
+
+def _normalize_light_paths(light_paths_raw: Any) -> list[dict[str, Any]]:
+    routes=[]
+    if not isinstance(light_paths_raw,list):
+        return routes
+    for lp in light_paths_raw:
+        if not isinstance(lp,dict):
+            continue
+        route_id=clean_text(lp.get('id'))
+        route_type=clean_text(lp.get('route_type')) or route_id
+        readouts=[clean_text(v) for v in (lp.get('readouts') or []) if isinstance(v,str) and clean_text(v)]
+        route=copy.deepcopy(lp)
+        route['id']=route_id
+        route['route_type']=route_type
+        route['readouts']=readouts
+        routes.append(route)
+    return routes
 def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, retired: bool) -> dict[str, Any] | None:
     """Build canonical instrument DTO used by dashboard templates and exports."""
     inst_section = payload.get("instrument")
@@ -494,6 +530,27 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     modalities = payload.get("modalities")
     if not isinstance(modalities, list):
         modalities = []
+    modalities = [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)]
+
+    capabilities_raw = payload.get("capabilities") if isinstance(payload.get("capabilities"), dict) else {}
+    capabilities = {
+        "imaging_modes": [clean_text(v) for v in (capabilities_raw.get("imaging_modes") or []) if isinstance(v, str) and clean_text(v)],
+        "contrast_methods": [clean_text(v) for v in (capabilities_raw.get("contrast_methods") or []) if isinstance(v, str) and clean_text(v)],
+        "readouts": [clean_text(v) for v in (capabilities_raw.get("readouts") or []) if isinstance(v, str) and clean_text(v)],
+        "workflows": [clean_text(v) for v in (capabilities_raw.get("workflows") or []) if isinstance(v, str) and clean_text(v)],
+        "assay_operations": [clean_text(v) for v in (capabilities_raw.get("assay_operations") or []) if isinstance(v, str) and clean_text(v)],
+        "non_optical": [clean_text(v) for v in (capabilities_raw.get("non_optical") or []) if isinstance(v, str) and clean_text(v)],
+    }
+    if not any(capabilities.values()):
+        if not retired:
+            raise RuntimeError(
+                f"Instrument '{source_file.stem}': no canonical capabilities found. "
+                "Add explicit capabilities.* axes to the instrument YAML. "
+                "Falling back to legacy modalities is not permitted for active "
+                "instruments.",
+            )
+        capabilities = _derive_capabilities_from_legacy_modalities(modalities)
+
 
     software = strip_empty_values(normalize_software(payload.get("software")))
     software_status = normalize_software_status(payload.get("software_status"))
@@ -576,13 +633,14 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
             "notes": notes_raw,
             "url": clean_text(inst_section.get("url")),
         },
-        "modalities": [clean_text(m) for m in modalities if isinstance(m, str) and clean_text(m)],
+        "modalities": copy.deepcopy(modalities),
+        "capabilities": copy.deepcopy(capabilities),
         "modules": copy.deepcopy(modules),
         "notes": notes_raw,
         "software": software,
         "software_status": software_status,
         "hardware": hardware,
-        "light_paths": copy.deepcopy(payload.get("light_paths") or []),
+        "light_paths": _normalize_light_paths(payload.get("light_paths") or []),
         "policy": {
             "sections": policy.sections,
             "missing_required": policy.missing_required,
@@ -612,6 +670,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "notes_raw": notes_raw,
         "notes": notes_raw,
         "modalities": copy.deepcopy(canonical["modalities"]),
+        "capabilities": copy.deepcopy(canonical.get("capabilities") or {}),
         "modules": copy.deepcopy(canonical["modules"]),
         "software": copy.deepcopy(canonical["software"]),
         "software_status": canonical.get("software_status", ""),

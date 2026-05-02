@@ -8,291 +8,308 @@ instrument:
   stand_orientation: inverted
   ocular_availability: camera_only
   location: Local Cell Culture Lab, Biocity 5th Floor
-  notes: 'Widefield fluorescence microscope (inverted). Imaging modes: Brightfield (transmitted), Fluorescence (LED illumination). Usage: All users are free to use the microscope after instrument-specific training (contact AIC staff for training). IMPORTANT: Only AIC personnel are allowed to change filter cubes.'
+  notes: 'Widefield fluorescence microscope (inverted). Imaging modes: Brightfield
+    (transmitted), Fluorescence (LED illumination). Usage: All users are free to use
+    the microscope after instrument-specific training (contact AIC staff for training).
+    IMPORTANT: Only AIC personnel are allowed to change filter cubes.'
   url: ''
 
 modalities:
-  - widefield_fluorescence
-  - transmitted_brightfield
-  - phase_contrast
+- widefield_fluorescence
+- transmitted_brightfield
+- phase_contrast
 
 modules:
-  - type: universal_vessel_holder # Canonical module ID for the installed vessel holder
-    manufacturer: Thermo Fisher
-    model: Universal Vessel Holder
-    product_code: AMEP-VH009
-    notes: ''
-    url: https://www.thermofisher.com/order/catalog/product/AMEPVH009
+- type: universal_vessel_holder   # Canonical module ID for the installed vessel holder
+  manufacturer: Thermo Fisher
+  model: Universal Vessel Holder
+  product_code: AMEP-VH009
+  notes: ''
+  url: https://www.thermofisher.com/order/catalog/product/AMEPVH009
 
 software:
-  - role: acquisition
-    name: On-board EVOS interface
-    version: ''
-    notes: no external software, USB storage
-    url: https://www.thermofisher.com/fi/en/home/life-science/cell-analysis/cellular-imaging/evos-cell-imaging-systems/software.html
+- role: acquisition
+  name: On-board EVOS interface
+  version: ''
+  notes: no external software, USB storage
+  url: 
+    https://www.thermofisher.com/fi/en/home/life-science/cell-analysis/cellular-imaging/evos-cell-imaging-systems/software.html
 
 hardware:
   scanner:
     type: none
     notes: ''
     url: ''
-    
   detectors:
-    - kind: ccd
-      manufacturer: AMG (Thermo Fisher)
-      model: Sony ICX285AQ Color CCD
-      pixel_pitch_um: 6.45
-      notes: Integrated color camera for brightfield (1.4 Megapixels).
-      url: ''
-      id: integrated_color_camera
-    - kind: ccd
-      manufacturer: AMG (Thermo Fisher)
-      model: AMF-4302 (Sony ICX285AL Monochrome CCD)
-      pixel_pitch_um: 6.45
-      notes: Integrated monochrome camera for fluorescence (1.4 Megapixels).
-      url: ''
-      id: integrated_fluorescence_camera
-      
+  - kind: ccd
+    manufacturer: AMG (Thermo Fisher)
+    model: Sony ICX285AQ Color CCD
+    pixel_pitch_um: 6.45
+    notes: Integrated color camera for brightfield (1.4 Megapixels).
+    url: ''
+    id: integrated_color_camera
+  - kind: ccd
+    manufacturer: AMG (Thermo Fisher)
+    model: AMF-4302 (Sony ICX285AL Monochrome CCD)
+    pixel_pitch_um: 6.45
+    notes: Integrated monochrome camera for fluorescence (1.4 Megapixels).
+    url: ''
+    id: integrated_fluorescence_camera
+
   objectives:
-    - id: 4x_air
-      manufacturer: Olympus
-      model: U Plan FL N 4x/0.13 PhP
-      product_code: ''
-      magnification: 4.0
-      numerical_aperture: 0.13
-      working_distance: 16.4 mm
-      immersion: air
-      correction: fluorite
-      afc_compatible: false
-      specialties:
-        - phase
-      notes: PhP
-      url: ''
-      is_installed: true
-    - id: 10x_air
-      manufacturer: AMG (Thermo Fisher)
-      model: Plan Fluor 10x/0.3
-      product_code: AMG-AMEP 4623
-      magnification: 10.0
-      numerical_aperture: 0.3
-      working_distance: 8.3 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties: []
-      notes: Fluorite (FL)
-      url: ''
-      is_installed: true
-    - id: 20x_air
-      manufacturer: AMG (Thermo Fisher)
-      model: Plan Fluor 20x/0.45
-      product_code: AMG-AMEP 4624
-      magnification: 20.0
-      numerical_aperture: 0.45
-      working_distance: 7.1 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties: []
-      notes: Fluorite (FL)
-      url: ''
-      is_installed: true
-    - id: 40x_air
-      manufacturer: AMG (Thermo Fisher)
-      model: Plan Fluor 40x/0.65
-      product_code: AMG-AMEP 4625
-      magnification: 40.0
-      numerical_aperture: 0.65
-      working_distance: 2.8 mm
-      immersion: air
-      correction: plan_fluorite
-      afc_compatible: false
-      specialties: []
-      notes: Fluorite (FL)
-      url: ''
-      is_installed: true
-      
+  - id: 4x_air
+    manufacturer: Olympus
+    model: U Plan FL N 4x/0.13 PhP
+    product_code: ''
+    magnification: 4.0
+    numerical_aperture: 0.13
+    working_distance: 16.4 mm
+    immersion: air
+    correction: fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: PhP
+    url: ''
+    is_installed: true
+  - id: 10x_air
+    manufacturer: AMG (Thermo Fisher)
+    model: Plan Fluor 10x/0.3
+    product_code: AMG-AMEP 4623
+    magnification: 10.0
+    numerical_aperture: 0.3
+    working_distance: 8.3 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: Fluorite (FL)
+    url: ''
+    is_installed: true
+  - id: 20x_air
+    manufacturer: AMG (Thermo Fisher)
+    model: Plan Fluor 20x/0.45
+    product_code: AMG-AMEP 4624
+    magnification: 20.0
+    numerical_aperture: 0.45
+    working_distance: 7.1 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: Fluorite (FL)
+    url: ''
+    is_installed: true
+  - id: 40x_air
+    manufacturer: AMG (Thermo Fisher)
+    model: Plan Fluor 40x/0.65
+    product_code: AMG-AMEP 4625
+    magnification: 40.0
+    numerical_aperture: 0.65
+    working_distance: 2.8 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties: []
+    notes: Fluorite (FL)
+    url: ''
+    is_installed: true
+
   sources:
-    - kind: led
-      manufacturer: Thermo Fisher / AMG
-      model: Transmitted Light LED
-      
-      notes: Broad spectrum overhead LED used for brightfield and phase contrast.
-      id: transmitted_light_led
-      modalities:
-        - transmitted_brightfield
-        - phase_contrast
-    - kind: led
-      manufacturer: Thermo Fisher / AMG
-      model: EVOS DAPI Light Cube LED
-      wavelength_nm: 357
-      notes: Integrated LED inside the DAPI Light Cube
-      id: evos_dapi_light_cube_led
-      modalities:
-        - widefield_fluorescence
-    - kind: led
-      manufacturer: Thermo Fisher / AMG
-      model: EVOS CFP Light Cube LED
-      wavelength_nm: 445
-      notes: Integrated LED inside the CFP Light Cube
-      id: evos_cfp_light_cube_led
-      modalities:
-        - widefield_fluorescence
-    - kind: led
-      manufacturer: Thermo Fisher / AMG
-      model: EVOS GFP Light Cube LED
-      wavelength_nm: 470
-      notes: Integrated LED inside the GFP Light Cube
-      id: evos_gfp_light_cube_led
-      modalities:
-        - widefield_fluorescence
-    - kind: led
-      manufacturer: Thermo Fisher / AMG
-      model: EVOS RFP Light Cube LED
-      wavelength_nm: 531
-      notes: Integrated LED inside the RFP Light Cube
-      id: evos_rfp_light_cube_led
-      modalities:
-        - widefield_fluorescence
-    - kind: led
-      manufacturer: Thermo Fisher / AMG
-      model: EVOS Cy5 Light Cube LED
-      wavelength_nm: 628
-      notes: Integrated LED inside the Cy5 Light Cube
-      id: evos_cy5_light_cube_led
-      modalities:
-        - widefield_fluorescence
-        
+  - kind: led
+    manufacturer: Thermo Fisher / AMG
+    model: Transmitted Light LED
+
+    notes: Broad spectrum overhead LED used for brightfield and phase contrast.
+    id: transmitted_light_led
+    modalities:
+    - transmitted_brightfield
+    - phase_contrast
+  - kind: led
+    manufacturer: Thermo Fisher / AMG
+    model: EVOS DAPI Light Cube LED
+    wavelength_nm: 357
+    notes: Integrated LED inside the DAPI Light Cube
+    id: evos_dapi_light_cube_led
+    modalities:
+    - widefield_fluorescence
+  - kind: led
+    manufacturer: Thermo Fisher / AMG
+    model: EVOS CFP Light Cube LED
+    wavelength_nm: 445
+    notes: Integrated LED inside the CFP Light Cube
+    id: evos_cfp_light_cube_led
+    modalities:
+    - widefield_fluorescence
+  - kind: led
+    manufacturer: Thermo Fisher / AMG
+    model: EVOS GFP Light Cube LED
+    wavelength_nm: 470
+    notes: Integrated LED inside the GFP Light Cube
+    id: evos_gfp_light_cube_led
+    modalities:
+    - widefield_fluorescence
+  - kind: led
+    manufacturer: Thermo Fisher / AMG
+    model: EVOS RFP Light Cube LED
+    wavelength_nm: 531
+    notes: Integrated LED inside the RFP Light Cube
+    id: evos_rfp_light_cube_led
+    modalities:
+    - widefield_fluorescence
+  - kind: led
+    manufacturer: Thermo Fisher / AMG
+    model: EVOS Cy5 Light Cube LED
+    wavelength_nm: 628
+    notes: Integrated LED inside the Cy5 Light Cube
+    id: evos_cy5_light_cube_led
+    modalities:
+    - widefield_fluorescence
+
   optical_path_elements:
-    - name: Light Cube Turret
-      
-      stage_role: cube
-      id: light_cube_turret
-      element_type: turret
-      modalities:
-        - widefield_fluorescence
-      notes: Filter sets must be changed manually. Only AIC personnel are allowed to change filter cubes.
-      positions:
-        Pos_1:
-          name: DAPI
-          component_type: filter_cube # CORRECTED: Converted to canonical component type
-          product_code: ZP-EPI-9001
-          bands: 
-            - center_nm: 447
-              width_nm: 60
-          notes: 'Included with base unit. Excitation: 357/44 nm. Dichroic Cutoff: 400 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 357
-            width_nm: 44
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 400
-          emission_filter:
-            component_type: bandpass
-            center_nm: 447
-            width_nm: 60
-        Pos_2:
-          name: CFP
-          component_type: filter_cube
-          product_code: AMEP-4653
-          bands:
-            - center_nm: 510
-              width_nm: 42
-          notes: 'Excitation: 445/45 nm. Dichroic Cutoff: 480 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 445
-            width_nm: 45
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 480
-          emission_filter:
-            component_type: bandpass
-            center_nm: 510
-            width_nm: 42
-        Pos_3:
-          name: GFP/Alexa 488
-          component_type: filter_cube
-          product_code: ZP-EPI-9002
-          bands:
-            - center_nm: 510
-              width_nm: 42
-          notes: 'Included with base unit. Excitation: 470/22 nm. Dichroic Cutoff: 495 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 470
-            width_nm: 22
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 495
-          emission_filter:
-            component_type: bandpass
-            center_nm: 510
-            width_nm: 42
-        Pos_4:
-          name: RFP/Alexa 555
-          component_type: filter_cube
-          product_code: ZP-EPI-9003
-          bands:
-            - center_nm: 593
-              width_nm: 40
-          notes: 'Included with base unit. Excitation: 531/40 nm. Dichroic Cutoff: 560 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 531
-            width_nm: 40
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 560
-          emission_filter:
-            component_type: bandpass
-            center_nm: 593
-            width_nm: 40
-        Pos_5:
-          name: Cy5/Alexa 647
-          component_type: filter_cube
-          product_code: AMEP-4656
-          bands:
-            - center_nm: 692
-              width_nm: 40
-          notes: 'Excitation: 628/40 nm. Dichroic Cutoff: 660 nm.'
-          excitation_filter:
-            component_type: bandpass
-            center_nm: 628
-            width_nm: 40
-          dichroic:
-            component_type: dichroic
-            cut_on_nm: 660
-          emission_filter:
-            component_type: bandpass
-            center_nm: 692
-            width_nm: 40
-          
-  endpoints: [] 
+  - name: Light Cube Turret
+
+    stage_role: cube
+    id: light_cube_turret
+    element_type: turret
+    modalities:
+    - widefield_fluorescence
+    notes: Filter sets must be changed manually. Only AIC personnel are allowed 
+      to change filter cubes.
+    positions:
+      Pos_1:
+        name: DAPI
+        component_type: filter_cube   # CORRECTED: Converted to canonical component type
+        product_code: ZP-EPI-9001
+        bands:
+        - center_nm: 447
+          width_nm: 60
+        notes: 'Included with base unit. Excitation: 357/44 nm. Dichroic Cutoff: 400
+          nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 357
+          width_nm: 44
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 400
+        emission_filter:
+          component_type: bandpass
+          center_nm: 447
+          width_nm: 60
+      Pos_2:
+        name: CFP
+        component_type: filter_cube
+        product_code: AMEP-4653
+        bands:
+        - center_nm: 510
+          width_nm: 42
+        notes: 'Excitation: 445/45 nm. Dichroic Cutoff: 480 nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 445
+          width_nm: 45
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 480
+        emission_filter:
+          component_type: bandpass
+          center_nm: 510
+          width_nm: 42
+      Pos_3:
+        name: GFP/Alexa 488
+        component_type: filter_cube
+        product_code: ZP-EPI-9002
+        bands:
+        - center_nm: 510
+          width_nm: 42
+        notes: 'Included with base unit. Excitation: 470/22 nm. Dichroic Cutoff: 495
+          nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 470
+          width_nm: 22
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 495
+        emission_filter:
+          component_type: bandpass
+          center_nm: 510
+          width_nm: 42
+      Pos_4:
+        name: RFP/Alexa 555
+        component_type: filter_cube
+        product_code: ZP-EPI-9003
+        bands:
+        - center_nm: 593
+          width_nm: 40
+        notes: 'Included with base unit. Excitation: 531/40 nm. Dichroic Cutoff: 560
+          nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 531
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 560
+        emission_filter:
+          component_type: bandpass
+          center_nm: 593
+          width_nm: 40
+      Pos_5:
+        name: Cy5/Alexa 647
+        component_type: filter_cube
+        product_code: AMEP-4656
+        bands:
+        - center_nm: 692
+          width_nm: 40
+        notes: 'Excitation: 628/40 nm. Dichroic Cutoff: 660 nm.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 628
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 660
+        emission_filter:
+          component_type: bandpass
+          center_nm: 692
+          width_nm: 40
+
+  endpoints: []
 
 light_paths:
-  - id: widefield_fluorescence # CORRECTED: Aligned ID with canonical modality names
-    name: Widefield Fluorescence
-    modalities:
-      - widefield_fluorescence
-    illumination_sequence:
-      - source_id: evos_dapi_light_cube_led
-      - source_id: evos_cfp_light_cube_led
-      - source_id: evos_gfp_light_cube_led
-      - source_id: evos_rfp_light_cube_led
-      - source_id: evos_cy5_light_cube_led
-      - optical_path_element_id: light_cube_turret
-    detection_sequence:
-      - optical_path_element_id: light_cube_turret
-      - endpoint_id: integrated_fluorescence_camera 
-      
-  - id: transmitted_brightfield
-    name: Transmitted Light
-    modalities:
-      - transmitted_brightfield
-      - phase_contrast
-    illumination_sequence:
-      - source_id: transmitted_light_led
-    detection_sequence:
-      - endpoint_id: integrated_color_camera
+- id: widefield_fluorescence   # CORRECTED: Aligned ID with canonical modality names
+  name: Widefield Fluorescence
+  modalities:
+  - widefield_fluorescence
+  illumination_sequence:
+  - source_id: evos_dapi_light_cube_led
+  - source_id: evos_cfp_light_cube_led
+  - source_id: evos_gfp_light_cube_led
+  - source_id: evos_rfp_light_cube_led
+  - source_id: evos_cy5_light_cube_led
+  - optical_path_element_id: light_cube_turret
+  detection_sequence:
+  - optical_path_element_id: light_cube_turret
+  - endpoint_id: integrated_fluorescence_camera
+
+- id: transmitted_brightfield
+  name: Transmitted Light
+  modalities:
+  - transmitted_brightfield
+  - phase_contrast
+  illumination_sequence:
+  - source_id: transmitted_light_led
+  detection_sequence:
+  - endpoint_id: integrated_color_camera
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []

@@ -1,77 +1,65 @@
 terms:
   - id: epi
     label: "Epi"
-    description: "Epifluorescence / epi illumination route."
+    description: "Epifluorescence / epi illumination route family."
   - id: widefield_fluorescence
     label: "Widefield Fluorescence"
-    description: "Widefield epifluorescence route identifier used by instrument light_paths and route guards."
+    description: "Widefield epifluorescence route family."
   - id: tirf
     label: "TIRF"
-    description: "TIRF excitation route."
+    description: "TIRF excitation route family."
   - id: confocal
     label: "Confocal"
-    description: "Generic point- or disk-confocal route."
+    description: "Generic confocal route family (compatibility umbrella)."
   - id: confocal_point
     label: "Point-Scanning Confocal"
-    description: "Point-scanning confocal route identifier used when the route is explicitly distinct from spinning-disk confocal."
+    description: "Point-scanning confocal route family."
   - id: confocal_spinning_disk
     label: "Spinning-Disk Confocal"
-    description: "Spinning-disk confocal route identifier used by light_paths and route guards."
+    description: "Spinning-disk confocal route family."
   - id: multiphoton
     label: "Multiphoton"
-    description: "Multiphoton excitation route."
+    description: "Multiphoton excitation route family."
   - id: light_sheet
     label: "Light Sheet"
-    description: "Light-sheet illumination/detection route."
+    description: "Light-sheet illumination/detection route family."
   - id: transmitted
     label: "Transmitted"
-    description: "Generic transmitted-light route used for brightfield, darkfield, phase contrast, and DIC."
+    description: "Generic transmitted-light route family used for brightfield, darkfield, phase contrast, and DIC."
     synonyms:
       - diascopic
       - dia
       - trans
   - id: transmitted_brightfield
     label: "Transmitted Brightfield"
-    description: "Transmitted brightfield route identifier used by light_paths and route guards."
+    description: "Transmitted brightfield route family."
   - id: phase_contrast
     label: "Phase Contrast"
-    description: "Phase-contrast route identifier used by light_paths and route guards."
+    description: "Phase-contrast route family."
   - id: darkfield
     label: "Darkfield"
-    description: "Darkfield route identifier used by light_paths and route guards."
+    description: "Darkfield route family."
   - id: dic
     label: "Differential Interference Contrast"
-    description: "DIC route identifier used by light_paths and route guards."
+    description: "DIC route family."
   - id: reflected_brightfield
     label: "Reflected Brightfield"
-    description: "Reflected-light brightfield route identifier used by stereo/zoom microscopes and top-illumination systems."
+    description: "Reflected-light brightfield route family."
   - id: optical_sectioning
     label: "Optical Sectioning"
-    description: "Structured optical-sectioning route identifier used by grid- or patterned-illumination systems."
-  - id: spectral_imaging
-    label: "Spectral Imaging"
-    description: "Spectral imaging route identifier used when wavelength-resolved detection is modeled explicitly."
-  - id: flim
-    label: "FLIM"
-    description: "Fluorescence lifetime imaging route identifier."
-  - id: fcs
-    label: "FCS"
-    description: "Fluorescence correlation spectroscopy route identifier."
+    description: "Structured optical-sectioning route family."
+  - id: sim
+    label: "SIM"
+    description: "Structured illumination microscopy route family."
+  - id: sted
+    label: "STED"
+    description: "Stimulated emission depletion route family."
+  - id: resolft
+    label: "RESOLFT"
+    description: "RESOLFT route family."
   - id: ism
     label: "Image Scanning Microscopy"
-    description: "Image-scanning microscopy route identifier, including Airyscan-style detection routes."
+    description: "Image-scanning microscopy route family, including Airyscan-style optical routes."
   - id: smlm
     label: "SMLM"
-    description: "Single-molecule localization microscopy route identifier."
-  - id: spt
-    label: "SPT"
-    description: "Single-particle tracking route identifier."
-  - id: fret
-    label: "FRET"
-    description: "FRET imaging route identifier."
-  - id: shared
-    label: "Shared"
-    description: "Shared across multiple routes."
-  - id: all
-    label: "All"
-    description: "Applies to all routes."
+    description: "Single-molecule localization microscopy route/imaging-mode family when authored as an optical acquisition route."

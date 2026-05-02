@@ -8,284 +8,306 @@ instrument:
   stand_orientation: inverted
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: 'Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF for evenly illuminated large fields of view.'
+  notes: 'Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization
+    microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF
+    for evenly illuminated large fields of view.'
   url: ''
 
 modalities:
-  - widefield_fluorescence
-  - tirf
-  - sim
-  - smlm
+- widefield_fluorescence
+- tirf
+- sim
+- smlm
 
 modules:
-  - type: environmental_enclosure 
-    notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system.
-    url: ''
-    manufacturer: GE Healthcare
-    model: Onstage Incubator/Heating Assembly
-  - type: hardware_autofocus 
-    notes: Ultimate Focus Hardware Autofocus Module
-    url: ''
-    manufacturer: GE Healthcare
-    model: Ultimate Focus Hardware Autofocus Module
-  - type: piezo_z_stage 
-    notes: X, Y, Z Nanomotion sample stage with fast piezo Z-axis system
-    url: ''
-    manufacturer: GE Healthcare
-    model: Nanomotion Stage with Piezo Z-axis
-  - type: 3d_sim 
-    notes: Proprietary electro-optical high speed structured illumination engine. 110-160 nm lateral and 320-400 nm axial resolution.
-    url: ''
-    manufacturer: GE Healthcare
-    model: 3D-SIM Illumination Engine
-  - type: tirf 
-    notes: Ring TIRF optics module with integrated PhotoKinetic (PK) optics. Allows rapid wavelength switching and TIRF depth penetration modulation.
-    url: ''
-    manufacturer: GE Healthcare
-    model: Ring TIRF with PhotoKinetic Optics
+- type: environmental_enclosure
+  notes: Onstage incubator/heating assembly. Includes insulated sample holder, 
+    heating block, objective lens heater, and gas delivery system.
+  url: ''
+  manufacturer: GE Healthcare
+  model: Onstage Incubator/Heating Assembly
+- type: hardware_autofocus
+  notes: Ultimate Focus Hardware Autofocus Module
+  url: ''
+  manufacturer: GE Healthcare
+  model: Ultimate Focus Hardware Autofocus Module
+- type: piezo_z_stage
+  notes: X, Y, Z Nanomotion sample stage with fast piezo Z-axis system
+  url: ''
+  manufacturer: GE Healthcare
+  model: Nanomotion Stage with Piezo Z-axis
+- type: 3d_sim
+  notes: Proprietary electro-optical high speed structured illumination engine. 
+    110-160 nm lateral and 320-400 nm axial resolution.
+  url: ''
+  manufacturer: GE Healthcare
+  model: 3D-SIM Illumination Engine
+- type: tirf
+  notes: Ring TIRF optics module with integrated PhotoKinetic (PK) optics. 
+    Allows rapid wavelength switching and TIRF depth penetration modulation.
+  url: ''
+  manufacturer: GE Healthcare
+  model: Ring TIRF with PhotoKinetic Optics
 
 software:
-  - role: acquisition
-    name: OMX Acquisition
-    version: '3.70'
-    notes: Master Control on Windows. Image processing on CentOS with softWoRx 6.0 or newer for deconvolution/reconstruction.
-    url: ''
+- role: acquisition
+  name: OMX Acquisition
+  version: '3.70'
+  notes: Master Control on Windows. Image processing on CentOS with softWoRx 6.0
+    or newer for deconvolution/reconstruction.
+  url: ''
 
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
-    notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system.
-    
+    notes: Onstage incubator/heating assembly. Includes insulated sample holder,
+      heating block, objective lens heater, and gas delivery system.
+
   stages:
-    - type: z_piezo 
-      manufacturer: GE Healthcare 
-      model: Nanomotion Stage with Piezo Z-axis
-      notes: X, Y, Z Nanomotion sample stage with fast piezo Z-axis system
-      
+  - type: z_piezo
+    manufacturer: GE Healthcare
+    model: Nanomotion Stage with Piezo Z-axis
+    notes: X, Y, Z Nanomotion sample stage with fast piezo Z-axis system
+
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-    
+
   scanner:
     type: none
     notes: ''
     url: ''
-    
   detectors:
-    - kind: scmos
-      manufacturer: PCO
-      model: Edge
-      pixel_pitch_um: 6.5
-      qe_peak_pct: 60 
-      sensor_format_px: 1024 x 1024
-      notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam1 DAPI+Cy5/CFP.'
-      url: ''
-      id: detector_1
-    - kind: scmos
-      manufacturer: PCO
-      model: Edge
-      pixel_pitch_um: 6.5
-      qe_peak_pct: 60 
-      sensor_format_px: 1024 x 1024
-      notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam2 Alexa 488/YFP'
-      url: ''
-      id: detector_2
-    - kind: scmos
-      manufacturer: PCO
-      model: Edge
-      pixel_pitch_um: 6.5
-      qe_peak_pct: 60 
-      sensor_format_px: 1024 x 1024
-      notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam3 Alexa 568.'
-      url: ''
-      id: detector_3
-      
+  - kind: scmos
+    manufacturer: PCO
+    model: Edge
+    pixel_pitch_um: 6.5
+    qe_peak_pct: 60
+    sensor_format_px: 1024 x 1024
+    notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam1
+      DAPI+Cy5/CFP.'
+    url: ''
+    id: detector_1
+  - kind: scmos
+    manufacturer: PCO
+    model: Edge
+    pixel_pitch_um: 6.5
+    qe_peak_pct: 60
+    sensor_format_px: 1024 x 1024
+    notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam2
+      Alexa 488/YFP'
+    url: ''
+    id: detector_2
+  - kind: scmos
+    manufacturer: PCO
+    model: Edge
+    pixel_pitch_um: 6.5
+    qe_peak_pct: 60
+    sensor_format_px: 1024 x 1024
+    notes: 'Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam3
+      Alexa 568.'
+    url: ''
+    id: detector_3
+
   objectives:
-    - id: 60x_oil
-      manufacturer: Olympus
-      model: Plan Apo N
-      product_code: ''
-      magnification: 60.0
-      numerical_aperture: 1.42
-      working_distance: 0.15 mm
-      immersion: oil
-      correction: plan_apochromat
-      afc_compatible: false
-      specialties:
-        - sim
-      notes: ''
-      url: ''
-      is_installed: false
-    - id: 60x_oil_2
-      manufacturer: Olympus
-      model: APO N TIRF
-      product_code: ''
-      magnification: 60.0
-      numerical_aperture: 1.49
-      working_distance: 0.10 mm
-      immersion: oil
-      correction: apochromat
-      afc_compatible: false
-      specialties:
-        - tirf
-      notes: Equipped with correction collar.
-      url: ''
-      is_installed: true
-      
+  - id: 60x_oil
+    manufacturer: Olympus
+    model: Plan Apo N
+    product_code: ''
+    magnification: 60.0
+    numerical_aperture: 1.42
+    working_distance: 0.15 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties:
+    - sim
+    notes: ''
+    url: ''
+    is_installed: false
+  - id: 60x_oil_2
+    manufacturer: Olympus
+    model: APO N TIRF
+    product_code: ''
+    magnification: 60.0
+    numerical_aperture: 1.49
+    working_distance: 0.10 mm
+    immersion: oil
+    correction: apochromat
+    afc_compatible: false
+    specialties:
+    - tirf
+    notes: Equipped with correction collar.
+    url: ''
+    is_installed: true
+
   sources:
-    - kind: laser
-      manufacturer: GE Healthcare
-      model: 405 nm
-      role: excitation
-      technology: diode
-      wavelength_nm: 405 
-      power: 100 mW
-      notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-      url: ''
-      id: 405_nm
-      modalities:
-        - epi
-      
-    - kind: laser
-      manufacturer: GE Healthcare
-      model: 445 nm
-      role: excitation
-      technology: diode
-      wavelength_nm: 445
-      power: 100 mW
-      notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-      url: ''
-      id: 445_nm
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: GE Healthcare
-      model: 488 nm
-      role: excitation
-      technology: dpss
-      wavelength_nm: 488
-      power: 100 mW
-      notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-      url: ''
-      id: 488_nm
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: GE Healthcare
-      model: 514 nm
-      role: excitation
-      technology: dpss
-      wavelength_nm: 514
-      power: 100 mW
-      notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-      url: ''
-      id: 514_nm
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: GE Healthcare
-      model: 568 nm
-      role: excitation
-      technology: dpss
-      wavelength_nm: 568
-      power: 100 mW
-      notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-      url: ''
-      id: 568_nm
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: GE Healthcare
-      model: 642 nm
-      role: excitation
-      technology: diode
-      wavelength_nm: 642
-      power: 110 mW
-      notes: Ultra-high speed Galvanometer shutter (0.2 ms).
-      url: ''
-      id: 642_nm
-      modalities:
-        - epi
-        
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 405 nm
+    role: excitation
+    technology: diode
+    wavelength_nm: 405
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 405_nm
+    modalities:
+    - epi
+
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 445 nm
+    role: excitation
+    technology: diode
+    wavelength_nm: 445
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 445_nm
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 488 nm
+    role: excitation
+    technology: dpss
+    wavelength_nm: 488
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 488_nm
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 514 nm
+    role: excitation
+    technology: dpss
+    wavelength_nm: 514
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 514_nm
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 568 nm
+    role: excitation
+    technology: dpss
+    wavelength_nm: 568
+    power: 100 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 568_nm
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: GE Healthcare
+    model: 642 nm
+    role: excitation
+    technology: diode
+    wavelength_nm: 642
+    power: 110 mW
+    notes: Ultra-high speed Galvanometer shutter (0.2 ms).
+    url: ''
+    id: 642_nm
+    modalities:
+    - epi
+
   optical_path_elements:
-    
-    - name: OMX Emission Filters
-      stage_role: emission
-      id: omx_emission_filters
-      element_type: filter_wheel
-      modalities:
-        - epi
-      positions:
-        Pos_1:
-          name: DAPI
-          component_type: bandpass
-          bands:
-            - center_nm: 436
-              width_nm: 31
-        Pos_2:
-          name: CFP
-          component_type: bandpass
-          bands:
-            - center_nm: 478
-              width_nm: 35
-        Pos_3:
-          name: Alexa 488
-          component_type: bandpass
-          bands:
-            - center_nm: 528
-              width_nm: 45
-        Pos_4:
-          name: YFP
-          component_type: bandpass
-          bands:
-            - center_nm: 541
-              width_nm: 22
-        Pos_5:
-          name: Alexa 568
-          component_type: bandpass
-          bands:
-            - center_nm: 609
-              width_nm: 37
-        Pos_6:
-          name: Cy5
-          component_type: bandpass
-          bands:
-            - center_nm: 683
-              width_nm: 40
+  - name: OMX Emission Filters
+    stage_role: emission
+    id: omx_emission_filters
+    element_type: filter_wheel
+    modalities:
+    - epi
+    positions:
+      Pos_1:
+        name: DAPI
+        component_type: bandpass
+        bands:
+        - center_nm: 436
+          width_nm: 31
+      Pos_2:
+        name: CFP
+        component_type: bandpass
+        bands:
+        - center_nm: 478
+          width_nm: 35
+      Pos_3:
+        name: Alexa 488
+        component_type: bandpass
+        bands:
+        - center_nm: 528
+          width_nm: 45
+      Pos_4:
+        name: YFP
+        component_type: bandpass
+        bands:
+        - center_nm: 541
+          width_nm: 22
+      Pos_5:
+        name: Alexa 568
+        component_type: bandpass
+        bands:
+        - center_nm: 609
+          width_nm: 37
+      Pos_6:
+        name: Cy5
+        component_type: bandpass
+        bands:
+        - center_nm: 683
+          width_nm: 40
 
   endpoints: []
 
 light_paths:
-  - id: widefield_fluorescence
-    name: Epi-fluorescence
-    modalities:
-      - widefield_fluorescence
-      - tirf
-      - sim
-      - smlm
-    illumination_sequence:
-      - source_id: 405_nm
-      - source_id: 445_nm
-      - source_id: 488_nm
-      - source_id: 514_nm
-      - source_id: 568_nm
-      - source_id: 642_nm
-    detection_sequence:
-      - optical_path_element_id: omx_emission_filters
-      - branches: 
-          selection_mode: exclusive
-          items:
-            - branch_id: to_cam1
-              label: "To Camera 1 (DAPI/Cy5/CFP)"
-              sequence:
-                - endpoint_id: detector_1
-            - branch_id: to_cam2
-              label: "To Camera 2 (Alexa 488/YFP)"
-              sequence:
-                - endpoint_id: detector_2
-            - branch_id: to_cam3
-              label: "To Camera 3 (Alexa 568)"
-              sequence:
-                - endpoint_id: detector_3
+- id: widefield_fluorescence
+  name: Epi-fluorescence
+  modalities:
+  - widefield_fluorescence
+  - tirf
+  - sim
+  - smlm
+  illumination_sequence:
+  - source_id: 405_nm
+  - source_id: 445_nm
+  - source_id: 488_nm
+  - source_id: 514_nm
+  - source_id: 568_nm
+  - source_id: 642_nm
+  detection_sequence:
+  - optical_path_element_id: omx_emission_filters
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_cam1
+        label: "To Camera 1 (DAPI/Cy5/CFP)"
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_cam2
+        label: "To Camera 2 (Alexa 488/YFP)"
+        sequence:
+        - endpoint_id: detector_2
+      - branch_id: to_cam3
+        label: "To Camera 3 (Alexa 568)"
+        sequence:
+        - endpoint_id: detector_3
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  - tirf
+  - sim
+  - smlm
+  contrast_methods: []
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []

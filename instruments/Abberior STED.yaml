@@ -8,246 +8,267 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, BioPhysics room 5086
-  notes: 'Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose.'
+  notes: 'Abberior STED. Sophisticated and highly flexible open platform that can
+    be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150
+    nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator
+    (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables
+    deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue
+    STED is available for live super-resolution imaging with reduced light dose.'
   url: ''
 
 modalities:
-  - sted
-  - resolft
-  - confocal_point
+- sted
+- resolft
+- confocal_point
 
 modules:
-  - type: easy3d_sted # CORRECTED: Changed 'name' to the strictly required 'type' field
-    manufacturer: Abberior
-    model: easy3D STED
-    notes: Programmable SLM-based module for 2D/3D STED phase pattern generation.
-    url: ''
-  - type: adaptive_optics # CORRECTED
-    manufacturer: Abberior
-    model: Adaptive Optics
-    notes: Supports deep imaging up to 75 µm into cleared tissue with a 100x oil objective.
-    url: ''
-  - type: rescue_sted # CORRECTED
-    manufacturer: Abberior
-    model: RESCue STED
-    notes: Reduction of state transition cycles mode for super-resolution live imaging with lower light dose.
-    url: ''
+- type: easy3d_sted   # CORRECTED: Changed 'name' to the strictly required 'type' field
+  manufacturer: Abberior
+  model: easy3D STED
+  notes: Programmable SLM-based module for 2D/3D STED phase pattern generation.
+  url: ''
+- type: adaptive_optics   # CORRECTED
+  manufacturer: Abberior
+  model: Adaptive Optics
+  notes: Supports deep imaging up to 75 µm into cleared tissue with a 100x oil 
+    objective.
+  url: ''
+- type: rescue_sted   # CORRECTED
+  manufacturer: Abberior
+  model: RESCue STED
+  notes: Reduction of state transition cycles mode for super-resolution live 
+    imaging with lower light dose.
+  url: ''
 
 software:
-  - role: acquisition
-    name: Abberior Imspector
-    version: ''
-    url: ''
+- role: acquisition
+  name: Abberior Imspector
+  version: ''
+  url: ''
 
 hardware:
   scanner:
     type: galvo
     notes: STED point scanning configuration.
     url: ''
-    
   detectors:
-    - kind: pmt
-      manufacturer: Hamamatsu Photonics
-      model: Photomultiplier Tube
-      notes: General confocal detection channel.
-      url: ''
-      id: detector_1
-    - kind: apd
-      manufacturer: Excelitas Technologies
-      model: SPCM-AQRH-14-TR
-      supports_time_gating: true
-      default_gating_delay_ns: 1.0
-      default_gate_width_ns: 7.0
-      notes: Two APD detectors; timing resolution optimized for time-gated CW-STED.
-      url: ''
-      id: detector_2
-    - kind: ccd
-      manufacturer: Generic
-      model: Monochrome CCD camera
-      pixel_pitch_um: 4.65
-      sensor_format_px: 1280 x 960
-      notes: 1/2-inch format camera.
-      url: ''
-      id: detector_3
-      
+  - kind: pmt
+    manufacturer: Hamamatsu Photonics
+    model: Photomultiplier Tube
+    notes: General confocal detection channel.
+    url: ''
+    id: detector_1
+  - kind: apd
+    manufacturer: Excelitas Technologies
+    model: SPCM-AQRH-14-TR
+    supports_time_gating: true
+    default_gating_delay_ns: 1.0
+    default_gate_width_ns: 7.0
+    notes: Two APD detectors; timing resolution optimized for time-gated 
+      CW-STED.
+    url: ''
+    id: detector_2
+  - kind: ccd
+    manufacturer: Generic
+    model: Monochrome CCD camera
+    pixel_pitch_um: 4.65
+    sensor_format_px: 1280 x 960
+    notes: 1/2-inch format camera.
+    url: ''
+    id: detector_3
+
   objectives:
-    - id: 20x_air
-      manufacturer: Olympus
-      model: LMPlanFL N 20x/0.40
-      product_code: 1-U2N345
-      magnification: 20.0
-      numerical_aperture: 0.4
-      working_distance: 12.0 mm
-      immersion: air
-      correction: plan_fluorite
-      is_installed: true
-    - id: 60x_water
-      manufacturer: Olympus
-      model: UPlanSApo 60x/1.2 W
-      product_code: N6432600
-      magnification: 60.0
-      numerical_aperture: 1.2
-      working_distance: 0.28 mm
-      immersion: water
-      correction: plan_apochromat
-      is_installed: true
-    - id: 100x_oil
-      manufacturer: Olympus
-      model: UPlanSApo 100x/1.40 Oil
-      product_code: 1-U2B836
-      magnification: 100.0
-      numerical_aperture: 1.4
-      working_distance: 0.13 mm
-      immersion: oil
-      correction: plan_apochromat
-      is_installed: true
-      
+  - id: 20x_air
+    manufacturer: Olympus
+    model: LMPlanFL N 20x/0.40
+    product_code: 1-U2N345
+    magnification: 20.0
+    numerical_aperture: 0.4
+    working_distance: 12.0 mm
+    immersion: air
+    correction: plan_fluorite
+    is_installed: true
+  - id: 60x_water
+    manufacturer: Olympus
+    model: UPlanSApo 60x/1.2 W
+    product_code: N6432600
+    magnification: 60.0
+    numerical_aperture: 1.2
+    working_distance: 0.28 mm
+    immersion: water
+    correction: plan_apochromat
+    is_installed: true
+  - id: 100x_oil
+    manufacturer: Olympus
+    model: UPlanSApo 100x/1.40 Oil
+    product_code: 1-U2B836
+    magnification: 100.0
+    numerical_aperture: 1.4
+    working_distance: 0.13 mm
+    immersion: oil
+    correction: plan_apochromat
+    is_installed: true
+
   optical_modulators:
-    - type: slm
-      manufacturer: Abberior
-      model: easy3D SLM
-      supported_phase_masks:
-        - vortex
-        - bottle
-        - 3d_sted
-      notes: Used for Easy3D STED phase-pattern generation and adaptive optics workflows.
-      
+  - type: slm
+    manufacturer: Abberior
+    model: easy3D SLM
+    supported_phase_masks:
+    - vortex
+    - bottle
+    - 3d_sted
+    notes: Used for Easy3D STED phase-pattern generation and adaptive optics 
+      workflows.
+
   illumination_logic:
-    - method: rescue_sted
-      default_enabled: false
-      notes: Real-time adaptive STED decision logic used to reduce photobleaching and light dose during live-cell super-resolution imaging.
-      
+  - method: rescue_sted
+    default_enabled: false
+    notes: Real-time adaptive STED decision logic used to reduce photobleaching 
+      and light dose during live-cell super-resolution imaging.
+
   sources:
-    - kind: laser
-      manufacturer: PicoQuant
-      model: LDH-D-C-485
-      role: excitation
-      timing_mode: pulsed
-      wavelength_nm: 485
-      pulse_width_ps: 80
-      repetition_rate_mhz: 40
-      notes: Pulsed excitation source for the 488 nm channel.
-      url: ''
-      id: ldh_d_c_485
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: PicoQuant
-      model: PDL-T 561
-      role: excitation
-      timing_mode: pulsed
-      wavelength_nm: 561
-      pulse_width_ps: 80
-      repetition_rate_mhz: 40
-      notes: Pulsed excitation source for the 561 nm channel.
-      url: ''
-      id: pdl_t_561
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: PicoQuant
-      model: LDH-D-C-640
-      role: excitation
-      timing_mode: pulsed
-      wavelength_nm: 640
-      pulse_width_ps: 80
-      repetition_rate_mhz: 40
-      notes: Pulsed excitation source for the 640 nm channel.
-      url: ''
-      id: ldh_d_c_640
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: MPB Communications
-      model: VFL-P-1000-580
-      role: depletion
-      timing_mode: cw
-      wavelength_nm: 580
-      depletion_targets_nm:
-        - 488
-      notes: Continuous-wave STED depletion source for the 488 nm excitation channel.
-      url: ''
-      id: vfl_p_1000_580
-      modalities:
-        - epi
-    - kind: laser
-      manufacturer: OneFive / NKT Photonics
-      model: Katana HP 775
-      role: depletion
-      timing_mode: pulsed
-      wavelength_nm: 775
-      pulse_width_ps: 600
-      repetition_rate_mhz: 40
-      depletion_targets_nm:
-        - 561
-        - 640
-      notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation channels.
-      url: ''
-      id: katana_hp_775
-      modalities:
-        - epi
-        
+  - kind: laser
+    manufacturer: PicoQuant
+    model: LDH-D-C-485
+    role: excitation
+    timing_mode: pulsed
+    wavelength_nm: 485
+    pulse_width_ps: 80
+    repetition_rate_mhz: 40
+    notes: Pulsed excitation source for the 488 nm channel.
+    url: ''
+    id: ldh_d_c_485
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: PicoQuant
+    model: PDL-T 561
+    role: excitation
+    timing_mode: pulsed
+    wavelength_nm: 561
+    pulse_width_ps: 80
+    repetition_rate_mhz: 40
+    notes: Pulsed excitation source for the 561 nm channel.
+    url: ''
+    id: pdl_t_561
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: PicoQuant
+    model: LDH-D-C-640
+    role: excitation
+    timing_mode: pulsed
+    wavelength_nm: 640
+    pulse_width_ps: 80
+    repetition_rate_mhz: 40
+    notes: Pulsed excitation source for the 640 nm channel.
+    url: ''
+    id: ldh_d_c_640
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: MPB Communications
+    model: VFL-P-1000-580
+    role: depletion
+    timing_mode: cw
+    wavelength_nm: 580
+    depletion_targets_nm:
+    - 488
+    notes: Continuous-wave STED depletion source for the 488 nm excitation 
+      channel.
+    url: ''
+    id: vfl_p_1000_580
+    modalities:
+    - epi
+  - kind: laser
+    manufacturer: OneFive / NKT Photonics
+    model: Katana HP 775
+    role: depletion
+    timing_mode: pulsed
+    wavelength_nm: 775
+    pulse_width_ps: 600
+    repetition_rate_mhz: 40
+    depletion_targets_nm:
+    - 561
+    - 640
+    notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation 
+      channels.
+    url: ''
+    id: katana_hp_775
+    modalities:
+    - epi
+
   optical_path_elements:
-    - name: Emission Filter Wheel
-      slots: 3
-      stage_role: emission
-      id: emission_filter_wheel
-      element_type: filter_wheel # CORRECTED: Removed redundant 'type: filter_wheel' alias
-      modalities:
-        - epi
-      positions:
-        Pos_1: # CORRECTED: Changed integer key to string format
-          component_type: bandpass
-          manufacturer: Semrock
-          product_code: FF01-525/25
-          bands: # CORRECTED: Nested center_nm and width_nm inside the required 'bands' array
-            - center_nm: 525
-              width_nm: 25
-        Pos_2:
-          component_type: bandpass
-          manufacturer: Semrock
-          model: BrightLine 615/10
-          product_code: ''
-          bands:
-            - center_nm: 615
-              width_nm: 10
-        Pos_3:
-          component_type: bandpass
-          manufacturer: Chroma
-          product_code: ET685/35
-          bands:
-            - center_nm: 685
-              width_nm: 35
-              
+  - name: Emission Filter Wheel
+    slots: 3
+    stage_role: emission
+    id: emission_filter_wheel
+    element_type: filter_wheel   # CORRECTED: Removed redundant 'type: filter_wheel' alias
+    modalities:
+    - epi
+    positions:
+      Pos_1:   # CORRECTED: Changed integer key to string format
+        component_type: bandpass
+        manufacturer: Semrock
+        product_code: FF01-525/25
+        bands:   # CORRECTED: Nested center_nm and width_nm inside the required 'bands' array
+        - center_nm: 525
+          width_nm: 25
+      Pos_2:
+        component_type: bandpass
+        manufacturer: Semrock
+        model: BrightLine 615/10
+        product_code: ''
+        bands:
+        - center_nm: 615
+          width_nm: 10
+      Pos_3:
+        component_type: bandpass
+        manufacturer: Chroma
+        product_code: ET685/35
+        bands:
+        - center_nm: 685
+          width_nm: 35
+
   endpoints: []
 
 light_paths:
-  - id: confocal_point
-    name: Epi-fluorescence
-    modalities:
-      - confocal_point
-      - sted
-      - resolft
-    illumination_sequence:
-      - source_id: ldh_d_c_485
-      - source_id: pdl_t_561
-      - source_id: ldh_d_c_640
-      - source_id: vfl_p_1000_580
-      - source_id: katana_hp_775
-    detection_sequence:
-      - optical_path_element_id: emission_filter_wheel
-      - branches: # ADDED: Required terminal routing to explicitly defined endpoints
-          selection_mode: exclusive
-          items:
-            - branch_id: to_pmt
-              label: "To PMT (Confocal)"
-              sequence:
-                - endpoint_id: detector_1
-            - branch_id: to_apd
-              label: "To APD (STED)"
-              sequence:
-                - endpoint_id: detector_2
-            - branch_id: to_ccd
-              label: "To CCD Camera"
-              sequence:
-                - endpoint_id: detector_3
+- id: confocal_point
+  name: Epi-fluorescence
+  modalities:
+  - confocal_point
+  - sted
+  - resolft
+  illumination_sequence:
+  - source_id: ldh_d_c_485
+  - source_id: pdl_t_561
+  - source_id: ldh_d_c_640
+  - source_id: vfl_p_1000_580
+  - source_id: katana_hp_775
+  detection_sequence:
+  - optical_path_element_id: emission_filter_wheel
+  - branches:     # ADDED: Required terminal routing to explicitly defined endpoints
+      selection_mode: exclusive
+      items:
+      - branch_id: to_pmt
+        label: "To PMT (Confocal)"
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_apd
+        label: "To APD (STED)"
+        sequence:
+        - endpoint_id: detector_2
+      - branch_id: to_ccd
+        label: "To CCD Camera"
+        sequence:
+        - endpoint_id: detector_3
+capabilities:
+  imaging_modes:
+  - sted
+  - resolft
+  - confocal_point
+  contrast_methods: []
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []

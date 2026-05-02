@@ -25,6 +25,29 @@ from scripts.display_labels import (
 from scripts.validate import Vocabulary
 
 
+_MAX_READOUT_ACRONYM_LENGTH = 5
+"""Readout IDs with ≤ this many non-space characters are rendered as UPPERCASE acronyms."""
+
+
+def _readout_vocab_label(readout_id: str, vocabulary: Vocabulary | None) -> str:
+    """Return a display label for a measurement readout vocabulary term.
+
+    Uses the vocabulary when available; falls back to a human-readable
+    derivation of the ID so the UI never shows a raw machine identifier.
+    """
+    if not readout_id:
+        return ""
+    if vocabulary:
+        term = vocabulary.terms_by_vocab.get("measurement_readouts", {}).get(readout_id)
+        if term is not None:
+            label = getattr(term, "label", None)
+            if label:
+                return label
+    # Fallback: short uppercase acronyms (≤ _MAX_READOUT_ACRONYM_LENGTH non-space chars) else title-case
+    slug = readout_id.replace("_", " ")
+    return slug.upper() if len(slug.replace(" ", "")) <= _MAX_READOUT_ACRONYM_LENGTH else slug.title()
+
+
 def _compact_join(parts: Iterable[str]) -> str:
     return ", ".join(part for part in parts if isinstance(part, str) and part.strip())
 
@@ -675,11 +698,26 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
         route_label = clean_text(route_renderable.get("name") or route_renderable.get("id"))
         illumination_mode = clean_text(route_identity.get("modality") or route_id)
         selected_execution = copy.deepcopy(route_renderable.get("selected_execution") or {})
+
+        # Enrich route_identity with vocabulary-resolved readout display labels so
+        # downstream templates and LLM exports receive {id, display_label} dicts
+        # instead of raw strings.
+        enriched_route_identity = copy.deepcopy(route_identity)
+        enriched_route_identity["readouts"] = [
+            {
+                "id": r,
+                "display_label": _readout_vocab_label(r, vocabulary),
+            }
+            for r in (route_identity.get("readouts") or [])
+            if isinstance(r, str) and r.strip()
+        ]
+
         authoritative_route_contract_routes.append({
             "id": route_id,
             "display_label": route_label,
             "illumination_mode": illumination_mode,
-            "route_identity": copy.deepcopy(route_identity),
+            "route_identity": enriched_route_identity,
+            "readouts": enriched_route_identity["readouts"],
             "route_hardware_usage": {
                 "hardware_inventory_ids": route_inventory_ids,
                 "endpoint_inventory_ids": list(route_usage.get("endpoint_inventory_ids") or []),

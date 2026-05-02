@@ -1247,6 +1247,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "instrument": {"instrument_id": "scope-legacy", "display_name": "Legacy Scope"},
             "objectives": [{"manufacturer": "Nikon", "model": "CFI", "magnification": 60}],
             "hardware": {},
+            "capabilities": {"imaging_modes": ["widefield_fluorescence"]},
         }
 
         with mock.patch("scripts.build_context.build_instrument_completeness_report") as report_builder:
@@ -1263,11 +1264,11 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             instruments_dir = root / "instruments"
             instruments_dir.mkdir(parents=True, exist_ok=True)
             (instruments_dir / "valid.yaml").write_text(
-                json.dumps({"instrument": {"instrument_id": "valid-scope", "display_name": "Valid"}, "hardware": {}}),
+                json.dumps({"instrument": {"instrument_id": "valid-scope", "display_name": "Valid"}, "hardware": {}, "capabilities": {"imaging_modes": ["widefield_fluorescence"]}}),
                 encoding="utf-8",
             )
             (instruments_dir / "invalid.yaml").write_text(
-                json.dumps({"instrument": {"instrument_id": "invalid-scope", "display_name": "Invalid"}, "hardware": {}}),
+                json.dumps({"instrument": {"instrument_id": "invalid-scope", "display_name": "Invalid"}, "hardware": {}, "capabilities": {"imaging_modes": ["widefield_fluorescence"]}}),
                 encoding="utf-8",
             )
 
@@ -1373,6 +1374,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "instrument": {"instrument_id": "scope-1", "display_name": "Scope 1"},
             "modules": [{"name": "confocal", "manufacturer": "Leica", "model": "TCS", "notes": "n", "url": "u"}],
             "hardware": {},
+            "capabilities": {"imaging_modes": ["confocal_point"]},
         }
 
         with mock.patch("scripts.build_context.build_instrument_completeness_report") as report_builder:
@@ -1388,6 +1390,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "instrument": {"instrument_id": "scope-2", "display_name": "Scope 2"},
             "objectives": [{"manufacturer": "Nikon", "model": "CFI", "magnification": 60}],
             "hardware": {},
+            "capabilities": {"imaging_modes": ["widefield_fluorescence"]},
         }
 
         with mock.patch("scripts.build_context.build_instrument_completeness_report") as report_builder:

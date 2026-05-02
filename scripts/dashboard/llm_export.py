@@ -402,7 +402,11 @@ def build_llm_inventory_payload(
                 "Use hardware_focus_summary for quick screening, then use "
                 "llm_context.authoritative_route_contract as primary route truth; "
                 "llm_context.route_planning_summary is a convenience view derived "
-                "from that truth. Cite raw hardware fields only for supplemental detail."
+                "from that truth. Prefer capabilities (grouped axes) and "
+                "route_identity.readouts in authoritative_route_contract.routes "
+                "as semantic facts; the flat modalities list is compatibility-only "
+                "and must not be used as primary truth. "
+                "Cite raw hardware fields only for supplemental detail."
             ),
             "do_not_infer_constraints": [
                 (
@@ -454,6 +458,13 @@ def build_llm_inventory_payload(
             "hardware": copy.deepcopy(canonical_instrument_dto.get("hardware") or {}),
             "methods": copy.deepcopy(canonical_instrument_dto.get("methods") or {}),
             "modalities": copy.deepcopy(canonical_instrument_dto.get("modalities") or []),
+            "modalities_note": (
+                "Compatibility-only flat list. Prefer capabilities (grouped axes) "
+                "and route_identity.readouts in "
+                "llm_context.authoritative_route_contract.routes "
+                "as the primary semantic facts."
+            ),
+            "capabilities": copy.deepcopy(canonical_instrument_dto.get("capabilities") or {}),
             "software": copy.deepcopy(canonical_instrument_dto.get("software") or []),
             "software_status": clean_text(canonical_instrument_dto.get("software_status")).lower(),
         }

@@ -410,6 +410,22 @@ def _annotate_display_labels(
             vocab_label(vocabulary, "modalities", modality_id)
             for modality_id in inst.get("modalities", [])
         ]
+        caps = inst.get("capabilities") if isinstance(inst.get("capabilities"), dict) else {}
+        axis_vocab = {
+            "imaging_modes": "imaging_modes",
+            "contrast_methods": "contrast_methods",
+            "readouts": "measurement_readouts",
+            "workflows": "workflow_tags",
+            "assay_operations": "assay_operations",
+            "non_optical": "non_optical_capabilities",
+        }
+        primary = []
+        for axis, vocab_name in axis_vocab.items():
+            values = caps.get(axis) if isinstance(caps.get(axis), list) else []
+            for value in values:
+                primary.append({"axis": axis, "id": value, "label": vocab_label(vocabulary, vocab_name, value)})
+        inst["capabilities_primary"] = primary
+        inst["capabilities_primary_ids"] = [f"{item['axis']}:{item['id']}".lower() for item in primary]
         for module in inst.get("modules", []):
             module_name = clean_text(module.get("type") or module.get("name"))
             module["display_name"] = vocab_label(vocabulary, "modules", module_name)
@@ -503,21 +519,14 @@ def render_site(
             report_name="migration notices",
         )
 
-    all_modality_ids = sorted(
-        {
-            modality_id
-            for inst in instruments
-            for modality_id in inst.get("modalities", [])
-            if isinstance(modality_id, str)
-        }
-    )
-    all_modalities = [
-        {
-            "id": modality_id,
-            "label": vocab_label(vocabulary, "modalities", modality_id),
-        }
-        for modality_id in all_modality_ids
-    ]
+    all_capability_ids = sorted({cid for inst in instruments for cid in (inst.get("capabilities_primary_ids") or []) if isinstance(cid, str)})
+    capability_filter_options = []
+    axis_vocab = {"imaging_modes": "imaging_modes", "contrast_methods": "contrast_methods", "readouts": "measurement_readouts", "workflows": "workflow_tags", "assay_operations": "assay_operations", "non_optical": "non_optical_capabilities"}
+    axis_labels = {"imaging_modes":"Imaging", "contrast_methods":"Contrast", "readouts":"Readout", "workflows":"Workflow", "assay_operations":"Assay", "non_optical":"Non-optical"}
+    for cid in all_capability_ids:
+        axis, _, term = cid.partition(":")
+        human_term = vocab_label(vocabulary, axis_vocab.get(axis, ""), term) if axis in axis_vocab else term
+        capability_filter_options.append({"id": cid, "label": f"{axis_labels.get(axis, axis)}: {human_term}"})
 
     fleet_counts = {"total": len(instruments), "green": 0, "yellow": 0, "red": 0}
     flagged: list[dict[str, Any]] = []
@@ -672,7 +681,7 @@ def render_site(
 
     index_md = tpl_index.render(
         instruments=instruments,
-        all_modalities=all_modalities,
+        capability_filter_options=capability_filter_options,
         counts=fleet_counts,
     )
     (docs_root / "index.md").write_text(index_md, encoding="utf-8")
