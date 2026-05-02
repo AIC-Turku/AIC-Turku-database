@@ -283,7 +283,7 @@ hardware:
     modalities:
     - confocal_point
     - ism
-  - kind: halogen
+  - kind: halogen_lamp
     manufacturer: Zeiss
     model: Transmitted light illumination (HAL 100 / LED)
     role: transmitted_illumination
