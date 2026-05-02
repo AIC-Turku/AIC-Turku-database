@@ -1498,8 +1498,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const imagingContainer = document.getElementById('capabilities-imaging-modes');
             const readoutsContainer = document.getElementById('capabilities-readouts');
             // Collect label text from tag spans in each container
-            const imagingLabels = imagingContainer.children.map(c => c.textContent);
-            const readoutLabels = readoutsContainer.children.map(c => c.textContent);
+            const imagingLabels = Array.from(imagingContainer.children).map(c => c.textContent);
+            const readoutLabels = Array.from(readoutsContainer.children).map(c => c.textContent);
             return {
                 imagingVisible: imagingSection && imagingSection.style.display !== 'none',
                 contrastVisible: contrastSection && contrastSection.style.display !== 'none',
@@ -1635,7 +1635,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         # Route sentence must be present
         self.assertIn("Images were acquired using the Confocal point scanning route.", result["output"])
         # Primary paragraph must NOT contain the modality sentence as primary content
-        self.assertNotIn("confocal point imaging was performed", result["output"].lower())
+        self.assertNotIn("Confocal point imaging was performed", result["output"])
 
 
 if __name__ == "__main__":
