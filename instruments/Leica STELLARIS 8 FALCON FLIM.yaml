@@ -26,7 +26,6 @@ modalities:
   - fcs
   - transmitted_brightfield
   - widefield_fluorescence
-  - live_cell_imaging
 
 modules:
   - type: flim
@@ -178,6 +177,7 @@ hardware:
       collection_min_nm: 410
       collection_max_nm: 750
       supports_time_gating: true
+      time_gating_defaults_known: false
       notes: >-
         Installed the spectral detector at position 2. FALCON/FCS-capable detector for
         visible to far-red workflows. QE/range are catalogue/facility-spec
@@ -208,6 +208,7 @@ hardware:
       collection_min_nm: 410
       collection_max_nm: 750
       supports_time_gating: true
+      time_gating_defaults_known: false
       notes: >-
         Installed the spectral detector at position 4. FALCON/FCS-capable detector for
         visible to far-red workflows. QE/range are catalogue/facility-spec
@@ -224,6 +225,7 @@ hardware:
       collection_min_nm: 410
       collection_max_nm: 830
       supports_time_gating: true
+      time_gating_defaults_known: false
       notes: >-
         Installed the spectral detector at position 5. Near-infrared FALCON/FCS
         detector. QE/range are catalogue/facility-spec values, not local
@@ -348,6 +350,43 @@ hardware:
       url: ''
       is_installed: true
 
+  environment:
+    temperature_control: true
+    co2_control: true
+    humidity_control: false
+    notes: >-
+      Okolab Black Box Incubator DMi8, Okolab Sample Chamber Inv Super Z, and
+      Okolab CO2, Humidity Passive are listed in the vendor quotation. Controlled
+      via LAS X Environmental Control. Exact temperature, CO2, and humidity
+      operating ranges are not documented in the provided records.
+
+  stages:
+    - id: scanning_stage_inv_universal
+      type: xy_motorized
+      manufacturer: Leica Microsystems
+      model: Scanning stage inv. universal
+      product_code: '158004141'
+      notes: >-
+        Vendor quotation also lists Cable Scanning Stage 3 m 90° product code
+        15500332 and XY advanced board for scanning stage product code 15525226.
+
+    - id: superz_galvo_stage
+      type: z_piezo
+      manufacturer: Leica Microsystems
+      model: SuperZ Galvo Stage
+      product_code: '158004421'
+      notes: >-
+        Vendor quotation also lists Insert Rotatable Inverse SuperZ product code
+        158004423 and Petri dish insert 36 mm for Super Z product code 158004136.
+
+  hardware_autofocus:
+    is_installed: true
+    type: infrared_reflection
+    manufacturer: Leica Microsystems
+    model: Closed Loop Focus with AFC
+    product_code: '158204202'
+    notes: Vendor quotation lists Closed Loop Focus with AFC.
+
   sources:
     - id: white_light_laser_wll
       name: White Light Laser
@@ -390,7 +429,6 @@ hardware:
       url: ''
 
     - id: leica_led_3
-      name: Leica LED 3
       kind: led
       manufacturer: Leica Microsystems
       model: Leica LED 3
@@ -535,13 +573,15 @@ hardware:
 
         icr_reflector_cube:
           slot: 5
-          component_type: filter_cube
+          component_type: analyzer
           manufacturer: Leica Microsystems
-          model: 'Reflector cube ICR: 45° dichroic mirror with fixed crossed polarizer/analyzer'
+          model: Reflector cube ICR
           product_code: '11525375'
           notes: >-
-            ICR reflector cube for polarization/DIC-style observation; no
-            fluorescence bandpass metadata encoded.
+            Reflector cube with 45° dichroic mirror and permanently installed and
+            fixed crossed polarizer and analyzer. This is not an authoritative
+            fluorescence filter cube and should not be used for spectral
+            fluorophore simulation.
 
     - id: transmitted_light_path
       name: Transmitted-light / BF path
