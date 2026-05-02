@@ -3,5 +3,11 @@ terms:
   display_label: FRAP
   label: FRAP
 - id: photoactivation
+  display_label: Photoactivation
+  label: Photoactivation
 - id: photobleaching
+  display_label: Photobleaching
+  label: Photobleaching
 - id: uncaging
+  display_label: Uncaging
+  label: Uncaging

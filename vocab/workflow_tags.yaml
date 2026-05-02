@@ -1,8 +1,16 @@
 terms:
 - id: live_cell_imaging
+  display_label: Live cell imaging
+  label: Live cell imaging
 - id: high_content_screening
+  display_label: High-content screening
+  label: High-content screening
 - id: super_resolution
+  display_label: Super-resolution
+  label: Super-resolution
 - id: single_molecule
+  display_label: Single-molecule imaging
+  label: Single-molecule imaging
 - id: single_particle_tracking
   synonyms:
   - spt

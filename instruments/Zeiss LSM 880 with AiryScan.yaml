@@ -355,6 +355,8 @@ light_paths:
   modalities:
   - confocal_point
   - spectral_imaging
+  readouts:
+  - spectral_imaging
   illumination_sequence:
   - source_id: 405_nm_diode
   - source_id: 458_nm_argon
@@ -404,8 +406,6 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-  readouts:
-  - spectral_imaging
 - id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:

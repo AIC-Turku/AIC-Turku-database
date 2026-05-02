@@ -3,6 +3,8 @@ terms:
   display_label: Confocal point scanning
   label: Confocal point scanning
 - id: confocal_spinning_disk
+  display_label: Confocal spinning disk
+  label: Confocal spinning disk
 - id: widefield_fluorescence
   display_label: Widefield fluorescence
   label: Widefield fluorescence
@@ -10,8 +12,14 @@ terms:
   display_label: TIRF
   label: TIRF
 - id: multiphoton
+  display_label: Multiphoton
+  label: Multiphoton
 - id: light_sheet
+  display_label: Light sheet
+  label: Light sheet
 - id: sim
+  display_label: SIM
+  label: SIM
 - id: sted
   display_label: STED
   label: STED
@@ -19,4 +27,8 @@ terms:
   display_label: RESOLFT
   label: RESOLFT
 - id: smlm
+  display_label: SMLM
+  label: SMLM
 - id: ism
+  display_label: ISM (AiryScan)
+  label: ISM (AiryScan)
