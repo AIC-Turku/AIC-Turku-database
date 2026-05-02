@@ -48,6 +48,26 @@ def _readout_vocab_label(readout_id: str, vocabulary: Vocabulary | None) -> str:
     return slug.upper() if len(slug.replace(" ", "")) <= _MAX_READOUT_ACRONYM_LENGTH else slug.title()
 
 
+def _route_type_vocab_label(route_type_id: str, vocabulary: Vocabulary | None) -> str:
+    """Return a human-readable label for an optical route type / illumination mode.
+
+    Resolves against ``imaging_modes`` and ``contrast_methods`` vocab (both
+    share IDs with optical route types) so the template never shows a raw
+    snake_case identifier for the route type field.
+    """
+    if not route_type_id:
+        return ""
+    if vocabulary:
+        for vocab_name in ("imaging_modes", "contrast_methods", "optical_routes"):
+            term = vocabulary.terms_by_vocab.get(vocab_name, {}).get(route_type_id)
+            if term is not None:
+                label = getattr(term, "label", None) or getattr(term, "display_label", None)
+                if label:
+                    return label
+    # Fallback: title-case the slug
+    return route_type_id.replace("_", " ").title()
+
+
 def _compact_join(parts: Iterable[str]) -> str:
     return ", ".join(part for part in parts if isinstance(part, str) and part.strip())
 
@@ -701,7 +721,8 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
 
         # Enrich route_identity with vocabulary-resolved readout display labels so
         # downstream templates and LLM exports receive {id, display_label} dicts
-        # instead of raw strings.
+        # instead of raw strings. Also populate route_type_label so the template
+        # never falls back to a raw snake_case illumination_mode ID.
         enriched_route_identity = copy.deepcopy(route_identity)
         enriched_route_identity["readouts"] = [
             {
@@ -711,6 +732,15 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             for r in (route_identity.get("readouts") or [])
             if isinstance(r, str) and r.strip()
         ]
+        if not enriched_route_identity.get("route_type_label"):
+            route_type_for_label = (
+                enriched_route_identity.get("route_type")
+                or illumination_mode
+            )
+            if route_type_for_label:
+                enriched_route_identity["route_type_label"] = _route_type_vocab_label(
+                    route_type_for_label, vocabulary
+                )
 
         authoritative_route_contract_routes.append({
             "id": route_id,

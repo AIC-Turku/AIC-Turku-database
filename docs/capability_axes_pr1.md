@@ -17,6 +17,8 @@ This PR introduces canonical schema/vocabulary foundations for capability axes w
 
 Full active instrument migration is deferred to later PRs.
 
+> **Status (updated):** Active instrument migration is now complete. All 22 active instruments use canonical `capabilities` axes. Top-level `modalities` is rejected at build time for active instruments.
+
 - `optical_routes` is limited to optical route families only.
 - Readouts belong in `measurement_readouts`, workflows in `workflow_tags`, assay operations in `assay_operations`, and non-optical capabilities in `non_optical_capabilities`.
 - Legacy/meta terms such as `shared` and `all` are not canonical `route_type` values.
