@@ -100,6 +100,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'copy-feedback',
               'methods-metadata-warning',
               'methods-metadata-blockers',
+              'section-route',
               'section-modality',
               'section-module',
               'section-scanner',
@@ -111,6 +112,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'section-magnification-changer',
               'section-optical-modulator',
               'section-illumination-logic',
+              'route-list',
               'modality-list',
               'module-list',
               'scanner-list',
@@ -1104,6 +1106,350 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("channel DAPI", result["output"])
         self.assertIn("selectable positions: DAPI and FITC", result["output"])
         self.assertIn("caveats: incomplete cube and unsupported spectral model", result["output"])
+
+    # ── Route/readout UI tests (migration from flat modalities) ──────────────────
+
+    def _stellaris_like_instrument(self):
+        """Return a minimal STELLARIS-like instrument fixture with route-level readouts."""
+        return {
+            "id": "scope-stellaris",
+            "display_name": "STELLARIS Confocal",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Confocal imaging was performed."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [
+                        {"id": "laser:561", "inventory_class": "light_source",
+                         "display_label": "561 Laser", "method_sentence": "Excitation by 561 Laser.",
+                         "modalities": []},
+                        {"id": "hyd:1", "inventory_class": "endpoint",
+                         "display_label": "HyD 1", "method_sentence": "Detection by HyD 1.",
+                         "modalities": []},
+                    ],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "confocal_point",
+                                "display_label": "Confocal point scanning",
+                                "illumination_mode": "confocal_point",
+                                "route_identity": {
+                                    "readouts": [
+                                        {"id": "spectral_imaging", "display_label": "Spectral Imaging"},
+                                        {"id": "flim", "display_label": "FLIM"},
+                                        {"id": "fcs", "display_label": "FCS"},
+                                    ]
+                                },
+                                "relevant_hardware": {
+                                    "sources": [{"id": "laser:561"}],
+                                    "filters": [],
+                                    "splitters": [],
+                                    "endpoints": [{"id": "hyd:1"}],
+                                },
+                            },
+                        ]
+                    },
+                },
+            },
+            "routes": [
+                {"id": "confocal_point", "display_label": "Confocal point scanning",
+                 "readouts": ["spectral_imaging", "flim", "fcs"]},
+            ],
+            # flat modalities intentionally omit FLIM/FCS/spectral_imaging as primary entries
+            "modalities": [],
+            "modules": [],
+        }
+
+    def test_routes_with_readouts_are_rendered_in_route_list(self) -> None:
+        """route-list must render route checkboxes with nested readout checkboxes."""
+        instrument = self._stellaris_like_instrument()
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-stellaris';
+            systemSelect.listeners.change({ target: systemSelect });
+            const routeList = document.getElementById('route-list');
+            // Collect all route and readout checkboxes
+            const routeCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'route'
+            );
+            const readoutCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'readout'
+            );
+            return {
+                routeCount: routeCheckboxes.length,
+                routeId: routeCheckboxes[0] && routeCheckboxes[0].value,
+                routeLabel: routeCheckboxes[0] && routeCheckboxes[0].dataset.displayLabel,
+                readoutCount: readoutCheckboxes.length,
+                readoutIds: readoutCheckboxes.map(cb => cb.value),
+                readoutLabels: readoutCheckboxes.map(cb => cb.dataset.displayLabel),
+                readoutRouteIds: readoutCheckboxes.map(cb => cb.dataset.routeId),
+            };
+            """,
+        )
+        self.assertEqual(result["routeCount"], 1)
+        self.assertEqual(result["routeId"], "confocal_point")
+        self.assertIn("Confocal point scanning", result["routeLabel"])
+        # 3 readouts: spectral_imaging, flim, fcs
+        self.assertEqual(result["readoutCount"], 3)
+        self.assertIn("confocal_point:spectral_imaging", result["readoutIds"])
+        self.assertIn("confocal_point:flim", result["readoutIds"])
+        self.assertIn("confocal_point:fcs", result["readoutIds"])
+        self.assertIn("Spectral Imaging", result["readoutLabels"])
+        self.assertIn("FLIM", result["readoutLabels"])
+        self.assertIn("FCS", result["readoutLabels"])
+        # All readout checkboxes reference the confocal_point route
+        for rId in result["readoutRouteIds"]:
+            self.assertEqual(rId, "confocal_point")
+
+    def test_flim_fcs_not_rendered_as_standalone_route_checkboxes(self) -> None:
+        """FLIM, FCS, FRET must not appear as standalone route checkboxes (they are readouts)."""
+        instrument = self._stellaris_like_instrument()
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-stellaris';
+            systemSelect.listeners.change({ target: systemSelect });
+            const routeCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'route'
+            );
+            return {
+                routeValues: routeCheckboxes.map(cb => cb.value),
+            };
+            """,
+        )
+        for forbidden in ["flim", "fcs", "fret", "spectral_imaging"]:
+            self.assertNotIn(
+                forbidden,
+                result["routeValues"],
+                f"{forbidden} must not appear as a standalone route checkbox",
+            )
+
+    def test_route_selection_generates_route_aware_method_sentence(self) -> None:
+        """Selecting a route must generate 'Images were acquired using the X route.' sentence."""
+        instrument = self._stellaris_like_instrument()
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-stellaris';
+            systemSelect.listeners.change({ target: systemSelect });
+            const routeCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'route'
+            );
+            // Select the confocal_point route
+            routeCheckboxes.forEach(cb => { cb.checked = true; });
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        self.assertIn("Images were acquired using the Confocal point scanning route.", result["output"])
+
+    def test_readout_selection_generates_readout_aware_sentence(self) -> None:
+        """Selecting a readout must generate '{Readout} readout was acquired using ... route.' sentence."""
+        instrument = self._stellaris_like_instrument()
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-stellaris';
+            systemSelect.listeners.change({ target: systemSelect });
+            const readoutCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'readout'
+            );
+            // Check the FLIM readout
+            const flimCb = readoutCheckboxes.find(
+                cb => cb.value === 'confocal_point:flim'
+            );
+            if (flimCb) flimCb.checked = true;
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        # Must say "FLIM readout ... route", not "flim imaging was performed"
+        self.assertIn("FLIM readout", result["output"])
+        self.assertIn("Confocal point scanning route", result["output"])
+        self.assertNotIn("flim imaging was performed", result["output"].lower())
+
+    def test_route_selection_drives_hardware_visibility(self) -> None:
+        """Selecting a route must filter hardware list to that route's hardware only."""
+        instrument = self._stellaris_like_instrument()
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-stellaris';
+            systemSelect.listeners.change({ target: systemSelect });
+            // Check confocal_point route
+            const routeCb = state.inputs.find(
+                cb => cb.dataset && cb.dataset.category === 'route' && cb.value === 'confocal_point'
+            );
+            if (routeCb) routeCb.checked = true;
+            document.getElementById('route-list').listeners.change();
+            return {
+                lightCount: document.getElementById('light-list').children.length,
+                detCount: document.getElementById('det-list').children.length,
+            };
+            """,
+        )
+        # After selecting the confocal route, only its hardware should be shown
+        self.assertEqual(result["lightCount"], 1, "Only laser:561 should be shown for confocal route")
+        self.assertEqual(result["detCount"], 1, "Only hyd:1 should be shown for confocal route")
+
+    def test_lambert_widefield_route_with_flim_readout(self) -> None:
+        """Lambert FLIM: widefield route must show FLIM readout, not as standalone route."""
+        instrument = {
+            "id": "scope-lambert",
+            "display_name": "Lambert FLIM",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Wide-field imaging was performed."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "widefield_fluorescence",
+                                "display_label": "Widefield fluorescence",
+                                "illumination_mode": "widefield_fluorescence",
+                                "route_identity": {
+                                    "readouts": [
+                                        {"id": "flim", "display_label": "FLIM"},
+                                    ]
+                                },
+                                "relevant_hardware": {"sources": [], "filters": [], "splitters": [], "endpoints": []},
+                            }
+                        ]
+                    },
+                },
+            },
+            "routes": [{"id": "widefield_fluorescence", "display_label": "Widefield fluorescence", "readouts": ["flim"]}],
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-lambert';
+            systemSelect.listeners.change({ target: systemSelect });
+            const readoutCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'readout'
+            );
+            const routeCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'route'
+            );
+            // FLIM must appear as a readout, not a route
+            const flimAsRoute = routeCheckboxes.find(cb => cb.value === 'flim');
+            const flimAsReadout = readoutCheckboxes.find(
+                cb => cb.value === 'widefield_fluorescence:flim'
+            );
+            return {
+                routeCount: routeCheckboxes.length,
+                routeValues: routeCheckboxes.map(cb => cb.value),
+                flimIsRoute: Boolean(flimAsRoute),
+                flimIsReadout: Boolean(flimAsReadout),
+                readoutLabel: flimAsReadout && flimAsReadout.dataset.displayLabel,
+            };
+            """,
+        )
+        self.assertFalse(result["flimIsRoute"], "FLIM must not appear as a standalone route")
+        self.assertTrue(result["flimIsReadout"], "FLIM must appear as a readout under widefield route")
+        self.assertEqual(result["readoutLabel"], "FLIM")
+        self.assertEqual(result["routeCount"], 1)
+        self.assertIn("widefield_fluorescence", result["routeValues"])
+
+    def test_oni_tirf_route_with_fret_readout(self) -> None:
+        """ONI Nanoimager: TIRF route must show FRET readout, not as standalone route."""
+        instrument = {
+            "id": "scope-oni",
+            "display_name": "ONI Nanoimager",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "TIRF imaging was performed."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "tirf",
+                                "display_label": "TIRF",
+                                "illumination_mode": "tirf",
+                                "route_identity": {
+                                    "readouts": [
+                                        {"id": "fret", "display_label": "FRET"},
+                                    ]
+                                },
+                                "relevant_hardware": {"sources": [], "filters": [], "splitters": [], "endpoints": []},
+                            }
+                        ]
+                    },
+                },
+            },
+            "routes": [{"id": "tirf", "display_label": "TIRF", "readouts": ["fret"]}],
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-oni';
+            systemSelect.listeners.change({ target: systemSelect });
+            const routeCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'route'
+            );
+            const readoutCheckboxes = state.inputs.filter(
+                cb => cb.dataset && cb.dataset.category === 'readout'
+            );
+            const fretAsRoute = routeCheckboxes.find(cb => cb.value === 'fret');
+            const fretAsReadout = readoutCheckboxes.find(cb => cb.value === 'tirf:fret');
+            return {
+                fretIsRoute: Boolean(fretAsRoute),
+                fretIsReadout: Boolean(fretAsReadout),
+                fretReadoutLabel: fretAsReadout && fretAsReadout.dataset.displayLabel,
+            };
+            """,
+        )
+        self.assertFalse(result["fretIsRoute"], "FRET must not appear as a standalone route")
+        self.assertTrue(result["fretIsReadout"], "FRET must appear as a readout under TIRF route")
+        self.assertEqual(result["fretReadoutLabel"], "FRET")
+
+    def test_legacy_modalities_labeled_compatibility_in_template(self) -> None:
+        """The methods_generator template must label the legacy modality section as compatibility/legacy."""
+        template_content = TEMPLATE_PATH.read_text(encoding="utf-8")
+        # Must NOT still be labeled simply "Imaging Modalities"
+        self.assertNotIn(">2. Imaging Modalities:<", template_content)
+        # Must contain legacy indicator
+        self.assertTrue(
+            "Legacy" in template_content or "legacy" in template_content or "compat" in template_content.lower(),
+            "Modality section must be labeled as legacy/compatibility",
+        )
 
 
 if __name__ == "__main__":

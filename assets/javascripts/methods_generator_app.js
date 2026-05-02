@@ -221,6 +221,100 @@ document.addEventListener("DOMContentLoaded", async () => {
         section.style.display = hasItems ? "" : "none";
     }
 
+    /**
+     * Bind canonical route checkboxes (with nested readout checkboxes) from
+     * authoritative_route_contract.routes into the given container.
+     *
+     * Route checkboxes use prefix "route-" and value = route.id.
+     * Readout checkboxes use prefix "readout-{routeIndex}-" and
+     * value = "{routeId}:{readoutId}", with dataset.routeId and
+     * dataset.routeDisplayLabel for sentence generation.
+     *
+     * Returns the number of route checkboxes rendered.
+     */
+    function bindRoutes(dto) {
+        const container = document.getElementById("route-list");
+        container.innerHTML = "";
+        if (Array.isArray(container.children)) container.children = [];
+        if (Array.isArray(container.options)) container.options = [];
+
+        const routeViews = routeViewsForInstrument(dto);
+        let routeCheckboxCount = 0;
+
+        routeViews.forEach((route, routeIdx) => {
+            const routeId = cleanText(route.id);
+            const routeLabel = cleanText(route.display_label || route.id);
+            if (!routeId) return;
+
+            // Route checkbox
+            const routeWrapper = document.createElement("div");
+            routeWrapper.style.marginBottom = "4px";
+
+            const routeCheckbox = document.createElement("input");
+            routeCheckbox.type = "checkbox";
+            routeCheckbox.id = `route-${routeIdx}`;
+            routeCheckbox.value = routeId;
+            routeCheckbox.dataset.displayLabel = routeLabel;
+            routeCheckbox.dataset.methodSentence = `Images were acquired using the ${routeLabel} route.`;
+            routeCheckbox.dataset.category = "route";
+
+            const routeLabelEl = document.createElement("label");
+            routeLabelEl.htmlFor = routeCheckbox.id;
+            const routeLabelText = document.createElement("span");
+            routeLabelText.textContent = ` ${routeLabel}`;
+            routeLabelEl.appendChild(routeLabelText);
+
+            routeWrapper.appendChild(routeCheckbox);
+            routeWrapper.appendChild(routeLabelEl);
+            container.appendChild(routeWrapper);
+            routeCheckboxCount++;
+
+            // Nested readout checkboxes
+            const routeIdentity = route.route_identity && typeof route.route_identity === "object"
+                ? route.route_identity
+                : {};
+            const readouts = Array.isArray(routeIdentity.readouts) ? routeIdentity.readouts : [];
+            readouts.forEach((readout, readoutIdx) => {
+                const readoutId = cleanText(
+                    (readout && typeof readout === "object" ? readout.id : readout) || ""
+                );
+                const readoutLabel = cleanText(
+                    (readout && typeof readout === "object"
+                        ? (readout.display_label || readout.id)
+                        : readout) || ""
+                );
+                if (!readoutId) return;
+
+                const readoutWrapper = document.createElement("div");
+                readoutWrapper.style.marginBottom = "2px";
+                readoutWrapper.style.marginLeft = "20px";
+
+                const readoutCheckbox = document.createElement("input");
+                readoutCheckbox.type = "checkbox";
+                readoutCheckbox.id = `readout-${routeIdx}-${readoutIdx}`;
+                readoutCheckbox.value = `${routeId}:${readoutId}`;
+                readoutCheckbox.dataset.displayLabel = readoutLabel;
+                readoutCheckbox.dataset.routeId = routeId;
+                readoutCheckbox.dataset.routeDisplayLabel = routeLabel;
+                readoutCheckbox.dataset.methodSentence =
+                    `${readoutLabel} readout was acquired using the ${routeLabel} route.`;
+                readoutCheckbox.dataset.category = "readout";
+
+                const readoutLabelEl = document.createElement("label");
+                readoutLabelEl.htmlFor = readoutCheckbox.id;
+                const readoutLabelText = document.createElement("span");
+                readoutLabelText.textContent = ` ${readoutLabel}`;
+                readoutLabelEl.appendChild(readoutLabelText);
+
+                readoutWrapper.appendChild(readoutCheckbox);
+                readoutWrapper.appendChild(readoutLabelEl);
+                container.appendChild(readoutWrapper);
+            });
+        });
+
+        return routeCheckboxCount;
+    }
+
     function routeViewsForInstrument(dto) {
         return Array.isArray(dto?.hardware?.optical_path?.authoritative_route_contract?.routes)
             ? dto.hardware.optical_path.authoritative_route_contract.routes
@@ -239,20 +333,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function updateHardwareVisibility(dto) {
-        const checkedModalityIds = new Set(getCheckedIds("modality"));
+        // Route selection is authoritative; fall back to legacy modality filter only
+        // when no route checkboxes are checked.
+        const checkedRouteIds = new Set(getCheckedIds("route"));
+        const checkedModalityIds = checkedRouteIds.size === 0
+            ? new Set(getCheckedIds("modality"))
+            : new Set();
         const routeViews = routeViewsForInstrument(dto);
 
-        // Collect hardware IDs from routes that match the checked modalities.
-        // When no modalities are checked, include hardware from ALL routes.
-        // Both illumination_mode (derived from route_identity.modality) and id are
-        // checked because illumination_mode may differ from the route id when
-        // route_identity.modality is explicitly set (e.g. id="epi-fluorescence"
-        // with illumination_mode="widefield_fluorescence").
+        // Collect hardware IDs from routes that match the checked routes/modalities.
+        // When nothing is checked, include hardware from ALL routes.
         const matchingRouteHardwareIds = new Set();
         routeViews
-            .filter(rv => checkedModalityIds.size === 0 ||
-                checkedModalityIds.has(cleanText(rv.illumination_mode)) ||
-                checkedModalityIds.has(cleanText(rv.id)))
+            .filter(rv => {
+                if (checkedRouteIds.size === 0 && checkedModalityIds.size === 0) return true;
+                if (checkedRouteIds.has(cleanText(rv.id))) return true;
+                // Legacy modality fallback: illumination_mode or id match
+                return checkedModalityIds.has(cleanText(rv.illumination_mode)) ||
+                    checkedModalityIds.has(cleanText(rv.id));
+            })
             .forEach(rv => {
                 ["sources", "filters", "splitters", "endpoints"].forEach(key => {
                     (rv.relevant_hardware?.[key] || []).forEach(item => {
@@ -262,12 +361,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
             });
 
-        // Filter inventory renderables (which carry method_sentence) by:
-        //   1. The item's own modalities array declares a checked modality, OR
-        //   2. The item belongs to a route that declares a checked modality.
-        // When no modalities are checked, return all items unfiltered.
-        function filterByModality(items) {
-            if (checkedModalityIds.size === 0) return items;
+        // Filter inventory renderables by:
+        //   1. The item belongs to a matching route, OR
+        //   2. (Legacy) The item's own modalities array declares a checked modality.
+        // When nothing is checked, return all items unfiltered.
+        function filterBySelection(items) {
+            if (checkedRouteIds.size === 0 && checkedModalityIds.size === 0) return items;
             return items.filter(item => {
                 const id = cleanText(item?.id);
                 if (matchingRouteHardwareIds.has(id)) return true;
@@ -279,10 +378,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const allDetItems = inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
         const allFilterItems = inventoryItemsForClasses(dto, ["optical_element"]);
         const allSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
-        toggleSectionVisibility("section-light", bindCheckboxes("light-list", filterByModality(allLightItems), "light") > 0);
-        toggleSectionVisibility("section-det", bindCheckboxes("det-list", filterByModality(allDetItems), "det") > 0);
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterByModality(allFilterItems), "filter") > 0);
-        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterByModality(allSplitterItems), "splitter") > 0);
+        toggleSectionVisibility("section-light", bindCheckboxes("light-list", filterBySelection(allLightItems), "light") > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", filterBySelection(allDetItems), "det") > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterBySelection(allFilterItems), "filter") > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterBySelection(allSplitterItems), "splitter") > 0);
     }
 
     function getCheckedSelections(prefix) {
@@ -304,6 +403,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
 
+        if (prefix === "route") {
+            return labels.length === 1
+                ? `Images were acquired using the ${labels[0]} route.`
+                : `Images were acquired using the ${humanJoin(labels)} routes.`;
+        }
+        if (prefix === "readout") {
+            // Each readout has its own route-aware method_sentence; use it directly.
+            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
+        }
         if (prefix === "modality") {
             return labels.length === 1
                 ? `Imaging modality used was ${labels[0]}.`
@@ -640,6 +748,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const dto = currentInst;
 
+        const routeCount = bindRoutes(dto);
+        toggleSectionVisibility("section-route", routeCount > 0);
         const modalityCount = bindCheckboxes("modality-list", dto.modalities || [], "modality");
         toggleSectionVisibility("section-modality", modalityCount > 0);
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
@@ -657,6 +767,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (currentInst) updateHardwareVisibility(currentInst);
     });
 
+    // Container-level change listener for route/readout checkboxes. Route selection
+    // is authoritative; modality filter only activates when no route is checked.
+    document.getElementById("route-list").addEventListener("change", () => {
+        if (currentInst) updateHardwareVisibility(currentInst);
+    });
+
     addBtn.addEventListener("click", () => {
         if (!currentInst) return;
 
@@ -667,6 +783,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const groupedSelections = {
+            route: groupedLabelSentence("route", getCheckedSelections("route")),
+            readout: groupedLabelSentence("readout", getCheckedSelections("readout")),
             modality: groupedLabelSentence("modality", getCheckedSelections("modality")),
             module: groupedLabelSentence("module", getCheckedSelections("module")),
             scanner: groupedLabelSentence("scanner", getCheckedSelections("scanner")),
@@ -681,6 +799,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const paragraphHardware = dedupeSentences([
             dto.methods?.base_sentence,
+            groupedSelections.route,
+            groupedSelections.readout,
             groupedSelections.modality,
             groupedSelections.module,
             groupedSelections.scanner,
