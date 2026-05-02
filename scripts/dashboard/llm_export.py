@@ -465,11 +465,13 @@ def build_llm_inventory_payload(
         if inst.get("retired") or legacy_modalities:
             llm_record["modalities"] = legacy_modalities
             llm_record["modalities_note"] = (
-                "Compatibility-only flat list for retired/legacy records."
+                "Compatibility-only flat list for retired/legacy records; "
+                "canonical capability semantics are carried by capabilities and route readouts."
             )
-        llm_record["modalities_note"] = (
-            "Compatibility-only field; canonical capability semantics are carried by capabilities and route readouts."
-        )
+        else:
+            llm_record["modalities_note"] = (
+                "Compatibility-only field; canonical capability semantics are carried by capabilities and route readouts."
+            )
         if llm_record["software_status"] == "not_applicable":
             llm_record["software_status_caveat"] = (
                 "No acquisition/control software is part of this instrument record."
