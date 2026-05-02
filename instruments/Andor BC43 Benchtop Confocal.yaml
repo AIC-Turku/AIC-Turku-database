@@ -64,6 +64,10 @@ hardware:
       manufacturer: Andor
       model: 4.1 MP sCMOS
       pixel_pitch_um: 6.5
+      collection_min_nm: 425
+      collection_max_nm: 710
+      collection_center_nm: 567.5
+      collection_width_nm: 285
       qe_peak_pct: 82
       notes: 16-bit. 18.4 mm field of view.
       url: ''
@@ -203,13 +207,13 @@ hardware:
     - kind: led
       manufacturer: Andor
       model: Transmitted Light Illuminator
-      wavelength_nm: broadband
       role: transmitted_illumination
-      notes: Used for Brightfield and Differential Phase Contrast (DPC).
+      notes: Used for Brightfield and Differential Phase Contrast (DPC). Broadband white LED.
       url: ''
       id: transmitted_light_illuminator
       modalities:
         - transmitted_brightfield
+        - phase_contrast
 
   optical_path_elements:
     - name: BC43 Internal Dichroic
