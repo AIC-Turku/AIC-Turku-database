@@ -1451,6 +1451,192 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             "Modality section must be labeled as legacy/compatibility",
         )
 
+    def test_capability_axes_displayed_as_context_when_present(self) -> None:
+        """Capability axes from dto.capabilities must be shown as context labels in the UI."""
+        instrument = {
+            "id": "scope-caps",
+            "display_name": "Scope With Capabilities",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "capabilities": {
+                "imaging_modes": [{"id": "confocal_point", "display_label": "Confocal Point"}],
+                "contrast_methods": [],
+                "readouts": [
+                    {"id": "spectral_imaging", "display_label": "Spectral Imaging"},
+                    {"id": "flim", "display_label": "FLIM"},
+                ],
+                "workflows": [],
+                "assay_operations": [],
+                "non_optical": [],
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-caps';
+            systemSelect.listeners.change({ target: systemSelect });
+            const imagingSection = document.getElementById('capabilities-imaging-modes-section');
+            const readoutsSection = document.getElementById('capabilities-readouts-section');
+            const contrastSection = document.getElementById('capabilities-contrast-methods-section');
+            const imagingContainer = document.getElementById('capabilities-imaging-modes');
+            const readoutsContainer = document.getElementById('capabilities-readouts');
+            // Collect label text from tag spans in each container
+            const imagingLabels = imagingContainer.children.map(c => c.textContent);
+            const readoutLabels = readoutsContainer.children.map(c => c.textContent);
+            return {
+                imagingVisible: imagingSection && imagingSection.style.display !== 'none',
+                contrastVisible: contrastSection && contrastSection.style.display !== 'none',
+                readoutsVisible: readoutsSection && readoutsSection.style.display !== 'none',
+                imagingLabels,
+                readoutLabels,
+            };
+            """,
+        )
+        self.assertTrue(result["imagingVisible"], "Imaging modes section must be visible when capabilities exist")
+        self.assertTrue(result["readoutsVisible"], "Readouts section must be visible when readouts exist")
+        self.assertFalse(result["contrastVisible"], "Contrast methods section must be hidden when empty")
+        self.assertIn("Confocal Point", result["imagingLabels"])
+        self.assertIn("Spectral Imaging", result["readoutLabels"])
+        self.assertIn("FLIM", result["readoutLabels"])
+
+    def test_capability_section_hidden_when_no_capabilities(self) -> None:
+        """section-capabilities must be hidden when dto.capabilities is absent or all axes empty."""
+        instrument = {
+            "id": "scope-no-caps",
+            "display_name": "Scope No Capabilities",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-no-caps';
+            systemSelect.listeners.change({ target: systemSelect });
+            const sec = document.getElementById('section-capabilities');
+            return { capabilitiesHidden: !sec || sec.style.display === 'none' };
+            """,
+        )
+        self.assertTrue(result["capabilitiesHidden"], "section-capabilities must be hidden when no capabilities present")
+
+    def test_legacy_modality_selection_is_compatibility_only_not_in_primary_paragraph(self) -> None:
+        """When modalities are present and checked, the sentence must appear with (Compatibility) prefix,
+        not as part of the primary route/hardware paragraph."""
+        instrument = {
+            "id": "scope-compat-modality",
+            "display_name": "Scope Compat Modality",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "modalities": [
+                {"id": "confocal", "display_label": "Confocal",
+                 "method_sentence": "Confocal imaging was performed."},
+            ],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-compat-modality';
+            systemSelect.listeners.change({ target: systemSelect });
+            // Check the confocal modality checkbox
+            const confocalCb = state.inputs.find(
+                cb => cb.id && cb.id.startsWith('modality-') && cb.value === 'confocal'
+            );
+            if (confocalCb) confocalCb.checked = true;
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        # Modality text must appear with compatibility label, not as primary sentence
+        self.assertIn("(Compatibility)", result["output"])
+        # The raw modality sentence style "imaging modalities used included X" may appear
+        # but ONLY under the (Compatibility) marker — the primary paragraph must not
+        # start with a modality sentence.
+        lines = result["output"].split("\n\n")
+        primary = lines[0] if lines else ""
+        self.assertNotIn("Imaging modality", primary,
+                         "Primary paragraph must not contain modality sentence; it belongs in (Compatibility) section")
+
+    def test_modality_text_not_in_primary_output_when_route_also_selected(self) -> None:
+        """When a route is selected alongside modality, only route text appears in the primary paragraph."""
+        instrument = self._stellaris_like_instrument()
+        # Add a modality to the fixture
+        instrument["modalities"] = [
+            {"id": "confocal_point", "display_label": "Confocal Point",
+             "method_sentence": "Confocal point imaging was performed."},
+        ]
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-stellaris';
+            systemSelect.listeners.change({ target: systemSelect });
+            // Check both the route and a modality checkbox
+            const routeCb = state.inputs.find(
+                cb => cb.dataset && cb.dataset.category === 'route' && cb.value === 'confocal_point'
+            );
+            if (routeCb) routeCb.checked = true;
+            const modalityCb = state.inputs.find(
+                cb => cb.id && cb.id.startsWith('modality-') && cb.value === 'confocal_point'
+            );
+            if (modalityCb) modalityCb.checked = true;
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        # Route sentence must be present
+        self.assertIn("Images were acquired using the Confocal point scanning route.", result["output"])
+        # Primary paragraph must NOT contain the modality sentence as primary content
+        self.assertNotIn("confocal point imaging was performed", result["output"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

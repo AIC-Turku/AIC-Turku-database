@@ -315,6 +315,59 @@ document.addEventListener("DOMContentLoaded", async () => {
         return routeCheckboxCount;
     }
 
+    /**
+     * Bind capability-axis context labels from dto.capabilities into the
+     * capability-axis sections.  Capabilities are reference/context only and
+     * do not generate method sentences directly.
+     *
+     * Each axis renders its items as plain text tags so users can see at a
+     * glance what the instrument supports without treating the list as a
+     * method-sentence source.
+     */
+    function bindCapabilities(dto) {
+        const caps = dto?.capabilities && typeof dto.capabilities === "object" ? dto.capabilities : {};
+        const axes = [
+            { key: "imaging_modes", sectionId: "capabilities-imaging-modes-section", containerId: "capabilities-imaging-modes" },
+            { key: "contrast_methods", sectionId: "capabilities-contrast-methods-section", containerId: "capabilities-contrast-methods" },
+            { key: "readouts", sectionId: "capabilities-readouts-section", containerId: "capabilities-readouts" },
+            { key: "workflows", sectionId: "capabilities-workflows-section", containerId: "capabilities-workflows" },
+            { key: "assay_operations", sectionId: "capabilities-assay-operations-section", containerId: "capabilities-assay-operations" },
+            { key: "non_optical", sectionId: "capabilities-non-optical-section", containerId: "capabilities-non-optical" },
+        ];
+
+        let anyAxis = false;
+        axes.forEach(({ key, sectionId, containerId }) => {
+            const container = document.getElementById(containerId);
+            const section = document.getElementById(sectionId);
+            if (!container || !section) return;
+            container.innerHTML = "";
+            const items = Array.isArray(caps[key]) ? caps[key] : [];
+            const labels = items.map(item => {
+                if (typeof item === "string") return cleanText(item);
+                return cleanText(item?.display_label || item?.id || "");
+            }).filter(Boolean);
+            if (!labels.length) {
+                section.style.display = "none";
+                return;
+            }
+            anyAxis = true;
+            section.style.display = "";
+            labels.forEach(label => {
+                const tag = document.createElement("span");
+                tag.textContent = label;
+                tag.style.display = "inline-block";
+                tag.style.marginRight = "6px";
+                tag.style.marginBottom = "4px";
+                tag.style.padding = "2px 6px";
+                tag.style.borderRadius = "3px";
+                tag.style.fontSize = "0.85em";
+                tag.style.border = "1px solid var(--md-default-fg-color--light, #ccc)";
+                container.appendChild(tag);
+            });
+        });
+        toggleSectionVisibility("section-capabilities", anyAxis);
+    }
+
     function routeViewsForInstrument(dto) {
         return Array.isArray(dto?.hardware?.optical_path?.authoritative_route_contract?.routes)
             ? dto.hardware.optical_path.authoritative_route_contract.routes
@@ -750,6 +803,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const routeCount = bindRoutes(dto);
         toggleSectionVisibility("section-route", routeCount > 0);
+        bindCapabilities(dto);
         const modalityCount = bindCheckboxes("modality-list", dto.modalities || [], "modality");
         toggleSectionVisibility("section-modality", modalityCount > 0);
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
@@ -801,7 +855,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             dto.methods?.base_sentence,
             groupedSelections.route,
             groupedSelections.readout,
-            groupedSelections.modality,
             groupedSelections.module,
             groupedSelections.scanner,
             groupedSelections.objective,
@@ -811,6 +864,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             dto.methods?.autofocus_sentence,
             dto.methods?.triggering_sentence,
         ]).join(" ");
+
+        // Compatibility note: legacy modality selections are appended after the
+        // primary hardware paragraph and are clearly labeled as compatibility-only.
+        // They must not override or substitute for route/readout selections.
+        const compatModalityText = cleanText(groupedSelections.modality);
+        const paragraphCompatModality = compatModalityText
+            ? `(Compatibility) ${compatModalityText}`
+            : "";
 
         const runtimeDetails = runtimeConfigurationSentence(dto);
 
@@ -851,6 +912,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             paragraphLightPath,
             paragraphAcquisition,
             paragraphDeposition,
+            paragraphCompatModality,
             paragraphMissingMetadata,
         ].map(cleanText).filter(Boolean);
 
