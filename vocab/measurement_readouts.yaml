@@ -1,5 +1,9 @@
 terms:
   - id: spectral_imaging
+    label: "Spectral Imaging"
   - id: flim
+    label: "FLIM"
   - id: fcs
+    label: "FCS"
   - id: fret
+    label: "FRET"

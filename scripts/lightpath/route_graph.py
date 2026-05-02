@@ -1250,6 +1250,7 @@ def _build_route_sequences_and_graph(
             "name": route.get("name"),
             "modality": route_modalities[0],
             "modalities": route_modalities,
+            "readouts": list(route.get("readouts") or []),
         },
         "illumination_mode": route_modalities[0],
         "modalities": route_modalities,

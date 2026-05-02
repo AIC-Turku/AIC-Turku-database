@@ -543,13 +543,11 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     }
     if not any(capabilities.values()):
         if not retired:
-            import warnings as _warnings_mod
-            _warnings_mod.warn(
-                f"Instrument '{source_file.stem}': no canonical capabilities object found; "
-                "deriving capabilities from legacy modalities. "
-                "Add explicit capabilities.* axes to the instrument YAML to avoid this fallback.",
-                UserWarning,
-                stacklevel=2,
+            raise RuntimeError(
+                f"Instrument '{source_file.stem}': no canonical capabilities found. "
+                "Add explicit capabilities.* axes to the instrument YAML. "
+                "Falling back to legacy modalities is not permitted for active "
+                "instruments.",
             )
         capabilities = _derive_capabilities_from_legacy_modalities(modalities)
 
