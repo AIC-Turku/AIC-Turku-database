@@ -748,6 +748,16 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         ],
     }
 
+    capabilities_flat = []
+    seen_capability_ids = set()
+    for axis_key in ("imaging_modes", "contrast_methods", "readouts", "workflows", "assay_operations", "non_optical"):
+        for entry in capabilities.get(axis_key, []):
+            cid = clean_text(entry.get("id"))
+            if not cid or cid in seen_capability_ids:
+                continue
+            seen_capability_ids.add(cid)
+            capabilities_flat.append({"id": cid, "display_label": clean_text(entry.get("display_label")) or cid})
+
     modules = []
     for module in canonical_modules:
         if not isinstance(module, dict):
@@ -873,6 +883,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         },
         "modalities": modalities,
         "capabilities": capabilities,
+        "capabilities_flat": capabilities_flat,
         "modules": modules,
         "software": software_rows,
         "software_status": software_status,

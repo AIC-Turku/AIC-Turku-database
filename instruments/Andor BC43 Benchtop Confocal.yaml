@@ -8,17 +8,21 @@ instrument:
   stand_orientation: benchtop
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: 'Benchtop microlens-spinning disk confocal with Borealis illumination and
+  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and
     ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage
-    drive.'
+    drive.
   url: https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope
-
-modalities:
-- confocal_spinning_disk
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
-
+capabilities:
+  imaging_modes:
+  - confocal_spinning_disk
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
 - type: hardware_autofocus
   notes: Dual function Focus Seek and Lock
@@ -30,7 +34,6 @@ modules:
   url: ''
   manufacturer: Andor
   model: TOPSTAGE-ANDOR-BL3 Incubator Bundle
-
 software:
 - role: acquisition
   name: Fusion BC43
@@ -41,26 +44,23 @@ software:
   name: Imaris Quant
   version: ''
   developer: Oxford Instruments / Andor
-  notes: Offline license for high-quality snapshots, movie creation, isosurface 
-    reconstructions, and traditional intensity-based/AI metric characterization.
+  notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions,
+    and traditional intensity-based/AI metric characterization.
   url: ''
-
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
     notes: TOPSTAGE-ANDOR-BL3 Incubator Bundle (T/H/CO2)
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes 
-      with optimized spacing for deep tissue imaging.
+    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with
+      optimized spacing for deep tissue imaging.
     url: ''
   detectors:
   - kind: scmos
@@ -75,7 +75,6 @@ hardware:
     notes: 16-bit. 18.4 mm field of view.
     url: ''
     id: detector_1
-
   objectives:
   - id: 10x_air
     manufacturer: Nikon
@@ -161,7 +160,6 @@ hardware:
     notes: 'Optical family: Lambda D.'
     url: ''
     is_installed: true
-
   sources:
   - kind: laser
     manufacturer: Andor
@@ -211,14 +209,13 @@ hardware:
     manufacturer: Andor
     model: Transmitted Light Illuminator
     role: transmitted_illumination
-    notes: Used for Brightfield and Differential Phase Contrast (DPC). Broadband
-      white LED.
+    notes: Used for Brightfield and Differential Phase Contrast (DPC). Broadband white
+      LED.
     url: ''
     id: transmitted_light_illuminator
     modalities:
     - transmitted_brightfield
     - phase_contrast
-
   optical_path_elements:
   - name: BC43 Internal Dichroic
     stage_role: dichroic
@@ -240,8 +237,8 @@ hardware:
           width_nm: 50
         - center_nm: 685
           width_nm: 50
-        notes: 'Built-in multiband dichroic for standard 4-line excitation. Explicit
-          transmission windows are aligned to the installed emission channels.'
+        notes: Built-in multiband dichroic for standard 4-line excitation. Explicit
+          transmission windows are aligned to the installed emission channels.
   - name: BC43 Internal Emission Filters
     slots: 4
     stage_role: emission
@@ -276,7 +273,6 @@ hardware:
         bands:
         - center_nm: 685
           width_nm: 50
-
 light_paths:
 - id: confocal_spinning_disk
   name: Confocal Spinning Disk
@@ -292,7 +288,6 @@ light_paths:
   - optical_path_element_id: bc43_internal_dichroic
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
-
 - id: widefield_fluorescence
   name: Widefield Fluorescence
   modalities:
@@ -307,7 +302,6 @@ light_paths:
   - optical_path_element_id: bc43_internal_dichroic
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
-
 - id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:
@@ -319,14 +313,3 @@ light_paths:
   - optical_path_element_id: bc43_internal_dichroic
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
-capabilities:
-  imaging_modes:
-  - confocal_spinning_disk
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  - phase_contrast
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

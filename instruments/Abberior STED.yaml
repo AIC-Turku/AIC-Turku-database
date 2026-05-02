@@ -8,44 +8,45 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, BioPhysics room 5086
-  notes: 'Abberior STED. Sophisticated and highly flexible open platform that can
-    be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150
+  notes: Abberior STED. Sophisticated and highly flexible open platform that can be
+    modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150
     nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator
     (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables
     deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue
-    STED is available for live super-resolution imaging with reduced light dose.'
+    STED is available for live super-resolution imaging with reduced light dose.
   url: ''
-
-modalities:
-- sted
-- resolft
-- confocal_point
-
+capabilities:
+  imaging_modes:
+  - sted
+  - resolft
+  - confocal_point
+  contrast_methods: []
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: easy3d_sted   # CORRECTED: Changed 'name' to the strictly required 'type' field
+- type: easy3d_sted
   manufacturer: Abberior
   model: easy3D STED
   notes: Programmable SLM-based module for 2D/3D STED phase pattern generation.
   url: ''
-- type: adaptive_optics   # CORRECTED
+- type: adaptive_optics
   manufacturer: Abberior
   model: Adaptive Optics
-  notes: Supports deep imaging up to 75 µm into cleared tissue with a 100x oil 
-    objective.
+  notes: Supports deep imaging up to 75 µm into cleared tissue with a 100x oil objective.
   url: ''
-- type: rescue_sted   # CORRECTED
+- type: rescue_sted
   manufacturer: Abberior
   model: RESCue STED
-  notes: Reduction of state transition cycles mode for super-resolution live 
-    imaging with lower light dose.
+  notes: Reduction of state transition cycles mode for super-resolution live imaging
+    with lower light dose.
   url: ''
-
 software:
 - role: acquisition
   name: Abberior Imspector
   version: ''
   url: ''
-
 hardware:
   scanner:
     type: galvo
@@ -64,8 +65,7 @@ hardware:
     supports_time_gating: true
     default_gating_delay_ns: 1.0
     default_gate_width_ns: 7.0
-    notes: Two APD detectors; timing resolution optimized for time-gated 
-      CW-STED.
+    notes: Two APD detectors; timing resolution optimized for time-gated CW-STED.
     url: ''
     id: detector_2
   - kind: ccd
@@ -76,7 +76,6 @@ hardware:
     notes: 1/2-inch format camera.
     url: ''
     id: detector_3
-
   objectives:
   - id: 20x_air
     manufacturer: Olympus
@@ -108,7 +107,6 @@ hardware:
     immersion: oil
     correction: plan_apochromat
     is_installed: true
-
   optical_modulators:
   - type: slm
     manufacturer: Abberior
@@ -117,15 +115,12 @@ hardware:
     - vortex
     - bottle
     - 3d_sted
-    notes: Used for Easy3D STED phase-pattern generation and adaptive optics 
-      workflows.
-
+    notes: Used for Easy3D STED phase-pattern generation and adaptive optics workflows.
   illumination_logic:
   - method: rescue_sted
     default_enabled: false
-    notes: Real-time adaptive STED decision logic used to reduce photobleaching 
-      and light dose during live-cell super-resolution imaging.
-
+    notes: Real-time adaptive STED decision logic used to reduce photobleaching and
+      light dose during live-cell super-resolution imaging.
   sources:
   - kind: laser
     manufacturer: PicoQuant
@@ -174,8 +169,7 @@ hardware:
     wavelength_nm: 580
     depletion_targets_nm:
     - 488
-    notes: Continuous-wave STED depletion source for the 488 nm excitation 
-      channel.
+    notes: Continuous-wave STED depletion source for the 488 nm excitation channel.
     url: ''
     id: vfl_p_1000_580
     modalities:
@@ -191,27 +185,25 @@ hardware:
     depletion_targets_nm:
     - 561
     - 640
-    notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation 
-      channels.
+    notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation channels.
     url: ''
     id: katana_hp_775
     modalities:
     - epi
-
   optical_path_elements:
   - name: Emission Filter Wheel
     slots: 3
     stage_role: emission
     id: emission_filter_wheel
-    element_type: filter_wheel   # CORRECTED: Removed redundant 'type: filter_wheel' alias
+    element_type: filter_wheel
     modalities:
     - epi
     positions:
-      Pos_1:   # CORRECTED: Changed integer key to string format
+      Pos_1:
         component_type: bandpass
         manufacturer: Semrock
         product_code: FF01-525/25
-        bands:   # CORRECTED: Nested center_nm and width_nm inside the required 'bands' array
+        bands:
         - center_nm: 525
           width_nm: 25
       Pos_2:
@@ -229,9 +221,7 @@ hardware:
         bands:
         - center_nm: 685
           width_nm: 35
-
   endpoints: []
-
 light_paths:
 - id: confocal_point
   name: Epi-fluorescence
@@ -247,28 +237,18 @@ light_paths:
   - source_id: katana_hp_775
   detection_sequence:
   - optical_path_element_id: emission_filter_wheel
-  - branches:     # ADDED: Required terminal routing to explicitly defined endpoints
+  - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_pmt
-        label: "To PMT (Confocal)"
+        label: To PMT (Confocal)
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_apd
-        label: "To APD (STED)"
+        label: To APD (STED)
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_ccd
-        label: "To CCD Camera"
+        label: To CCD Camera
         sequence:
         - endpoint_id: detector_3
-capabilities:
-  imaging_modes:
-  - sted
-  - resolft
-  - confocal_point
-  contrast_methods: []
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

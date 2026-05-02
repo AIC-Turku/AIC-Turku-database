@@ -349,8 +349,8 @@ sections:
         rationale: Helpful for staff lookup and manuals, not essential for methods completeness.
 
       - path: modalities
-        title: Imaging modalities
-        status: required
+        title: Imaging modalities (legacy)
+        status: optional
         type: list
         item_type: string
         min_items: 1
@@ -360,7 +360,7 @@ sections:
 
       - path: capabilities
         title: Capability axes
-        status: optional
+        status: required
         type: object
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.

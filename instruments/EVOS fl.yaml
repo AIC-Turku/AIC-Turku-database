@@ -13,28 +13,29 @@ instrument:
     the microscope after instrument-specific training (contact AIC staff for training).
     IMPORTANT: Only AIC personnel are allowed to change filter cubes.'
   url: ''
-
-modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: universal_vessel_holder   # Canonical module ID for the installed vessel holder
+- type: universal_vessel_holder
   manufacturer: Thermo Fisher
   model: Universal Vessel Holder
   product_code: AMEP-VH009
   notes: ''
   url: https://www.thermofisher.com/order/catalog/product/AMEPVH009
-
 software:
 - role: acquisition
   name: On-board EVOS interface
   version: ''
   notes: no external software, USB storage
-  url: 
-    https://www.thermofisher.com/fi/en/home/life-science/cell-analysis/cellular-imaging/evos-cell-imaging-systems/software.html
-
+  url: https://www.thermofisher.com/fi/en/home/life-science/cell-analysis/cellular-imaging/evos-cell-imaging-systems/software.html
 hardware:
   scanner:
     type: none
@@ -55,7 +56,6 @@ hardware:
     notes: Integrated monochrome camera for fluorescence (1.4 Megapixels).
     url: ''
     id: integrated_fluorescence_camera
-
   objectives:
   - id: 4x_air
     manufacturer: Olympus
@@ -114,12 +114,10 @@ hardware:
     notes: Fluorite (FL)
     url: ''
     is_installed: true
-
   sources:
   - kind: led
     manufacturer: Thermo Fisher / AMG
     model: Transmitted Light LED
-
     notes: Broad spectrum overhead LED used for brightfield and phase contrast.
     id: transmitted_light_led
     modalities:
@@ -165,21 +163,19 @@ hardware:
     id: evos_cy5_light_cube_led
     modalities:
     - widefield_fluorescence
-
   optical_path_elements:
   - name: Light Cube Turret
-
     stage_role: cube
     id: light_cube_turret
     element_type: turret
     modalities:
     - widefield_fluorescence
-    notes: Filter sets must be changed manually. Only AIC personnel are allowed 
-      to change filter cubes.
+    notes: Filter sets must be changed manually. Only AIC personnel are allowed to
+      change filter cubes.
     positions:
       Pos_1:
         name: DAPI
-        component_type: filter_cube   # CORRECTED: Converted to canonical component type
+        component_type: filter_cube
         product_code: ZP-EPI-9001
         bands:
         - center_nm: 447
@@ -275,11 +271,9 @@ hardware:
           component_type: bandpass
           center_nm: 692
           width_nm: 40
-
   endpoints: []
-
 light_paths:
-- id: widefield_fluorescence   # CORRECTED: Aligned ID with canonical modality names
+- id: widefield_fluorescence
   name: Widefield Fluorescence
   modalities:
   - widefield_fluorescence
@@ -293,7 +287,6 @@ light_paths:
   detection_sequence:
   - optical_path_element_id: light_cube_turret
   - endpoint_id: integrated_fluorescence_camera
-
 - id: transmitted_brightfield
   name: Transmitted Light
   modalities:
@@ -303,13 +296,3 @@ light_paths:
   - source_id: transmitted_light_led
   detection_sequence:
   - endpoint_id: integrated_color_camera
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  - phase_contrast
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

@@ -15,15 +15,19 @@ instrument:
     imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss
     LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
-
-modalities:
-- confocal_point
-- ism
-- spectral_imaging
-- transmitted_brightfield
-
+capabilities:
+  imaging_modes:
+  - confocal_point
+  - ism
+  contrast_methods:
+  - transmitted_brightfield
+  readouts:
+  - spectral_imaging
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: airyscan   # CORRECTED: Changed 'name' to the canonical 'type'
+- type: airyscan
   notes: 32-channel GaAsP area detector for super-resolution
   url: ''
   manufacturer: Zeiss
@@ -48,74 +52,67 @@ modules:
   url: ''
   manufacturer: Zeiss
   model: Image Processing Workstation
-
 software:
 - role: acquisition
   name: Zeiss ZEN 2.3 SP1 (black edition)
   version: ''
   url: ''
-
 hardware:
   environment:
     temperature_control: true
-    notes: Environmental chamber with temperature control and heated stage 
-      inserts
-
+    notes: Environmental chamber with temperature control and heated stage inserts
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   stages:
-  - type: z_piezo   # Canonical stage type for the installed piezo Z stage
-    manufacturer: Zeiss   # ADDED: Required completeness
+  - type: z_piezo
+    manufacturer: Zeiss
     model: Piezo Z-stage
     notes: Piezo Z-stage
-
   scanner:
     type: resonant
-    line_rate_hz: 8000 # REQUIRED: Replaced 'null' with integer for resonant scanners
+    line_rate_hz: 8000
     notes: ''
     url: ''
   detectors:
   - kind: pmt
     manufacturer: Unknown
     model: PMT (Ch1)
-    qe_peak_pct: 30   # REQUIRED: Replaced 'null' for confocal modalities
+    qe_peak_pct: 30
     notes: ''
     url: ''
     id: detector_1
   - kind: pmt
     manufacturer: Unknown
     model: Cooled PMT (Ch2)
-    qe_peak_pct: 30   # REQUIRED
+    qe_peak_pct: 30
     notes: ''
     url: ''
     id: detector_2
   - kind: pmt
     manufacturer: Unknown
     model: Transmitted light PMT
-    qe_peak_pct: 30   # REQUIRED
+    qe_peak_pct: 30
     notes: ''
     url: ''
     id: detector_3
-  - kind: pmt   # CORRECTED: 'gaasp_pmt' is not a valid kind; standard 'pmt' applies
+  - kind: pmt
     manufacturer: Unknown
     model: 32-channel GaAsP spectral array detector
-    qe_peak_pct: 45   # REQUIRED
+    qe_peak_pct: 45
     notes: ''
     url: ''
     id: detector_4
-  - kind: pmt   # CORRECTED
+  - kind: pmt
     manufacturer: Unknown
     model: 32-channel AiryScan detector (GaAsP)
-    qe_peak_pct: 45   # REQUIRED
+    qe_peak_pct: 45
     notes: ''
     url: ''
     id: detector_5
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 10x_air
     manufacturer: Zeiss
@@ -129,8 +126,7 @@ hardware:
     afc_compatible: false
     specialties: []
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/420640-9800-000/Objective-Plan-Apochromat-10x-0.3-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420640-9800-000/Objective-Plan-Apochromat-10x-0.3-M27
     is_installed: true
   - id: 20x_air
     manufacturer: Zeiss
@@ -144,8 +140,7 @@ hardware:
     afc_compatible: false
     specialties: []
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/zh/us/shop/objectives/420650-9901-000/Objective-Plan-Apochromat-20x-0.8-M27
+    url: https://www.micro-shop.zeiss.com/zh/us/shop/objectives/420650-9901-000/Objective-Plan-Apochromat-20x-0.8-M27
     is_installed: true
   - id: 40x_multi
     manufacturer: Zeiss
@@ -161,8 +156,7 @@ hardware:
     - dic
     - ir_transmission
     notes: Imm Korr (Multi-immersion, correction collar)
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27
     is_installed: true
   - id: 63x_oil
     manufacturer: Zeiss
@@ -178,8 +172,7 @@ hardware:
     - dic
     - ir_transmission
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/421782-9900-000/Objective-C-Plan-Apochromat-63x-1.4-Oil-DIC-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421782-9900-000/Objective-C-Plan-Apochromat-63x-1.4-Oil-DIC-M27
     is_installed: true
   - id: 25x_multi
     manufacturer: Zeiss
@@ -195,8 +188,7 @@ hardware:
     - dic
     - ir_transmission
     notes: Optional objective. Imm Korr (Multi-immersion, correction collar)
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27
     is_installed: false
   - id: 63x_water
     manufacturer: Zeiss
@@ -211,15 +203,13 @@ hardware:
     specialties:
     - ir_transmission
     notes: Optional objective. W Korr (Water immersion, correction collar)
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
     is_installed: false
-
   sources:
   - kind: laser
-    manufacturer: Unknown   # CORRECTED: Replaced empty strings
+    manufacturer: Unknown
     model: 405 nm (Diode)
-    wavelength_nm: 405   # CORRECTED: Converted to integer
+    wavelength_nm: 405
     power: ''
     notes: ''
     url: ''
@@ -227,7 +217,6 @@ hardware:
     modalities:
     - confocal_point
     - ism
-      # CORRECTED: Removed legacy 'path: epi' alias
   - kind: laser
     manufacturer: Unknown
     model: 458 nm (Argon)
@@ -292,12 +281,11 @@ hardware:
     id: transmitted_illumination
     modalities:
     - transmitted_brightfield
-
   optical_path_elements:
   - name: AiryScan Emission Wheel
     stage_role: emission
     id: airyscan_emission_wheel
-    element_type: filter_wheel   # CORRECTED: Converted hardware.filters into canonical wheel
+    element_type: filter_wheel
     modalities:
     - ism
     positions:
@@ -311,7 +299,7 @@ hardware:
           width_nm: 55
       Pos_2:
         name: AiryScan BP 465-505 + LP 525
-        component_type: multiband_bandpass   # Note: Modeling a mixed BP/LP setup is complex; using multiband logic
+        component_type: multiband_bandpass
         bands:
         - center_nm: 485
           width_nm: 40
@@ -349,8 +337,7 @@ hardware:
           width_nm: 50
         cut_on_nm:
         - 645
-
-  - name: Trinocular Port   # ADDED: Splitting logic for ocular paths
+  - name: Trinocular Port
     stage_role: splitter
     id: trinocular_port
     element_type: splitter
@@ -362,11 +349,8 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 2
-
-  # CORRECTED: Removed deprecated hardware.endpoints block.
-
 light_paths:
-- id: confocal_point   # CORRECTED: Aligned ID with standard modalities
+- id: confocal_point
   name: Confocal Scanning
   modalities:
   - confocal_point
@@ -380,22 +364,21 @@ light_paths:
   - source_id: 633_nm_hene
   detection_sequence:
   - optical_path_element_id: trinocular_port
-  - branches:     # ADDED: Required detection routing to endpoints
+  - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_ch1
-        label: "To PMT Ch1"
+        label: To PMT Ch1
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_ch2
-        label: "To Cooled PMT Ch2"
+        label: To Cooled PMT Ch2
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: ism
   name: Super-resolution AiryScan
   modalities:
@@ -414,16 +397,15 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_airyscan
-        label: "To AiryScan Detector"
+        label: To AiryScan Detector
         sequence:
         - endpoint_id: detector_5
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
   readouts:
   - spectral_imaging
-
 - id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:
@@ -436,22 +418,10 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_transmitted_pmt
-        label: "To Transmitted Light PMT"
+        label: To Transmitted Light PMT
         sequence:
         - endpoint_id: detector_3
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
-capabilities:
-  imaging_modes:
-  - confocal_point
-  - ism
-  contrast_methods:
-  - transmitted_brightfield
-  readouts:
-  - spectral_imaging
-  workflows: []
-  assay_operations: []
-  non_optical: []

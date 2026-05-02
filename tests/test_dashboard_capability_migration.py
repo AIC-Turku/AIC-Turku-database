@@ -443,6 +443,21 @@ class RouteReadoutPropagationTests(unittest.TestCase):
             + "\n".join(f"  - {item}" for item in invalid),
         )
 
+
+    def test_instrument_spec_template_hides_legacy_modalities_and_shows_flat_capability_chips(self) -> None:
+        from scripts.dashboard.instrument_view import build_instrument_mega_dto
+        from scripts.dashboard.site_render import _annotate_display_labels
+        normalized, lightpath_dto, _, vocabulary = self._load_stellaris_inst_with_lightpath()
+        inst = {**normalized, "lightpath_dto": lightpath_dto}
+        dto = build_instrument_mega_dto(vocabulary, inst, lightpath_dto)
+        inst["dto"] = dto
+        _annotate_display_labels([inst], [], vocabulary)
+        rendered = _template_env().get_template("instrument_spec.md.j2").render(instrument=inst, latest_metrics={}, metric_names={}, policy={"missing_required": [], "missing_conditional": [], "alias_fallbacks": []})
+        self.assertNotIn("Legacy modalities", rendered)
+        for label in ("FLIM", "FCS", "Spectral Imaging", "Confocal point scanning", "Widefield fluorescence", "Transmitted brightfield"):
+            self.assertIn(label, rendered)
+        self.assertIn("Show grouped capability axes", rendered)
+
     def test_instrument_spec_template_renders_route_readouts_not_dash(self) -> None:
         """instrument_spec.md.j2 must render FLIM and FCS chips for STELLARIS, not just dashes."""
         from scripts.dashboard.instrument_view import build_instrument_mega_dto

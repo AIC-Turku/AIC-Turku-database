@@ -14,17 +14,20 @@ instrument:
     resolution, and lower phototoxic burden due to single exposure per z-slice and
     self-healing/non-diffractive beam propagation.'
   url: ''
-
-modalities:
-- light_sheet
-
+capabilities:
+  imaging_modes:
+  - light_sheet
+  contrast_methods: []
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
 - type: environmental_enclosure
   notes: Laser safety enclosure CUBE & BOX
   url: ''
   manufacturer: M Squared
   model: CUBE & BOX Laser Safety Enclosure
-
 software:
 - role: acquisition
   name: M Squared Cubes Acquisition
@@ -34,29 +37,26 @@ software:
   name: M Squared Cubes Deconvolution
   version: ''
   url: ''
-
 hardware:
   environment:
     temperature_control: true
-
   scanner:
     type: tandem
     light_sheet_type: airy_beam
     line_rate_hz: 8000
-    notes: Galvanometric scanner and remote focusing lenses on 
-      illumination/detection; integrated Resonant scanner for beam scanning.
+    notes: Galvanometric scanner and remote focusing lenses on illumination/detection;
+      integrated Resonant scanner for beam scanning.
     url: ''
   detectors:
   - kind: scmos
     manufacturer: Hamamatsu
     model: ORCA-Flash4.0 V3 (C11440-22CU)
     pixel_pitch_um: 6.5
-    qe_peak_pct: 82   # ADDED: Added standard peak QE for this sensor
+    qe_peak_pct: 82
     sensor_format_px: 2048 x 2048
     notes: Supplied with water chiller for camera chip cooling
     url: ''
     id: detector_1
-
   objectives:
   - id: 17x_multi
     manufacturer: Special Optics
@@ -70,12 +70,11 @@ hardware:
     afc_compatible: false
     specialties:
     - cleared_tissue_imaging
-    notes: 'Excitation and detection objectives designed for dipping media with refractive
+    notes: Excitation and detection objectives designed for dipping media with refractive
       index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across
-      RI. FOV 1.2 mm diameter.'
+      RI. FOV 1.2 mm diameter.
     url: ''
     is_installed: true
-
   sources:
   - kind: laser
     manufacturer: Coherent OBIS
@@ -87,7 +86,6 @@ hardware:
     id: 488_nm_laser
     modalities:
     - light_sheet
-
   - kind: laser
     manufacturer: Coherent OBIS
     model: 561 nm laser
@@ -108,9 +106,7 @@ hardware:
     id: 640_nm_laser_lx
     modalities:
     - light_sheet
-
   optical_path_elements:
-
   - name: Emission Wheel
     stage_role: emission
     id: emission_wheel
@@ -121,23 +117,21 @@ hardware:
       Pos_1:
         name: GFP filter
         component_type: bandpass
-        bands:   # CORRECTED: Translated 520/40 string to canonical bands array
+        bands:
         - center_nm: 520
           width_nm: 40
       Pos_2:
         name: GFP longpass
         component_type: longpass
-        cut_on_nm:   # CORRECTED: Translated LP 500 string to canonical cut_on_nm array
+        cut_on_nm:
         - 500
       Pos_3:
         name: RFP longpass
         component_type: longpass
         cut_on_nm:
         - 570
-
-
 light_paths:
-- id: light_sheet   # CORRECTED: Aligned ID with standard modalities
+- id: light_sheet
   name: Light-Sheet
   modalities:
   - light_sheet
@@ -147,12 +141,4 @@ light_paths:
   - source_id: 640_nm_laser_lx
   detection_sequence:
   - optical_path_element_id: emission_wheel
-  - endpoint_id: detector_1     # ADDED: Sequence routed directly to the detector
-capabilities:
-  imaging_modes:
-  - light_sheet
-  contrast_methods: []
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []
+  - endpoint_id: detector_1

@@ -1,3 +1,7 @@
 terms:
-  - id: afm
-  - id: impedance_cytometry
+- id: afm
+  display_label: AFM
+  label: AFM
+- id: impedance_cytometry
+  display_label: Impedance cytometry
+  label: Impedance cytometry

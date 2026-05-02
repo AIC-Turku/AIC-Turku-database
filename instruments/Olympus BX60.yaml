@@ -11,19 +11,22 @@ instrument:
   notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence
     (epifluorescence), Phase contrast.'
   url: ''
-
-modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules: []
 software:
 - role: acquisition
   name: Olympus Cell^D
   version: ''
   url: ''
-
 hardware:
   scanner:
     type: none
@@ -35,14 +38,12 @@ hardware:
     model: DP71
     pixel_pitch_um: 6.45
     sensor_format_px: 4080 x 3072
-    notes: 1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel
-      resolution.
+    notes: 1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel resolution.
     url: ''
     id: detector_1
-
-  eyepieces: # ADDED: Required to support trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 4x_air
     manufacturer: Olympus
@@ -133,16 +134,13 @@ hardware:
     notes: Optional objective. Includes adjustable iris.
     url: ''
     is_installed: false
-
   sources:
   - kind: halogen_lamp
     manufacturer: Olympus
     model: 12V 100W halogen bulb
-      # CORRECTED: Removed invalid 'wavelength_nm: broadband' string and legacy 'path' alias
     power: 100 W
     role: transmitted_illumination
-    notes: Transmitted brightfield and phase contrast source. Broadband 
-      illumination.
+    notes: Transmitted brightfield and phase contrast source. Broadband illumination.
     url: ''
     id: 12v_100w_halogen_bulb
     modalities:
@@ -151,17 +149,14 @@ hardware:
   - kind: arc_lamp
     manufacturer: Osram
     model: HBO 103W short arc bulb
-      # CORRECTED: Removed invalid 'wavelength_nm: broadband' string and legacy 'path' alias
     power: 103 W
     notes: Fluorescence excitation source. Broadband illumination.
     url: ''
     id: hbo_103w_short_arc_bulb
     modalities:
     - widefield_fluorescence
-
   optical_path_elements:
   - name: Fluorescence Turret
-      # CORRECTED: Removed legacy 'type' and 'path' aliases
     stage_role: cube
     id: fluorescence_turret
     element_type: turret
@@ -239,8 +234,7 @@ hardware:
           component_type: bandpass
           center_nm: 530
           width_nm: 40
-
-  - name: Trinocular Port   # ADDED: Required to split light to camera or eyepieces
+  - name: Trinocular Port
     stage_role: splitter
     id: trinocular_port
     element_type: splitter
@@ -253,11 +247,8 @@ hardware:
     - selected
     supported_branch_count: 2
     notes: Splits light between the eyepieces and the camera.
-
-  # CORRECTED: Removed the deprecated hardware.endpoints block.
-
 light_paths:
-- id: widefield_fluorescence   # CORRECTED: Aligned ID with standard modalities
+- id: widefield_fluorescence
   name: Epi-fluorescence
   modalities:
   - widefield_fluorescence
@@ -267,19 +258,18 @@ light_paths:
   detection_sequence:
   - optical_path_element_id: fluorescence_turret
   - optical_path_element_id: trinocular_port
-  - branches:     # ADDED: Valid detection routing to endpoints
+  - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To DP71 Camera"
+        label: To DP71 Camera
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
-- id: transmitted_brightfield   # CORRECTED: Aligned ID with standard modalities
+- id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:
   - transmitted_brightfield
@@ -292,20 +282,10 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To DP71 Camera"
+        label: To DP71 Camera
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  - phase_contrast
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

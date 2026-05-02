@@ -1,12 +1,22 @@
 terms:
-  - id: confocal_point
-  - id: confocal_spinning_disk
-  - id: widefield_fluorescence
-  - id: tirf
-  - id: multiphoton
-  - id: light_sheet
-  - id: sim
-  - id: sted
-  - id: resolft
-  - id: smlm
-  - id: ism
+- id: confocal_point
+  display_label: Confocal point scanning
+  label: Confocal point scanning
+- id: confocal_spinning_disk
+- id: widefield_fluorescence
+  display_label: Widefield fluorescence
+  label: Widefield fluorescence
+- id: tirf
+  display_label: TIRF
+  label: TIRF
+- id: multiphoton
+- id: light_sheet
+- id: sim
+- id: sted
+  display_label: STED
+  label: STED
+- id: resolft
+  display_label: RESOLFT
+  label: RESOLFT
+- id: smlm
+- id: ism

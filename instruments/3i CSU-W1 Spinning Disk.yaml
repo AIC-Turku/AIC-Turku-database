@@ -15,14 +15,18 @@ instrument:
     imaging but is not ideal for low-magnification confocal sectioning compared with
     a 25 µm disk.'
   url: ''
-
-modalities:
-- confocal_spinning_disk
-- widefield_fluorescence
-- frap
-- photoactivation
-- transmitted_brightfield   # ADDED: Included to reflect the new transmitted light path
-
+capabilities:
+  imaging_modes:
+  - confocal_spinning_disk
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  readouts: []
+  workflows: []
+  assay_operations:
+  - frap
+  - photoactivation
+  non_optical: []
 modules:
 - type: frap
   manufacturer: 3i
@@ -44,37 +48,31 @@ modules:
   model: Full Enclosure
   notes: Okolab environment chamber with temperature and gas control
   url: ''
-
 software:
 - role: acquisition
   name: 3i SlideBook
   version: '6'
   url: ''
-
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     o2_control: false
-    notes: Okolab Full Enclosure Incubator with temperature and digital CO2 
-      control
-
+    notes: Okolab Full Enclosure Incubator with temperature and digital CO2 control
   stages:
   - type: z_piezo
     manufacturer: ASI
     model: PZ-2000
     notes: ASI piezo stage (300 µm travel)
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard 
-      live-cell spinning-disk confocal imaging; less optimal than a 25 µm disk 
-      for low-magnification confocal sectioning.
+    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell
+      spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification
+      confocal sectioning.
     url: ''
   detectors:
   - kind: scmos
@@ -95,10 +93,9 @@ hardware:
     notes: 10 MHz back-illuminated EMCCD
     url: ''
     id: detector_2
-
-  eyepieces: # ADDED: Must be declared to serve as a valid routing endpoint
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 10x_air
     manufacturer: Zeiss
@@ -113,8 +110,7 @@ hardware:
     specialties:
     - phase
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420641-9910-000/Objective-Plan-Apochromat-10x-0.45-Ph1-M27
     is_installed: true
   - id: 20x_air
     manufacturer: Zeiss
@@ -128,8 +124,7 @@ hardware:
     afc_compatible: false
     specialties: []
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8
     is_installed: true
   - id: 40x_water
     manufacturer: Zeiss
@@ -145,8 +140,7 @@ hardware:
     - coverslip_correction
     - ir_transmission
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421867-9970-000/Objective-LD-C-Apochromat-40x-1.1-W-Corr-M27
     is_installed: true
   - id: 63x_oil
     manufacturer: Zeiss
@@ -161,8 +155,7 @@ hardware:
     specialties:
     - dic
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420782-9900-799/Objective-Plan-Apochromat-63x-1.4-Oil-DIC-M27
     is_installed: true
   - id: 100x_oil
     manufacturer: Zeiss
@@ -177,8 +170,7 @@ hardware:
     specialties:
     - dic
     notes: ''
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9901-000/Objective-Plan-Apochromat-100x-1.4-Oil-DIC-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9901-000/Objective-Plan-Apochromat-100x-1.4-Oil-DIC-M27
     is_installed: true
   - id: 25x_multi
     manufacturer: Zeiss
@@ -195,8 +187,7 @@ hardware:
     - ir_transmission
     - correction_collar
     notes: Optional objective. Multi-immersion correction-collar objective.
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420852-9871-799/Objective-LD-LCI-Plan-Apochromat-25x-0.8-Imm-Corr-DIC-M27
     is_installed: false
   - id: 63x_water_c_apo
     manufacturer: Zeiss
@@ -212,10 +203,8 @@ hardware:
     - ir_transmission
     - correction_collar
     notes: Optional objective. Water-immersion correction-collar objective.
-    url: 
-      https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/421787-9970-799/Objective-C-Apochromat-63x-1.2-W-Corr-M27
     is_installed: false
-
   sources:
   - kind: laser
     manufacturer: 3i
@@ -259,20 +248,18 @@ hardware:
     wavelength_nm: 730
     power: 30 mW
     role: excitation
-    notes: 'Near-IR excitation line delivered via the CSU-W1 near-IR illumination
-      port. Requires the installed IR/VIS combining dichroic, disk dichroic, and IR
-      emitter to be documented explicitly in the light path.'
+    notes: Near-IR excitation line delivered via the CSU-W1 near-IR illumination port.
+      Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter
+      to be documented explicitly in the light path.
     url: ''
     id: singleline_730nm_laser_launch
   - kind: led
     manufacturer: Excelitas
     model: X-Cite XLED1
-    notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and 
-      Cy5-class widefield fluorescence
+    notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class
+      widefield fluorescence
     url: ''
     id: x_cite_xled1
-
-
   optical_path_elements:
   - name: XLED Excitation Filters
     stage_role: excitation
@@ -303,7 +290,6 @@ hardware:
         bands:
         - center_nm: 650
           width_nm: 13
-
   - name: CSU-W1 Dichroic Slider
     stage_role: dichroic
     id: csu_w1_dichroic_slider
@@ -322,13 +308,13 @@ hardware:
           width_nm: 25
         - center_nm: 700
           width_nm: 25
-        notes: 'Standard multiband spinning-disk dichroic for 405/488/561/640-class
-          excitation.'
+        notes: Standard multiband spinning-disk dichroic for 405/488/561/640-class
+          excitation.
       Pos_2:
         component_type: empty
         name: NIR dichroic position
-        notes: 'Placeholder for the installed NIR dichroic used with the 730 nm excitation
-          / 809 nm emission route.'
+        notes: Placeholder for the installed NIR dichroic used with the 730 nm excitation
+          / 809 nm emission route.
   - name: Widefield Dichroic
     stage_role: dichroic
     id: widefield_dichroic
@@ -346,7 +332,6 @@ hardware:
           width_nm: 25
         - center_nm: 700
           width_nm: 25
-
   - name: CSU-W1 Emission Wheel
     stage_role: emission
     id: csu_w1_emission_wheel
@@ -379,8 +364,7 @@ hardware:
         bands:
         - center_nm: 525
           width_nm: 50
-        notes: Previously 525/30 (FF01-525/30-25 in the old PDF) before 
-          2021-08-18.
+        notes: Previously 525/30 (FF01-525/30-25 in the old PDF) before 2021-08-18.
       Pos_4:
         component_type: bandpass
         name: Cy3 / Alexa 568
@@ -402,7 +386,6 @@ hardware:
         bands:
         - center_nm: 809
           width_nm: 81
-
   - name: Widefield Emission
     stage_role: emission
     id: widefield_emission
@@ -420,7 +403,6 @@ hardware:
           width_nm: 25
         - center_nm: 700
           width_nm: 25
-
   - name: Trinocular Port Selector
     stage_role: splitter
     id: trinocular_port_selector
@@ -429,7 +411,6 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 3
-
 light_paths:
 - id: confocal_spinning_disk
   name: confocal spinning disk
@@ -452,14 +433,13 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera_1
-        label: "To ORCA-Flash4.0"
+        label: To ORCA-Flash4.0
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_camera_2
-        label: "To Evolve EMCCD"
+        label: To Evolve EMCCD
         sequence:
         - endpoint_id: detector_2
-
 - id: widefield_fluorescence
   name: Epi-fluorescence
   modalities:
@@ -478,49 +458,36 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera_1
-        label: "To ORCA-Flash4.0"
+        label: To ORCA-Flash4.0
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_camera_2
-        label: "To Evolve EMCCD"
+        label: To Evolve EMCCD
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: transmitted_brightfield
   name: Transmitted Light
   modalities:
   - transmitted_brightfield
-  illumination_sequence: []   # Intentionally left empty since no specific brightfield source is declared
+  illumination_sequence: []
   detection_sequence:
   - optical_path_element_id: trinocular_port_selector
   - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_camera_1
-        label: "To ORCA-Flash4.0"
+        label: To ORCA-Flash4.0
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_camera_2
-        label: "To Evolve EMCCD"
+        label: To Evolve EMCCD
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - confocal_spinning_disk
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  readouts: []
-  workflows: []
-  assay_operations:
-  - frap
-  - photoactivation
-  non_optical: []

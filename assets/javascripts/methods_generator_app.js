@@ -385,6 +385,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         return opticalPathInventory(dto).filter(item => wanted.has(cleanText(item?.inventory_class)));
     }
 
+
+    function shouldUseLegacyModalities(dto) {
+        const modalities = Array.isArray(dto?.modalities) ? dto.modalities : [];
+        const caps = dto?.capabilities && typeof dto.capabilities === "object" ? dto.capabilities : {};
+        const hasCapabilities = Object.values(caps).some(v => Array.isArray(v) && v.length > 0);
+        return modalities.length > 0 && (!!dto?.retired || !hasCapabilities);
+    }
+
     function updateHardwareVisibility(dto) {
         // Route selection is authoritative; fall back to legacy modality filter only
         // when no route checkboxes are checked.
@@ -804,7 +812,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const routeCount = bindRoutes(dto);
         toggleSectionVisibility("section-route", routeCount > 0);
         bindCapabilities(dto);
-        const modalityCount = bindCheckboxes("modality-list", dto.modalities || [], "modality");
+        const showLegacyModalities = shouldUseLegacyModalities(dto);
+        const modalityCount = showLegacyModalities ? bindCheckboxes("modality-list", dto.modalities || [], "modality") : 0;
         toggleSectionVisibility("section-modality", modalityCount > 0);
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
         toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
@@ -839,7 +848,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const groupedSelections = {
             route: groupedLabelSentence("route", getCheckedSelections("route")),
             readout: groupedLabelSentence("readout", getCheckedSelections("readout")),
-            modality: groupedLabelSentence("modality", getCheckedSelections("modality")),
+            modality: shouldUseLegacyModalities(dto) ? groupedLabelSentence("modality", getCheckedSelections("modality")) : "",
             module: groupedLabelSentence("module", getCheckedSelections("module")),
             scanner: groupedLabelSentence("scanner", getCheckedSelections("scanner")),
             objective: groupedLabelSentence("obj", getCheckedSelections("obj")),

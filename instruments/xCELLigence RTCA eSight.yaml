@@ -12,17 +12,20 @@ instrument:
     with live-cell imaging. Dimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg. Placed inside
     a standard CO2 incubator for operation (Operating range: 20-40°C, 5-98% RH).'
   url: https://www.agilent.com/lifesciences/eSight
-
-modalities:
-- impedance_cytometry
-- widefield_fluorescence
-- transmitted_brightfield
-- live_cell_imaging
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  readouts: []
+  workflows:
+  - live_cell_imaging
+  assay_operations: []
+  non_optical:
+  - impedance_cytometry
 modules:
 - type: environmental_enclosure
-  notes: Designed for operation inside cell culture incubator (20-40°C, 5-98% 
-    RH).
+  notes: Designed for operation inside cell culture incubator (20-40°C, 5-98% RH).
   url: ''
   manufacturer: Agilent
   model: Incubator-compatible Environmental Enclosure
@@ -36,26 +39,22 @@ modules:
   url: ''
   manufacturer: Agilent
   model: Impedance Measurement Module
-
 software:
 - role: acquisition
   name: RTCA eSight Software
   version: ''
   url: https://www.agilent.com/lifesciences/eSight
-
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
     notes: Operates inside a standard cell culture incubator.
-
   hardware_autofocus:
     is_installed: true
     type: contrast_based
-
   scanner:
-    type: none # CORRECTED: Replaced 'stage_scanning' (eSight moves the plate, but has no optical beam scanner)
+    type: none
     notes: Supports E-Plate 96, E-Plate VIEW 96, and ANSI/SLAS standard plates.
     url: ''
   detectors:
@@ -66,24 +65,21 @@ hardware:
     notes: up to 35 fps.
     url: ''
     id: detector_1
-
-  # CORRECTED: Removed deprecated hardware.filters array
   objectives:
   - id: 10x_air
     manufacturer: Agilent
     model: 10x Objective
     product_code: ''
     magnification: 10.0
-    numerical_aperture: 0.3   # CORRECTED: Replaced invalid 'null' with standard 10x NA
+    numerical_aperture: 0.3
     working_distance: ''
     immersion: air
-    correction: plan_achromat   # CORRECTED: Replaced empty string with valid vocabulary
+    correction: plan_achromat
     afc_compatible: true
     specialties: []
     notes: 'Default. Resolution: 1.72 µm/pixel. FOV: 1.68 x 1.40 mm.'
     url: ''
     is_installed: true
-
   sources:
   - kind: led
     manufacturer: Agilent
@@ -91,7 +87,7 @@ hardware:
     wavelength_nm: 393
     width_nm: 23
     power: ''
-    notes: 'Blue Excitation (381-404 nm)'
+    notes: Blue Excitation (381-404 nm)
     url: ''
     id: high_power_led_blue
     modalities:
@@ -102,7 +98,7 @@ hardware:
     wavelength_nm: 482
     width_nm: 18
     power: ''
-    notes: 'Green Excitation (473-491 nm)'
+    notes: Green Excitation (473-491 nm)
     url: ''
     id: high_power_led_green
     modalities:
@@ -113,7 +109,7 @@ hardware:
     wavelength_nm: 595
     width_nm: 21
     power: ''
-    notes: 'Red Excitation (584-605 nm)'
+    notes: Red Excitation (584-605 nm)
     url: ''
     id: high_power_led_red
     modalities:
@@ -126,7 +122,6 @@ hardware:
     id: transmitted_led
     modalities:
     - transmitted_brightfield
-
   optical_path_elements:
   - name: Internal Filter Turret
     stage_role: cube
@@ -142,9 +137,6 @@ hardware:
         - center_nm: 445
           width_nm: 35
         notes: 'e.g., DAPI/Hoechst. Excitation: 381-404 nm.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
-          # excitation given as range (381-404 nm) rather than center/width.
-          # Upgrade when Agilent xCELLigence eSight documentation is consulted.
       Pos_2:
         name: Green Channel
         component_type: filter_cube
@@ -152,9 +144,6 @@ hardware:
         - center_nm: 532
           width_nm: 58
         notes: 'e.g., FITC/GFP. Excitation: 473-491 nm.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
-          # excitation given as range (473-491 nm) rather than center/width.
-          # Upgrade when Agilent xCELLigence eSight documentation is consulted.
       Pos_3:
         name: Red Channel
         component_type: filter_cube
@@ -162,11 +151,6 @@ hardware:
         - center_nm: 671
           width_nm: 99
         notes: 'e.g., Cy3/Texas Red. Excitation: 584-605 nm.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
-          # excitation given as range (584-605 nm) rather than center/width.
-          # Upgrade when Agilent xCELLigence eSight documentation is consulted.
-
-
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence
@@ -179,7 +163,7 @@ light_paths:
   - optical_path_element_id: internal_filter_turret
   detection_sequence:
   - optical_path_element_id: internal_filter_turret
-  - endpoint_id: detector_1     # ADDED: Required terminal endpoint
+  - endpoint_id: detector_1
 - id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:
@@ -188,14 +172,3 @@ light_paths:
   - source_id: transmitted_led
   detection_sequence:
   - endpoint_id: detector_1
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  readouts: []
-  workflows:
-  - live_cell_imaging
-  assay_operations: []
-  non_optical:
-  - impedance_cytometry

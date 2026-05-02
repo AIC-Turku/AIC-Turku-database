@@ -12,43 +12,41 @@ instrument:
     (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging
     (with autofocus), High-content screening (multi-well scanning).'
   url: ''
-
-modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- dic
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - dic
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: incubation   # CORRECTED: Changed 'name' to canonical 'type'
-  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab 
-    H201-T)
+- type: incubation
+  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
   url: ''
   manufacturer: Okolab
   model: H201-T
-- type: hardware_autofocus   # CORRECTED: Changed 'name' to canonical 'type'
+- type: hardware_autofocus
   notes: Nikon Perfect Focus System (autofocus)
   url: ''
   manufacturer: Nikon
   model: Perfect Focus System
-
 software:
 - role: acquisition
   name: Nikon NIS-Elements AR
   version: '5.11'
   url: ''
-
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
-    notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab
-      H201-T)
-
+    notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   scanner:
     type: none
     notes: ''
@@ -57,7 +55,7 @@ hardware:
   - kind: scmos
     manufacturer: Hamamatsu
     model: Orca Flash4.0 V3
-    pixel_pitch_um: 6.5   # CORRECTED: Missing required value replaced with known sensor specification
+    pixel_pitch_um: 6.5
     sensor_format_px: 2048 x 2044
     notes: sCMOS
     url: ''
@@ -65,15 +63,14 @@ hardware:
   - kind: cmos
     manufacturer: Nikon
     model: DS-Fi3
-    pixel_pitch_um: 2.4   # CORRECTED: Missing required value replaced with known sensor specification
+    pixel_pitch_um: 2.4
     sensor_format_px: 2880 x 2048
     notes: Color CMOS
     url: ''
     id: detector_2
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 2x_air
     manufacturer: Nikon
@@ -225,9 +222,7 @@ hardware:
       polarization suitable.'
     url: ''
     is_installed: true
-
   sources:
-    # CORRECTED: Multi-line engines must be split into canonical individual sources for valid routing
   - kind: led
     manufacturer: Lumencor
     model: Spectra X LED system
@@ -285,7 +280,7 @@ hardware:
     id: spectra_x_730
     modalities:
     - widefield_fluorescence
-  - kind: led   # ADDED: Required to satisfy Transmitted Brightfield/DIC light paths
+  - kind: led
     manufacturer: Nikon
     model: Ti2 Transmitted Illuminator
     role: transmitted_illumination
@@ -294,9 +289,7 @@ hardware:
     modalities:
     - transmitted_brightfield
     - dic
-
   optical_path_elements:
-    # CORRECTED: Migrated legacy hardware.filters into canonical elements with bands
   - name: Filter Turret
     stage_role: dichroic
     id: filter_turret
@@ -322,7 +315,6 @@ hardware:
         - center_nm: 809
           width_nm: 81
         notes: Cy7 emission filter housed in turret
-
   - name: Emission Wheel
     stage_role: emission
     id: emission_wheel
@@ -372,7 +364,6 @@ hardware:
         bands:
         - center_nm: 705
           width_nm: 71
-
   - name: Lamp Filter Cubes
     stage_role: cube
     id: epi_turret
@@ -384,11 +375,6 @@ hardware:
         name: Standard Cubes
         component_type: filter_cube
         notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
-          # TODO: Non-authoritative cube — no spectral data available. This
-          # position bundles multiple unnamed cubes without individual
-          # specifications. Upgrade when individual cube models and their
-          # excitation_filter, dichroic, and emission_filter specs are identified.
-
   - name: DIC Fixed Analyzer
     stage_role: analyzer
     id: analyzer_slider
@@ -399,7 +385,6 @@ hardware:
       Pos_1:
         component_type: analyzer
         notes: For DIC imaging
-
   - name: Trinocular Port
     stage_role: splitter
     id: trinocular_port
@@ -413,11 +398,8 @@ hardware:
     - selected
     supported_branch_count: 3
     notes: Routes light between oculars and dual camera ports.
-
-  # CORRECTED: Removed the deprecated hardware.endpoints block.
-
 light_paths:
-- id: widefield_fluorescence   # CORRECTED: Aligned ID with standard modalities
+- id: widefield_fluorescence
   name: Epi-fluorescence
   modalities:
   - widefield_fluorescence
@@ -435,22 +417,21 @@ light_paths:
   - optical_path_element_id: filter_turret
   - optical_path_element_id: emission_wheel
   - optical_path_element_id: trinocular_port
-  - branches:     # ADDED: Required detection routing to valid endpoints
+  - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_orca
-        label: "To Orca Flash4.0"
+        label: To Orca Flash4.0
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_ds_fi3
-        label: "To DS-Fi3"
+        label: To DS-Fi3
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:
@@ -464,24 +445,14 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_orca
-        label: "To Orca Flash4.0"
+        label: To Orca Flash4.0
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_ds_fi3
-        label: "To DS-Fi3"
+        label: To DS-Fi3
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  - dic
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

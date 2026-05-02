@@ -10,154 +10,126 @@ instrument:
   location: BioCity, 5th floor, room 5149
   serial_number: '8300000681'
   asset_number: '13334341'
-  notes: >-
-    Inverted Leica STELLARIS 8 FALCON/FCS confocal spectral microscope on DMi8 CS
-    Premium stand. Local quotation describes WLL/AOBS prism-based spectral
-    detection, resonant and non-resonant scanning, FALCON Fast FLIM, FCS,
-    TauSense, LIGHTNING, DMi8 stand, Okolab environmental control, K5 camera,
-    five Power HyD spectral detector positions, a BF detector for DMI, and an
-    installed LED/filter-cube observation path.
-  url: 
-    https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
-
-modalities:
-- confocal_point
-- spectral_imaging
-- flim
-- fcs
-- transmitted_brightfield
-- widefield_fluorescence
-
+  notes: Inverted Leica STELLARIS 8 FALCON/FCS confocal spectral microscope on DMi8
+    CS Premium stand. Local quotation describes WLL/AOBS prism-based spectral detection,
+    resonant and non-resonant scanning, FALCON Fast FLIM, FCS, TauSense, LIGHTNING,
+    DMi8 stand, Okolab environmental control, K5 camera, five Power HyD spectral detector
+    positions, a BF detector for DMI, and an installed LED/filter-cube observation
+    path.
+  url: https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
+capabilities:
+  imaging_modes:
+  - confocal_point
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  readouts:
+  - spectral_imaging
+  - flim
+  - fcs
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
 - type: flim
   manufacturer: Leica Microsystems
   model: STELLARIS 8 FALCON
-  notes: >-
-    Product code 158305100. FALCON Fast Lifetime Contrast module. Local
-    quotation states that STELLARIS 8 FALCON includes FLIM analysis tools
-    including exponential fitting, FLIM phasor analysis, pattern fitting, and
-    FLIM-FRET analyser.
-  url: 
-    https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
-
+  notes: Product code 158305100. FALCON Fast Lifetime Contrast module. Local quotation
+    states that STELLARIS 8 FALCON includes FLIM analysis tools including exponential
+    fitting, FLIM phasor analysis, pattern fitting, and FLIM-FRET analyser.
+  url: https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
 - type: fcs
   manufacturer: Leica Microsystems
   model: STELLARIS 8 FCS
   notes: Product code 158305101. Fluorescence correlation spectroscopy module.
-  url: 
-    https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
-
+  url: https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
 - type: aobs
   manufacturer: Leica Microsystems
   model: AOBS
-  notes: Acousto-Optical Beam Splitter for software-controlled 
-    excitation/emission routing.
-  url: 
-    https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
-
+  notes: Acousto-Optical Beam Splitter for software-controlled excitation/emission
+    routing.
+  url: https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
 - type: hardware_autofocus
   manufacturer: Leica Microsystems
   model: Closed Loop Focus with AFC
   notes: Product code 158204202.
   url: ''
-
 - type: motorized_stage
   manufacturer: Leica Microsystems
   model: Scanning stage inv. universal / SuperZ Galvo Stage
-  notes: >-
-    Product codes 158004141, 15500332, 15525226, 158004421, 158004423 and
-    158004136.
+  notes: Product codes 158004141, 15500332, 15525226, 158004421, 158004423 and 158004136.
   url: ''
-
 - type: incubation
   manufacturer: Okolab
   model: Black Box Incubator DMi8 with Super Z chamber, CO2 and passive humidity
-  notes: >-
-    Product codes 158206048, 158206037 and 158206039. Controlled through LAS X
-    Environmental Control.
+  notes: Product codes 158206048, 158206037 and 158206039. Controlled through LAS
+    X Environmental Control.
   url: ''
-
 - type: workstation
   manufacturer: Leica Microsystems
   model: Workstation Premium
   notes: Product code 158203112.
   url: ''
-
 software:
 - role: acquisition
   name: LAS X STELLARIS Control Software
   version: unknown
-  url: 
-    https://www.leica-microsystems.com/products/microscope-software/p/las-x-ls/
-  notes: >-
-    Product code 158203200. The exact installed LAS X version must be read from
+  url: https://www.leica-microsystems.com/products/microscope-software/p/las-x-ls/
+  notes: Product code 158203200. The exact installed LAS X version must be read from
     The acquisition workstation.
-
 - role: acquisition
   name: LAS X Dye Finder
   version: unknown
   url: ''
   notes: Product code 158203206.
-
 - role: acquisition
   name: LAS X Assay Editor
   version: unknown
   url: ''
   notes: Product code 158203211.
-
 - role: analysis
   name: LAS X 3D Visualisation
   version: unknown
   url: ''
   notes: Product code 158203202.
-
 - role: acquisition
   name: LAS X Live Data Mode
   version: unknown
   url: ''
   notes: Product code 158203201.
-
 - role: analysis
   name: LAS X AiviaMotion
   version: unknown
   url: ''
   notes: Product code 158203220.
-
 - role: acquisition
   name: LAS X MicroLab
   version: unknown
   url: ''
   notes: Product code 158203207.
-
 - role: processing
   name: LAS X Lightning Expert
   version: unknown
   url: ''
   notes: Product code 158203204.
-
 - role: hardware_control
   name: LAS X Environmental Control
   version: unknown
   url: ''
   notes: Product code 158203214.
-
 - role: hardware_control
   name: LAS X water pump
   version: unknown
   url: ''
   notes: Product code 158203218.
-
 hardware:
   scanner:
     type: tandem
     line_rate_hz: 8000
-    notes: >-
-      Product code 158301131: 8 kHz Tandem Scanner STELLARIS 8. Local quotation
-      describes a tandem scanning system switchable between resonant and
-      non-resonant/galvanometric mode.
-    url: 
-      https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
-
+    notes: 'Product code 158301131: 8 kHz Tandem Scanner STELLARIS 8. Local quotation
+      describes a tandem scanning system switchable between resonant and non-resonant/galvanometric
+      mode.'
+    url: https://www.leica-microsystems.com/products/confocal-microscopes/p/stellaris/
   detectors:
   - id: hyd_s_sp_pos_1
     kind: hyd
@@ -168,14 +140,11 @@ hardware:
     collection_min_nm: 410
     collection_max_nm: 850
     supports_time_gating: false
-    notes: >-
-      Installed the spectral detector at position 1. Leica describes Power HyD S as
-      an all-round detector with high performance throughout the spectrum and
-      enhanced blue-green photon detection efficiency. PDE/QE metadata is
-      catalogue/family-level, not a local measurement.
-    url: 
-      https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
-
+    notes: Installed the spectral detector at position 1. Leica describes Power HyD
+      S as an all-round detector with high performance throughout the spectrum and
+      enhanced blue-green photon detection efficiency. PDE/QE metadata is catalogue/family-level,
+      not a local measurement.
+    url: https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
   - id: hyd_x_sp_pos_2
     kind: hyd
     manufacturer: Leica Microsystems
@@ -186,14 +155,11 @@ hardware:
     collection_max_nm: 750
     supports_time_gating: true
     time_gating_defaults_known: false
-    notes: >-
-      Installed the spectral detector at position 2. FALCON/FCS-capable detector for
-      visible to far-red workflows. QE/range are catalogue/facility-spec
-      values, not local measurements. Do not treat time-gating delay/width as
-      Fixed defaults; they are experiment/runtime settings.
-    url: 
-      https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
-
+    notes: Installed the spectral detector at position 2. FALCON/FCS-capable detector
+      for visible to far-red workflows. QE/range are catalogue/facility-spec values,
+      not local measurements. Do not treat time-gating delay/width as Fixed defaults;
+      they are experiment/runtime settings.
+    url: https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
   - id: hyd_s_sp_pos_3
     kind: hyd
     manufacturer: Leica Microsystems
@@ -203,12 +169,9 @@ hardware:
     collection_min_nm: 410
     collection_max_nm: 850
     supports_time_gating: false
-    notes: >-
-      Installed the spectral detector position 3 / SP Core Unit. PDE/QE metadata
+    notes: Installed the spectral detector position 3 / SP Core Unit. PDE/QE metadata
       It is a catalogue/family-level measurement, not a local one.
-    url: 
-      https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
-
+    url: https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
   - id: hyd_x_sp_pos_4
     kind: hyd
     manufacturer: Leica Microsystems
@@ -219,14 +182,11 @@ hardware:
     collection_max_nm: 750
     supports_time_gating: true
     time_gating_defaults_known: false
-    notes: >-
-      Installed the spectral detector at position 4. FALCON/FCS-capable detector for
-      visible to far-red workflows. QE/range are catalogue/facility-spec
-      values, not local measurements. Do not treat time-gating delay/width as
-      Fixed defaults; they are experiment/runtime settings.
-    url: 
-      https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
-
+    notes: Installed the spectral detector at position 4. FALCON/FCS-capable detector
+      for visible to far-red workflows. QE/range are catalogue/facility-spec values,
+      not local measurements. Do not treat time-gating delay/width as Fixed defaults;
+      they are experiment/runtime settings.
+    url: https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
   - id: hyd_r_sp_pos_5
     kind: hyd
     manufacturer: Leica Microsystems
@@ -237,26 +197,21 @@ hardware:
     collection_max_nm: 830
     supports_time_gating: true
     time_gating_defaults_known: false
-    notes: >-
-      Installed the spectral detector at position 5. Near-infrared FALCON/FCS
-      detector. QE/range are catalogue/facility-spec values, not local
-      measurements. Do not treat time-gating delay/width as fixed defaults;
-      They are experiment/runtime settings.
-    url: 
-      https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
-
+    notes: Installed the spectral detector at position 5. Near-infrared FALCON/FCS
+      detector. QE/range are catalogue/facility-spec values, not local measurements.
+      Do not treat time-gating delay/width as fixed defaults; They are experiment/runtime
+      settings.
+    url: https://www.leica-microsystems.com/science-lab/life-science/power-hyd-detectors/
   - id: bf_detector_dmi
     kind: pmt
     manufacturer: Leica Microsystems
     model: BF detector for DMI
     product_code: '158004201'
     qe_peak_pct: 30
-    notes: >-
-      Transmitted-light / brightfield detector listed in local quotation. QE is
-      a generic placeholder needed by the current confocal detector-completeness
+    notes: Transmitted-light / brightfield detector listed in local quotation. QE
+      is a generic placeholder needed by the current confocal detector-completeness
       policy, not a measured local value.
     url: ''
-
   - id: k5_camera
     kind: scmos
     manufacturer: Leica Microsystems
@@ -265,23 +220,20 @@ hardware:
     pixel_pitch_um: 6.5
     sensor_format_px: 4.2 MP
     qe_peak_pct: 80
-    notes: >-
-      External/stand camera via C-mount adapter 1x HC f. 1, product code
-      11541510. Camera specs are online catalogue values; this is not the
-      default detector for confocal spectral scanning.
+    notes: External/stand camera via C-mount adapter 1x HC f. 1, product code 11541510.
+      Camera specs are online catalogue values; this is not the default detector for
+      confocal spectral scanning.
     url: https://www.leica-microsystems.com/products/microscope-cameras/p/k5/
-
   eyepieces:
   - id: eyepieces
     notes: Bino Tube, product code 155933660.
-
   objectives:
   - id: obj_10x_air_0_40
     manufacturer: Leica Microsystems
     model: HC PL APO 10x/0.40 CS2
     product_code: '15506424'
     magnification: 10.0
-    numerical_aperture: 0.40
+    numerical_aperture: 0.4
     working_distance: unknown
     immersion: air
     correction: apochromat
@@ -290,7 +242,6 @@ hardware:
     notes: Installed objective listed in local quotation.
     url: ''
     is_installed: true
-
   - id: obj_20x_air_0_75
     manufacturer: Leica Microsystems
     model: HC PL APO 20x/0.75 CS2
@@ -305,7 +256,6 @@ hardware:
     notes: Installed objective listed in local quotation.
     url: ''
     is_installed: true
-
   - id: obj_40x_glycerol_1_25_corr
     manufacturer: Leica Microsystems
     model: HC PL APO 40x/1.25 GLYC CORR CS2
@@ -318,35 +268,31 @@ hardware:
     afc_compatible: true
     specialties:
     - correction_collar
-    notes: >-
-      Installed objective listed in local quotation. Uses Type G immersion
-      liquid, product code 15513910.
+    notes: Installed objective listed in local quotation. Uses Type G immersion liquid,
+      product code 15513910.
     url: ''
     is_installed: true
-
   - id: obj_63x_oil_1_40
     manufacturer: Leica Microsystems
     model: HC PL APO 63x/1.40 OIL CS2
     product_code: '15506350'
     magnification: 63.0
-    numerical_aperture: 1.40
+    numerical_aperture: 1.4
     working_distance: unknown
     immersion: oil
     correction: apochromat
     afc_compatible: true
     specialties: []
-    notes: >-
-      Installed objective listed in local quotation. Uses Type F immersion
-      liquid, ISO 8036, product code 15513859.
+    notes: Installed objective listed in local quotation. Uses Type F immersion liquid,
+      ISO 8036, product code 15513859.
     url: ''
     is_installed: true
-
   - id: obj_86x_water_1_20_motcorr_sted
     manufacturer: Leica Microsystems
     model: HC PL APO 86x/1.20 W motCORR STED W
     product_code: '15506333'
     magnification: 86.0
-    numerical_aperture: 1.20
+    numerical_aperture: 1.2
     working_distance: unknown
     immersion: water
     correction: apochromat
@@ -354,43 +300,35 @@ hardware:
     specialties:
     - correction_collar
     - sted
-    notes: >-
-      Installed water objective listed in local quotation. Associated motCORR
-      board product code 15525212 and water immersion micro dispenser product
-      code 15640019. Included because it is installed, even though this
-      instrument record does not currently declare a STED modality.
+    notes: Installed water objective listed in local quotation. Associated motCORR
+      board product code 15525212 and water immersion micro dispenser product code
+      15640019. Included because it is installed, even though this instrument record
+      does not currently declare a STED modality.
     url: ''
     is_installed: true
-
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: false
-    notes: >-
-      Okolab Black Box Incubator DMi8, Okolab Sample Chamber Inv Super Z, and
+    notes: Okolab Black Box Incubator DMi8, Okolab Sample Chamber Inv Super Z, and
       Okolab CO2, Humidity Passive are listed in the vendor quotation. Controlled
-      via LAS X Environmental Control. Exact temperature, CO2, and humidity
-      operating ranges are not documented in the provided records.
-
+      via LAS X Environmental Control. Exact temperature, CO2, and humidity operating
+      ranges are not documented in the provided records.
   stages:
   - id: scanning_stage_inv_universal
     type: xy_motorized
     manufacturer: Leica Microsystems
     model: Scanning stage inv. universal
     product_code: '158004141'
-    notes: >-
-      Vendor quotation also lists Cable Scanning Stage 3 m 90° product code
-      15500332 and XY advanced board for scanning stage product code 15525226.
-
+    notes: Vendor quotation also lists Cable Scanning Stage 3 m 90° product code 15500332
+      and XY advanced board for scanning stage product code 15525226.
   - id: superz_galvo_stage
     type: z_piezo
     manufacturer: Leica Microsystems
     model: SuperZ Galvo Stage
     product_code: '158004421'
-    notes: >-
-      Vendor quotation also lists Insert Rotatable Inverse SuperZ product code
+    notes: Vendor quotation also lists Insert Rotatable Inverse SuperZ product code
       158004423 and Petri dish insert 36 mm for Super Z product code 158004136.
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
@@ -398,7 +336,6 @@ hardware:
     model: Closed Loop Focus with AFC
     product_code: '158204202'
     notes: Vendor quotation lists Closed Loop Focus with AFC.
-
   sources:
   - id: white_light_laser_wll
     name: White Light Laser
@@ -416,13 +353,10 @@ hardware:
     - spectral_imaging
     - flim
     - fcs
-    notes: >-
-      Local quotation states visible excitation range 440-790 nm. Service
-      report SA-223726 records WLL replacement and that all WLL laser lines
-      were in specification after integration. Measured powers are not provided.
-    url: 
-      https://www.leica-microsystems.com/science-lab/life-science/stellaris-white-light-lasers/
-
+    notes: Local quotation states visible excitation range 440-790 nm. Service report
+      SA-223726 records WLL replacement and that all WLL laser lines were in specification
+      after integration. Measured powers are not provided.
+    url: https://www.leica-microsystems.com/science-lab/life-science/stellaris-white-light-lasers/
   - id: laser_405_dmod
     name: 405 nm DMOD laser
     kind: laser
@@ -440,7 +374,6 @@ hardware:
     - widefield_fluorescence
     notes: Local quotation also lists Laser Port 405/UV, product code 158301200.
     url: ''
-
   - id: leica_led_3
     kind: led
     manufacturer: Leica Microsystems
@@ -451,12 +384,9 @@ hardware:
     modalities:
     - widefield_fluorescence
     - transmitted_brightfield
-    notes: >-
-      Used with installed observation filter cubes and transmitted/stand
-      observation workflows. Exact LED channels/powers are not documented in
-      the provided records.
+    notes: Used with installed observation filter cubes and transmitted/stand observation
+      workflows. Exact LED channels/powers are not documented in the provided records.
     url: ''
-
   optical_path_elements:
   - id: aobs
     name: Acousto-Optical Beam Splitter
@@ -473,7 +403,6 @@ hardware:
     - flim
     - fcs
     notes: Installed AOBS for software-controlled wavelength selection/routing.
-
   - id: spectral_detection_unit
     name: Prism-based spectral detection unit
     display_label: Spectral detection / SP module
@@ -485,11 +414,8 @@ hardware:
     - spectral_imaging
     - flim
     - fcs
-    notes: >-
-      Computer-controlled adjustable emission bandwidth. Local quotation states
-      detection range up to 850 nm and up to five simultaneous fluorescence
-      channels.
-
+    notes: Computer-controlled adjustable emission bandwidth. Local quotation states
+      detection range up to 850 nm and up to five simultaneous fluorescence channels.
   - id: epi_filter_cube_turret
     name: Reflected-light filter cube turret
     display_label: LED/filter-cube observation path
@@ -516,11 +442,9 @@ hardware:
           component_type: bandpass
           center_nm: 470
           width_nm: 40
-        notes: >-
-          Spectral bands are catalogue-derived from matching Leica-style
-          filter-cube references; verify against installed cube label before
-          treating as measured local truth.
-
+        notes: Spectral bands are catalogue-derived from matching Leica-style filter-cube
+          references; verify against installed cube label before treating as measured
+          local truth.
       gfp_cube:
         slot: 2
         component_type: filter_cube
@@ -538,10 +462,8 @@ hardware:
           component_type: bandpass
           center_nm: 525
           width_nm: 50
-        notes: >-
-          Catalogue-derived GFP cube bands; verify against installed cube label
+        notes: Catalogue-derived GFP cube bands; verify against installed cube label
           if exact bands matter.
-
       txr_cube:
         slot: 3
         component_type: filter_cube
@@ -559,10 +481,8 @@ hardware:
           component_type: bandpass
           center_nm: 630
           width_nm: 75
-        notes: >-
-          Catalogue-derived TXR cube bands; verify against installed cube label
+        notes: Catalogue-derived TXR cube bands; verify against installed cube label
           if exact bands matter.
-
       cy5_narrow_cube:
         slot: 4
         component_type: filter_cube
@@ -580,22 +500,17 @@ hardware:
           component_type: bandpass
           center_nm: 690
           width_nm: 50
-        notes: >-
-          Catalogue-derived Cy5 narrow bands from product listing; verify
-          against installed cube label if exact bands matter.
-
+        notes: Catalogue-derived Cy5 narrow bands from product listing; verify against
+          installed cube label if exact bands matter.
       icr_reflector_cube:
         slot: 5
         component_type: analyzer
         manufacturer: Leica Microsystems
         model: Reflector cube ICR
         product_code: '11525375'
-        notes: >-
-          Reflector cube with 45° dichroic mirror and permanently installed and
-          fixed crossed polarizer and analyzer. This is not an authoritative
-          fluorescence filter cube and should not be used for spectral
-          fluorophore simulation.
-
+        notes: Reflector cube with 45° dichroic mirror and permanently installed and
+          fixed crossed polarizer and analyzer. This is not an authoritative fluorescence
+          filter cube and should not be used for spectral fluorophore simulation.
   - id: transmitted_light_path
     name: Transmitted-light / BF path
     display_label: Transmitted light path
@@ -605,7 +520,6 @@ hardware:
     modalities:
     - transmitted_brightfield
     notes: Includes BF detector for DMI and transmitted-light observation path.
-
   - id: eyepiece_camera_selector
     name: Eyepiece/camera observation selector
     display_label: Eyepiece / K5 camera selector
@@ -618,10 +532,8 @@ hardware:
     modalities:
     - widefield_fluorescence
     - transmitted_brightfield
-    notes: >-
-      Represents trinocular observation routing to eyepieces or K5 camera.
-      Physical default is not authored.
-
+    notes: Represents trinocular observation routing to eyepieces or K5 camera. Physical
+      default is not authored.
 light_paths:
 - id: confocal_point
   name: Confocal spectral / FALCON FLIM / FCS
@@ -660,7 +572,6 @@ light_paths:
         label: Power HyD R SP pos 5
         sequence:
         - endpoint_id: hyd_r_sp_pos_5
-
   readouts:
   - spectral_imaging
   - flim
@@ -686,7 +597,6 @@ light_paths:
         label: To eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: transmitted_brightfield
   name: Transmitted brightfield
   modalities:
@@ -711,16 +621,3 @@ light_paths:
         label: To eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - confocal_point
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  readouts:
-  - spectral_imaging
-  - flim
-  - fcs
-  workflows: []
-  assay_operations: []
-  non_optical: []

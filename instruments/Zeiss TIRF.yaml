@@ -8,19 +8,23 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2209
-  notes: 'TIRF/widefield microscope (inverted). TIRF imaging enables approximately
+  notes: TIRF/widefield microscope (inverted). TIRF imaging enables approximately
     70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm
     in common confocal microscopy). Designed for membrane studies such as endocytosis
-    and integrin trafficking, and also suitable for sensitive widefield imaging.'
+    and integrin trafficking, and also suitable for sensitive widefield imaging.
   url: ''
-
-modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- tirf
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  - tirf
+  contrast_methods:
+  - transmitted_brightfield
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: incubation   # CORRECTED: Changed 'name' to the canonical 'type'
+- type: incubation
   notes: Heated incubator and sample holder
   url: ''
   manufacturer: Zeiss
@@ -35,28 +39,23 @@ modules:
   url: ''
   manufacturer: Zeiss
   model: Motorized XY Stage
-
 software:
 - role: acquisition
   name: Unknown
   version: ''
   url: ''
-
 hardware:
   environment:
     temperature_control: true
     notes: Heated incubator and sample holder
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   stages:
-  - type: xy_motorized   # Canonical stage type for the installed XY stage
-    manufacturer: Zeiss   # ADDED: Required for completeness
+  - type: xy_motorized
+    manufacturer: Zeiss
     model: Motorized XY Stage
     notes: Motorized XY stage
-
   scanner:
     type: none
     notes: ''
@@ -78,10 +77,9 @@ hardware:
     notes: ''
     url: ''
     id: detector_2
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 2.5x_air
     manufacturer: Zeiss
@@ -155,12 +153,11 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
-
   sources:
   - kind: laser
-    manufacturer: Unknown   # CORRECTED: Replaced empty strings
+    manufacturer: Unknown
     model: 488 nm
-    wavelength_nm: 488   # CORRECTED: Changed string to integer
+    wavelength_nm: 488
     power: ''
     notes: ''
     url: ''
@@ -168,7 +165,6 @@ hardware:
     modalities:
     - widefield_fluorescence
     - tirf
-      # CORRECTED: Removed legacy 'path: epi' aliases
   - kind: laser
     manufacturer: Unknown
     model: 561 nm
@@ -191,7 +187,7 @@ hardware:
     modalities:
     - widefield_fluorescence
     - tirf
-  - kind: halogen_lamp   # ADDED: Required to satisfy Transmitted Brightfield light path
+  - kind: halogen_lamp
     manufacturer: Zeiss
     model: Transmitted Halogen Lamp
     role: transmitted_illumination
@@ -199,10 +195,8 @@ hardware:
     id: halogen_lamp_transmitted
     modalities:
     - transmitted_brightfield
-
   optical_path_elements:
   - name: Filter Turret
-      # CORRECTED: Migrated legacy hardware.filters into canonical element with standard bands
     stage_role: cube
     id: epi_turret
     element_type: turret
@@ -218,9 +212,6 @@ hardware:
         - center_nm: 525
           width_nm: 50
         notes: 'Excitation: 470/40 nm.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
-          # data. Upgrade to explicit excitation_filter, dichroic, and
-          # emission_filter when Zeiss filter set 38 HE datasheet is consulted.
       Pos_2:
         name: Filter set 43 HE (DsRed)
         product_code: 43 HE
@@ -229,13 +220,11 @@ hardware:
         - center_nm: 605
           width_nm: 70
         notes: 'Excitation: 550/25 nm.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
-          # data. Upgrade when Zeiss filter set 43 HE datasheet is consulted.
       Pos_3:
         name: Filter set 76 HE (CFP/GFP/DsRed)
         product_code: 76 HE
         component_type: filter_cube
-        bands:   # CORRECTED: Translated complex TBP string into individual bands
+        bands:
         - center_nm: 459
           width_nm: 25
         - center_nm: 525
@@ -243,8 +232,6 @@ hardware:
         - center_nm: 608
           width_nm: 30
         notes: 'Excitation: TBP 406+489+561 nm. Emission: TBP 459+525+608 nm.'
-          # TODO: Non-authoritative multiband cube — dichroic cutoff not recorded
-          # in local data. Upgrade when Zeiss filter set 76 HE datasheet is consulted.
       Pos_4:
         name: Filter set 77 HE (GFP/mRFP/Alexa 633)
         product_code: 77 HE
@@ -257,10 +244,7 @@ hardware:
         - center_nm: 688
           width_nm: 40
         notes: 'Excitation: TBP 483+564+642 nm. Emission: TBP 526+601+688 nm.'
-          # TODO: Non-authoritative multiband cube — dichroic cutoff not recorded
-          # in local data. Upgrade when Zeiss filter set 77 HE datasheet is consulted.
-
-  - name: Trinocular Port   # ADDED: Splitting logic for ocular paths
+  - name: Trinocular Port
     stage_role: splitter
     id: trinocular_port
     element_type: splitter
@@ -272,11 +256,8 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 3
-
-  # CORRECTED: Removed deprecated hardware.endpoints block.
-
 light_paths:
-- id: tirf   # CORRECTED: Aligned ID with standard modalities
+- id: tirf
   name: TIRF
   modalities:
   - tirf
@@ -288,22 +269,21 @@ light_paths:
   detection_sequence:
   - optical_path_element_id: epi_turret
   - optical_path_element_id: trinocular_port
-  - branches:     # ADDED: Required detection routing to endpoints
+  - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_emccd
-        label: "To Hamamatsu EMCCD"
+        label: To Hamamatsu EMCCD
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_scmos
-        label: "To ORCA-Flash4.0 sCMOS"
+        label: To ORCA-Flash4.0 sCMOS
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: widefield_fluorescence
   name: Epi-fluorescence
   modalities:
@@ -320,19 +300,18 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_emccd
-        label: "To Hamamatsu EMCCD"
+        label: To Hamamatsu EMCCD
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_scmos
-        label: "To ORCA-Flash4.0 sCMOS"
+        label: To ORCA-Flash4.0 sCMOS
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
-- id: transmitted_brightfield   # ADDED: Routing for declared transmitted modality
+- id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:
   - transmitted_brightfield
@@ -344,24 +323,14 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_emccd
-        label: "To Hamamatsu EMCCD"
+        label: To Hamamatsu EMCCD
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_scmos
-        label: "To ORCA-Flash4.0 sCMOS"
+        label: To ORCA-Flash4.0 sCMOS
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  - tirf
-  contrast_methods:
-  - transmitted_brightfield
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

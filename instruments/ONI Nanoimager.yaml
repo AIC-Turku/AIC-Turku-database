@@ -14,31 +14,34 @@ instrument:
     (<10 nm mapping accuracy). Equipped with a closed-loop piezo stage (20/20/10 mm
     XYZ travel, 1 nm resolution) and continuous/one-shot autofocus.'
   url: https://oni.bio/nanoimager
-
-modalities:
-- tirf
-- smlm
-- spt
-- fret
-
+capabilities:
+  imaging_modes:
+  - tirf
+  - smlm
+  contrast_methods: []
+  readouts:
+  - fret
+  workflows:
+  - single_particle_tracking
+  assay_operations: []
+  non_optical: []
 modules:
-- type: environmental_enclosure   # CORRECTED: Changed 'name' to the canonical 'type'
-  notes: Resistive heating without active cooling. Suitable for live cell 
-    imaging at 37°C.
+- type: environmental_enclosure
+  notes: Resistive heating without active cooling. Suitable for live cell imaging
+    at 37°C.
   url: ''
   manufacturer: ONI
   model: Environmental Enclosure
-- type: piezo_z_stage   # CORRECTED
+- type: piezo_z_stage
   notes: Closed-loop piezo stage (20/20/10 mm XYZ travel, 1 nm resolution)
   url: ''
   manufacturer: ONI
   model: Closed-loop Piezo XYZ Stage
-- type: hardware_autofocus   # CORRECTED
+- type: hardware_autofocus
   notes: Continuous/one-shot autofocus
   url: ''
   manufacturer: ONI
   model: Continuous/One-shot Autofocus
-
 software:
 - role: acquisition
   name: NimOS microscope control software
@@ -48,23 +51,19 @@ software:
   name: CODI analysis software
   version: ''
   url: ''
-
 hardware:
   environment:
     temperature_control: true
-    notes: Resistive heating without active cooling. Suitable for live cell 
-      imaging at 37°C.
-
+    notes: Resistive heating without active cooling. Suitable for live cell imaging
+      at 37°C.
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   stages:
-  - type: z_piezo   # Canonical stage type for the installed piezo Z stage
-    manufacturer: ONI   # ADDED: Required for completeness
+  - type: z_piezo
+    manufacturer: ONI
     model: Closed-loop Piezo XYZ Stage
     notes: Closed-loop piezo stage (20/20/10 mm XYZ travel, 1 nm resolution)
-
   scanner:
     type: none
     notes: ''
@@ -74,14 +73,10 @@ hardware:
     manufacturer: Hamamatsu
     model: ORCA-Flash4.0 V3
     pixel_pitch_um: 6.5
-    qe_peak_pct: 82   # ADDED: Strictly required for SMLM modalities
-    notes: Digital sCMOS camera, 100 fps full frame. Typically operated with 2x2
-      binning.
+    qe_peak_pct: 82
+    notes: Digital sCMOS camera, 100 fps full frame. Typically operated with 2x2 binning.
     url: ''
     id: detector_1
-
-  # CORRECTED: Removed the deprecated hardware.filters array
-
   objectives:
   - id: 100x_oil
     manufacturer: Olympus
@@ -97,30 +92,28 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
-
   magnification_changers:
   - manufacturer: ONI
     model: Custom tube lens
     magnification: 1.1
-    notes: Custom tube lens provides 110x total magnification with the 100x 
-      objective. Combined with 2x2 binning, this yields a pixel size of ~117 nm.
+    notes: Custom tube lens provides 110x total magnification with the 100x objective.
+      Combined with 2x2 binning, this yields a pixel size of ~117 nm.
     url: ''
   sources:
   - kind: laser
     manufacturer: ONI
     model: 405 nm violet
     technology: diode
-    wavelength_nm: 405   # CORRECTED: Converted from string to integer
+    wavelength_nm: 405
     power: 70 mW
     notes: Power measured at the objective.
     url: ''
     id: 405_nm_violet
-    modalities:   # CORRECTED: Aligned modalities with standard definitions
+    modalities:
     - tirf
     - smlm
     - spt
     - fret
-      # CORRECTED: Removed legacy 'path: epi' alias
   - kind: laser
     manufacturer: ONI
     model: 488 nm blue
@@ -141,8 +134,8 @@ hardware:
     technology: dpss
     wavelength_nm: 561
     power: 250 mW
-    notes: Power measured at the objective. DPSS technology inherently takes ~30
-      sec to stabilize.
+    notes: Power measured at the objective. DPSS technology inherently takes ~30 sec
+      to stabilize.
     url: ''
     id: 561_nm_green
     modalities:
@@ -164,9 +157,8 @@ hardware:
     - smlm
     - spt
     - fret
-
   optical_path_elements:
-  - name: Internal Emission Splitter   # CORRECTED: Converted legacy filters array into a canonical splitter
+  - name: Internal Emission Splitter
     stage_role: splitter
     id: internal_emission_splitter
     element_type: splitter
@@ -179,26 +171,23 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 2
-    notes: 'Simultaneous 2-channel imaging. Splits emission onto two halves of the
-      single camera chip.'
+    notes: Simultaneous 2-channel imaging. Splits emission onto two halves of the
+      single camera chip.
     positions:
       Pos_1:
         name: Channel 0 & 1 Splitting Optics
         component_type: multiband_bandpass
-        bands:   # CORRECTED: Converted string ranges into canonical center/width numeric arrays
+        bands:
         - center_nm: 524.5
-          width_nm: 53     # Maps to 498-551 nm
+          width_nm: 53
         - center_nm: 598
-          width_nm: 44     # Maps to 576-620 nm
+          width_nm: 44
         - center_nm: 685
-          width_nm: 40     # Maps to 665-705 nm
-        notes: 'Channel 0 Dual-band (approx 498-551 nm; 576-620 nm) and Channel 1
-          (approx 665-705 nm).'
-
-  # CORRECTED: Removed deprecated hardware.endpoints array
-
+          width_nm: 40
+        notes: Channel 0 Dual-band (approx 498-551 nm; 576-620 nm) and Channel 1 (approx
+          665-705 nm).
 light_paths:
-- id: tirf   # Canonical physical route; SMLM/SPT/FRET remain documented as supported modalities
+- id: tirf
   name: SMLM / TIRF / SPT / FRET
   modalities:
   - tirf
@@ -212,27 +201,16 @@ light_paths:
   - source_id: 640_nm_red
   detection_sequence:
   - optical_path_element_id: internal_emission_splitter
-  - branches:     # ADDED: Required detection routing to valid endpoints
+  - branches:
       selection_mode: multiple
       items:
       - branch_id: to_channel_0
-        label: "Channel 0 (Green/Red - Left Half of Sensor)"
+        label: Channel 0 (Green/Red - Left Half of Sensor)
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_channel_1
-        label: "Channel 1 (Far-Red - Right Half of Sensor)"
+        label: Channel 1 (Far-Red - Right Half of Sensor)
         sequence:
         - endpoint_id: detector_1
   readouts:
   - fret
-capabilities:
-  imaging_modes:
-  - tirf
-  - smlm
-  contrast_methods: []
-  readouts:
-  - fret
-  workflows:
-  - single_particle_tracking
-  assay_operations: []
-  non_optical: []
