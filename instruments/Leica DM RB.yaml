@@ -11,31 +11,33 @@ instrument:
   notes: 'Widefield microscope (upright) with camera port. Imaging modes: Fluorescence
     (epifluorescence), Brightfield (transmitted light), Darkfield.'
   url: ''
-
-modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- darkfield
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - darkfield
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules: []
 software_status: not_applicable
 software: []
-
 hardware:
   scanner:
     type: none
     notes: ''
     url: ''
-  detectors: # ADDED: Camera port must be registered as a detector to serve as a valid routing endpoint
+  detectors:
   - kind: ccd
     manufacturer: Unknown
     model: Unknown Camera
     notes: Camera port for optional detector.
     id: camera_port_main
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 10x_air
     manufacturer: Leica
@@ -107,16 +109,13 @@ hardware:
     notes: NA range 1.40-0.7. Has an adjustable iris diaphragm for darkfield.
     url: ''
     is_installed: true
-
   sources:
   - kind: halogen_lamp
     manufacturer: Leica
     model: 12V 100W halogen bulb
-      # CORRECTED: Removed invalid string 'broadband' for wavelength and legacy 'path' alias
     power: 100 W
     role: transmitted_illumination
-    notes: Transmitted light source for Brightfield and Darkfield. Broadband 
-      illumination.
+    notes: Transmitted light source for Brightfield and Darkfield. Broadband illumination.
     url: ''
     id: 12v_100w_halogen_bulb
     modalities:
@@ -125,17 +124,14 @@ hardware:
   - kind: arc_lamp
     manufacturer: Osram
     model: 50W HBO short arc bulb
-      # CORRECTED: Removed invalid string 'broadband' for wavelength and legacy 'path' alias
     power: 50 W
     notes: Fluorescence excitation source. Broadband illumination.
     url: ''
     id: 50w_hbo_short_arc_bulb
     modalities:
     - widefield_fluorescence
-
   optical_path_elements:
   - name: Fluorescence Turret
-      # CORRECTED: Removed legacy 'type' and 'path' aliases
     stage_role: cube
     id: fluorescence_turret
     element_type: turret
@@ -194,26 +190,21 @@ hardware:
           component_type: bandpass
           center_nm: 605
           width_nm: 70
-
-  - name: Trinocular Port   # CORRECTED: Changed label to reflect its trinocular splitting role
-      # CORRECTED: Removed legacy 'type' and 'path' aliases
+  - name: Trinocular Port
     stage_role: splitter
     id: camera_port
-    element_type: splitter   # CORRECTED: Replaced invalid type 'emission_splitter' with 'splitter'
-    selection_mode: exclusive   # CORRECTED: Replaced non-standard 'fixed' selection mode
+    element_type: splitter
+    selection_mode: exclusive
     modalities:
     - widefield_fluorescence
     - transmitted_brightfield
     - darkfield
     supported_branch_modes:
     - selected
-    supported_branch_count: 2   # CORRECTED: Increased to 2 for camera + eyepieces
+    supported_branch_count: 2
     notes: Camera port for optional detector and eyepieces.
-
-  # CORRECTED: Removed the deprecated hardware.endpoints block.
-
 light_paths:
-- id: widefield_fluorescence   # CORRECTED: Aligned ID with standard modalities
+- id: widefield_fluorescence
   name: Epi-fluorescence
   modalities:
   - widefield_fluorescence
@@ -223,19 +214,18 @@ light_paths:
   detection_sequence:
   - optical_path_element_id: fluorescence_turret
   - optical_path_element_id: camera_port
-  - branches:     # ADDED: Valid detection routing to endpoints
+  - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To Camera Port"
+        label: To Camera Port
         sequence:
         - endpoint_id: camera_port_main
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
-- id: transmitted_brightfield   # CORRECTED: Aligned ID with standard modalities
+- id: transmitted_brightfield
   name: Transmitted light
   modalities:
   - transmitted_brightfield
@@ -247,15 +237,14 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To Camera Port"
+        label: To Camera Port
         sequence:
         - endpoint_id: camera_port_main
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
-- id: darkfield   # ADDED: Explicit light path for the declared Darkfield modality
+- id: darkfield
   name: Darkfield
   modalities:
   - darkfield
@@ -267,20 +256,10 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To Camera Port"
+        label: To Camera Port
         sequence:
         - endpoint_id: camera_port_main
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  - darkfield
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

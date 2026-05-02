@@ -175,7 +175,7 @@ def _build_hardware_focus_summary(
     ]
 
     return {
-        "modality_labels": _display_labels(canonical_instrument_dto.get("modalities")),
+        "modality_labels": (_display_labels(canonical_instrument_dto.get("modalities")) or _display_labels((canonical_instrument_dto.get("capabilities") or {}).get("imaging_modes"))),
         "route_labels": route_labels,
         "installed_objective_labels": _display_labels(
             hardware.get("objectives"),
@@ -457,17 +457,21 @@ def build_llm_inventory_payload(
             ),
             "hardware": copy.deepcopy(canonical_instrument_dto.get("hardware") or {}),
             "methods": copy.deepcopy(canonical_instrument_dto.get("methods") or {}),
-            "modalities": copy.deepcopy(canonical_instrument_dto.get("modalities") or []),
-            "modalities_note": (
-                "Compatibility-only flat list. Prefer capabilities (grouped axes) "
-                "and route_identity.readouts in "
-                "llm_context.authoritative_route_contract.routes "
-                "as the primary semantic facts."
-            ),
             "capabilities": copy.deepcopy(canonical_instrument_dto.get("capabilities") or {}),
             "software": copy.deepcopy(canonical_instrument_dto.get("software") or []),
             "software_status": clean_text(canonical_instrument_dto.get("software_status")).lower(),
         }
+        legacy_modalities = copy.deepcopy(canonical_instrument_dto.get("modalities") or [])
+        if inst.get("retired") or legacy_modalities:
+            llm_record["modalities"] = legacy_modalities
+            llm_record["modalities_note"] = (
+                "Compatibility-only flat list for retired/legacy records; "
+                "canonical capability semantics are carried by capabilities and route readouts."
+            )
+        else:
+            llm_record["modalities_note"] = (
+                "Compatibility-only field; canonical capability semantics are carried by capabilities and route readouts."
+            )
         if llm_record["software_status"] == "not_applicable":
             llm_record["software_status_caveat"] = (
                 "No acquisition/control software is part of this instrument record."

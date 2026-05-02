@@ -20,7 +20,7 @@ instrument:
 # -----------------------------------------------------------------------------
 # IMAGING MODALITIES
 # -----------------------------------------------------------------------------
-modalities:  # Imaging modalities: Core reporting category in QUAREP/JCB-style instrumentation metadata. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
+modalities:  # Imaging modalities (legacy): Core reporting category in QUAREP/JCB-style instrumentation metadata. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
   - ""
 
 # -----------------------------------------------------------------------------

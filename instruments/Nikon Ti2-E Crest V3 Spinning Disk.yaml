@@ -8,18 +8,21 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: High-end spinning disk system with Lumencor Celesta 7-channel laser, 
-    dual Photometrics Kinetix cameras, and Dark Enclosure WarmBox.
-  url: 
-    https://www.microscope.healthcare.nikon.com/products/inverted-microscopes/eclipse-ti2
-
-modalities:
-- confocal_spinning_disk
-- widefield_fluorescence
-- transmitted_brightfield
-
+  notes: High-end spinning disk system with Lumencor Celesta 7-channel laser, dual
+    Photometrics Kinetix cameras, and Dark Enclosure WarmBox.
+  url: https://www.microscope.healthcare.nikon.com/products/inverted-microscopes/eclipse-ti2
+capabilities:
+  imaging_modes:
+  - confocal_spinning_disk
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: hardware_autofocus   # CORRECTED: Changed 'name' to 'type'
+- type: hardware_autofocus
   notes: 'Nikon Perfect Focus System (PFS). WARNING: Not compatible with 751 nm excitation.
     The PFS beamsplitter needs to be taken out from the lightpath in the optical configurations
     for 749/751nm use.'
@@ -37,9 +40,8 @@ modules:
   manufacturer: Prior
   model: SP600 piezo kit
 - type: hardware_triggering
-  notes: Crest V3 Triggering Kit (MXCRO057) including NI PCIe-6738, Ubob42 NIDAQ
-    Ultimate Breakout Box, and 9-Channel Trigger Cable for high-speed device 
-    synchronization.
+  notes: Crest V3 Triggering Kit (MXCRO057) including NI PCIe-6738, Ubob42 NIDAQ Ultimate
+    Breakout Box, and 9-Channel Trigger Cable for high-speed device synchronization.
   url: ''
   manufacturer: CrestOptics
   model: V3 Triggering Kit MXCRO057
@@ -48,7 +50,6 @@ modules:
   url: ''
   manufacturer: Nikon
   model: Motorized XY Stage
-
 software:
 - role: acquisition
   name: NIS-Elements AR
@@ -57,30 +58,24 @@ software:
   name: NIS-Elements AR
   version: ''
   notes: Includes 6D, JOBS 2.0, 3D Measurement, and RT Acquisition
-  url: 
-    https://www.microscope.healthcare.nikon.com/products/software/nis-elements
-
+  url: https://www.microscope.healthcare.nikon.com/products/software/nis-elements
 hardware:
   environment:
     temperature_control: true
     notes: Dark Enclosure WarmBox set for Ti2 (TI2WB-SP400NX-G)
-
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
-
   stages:
-  - type: z_piezo   # Canonical stage type for the installed piezo Z stage
+  - type: z_piezo
     manufacturer: Prior
     model: QG/Prior SP600 piezo kit
     notes: QG/Prior SP600 piezo kit with well-plate holder
-
   scanner:
     type: spinning_disk
     pinhole_um: 50
     notes: CrestOptics X-Light V3 HTDS (Laser-SP disk-Throughput-V2&V3 50:250um)
     url: https://crestoptics.com/x-light-v3/
-
   detectors:
   - id: kinetix_master_camera
     kind: scmos
@@ -100,10 +95,9 @@ hardware:
     sensor_format_px: 3200 x 3200
     notes: Slave Camera (2nd F-cam) - DAPI/Cy3 in DualCam mode
     url: https://www.photometrics.com/products/kinetix-family/kinetix
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 4x_air
     manufacturer: Nikon
@@ -211,7 +205,6 @@ hardware:
     notes: Optional objective. Requires DIC-prism N2.
     url: ''
     is_installed: false
-
   sources:
   - kind: laser
     manufacturer: Lumencor
@@ -286,7 +279,6 @@ hardware:
   - kind: led
     manufacturer: Nikon
     model: D-LEDI Fluorescence LED Illumination System
-      # CORRECTED: Removed invalid 'broadband' string
     power: ''
     notes: For widefield epifluorescence. Broadband illumination.
     url: ''
@@ -296,7 +288,6 @@ hardware:
   - kind: led
     manufacturer: Nikon
     model: T12-D-LHLED LED Lamp House
-      # CORRECTED: Removed invalid 'white' string
     power: ''
     role: transmitted_illumination
     notes: For DIA transmitted illumination. White light source.
@@ -304,7 +295,6 @@ hardware:
     id: t12_d_lhled_led_lamp_house
     modalities:
     - transmitted_brightfield
-
   optical_path_elements:
   - name: Epi Turret
     stage_role: cube
@@ -390,7 +380,6 @@ hardware:
           component_type: bandpass
           center_nm: 700
           width_nm: 75
-
   - name: Crest Excitation Wheel
     slots: 3
     stage_role: excitation
@@ -427,7 +416,6 @@ hardware:
         name: Neutral Density
         component_type: neutral_density
         notes: ND 1.3-5%T-25mm. 5% transmission to be used with widefield.
-
   - name: Crest Dichroic Wheel
     slots: 2
     stage_role: dichroic
@@ -440,7 +428,7 @@ hardware:
         name: Celesta-DA/FI/TR/Cy5/Cy7-A
         component_type: multiband_dichroic
         product_code: MXR00543
-        bands:   # CORRECTED: Consolidated transmission/reflection lists into standard bands
+        bands:
         - center_nm: 441
           width_nm: 36.1
         - center_nm: 511
@@ -526,7 +514,6 @@ hardware:
         bands:
         - center_nm: 685
           width_nm: 40
-
   - name: Nikon DIA
     notes: Neutral filter for assigning the light path to single camera
     supported_branch_modes:
@@ -534,12 +521,11 @@ hardware:
     supported_branch_count: 2
     stage_role: splitter
     id: nikon_dia
-    element_type: splitter   # CORRECTED: Replaced invalid type
+    element_type: splitter
     selection_mode: exclusive
     modalities:
     - transmitted_brightfield
     - widefield_fluorescence
-
   - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
     notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave
       Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
@@ -550,7 +536,7 @@ hardware:
     stage_role: splitter
     id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
     element_type: splitter
-    selection_mode: multiple   # Both camera branches can be active simultaneously
+    selection_mode: multiple
     modalities:
     - confocal_spinning_disk
     positions:
@@ -560,7 +546,6 @@ hardware:
         - 485
         - 560
         - 645
-
   - name: MXR00545 V3 DualCam-CFP/YFP 2 Bands Celesta Set
     notes: Additional DualCam Splitter option for CFP/YFP imaging.
     supported_branch_modes:
@@ -573,8 +558,7 @@ hardware:
     selection_mode: multiple
     modalities:
     - confocal_spinning_disk
-
-  - name: Trinocular Port   # ADDED: Required for ocular routing
+  - name: Trinocular Port
     stage_role: splitter
     id: trinocular_port
     element_type: splitter
@@ -586,11 +570,8 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 2
-
-  # CORRECTED: Removed the deprecated hardware.endpoints block.
-
 light_paths:
-- id: confocal_spinning_disk   # CORRECTED: Aligned ID with standard modalities
+- id: confocal_spinning_disk
   name: Confocal
   modalities:
   - confocal_spinning_disk
@@ -612,22 +593,19 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_master
-        label: "To Kinetix Master (via Dual Camera Splitter)"
+        label: To Kinetix Master (via Dual Camera Splitter)
         sequence:
-        - optical_path_element_id: 
-            mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
+        - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
         - endpoint_id: kinetix_master_camera
       - branch_id: to_slave
-        label: "To Kinetix Slave (via Dual Camera Splitter)"
+        label: To Kinetix Slave (via Dual Camera Splitter)
         sequence:
-        - optical_path_element_id: 
-            mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
+        - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
         - endpoint_id: kinetix_slave_camera
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: widefield_fluorescence
   name: Epi-fluorescence
   modalities:
@@ -643,18 +621,17 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_master_camera
-        label: "To Kinetix Master"
+        label: To Kinetix Master
         sequence:
         - endpoint_id: kinetix_master_camera
       - branch_id: to_slave_camera
-        label: "To Kinetix Slave"
+        label: To Kinetix Slave
         sequence:
         - endpoint_id: kinetix_slave_camera
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: transmitted_brightfield
   name: Transmitted light
   modalities:
@@ -668,24 +645,14 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_master_camera
-        label: "To Kinetix Master"
+        label: To Kinetix Master
         sequence:
         - endpoint_id: kinetix_master_camera
       - branch_id: to_slave_camera
-        label: "To Kinetix Slave"
+        label: To Kinetix Slave
         sequence:
         - endpoint_id: kinetix_slave_camera
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - confocal_spinning_disk
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

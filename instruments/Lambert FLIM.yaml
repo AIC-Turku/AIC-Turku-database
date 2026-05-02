@@ -19,42 +19,41 @@ instrument:
     spatial resolution of biochemical processes in the cell" (Trends Cell Biol. 1999
     Feb;9(2):48-52).'
   url: ''
-
-modalities:
-- widefield_fluorescence
-- flim
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods: []
+  readouts:
+  - flim
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: flim   # CORRECTED: Changed from 'name' to the canonical 'type'
+- type: flim
   notes: Lambert Instruments LIFA fast frequency-domain FLIM module
   url: ''
   manufacturer: Lambert Instruments
   model: LIFA
-
 software:
 - role: acquisition
   name: Unknown
   version: ''
   url: ''
-
 hardware:
   scanner:
     type: none
     notes: ''
     url: ''
-  detectors: # ADDED: A detector must exist to serve as a valid light path endpoint
+  detectors:
   - kind: ccd
     manufacturer: Lambert Instruments
     model: LIFA Camera
     notes: Assumed LIFA integrated frequency-domain FLIM camera.
     url: ''
     id: detector_1
-
-  eyepieces: # ADDED: Required to support trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
-
-  # CORRECTED: Removed deprecated 'filters', 'splitters', and 'endpoints' arrays
+    notes: Binocular Eyepieces
   objectives:
   - id: 20x_air_ph2
     manufacturer: Zeiss
@@ -100,12 +99,11 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
-
   sources:
   - kind: led
-    manufacturer: Unknown   # CORRECTED: Replaced invalid 'null' with 'Unknown'
+    manufacturer: Unknown
     model: Multi-LED excitation
-    wavelength_nm: 406   # CORRECTED: Changed string '406' to number 406
+    wavelength_nm: 406
     power: ''
     notes: Excitation line
     url: ''
@@ -113,7 +111,6 @@ hardware:
     modalities:
     - widefield_fluorescence
     - flim
-      # CORRECTED: Removed legacy 'path' alias
   - kind: led
     manufacturer: Unknown
     model: Multi-LED excitation
@@ -136,7 +133,6 @@ hardware:
     modalities:
     - widefield_fluorescence
     - flim
-
   optical_path_elements:
   - id: trinocular_port_selector
     name: Trinocular Port Selector
@@ -149,10 +145,8 @@ hardware:
     modalities:
     - widefield_fluorescence
     - flim
-
-
 light_paths:
-- id: widefield_fluorescence   # Optical route is widefield fluorescence; FLIM is a readout, not a route type
+- id: widefield_fluorescence
   name: Epi-fluorescence (FLIM)
   modalities:
   - widefield_fluorescence
@@ -167,21 +161,12 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To LIFA Camera"
+        label: To LIFA Camera
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
   readouts:
   - flim
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods: []
-  readouts:
-  - flim
-  workflows: []
-  assay_operations: []
-  non_optical: []

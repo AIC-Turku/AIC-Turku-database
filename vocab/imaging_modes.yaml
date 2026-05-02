@@ -1,12 +1,34 @@
 terms:
-  - id: confocal_point
-  - id: confocal_spinning_disk
-  - id: widefield_fluorescence
-  - id: tirf
-  - id: multiphoton
-  - id: light_sheet
-  - id: sim
-  - id: sted
-  - id: resolft
-  - id: smlm
-  - id: ism
+- id: confocal_point
+  display_label: Confocal point scanning
+  label: Confocal point scanning
+- id: confocal_spinning_disk
+  display_label: Confocal spinning disk
+  label: Confocal spinning disk
+- id: widefield_fluorescence
+  display_label: Widefield fluorescence
+  label: Widefield fluorescence
+- id: tirf
+  display_label: TIRF
+  label: TIRF
+- id: multiphoton
+  display_label: Multiphoton
+  label: Multiphoton
+- id: light_sheet
+  display_label: Light sheet
+  label: Light sheet
+- id: sim
+  display_label: SIM
+  label: SIM
+- id: sted
+  display_label: STED
+  label: STED
+- id: resolft
+  display_label: RESOLFT
+  label: RESOLFT
+- id: smlm
+  display_label: SMLM
+  label: SMLM
+- id: ism
+  display_label: ISM (AiryScan)
+  label: ISM (AiryScan)

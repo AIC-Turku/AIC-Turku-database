@@ -8,19 +8,22 @@ instrument:
   stand_orientation: upright
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: 'Upright microscope with camera port in microscope body. Current imaging
-    modes are transmitted brightfield and differential interference contrast (DIC).
-    Fluorescence excitation is currently unavailable but can be attached.'
+  notes: Upright microscope with camera port in microscope body. Current imaging modes
+    are transmitted brightfield and differential interference contrast (DIC). Fluorescence
+    excitation is currently unavailable but can be attached.
   url: ''
-
-modalities:
-- transmitted_brightfield
-- dic
-
+capabilities:
+  imaging_modes: []
+  contrast_methods:
+  - transmitted_brightfield
+  - dic
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules: []
 software_status: not_applicable
 software: []
-
 hardware:
   scanner:
     type: none
@@ -32,10 +35,9 @@ hardware:
     model: Unknown Camera
     notes: Camera port in microscope body for optional detector.
     id: camera_port_main
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 10x_air
     manufacturer: Leica
@@ -116,12 +118,10 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
-
   sources:
   - kind: halogen_lamp
     manufacturer: Leica
     model: 12V 100W halogen bulb
-      # CORRECTED: Removed invalid string 'broadband' for wavelength and legacy 'path' alias
     power: 100 W
     role: transmitted_illumination
     notes: Transmitted light source for TL and DIC. Broadband illumination.
@@ -130,7 +130,6 @@ hardware:
     modalities:
     - transmitted_brightfield
     - dic
-
   optical_path_elements:
   - name: Camera Port
     stage_role: splitter
@@ -144,8 +143,6 @@ hardware:
     - selected
     supported_branch_count: 2
     notes: Splits light between eyepieces and camera port.
-
-
 light_paths:
 - id: transmitted_brightfield
   name: Transmitted Brightfield
@@ -160,19 +157,10 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To Camera Port"
+        label: To Camera Port
         sequence:
         - endpoint_id: camera_port_main
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes: []
-  contrast_methods:
-  - transmitted_brightfield
-  - dic
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

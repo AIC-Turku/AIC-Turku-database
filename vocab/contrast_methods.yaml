@@ -1,8 +1,22 @@
 terms:
-  - id: transmitted_brightfield
-  - id: reflected_brightfield
-  - id: phase_contrast
-  - id: dic
-  - id: darkfield
-  - id: polarized_light
-  - id: optical_sectioning
+- id: transmitted_brightfield
+  display_label: Transmitted brightfield
+  label: Transmitted brightfield
+- id: reflected_brightfield
+  display_label: Reflected brightfield
+  label: Reflected brightfield
+- id: phase_contrast
+  display_label: Phase contrast
+  label: Phase contrast
+- id: dic
+  display_label: DIC
+  label: DIC
+- id: darkfield
+  display_label: Darkfield
+  label: Darkfield
+- id: polarized_light
+  display_label: Polarized light
+  label: Polarized light
+- id: optical_sectioning
+  display_label: Optical sectioning
+  label: Optical sectioning

@@ -1440,6 +1440,26 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertTrue(result["fretIsReadout"], "FRET must appear as a readout under TIRF route")
         self.assertEqual(result["fretReadoutLabel"], "FRET")
 
+
+    def test_active_instrument_hides_legacy_modality_section_when_capabilities_present(self) -> None:
+        instrument = {
+            "id": "scope-active",
+            "retired": False,
+            "capabilities": {"imaging_modes": ["confocal_point"], "readouts": ["flim"]},
+            "modalities": [{"id": "confocal", "display_label": "Confocal"}],
+            "hardware": {}, "methods": {"base_sentence": "Images acquired."}, "modules": []
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = instrumentPayload[0].id;
+            systemSelect.listeners.change({ target: systemSelect });
+            return { sectionDisplay: document.getElementById('section-modality').style.display || '' };
+            """,
+        )
+        self.assertEqual(result["sectionDisplay"], "none")
+
     def test_legacy_modalities_labeled_compatibility_in_template(self) -> None:
         """The methods_generator template must label the legacy modality section as compatibility/legacy."""
         template_content = TEMPLATE_PATH.read_text(encoding="utf-8")

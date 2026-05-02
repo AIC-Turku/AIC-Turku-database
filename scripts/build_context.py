@@ -541,6 +541,11 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         "assay_operations": [clean_text(v) for v in (capabilities_raw.get("assay_operations") or []) if isinstance(v, str) and clean_text(v)],
         "non_optical": [clean_text(v) for v in (capabilities_raw.get("non_optical") or []) if isinstance(v, str) and clean_text(v)],
     }
+    if modalities and not retired:
+        raise RuntimeError(
+            f"Instrument '{source_file.stem}': top-level legacy modalities are not allowed for active instruments; remove modalities and keep capabilities only.",
+        )
+
     if not any(capabilities.values()):
         if not retired:
             raise RuntimeError(

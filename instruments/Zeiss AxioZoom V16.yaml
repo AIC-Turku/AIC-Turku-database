@@ -13,26 +13,28 @@ instrument:
     Optical sectioning (ApoTome.2 structured illumination SIM). Reservation system:
     Zeiss AxioZoom.V16. Fluorophore selection guide available for users.'
   url: ''
-
-modalities:
-- widefield_fluorescence
-- optical_sectioning
-- transmitted_brightfield
-- reflected_brightfield   # ADDED: Required to properly classify the top-illumination ring light
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - optical_sectioning
+  - transmitted_brightfield
+  - reflected_brightfield
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules:
-- type: sim_module   # Canonical module ID for the installed ApoTome structured-illumination add-on
+- type: sim_module
   notes: Zeiss ApoTome.2 module (structured illumination for optical sectioning)
   url: ''
   manufacturer: Zeiss
   model: ApoTome.2
-
 software:
 - role: acquisition
   name: Zeiss ZEN Pro
   version: ''
   url: ''
-
 hardware:
   scanner:
     type: none
@@ -50,15 +52,14 @@ hardware:
   - kind: cmos
     manufacturer: Zeiss
     model: AxioCam 105 Color
-    pixel_pitch_um: 2.2   # CORRECTED: Replaced invalid 'null' with actual sensor specification
+    pixel_pitch_um: 2.2
     sensor_format_px: 2560 x 1920
     notes: color
     url: ''
     id: detector_2
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 0.5x_air
     manufacturer: Zeiss
@@ -86,16 +87,14 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties: []
-    notes: System magnification range 7x-112x. Field of view range 33-2 mm. 
-      ApoTome compatible from 40x-112x.
+    notes: System magnification range 7x-112x. Field of view range 33-2 mm. ApoTome
+      compatible from 40x-112x.
     url: ''
     is_installed: true
-
   sources:
   - kind: led
     manufacturer: Zeiss
     model: CL 9000 LED CAN ring light
-      # CORRECTED: Removed invalid empty string for wavelength_nm and legacy 'path' alias
     power: ''
     role: reflected_illumination
     notes: Top illumination. Broadband white light.
@@ -123,9 +122,7 @@ hardware:
     modalities:
     - widefield_fluorescence
     - optical_sectioning
-
   optical_path_elements:
-    # CORRECTED: Migrated legacy hardware.filters into canonical element with standard bands
   - name: Fluorescence Turret
     stage_role: cube
     id: epi_turret
@@ -142,9 +139,6 @@ hardware:
         - center_nm: 445
           width_nm: 50
         notes: 'Excitation: G365.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded and
-          # excitation uses Zeiss designation (G365) rather than center/width.
-          # Upgrade when Zeiss filter set 49 datasheet is consulted.
       Pos_2:
         name: Alexa 488 (Filter set 38 HE)
         product_code: 38 HE
@@ -153,8 +147,6 @@ hardware:
         - center_nm: 525
           width_nm: 50
         notes: 'Excitation: BP 470/40.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
-          # data. Upgrade when Zeiss filter set 38 HE datasheet is consulted.
       Pos_3:
         name: Alexa 568 (Filter set 45)
         product_code: '45'
@@ -163,8 +155,6 @@ hardware:
         - center_nm: 630
           width_nm: 75
         notes: 'Excitation: BP 560/40.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
-          # data. Upgrade when Zeiss filter set 45 datasheet is consulted.
       Pos_4:
         name: Alexa 647 (Filter set 50)
         product_code: '50'
@@ -173,10 +163,7 @@ hardware:
         - center_nm: 690
           width_nm: 50
         notes: 'Excitation: BP 640/30.'
-          # TODO: Non-authoritative cube — dichroic cutoff not recorded in local
-          # data. Upgrade when Zeiss filter set 50 datasheet is consulted.
-
-  - name: Trinocular Port   # ADDED: Required to split light to cameras or eyepieces
+  - name: Trinocular Port
     stage_role: splitter
     id: trinocular_port
     element_type: splitter
@@ -190,11 +177,8 @@ hardware:
     - selected
     supported_branch_count: 3
     notes: Splits light between the eyepieces, mono camera, and color camera.
-
-  # CORRECTED: Removed deprecated hardware.endpoints block.
-
 light_paths:
-- id: widefield_fluorescence   # CORRECTED: Aligned ID with standard modalities
+- id: widefield_fluorescence
   name: Epi-fluorescence
   modalities:
   - widefield_fluorescence
@@ -204,22 +188,21 @@ light_paths:
   detection_sequence:
   - optical_path_element_id: epi_turret
   - optical_path_element_id: trinocular_port
-  - branches:     # ADDED: Valid detection routing to endpoints
+  - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_mono_camera
-        label: "To ORCA-Flash4.0 LT+"
+        label: To ORCA-Flash4.0 LT+
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_color_camera
-        label: "To AxioCam 105"
+        label: To AxioCam 105
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: optical_sectioning
   name: ApoTome.2 Structured Illumination
   modalities:
@@ -234,14 +217,13 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_mono_camera
-        label: "To ORCA-Flash4.0 LT+"
+        label: To ORCA-Flash4.0 LT+
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: transmitted_brightfield
   name: Transmitted Brightfield
   modalities:
@@ -254,19 +236,18 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_mono_camera
-        label: "To ORCA-Flash4.0 LT+"
+        label: To ORCA-Flash4.0 LT+
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_color_camera
-        label: "To AxioCam 105"
+        label: To AxioCam 105
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
-- id: reflected_brightfield   # ADDED: Explicit light path for the ring light
+- id: reflected_brightfield
   name: Reflected Brightfield
   modalities:
   - reflected_brightfield
@@ -278,25 +259,14 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_mono_camera
-        label: "To ORCA-Flash4.0 LT+"
+        label: To ORCA-Flash4.0 LT+
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_color_camera
-        label: "To AxioCam 105"
+        label: To AxioCam 105
         sequence:
         - endpoint_id: detector_2
       - branch_id: to_eyepieces
-        label: "To Eyepieces"
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods:
-  - optical_sectioning
-  - transmitted_brightfield
-  - reflected_brightfield
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []

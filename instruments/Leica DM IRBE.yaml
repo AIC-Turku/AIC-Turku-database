@@ -8,21 +8,24 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: 'Inverted microscope with camera port. Current imaging modes are widefield
+  notes: Inverted microscope with camera port. Current imaging modes are widefield
     fluorescence, transmitted brightfield, darkfield, and phase contrast. Optional
-    1.6x auxiliary lens in microscope body.'
+    1.6x auxiliary lens in microscope body.
   url: ''
-
-modalities:
-- widefield_fluorescence
-- transmitted_brightfield
-- phase_contrast
-- darkfield
-
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  - darkfield
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
 modules: []
 software_status: not_applicable
 software: []
-
 hardware:
   scanner:
     type: none
@@ -32,13 +35,12 @@ hardware:
   - kind: ccd
     manufacturer: Unknown
     model: Unknown Camera
-    notes: Standalone camera system attached to port (no computer required); 
-      image storage via USB memory device.
+    notes: Standalone camera system attached to port (no computer required); image
+      storage via USB memory device.
     id: camera_port_main
-
-  eyepieces: # ADDED: Required for trinocular routing
+  eyepieces:
   - id: eyepieces
-    notes: 'Binocular Eyepieces'
+    notes: Binocular Eyepieces
   objectives:
   - id: 10x_air
     manufacturer: Leica
@@ -101,7 +103,6 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
-
   magnification_changers:
   - manufacturer: Leica
     model: 1.6x Auxiliary Lens
@@ -128,7 +129,6 @@ hardware:
     id: 50w_hbo_short_arc_bulb
     modalities:
     - widefield_fluorescence
-
   optical_path_elements:
   - name: Fluorescence Turret
     stage_role: cube
@@ -189,8 +189,7 @@ hardware:
           component_type: bandpass
           center_nm: 605
           width_nm: 70
-
-  - name: Trinocular Port   # CORRECTED: Changed label to reflect its trinocular splitting role
+  - name: Trinocular Port
     stage_role: splitter
     id: camera_port
     element_type: splitter
@@ -200,9 +199,8 @@ hardware:
     - transmitted_brightfield
     supported_branch_modes:
     - selected
-    supported_branch_count: 2   # CORRECTED: Increased to 2 for camera + eyepieces
+    supported_branch_count: 2
     notes: Splits light between eyepieces and camera port.
-
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence
@@ -218,14 +216,13 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To Camera Port"
+        label: To Camera Port
         sequence:
         - endpoint_id: camera_port_main
-      - branch_id: to_eyepieces       # ADDED: Eyepiece branch
-        label: "To Eyepieces"
+      - branch_id: to_eyepieces
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-
 - id: transmitted_brightfield
   name: Transmitted light
   modalities:
@@ -240,21 +237,10 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_camera
-        label: "To Camera Port"
+        label: To Camera Port
         sequence:
         - endpoint_id: camera_port_main
-      - branch_id: to_eyepieces       # ADDED: Eyepiece branch
-        label: "To Eyepieces"
+      - branch_id: to_eyepieces
+        label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-capabilities:
-  imaging_modes:
-  - widefield_fluorescence
-  contrast_methods:
-  - transmitted_brightfield
-  - phase_contrast
-  - darkfield
-  readouts: []
-  workflows: []
-  assay_operations: []
-  non_optical: []
