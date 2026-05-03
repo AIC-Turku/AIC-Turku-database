@@ -293,3 +293,10 @@ light_paths:
   detection_sequence:
   - endpoint_id: integrated_color_camera
   route_type: transmitted_brightfield
+- id: phase_contrast
+  name: Phase Contrast
+  illumination_sequence:
+  - source_id: transmitted_light_led
+  detection_sequence:
+  - endpoint_id: integrated_color_camera
+  route_type: phase_contrast

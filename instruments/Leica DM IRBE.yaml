@@ -240,3 +240,39 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_brightfield
+- id: phase_contrast
+  name: Phase Contrast
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_camera
+        label: To Camera Port
+        sequence:
+        - endpoint_id: camera_port_main
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
+  route_type: phase_contrast
+- id: darkfield
+  name: Darkfield
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_camera
+        label: To Camera Port
+        sequence:
+        - endpoint_id: camera_port_main
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
+  route_type: darkfield

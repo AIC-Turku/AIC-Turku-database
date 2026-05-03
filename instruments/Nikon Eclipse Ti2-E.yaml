@@ -453,3 +453,25 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_brightfield
+- id: dic
+  name: DIC
+  illumination_sequence:
+  - source_id: transmitted_illuminator
+  detection_sequence:
+  - optical_path_element_id: trinocular_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_orca
+        label: To Orca Flash4.0
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_ds_fi3
+        label: To DS-Fi3
+        sequence:
+        - endpoint_id: detector_2
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
+  route_type: dic

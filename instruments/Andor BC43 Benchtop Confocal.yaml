@@ -309,3 +309,12 @@ light_paths:
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
   route_type: transmitted_brightfield
+- id: phase_contrast
+  name: Phase Contrast
+  illumination_sequence:
+  - source_id: transmitted_light_illuminator
+  detection_sequence:
+  - optical_path_element_id: bc43_internal_dichroic
+  - optical_path_element_id: bc43_internal_emission_filters
+  - endpoint_id: detector_1
+  route_type: phase_contrast

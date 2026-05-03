@@ -249,3 +249,39 @@ light_paths:
         sequence:
         - endpoint_id: detector_3
   route_type: confocal_point
+- id: sted
+  name: STED
+  illumination_sequence:
+  - source_id: ldh_d_c_485
+  - source_id: pdl_t_561
+  - source_id: ldh_d_c_640
+  - source_id: vfl_p_1000_580
+  - source_id: katana_hp_775
+  detection_sequence:
+  - optical_path_element_id: emission_filter_wheel
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_apd
+        label: To APD (STED)
+        sequence:
+        - endpoint_id: detector_2
+  route_type: sted
+- id: resolft
+  name: RESOLFT
+  illumination_sequence:
+  - source_id: ldh_d_c_485
+  - source_id: pdl_t_561
+  - source_id: ldh_d_c_640
+  - source_id: vfl_p_1000_580
+  - source_id: katana_hp_775
+  detection_sequence:
+  - optical_path_element_id: emission_filter_wheel
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_apd
+        label: To APD (STED)
+        sequence:
+        - endpoint_id: detector_2
+  route_type: resolft
