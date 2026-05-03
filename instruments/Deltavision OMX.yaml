@@ -316,6 +316,7 @@ light_paths:
         sequence:
         - endpoint_id: detector_3
   route_type: tirf
+  notes: Shares the same documented physical path as widefield_fluorescence; TIRF illumination geometry is provided by the integrated ring TIRF module (ring_tirf optics with PhotoKinetic switching).
 - id: sim
   name: SIM
   illumination_sequence:
@@ -343,6 +344,7 @@ light_paths:
         sequence:
         - endpoint_id: detector_3
   route_type: sim
+  notes: Shares the same documented physical path as widefield_fluorescence; structured illumination is provided by the integrated 3D SIM module (electro-optical high-speed SIM engine).
 - id: smlm
   name: SMLM
   illumination_sequence:
@@ -370,3 +372,4 @@ light_paths:
         sequence:
         - endpoint_id: detector_3
   route_type: smlm
+  notes: Shares the same documented physical path as tirf; SMLM (PALM/STORM) is performed in TIRF/HILO illumination mode using the ring TIRF module.

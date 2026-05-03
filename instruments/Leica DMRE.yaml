@@ -180,3 +180,4 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: dic
+  notes: Shares the same documented physical path as transmitted_brightfield; DIC requires compatible Wollaston-prism objectives, which are documented in the objectives list.

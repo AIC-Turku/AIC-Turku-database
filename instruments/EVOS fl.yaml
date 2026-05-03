@@ -300,3 +300,4 @@ light_paths:
   detection_sequence:
   - endpoint_id: integrated_color_camera
   route_type: phase_contrast
+  notes: Shares the same documented physical path as transmitted_brightfield; phase contrast is supported by the broad-spectrum transmitted-light LED.

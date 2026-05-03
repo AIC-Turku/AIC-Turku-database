@@ -310,7 +310,7 @@ light_paths:
   - endpoint_id: detector_1
   route_type: transmitted_brightfield
 - id: phase_contrast
-  name: Phase Contrast
+  name: Differential Phase Contrast (DPC)
   illumination_sequence:
   - source_id: transmitted_light_illuminator
   detection_sequence:
@@ -318,3 +318,4 @@ light_paths:
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
   route_type: phase_contrast
+  notes: Uses the same physical transmitted-light path as transmitted_brightfield; DPC contrast is computed from asymmetric LED illumination patterns.

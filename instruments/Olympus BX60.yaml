@@ -304,3 +304,4 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: phase_contrast
+  notes: Shares the same documented physical path as transmitted_brightfield; phase contrast is supported by the halogen lamp source, which explicitly lists phase_contrast in its modalities.

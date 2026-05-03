@@ -231,3 +231,4 @@ light_paths:
         sequence:
         - endpoint_id: detector_1
   route_type: smlm
+  notes: Shares the same documented physical path as tirf; SMLM (2D/3D PALM/STORM) is performed in TIRF or HILO illumination using the same four-laser excitation sources.

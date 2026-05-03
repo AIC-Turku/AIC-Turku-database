@@ -267,6 +267,7 @@ light_paths:
         sequence:
         - endpoint_id: detector_2
   route_type: sted
+  notes: Shares the same documented illumination sources as confocal_point; STED mode uses depletion sources (vfl_p_1000_580, katana_hp_775) with SLM phase masks. Detection is restricted to APD (gated).
 - id: resolft
   name: RESOLFT
   illumination_sequence:
@@ -285,3 +286,4 @@ light_paths:
         sequence:
         - endpoint_id: detector_2
   route_type: resolft
+  notes: Shares the same documented illumination sources and APD detection as the sted route; RESOLFT uses photoswitchable fluorescent proteins with the same depletion/switching beam hardware.

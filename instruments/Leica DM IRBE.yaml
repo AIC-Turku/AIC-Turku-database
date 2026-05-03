@@ -120,6 +120,8 @@ hardware:
     id: 12v_100w_halogen_bulb
     modalities:
     - transmitted_brightfield
+    - phase_contrast
+    - darkfield
   - kind: arc_lamp
     manufacturer: Leica
     model: 50W HBO short arc bulb
@@ -258,6 +260,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: phase_contrast
+  notes: Shares the same documented physical path as transmitted_brightfield; phase contrast requires appropriate condenser annuli (PH objectives) with the halogen lamp.
 - id: darkfield
   name: Darkfield
   illumination_sequence:
@@ -276,3 +279,4 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: darkfield
+  notes: Shares the same documented physical path as transmitted_brightfield; darkfield uses a darkfield condenser with the halogen lamp to illuminate from oblique angles.
