@@ -13,7 +13,7 @@ from scripts.validation.events import (
 )
 from scripts.validation.instrument import (
     INSTRUMENT_ID_PATTERN,
-    _append_light_path_modality_warnings,
+    _append_light_path_route_warnings,
     _append_name_model_redundancy_warnings,
     _append_product_code_redundancy_warnings,
     _build_canonical_instrument_payload,
@@ -68,7 +68,7 @@ __all__ = [
     "_get_started_year",
     "validate_event_ledgers",
     "INSTRUMENT_ID_PATTERN",
-    "_append_light_path_modality_warnings",
+    "_append_light_path_route_warnings",
     "_append_name_model_redundancy_warnings",
     "_append_product_code_redundancy_warnings",
     "_build_canonical_instrument_payload",

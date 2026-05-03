@@ -379,11 +379,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
         self.assertTrue(all(issue.code == 'invalid_light_path' for issue in issues))
         warning_codes = {warning.code for warning in warnings}
-        self.assertIn('light_path_modalities_missing', warning_codes)
-        self.assertIn('light_path_modalities_empty', warning_codes)
-        self.assertIn('light_path_modalities_duplicate', warning_codes)
-        self.assertIn('light_path_modality_not_in_instrument', warning_codes)
-        self.assertIn('top_level_modality_uncovered_by_light_paths', warning_codes)
+        self.assertIn('light_path_route_type_missing', warning_codes)
 
 
     def test_validate_instrument_ledgers_accepts_capability_axes_and_route_type(self) -> None:
@@ -441,7 +437,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, issues, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         self.assertEqual(issues, [])
         self.assertTrue(all(w.code != 'unknown_vocab_term' for w in warnings))
-        self.assertTrue(all(w.code != 'light_path_modalities_missing' for w in warnings))
+        self.assertTrue(all(w.code != 'light_path_route_type_missing' for w in warnings))
 
     def test_validate_instrument_ledgers_rejects_invalid_new_capability_axis_terms(self) -> None:
         self._write_json_yaml(
@@ -1616,6 +1612,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             {
                 'instrument': {'instrument_id': 'sted-gap'},
                 'modalities': ['sted'],
+                'capabilities': {'imaging_modes': ['sted']},
                 'software': [{'role': 'acquisition', 'name': 'Control SW'}],
                 'hardware': {
                     'sources': [{'kind': 'laser', 'role': 'excitation'}],

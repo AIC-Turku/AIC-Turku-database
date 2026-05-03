@@ -622,7 +622,8 @@ def _parse_canonical_light_paths(
 
             detection_sequence.append(normalized)
 
-        route_modalities = _normalize_modalities(
+        route_type = _clean_identifier(route.get("route_type")) or route_id
+        legacy_route_modalities = _normalize_modalities(
             route.get("modalities")
             or route.get("routes")
             or route.get("path")
@@ -631,7 +632,7 @@ def _parse_canonical_light_paths(
         route_payload: dict[str, Any] = {
             "id": route_id,
             "name": _clean_string(route.get("name")) or _resolve_route_label(route_id),
-            "modalities": route_modalities or [route_id],
+            "route_type": route_type,
             "readouts": [
                 r.strip()
                 for r in (route.get("readouts") or [])
@@ -640,6 +641,8 @@ def _parse_canonical_light_paths(
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
         }
+        if legacy_route_modalities:
+            route_payload["_legacy_route_modalities"] = legacy_route_modalities
 
         if parse_warnings:
             route_payload["_parse_warnings"] = parse_warnings
@@ -699,14 +702,9 @@ def _apply_route_modalities_from_sequences(
                     apply_to_ref(ref_key, ref_id, route_id)
 
     for route in light_paths:
-        route_ids = (
-            _normalize_modalities(
-                route.get("modalities")
-                or route.get("routes")
-                or route.get("path")
-            )
-            or [route["id"]]
-        )
+        route_ids = [route.get("route_type") or route.get("id")]
+        if route.get("_legacy_route_modalities"):
+            route_ids = list(route.get("_legacy_route_modalities") or route_ids)
 
         for route_id in route_ids:
             for sequence_key in ("illumination_sequence", "detection_sequence"):

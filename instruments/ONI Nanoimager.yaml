@@ -189,11 +189,6 @@ hardware:
 light_paths:
 - id: tirf
   name: SMLM / TIRF / SPT / FRET
-  modalities:
-  - tirf
-  - smlm
-  - spt
-  - fret
   illumination_sequence:
   - source_id: 405_nm_violet
   - source_id: 488_nm_blue
@@ -214,3 +209,26 @@ light_paths:
         - endpoint_id: detector_1
   readouts:
   - fret
+  route_type: tirf
+- id: smlm
+  name: SMLM
+  illumination_sequence:
+  - source_id: 405_nm_violet
+  - source_id: 488_nm_blue
+  - source_id: 561_nm_green
+  - source_id: 640_nm_red
+  detection_sequence:
+  - optical_path_element_id: internal_emission_splitter
+  - branches:
+      selection_mode: multiple
+      items:
+      - branch_id: to_channel_0
+        label: Channel 0 (Green/Red - Left Half of Sensor)
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_channel_1
+        label: Channel 1 (Far-Red - Right Half of Sensor)
+        sequence:
+        - endpoint_id: detector_1
+  route_type: smlm
+  notes: Shares the same documented physical path as tirf; SMLM (2D/3D PALM/STORM) is performed in TIRF or HILO illumination using the same four-laser excitation sources.

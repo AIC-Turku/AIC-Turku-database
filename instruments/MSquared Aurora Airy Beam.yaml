@@ -133,8 +133,6 @@ hardware:
 light_paths:
 - id: light_sheet
   name: Light-Sheet
-  modalities:
-  - light_sheet
   illumination_sequence:
   - source_id: 488_nm_laser
   - source_id: 561_nm_laser
@@ -142,3 +140,4 @@ light_paths:
   detection_sequence:
   - optical_path_element_id: emission_wheel
   - endpoint_id: detector_1
+  route_type: light_sheet

@@ -120,6 +120,8 @@ hardware:
     id: 12v_100w_halogen_bulb
     modalities:
     - transmitted_brightfield
+    - phase_contrast
+    - darkfield
   - kind: arc_lamp
     manufacturer: Leica
     model: 50W HBO short arc bulb
@@ -204,8 +206,6 @@ hardware:
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence
-  modalities:
-  - widefield_fluorescence
   illumination_sequence:
   - source_id: 50w_hbo_short_arc_bulb
   - optical_path_element_id: fluorescence_turret
@@ -223,12 +223,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: widefield_fluorescence
 - id: transmitted_brightfield
   name: Transmitted light
-  modalities:
-  - transmitted_brightfield
-  - phase_contrast
-  - darkfield
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
   detection_sequence:
@@ -244,3 +241,42 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield
+- id: phase_contrast
+  name: Phase Contrast
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_camera
+        label: To Camera Port
+        sequence:
+        - endpoint_id: camera_port_main
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
+  route_type: phase_contrast
+  notes: Shares the same documented physical path as transmitted_brightfield; phase contrast requires appropriate condenser annuli (PH objectives) with the halogen lamp.
+- id: darkfield
+  name: Darkfield
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_camera
+        label: To Camera Port
+        sequence:
+        - endpoint_id: camera_port_main
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
+  route_type: darkfield
+  notes: Shares the same documented physical path as transmitted_brightfield; darkfield uses a darkfield condenser with the halogen lamp to illuminate from oblique angles.

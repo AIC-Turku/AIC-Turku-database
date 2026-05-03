@@ -716,7 +716,8 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
 
         route_identity = route_renderable.get("route_identity") if isinstance(route_renderable.get("route_identity"), dict) else {}
         route_label = clean_text(route_renderable.get("name") or route_renderable.get("id"))
-        illumination_mode = clean_text(route_identity.get("modality") or route_id)
+        route_type = clean_text(route_identity.get("route_type") or route_id)
+        illumination_mode = clean_text(route_renderable.get("illumination_mode") or route_type or route_id)
         selected_execution = copy.deepcopy(route_renderable.get("selected_execution") or {})
 
         # Enrich route_identity with vocabulary-resolved readout display labels so
@@ -735,7 +736,7 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
         if not enriched_route_identity.get("route_type_label"):
             route_type_for_label = (
                 enriched_route_identity.get("route_type")
-                or illumination_mode
+                or route_type
             )
             if route_type_for_label:
                 enriched_route_identity["route_type_label"] = _route_type_vocab_label(
@@ -747,6 +748,8 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             "display_label": route_label,
             "illumination_mode": illumination_mode,
             "route_identity": enriched_route_identity,
+            "route_type": route_type,
+            "route_type_label": clean_text(enriched_route_identity.get("route_type_label")),
             "readouts": enriched_route_identity["readouts"],
             "route_hardware_usage": {
                 "hardware_inventory_ids": route_inventory_ids,

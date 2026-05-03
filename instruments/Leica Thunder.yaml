@@ -444,8 +444,6 @@ hardware:
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence
-  modalities:
-  - widefield_fluorescence
   illumination_sequence:
   - source_id: led_8
   - source_id: led_8_2
@@ -471,10 +469,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: widefield_fluorescence
 - id: transmitted_brightfield
   name: Transmitted Brightfield
-  modalities:
-  - transmitted_brightfield
   illumination_sequence: []
   detection_sequence:
   - optical_path_element_id: trinocular_port_selector
@@ -489,3 +486,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield

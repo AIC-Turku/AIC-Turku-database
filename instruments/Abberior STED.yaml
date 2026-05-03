@@ -225,10 +225,6 @@ hardware:
 light_paths:
 - id: confocal_point
   name: Epi-fluorescence
-  modalities:
-  - confocal_point
-  - sted
-  - resolft
   illumination_sequence:
   - source_id: ldh_d_c_485
   - source_id: pdl_t_561
@@ -252,3 +248,42 @@ light_paths:
         label: To CCD Camera
         sequence:
         - endpoint_id: detector_3
+  route_type: confocal_point
+- id: sted
+  name: STED
+  illumination_sequence:
+  - source_id: ldh_d_c_485
+  - source_id: pdl_t_561
+  - source_id: ldh_d_c_640
+  - source_id: vfl_p_1000_580
+  - source_id: katana_hp_775
+  detection_sequence:
+  - optical_path_element_id: emission_filter_wheel
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_apd
+        label: To APD (STED)
+        sequence:
+        - endpoint_id: detector_2
+  route_type: sted
+  notes: Shares the same documented illumination sources as confocal_point; STED mode uses depletion sources (vfl_p_1000_580, katana_hp_775) with SLM phase masks. Detection is restricted to APD (gated).
+- id: resolft
+  name: RESOLFT
+  illumination_sequence:
+  - source_id: ldh_d_c_485
+  - source_id: pdl_t_561
+  - source_id: ldh_d_c_640
+  - source_id: vfl_p_1000_580
+  - source_id: katana_hp_775
+  detection_sequence:
+  - optical_path_element_id: emission_filter_wheel
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_apd
+        label: To APD (STED)
+        sequence:
+        - endpoint_id: detector_2
+  route_type: resolft
+  notes: Shares the same documented illumination sources and APD detection as the sted route; RESOLFT uses photoswitchable fluorescent proteins with the same depletion/switching beam hardware.

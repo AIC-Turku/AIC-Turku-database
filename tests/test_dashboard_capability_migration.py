@@ -256,6 +256,7 @@ class RouteReadoutPropagationTests(unittest.TestCase):
         routes = arc.get("routes") or []
         confocal = next((r for r in routes if r.get("id") == "confocal_point"), None)
         self.assertIsNotNone(confocal, "confocal_point not in authoritative_route_contract.routes")
+        self.assertEqual(confocal.get("route_type"), "confocal_point")
         route_readouts = confocal.get("readouts") or []
         readout_ids = [r.get("id") for r in route_readouts if isinstance(r, dict)]
         self.assertIn("flim", readout_ids, f"flim not in route readouts; got: {route_readouts}")
@@ -278,6 +279,8 @@ class RouteReadoutPropagationTests(unittest.TestCase):
         routes = arc.get("routes") or []
         confocal = next((r for r in routes if r.get("id") == "confocal_point"), None)
         self.assertIsNotNone(confocal)
+        self.assertNotIn("modality", confocal.get("route_identity") or {})
+        self.assertNotIn("modalities", confocal.get("route_identity") or {})
         route_readouts = confocal.get("readouts") or []
         self.assertTrue(len(route_readouts) > 0, "Expected non-empty readouts list")
         for ro in route_readouts:
@@ -355,10 +358,26 @@ class RouteReadoutPropagationTests(unittest.TestCase):
         self.assertIsNotNone(
             confocal, "confocal_point not in LLM authoritative_route_contract.routes"
         )
+        self.assertEqual(confocal.get("route_type"), "confocal_point")
         route_identity = confocal.get("route_identity") or {}
         readouts = route_identity.get("readouts") or []
         readout_ids = [r.get("id") if isinstance(r, dict) else r for r in readouts]
         self.assertIn("flim", readout_ids, f"flim not in LLM route readouts; got: {readouts}")
+
+    def test_lambert_and_oni_route_type_readout_contract(self) -> None:
+        import yaml  # type: ignore[import]
+        from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
+
+        lambert = yaml.safe_load((REPO_ROOT / "instruments" / "Lambert FLIM.yaml").read_text(encoding="utf-8"))
+        oni = yaml.safe_load((REPO_ROOT / "instruments" / "ONI Nanoimager.yaml").read_text(encoding="utf-8"))
+        lambert_lp = generate_virtual_microscope_payload(lambert).get("light_paths") or []
+        oni_lp = generate_virtual_microscope_payload(oni).get("light_paths") or []
+        lroute = next((r for r in lambert_lp if r.get("id") == "widefield_fluorescence"), {})
+        oroute = next((r for r in oni_lp if r.get("id") == "tirf"), {})
+        self.assertEqual((lroute.get("route_identity") or {}).get("route_type"), "widefield_fluorescence")
+        self.assertIn("flim", (lroute.get("route_identity") or {}).get("readouts") or [])
+        self.assertEqual((oroute.get("route_identity") or {}).get("route_type"), "tirf")
+        self.assertIn("fret", (oroute.get("route_identity") or {}).get("readouts") or [])
 
     def test_llm_payload_labels_modalities_as_compatibility(self) -> None:
         """LLM record must include modalities_note labeling flat modalities as compatibility-only."""
@@ -483,4 +502,3 @@ class RouteReadoutPropagationTests(unittest.TestCase):
                       "FLIM readout chip must appear in rendered route section for STELLARIS")
         self.assertIn("FCS", rendered,
                       "FCS readout chip must appear in rendered route section for STELLARIS")
-

@@ -414,10 +414,6 @@ hardware:
 light_paths:
 - id: confocal_spinning_disk
   name: confocal spinning disk
-  modalities:
-  - confocal_spinning_disk
-  - frap
-  - photoactivation
   illumination_sequence:
   - source_id: laserstack_v4
   - source_id: laserstack_v4_2
@@ -440,12 +436,9 @@ light_paths:
         label: To Evolve EMCCD
         sequence:
         - endpoint_id: detector_2
+  route_type: confocal_spinning_disk
 - id: widefield_fluorescence
   name: Epi-fluorescence
-  modalities:
-  - widefield_fluorescence
-  - frap
-  - photoactivation
   illumination_sequence:
   - source_id: x_cite_xled1
   - optical_path_element_id: xled_excitation_filters
@@ -469,10 +462,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: widefield_fluorescence
 - id: transmitted_brightfield
   name: Transmitted Light
-  modalities:
-  - transmitted_brightfield
   illumination_sequence: []
   detection_sequence:
   - optical_path_element_id: trinocular_port_selector
@@ -491,3 +483,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield

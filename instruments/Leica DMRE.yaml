@@ -146,9 +146,6 @@ hardware:
 light_paths:
 - id: transmitted_brightfield
   name: Transmitted Brightfield
-  modalities:
-  - transmitted_brightfield
-  - dic
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
   detection_sequence:
@@ -164,3 +161,23 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield
+- id: dic
+  name: DIC
+  illumination_sequence:
+  - source_id: 12v_100w_halogen_bulb
+  detection_sequence:
+  - optical_path_element_id: camera_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_camera
+        label: To Camera Port
+        sequence:
+        - endpoint_id: camera_port_main
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
+  route_type: dic
+  notes: Shares the same documented physical path as transmitted_brightfield; DIC requires compatible Wollaston-prism objectives, which are documented in the objectives list.

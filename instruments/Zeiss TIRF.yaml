@@ -259,8 +259,6 @@ hardware:
 light_paths:
 - id: tirf
   name: TIRF
-  modalities:
-  - tirf
   illumination_sequence:
   - source_id: 488_nm
   - source_id: 561_nm
@@ -284,10 +282,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: tirf
 - id: widefield_fluorescence
   name: Epi-fluorescence
-  modalities:
-  - widefield_fluorescence
   illumination_sequence:
   - source_id: 488_nm
   - source_id: 561_nm
@@ -311,10 +308,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: widefield_fluorescence
 - id: transmitted_brightfield
   name: Transmitted Brightfield
-  modalities:
-  - transmitted_brightfield
   illumination_sequence:
   - source_id: halogen_lamp_transmitted
   detection_sequence:
@@ -334,3 +330,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield

@@ -206,8 +206,6 @@ hardware:
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence
-  modalities:
-  - widefield_fluorescence
   illumination_sequence:
   - source_id: 50w_hbo_short_arc_bulb
   - optical_path_element_id: fluorescence_turret
@@ -225,10 +223,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: widefield_fluorescence
 - id: transmitted_brightfield
   name: Transmitted light
-  modalities:
-  - transmitted_brightfield
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
   detection_sequence:
@@ -244,10 +241,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield
 - id: darkfield
   name: Darkfield
-  modalities:
-  - darkfield
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
   detection_sequence:
@@ -263,3 +259,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: darkfield

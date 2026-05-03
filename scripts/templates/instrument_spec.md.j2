@@ -102,7 +102,7 @@ hide:
     {% set route_identity = route.route_identity if route.route_identity else {} %}
     <div style="margin-bottom: 10px;">
       <div><strong>Route:</strong> {{ route.display_label or route.id }}</div>
-      <div class="aic-muted"><strong>Route type:</strong> {{ route_identity.route_type_label or route_identity.route_type or route.illumination_mode or '—' }}</div>
+      <div class="aic-muted"><strong>Route type:</strong> {{ route_identity.route_type_label or route_identity.route_type or '—' }}</div>
       <div class="aic-chiprow">
         {% for ro in (route_identity.readouts or []) %}
           <span class="aic-chip">{{ ro.display_label or ro.id }}</span>

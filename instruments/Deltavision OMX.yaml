@@ -264,11 +264,6 @@ hardware:
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence
-  modalities:
-  - widefield_fluorescence
-  - tirf
-  - sim
-  - smlm
   illumination_sequence:
   - source_id: 405_nm
   - source_id: 445_nm
@@ -293,3 +288,88 @@ light_paths:
         label: To Camera 3 (Alexa 568)
         sequence:
         - endpoint_id: detector_3
+  route_type: widefield_fluorescence
+- id: tirf
+  name: TIRF
+  illumination_sequence:
+  - source_id: 405_nm
+  - source_id: 445_nm
+  - source_id: 488_nm
+  - source_id: 514_nm
+  - source_id: 568_nm
+  - source_id: 642_nm
+  detection_sequence:
+  - optical_path_element_id: omx_emission_filters
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_cam1
+        label: To Camera 1 (DAPI/Cy5/CFP)
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_cam2
+        label: To Camera 2 (Alexa 488/YFP)
+        sequence:
+        - endpoint_id: detector_2
+      - branch_id: to_cam3
+        label: To Camera 3 (Alexa 568)
+        sequence:
+        - endpoint_id: detector_3
+  route_type: tirf
+  notes: Shares the same documented physical path as widefield_fluorescence; TIRF illumination geometry is provided by the integrated ring TIRF module (ring_tirf optics with PhotoKinetic switching).
+- id: sim
+  name: SIM
+  illumination_sequence:
+  - source_id: 405_nm
+  - source_id: 445_nm
+  - source_id: 488_nm
+  - source_id: 514_nm
+  - source_id: 568_nm
+  - source_id: 642_nm
+  detection_sequence:
+  - optical_path_element_id: omx_emission_filters
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_cam1
+        label: To Camera 1 (DAPI/Cy5/CFP)
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_cam2
+        label: To Camera 2 (Alexa 488/YFP)
+        sequence:
+        - endpoint_id: detector_2
+      - branch_id: to_cam3
+        label: To Camera 3 (Alexa 568)
+        sequence:
+        - endpoint_id: detector_3
+  route_type: sim
+  notes: Shares the same documented physical path as widefield_fluorescence; structured illumination is provided by the integrated 3D SIM module (electro-optical high-speed SIM engine).
+- id: smlm
+  name: SMLM
+  illumination_sequence:
+  - source_id: 405_nm
+  - source_id: 445_nm
+  - source_id: 488_nm
+  - source_id: 514_nm
+  - source_id: 568_nm
+  - source_id: 642_nm
+  detection_sequence:
+  - optical_path_element_id: omx_emission_filters
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_cam1
+        label: To Camera 1 (DAPI/Cy5/CFP)
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_cam2
+        label: To Camera 2 (Alexa 488/YFP)
+        sequence:
+        - endpoint_id: detector_2
+      - branch_id: to_cam3
+        label: To Camera 3 (Alexa 568)
+        sequence:
+        - endpoint_id: detector_3
+  route_type: smlm
+  notes: Shares the same documented physical path as tirf; SMLM (PALM/STORM) is performed in TIRF/HILO illumination mode using the ring TIRF module.

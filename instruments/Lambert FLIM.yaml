@@ -148,9 +148,6 @@ hardware:
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence (FLIM)
-  modalities:
-  - widefield_fluorescence
-  - flim
   illumination_sequence:
   - source_id: multi_led_excitation
   - source_id: multi_led_excitation_2
@@ -170,3 +167,4 @@ light_paths:
         - endpoint_id: eyepieces
   readouts:
   - flim
+  route_type: widefield_fluorescence

@@ -320,6 +320,15 @@ def _build_route_planning_summary(
             {
                 "route_id": clean_text(route.get("id")),
                 "route_label": clean_text(route.get("display_label") or route.get("id")),
+                "route_type": clean_text(
+                    ((route.get("route_identity") or {}).get("route_type"))
+                    or route.get("route_type")
+                    or route.get("illumination_mode")
+                    or route.get("id")
+                ),
+                "route_type_label": clean_text(
+                    ((route.get("route_identity") or {}).get("route_type_label"))
+                ),
                 "illumination_mode": clean_text(
                     route.get("illumination_mode") or route.get("id")
                 ),
