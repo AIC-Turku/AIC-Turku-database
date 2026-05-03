@@ -30,7 +30,7 @@ class ActiveYamlContractTests(unittest.TestCase):
         """Active YAMLs must not have top-level modalities field."""
         payload = {
             "instrument": {"instrument_id": "scope-bad", "display_name": "Bad Scope"},
-            "modalities": ["confocal_point"],
+            "modalities": ["confocal"],  # legacy term from the old modality vocabulary
             "capabilities": {"imaging_modes": ["confocal_point"]},
         }
         with self.assertRaises(RuntimeError) as ctx:

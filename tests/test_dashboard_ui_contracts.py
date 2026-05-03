@@ -58,9 +58,15 @@ class DashboardUiContractTests(unittest.TestCase):
         ids = instruments[0]["capabilities_primary_ids"]
         self.assertIn("imaging_modes:confocal_point", ids)
         self.assertIn("readouts:flim", ids)
-        # Legacy modalities should NOT be in the chip IDs
+        # Legacy modalities should NOT appear anywhere in capability chips
         self.assertNotIn("confocal", ids)
         self.assertNotIn("modalities:confocal", ids)
+        primary_labels = [item["label"] for item in instruments[0]["capabilities_primary"]]
+        # The legacy modality label "confocal" must not appear in capability chip labels
+        self.assertFalse(
+            any("modality" in label.lower() for label in primary_labels),
+            f"Legacy modality labels must not appear in capabilities_primary: {primary_labels}",
+        )
         # Retired instrument should also get annotated correctly
         self.assertIn(
             "imaging_modes:widefield_fluorescence",
