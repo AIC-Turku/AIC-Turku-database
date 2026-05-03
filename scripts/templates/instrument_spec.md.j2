@@ -106,8 +106,12 @@ hide:
 {{ render_spec_card(sw) }}
 {% endfor %}
 </div>
+{% elif dto.software_status == 'not_applicable' %}
+> *No acquisition/control software — manual or standalone system.*
+{% elif dto.software_status == 'unknown' %}
+> *Software applicability has not yet been curated for this instrument.*
 {% else %}
-> *No software configurations recorded yet (unknown / not documented).*
+> *No software configurations recorded yet — not documented.*
 {% endif %}
 
 ---

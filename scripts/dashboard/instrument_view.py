@@ -597,17 +597,19 @@ def build_software_dto(vocabulary: Vocabulary, software: dict[str, Any]) -> dict
     name = clean_text(software.get("name"))
     version = clean_text(software.get("version"))
     developer = clean_text(software.get("developer"))
-    display_label = f"{name} (v{version})" if name and version else name or role_label or "Software"
+    version_is_known = version and version.lower() not in {"unknown", "n/a", "not applicable", "tbd"}
+    display_label = f"{name} (v{version})" if name and version_is_known else name or role_label or "Software"
     method_sentence = ""
     role_id = clean_text(software.get("role")).lower()
     if role_id == "acquisition" and display_label:
         method_sentence = f"Instrument control and image acquisition were performed using {display_label}."
     elif role_id in {"processing", "analysis"} and display_label:
         method_sentence = f"Post-acquisition processing and analysis were performed using {display_label}."
+    version_display = f"`{version}`" if version else "*Not documented*"
     spec_lines = _spec_lines(
         ("Role", role_label),
         ("Developer", developer),
-        ("Version", f"`{version}`" if version else None),
+        ("Version", version_display),
         ("Notes", clean_text(software.get("notes"))),
     )
     return {
