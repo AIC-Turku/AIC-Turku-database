@@ -1,10 +1,17 @@
 import copy
 import unittest
+from pathlib import Path
+import tempfile
+import os
+
+import yaml  # type: ignore[import]
 
 from scripts.dashboard.llm_export import build_llm_inventory_payload
 from scripts.dashboard.methods_export import build_methods_generator_instrument_export
 from scripts.dashboard.vm_export import build_vm_payload
 from scripts.dashboard.loaders import evaluate_instrument_status
+from scripts.dashboard.loaders import get_all_instrument_logs
+from scripts.validate import validate_event_ledgers
 
 
 class DashboardSmokeMinimalTests(unittest.TestCase):
@@ -83,6 +90,40 @@ class DashboardSmokeMinimalTests(unittest.TestCase):
         self.assertEqual(green['color'], 'green')
         self.assertEqual(yellow['color'], 'yellow')
         self.assertEqual(red['color'], 'red')
+
+    def test_qc_maintenance_events_propagate_to_dashboard_and_llm(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "schema").mkdir(parents=True, exist_ok=True)
+            (repo / "vocab").mkdir(parents=True, exist_ok=True)
+            (repo / "qc/sessions/scope-1/2026").mkdir(parents=True, exist_ok=True)
+            (repo / "maintenance/events/scope-1/2026").mkdir(parents=True, exist_ok=True)
+            (repo / "schema/QC_policy.yaml").write_text(yaml.safe_dump({"record_type": "qc_session", "field_rules": []}))
+            (repo / "schema/maintenance_policy.yaml").write_text(yaml.safe_dump({"record_type": "maintenance_event", "field_rules": []}))
+            (repo / "qc/sessions/scope-1/2026/2026-01-01_qc.yaml").write_text(yaml.safe_dump({"record_type": "qc_session", "microscope": "scope-1", "date": "2026-01-01", "evaluation": {"overall_status": "warn", "summary": "drift"}}))
+            (repo / "maintenance/events/scope-1/2026/2026-01-02_maint.yaml").write_text(yaml.safe_dump({"record_type": "maintenance_event", "microscope": "scope-1", "date": "2026-01-02", "service_provider": "Vendor", "status": "limited", "reason": "laser_alignment"}))
+
+            cwd = Path.cwd()
+            os.chdir(repo)
+            try:
+                report = validate_event_ledgers(instrument_ids={"scope-1"})
+            finally:
+                os.chdir(cwd)
+            self.assertFalse(report.errors)
+
+            cwd = Path.cwd()
+            os.chdir(repo)
+            try:
+                qc_logs = get_all_instrument_logs("qc/sessions", "scope-1")
+                maint_logs = get_all_instrument_logs("maintenance/events", "scope-1")
+            finally:
+                os.chdir(cwd)
+            self.assertEqual(qc_logs[-1]["data"]["microscope"], "scope-1")
+            self.assertEqual(maint_logs[-1]["data"]["service_provider"], "Vendor")
+            self.assertEqual(maint_logs[-1]["data"]["status"], "limited")
+
+            status = evaluate_instrument_status(qc_logs[-1]["data"], maint_logs[-1]["data"])
+            self.assertEqual(status["color"], "yellow")
 
 
 if __name__ == '__main__':

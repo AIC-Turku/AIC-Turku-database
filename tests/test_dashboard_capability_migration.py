@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import unittest
-import warnings
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -32,6 +31,36 @@ def _load_optical_routes_vocab() -> set[str]:
 
 
 class CapabilityMigrationTests(unittest.TestCase):
+    def test_strict_vs_non_strict_diagnostics_severity_matrix(self) -> None:
+        active_missing_caps = {
+            "instrument": {"instrument_id": "scope-active", "display_name": "Scope Active"},
+            "modalities": ["confocal_point"],
+        }
+        with self.assertRaises(RuntimeError):
+            normalize_instrument_dto(active_missing_caps, Path("scope-active.yaml"), retired=False)
+
+        active_with_legacy_top_level_modalities = {
+            "instrument": {"instrument_id": "scope-active-legacy", "display_name": "Scope Active Legacy"},
+            "modalities": ["confocal_point"],
+            "capabilities": {"imaging_modes": ["confocal_point"]},
+        }
+        with self.assertRaises(RuntimeError):
+            normalize_instrument_dto(active_with_legacy_top_level_modalities, Path("scope-active-legacy.yaml"), retired=False)
+
+        active_with_legacy_lightpath_modalities = {
+            "instrument": {"instrument_id": "scope-active-2", "display_name": "Scope Active 2"},
+            "capabilities": {"imaging_modes": ["confocal_point"]},
+            "light_paths": [{"id": "confocal_point", "modalities": ["flim"]}],
+        }
+        normalized = normalize_instrument_dto(active_with_legacy_lightpath_modalities, Path("scope-active-2.yaml"), retired=False)
+        self.assertEqual(normalized["capabilities"]["imaging_modes"], ["confocal_point"])
+
+        retired_missing_caps = {
+            "instrument": {"instrument_id": "scope-retired-1", "display_name": "Scope Retired"},
+            "modalities": ["confocal_point"],
+        }
+        out = normalize_instrument_dto(retired_missing_caps, Path("scope-retired-1.yaml"), retired=True)
+        self.assertIn("imaging_modes", out["capabilities"])
 
     def test_capability_filter_options_use_axis_ids_and_labels(self) -> None:
         vocabulary = _build_vocabulary(Path.cwd())
