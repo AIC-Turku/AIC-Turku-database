@@ -348,15 +348,6 @@ sections:
         used_by: [audit_pdf, dashboard]
         rationale: Helpful for staff lookup and manuals, not essential for methods completeness.
 
-      - path: modalities
-        title: Imaging modalities (legacy)
-        status: optional
-        type: list
-        item_type: string
-        min_items: 1
-        vocab: modalities
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Core reporting category in QUAREP/JCB-style instrumentation metadata.
 
       - path: capabilities
         title: Capability axes
@@ -1854,17 +1845,6 @@ sections:
         used_by: [dashboard, method_generator]
         rationale: Optional per-route measurement/readout tags associated with a route traversal.
 
-      - path: light_paths[].modalities
-        title: Light path modalities
-        status: conditional
-        type: list
-        item_type: string
-        min_items: 1
-        vocab: modalities
-        required_if:
-          parent_present: "light_paths[]"
-        used_by: [dashboard, method_generator]
-        rationale: Canonical modality IDs explicitly mapped to this route. When light_paths are declared, every populated route must define a non-empty modalities list so route-aware consumers never have to infer modality coverage.
 
       - path: light_paths[].illumination_sequence
         title: Illumination sequence

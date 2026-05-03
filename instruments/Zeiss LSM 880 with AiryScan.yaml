@@ -352,9 +352,6 @@ hardware:
 light_paths:
 - id: confocal_point
   name: Confocal Scanning
-  modalities:
-  - confocal_point
-  - spectral_imaging
   readouts:
   - spectral_imaging
   illumination_sequence:
@@ -381,10 +378,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: confocal_point
 - id: ism
   name: Super-resolution AiryScan
-  modalities:
-  - ism
   illumination_sequence:
   - source_id: 405_nm_diode
   - source_id: 458_nm_argon
@@ -406,10 +402,9 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: ism
 - id: transmitted_brightfield
   name: Transmitted Brightfield
-  modalities:
-  - transmitted_brightfield
   illumination_sequence:
   - source_id: transmitted_illumination
   detection_sequence:
@@ -425,3 +420,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield

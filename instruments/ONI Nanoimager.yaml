@@ -189,11 +189,6 @@ hardware:
 light_paths:
 - id: tirf
   name: SMLM / TIRF / SPT / FRET
-  modalities:
-  - tirf
-  - smlm
-  - spt
-  - fret
   illumination_sequence:
   - source_id: 405_nm_violet
   - source_id: 488_nm_blue
@@ -214,3 +209,4 @@ light_paths:
         - endpoint_id: detector_1
   readouts:
   - fret
+  route_type: tirf

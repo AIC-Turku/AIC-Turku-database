@@ -44,7 +44,7 @@ class ValidationModuleBoundariesStaticTests(unittest.TestCase):
             "def _build_canonical_instrument_payload",
             "def _legacy_instrument_topology_paths",
             "def _append_product_code_redundancy_warnings",
-            "def _append_light_path_modality_warnings",
+            "def _append_light_path_route_warnings",
             "def validate_instrument_ledgers",
         ):
             self.assertIn(symbol, text)
@@ -67,7 +67,7 @@ class ValidationModuleBoundariesStaticTests(unittest.TestCase):
             "def _build_canonical_instrument_payload",
             "def _legacy_instrument_topology_paths",
             "def _append_product_code_redundancy_warnings",
-            "def _append_light_path_modality_warnings",
+            "def _append_light_path_route_warnings",
             "def validate_instrument_ledgers",
         )
         for item in forbidden:

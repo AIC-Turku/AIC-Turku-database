@@ -1230,7 +1230,12 @@ def _build_route_sequences_and_graph(
         lane=0,
     )
 
-    route_modalities = _normalize_modalities(route.get("modalities") or route.get("routes") or route.get("path")) or [route.get("id")]
+    route_type = _clean_identifier(route.get("route_type")) or _clean_identifier(route.get("id")) or ""
+    legacy_route_modalities = _normalize_modalities(
+        route.get("modalities")
+        or route.get("routes")
+        or route.get("path")
+    )
     route_steps, route_warnings = _build_route_steps(
         illumination_sequence,
         detection_sequence,
@@ -1248,12 +1253,11 @@ def _build_route_sequences_and_graph(
         "route_identity": {
             "id": route.get("id"),
             "name": route.get("name"),
-            "modality": route_modalities[0],
-            "modalities": route_modalities,
+            "route_type": route_type,
+            "route_type_label": _resolve_route_label(route_type) if route_type else "",
             "readouts": list(route.get("readouts") or []),
         },
-        "illumination_mode": route_modalities[0],
-        "modalities": route_modalities,
+        "illumination_mode": route_type or _clean_identifier(route.get("id")) or "",
         "illumination_traversal": illumination_sequence,
         "detection_traversal": detection_sequence,
         "graph_nodes": graph_nodes,
@@ -1270,6 +1274,9 @@ def _build_route_sequences_and_graph(
         "endpoints": list(usage["endpoint_inventory_ids"]),
         "hardware_inventory_ids": list(usage["hardware_inventory_ids"]),
         }
+    if legacy_route_modalities:
+        resolved_route["route_identity"]["_legacy_modalities"] = legacy_route_modalities
+        resolved_route["_legacy_route_modalities"] = legacy_route_modalities
     resolved_route["graph_tree"] = {
         "illumination": illumination_sequence,
         "sample": {"node_id": sample_node_id, "label": "Objective / Sample Plane"},

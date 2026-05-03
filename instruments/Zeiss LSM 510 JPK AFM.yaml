@@ -98,8 +98,6 @@ hardware:
 light_paths:
 - id: confocal_point
   name: Confocal
-  modalities:
-  - confocal_point
   illumination_sequence:
   - source_id: source_1
   detection_sequence:
@@ -115,3 +113,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: confocal_point

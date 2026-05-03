@@ -18,12 +18,6 @@ instrument:
   url: ""  # Instrument URL: Helpful for staff lookup and manuals, not essential for methods completeness.
 
 # -----------------------------------------------------------------------------
-# IMAGING MODALITIES
-# -----------------------------------------------------------------------------
-modalities:  # Imaging modalities (legacy): Core reporting category in QUAREP/JCB-style instrumentation metadata. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
-  - ""
-
-# -----------------------------------------------------------------------------
 # CAPABILITIES
 # -----------------------------------------------------------------------------
 capabilities:  # Capability axes: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.
@@ -255,8 +249,6 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
     name: ""  # Light path name: Human-readable route label shown in UI and exported DTO route catalogs.
     route_type: ""  # Light path route type: Controlled optical route type. light_paths[].id remains a stable local identifier and may be descriptive. | Allowed values (canonical IDs): epi, widefield_fluorescence, tirf, confocal, confocal_point, confocal_spinning_disk, multiphoton, light_sheet, transmitted, transmitted_brightfield, phase_contrast, darkfield, dic, reflected_brightfield, optical_sectioning, sim, sted, resolft, ism, smlm
     readouts:  # Light path readouts: Optional per-route measurement/readout tags associated with a route traversal. | Allowed values (canonical IDs): spectral_imaging, flim, fcs, fret
-      - ""
-    modalities:  # Light path modalities: Canonical modality IDs explicitly mapped to this route. When light_paths are declared, every populated route must define a non-empty modalities list so route-aware consumers never have to infer modality coverage. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
       - ""
     illumination_sequence:  # Illumination sequence: Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id.
       -

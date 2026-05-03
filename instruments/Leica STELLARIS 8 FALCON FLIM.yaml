@@ -537,11 +537,6 @@ hardware:
 light_paths:
 - id: confocal_point
   name: Confocal spectral / FALCON FLIM / FCS
-  modalities:
-  - confocal_point
-  - spectral_imaging
-  - flim
-  - fcs
   illumination_sequence:
   - source_id: white_light_laser_wll
   - source_id: laser_405_dmod
@@ -576,10 +571,9 @@ light_paths:
   - spectral_imaging
   - flim
   - fcs
+  route_type: confocal_point
 - id: widefield_fluorescence
   name: LED / filter-cube observation
-  modalities:
-  - widefield_fluorescence
   illumination_sequence:
   - source_id: leica_led_3
   - optical_path_element_id: epi_filter_cube_turret
@@ -597,10 +591,9 @@ light_paths:
         label: To eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: widefield_fluorescence
 - id: transmitted_brightfield
   name: Transmitted brightfield
-  modalities:
-  - transmitted_brightfield
   illumination_sequence:
   - source_id: leica_led_3
   - optical_path_element_id: transmitted_light_path
@@ -621,3 +614,4 @@ light_paths:
         label: To eyepieces
         sequence:
         - endpoint_id: eyepieces
+  route_type: transmitted_brightfield

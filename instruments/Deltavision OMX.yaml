@@ -264,11 +264,6 @@ hardware:
 light_paths:
 - id: widefield_fluorescence
   name: Epi-fluorescence
-  modalities:
-  - widefield_fluorescence
-  - tirf
-  - sim
-  - smlm
   illumination_sequence:
   - source_id: 405_nm
   - source_id: 445_nm
@@ -293,3 +288,4 @@ light_paths:
         label: To Camera 3 (Alexa 568)
         sequence:
         - endpoint_id: detector_3
+  route_type: widefield_fluorescence

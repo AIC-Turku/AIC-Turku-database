@@ -276,8 +276,6 @@ hardware:
 light_paths:
 - id: confocal_spinning_disk
   name: Confocal Spinning Disk
-  modalities:
-  - confocal_spinning_disk
   illumination_sequence:
   - source_id: borealis_illumination
   - source_id: borealis_illumination_2
@@ -288,10 +286,9 @@ light_paths:
   - optical_path_element_id: bc43_internal_dichroic
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
+  route_type: confocal_spinning_disk
 - id: widefield_fluorescence
   name: Widefield Fluorescence
-  modalities:
-  - widefield_fluorescence
   illumination_sequence:
   - source_id: borealis_illumination
   - source_id: borealis_illumination_2
@@ -302,14 +299,13 @@ light_paths:
   - optical_path_element_id: bc43_internal_dichroic
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
+  route_type: widefield_fluorescence
 - id: transmitted_brightfield
   name: Transmitted Brightfield
-  modalities:
-  - transmitted_brightfield
-  - phase_contrast
   illumination_sequence:
   - source_id: transmitted_light_illuminator
   detection_sequence:
   - optical_path_element_id: bc43_internal_dichroic
   - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
+  route_type: transmitted_brightfield
