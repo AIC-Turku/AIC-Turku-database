@@ -8,11 +8,7 @@ instrument:
   stand_orientation: other
   ocular_availability: camera_only
   location: ''
-  notes: 'Super-resolution microscope (compact). Imaging modes: Single-molecule localization
-    microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET
-    imaging. Field of view: 50 μm x 80 μm per channel. Simultaneous 2-channel imaging
-    (<10 nm mapping accuracy). Equipped with a closed-loop piezo stage (20/20/10 mm
-    XYZ travel, 1 nm resolution) and continuous/one-shot autofocus.'
+  notes: 'Super-resolution microscope (compact). Imaging modes: Single-molecule localization microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET imaging. Field of view: 50 μm x 80 μm per channel. Simultaneous 2-channel imaging (<10 nm mapping accuracy). Equipped with a closed-loop piezo stage (20/20/10 mm XYZ travel, 1 nm resolution) and continuous/one-shot autofocus.'
   url: https://oni.bio/nanoimager
 capabilities:
   imaging_modes:
@@ -23,12 +19,14 @@ capabilities:
   - fret
   workflows:
   - single_particle_tracking
+  - live_cell_imaging
+  - single_molecule
+  - super_resolution
   assay_operations: []
   non_optical: []
 modules:
 - type: environmental_enclosure
-  notes: Resistive heating without active cooling. Suitable for live cell imaging
-    at 37°C.
+  notes: Resistive heating without active cooling. Suitable for live cell imaging at 37°C.
   url: ''
   manufacturer: ONI
   model: Environmental Enclosure
@@ -54,8 +52,7 @@ software:
 hardware:
   environment:
     temperature_control: true
-    notes: Resistive heating without active cooling. Suitable for live cell imaging
-      at 37°C.
+    notes: Resistive heating without active cooling. Suitable for live cell imaging at 37°C.
   hardware_autofocus:
     is_installed: true
     type: infrared_reflection
@@ -96,8 +93,7 @@ hardware:
   - manufacturer: ONI
     model: Custom tube lens
     magnification: 1.1
-    notes: Custom tube lens provides 110x total magnification with the 100x objective.
-      Combined with 2x2 binning, this yields a pixel size of ~117 nm.
+    notes: Custom tube lens provides 110x total magnification with the 100x objective. Combined with 2x2 binning, this yields a pixel size of ~117 nm.
     url: ''
   sources:
   - kind: laser
@@ -134,8 +130,7 @@ hardware:
     technology: dpss
     wavelength_nm: 561
     power: 250 mW
-    notes: Power measured at the objective. DPSS technology inherently takes ~30 sec
-      to stabilize.
+    notes: Power measured at the objective. DPSS technology inherently takes ~30 sec to stabilize.
     url: ''
     id: 561_nm_green
     modalities:
@@ -171,8 +166,7 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 2
-    notes: Simultaneous 2-channel imaging. Splits emission onto two halves of the
-      single camera chip.
+    notes: Simultaneous 2-channel imaging. Splits emission onto two halves of the single camera chip.
     positions:
       Pos_1:
         name: Channel 0 & 1 Splitting Optics
@@ -184,8 +178,7 @@ hardware:
           width_nm: 44
         - center_nm: 685
           width_nm: 40
-        notes: Channel 0 Dual-band (approx 498-551 nm; 576-620 nm) and Channel 1 (approx
-          665-705 nm).
+        notes: Channel 0 Dual-band (approx 498-551 nm; 576-620 nm) and Channel 1 (approx 665-705 nm).
 light_paths:
 - id: tirf
   name: SMLM / TIRF / SPT / FRET

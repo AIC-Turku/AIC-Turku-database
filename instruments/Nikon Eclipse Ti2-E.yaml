@@ -8,9 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: ''
-  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence
-    (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging
-    (with autofocus), High-content screening (multi-well scanning).'
+  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning).'
   url: ''
 capabilities:
   imaging_modes:
@@ -18,8 +16,11 @@ capabilities:
   contrast_methods:
   - transmitted_brightfield
   - dic
+  - phase_contrast
   readouts: []
-  workflows: []
+  workflows:
+  - live_cell_imaging
+  - high_content_screening
   assay_operations: []
   non_optical: []
 modules:
@@ -99,8 +100,7 @@ hardware:
     afc_compatible: false
     specialties:
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended;
-      polarization possible.'
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
     url: ''
     is_installed: true
   - id: 4x_air_2
@@ -114,8 +114,7 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties: []
-    notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS)
-      recommended; FLUO (NIR) recommended.'
+    notes: 'Optical family: Lambda D. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended.'
     url: ''
     is_installed: true
   - id: 10x_air
@@ -130,8 +129,7 @@ hardware:
     afc_compatible: true
     specialties:
     - phase
-    notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV)
-      suitable.'
+    notes: 'OFN 25. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
     url: ''
     is_installed: true
   - id: 20x_air
@@ -148,8 +146,7 @@ hardware:
     - long_working_distance
     - dic
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended;
-      polarization suitable.'
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
     url: ''
     is_installed: true
   - id: 20x_air_2
@@ -165,8 +162,7 @@ hardware:
     specialties:
     - dic
     - polarization
-    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO
-      (VIS) recommended; FLUO (UV) recommended; polarization possible.'
+    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization possible.'
     url: ''
     is_installed: true
   - id: 40x_air
@@ -182,8 +178,7 @@ hardware:
     specialties:
     - long_working_distance
     - phase
-    notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV)
-      suitable.'
+    notes: 'OFN 22. Mode suitability: BF suitable; FLUO (VIS) suitable; FLUO (UV) suitable.'
     url: ''
     is_installed: true
   - id: 60x_oil
@@ -199,8 +194,7 @@ hardware:
     specialties:
     - dic
     - polarization
-    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO
-      (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
+    notes: 'OFN 25. Optical family: Lambda. Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (NIR) recommended; polarization suitable.'
     url: ''
     is_installed: true
   - id: 100x_oil
@@ -218,8 +212,7 @@ hardware:
     - phase
     - dic
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible;
-      polarization suitable.'
+    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
     url: ''
     is_installed: true
   sources:
@@ -476,3 +469,8 @@ light_paths:
         - endpoint_id: eyepieces
   route_type: dic
   notes: Shares the same documented physical path as transmitted_brightfield; DIC requires compatible DIC prism objectives (S Plan Fluor ELWD ADM, Plan Apo λ series with DIC designation), documented in the objectives list.
+- id: phase_contrast
+  name: Phase Contrast
+  route_type: phase_contrast
+  illumination_sequence: []
+  detection_sequence: []

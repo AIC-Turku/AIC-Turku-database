@@ -8,12 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting
-    standard confocal and super-resolution AiryScan imaging. Dedicated for fast and
-    sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal
-    scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell
-    imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss
-    LSMM880 with AiryScan. Fluorophore selection guide available for users.'
+  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting standard confocal and super-resolution AiryScan imaging. Dedicated for fast and sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
 capabilities:
   imaging_modes:
@@ -21,9 +16,12 @@ capabilities:
   - ism
   contrast_methods:
   - transmitted_brightfield
+  - dic
   readouts:
   - spectral_imaging
-  workflows: []
+  workflows:
+  - live_cell_imaging
+  - super_resolution
   assay_operations: []
   non_optical: []
 modules:
@@ -155,11 +153,7 @@ hardware:
     specialties:
     - dic
     - ir_transmission
-    notes: >-
-      Imm Korr (multi-immersion, correction collar). Reported 2026-05-04:
-      immersion/correction collar is broken and the current collar position is
-      unknown. Objective remains physically available but may give suboptimal image
-      quality; contact facility staff before critical imaging.
+    notes: 'Imm Korr (multi-immersion, correction collar). Reported 2026-05-04: immersion/correction collar is broken and the current collar position is unknown. Objective remains physically available but may give suboptimal image quality; contact facility staff before critical imaging.'
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27
     is_installed: true
   - id: 63x_oil
@@ -425,3 +419,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_brightfield
+- id: dic
+  name: Dic
+  route_type: dic
+  illumination_sequence: []
+  detection_sequence: []

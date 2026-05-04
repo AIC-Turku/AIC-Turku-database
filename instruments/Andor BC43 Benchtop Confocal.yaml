@@ -8,9 +8,7 @@ instrument:
   stand_orientation: benchtop
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and
-    ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage
-    drive.
+  notes: Benchtop microlens-spinning disk confocal with Borealis illumination and ClearView GPU-accelerated deconvolution. Includes an additional 8TB data storage drive.
   url: https://andor.oxinst.com/products/bc43-benchtop-confocal-microscope
 capabilities:
   imaging_modes:
@@ -20,7 +18,8 @@ capabilities:
   - transmitted_brightfield
   - phase_contrast
   readouts: []
-  workflows: []
+  workflows:
+  - live_cell_imaging
   assay_operations: []
   non_optical: []
 modules:
@@ -44,8 +43,7 @@ software:
   name: Imaris Quant
   version: ''
   developer: Oxford Instruments / Andor
-  notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions,
-    and traditional intensity-based/AI metric characterization.
+  notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
   url: ''
 hardware:
   environment:
@@ -59,8 +57,7 @@ hardware:
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with
-      optimized spacing for deep tissue imaging.
+    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with optimized spacing for deep tissue imaging.
     url: ''
   detectors:
   - kind: scmos
@@ -209,8 +206,7 @@ hardware:
     manufacturer: Andor
     model: Transmitted Light Illuminator
     role: transmitted_illumination
-    notes: Used for Brightfield and Differential Phase Contrast (DPC). Broadband white
-      LED.
+    notes: Used for Brightfield and Differential Phase Contrast (DPC). Broadband white LED.
     url: ''
     id: transmitted_light_illuminator
     modalities:
@@ -237,8 +233,7 @@ hardware:
           width_nm: 50
         - center_nm: 685
           width_nm: 50
-        notes: Built-in multiband dichroic for standard 4-line excitation. Explicit
-          transmission windows are aligned to the installed emission channels.
+        notes: Built-in multiband dichroic for standard 4-line excitation. Explicit transmission windows are aligned to the installed emission channels.
   - name: BC43 Internal Emission Filters
     slots: 4
     stage_role: emission

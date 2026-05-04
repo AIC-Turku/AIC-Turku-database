@@ -8,15 +8,14 @@ instrument:
   stand_orientation: upright
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: Upright microscope with camera port in microscope body. Current imaging modes
-    are transmitted brightfield and differential interference contrast (DIC). Fluorescence
-    excitation is currently unavailable but can be attached.
+  notes: Upright microscope with camera port in microscope body. Current imaging modes are transmitted brightfield and differential interference contrast (DIC). Fluorescence excitation is currently unavailable but can be attached.
   url: ''
 capabilities:
   imaging_modes: []
   contrast_methods:
   - transmitted_brightfield
   - dic
+  - phase_contrast
   readouts: []
   workflows: []
   assay_operations: []
@@ -181,3 +180,8 @@ light_paths:
         - endpoint_id: eyepieces
   route_type: dic
   notes: Shares the same documented physical path as transmitted_brightfield; DIC requires compatible Wollaston-prism objectives, which are documented in the objectives list.
+- id: phase_contrast
+  name: Phase Contrast
+  route_type: phase_contrast
+  illumination_sequence: []
+  detection_sequence: []
