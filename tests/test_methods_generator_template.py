@@ -348,6 +348,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                         "id": "obj-1",
                         "display_label": "HC PL APO 63x Oil",
                         "display_subtitle": "NA 1.40",
+                        "manufacturer": "Leica",
                     }
                 ],
                 "light_sources": [],
@@ -376,7 +377,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         )
 
         self.assertIn('HC PL APO 63x Oil', result['mainText'])
-        self.assertIn('NA 1.40', result['noteText'])
+        self.assertIn('Leica', result['noteText'])
         self.assertIn('—', result['noteText'])
         self.assertEqual('0.85em', result['noteFontSize'])
         self.assertEqual('var(--md-default-fg-color--light)', result['noteColor'])
@@ -1477,7 +1478,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertNotIn("Capability Axes (context &amp; filtering)", template_content)
         self.assertNotIn('id="section-capabilities"', template_content)
 
-    def test_light_source_label_metadata_includes_manufacturer_context(self) -> None:
+    def test_light_source_metadata_shows_manufacturer_only(self) -> None:
         instrument = {
             "id": "scope-brand-meta",
             "display_name": "Scope Brand Meta",
@@ -1518,7 +1519,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
         self.assertIn("Andor", result["sideMeta"])
-        self.assertIn("Light Source", result["sideMeta"])
+        self.assertNotIn("Light Source", result["sideMeta"])
         self.assertNotIn("light_source", result["sideMeta"])
 
     def test_metadata_renderer_dedupes_near_duplicate_class_fragments_and_manufacturer(self) -> None:
@@ -1561,9 +1562,133 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { sideMeta: labelNode.children[1]?.textContent || '' };
             """,
         )
-        self.assertIn("Light Source", result["sideMeta"])
+        self.assertNotIn("Light Source", result["sideMeta"])
         self.assertNotIn("light_source", result["sideMeta"])
         self.assertNotIn("Andor — Andor", result["sideMeta"])
+
+    def test_filter_metadata_without_manufacturer_is_empty(self) -> None:
+        instrument = {
+            "id": "scope-filter-meta",
+            "display_name": "Scope Filter Meta",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [{
+                        "id": "optical_path_element:widefield_dichroic",
+                        "inventory_class": "optical_element",
+                        "display_label": "Widefield Dichroic",
+                        "display_subtitle": "Optical Element",
+                        "method_sentence": "Widefield dichroic was used.",
+                    }],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-filter-meta';
+            systemSelect.listeners.change({ target: systemSelect });
+            const labelNode = document.getElementById('filter-list').children[0].children[1];
+            return { sideMeta: labelNode.children[1]?.textContent || '' };
+            """,
+        )
+        self.assertEqual("", result["sideMeta"])
+
+    def test_detector_metadata_shows_manufacturer_only(self) -> None:
+        instrument = {
+            "id": "scope-detector-meta",
+            "display_name": "Scope Detector Meta",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [{
+                        "id": "endpoint:orca",
+                        "inventory_class": "endpoint",
+                        "display_label": "ORCA-Flash4.0",
+                        "display_subtitle": "Endpoint",
+                        "manufacturer": "Hamamatsu",
+                        "method_sentence": "Detection was performed with ORCA-Flash4.0.",
+                    }],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-detector-meta';
+            systemSelect.listeners.change({ target: systemSelect });
+            const labelNode = document.getElementById('det-list').children[0].children[1];
+            return { sideMeta: labelNode.children[1]?.textContent || '' };
+            """,
+        )
+        self.assertEqual(" — Hamamatsu", result["sideMeta"])
+
+    def test_splitter_metadata_without_manufacturer_is_empty(self) -> None:
+        instrument = {
+            "id": "scope-splitter-meta",
+            "display_name": "Scope Splitter Meta",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [{
+                        "id": "splitter:trinocular",
+                        "inventory_class": "splitter",
+                        "display_label": "Trinocular Port Selector",
+                        "display_subtitle": "Splitter",
+                        "method_sentence": "Trinocular port routing was configured.",
+                    }],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-splitter-meta';
+            systemSelect.listeners.change({ target: systemSelect });
+            const labelNode = document.getElementById('splitter-list').children[0].children[1];
+            return { sideMeta: labelNode.children[1]?.textContent || '' };
+            """,
+        )
+        self.assertEqual("", result["sideMeta"])
 
     def test_legacy_modality_selection_is_compatibility_only_not_in_primary_paragraph(self) -> None:
         """When modalities are present and checked, the sentence must appear with (Compatibility) prefix,

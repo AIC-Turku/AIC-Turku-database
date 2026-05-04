@@ -169,55 +169,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function metadataFragmentsForItem(item) {
-        const fragments = [];
-        const normalizeFragment = (value) => cleanText(value)
-            .toLowerCase()
-            .replace(/[_-]+/g, " ")
-            .replace(/[^a-z0-9 ]+/g, " ")
-            .replace(/\s+/g, " ")
-            .trim();
-        const isEnumLike = (value) => /[_-]/.test(cleanText(value)) || cleanText(value) === cleanText(value).toLowerCase();
-        const canonicalDisplay = (value) => {
-            const cleaned = cleanText(value);
-            if (!cleaned) return "";
-            return cleaned.includes("_")
-                ? cleaned.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase())
-                : cleaned;
-        };
-        const pushFragment = (value) => {
-            const candidate = canonicalDisplay(value);
-            if (!candidate) return;
-            const normalizedCandidate = normalizeFragment(candidate);
-            if (!normalizedCandidate) return;
-            const existingIndex = fragments.findIndex((part) => normalizeFragment(part) === normalizedCandidate);
-            if (existingIndex === -1) {
-                fragments.push(candidate);
-                return;
-            }
-            if (isEnumLike(fragments[existingIndex]) && !isEnumLike(candidate)) {
-                fragments[existingIndex] = candidate;
-            }
-        };
-
         const manufacturer = cleanText(item?.manufacturer);
-        const subtitle = cleanText(item?.display_subtitle);
-        const classOrKind = cleanText(item?.kind_label || item?.role_label || item?.inventory_class_label || item?.inventory_class);
-        const routeLabel = cleanText(item?.route_label);
-        const mainLabel = cleanText(item?.display_label).toLowerCase();
-
-        if (manufacturer && !mainLabel.includes(manufacturer.toLowerCase())) {
-            pushFragment(manufacturer);
-        }
-        if (subtitle && subtitle.toLowerCase() !== manufacturer.toLowerCase()) {
-            pushFragment(subtitle);
-        }
-        if (classOrKind) {
-            pushFragment(classOrKind);
-        }
-        if (routeLabel) {
-            pushFragment(routeLabel);
-        }
-        return fragments;
+        return manufacturer ? [manufacturer] : [];
     }
 
     function bindCheckboxes(containerId, items, prefix) {
