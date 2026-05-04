@@ -82,15 +82,26 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
     def test_transmitted_route_detection_covers_all_transmitted_tags(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
+        self.assertIn("const SIMULATOR_EXCLUDED_ROUTE_TYPES = new Set([", source)
+        self.assertIn("function simulatorRouteIsExcluded(routeId)", source)
         self.assertIn("'transmitted_brightfield'", source)
+        self.assertIn("'reflected_brightfield'", source)
         self.assertIn("'phase_contrast'", source)
         self.assertIn("'darkfield'", source)
         self.assertIn("'dic'", source)
+        self.assertIn("if (simulatorRouteIsExcluded(route)) {", source)
+        self.assertIn("this UI targets fluorescence configurations", source)
         self.assertNotIn(
             "route === 'transmitted' || route === 'brightfield' || route === 'phase'",
             source,
             "Old 3-route transmitted check should be replaced with comprehensive list",
         )
+
+    def test_route_selector_excludes_transmitted_route_types(self) -> None:
+        source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
+
+        self.assertIn("const options = (explicitOptions.length ? explicitOptions : catalogFallback)", source)
+        self.assertIn("return !simulatorRouteIsExcluded(entry.id);", source)
 
     def test_active_route_order_uses_runtime_sort_order(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")

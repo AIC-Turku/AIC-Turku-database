@@ -150,6 +150,23 @@
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
 
+  // Simulator policy: this UI targets fluorescence configurations.
+  // Keep canonical YAML/DTO route data intact, but hide non-fluorescence
+  // transmitted/contrast/reflected-brightfield routes from route selection.
+  const SIMULATOR_EXCLUDED_ROUTE_TYPES = new Set([
+    'transmitted',
+    'transmitted_brightfield',
+    'reflected_brightfield',
+    'brightfield',
+    'phase',
+    'phase_contrast',
+    'darkfield',
+    'dic',
+  ]);
+
+  function simulatorRouteIsExcluded(routeId) {
+    return SIMULATOR_EXCLUDED_ROUTE_TYPES.has(cleanString(routeId).toLowerCase());
+  }
 
   function stagePipeKey(leftStage, rightStage) {
     return `${leftStage}->${rightStage}`;
@@ -1713,7 +1730,11 @@
     const catalogFallback = Array.isArray(
       state.activeInstrument && state.activeInstrument.routeTopology && state.activeInstrument.routeTopology.routeCatalog
     ) ? state.activeInstrument.routeTopology.routeCatalog : [];
-    const options = explicitOptions.length ? explicitOptions : catalogFallback;
+    const options = (explicitOptions.length ? explicitOptions : catalogFallback)
+      .filter((option) => {
+        const entry = option && typeof option === 'object' ? option : { id: option };
+        return !simulatorRouteIsExcluded(entry.id);
+      });
     DOM.routeSel.innerHTML = '';
 
     if (options.length <= 1) {
@@ -1823,8 +1844,7 @@
     shell.appendChild(inspector);
     DOM.graph.appendChild(shell);
 
-    const transmittedRoutes = ['transmitted', 'transmitted_brightfield', 'brightfield', 'phase', 'phase_contrast', 'darkfield', 'dic'];
-    if (transmittedRoutes.includes(route)) {
+    if (simulatorRouteIsExcluded(route)) {
       const warningPanel = document.createElement('div');
       warningPanel.className = 'vm-info-card';
       warningPanel.style.borderLeft = '4px solid var(--warning)';
