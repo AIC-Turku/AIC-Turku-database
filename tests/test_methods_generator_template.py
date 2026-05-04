@@ -348,6 +348,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                         "id": "obj-1",
                         "display_label": "HC PL APO 63x Oil",
                         "display_subtitle": "NA 1.40",
+                        "manufacturer": "Leica",
                     }
                 ],
                 "light_sources": [],
@@ -376,7 +377,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         )
 
         self.assertIn('HC PL APO 63x Oil', result['mainText'])
-        self.assertIn('NA 1.40', result['noteText'])
+        self.assertIn('Leica', result['noteText'])
         self.assertIn('—', result['noteText'])
         self.assertEqual('0.85em', result['noteFontSize'])
         self.assertEqual('var(--md-default-fg-color--light)', result['noteColor'])
@@ -1477,7 +1478,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertNotIn("Capability Axes (context &amp; filtering)", template_content)
         self.assertNotIn('id="section-capabilities"', template_content)
 
-    def test_light_source_metadata_prefers_manufacturer_over_generic_class(self) -> None:
+    def test_light_source_metadata_shows_manufacturer_only(self) -> None:
         instrument = {
             "id": "scope-brand-meta",
             "display_name": "Scope Brand Meta",
@@ -1565,7 +1566,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertNotIn("light_source", result["sideMeta"])
         self.assertNotIn("Andor — Andor", result["sideMeta"])
 
-    def test_filter_metadata_suppresses_generic_optical_element(self) -> None:
+    def test_filter_metadata_without_manufacturer_is_empty(self) -> None:
         instrument = {
             "id": "scope-filter-meta",
             "display_name": "Scope Filter Meta",
@@ -1606,7 +1607,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         )
         self.assertEqual("", result["sideMeta"])
 
-    def test_detector_metadata_keeps_manufacturer_and_suppresses_endpoint(self) -> None:
+    def test_detector_metadata_shows_manufacturer_only(self) -> None:
         instrument = {
             "id": "scope-detector-meta",
             "display_name": "Scope Detector Meta",
@@ -1648,7 +1649,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         )
         self.assertEqual(" — Hamamatsu", result["sideMeta"])
 
-    def test_splitter_metadata_suppresses_generic_splitter(self) -> None:
+    def test_splitter_metadata_without_manufacturer_is_empty(self) -> None:
         instrument = {
             "id": "scope-splitter-meta",
             "display_name": "Scope Splitter Meta",
