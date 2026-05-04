@@ -299,8 +299,3 @@ cross_field_rules:
     rule: >
       company should be populated when service_provider is vendor, distributor, or
       third_party.
-
-  - id: next_due_date_should_pair_with_followup
-    rule: >
-      If followup is present, next_due_date is recommended when the follow-up has
-      a concrete due date.

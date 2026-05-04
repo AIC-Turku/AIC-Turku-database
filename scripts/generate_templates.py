@@ -85,6 +85,8 @@ def _extract_rules(schema: dict) -> list[Rule]:
             for raw in section.get("rules", []) or []:
                 if not isinstance(raw, dict):
                     continue
+                if raw.get("superseded_by"):
+                    continue
                 path = raw.get("path")
                 if not isinstance(path, str) or not path.strip() or path in seen_paths:
                     continue
@@ -105,6 +107,8 @@ def _extract_rules(schema: dict) -> list[Rule]:
     else:
         raw_rules: Iterable[dict] = schema.get("field_rules", [])
         for raw in raw_rules:
+            if raw.get("superseded_by"):
+                continue
             path = raw.get("path")
             if not isinstance(path, str) or not path.strip() or path in seen_paths:
                 continue

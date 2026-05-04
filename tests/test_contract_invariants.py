@@ -51,6 +51,7 @@ from scripts.dashboard.methods_export import build_methods_generator_instrument_
 from scripts.dashboard.optical_path_view import build_optical_path_dto
 from scripts.generate_templates import build_template
 from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
+from scripts.validation.instrument import build_instrument_completeness_report
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -630,6 +631,70 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertIn("detection_sequence:", rendered)
         self.assertNotIn("light_sources:", rendered)
         self.assertNotIn("light_path:", rendered)
+
+    def test_generated_microscope_template_uses_canonical_alias_replacements(self) -> None:
+        rendered = TEMPLATE_PATH.read_text(encoding="utf-8")
+        self.assertNotIn('name: ""  # Module display name (legacy)', rendered)
+        self.assertNotIn('pixel_size_um: ""', rendered)
+        self.assertNotIn('channel_center_nm: ""', rendered)
+        self.assertNotIn('bandwidth_nm: ""', rendered)
+        self.assertNotIn('min_nm: ""  # Detector minimum wavelength', rendered)
+        self.assertNotIn('max_nm: ""  # Detector maximum wavelength', rendered)
+
+    def test_active_instruments_do_not_use_legacy_alias_fields(self) -> None:
+        import yaml
+
+        legacy_detector_fields = {"pixel_size_um", "min_nm", "max_nm", "channel_center_nm", "bandwidth_nm"}
+        instrument_root = Path("instruments")
+        violations: list[str] = []
+        for path in instrument_root.glob("*.yaml"):
+            payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                continue
+            modules = payload.get("modules")
+            if isinstance(modules, list):
+                for idx, module in enumerate(modules):
+                    if isinstance(module, dict) and "name" in module:
+                        violations.append(f"{path}: modules[{idx}].name")
+            hardware = payload.get("hardware")
+            detectors = hardware.get("detectors") if isinstance(hardware, dict) else None
+            if isinstance(detectors, list):
+                for idx, det in enumerate(detectors):
+                    if not isinstance(det, dict):
+                        continue
+                    for field in legacy_detector_fields:
+                        if field in det:
+                            violations.append(f"{path}: hardware.detectors[{idx}].{field}")
+        self.assertEqual([], violations, f"Legacy alias fields found in active instrument YAML: {violations}")
+
+    def test_canonical_module_and_detector_fields_do_not_emit_alias_fallbacks(self) -> None:
+        payload = {
+            "modules": [{"type": "incubation"}],
+            "hardware": {
+                "detectors": [
+                    {
+                        "id": "det1",
+                        "kind": "scmos",
+                        "pixel_pitch_um": 6.5,
+                        "collection_min_nm": 500,
+                        "collection_max_nm": 600,
+                        "collection_center_nm": 550,
+                        "collection_width_nm": 100,
+                    }
+                ]
+            },
+        }
+        report = build_instrument_completeness_report(payload)
+        alias_pairs = {(entry.get("alias"), entry.get("path")) for entry in report.alias_fallbacks}
+        forbidden = {
+            ("modules[].name", "modules[].type"),
+            ("hardware.detectors[].pixel_size_um", "hardware.detectors[].pixel_pitch_um"),
+            ("hardware.detectors[].min_nm", "hardware.detectors[].collection_min_nm"),
+            ("hardware.detectors[].max_nm", "hardware.detectors[].collection_max_nm"),
+            ("hardware.detectors[].channel_center_nm", "hardware.detectors[].collection_center_nm"),
+            ("hardware.detectors[].bandwidth_nm", "hardware.detectors[].collection_width_nm"),
+        }
+        self.assertTrue(alias_pairs.isdisjoint(forbidden), f"Unexpected alias fallback entries: {alias_pairs & forbidden}")
 
     def test_plan_experiments_prompt_uses_canonical_v2_route_language(self) -> None:
         rendered = PLAN_TEMPLATE_PATH.read_text(encoding="utf-8")

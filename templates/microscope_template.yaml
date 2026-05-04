@@ -40,7 +40,6 @@ capabilities:  # Capability axes: Canonical capability taxonomy that separates i
 modules:  # Installed modules: Only present when installed modules materially change imaging capabilities.
   -
     type: ""  # Module type: Canonical module classifier used for structured capability reporting. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, hardware_triggering, workstation, impedance_module, universal_vessel_holder, camera_port
-    name: ""  # Module display name (legacy): Legacy/local display label. Prefer modules[].type for canonical module identity.
     notes: ""  # Module notes: Useful for operational nuances and limitations.
     url: ""  # Module URL: Helpful vendor or manual reference.
     manufacturer: ""  # Module manufacturer: Vendor-facing module model/designation used as primary structured identity for the installed module.
@@ -81,7 +80,6 @@ hardware:
       manufacturer: ""  # Detector manufacturer: Needed for hardware identification.
       model: ""  # Detector model: Needed for hardware identification.
       pixel_pitch_um: ""  # Detector pixel pitch (um): Required for camera-based detectors because reporting completeness depends on it.
-      pixel_size_um: ""  # Detector pixel size (legacy alias): Backward-compatible alias retained for existing files; normalize to pixel_pitch_um when possible.
       sensor_format_px: ""  # Detector sensor format (px): Useful capability metadata, not minimal.
       binning: ""  # Detector binning: Usually acquisition-specific rather than fixed hardware metadata.
       bit_depth: ""  # Detector bit depth: Capability metadata; useful but not minimal.
@@ -96,10 +94,6 @@ hardware:
       collection_max_nm: ""  # Detector collection window maximum wavelength (nm): Explicit upper bound of detector collection window for virtual microscope response modeling.
       collection_center_nm: ""  # Detector collection window center wavelength (nm): Collection center wavelength used to derive detector passband when min/max are not supplied.
       collection_width_nm: ""  # Detector collection window width (nm): Collection bandwidth used with collection_center_nm to derive detector passband.
-      channel_center_nm: ""  # Detector channel center wavelength (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_center_nm.
-      bandwidth_nm: ""  # Detector bandwidth (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_width_nm.
-      min_nm: ""  # Detector minimum wavelength (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_min_nm.
-      max_nm: ""  # Detector maximum wavelength (nm, legacy alias): Deprecated alias retained for compatibility; prefer collection_max_nm.
       url: ""  # Detector URL: Reference only.
   optical_modulators:  # Optical modulators: Optional inventory of phase and beam-shaping devices used by STED or adaptive illumination workflows.
     -

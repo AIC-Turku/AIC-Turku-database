@@ -110,7 +110,8 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
         alias_hits: list[str] = []
         if rule.aliases:
             for alias in rule.aliases:
-                if _resolve_rule_nodes(payload, alias):
+                alias_nodes = _resolve_rule_nodes(payload, alias)
+                if _nodes_have_present_value(alias_nodes):
                     alias_hits.append(alias)
                     alias_fallbacks.append({
                         'path': rule.path,
