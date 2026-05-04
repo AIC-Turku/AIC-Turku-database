@@ -112,8 +112,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: confocal_point
-- id: transmitted_brightfield
+- id: transmitted_light
   name: Transmitted Brightfield
-  route_type: transmitted_brightfield
+  route_type: transmitted_light
   illumination_sequence: []
   detection_sequence: []

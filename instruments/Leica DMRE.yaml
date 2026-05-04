@@ -8,7 +8,9 @@ instrument:
   stand_orientation: upright
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: Upright microscope with camera port in microscope body. Current imaging modes are transmitted brightfield and differential interference contrast (DIC). Fluorescence excitation is currently unavailable but can be attached.
+  notes: Upright microscope with camera port in microscope body. Current imaging modes
+    are transmitted brightfield and differential interference contrast (DIC). Fluorescence
+    excitation is currently unavailable but can be attached.
   url: ''
 capabilities:
   imaging_modes: []
@@ -143,8 +145,7 @@ hardware:
     supported_branch_count: 2
     notes: Splits light between eyepieces and camera port.
 light_paths:
-- id: transmitted_brightfield
-  name: Transmitted Brightfield
+- id: transmitted_light
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
   detection_sequence:
@@ -160,28 +161,7 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-  route_type: transmitted_brightfield
-- id: dic
-  name: DIC
-  illumination_sequence:
-  - source_id: 12v_100w_halogen_bulb
-  detection_sequence:
-  - optical_path_element_id: camera_port
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_camera
-        label: To Camera Port
-        sequence:
-        - endpoint_id: camera_port_main
-      - branch_id: to_eyepieces
-        label: To Eyepieces
-        sequence:
-        - endpoint_id: eyepieces
-  route_type: dic
-  notes: Shares the same documented physical path as transmitted_brightfield; DIC requires compatible Wollaston-prism objectives, which are documented in the objectives list.
-- id: phase_contrast
-  name: Phase Contrast
-  route_type: phase_contrast
-  illumination_sequence: []
-  detection_sequence: []
+  route_type: transmitted_light
+  notes: Shares the same documented physical path as transmitted_brightfield; DIC
+    requires compatible Wollaston-prism objectives, which are documented in the objectives
+    list.

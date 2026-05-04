@@ -408,10 +408,10 @@ class RouteReadoutPropagationTests(unittest.TestCase):
         lambert_lp = generate_virtual_microscope_payload(lambert).get("light_paths") or []
         oni_lp = generate_virtual_microscope_payload(oni).get("light_paths") or []
         lroute = next((r for r in lambert_lp if r.get("id") == "widefield_fluorescence"), {})
-        oroute = next((r for r in oni_lp if r.get("id") == "tirf"), {})
+        oroute = next((r for r in oni_lp if r.get("id") == "widefield_fluorescence"), {})
         self.assertEqual((lroute.get("route_identity") or {}).get("route_type"), "widefield_fluorescence")
         self.assertIn("flim", (lroute.get("route_identity") or {}).get("readouts") or [])
-        self.assertEqual((oroute.get("route_identity") or {}).get("route_type"), "tirf")
+        self.assertEqual((oroute.get("route_identity") or {}).get("route_type"), "widefield_fluorescence")
         self.assertIn("fret", (oroute.get("route_identity") or {}).get("readouts") or [])
 
     def test_llm_payload_labels_modalities_as_compatibility(self) -> None:

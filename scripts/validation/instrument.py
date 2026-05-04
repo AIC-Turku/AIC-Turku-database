@@ -412,6 +412,16 @@ def _append_light_path_route_warnings(
         if route_key:
             resolved_route = vocabulary.resolve_canonical('optical_routes', route_key) or route_key
             covered_route_terms.add(resolved_route)
+            route_term = vocabulary.get_term('optical_routes', resolved_route)
+            if route_term is not None and isinstance(route_term.metadata, dict):
+                covers = route_term.metadata.get('covers')
+                if isinstance(covers, dict):
+                    for axis in ('imaging_modes', 'contrast_methods'):
+                        entries = covers.get(axis)
+                        if isinstance(entries, list):
+                            covered_route_terms.update(
+                                item.strip() for item in entries if isinstance(item, str) and item.strip()
+                            )
 
         # Validate route_id against optical_routes vocabulary when explicit route_type is absent.
         # Using a readout/modality term (e.g. "flim") as a route ID conflates route type with readout semantics.
@@ -426,7 +436,7 @@ def _append_light_path_route_warnings(
                         message=(
                             f"Instrument '{instrument_file.stem}' light path id '{route_id.strip()}' is not a "
                             f"recognized optical route vocabulary term. Use a canonical route type from "
-                            f"vocab/optical_routes.yaml (e.g. confocal_point, widefield_fluorescence, tirf) "
+                            f"vocab/optical_routes.yaml (e.g. confocal_point, widefield_fluorescence, transmitted_light) "
                             f"and move readout-type terms (flim, fcs, spectral_imaging) to light_paths[].readouts."
                         ),
                     ))

@@ -8,7 +8,12 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, BioPhysics room 5086
-  notes: Abberior STED. Sophisticated and highly flexible open platform that can be modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150 nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue STED is available for live super-resolution imaging with reduced light dose.
+  notes: Abberior STED. Sophisticated and highly flexible open platform that can be
+    modified, extended, and upgraded. Typical resolution is ~40 nm in XY and ~150
+    nm in Z using Easy3D STED. Easy3D uses a programmable spatial light modulator
+    (SLM) to create 2D/3D STED phase patterns. Easy3D with adaptive optics enables
+    deep imaging up to 75 µm into cleared tissue with a 100x oil objective. RESCue
+    STED is available for live super-resolution imaging with reduced light dose.
   url: ''
 capabilities:
   imaging_modes:
@@ -36,7 +41,8 @@ modules:
 - type: rescue_sted
   manufacturer: Abberior
   model: RESCue STED
-  notes: Reduction of state transition cycles mode for super-resolution live imaging with lower light dose.
+  notes: Reduction of state transition cycles mode for super-resolution live imaging
+    with lower light dose.
   url: ''
 software:
 - role: acquisition
@@ -115,7 +121,8 @@ hardware:
   illumination_logic:
   - method: rescue_sted
     default_enabled: false
-    notes: Real-time adaptive STED decision logic used to reduce photobleaching and light dose during live-cell super-resolution imaging.
+    notes: Real-time adaptive STED decision logic used to reduce photobleaching and
+      light dose during live-cell super-resolution imaging.
   sources:
   - kind: laser
     manufacturer: PicoQuant
@@ -219,7 +226,6 @@ hardware:
   endpoints: []
 light_paths:
 - id: confocal_point
-  name: Epi-fluorescence
   illumination_sequence:
   - source_id: ldh_d_c_485
   - source_id: pdl_t_561
@@ -244,41 +250,8 @@ light_paths:
         sequence:
         - endpoint_id: detector_3
   route_type: confocal_point
-- id: sted
-  name: STED
-  illumination_sequence:
-  - source_id: ldh_d_c_485
-  - source_id: pdl_t_561
-  - source_id: ldh_d_c_640
-  - source_id: vfl_p_1000_580
-  - source_id: katana_hp_775
-  detection_sequence:
-  - optical_path_element_id: emission_filter_wheel
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_apd
-        label: To APD (STED)
-        sequence:
-        - endpoint_id: detector_2
-  route_type: sted
-  notes: Shares the same documented illumination sources as confocal_point; STED mode uses depletion sources (vfl_p_1000_580, katana_hp_775) with SLM phase masks. Detection is restricted to APD (gated).
-- id: resolft
-  name: RESOLFT
-  illumination_sequence:
-  - source_id: ldh_d_c_485
-  - source_id: pdl_t_561
-  - source_id: ldh_d_c_640
-  - source_id: vfl_p_1000_580
-  - source_id: katana_hp_775
-  detection_sequence:
-  - optical_path_element_id: emission_filter_wheel
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_apd
-        label: To APD (STED)
-        sequence:
-        - endpoint_id: detector_2
-  route_type: resolft
-  notes: Shares the same documented illumination sources and APD detection as the sted route; RESOLFT uses photoswitchable fluorescent proteins with the same depletion/switching beam hardware.
+  notes: Shares the same documented illumination sources as confocal_point; STED mode
+    uses depletion sources (vfl_p_1000_580, katana_hp_775) with SLM phase masks. Detection
+    is restricted to APD (gated). Shares the same documented illumination sources
+    and APD detection as the sted route; RESOLFT uses photoswitchable fluorescent
+    proteins with the same depletion/switching beam hardware.
