@@ -462,7 +462,7 @@ hardware:
         manufacturer: Leica Microsystems
         model: Reflector cube ICR
         product_code: '11525375'
-        notes: Reflector cube with 45° dichroic mirror and permanently installed and fixed crossed polarizer and analyzer. This is not an authoritative fluorescence filter cube and should not be used for spectral fluorophore simulation.
+        notes: Reflector cube with 45° dichroic mirror and a permanently installed and fixed crossed polariser and analyser. This is not an authoritative fluorescence filter cube and should not be used for spectral fluorophore simulation.
   - id: transmitted_light_path
     name: Transmitted-light / BF path
     display_label: Transmitted light path
@@ -545,7 +545,7 @@ light_paths:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
   readouts:
-  - fret
+  - spectral_imaging
 - id: transmitted_brightfield
   name: Transmitted brightfield
   illumination_sequence:
@@ -570,4 +570,4 @@ light_paths:
         - endpoint_id: eyepieces
   route_type: transmitted_brightfield
   readouts:
-  - fret
+
