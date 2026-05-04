@@ -354,7 +354,8 @@ def _generate_virtual_microscope_payload_inner(
         "available_routes": [
             {
                 "id": route["id"],
-                "label": route.get("name") or _resolve_route_label(route["id"]),
+                "label": _resolve_route_label(route.get("route_type") or route["id"]),
+                "route_type": route.get("route_type") or route["id"],
             }
             for route in light_paths
         ],

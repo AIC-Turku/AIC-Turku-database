@@ -444,6 +444,18 @@ def _append_light_path_route_warnings(
         if not route_type and 'modalities' not in light_path:
             warnings.append(ValidationIssue(code='light_path_route_type_missing', path=route_path, message=(f"Instrument '{instrument_file.stem}' light path '{route_label}' is missing light_paths[].route_type.")))
 
+        route_name = light_path.get('name')
+        if isinstance(route_name, str) and route_name.strip() and not is_retired_instrument:
+            warnings.append(ValidationIssue(
+                code='light_path_name_deprecated',
+                path=f"{route_path}:name",
+                message=(
+                    f"Instrument '{instrument_file.stem}' light path '{route_label}': light_paths[].name is deprecated; "
+                    "route display labels are resolved from vocab/optical_routes.yaml using route_type. "
+                    "Remove name or move meaningful details to notes."
+                ),
+            ))
+
         route_readouts = light_path.get('readouts')
         if isinstance(route_readouts, list):
             for readout in route_readouts:

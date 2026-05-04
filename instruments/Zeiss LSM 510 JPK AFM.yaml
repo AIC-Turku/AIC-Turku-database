@@ -95,7 +95,6 @@ hardware:
     notes: Routes light between oculars and detector.
 light_paths:
 - id: confocal_point
-  name: Confocal
   illumination_sequence:
   - source_id: source_1
   detection_sequence:
@@ -113,7 +112,6 @@ light_paths:
         - endpoint_id: eyepieces
   route_type: confocal_point
 - id: transmitted_light
-  name: Transmitted Brightfield
   route_type: transmitted_light
   illumination_sequence: []
   detection_sequence: []

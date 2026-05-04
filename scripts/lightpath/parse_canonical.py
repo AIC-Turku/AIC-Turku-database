@@ -629,9 +629,10 @@ def _parse_canonical_light_paths(
             or route.get("path")
         )
 
+        authored_name = _clean_string(route.get("name"))
         route_payload: dict[str, Any] = {
             "id": route_id,
-            "name": _clean_string(route.get("name")) or _resolve_route_label(route_id),
+            "name": _resolve_route_label(route_type or route_id),
             "route_type": route_type,
             "readouts": [
                 r.strip()
@@ -641,6 +642,8 @@ def _parse_canonical_light_paths(
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
         }
+        if authored_name:
+            route_payload["authored_name"] = authored_name
         if legacy_route_modalities:
             route_payload["_legacy_route_modalities"] = legacy_route_modalities
 
