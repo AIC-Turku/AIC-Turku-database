@@ -1464,83 +1464,23 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         """The methods_generator template must label the legacy modality section as compatibility/legacy."""
         template_content = TEMPLATE_PATH.read_text(encoding="utf-8")
         # Must NOT still be labeled simply "Imaging Modalities"
-        self.assertNotIn(">2. Imaging Modalities:<", template_content)
+        self.assertNotIn("1. Select Microscope", template_content)
+        self.assertNotIn("2. Optical Routes", template_content)
         # Must contain legacy indicator
         self.assertTrue(
             "Legacy" in template_content or "legacy" in template_content or "compat" in template_content.lower(),
             "Modality section must be labeled as legacy/compatibility",
         )
 
-    def test_capability_axes_displayed_as_context_when_present(self) -> None:
-        """Capability axes from dto.capabilities must be shown as context labels in the UI."""
-        instrument = {
-            "id": "scope-caps",
-            "display_name": "Scope With Capabilities",
-            "retired": False,
-            "methods_generation": {"is_blocked": False, "blockers": []},
-            "methods": {"base_sentence": "Images acquired."},
-            "hardware": {
-                "scanner": {"present": False},
-                "objectives": [],
-                "light_sources": [],
-                "detectors": [],
-                "magnification_changers": [],
-                "optical_modulators": [],
-                "illumination_logic": [],
-                "optical_path": {
-                    "hardware_inventory_renderables": [],
-                    "authoritative_route_contract": {"routes": []},
-                },
-            },
-            "capabilities": {
-                "imaging_modes": [{"id": "confocal_point", "display_label": "Confocal Point"}],
-                "contrast_methods": [],
-                "readouts": [
-                    {"id": "spectral_imaging", "display_label": "Spectral Imaging"},
-                    {"id": "flim", "display_label": "FLIM"},
-                ],
-                "workflows": [],
-                "assay_operations": [],
-                "non_optical": [],
-            },
-            "modalities": [],
-            "modules": [],
-        }
-        result = self.run_template(
-            instruments=[instrument],
-            actions_js="""
-            const systemSelect = document.getElementById('system-select');
-            systemSelect.value = 'scope-caps';
-            systemSelect.listeners.change({ target: systemSelect });
-            const imagingSection = document.getElementById('capabilities-imaging-modes-section');
-            const readoutsSection = document.getElementById('capabilities-readouts-section');
-            const contrastSection = document.getElementById('capabilities-contrast-methods-section');
-            const imagingContainer = document.getElementById('capabilities-imaging-modes');
-            const readoutsContainer = document.getElementById('capabilities-readouts');
-            // Collect label text from tag spans in each container
-            const imagingLabels = Array.from(imagingContainer.children).map(c => c.textContent);
-            const readoutLabels = Array.from(readoutsContainer.children).map(c => c.textContent);
-            return {
-                imagingVisible: imagingSection && imagingSection.style.display !== 'none',
-                contrastVisible: contrastSection && contrastSection.style.display !== 'none',
-                readoutsVisible: readoutsSection && readoutsSection.style.display !== 'none',
-                imagingLabels,
-                readoutLabels,
-            };
-            """,
-        )
-        self.assertTrue(result["imagingVisible"], "Imaging modes section must be visible when capabilities exist")
-        self.assertTrue(result["readoutsVisible"], "Readouts section must be visible when readouts exist")
-        self.assertFalse(result["contrastVisible"], "Contrast methods section must be hidden when empty")
-        self.assertIn("Confocal Point", result["imagingLabels"])
-        self.assertIn("Spectral Imaging", result["readoutLabels"])
-        self.assertIn("FLIM", result["readoutLabels"])
+    def test_template_does_not_render_capability_axes_section(self) -> None:
+        template_content = TEMPLATE_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("Capability Axes (context &amp; filtering)", template_content)
+        self.assertNotIn('id="section-capabilities"', template_content)
 
-    def test_capability_section_hidden_when_no_capabilities(self) -> None:
-        """section-capabilities must be hidden when dto.capabilities is absent or all axes empty."""
+    def test_light_source_label_metadata_includes_manufacturer_context(self) -> None:
         instrument = {
-            "id": "scope-no-caps",
-            "display_name": "Scope No Capabilities",
+            "id": "scope-brand-meta",
+            "display_name": "Scope Brand Meta",
             "retired": False,
             "methods_generation": {"is_blocked": False, "blockers": []},
             "methods": {"base_sentence": "Images acquired."},
@@ -1553,7 +1493,14 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "optical_modulators": [],
                 "illumination_logic": [],
                 "optical_path": {
-                    "hardware_inventory_renderables": [],
+                    "hardware_inventory_renderables": [{
+                        "id": "source:laser_405",
+                        "inventory_class": "light_source",
+                        "display_label": "405 nm laser Borealis Illumination",
+                        "display_subtitle": "Light Source",
+                        "manufacturer": "Andor",
+                        "method_sentence": "Excitation was provided by 405 nm laser Borealis Illumination.",
+                    }],
                     "authoritative_route_contract": {"routes": []},
                 },
             },
@@ -1564,13 +1511,59 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             instruments=[instrument],
             actions_js="""
             const systemSelect = document.getElementById('system-select');
-            systemSelect.value = 'scope-no-caps';
+            systemSelect.value = 'scope-brand-meta';
             systemSelect.listeners.change({ target: systemSelect });
-            const sec = document.getElementById('section-capabilities');
-            return { capabilitiesHidden: !sec || sec.style.display === 'none' };
+            const labelNode = document.getElementById('light-list').children[0].children[1];
+            return { sideMeta: labelNode.children[1]?.textContent || '' };
             """,
         )
-        self.assertTrue(result["capabilitiesHidden"], "section-capabilities must be hidden when no capabilities present")
+        self.assertIn("Andor", result["sideMeta"])
+        self.assertIn("Light Source", result["sideMeta"])
+        self.assertNotIn("light_source", result["sideMeta"])
+
+    def test_metadata_renderer_dedupes_near_duplicate_class_fragments_and_manufacturer(self) -> None:
+        instrument = {
+            "id": "scope-brand-dedupe",
+            "display_name": "Scope Brand Dedupe",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [{
+                        "id": "source:laser_405",
+                        "inventory_class": "light_source",
+                        "display_label": "Andor Borealis 405 nm laser",
+                        "display_subtitle": "Light Source",
+                        "manufacturer": "Andor",
+                        "method_sentence": "Excitation was provided by Andor Borealis 405 nm laser.",
+                    }],
+                    "authoritative_route_contract": {"routes": []},
+                },
+            },
+            "modalities": [],
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-brand-dedupe';
+            systemSelect.listeners.change({ target: systemSelect });
+            const labelNode = document.getElementById('light-list').children[0].children[1];
+            return { sideMeta: labelNode.children[1]?.textContent || '' };
+            """,
+        )
+        self.assertIn("Light Source", result["sideMeta"])
+        self.assertNotIn("light_source", result["sideMeta"])
+        self.assertNotIn("Andor — Andor", result["sideMeta"])
 
     def test_legacy_modality_selection_is_compatibility_only_not_in_primary_paragraph(self) -> None:
         """When modalities are present and checked, the sentence must appear with (Compatibility) prefix,

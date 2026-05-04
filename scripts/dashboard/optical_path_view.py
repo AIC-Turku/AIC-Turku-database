@@ -483,7 +483,10 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             "id": clean_text(item.get("id")),
             "display_number": item.get("display_number"),
             "display_label": clean_text(item.get("display_label") or item.get("id")),
-            "display_subtitle": resolve_inventory_class_label(inventory_class, vocabulary) if vocabulary else inventory_class.replace("_", " ").title(),
+            "display_subtitle": " — ".join(part for part in [
+                clean_text(item.get("manufacturer")),
+                resolve_inventory_class_label(inventory_class, vocabulary) if vocabulary else inventory_class.replace("_", " ").title(),
+            ] if part),
             "spec_lines": _spec_lines(
                 ("Number", f"`{item.get('display_number')}`" if item.get("display_number") else None),
                 ("Manufacturer", clean_text(item.get("manufacturer"))),
