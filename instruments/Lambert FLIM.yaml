@@ -140,7 +140,6 @@ hardware:
     - flim
 light_paths:
 - id: widefield_fluorescence
-  name: Epi-fluorescence (FLIM)
   illumination_sequence:
   - source_id: multi_led_excitation
   - source_id: multi_led_excitation_2

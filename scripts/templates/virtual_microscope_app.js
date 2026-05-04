@@ -153,19 +153,16 @@
   // Simulator policy: this UI targets fluorescence configurations.
   // Keep canonical YAML/DTO route data intact, but hide non-fluorescence
   // transmitted/contrast/reflected-brightfield routes from route selection.
-  const SIMULATOR_EXCLUDED_ROUTE_TYPES = new Set([
-    'transmitted',
-    'transmitted_brightfield',
-    'reflected_brightfield',
-    'brightfield',
-    'phase',
-    'phase_contrast',
-    'darkfield',
-    'dic',
+  const VIRTUAL_MICROSCOPE_ROUTE_TYPES = new Set([
+    'confocal_point',
+    'confocal_spinning_disk',
+    'widefield_fluorescence',
+    'light_sheet',
+    'multiphoton',
   ]);
 
   function simulatorRouteIsExcluded(routeId) {
-    return SIMULATOR_EXCLUDED_ROUTE_TYPES.has(cleanString(routeId).toLowerCase());
+    return !VIRTUAL_MICROSCOPE_ROUTE_TYPES.has(cleanString(routeId).toLowerCase());
   }
 
   function stagePipeKey(leftStage, rightStage) {
@@ -1733,9 +1730,17 @@
     const options = (explicitOptions.length ? explicitOptions : catalogFallback)
       .filter((option) => {
         const entry = option && typeof option === 'object' ? option : { id: option };
-        return !simulatorRouteIsExcluded(entry.id);
+        const routeKey = cleanString(entry.route_type || entry.id).toLowerCase();
+        return !simulatorRouteIsExcluded(routeKey);
       });
     DOM.routeSel.innerHTML = '';
+
+    if (!options.length) {
+      DOM.routeWrap.style.display = 'none';
+      state.activeRoute = null;
+      state.routeTopology = null;
+      return;
+    }
 
     if (options.length <= 1) {
       DOM.routeWrap.style.display = 'none';
@@ -1856,6 +1861,14 @@
         </div>
       `;
       inspector.prepend(warningPanel);
+    }
+
+    if (!route) {
+      const empty = document.createElement('div');
+      empty.className = 'vm-info-card';
+      empty.innerHTML = '<div class="vm-info-card-subtitle">This microscope does not have a fluorescence-compatible light path to simulate.</div>';
+      inspector.appendChild(empty);
+      return;
     }
 
     if (!derivedControlGroups.length) return;

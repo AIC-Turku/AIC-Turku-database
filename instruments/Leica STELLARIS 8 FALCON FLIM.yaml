@@ -487,7 +487,6 @@ hardware:
     notes: Represents trinocular observation routing to eyepieces or K5 camera. Physical default is not authored.
 light_paths:
 - id: confocal_point
-  name: Confocal spectral / FALCON FLIM / FCS
   illumination_sequence:
   - source_id: white_light_laser_wll
   - source_id: laser_405_dmod
@@ -525,7 +524,6 @@ light_paths:
   - fret
   route_type: confocal_point
 - id: widefield_fluorescence
-  name: LED / filter-cube observation
   illumination_sequence:
   - source_id: leica_led_3
   - optical_path_element_id: epi_filter_cube_turret
@@ -547,7 +545,6 @@ light_paths:
   readouts:
   - spectral_imaging
 - id: transmitted_light
-  name: Transmitted brightfield
   illumination_sequence:
   - source_id: leica_led_3
   - optical_path_element_id: transmitted_light_path

@@ -153,7 +153,6 @@ hardware:
         notes: 'e.g., Cy3/Texas Red. Excitation: 584-605 nm.'
 light_paths:
 - id: widefield_fluorescence
-  name: Epi-fluorescence
   illumination_sequence:
   - source_id: high_power_led_blue
   - source_id: high_power_led_green
@@ -164,7 +163,6 @@ light_paths:
   - endpoint_id: detector_1
   route_type: widefield_fluorescence
 - id: transmitted_light
-  name: Transmitted Brightfield
   illumination_sequence:
   - source_id: transmitted_led
   detection_sequence:

@@ -1823,18 +1823,18 @@ sections:
 
       - path: light_paths[].name
         title: Light path name
-        status: required
+        status: optional
         type: string
         used_by: [dashboard, method_generator]
-        rationale: Human-readable route label shown in UI and exported DTO route catalogs.
+        rationale: Deprecated authored label. Canonical route display labels are resolved from vocab/optical_routes.yaml via light_paths[].route_type.
 
       - path: light_paths[].route_type
         title: Light path route type
-        status: optional
+        status: required
         type: string
         vocab: optical_routes
         used_by: [dashboard, method_generator]
-        rationale: Controlled optical route type. light_paths[].id remains a stable local identifier and may be descriptive.
+        rationale: Controlled optical route family and canonical display-label key. Active dataflow expects light_paths[].id to match light_paths[].route_type.
 
       - path: light_paths[].readouts
         title: Light path readouts

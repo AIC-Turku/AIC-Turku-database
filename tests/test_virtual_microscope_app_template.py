@@ -79,29 +79,29 @@ class VirtualMicroscopeAppTemplateTests(unittest.TestCase):
         self.assertIn("key: 'pipe:detection:' + detectIndex", source)
         self.assertIn("key: 'pipe:detectors:0'", source)
 
-    def test_transmitted_route_detection_covers_all_transmitted_tags(self) -> None:
+    def test_virtual_microscope_route_allowlist_is_fluorescence_only(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
-        self.assertIn("const SIMULATOR_EXCLUDED_ROUTE_TYPES = new Set([", source)
+        self.assertIn("const VIRTUAL_MICROSCOPE_ROUTE_TYPES = new Set([", source)
         self.assertIn("function simulatorRouteIsExcluded(routeId)", source)
-        self.assertIn("'transmitted_brightfield'", source)
-        self.assertIn("'reflected_brightfield'", source)
-        self.assertIn("'phase_contrast'", source)
-        self.assertIn("'darkfield'", source)
-        self.assertIn("'dic'", source)
-        self.assertIn("if (simulatorRouteIsExcluded(route)) {", source)
+        self.assertIn("'confocal_point'", source)
+        self.assertIn("'confocal_spinning_disk'", source)
+        self.assertIn("'widefield_fluorescence'", source)
+        self.assertIn("'light_sheet'", source)
+        self.assertIn("'multiphoton'", source)
+        self.assertNotIn("'transmitted_light'", source)
         self.assertIn("this UI targets fluorescence configurations", source)
-        self.assertNotIn(
-            "route === 'transmitted' || route === 'brightfield' || route === 'phase'",
-            source,
-            "Old 3-route transmitted check should be replaced with comprehensive list",
-        )
 
     def test_route_selector_excludes_transmitted_route_types(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")
 
         self.assertIn("const options = (explicitOptions.length ? explicitOptions : catalogFallback)", source)
-        self.assertIn("return !simulatorRouteIsExcluded(entry.id);", source)
+        self.assertIn("const routeKey = cleanString(entry.route_type || entry.id).toLowerCase();", source)
+        self.assertIn("return !simulatorRouteIsExcluded(routeKey);", source)
+        self.assertIn(
+            "This microscope does not have a fluorescence-compatible light path to simulate.",
+            source,
+        )
 
     def test_active_route_order_uses_runtime_sort_order(self) -> None:
         source = Path("scripts/templates/virtual_microscope_app.js").read_text(encoding="utf-8")

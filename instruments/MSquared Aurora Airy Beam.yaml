@@ -126,7 +126,6 @@ hardware:
         - 570
 light_paths:
 - id: light_sheet
-  name: Light-Sheet
   illumination_sequence:
   - source_id: 488_nm_laser
   - source_id: 561_nm_laser

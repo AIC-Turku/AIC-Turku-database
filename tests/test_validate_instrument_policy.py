@@ -623,6 +623,30 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
         self.assertTrue(any(w.code == 'instrument_readout_uncovered_by_route_readouts' for w in warnings))
 
+    def test_active_light_path_name_emits_deprecation_warning(self) -> None:
+        self._write_json_yaml(
+            'schema/instrument_policy.yaml',
+            {
+                'vocab_registry': {
+                    'optical_routes': {'source': 'inline', 'allowed_values': ['widefield_fluorescence']},
+                },
+                'sections': [
+                    {'id': 'instrument', 'title': 'Instrument', 'rules': [
+                        {'path': 'instrument.instrument_id', 'status': 'required', 'type': 'string'},
+                        {'path': 'light_paths', 'status': 'required', 'type': 'list', 'item_type': 'object', 'min_items': 1},
+                        {'path': 'light_paths[].id', 'status': 'required', 'type': 'slug'},
+                        {'path': 'light_paths[].route_type', 'status': 'required', 'type': 'string', 'vocab': 'optical_routes'},
+                    ]}
+                ],
+            },
+        )
+        self._write_json_yaml('instruments/example.yaml', {
+            'instrument': {'instrument_id': 'scope-1'},
+            'light_paths': [{'id': 'widefield_fluorescence', 'route_type': 'widefield_fluorescence', 'name': 'Epi-fluorescence'}],
+        })
+        _, _, warnings = validate_instrument_ledgers(instruments_dir=self.repo / 'instruments')
+        self.assertTrue(any(w.code == 'light_path_name_deprecated' for w in warnings))
+
     def test_active_instrument_missing_capabilities_emits_warning(self) -> None:
         self._write_json_yaml(
             'schema/instrument_policy.yaml',

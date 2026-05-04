@@ -138,7 +138,10 @@ class DataflowContractE2ETests(unittest.TestCase):
         )
         methods = ctx.methods_export_dto
         self.assertEqual(methods["methods_view_dto"]["routes"][0]["id"], "route_custom")
-        self.assertEqual(methods["methods_view_dto"]["routes"][0]["display_label"], "Route Custom")
+        self.assertEqual(
+            methods["methods_view_dto"]["routes"][0]["display_label"],
+            "route_custom (missing vocabulary translation)",
+        )
 
 
 if __name__ == "__main__":
