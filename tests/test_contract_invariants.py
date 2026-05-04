@@ -606,6 +606,8 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertNotIn("positions{}:", rendered)
 
     def test_instrument_template_includes_light_path_endpoints_branches_and_spectral_fields(self) -> None:
+        import yaml
+
         rendered = TEMPLATE_PATH.read_text(encoding="utf-8")
 
         self.assertIn("sources:", rendered)
@@ -631,15 +633,30 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertIn("detection_sequence:", rendered)
         self.assertNotIn("light_sources:", rendered)
         self.assertNotIn("light_path:", rendered)
+        # Canonical field presence
+        self.assertIn('capabilities:', rendered)
+        self.assertIn('pixel_pitch_um: ""', rendered)
+        self.assertIn('route_type: ""', rendered)
+        # Structural checks via YAML parse
+        data = yaml.safe_load(rendered)
+        self.assertNotIn('modalities', data, "Template must not expose a top-level modalities field")
+        for lp in data.get('light_paths', []):
+            if isinstance(lp, dict):
+                self.assertNotIn('modalities', lp, "light_paths[] entries must not include a modalities field")
 
     def test_generated_microscope_template_uses_canonical_alias_replacements(self) -> None:
         rendered = TEMPLATE_PATH.read_text(encoding="utf-8")
+        # Negative: legacy alias placeholders must not appear in the template
         self.assertNotIn('name: ""  # Module display name (legacy)', rendered)
         self.assertNotIn('pixel_size_um: ""', rendered)
         self.assertNotIn('channel_center_nm: ""', rendered)
         self.assertNotIn('bandwidth_nm: ""', rendered)
         self.assertNotIn('min_nm: ""  # Detector minimum wavelength', rendered)
         self.assertNotIn('max_nm: ""  # Detector maximum wavelength', rendered)
+        # Positive: canonical replacements must be present so removing them
+        # alongside their legacy counterparts would also be caught
+        self.assertIn('type: ""  # Module type', rendered)
+        self.assertIn('pixel_pitch_um: ""', rendered)
 
     def test_active_instruments_do_not_use_legacy_alias_fields(self) -> None:
         import yaml
@@ -695,6 +712,37 @@ class ContractInvariantTests(unittest.TestCase):
             ("hardware.detectors[].bandwidth_nm", "hardware.detectors[].collection_width_nm"),
         }
         self.assertTrue(alias_pairs.isdisjoint(forbidden), f"Unexpected alias fallback entries: {alias_pairs & forbidden}")
+
+    def test_legacy_alias_values_still_trigger_completeness_diagnostics(self) -> None:
+        """Alias fallback entries must still be emitted when a legacy alias value is actually present."""
+        payload = {
+            "hardware": {
+                "detectors": [
+                    {
+                        "id": "det1",
+                        "kind": "scmos",
+                        "pixel_size_um": 6.5,
+                        "channel_center_nm": 550,
+                        "bandwidth_nm": 100,
+                        "min_nm": 500,
+                        "max_nm": 600,
+                    }
+                ]
+            },
+        }
+        report = build_instrument_completeness_report(payload)
+        alias_pairs = {(entry.get("alias"), entry.get("path")) for entry in report.alias_fallbacks}
+        expected = {
+            ("hardware.detectors[].pixel_size_um", "hardware.detectors[].pixel_pitch_um"),
+            ("hardware.detectors[].channel_center_nm", "hardware.detectors[].collection_center_nm"),
+            ("hardware.detectors[].bandwidth_nm", "hardware.detectors[].collection_width_nm"),
+            ("hardware.detectors[].min_nm", "hardware.detectors[].collection_min_nm"),
+            ("hardware.detectors[].max_nm", "hardware.detectors[].collection_max_nm"),
+        }
+        self.assertTrue(
+            expected.issubset(alias_pairs),
+            f"Expected legacy alias diagnostics not emitted: {expected - alias_pairs}",
+        )
 
     def test_plan_experiments_prompt_uses_canonical_v2_route_language(self) -> None:
         rendered = PLAN_TEMPLATE_PATH.read_text(encoding="utf-8")
