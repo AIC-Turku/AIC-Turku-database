@@ -184,9 +184,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ? cleaned.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase())
                 : cleaned;
         };
-        const pushFragment = (value) => {
+        const isGenericHardwareMetadata = (value) => {
+            const normalized = normalizeFragment(value);
+            return ["light source", "optical element", "splitter", "endpoint", "eyepiece"].includes(normalized);
+        };
+        const pushFragment = (value, { suppressGeneric = false } = {}) => {
             const candidate = canonicalDisplay(value);
             if (!candidate) return;
+            if (suppressGeneric && isGenericHardwareMetadata(candidate)) return;
             const normalizedCandidate = normalizeFragment(candidate);
             if (!normalizedCandidate) return;
             const existingIndex = fragments.findIndex((part) => normalizeFragment(part) === normalizedCandidate);
@@ -203,16 +208,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         const subtitle = cleanText(item?.display_subtitle);
         const classOrKind = cleanText(item?.kind_label || item?.role_label || item?.inventory_class_label || item?.inventory_class);
         const routeLabel = cleanText(item?.route_label);
-        const mainLabel = cleanText(item?.display_label).toLowerCase();
 
-        if (manufacturer && !mainLabel.includes(manufacturer.toLowerCase())) {
+        if (manufacturer) {
             pushFragment(manufacturer);
         }
         if (subtitle && subtitle.toLowerCase() !== manufacturer.toLowerCase()) {
-            pushFragment(subtitle);
+            pushFragment(subtitle, { suppressGeneric: true });
         }
         if (classOrKind) {
-            pushFragment(classOrKind);
+            pushFragment(classOrKind, { suppressGeneric: true });
         }
         if (routeLabel) {
             pushFragment(routeLabel);
