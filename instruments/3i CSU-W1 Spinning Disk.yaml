@@ -8,12 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'Confocal spinning-disk microscope (inverted) based on a Zeiss stand with
-    a Yokogawa CSU-W1. Optimized for fast, gentle imaging of live samples and large
-    fields of view. Imaging modes: confocal spinning disk, live-cell time-lapse, FRAP,
-    photoactivation. Uses a 50 µm pinhole disk; this is well suited to standard spinning-disk
-    imaging but is not ideal for low-magnification confocal sectioning compared with
-    a 25 µm disk.'
+  notes: 'Confocal spinning-disk microscope (inverted) based on a Zeiss stand with a Yokogawa CSU-W1. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: confocal spinning disk, live-cell time-lapse, FRAP, photoactivation. Uses a 50 µm pinhole disk; this is well suited to standard spinning-disk imaging but is not ideal for low-magnification confocal sectioning compared with a 25 µm disk.'
   url: ''
 capabilities:
   imaging_modes:
@@ -21,8 +16,11 @@ capabilities:
   - widefield_fluorescence
   contrast_methods:
   - transmitted_brightfield
+  - phase_contrast
+  - dic
   readouts: []
-  workflows: []
+  workflows:
+  - live_cell_imaging
   assay_operations:
   - frap
   - photoactivation
@@ -70,9 +68,7 @@ hardware:
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell
-      spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification
-      confocal sectioning.
+    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification confocal sectioning.
     url: ''
   detectors:
   - kind: scmos
@@ -248,16 +244,13 @@ hardware:
     wavelength_nm: 730
     power: 30 mW
     role: excitation
-    notes: Near-IR excitation line delivered via the CSU-W1 near-IR illumination port.
-      Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter
-      to be documented explicitly in the light path.
+    notes: Near-IR excitation line delivered via the CSU-W1 near-IR illumination port. Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter to be documented explicitly in the light path.
     url: ''
     id: singleline_730nm_laser_launch
   - kind: led
     manufacturer: Excelitas
     model: X-Cite XLED1
-    notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class
-      widefield fluorescence
+    notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class widefield fluorescence
     url: ''
     id: x_cite_xled1
   optical_path_elements:
@@ -308,13 +301,11 @@ hardware:
           width_nm: 25
         - center_nm: 700
           width_nm: 25
-        notes: Standard multiband spinning-disk dichroic for 405/488/561/640-class
-          excitation.
+        notes: Standard multiband spinning-disk dichroic for 405/488/561/640-class excitation.
       Pos_2:
         component_type: empty
         name: NIR dichroic position
-        notes: Placeholder for the installed NIR dichroic used with the 730 nm excitation
-          / 809 nm emission route.
+        notes: Placeholder for the installed NIR dichroic used with the 730 nm excitation / 809 nm emission route.
   - name: Widefield Dichroic
     stage_role: dichroic
     id: widefield_dichroic
@@ -484,3 +475,13 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_brightfield
+- id: phase_contrast
+  name: Phase Contrast
+  route_type: phase_contrast
+  illumination_sequence: []
+  detection_sequence: []
+- id: dic
+  name: Dic
+  route_type: dic
+  illumination_sequence: []
+  detection_sequence: []

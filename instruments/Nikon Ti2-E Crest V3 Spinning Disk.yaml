@@ -8,8 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: High-end spinning disk system with Lumencor Celesta 7-channel laser, dual
-    Photometrics Kinetix cameras, and Dark Enclosure WarmBox.
+  notes: High-end spinning disk system with Lumencor Celesta 7-channel laser, dual Photometrics Kinetix cameras, and Dark Enclosure WarmBox.
   url: https://www.microscope.healthcare.nikon.com/products/inverted-microscopes/eclipse-ti2
 capabilities:
   imaging_modes:
@@ -17,15 +16,15 @@ capabilities:
   - widefield_fluorescence
   contrast_methods:
   - transmitted_brightfield
+  - dic
   readouts: []
-  workflows: []
+  workflows:
+  - live_cell_imaging
   assay_operations: []
   non_optical: []
 modules:
 - type: hardware_autofocus
-  notes: 'Nikon Perfect Focus System (PFS). WARNING: Not compatible with 751 nm excitation.
-    The PFS beamsplitter needs to be taken out from the lightpath in the optical configurations
-    for 749/751nm use.'
+  notes: 'Nikon Perfect Focus System (PFS). WARNING: Not compatible with 751 nm excitation. The PFS beamsplitter needs to be taken out from the lightpath in the optical configurations for 749/751nm use.'
   url: ''
   manufacturer: Nikon
   model: Perfect Focus System
@@ -40,8 +39,7 @@ modules:
   manufacturer: Prior
   model: SP600 piezo kit
 - type: hardware_triggering
-  notes: Crest V3 Triggering Kit (MXCRO057) including NI PCIe-6738, Ubob42 NIDAQ Ultimate
-    Breakout Box, and 9-Channel Trigger Cable for high-speed device synchronization.
+  notes: Crest V3 Triggering Kit (MXCRO057) including NI PCIe-6738, Ubob42 NIDAQ Ultimate Breakout Box, and 9-Channel Trigger Cable for high-speed device synchronization.
   url: ''
   manufacturer: CrestOptics
   model: V3 Triggering Kit MXCRO057
@@ -156,8 +154,7 @@ hardware:
     specialties:
     - long_working_distance
     - dic
-    notes: 'Optical family: Lambda S. Chromatic correction: 405-950nm. Requires DIC-prism
-      N2.'
+    notes: 'Optical family: Lambda S. Chromatic correction: 405-950nm. Requires DIC-prism N2.'
     url: ''
     is_installed: true
   - id: 60x_silicone
@@ -310,8 +307,7 @@ hardware:
         bands:
         - center_nm: 447
           width_nm: 60
-        notes: 'For widefield imaging with D-LEDI. Excitation: 377/50 nm. Dichroic
-          Cutoff: 409 nm.'
+        notes: 'For widefield imaging with D-LEDI. Excitation: 377/50 nm. Dichroic Cutoff: 409 nm.'
         excitation_filter:
           component_type: bandpass
           center_nm: 377
@@ -439,8 +435,7 @@ hardware:
           width_nm: 44.4
         - center_nm: 817
           width_nm: 78.8
-        notes: 'Explicit transmission windows are mapped. Reflection cutoffs: 421,
-          491, 567, 659, 776 nm.'
+        notes: 'Explicit transmission windows are mapped. Reflection cutoffs: 421, 491, 567, 659, 776 nm.'
       Pos_2:
         name: Celesta CFP-YFP-A
         component_type: multiband_dichroic
@@ -450,8 +445,7 @@ hardware:
           width_nm: 25.9
         - center_nm: 561
           width_nm: 38.9
-        notes: 'Explicit transmission windows are mapped. Reflection cutoffs: 471,
-          539 nm.'
+        notes: 'Explicit transmission windows are mapped. Reflection cutoffs: 471, 539 nm.'
   - name: Crest Emission Wheel
     slots: 8
     stage_role: emission
@@ -527,8 +521,7 @@ hardware:
     - transmitted_brightfield
     - widefield_fluorescence
   - name: MXR00547 V3 DualCam-GFP/mCherry 2 Bands Celesta Set
-    notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave
-      Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
+    notes: 'DualCam Splitter: GFP & Cy5 Channel on Master Camera; DAPI & Cy3 on Slave Camera. Transmits Green/Far-Red, Reflects Blue/Red.'
     supported_branch_modes:
     - transmitted
     - reflected
@@ -653,3 +646,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_brightfield
+- id: dic
+  name: Dic
+  route_type: dic
+  illumination_sequence: []
+  detection_sequence: []

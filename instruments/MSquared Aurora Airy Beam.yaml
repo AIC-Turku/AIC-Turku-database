@@ -8,18 +8,15 @@ instrument:
   stand_orientation: other
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: 'Light-sheet fluorescence microscope using Airy-beam illumination for long-term
-    volumetric live imaging with reduced photobleaching and striping artefacts. Approximate
-    performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial
-    resolution, and lower phototoxic burden due to single exposure per z-slice and
-    self-healing/non-diffractive beam propagation.'
+  notes: 'Light-sheet fluorescence microscope using Airy-beam illumination for long-term volumetric live imaging with reduced photobleaching and striping artefacts. Approximate performance claims: up to 800 µm FOV (with 15.3x Special Optics), sub-1 µm axial resolution, and lower phototoxic burden due to single exposure per z-slice and self-healing/non-diffractive beam propagation.'
   url: ''
 capabilities:
   imaging_modes:
   - light_sheet
   contrast_methods: []
   readouts: []
-  workflows: []
+  workflows:
+  - live_cell_imaging
   assay_operations: []
   non_optical: []
 modules:
@@ -44,8 +41,7 @@ hardware:
     type: tandem
     light_sheet_type: airy_beam
     line_rate_hz: 8000
-    notes: Galvanometric scanner and remote focusing lenses on illumination/detection;
-      integrated Resonant scanner for beam scanning.
+    notes: Galvanometric scanner and remote focusing lenses on illumination/detection; integrated Resonant scanner for beam scanning.
     url: ''
   detectors:
   - kind: scmos
@@ -70,9 +66,7 @@ hardware:
     afc_compatible: false
     specialties:
     - cleared_tissue_imaging
-    notes: Excitation and detection objectives designed for dipping media with refractive
-      index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across
-      RI. FOV 1.2 mm diameter.
+    notes: Excitation and detection objectives designed for dipping media with refractive index range 1.33-1.56 (NA 0.37-0.43), magnification range 15.3x-17.9x across RI. FOV 1.2 mm diameter.
     url: ''
     is_installed: true
   sources:

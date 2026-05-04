@@ -22,9 +22,7 @@ capabilities:
   - afm
 modules:
 - type: afm_module
-  notes: JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range).
-    Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force
-    Mapping, Force Modulation, and Manipulation.
+  notes: JPK NanoWizard I AFM (with CellHesion module, 100x100x15 µm scan range). Support for Contact Mode, Intermittent (tapping) Mode, Force Spectroscopy, Force Mapping, Force Modulation, and Manipulation.
   url: ''
   manufacturer: JPK
   model: NanoWizard I with CellHesion
@@ -114,3 +112,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: confocal_point
+- id: transmitted_brightfield
+  name: Transmitted Brightfield
+  route_type: transmitted_brightfield
+  illumination_sequence: []
+  detection_sequence: []
