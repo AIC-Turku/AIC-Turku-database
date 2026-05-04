@@ -155,7 +155,11 @@ hardware:
     specialties:
     - dic
     - ir_transmission
-    notes: Imm Korr (Multi-immersion, correction collar)
+    notes: >-
+      Imm Korr (multi-immersion, correction collar). Reported 2026-05-04:
+      immersion/correction collar is broken and the current collar position is
+      unknown. Objective remains physically available but may give suboptimal image
+      quality; contact facility staff before critical imaging.
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27
     is_installed: true
   - id: 63x_oil
