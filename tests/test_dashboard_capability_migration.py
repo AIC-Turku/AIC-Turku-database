@@ -96,12 +96,17 @@ class CapabilityMigrationTests(unittest.TestCase):
         self.assertIn("Imaging: Confocal point scanning", rendered)
         self.assertIn('data-capabilities="imaging_modes:confocal_point"', rendered)
 
-    def test_instrument_spec_route_type_and_readouts_are_separate(self) -> None:
+    def test_instrument_spec_hides_route_section_and_keeps_flat_capability_chips(self) -> None:
         tpl = _template_env().get_template("instrument_spec.md.j2")
         dto = {
             "identity": {"display_name": "Scope", "id": "scope", "image_filename": "placeholder.svg", "manufacturer": "", "model": "", "stand_orientation": {"display_label": ""}, "ocular_availability": {"display_label": ""}, "location": "", "year_of_purchase": "", "funding": ""},
             "status": {"color": "green", "badge": "Online", "reason": "ok"},
             "capabilities": {k: [] for k in ["imaging_modes", "contrast_methods", "readouts", "workflows", "assay_operations", "non_optical"]},
+            "capabilities_flat": [
+                {"id": "imaging_modes:confocal_point", "display_label": "Confocal point scanning"},
+                {"id": "readouts:flim", "display_label": "FLIM"},
+                {"id": "readouts:fcs", "display_label": "FCS"},
+            ],
             "modalities": [],
             "modules": [],
             "software": [],
@@ -124,7 +129,8 @@ class CapabilityMigrationTests(unittest.TestCase):
             instrument={"dto": dto},
             latest_metrics={}, metric_names={}, policy={"missing_required": [], "missing_conditional": [], "alias_fallbacks": []}
         )
-        self.assertIn("Route type:", rendered)
+        self.assertNotIn("Route type:", rendered)
+        self.assertNotIn("Optical routes and route-level readouts", rendered)
         self.assertIn("Confocal point scanning", rendered)
         self.assertIn("FLIM", rendered)
         self.assertIn("FCS", rendered)
@@ -504,10 +510,11 @@ class RouteReadoutPropagationTests(unittest.TestCase):
         self.assertNotIn("Legacy modalities", rendered)
         for label in ("FLIM", "FCS", "Spectral Imaging", "Confocal point scanning", "Widefield fluorescence", "Transmitted brightfield"):
             self.assertIn(label, rendered)
-        self.assertIn("Show grouped capability axes", rendered)
+        self.assertNotIn("Show grouped capability axes", rendered)
+        self.assertNotIn("Optical routes and route-level readouts", rendered)
 
-    def test_instrument_spec_template_renders_route_readouts_not_dash(self) -> None:
-        """instrument_spec.md.j2 must render FLIM and FCS chips for STELLARIS, not just dashes."""
+    def test_instrument_spec_template_keeps_capability_chips_without_route_section(self) -> None:
+        """instrument_spec.md.j2 keeps capability chips while hiding the dedicated route/readout section."""
         from scripts.dashboard.instrument_view import build_instrument_mega_dto
         from scripts.dashboard.site_render import _annotate_display_labels
 
@@ -527,7 +534,6 @@ class RouteReadoutPropagationTests(unittest.TestCase):
             metric_names={},
             policy={"missing_required": [], "missing_conditional": [], "alias_fallbacks": []},
         )
-        self.assertIn("FLIM", rendered,
-                      "FLIM readout chip must appear in rendered route section for STELLARIS")
-        self.assertIn("FCS", rendered,
-                      "FCS readout chip must appear in rendered route section for STELLARIS")
+        self.assertIn("FLIM", rendered)
+        self.assertIn("FCS", rendered)
+        self.assertNotIn("Optical routes and route-level readouts", rendered)

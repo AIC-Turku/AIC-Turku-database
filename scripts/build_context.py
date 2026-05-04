@@ -325,6 +325,7 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
                 }
             )
         cleaned_rows = [strip_empty_values(r) for r in rows]
+        return [r for r in cleaned_rows if isinstance(r, dict) and r]
     if isinstance(raw, dict):
         for role_or_name, payload in raw.items():
             normalized_role = normalize_role(role_or_name)
