@@ -17,13 +17,13 @@ modalities:
   - transmitted_brightfield
 
 modules:
-  - name: hardware_autofocus
+  - type: hardware_autofocus
     notes: Standard Z-drift compensation
     url: ''
-  - name: incubation
+  - type: incubation
     notes: Temperature and CO2 control enabled
     url: ''
-  - name: optogenetics
+  - type: optogenetics
     notes: Integrated 445nm stimulator
     url: ''
 

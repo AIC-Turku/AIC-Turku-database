@@ -158,6 +158,47 @@ class EventPolicyValidationTests(unittest.TestCase):
         self.assertTrue(any(issue.code == 'unsupported_event_field' for issue in report.warnings))
         self.assertFalse(any('maintenance_id' in issue.path and issue.code == 'missing_required_field' for issue in report.warnings))
 
+    def test_followup_without_next_due_date_does_not_emit_removed_cross_field_warning(self) -> None:
+        self._write_yaml(
+            'schema/QC_policy.yaml',
+            {'record_type': 'qc_session', 'field_rules': [], 'vocab_registry': {}},
+        )
+        self._write_yaml(
+            'schema/maintenance_policy.yaml',
+            {
+                'record_type': 'maintenance_event',
+                'vocab_registry': {},
+                'field_rules': [
+                    {'path': 'record_type', 'status': 'required', 'type': 'string', 'allowed_values': ['maintenance_event']},
+                    {'path': 'microscope', 'status': 'required', 'type': 'instrument_id'},
+                    {'path': 'maintenance_id', 'status': 'required', 'type': 'string'},
+                    {'path': 'started_utc', 'status': 'required', 'type': 'datetime_utc'},
+                    {'path': 'service_provider', 'status': 'required', 'type': 'string'},
+                    {'path': 'followup', 'status': 'optional', 'type': 'string'},
+                    {'path': 'next_due_date', 'status': 'optional', 'type': 'date'},
+                ],
+                'legacy_and_migration_rules': [],
+                'cross_field_rules': [
+                    {'id': 'external_provider_requires_company'},
+                ],
+            },
+        )
+        self._write_yaml(
+            'maintenance/events/scope-1/2026/2026-01-03_followup.yaml',
+            {
+                'record_type': 'maintenance_event',
+                'microscope': 'scope-1',
+                'maintenance_id': 'maint_scope-1_20260103_vendor',
+                'started_utc': '2026-01-03T10:00:00Z',
+                'service_provider': 'vendor',
+                'followup': 'Monitor system and recheck alignment.',
+            },
+        )
+        report = validate_event_ledgers(instrument_ids={'scope-1'})
+        warning_messages = [issue.message for issue in report.warnings]
+        self.assertFalse(any("next_due_date_should_pair_with_followup" in msg for msg in warning_messages))
+        self.assertTrue(any("external_provider_requires_company" in msg for msg in warning_messages))
+
 
 if __name__ == '__main__':
     unittest.main()

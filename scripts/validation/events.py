@@ -370,11 +370,6 @@ def validate_event_ledgers(
                         if isinstance(related_node.value, str) and related_node.value.strip() and related_node.value.startswith('qc_'):
                             continue
                         warnings.append(ValidationIssue(code='cross_field_rule_failed', path=f"{event_file.as_posix()}:{related_node.path}", message="Cross-field rule 'related_qc_should_reference_existing_sessions' failed."))
-                elif rule_id == 'next_due_date_should_pair_with_followup':
-                    has_followup = _is_non_empty_string(payload.get('followup'))
-                    has_next_due = _is_non_empty_string(payload.get('next_due_date'))
-                    if has_followup and not has_next_due:
-                        warnings.append(ValidationIssue(code='cross_field_rule_warning', path=event_file.as_posix(), message="Cross-field rule 'next_due_date_should_pair_with_followup': next_due_date is recommended when followup is present."))
                 elif rule_id == 'metric_class_matches_id_pattern':
                     # Ensures the assigned metric_class logically matches the metric_id text.
                     for section in ('inputs_human', 'metrics_computed'):
@@ -423,4 +418,3 @@ def validate_event_ledgers(
         )
 
     return EventValidationReport(errors=errors, warnings=warnings, migration_notices=migration_notices)
-
