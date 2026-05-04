@@ -8,7 +8,9 @@ instrument:
   stand_orientation: inverted
   ocular_availability: camera_only
   location: BioCity, 5th floor, room 5149
-  notes: Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF for evenly illuminated large fields of view.
+  notes: Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization
+    microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF
+    for evenly illuminated large fields of view.
   url: ''
 capabilities:
   imaging_modes:
@@ -26,7 +28,8 @@ capabilities:
   non_optical: []
 modules:
 - type: environmental_enclosure
-  notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system.
+  notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating
+    block, objective lens heater, and gas delivery system.
   url: ''
   manufacturer: GE Healthcare
   model: Onstage Incubator/Heating Assembly
@@ -41,12 +44,14 @@ modules:
   manufacturer: GE Healthcare
   model: Nanomotion Stage with Piezo Z-axis
 - type: 3d_sim
-  notes: Proprietary electro-optical high speed structured illumination engine. 110-160 nm lateral and 320-400 nm axial resolution.
+  notes: Proprietary electro-optical high speed structured illumination engine. 110-160
+    nm lateral and 320-400 nm axial resolution.
   url: ''
   manufacturer: GE Healthcare
   model: 3D-SIM Illumination Engine
 - type: tirf
-  notes: Ring TIRF optics module with integrated PhotoKinetic (PK) optics. Allows rapid wavelength switching and TIRF depth penetration modulation.
+  notes: Ring TIRF optics module with integrated PhotoKinetic (PK) optics. Allows
+    rapid wavelength switching and TIRF depth penetration modulation.
   url: ''
   manufacturer: GE Healthcare
   model: Ring TIRF with PhotoKinetic Optics
@@ -54,14 +59,16 @@ software:
 - role: acquisition
   name: OMX Acquisition
   version: '3.70'
-  notes: Master Control on Windows. Image processing on CentOS with softWoRx 6.0 or newer for deconvolution/reconstruction.
+  notes: Master Control on Windows. Image processing on CentOS with softWoRx 6.0 or
+    newer for deconvolution/reconstruction.
   url: ''
 hardware:
   environment:
     temperature_control: true
     co2_control: true
     humidity_control: true
-    notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating block, objective lens heater, and gas delivery system.
+    notes: Onstage incubator/heating assembly. Includes insulated sample holder, heating
+      block, objective lens heater, and gas delivery system.
   stages:
   - type: z_piezo
     manufacturer: GE Healthcare
@@ -81,7 +88,9 @@ hardware:
     pixel_pitch_um: 6.5
     qe_peak_pct: 60
     sensor_format_px: 1024 x 1024
-    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam1 DAPI+Cy5/CFP.
+    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam1
+      DAPI+Cy5/CFP.
     url: ''
     id: detector_1
   - kind: scmos
@@ -90,7 +99,9 @@ hardware:
     pixel_pitch_um: 6.5
     qe_peak_pct: 60
     sensor_format_px: 1024 x 1024
-    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam2 Alexa 488/YFP
+    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam2
+      Alexa 488/YFP
     url: ''
     id: detector_2
   - kind: scmos
@@ -99,7 +110,9 @@ hardware:
     pixel_pitch_um: 6.5
     qe_peak_pct: 60
     sensor_format_px: 1024 x 1024
-    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam3 Alexa 568.
+    notes: Liquid cooled sCMOS cameras. 15 bit, 5.5 Megapixel chip. Operation modes
+      include 3D-SIM (512 x 512 after SIM reconstruction) and Widefield/TIRF. Cam3
+      Alexa 568.
     url: ''
     id: detector_3
   objectives:
@@ -253,7 +266,6 @@ hardware:
   endpoints: []
 light_paths:
 - id: widefield_fluorescence
-  name: Epi-fluorescence
   illumination_sequence:
   - source_id: 405_nm
   - source_id: 445_nm
@@ -279,87 +291,10 @@ light_paths:
         sequence:
         - endpoint_id: detector_3
   route_type: widefield_fluorescence
-- id: tirf
-  name: TIRF
-  illumination_sequence:
-  - source_id: 405_nm
-  - source_id: 445_nm
-  - source_id: 488_nm
-  - source_id: 514_nm
-  - source_id: 568_nm
-  - source_id: 642_nm
-  detection_sequence:
-  - optical_path_element_id: omx_emission_filters
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_cam1
-        label: To Camera 1 (DAPI/Cy5/CFP)
-        sequence:
-        - endpoint_id: detector_1
-      - branch_id: to_cam2
-        label: To Camera 2 (Alexa 488/YFP)
-        sequence:
-        - endpoint_id: detector_2
-      - branch_id: to_cam3
-        label: To Camera 3 (Alexa 568)
-        sequence:
-        - endpoint_id: detector_3
-  route_type: tirf
-  notes: Shares the same documented physical path as widefield_fluorescence; TIRF illumination geometry is provided by the integrated ring TIRF module (ring_tirf optics with PhotoKinetic switching).
-- id: sim
-  name: SIM
-  illumination_sequence:
-  - source_id: 405_nm
-  - source_id: 445_nm
-  - source_id: 488_nm
-  - source_id: 514_nm
-  - source_id: 568_nm
-  - source_id: 642_nm
-  detection_sequence:
-  - optical_path_element_id: omx_emission_filters
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_cam1
-        label: To Camera 1 (DAPI/Cy5/CFP)
-        sequence:
-        - endpoint_id: detector_1
-      - branch_id: to_cam2
-        label: To Camera 2 (Alexa 488/YFP)
-        sequence:
-        - endpoint_id: detector_2
-      - branch_id: to_cam3
-        label: To Camera 3 (Alexa 568)
-        sequence:
-        - endpoint_id: detector_3
-  route_type: sim
-  notes: Shares the same documented physical path as widefield_fluorescence; structured illumination is provided by the integrated 3D SIM module (electro-optical high-speed SIM engine).
-- id: smlm
-  name: SMLM
-  illumination_sequence:
-  - source_id: 405_nm
-  - source_id: 445_nm
-  - source_id: 488_nm
-  - source_id: 514_nm
-  - source_id: 568_nm
-  - source_id: 642_nm
-  detection_sequence:
-  - optical_path_element_id: omx_emission_filters
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_cam1
-        label: To Camera 1 (DAPI/Cy5/CFP)
-        sequence:
-        - endpoint_id: detector_1
-      - branch_id: to_cam2
-        label: To Camera 2 (Alexa 488/YFP)
-        sequence:
-        - endpoint_id: detector_2
-      - branch_id: to_cam3
-        label: To Camera 3 (Alexa 568)
-        sequence:
-        - endpoint_id: detector_3
-  route_type: smlm
-  notes: Shares the same documented physical path as tirf; SMLM (PALM/STORM) is performed in TIRF/HILO illumination mode using the ring TIRF module.
+  notes: Shares the same documented physical path as widefield_fluorescence; TIRF
+    illumination geometry is provided by the integrated ring TIRF module (ring_tirf
+    optics with PhotoKinetic switching). Shares the same documented physical path
+    as widefield_fluorescence; structured illumination is provided by the integrated
+    3D SIM module (electro-optical high-speed SIM engine). Shares the same documented
+    physical path as tirf; SMLM (PALM/STORM) is performed in TIRF/HILO illumination
+    mode using the ring TIRF module.

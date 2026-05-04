@@ -163,10 +163,10 @@ light_paths:
   - optical_path_element_id: internal_filter_turret
   - endpoint_id: detector_1
   route_type: widefield_fluorescence
-- id: transmitted_brightfield
+- id: transmitted_light
   name: Transmitted Brightfield
   illumination_sequence:
   - source_id: transmitted_led
   detection_sequence:
   - endpoint_id: detector_1
-  route_type: transmitted_brightfield
+  route_type: transmitted_light

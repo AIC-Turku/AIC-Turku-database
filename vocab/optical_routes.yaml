@@ -1,65 +1,61 @@
 terms:
-  - id: epi
-    label: "Epi"
-    description: "Epifluorescence / epi illumination route family."
-  - id: widefield_fluorescence
-    label: "Widefield Fluorescence"
-    description: "Widefield epifluorescence route family."
-  - id: tirf
-    label: "TIRF"
-    description: "TIRF excitation route family."
-  - id: confocal
-    label: "Confocal"
-    description: "Generic confocal route family (compatibility umbrella)."
   - id: confocal_point
-    label: "Point-Scanning Confocal"
-    description: "Point-scanning confocal route family."
+    label: Point-scanning confocal
+    display_label: Point-scanning confocal
+    description: Broad point-scanning confocal route family, including point-scanning super-resolution or readout workflows implemented on the confocal scanner path.
+    covers:
+      imaging_modes:
+        - confocal_point
+        - sted
+        - resolft
+        - ism
+      contrast_methods: []
   - id: confocal_spinning_disk
-    label: "Spinning-Disk Confocal"
-    description: "Spinning-disk confocal route family."
-  - id: multiphoton
-    label: "Multiphoton"
-    description: "Multiphoton excitation route family."
+    label: Spinning-disk confocal
+    display_label: Spinning-disk confocal
+    description: Broad spinning-disk confocal route family, including CSU-W1 and Borealis spinning disk implementations.
+    covers:
+      imaging_modes:
+        - confocal_spinning_disk
+      contrast_methods: []
+  - id: widefield_fluorescence
+    label: Widefield fluorescence
+    display_label: Widefield fluorescence
+    description: Broad widefield/epi fluorescence route family, including TIRF and widefield-based localization or structured illumination acquisitions when implemented through the widefield fluorescence path.
+    covers:
+      imaging_modes:
+        - widefield_fluorescence
+        - tirf
+        - sim
+        - smlm
+      contrast_methods:
+        - reflected_brightfield
+        - optical_sectioning
+  - id: transmitted_light
+    label: Transmitted light
+    display_label: Transmitted light
+    description: Broad transmitted-light route family covering brightfield and transmitted contrast methods.
+    covers:
+      imaging_modes: []
+      contrast_methods:
+        - transmitted_brightfield
+        - phase_contrast
+        - dic
+        - darkfield
+        - polarized_light
   - id: light_sheet
-    label: "Light Sheet"
-    description: "Light-sheet illumination/detection route family."
-  - id: transmitted
-    label: "Transmitted"
-    description: "Generic transmitted-light route family used for brightfield, darkfield, phase contrast, and DIC."
-    synonyms:
-      - diascopic
-      - dia
-      - trans
-  - id: transmitted_brightfield
-    label: "Transmitted Brightfield"
-    description: "Transmitted brightfield route family."
-  - id: phase_contrast
-    label: "Phase Contrast"
-    description: "Phase-contrast route family."
-  - id: darkfield
-    label: "Darkfield"
-    description: "Darkfield route family."
-  - id: dic
-    label: "Differential Interference Contrast"
-    description: "DIC route family."
-  - id: reflected_brightfield
-    label: "Reflected Brightfield"
-    description: "Reflected-light brightfield route family."
-  - id: optical_sectioning
-    label: "Optical Sectioning"
-    description: "Structured optical-sectioning route family."
-  - id: sim
-    label: "SIM"
-    description: "Structured illumination microscopy route family."
-  - id: sted
-    label: "STED"
-    description: "Stimulated emission depletion route family."
-  - id: resolft
-    label: "RESOLFT"
-    description: "RESOLFT route family."
-  - id: ism
-    label: "Image Scanning Microscopy"
-    description: "Image-scanning microscopy route family, including Airyscan-style optical routes."
-  - id: smlm
-    label: "SMLM"
-    description: "Single-molecule localization microscopy route/imaging-mode family when authored as an optical acquisition route."
+    label: Light sheet
+    display_label: Light sheet
+    description: Light-sheet illumination and detection route family, including SPIM variants.
+    covers:
+      imaging_modes:
+        - light_sheet
+      contrast_methods: []
+  - id: multiphoton
+    label: Multiphoton
+    display_label: Multiphoton
+    description: Multiphoton excitation route family.
+    covers:
+      imaging_modes:
+        - multiphoton
+      contrast_methods: []

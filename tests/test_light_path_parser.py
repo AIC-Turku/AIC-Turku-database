@@ -1219,7 +1219,7 @@ class LightPathParserTests(unittest.TestCase):
         )
         payload = generate_virtual_microscope_payload(instrument)
 
-        route = next((entry for entry in payload["light_paths"] if entry.get("id") == "tirf"), None)
+        route = next((entry for entry in payload["light_paths"] if entry.get("id") == "widefield_fluorescence"), None)
         self.assertIsNotNone(route)
         routing_step = next(
             step for step in route["selected_execution"]["selected_route_steps"]
@@ -2817,7 +2817,7 @@ class LightPathParserTests(unittest.TestCase):
             ["borealis_illumination", "borealis_illumination_2", "borealis_illumination_3", "borealis_illumination_4"],
         )
         self.assertEqual(
-            [step["id"] for step in by_id["transmitted_brightfield"]["illumination_traversal"] if step.get("kind") == "source"],
+            [step["id"] for step in by_id["transmitted_light"]["illumination_traversal"] if step.get("kind") == "source"],
             ["transmitted_light_illuminator"],
         )
         self.assertEqual(

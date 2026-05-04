@@ -8,7 +8,10 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2209
-  notes: TIRF/widefield microscope (inverted). TIRF imaging enables approximately 70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm in common confocal microscopy). Designed for membrane studies such as endocytosis and integrin trafficking, and also suitable for sensitive widefield imaging.
+  notes: TIRF/widefield microscope (inverted). TIRF imaging enables approximately
+    70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm
+    in common confocal microscopy). Designed for membrane studies such as endocytosis
+    and integrin trafficking, and also suitable for sensitive widefield imaging.
   url: ''
 capabilities:
   imaging_modes:
@@ -255,34 +258,7 @@ hardware:
     - selected
     supported_branch_count: 3
 light_paths:
-- id: tirf
-  name: TIRF
-  illumination_sequence:
-  - source_id: 488_nm
-  - source_id: 561_nm
-  - source_id: 639_nm
-  - optical_path_element_id: epi_turret
-  detection_sequence:
-  - optical_path_element_id: epi_turret
-  - optical_path_element_id: trinocular_port
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_emccd
-        label: To Hamamatsu EMCCD
-        sequence:
-        - endpoint_id: detector_1
-      - branch_id: to_scmos
-        label: To ORCA-Flash4.0 sCMOS
-        sequence:
-        - endpoint_id: detector_2
-      - branch_id: to_eyepieces
-        label: To Eyepieces
-        sequence:
-        - endpoint_id: eyepieces
-  route_type: tirf
 - id: widefield_fluorescence
-  name: Epi-fluorescence
   illumination_sequence:
   - source_id: 488_nm
   - source_id: 561_nm
@@ -307,8 +283,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
-- id: transmitted_brightfield
-  name: Transmitted Brightfield
+- id: transmitted_light
   illumination_sequence:
   - source_id: halogen_lamp_transmitted
   detection_sequence:
@@ -328,4 +303,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-  route_type: transmitted_brightfield
+  route_type: transmitted_light

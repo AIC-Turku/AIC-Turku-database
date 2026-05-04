@@ -179,7 +179,6 @@ hardware:
     notes: Splits light between the eyepieces, mono camera, and color camera.
 light_paths:
 - id: widefield_fluorescence
-  name: Epi-fluorescence
   illumination_sequence:
   - source_id: hxp_200c
   - optical_path_element_id: epi_turret
@@ -202,28 +201,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
-- id: optical_sectioning
-  name: ApoTome.2 Structured Illumination
-  illumination_sequence:
-  - source_id: hxp_200c
-  - optical_path_element_id: epi_turret
-  detection_sequence:
-  - optical_path_element_id: epi_turret
-  - optical_path_element_id: trinocular_port
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_mono_camera
-        label: To ORCA-Flash4.0 LT+
-        sequence:
-        - endpoint_id: detector_1
-      - branch_id: to_eyepieces
-        label: To Eyepieces
-        sequence:
-        - endpoint_id: eyepieces
-  route_type: optical_sectioning
-- id: transmitted_brightfield
-  name: Transmitted Brightfield
+- id: transmitted_light
   illumination_sequence:
   - source_id: mc1000_led_base_light
   detection_sequence:
@@ -243,26 +221,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-  route_type: transmitted_brightfield
-- id: reflected_brightfield
-  name: Reflected Brightfield
-  illumination_sequence:
-  - source_id: cl_9000_led_can_ring_light
-  detection_sequence:
-  - optical_path_element_id: trinocular_port
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_mono_camera
-        label: To ORCA-Flash4.0 LT+
-        sequence:
-        - endpoint_id: detector_1
-      - branch_id: to_color_camera
-        label: To AxioCam 105
-        sequence:
-        - endpoint_id: detector_2
-      - branch_id: to_eyepieces
-        label: To Eyepieces
-        sequence:
-        - endpoint_id: eyepieces
-  route_type: reflected_brightfield
+  route_type: transmitted_light

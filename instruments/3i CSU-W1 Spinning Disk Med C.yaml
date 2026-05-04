@@ -8,7 +8,8 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: Medisiina C, 2nd floor, room C242
-  notes: System 2032. Confocal spinning-disk microscope based on a Zeiss Axio Observer 7 Advanced Marianas base. Includes Mesa Illumination Enhancement and Field Flattening.
+  notes: System 2032. Confocal spinning-disk microscope based on a Zeiss Axio Observer
+    7 Advanced Marianas base. Includes Mesa Illumination Enhancement and Field Flattening.
   url: ''
 capabilities:
   imaging_modes:
@@ -25,7 +26,8 @@ capabilities:
   non_optical: []
 modules:
 - type: incubation
-  notes: Okolab Full Enclosure Incubator with Temperature and digital CO2/O2 Control, Bold Line. Allows humidity control of 85% at 37C.
+  notes: Okolab Full Enclosure Incubator with Temperature and digital CO2/O2 Control,
+    Bold Line. Allows humidity control of 85% at 37C.
   manufacturer: Okolab
   model: Bold Line
 - type: hardware_autofocus
@@ -51,7 +53,8 @@ hardware:
     temperature_control: true
     co2_control: true
     o2_control: true
-    notes: Okolab full enclosure with Bold Line temperature controller, heater, and digital CO2/O2 gas mixer.
+    notes: Okolab full enclosure with Bold Line temperature controller, heater, and
+      digital CO2/O2 gas mixer.
   stages:
   - type: xy_motorized
     manufacturer: ASI
@@ -73,7 +76,9 @@ hardware:
     pixel_pitch_um: 6.5
     qe_peak_pct: 95
     sensor_format_px: 2048 x 2048
-    notes: 4 Megapixel 95% QE backside illuminated sensor, 1.3e- read noise. Hardware specifications sourced from test report. Can also be used for widefield fluorescence imaging.
+    notes: 4 Megapixel 95% QE backside illuminated sensor, 1.3e- read noise. Hardware
+      specifications sourced from test report. Can also be used for widefield fluorescence
+      imaging.
     url: https://www.teledynevisionsolutions.com/products/prime-bsi/
     id: detector_1
   eyepieces:
@@ -206,7 +211,8 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 405
     power: 100 mW
-    notes: 'Solid state laser. Measured fiber output: 46 mW; Back Aperture Output: 3.7 mW.'
+    notes: 'Solid state laser. Measured fiber output: 46 mW; Back Aperture Output:
+      3.7 mW.'
   - id: laserstack_488
     kind: laser
     role: excitation
@@ -214,7 +220,8 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 488
     power: 150 mW
-    notes: 'Solid state laser. Measured fiber output: 102 mW; Back Aperture Output: 9.6 mW.'
+    notes: 'Solid state laser. Measured fiber output: 102 mW; Back Aperture Output:
+      9.6 mW.'
   - id: laserstack_561
     kind: laser
     role: excitation
@@ -222,7 +229,8 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 561
     power: 150 mW
-    notes: 'Solid state laser. Measured fiber output: 105.5 mW; Back Aperture Output: 10.5 mW.'
+    notes: 'Solid state laser. Measured fiber output: 105.5 mW; Back Aperture Output:
+      10.5 mW.'
   - id: laserstack_640
     kind: laser
     role: excitation
@@ -230,12 +238,14 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 640
     power: 100 mW
-    notes: 'Solid state laser. Measured fiber output: 50.4 mW; Back Aperture Output: 6.3 mW.'
+    notes: 'Solid state laser. Measured fiber output: 50.4 mW; Back Aperture Output:
+      6.3 mW.'
   - id: pe_300
     kind: led
     manufacturer: CoolLED
     model: pE-300
-    notes: CoolLED PE-300 White Light Source with 3mm Liquid Light Guide. Broadband illumination.
+    notes: CoolLED PE-300 White Light Source with 3mm Liquid Light Guide. Broadband
+      illumination.
   optical_path_elements:
   - id: zeiss_widefield_fluorescence_positions
     name: Zeiss Widefield Fluorescence Positions
@@ -330,7 +340,6 @@ hardware:
     stage_role: splitter
 light_paths:
 - id: confocal_spinning_disk
-  name: Confocal spinning disk
   illumination_sequence:
   - source_id: laserstack_405
   - source_id: laserstack_488
@@ -343,7 +352,6 @@ light_paths:
   - endpoint_id: detector_1
   route_type: confocal_spinning_disk
 - id: widefield_fluorescence
-  name: Widefield fluorescence
   illumination_sequence:
   - source_id: pe_300
   - optical_path_element_id: zeiss_widefield_fluorescence_positions
@@ -362,8 +370,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
-- id: transmitted_brightfield
-  name: Transmitted brightfield
+- id: transmitted_light
   illumination_sequence: []
   detection_sequence:
   - optical_path_element_id: trinocular_port_selector
@@ -378,14 +385,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-  route_type: transmitted_brightfield
-- id: phase_contrast
-  name: Phase Contrast
-  route_type: phase_contrast
-  illumination_sequence: []
-  detection_sequence: []
-- id: dic
-  name: Dic
-  route_type: dic
-  illumination_sequence: []
-  detection_sequence: []
+  route_type: transmitted_light

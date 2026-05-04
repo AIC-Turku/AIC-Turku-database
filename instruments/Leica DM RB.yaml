@@ -205,7 +205,6 @@ hardware:
     notes: Camera port for optional detector and eyepieces.
 light_paths:
 - id: widefield_fluorescence
-  name: Epi-fluorescence
   illumination_sequence:
   - source_id: 50w_hbo_short_arc_bulb
   - optical_path_element_id: fluorescence_turret
@@ -224,8 +223,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
-- id: transmitted_brightfield
-  name: Transmitted light
+- id: transmitted_light
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
   detection_sequence:
@@ -241,22 +239,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-  route_type: transmitted_brightfield
-- id: darkfield
-  name: Darkfield
-  illumination_sequence:
-  - source_id: 12v_100w_halogen_bulb
-  detection_sequence:
-  - optical_path_element_id: camera_port
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_camera
-        label: To Camera Port
-        sequence:
-        - endpoint_id: camera_port_main
-      - branch_id: to_eyepieces
-        label: To Eyepieces
-        sequence:
-        - endpoint_id: eyepieces
-  route_type: darkfield
+  route_type: transmitted_light

@@ -8,7 +8,12 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting standard confocal and super-resolution AiryScan imaging. Dedicated for fast and sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
+  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting
+    standard confocal and super-resolution AiryScan imaging. Dedicated for fast and
+    sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal
+    scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell
+    imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss
+    LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
 capabilities:
   imaging_modes:
@@ -153,7 +158,10 @@ hardware:
     specialties:
     - dic
     - ir_transmission
-    notes: 'Imm Korr (multi-immersion, correction collar). Reported 2026-05-04: immersion/correction collar is broken and the current collar position is unknown. Objective remains physically available but may give suboptimal image quality; contact facility staff before critical imaging.'
+    notes: 'Imm Korr (multi-immersion, correction collar). Reported 2026-05-04: immersion/correction
+      collar is broken and the current collar position is unknown. Objective remains
+      physically available but may give suboptimal image quality; contact facility
+      staff before critical imaging.'
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27
     is_installed: true
   - id: 63x_oil
@@ -349,7 +357,6 @@ hardware:
     supported_branch_count: 2
 light_paths:
 - id: confocal_point
-  name: Confocal Scanning
   readouts:
   - spectral_imaging
   illumination_sequence:
@@ -377,32 +384,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: confocal_point
-- id: ism
-  name: Super-resolution AiryScan
-  illumination_sequence:
-  - source_id: 405_nm_diode
-  - source_id: 458_nm_argon
-  - source_id: 488_nm_argon
-  - source_id: 514_nm_argon
-  - source_id: 543_nm_hene
-  - source_id: 633_nm_hene
-  detection_sequence:
-  - optical_path_element_id: airyscan_emission_wheel
-  - optical_path_element_id: trinocular_port
-  - branches:
-      selection_mode: exclusive
-      items:
-      - branch_id: to_airyscan
-        label: To AiryScan Detector
-        sequence:
-        - endpoint_id: detector_5
-      - branch_id: to_eyepieces
-        label: To Eyepieces
-        sequence:
-        - endpoint_id: eyepieces
-  route_type: ism
-- id: transmitted_brightfield
-  name: Transmitted Brightfield
+- id: transmitted_light
   illumination_sequence:
   - source_id: transmitted_illumination
   detection_sequence:
@@ -418,9 +400,4 @@ light_paths:
         label: To Eyepieces
         sequence:
         - endpoint_id: eyepieces
-  route_type: transmitted_brightfield
-- id: dic
-  name: Dic
-  route_type: dic
-  illumination_sequence: []
-  detection_sequence: []
+  route_type: transmitted_light

@@ -274,7 +274,6 @@ hardware:
   endpoints: []
 light_paths:
 - id: widefield_fluorescence
-  name: Widefield Fluorescence
   illumination_sequence:
   - source_id: evos_dapi_light_cube_led
   - source_id: evos_cfp_light_cube_led
@@ -286,18 +285,11 @@ light_paths:
   - optical_path_element_id: light_cube_turret
   - endpoint_id: integrated_fluorescence_camera
   route_type: widefield_fluorescence
-- id: transmitted_brightfield
-  name: Transmitted Light
+- id: transmitted_light
   illumination_sequence:
   - source_id: transmitted_light_led
   detection_sequence:
   - endpoint_id: integrated_color_camera
-  route_type: transmitted_brightfield
-- id: phase_contrast
-  name: Phase Contrast
-  illumination_sequence:
-  - source_id: transmitted_light_led
-  detection_sequence:
-  - endpoint_id: integrated_color_camera
-  route_type: phase_contrast
-  notes: Shares the same documented physical path as transmitted_brightfield; phase contrast is supported by the broad-spectrum transmitted-light LED.
+  route_type: transmitted_light
+  notes: Shares the same documented physical path as transmitted_brightfield; phase
+    contrast is supported by the broad-spectrum transmitted-light LED.
