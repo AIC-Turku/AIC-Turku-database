@@ -168,6 +168,58 @@ document.addEventListener("DOMContentLoaded", async () => {
         return status;
     }
 
+    function metadataFragmentsForItem(item) {
+        const fragments = [];
+        const normalizeFragment = (value) => cleanText(value)
+            .toLowerCase()
+            .replace(/[_-]+/g, " ")
+            .replace(/[^a-z0-9 ]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        const isEnumLike = (value) => /[_-]/.test(cleanText(value)) || cleanText(value) === cleanText(value).toLowerCase();
+        const canonicalDisplay = (value) => {
+            const cleaned = cleanText(value);
+            if (!cleaned) return "";
+            return cleaned.includes("_")
+                ? cleaned.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase())
+                : cleaned;
+        };
+        const pushFragment = (value) => {
+            const candidate = canonicalDisplay(value);
+            if (!candidate) return;
+            const normalizedCandidate = normalizeFragment(candidate);
+            if (!normalizedCandidate) return;
+            const existingIndex = fragments.findIndex((part) => normalizeFragment(part) === normalizedCandidate);
+            if (existingIndex === -1) {
+                fragments.push(candidate);
+                return;
+            }
+            if (isEnumLike(fragments[existingIndex]) && !isEnumLike(candidate)) {
+                fragments[existingIndex] = candidate;
+            }
+        };
+
+        const manufacturer = cleanText(item?.manufacturer);
+        const subtitle = cleanText(item?.display_subtitle);
+        const classOrKind = cleanText(item?.kind_label || item?.role_label || item?.inventory_class_label || item?.inventory_class);
+        const routeLabel = cleanText(item?.route_label);
+        const mainLabel = cleanText(item?.display_label).toLowerCase();
+
+        if (manufacturer && !mainLabel.includes(manufacturer.toLowerCase())) {
+            pushFragment(manufacturer);
+        }
+        if (subtitle && subtitle.toLowerCase() !== manufacturer.toLowerCase()) {
+            pushFragment(subtitle);
+        }
+        if (classOrKind) {
+            pushFragment(classOrKind);
+        }
+        if (routeLabel) {
+            pushFragment(routeLabel);
+        }
+        return fragments;
+    }
+
     function bindCheckboxes(containerId, items, prefix) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
@@ -199,10 +251,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             mainText.textContent = " " + (item.display_label || "Unnamed item");
             label.appendChild(mainText);
 
-            const inlineDetail = cleanText(item.display_subtitle);
-            if (inlineDetail) {
+            const metadataFragments = metadataFragmentsForItem(item);
+            if (metadataFragments.length) {
                 const noteSpan = document.createElement("span");
-                noteSpan.textContent = ` — ${inlineDetail}`;
+                noteSpan.textContent = ` — ${metadataFragments.join(" — ")}`;
                 noteSpan.style.fontSize = "0.85em";
                 noteSpan.style.color = "var(--md-default-fg-color--light)";
                 label.appendChild(noteSpan);
@@ -313,59 +365,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         return routeCheckboxCount;
-    }
-
-    /**
-     * Bind capability-axis context labels from dto.capabilities into the
-     * capability-axis sections.  Capabilities are reference/context only and
-     * do not generate method sentences directly.
-     *
-     * Each axis renders its items as plain text tags so users can see at a
-     * glance what the instrument supports without treating the list as a
-     * method-sentence source.
-     */
-    function bindCapabilities(dto) {
-        const caps = dto?.capabilities && typeof dto.capabilities === "object" ? dto.capabilities : {};
-        const axes = [
-            { key: "imaging_modes", sectionId: "capabilities-imaging-modes-section", containerId: "capabilities-imaging-modes" },
-            { key: "contrast_methods", sectionId: "capabilities-contrast-methods-section", containerId: "capabilities-contrast-methods" },
-            { key: "readouts", sectionId: "capabilities-readouts-section", containerId: "capabilities-readouts" },
-            { key: "workflows", sectionId: "capabilities-workflows-section", containerId: "capabilities-workflows" },
-            { key: "assay_operations", sectionId: "capabilities-assay-operations-section", containerId: "capabilities-assay-operations" },
-            { key: "non_optical", sectionId: "capabilities-non-optical-section", containerId: "capabilities-non-optical" },
-        ];
-
-        let anyAxis = false;
-        axes.forEach(({ key, sectionId, containerId }) => {
-            const container = document.getElementById(containerId);
-            const section = document.getElementById(sectionId);
-            if (!container || !section) return;
-            container.innerHTML = "";
-            const items = Array.isArray(caps[key]) ? caps[key] : [];
-            const labels = items.map(item => {
-                if (typeof item === "string") return cleanText(item);
-                return cleanText(item?.display_label || item?.id || "");
-            }).filter(Boolean);
-            if (!labels.length) {
-                section.style.display = "none";
-                return;
-            }
-            anyAxis = true;
-            section.style.display = "";
-            labels.forEach(label => {
-                const tag = document.createElement("span");
-                tag.textContent = label;
-                tag.style.display = "inline-block";
-                tag.style.marginRight = "6px";
-                tag.style.marginBottom = "4px";
-                tag.style.padding = "2px 6px";
-                tag.style.borderRadius = "3px";
-                tag.style.fontSize = "0.85em";
-                tag.style.border = "1px solid var(--md-default-fg-color--light, #ccc)";
-                container.appendChild(tag);
-            });
-        });
-        toggleSectionVisibility("section-capabilities", anyAxis);
     }
 
     function routeViewsForInstrument(dto) {
@@ -811,7 +810,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const routeCount = bindRoutes(dto);
         toggleSectionVisibility("section-route", routeCount > 0);
-        bindCapabilities(dto);
         const showLegacyModalities = shouldUseLegacyModalities(dto);
         const modalityCount = showLegacyModalities ? bindCheckboxes("modality-list", dto.modalities || [], "modality") : 0;
         toggleSectionVisibility("section-modality", modalityCount > 0);
