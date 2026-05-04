@@ -1,0 +1,48 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-zeiss-lsm-880-with-airyscan_20260504_40x_objective_correction_collar_issue
+microscope: scope-zeiss-lsm-880-with-airyscan
+
+service_provider: internal
+company: Advanced Imaging Core
+contact: AIC staff
+reference: User-submitted issue, 2026-05-04 09:14 local time
+
+started_utc: '2026-05-04T06:14:00Z'
+
+reason: issue_reported
+reason_details: >-
+  The immersion medium adjustment/correction collar of the 40x objective is broken.
+  The objective remains physically available, but its current collar position is
+  unknown.
+
+action: other
+action_details: >-
+  Logged the issue and flagged the 40x objective for restricted/cautious use.
+  Facility staff should inspect the objective, determine whether the collar
+  position can be verified, and decide whether repair, replacement, or removal
+  from service is required.
+
+microscope_status_before: limited
+microscope_status_after: limited
+status_notes: >-
+  Limited operation: the Zeiss LSM 880 remains available, but the 40x
+  multi-immersion objective may give suboptimal image quality because the
+  correction collar is broken and its current setting is unknown. Users should
+  contact facility staff before critical imaging with this objective.
+
+tags:
+  - objective
+  - correction_collar
+  - immersion
+  - image_quality
+  - user_reported
+
+notes: >-
+  Submitter: AIC staff. Resource: Zeiss LSM880 with
+  AiryScan. Provider: Advanced Imaging Core. Report status: Active. Title: 40x
+  objective immersion adjustment collar. Affected objective in the instrument
+  YAML is hardware.objectives[id=40x_multi], model LD LCI Plan APOCHROMAT
+  40x/1.2 Imm Korr DIC (UV)VIS-IR. Do not close this maintenance issue until the
+  collar position has been verified or the objective has been
+  repaired/replaced/removed from restricted use.
