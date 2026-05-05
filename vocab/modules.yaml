@@ -5,7 +5,7 @@ terms:
     synonyms: ["environmental chamber", "temp/co2 control"]
     tags:
       provides_capability:
-        workflow_tags: ["live_cell_imaging"]
+        workflows: ["live_cell_imaging"]
   - id: microfluidics
     label: "Microfluidics / Perfusion"
     description: "Hardware for controlled delivery of media or drugs to the sample during live imaging."
@@ -38,14 +38,14 @@ terms:
     synonyms: ["correlation module", "FCS"]
     tags:
       provides_capability:
-        measurement_readouts: ["fcs"]
+        readouts: ["fcs"]
   - id: flim
     label: "FLIM Module"
     description: "Adds lifetime-resolved detection and analysis to fluorescence imaging. Enables contrast based on fluorophore decay kinetics."
     synonyms: ["lifetime module", "FLIM"]
     tags:
       provides_capability:
-        measurement_readouts: ["flim"]
+        readouts: ["flim"]
   - id: optogenetics
     label: "Optogenetics"
     description: "Provides patterned or wavelength-specific stimulation for light-controlled biological perturbations. Used to control signaling or neural activity during imaging."
@@ -106,7 +106,7 @@ terms:
     synonyms: ["Environmental Enclosure", "Temperature Control", "environmental_tolerance", "Live Cell Option"]
     tags:
       provides_capability:
-        workflow_tags: ["live_cell_imaging"]
+        workflows: ["live_cell_imaging"]
   - id: sim_module
     label: "SIM Module"
     description: "Structured illumination imaging module enabling resolution enhancement beyond diffraction-limited widefield microscopy."
@@ -120,7 +120,7 @@ terms:
     synonyms: ["AFM"]
     tags:
       provides_capability:
-        non_optical_capabilities: ["afm"]
+        non_optical: ["afm"]
   - id: airyscan
     label: "AiryScan Detector/Module"
     description: "Detector and reconstruction module that improves confocal sensitivity and resolution via multi-element signal collection."
@@ -142,7 +142,7 @@ terms:
     synonyms: ["impedance_module"]
     tags:
       provides_capability:
-        non_optical_capabilities: ["impedance_cytometry"]
+        non_optical: ["impedance_cytometry"]
   - id: universal_vessel_holder
     label: "Universal Vessel Holder"
     description: "Adaptable sample holder supporting multiple dish, slide, or plate formats within a single imaging setup."
