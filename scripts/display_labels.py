@@ -191,7 +191,6 @@ def resolve_inventory_class_label(
         "camera_port": "endpoint_types",
         "eyepiece": "endpoint_types",
         "optical_element": "optical_path_element_types",
-        "splitter": "splitter_types",
     }
     _INVENTORY_STATIC: dict[str, str] = {
         "light_source": "Light Source",

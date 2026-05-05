@@ -226,11 +226,6 @@ vocab_registry:
     path: vocab/branch_modes.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
-  splitter_types:
-    source: file
-    path: vocab/splitter_types.yaml
-    canonical_ids_only: true
-    allow_synonyms_on_input: true
   objective_specialties:
     source: file
     path: vocab/objective_specialties.yaml
