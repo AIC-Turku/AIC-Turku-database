@@ -232,24 +232,18 @@ hardware:
     wavelength_nm: 395
     width_nm: 25
     id: spectra_x_395
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Lumencor
     model: Spectra X LED system
     wavelength_nm: 440
     width_nm: 20
     id: spectra_x_440
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Lumencor
     model: Spectra X LED system
     wavelength_nm: 475
     width_nm: 28
     id: spectra_x_475
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Lumencor
     model: Spectra X LED system
@@ -257,48 +251,35 @@ hardware:
     width_nm: 15
     notes: 550 nm module available by request
     id: spectra_x_550
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Lumencor
     model: Spectra X LED system
     wavelength_nm: 575
     width_nm: 35
     id: spectra_x_575
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Lumencor
     model: Spectra X LED system
     wavelength_nm: 640
     width_nm: 30
     id: spectra_x_640
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Lumencor
     model: Spectra X LED system
     wavelength_nm: 730
     width_nm: 40
     id: spectra_x_730
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Nikon
     model: Ti2 Transmitted Illuminator
     role: transmitted_illumination
     notes: Broad spectrum transmitted source for BF/DIC.
     id: transmitted_illuminator
-    modalities:
-    - transmitted_brightfield
-    - dic
   optical_path_elements:
   - name: Filter Turret
     stage_role: dichroic
     id: filter_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
     positions:
       Pos_1:
         name: Chroma 89403bs
@@ -322,8 +303,6 @@ hardware:
     stage_role: emission
     id: emission_wheel
     element_type: filter_wheel
-    modalities:
-    - widefield_fluorescence
     positions:
       Pos_1:
         name: DAPI Emission
@@ -371,8 +350,6 @@ hardware:
     stage_role: cube
     id: epi_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
     positions:
       Pos_1:
         name: Standard Cubes
@@ -382,8 +359,6 @@ hardware:
     stage_role: analyzer
     id: analyzer_slider
     element_type: slider
-    modalities:
-    - dic
     positions:
       Pos_1:
         component_type: analyzer
@@ -393,10 +368,6 @@ hardware:
     id: trinocular_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - widefield_fluorescence
-    - transmitted_brightfield
-    - dic
     supported_branch_modes:
     - selected
     supported_branch_count: 3

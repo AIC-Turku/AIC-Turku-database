@@ -100,8 +100,6 @@ hardware:
     notes: Top illumination. Broadband white light.
     url: ''
     id: cl_9000_led_can_ring_light
-    modalities:
-    - reflected_brightfield
   - kind: led
     manufacturer: VisiLED
     model: MC1000 LED base light
@@ -110,8 +108,6 @@ hardware:
     notes: Bottom illumination. Broadband white light.
     url: ''
     id: mc1000_led_base_light
-    modalities:
-    - transmitted_brightfield
   - kind: arc_lamp
     manufacturer: Zeiss
     model: HXP 200C
@@ -119,17 +115,11 @@ hardware:
     notes: Mercury lamp. Broadband excitation.
     url: ''
     id: hxp_200c
-    modalities:
-    - widefield_fluorescence
-    - optical_sectioning
   optical_path_elements:
   - name: Fluorescence Turret
     stage_role: cube
     id: epi_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
-    - optical_sectioning
     positions:
       Pos_1:
         name: DAPI (Filter set 49)
@@ -168,11 +158,6 @@ hardware:
     id: trinocular_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - widefield_fluorescence
-    - optical_sectioning
-    - transmitted_brightfield
-    - reflected_brightfield
     supported_branch_modes:
     - selected
     supported_branch_count: 3

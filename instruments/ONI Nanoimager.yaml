@@ -112,11 +112,6 @@ hardware:
     notes: Power measured at the objective.
     url: ''
     id: 405_nm_violet
-    modalities:
-    - tirf
-    - smlm
-    - spt
-    - fret
   - kind: laser
     manufacturer: ONI
     model: 488 nm blue
@@ -126,11 +121,6 @@ hardware:
     notes: Power measured at the objective.
     url: ''
     id: 488_nm_blue
-    modalities:
-    - tirf
-    - smlm
-    - spt
-    - fret
   - kind: laser
     manufacturer: ONI
     model: 561 nm green
@@ -141,11 +131,6 @@ hardware:
       to stabilize.
     url: ''
     id: 561_nm_green
-    modalities:
-    - tirf
-    - smlm
-    - spt
-    - fret
   - kind: laser
     manufacturer: ONI
     model: 640 nm red
@@ -155,22 +140,12 @@ hardware:
     notes: Power measured at the objective.
     url: ''
     id: 640_nm_red
-    modalities:
-    - tirf
-    - smlm
-    - spt
-    - fret
   optical_path_elements:
   - name: Internal Emission Splitter
     stage_role: splitter
     id: internal_emission_splitter
     element_type: splitter
     selection_mode: multiple
-    modalities:
-    - tirf
-    - smlm
-    - spt
-    - fret
     supported_branch_modes:
     - selected
     supported_branch_count: 2

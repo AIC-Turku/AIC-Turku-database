@@ -143,9 +143,6 @@ hardware:
     notes: Transmitted brightfield and phase contrast source. Broadband illumination.
     url: ''
     id: 12v_100w_halogen_bulb
-    modalities:
-    - transmitted_brightfield
-    - phase_contrast
   - kind: arc_lamp
     manufacturer: Osram
     model: HBO 103W short arc bulb
@@ -153,15 +150,11 @@ hardware:
     notes: Fluorescence excitation source. Broadband illumination.
     url: ''
     id: hbo_103w_short_arc_bulb
-    modalities:
-    - widefield_fluorescence
   optical_path_elements:
   - name: Fluorescence Turret
     stage_role: cube
     id: fluorescence_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
     positions:
       Pos_1:
         name: U-MWU (DAPI)
@@ -239,10 +232,6 @@ hardware:
     id: trinocular_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - widefield_fluorescence
-    - transmitted_brightfield
-    - phase_contrast
     supported_branch_modes:
     - selected
     supported_branch_count: 2

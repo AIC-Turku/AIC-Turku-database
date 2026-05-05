@@ -163,9 +163,6 @@ hardware:
     notes: ''
     url: ''
     id: 488_nm
-    modalities:
-    - widefield_fluorescence
-    - tirf
   - kind: laser
     manufacturer: Unknown
     model: 561 nm
@@ -174,9 +171,6 @@ hardware:
     notes: ''
     url: ''
     id: 561_nm
-    modalities:
-    - widefield_fluorescence
-    - tirf
   - kind: laser
     manufacturer: Unknown
     model: 639 nm
@@ -185,25 +179,17 @@ hardware:
     notes: ''
     url: ''
     id: 639_nm
-    modalities:
-    - widefield_fluorescence
-    - tirf
   - kind: halogen_lamp
     manufacturer: Zeiss
     model: Transmitted Halogen Lamp
     role: transmitted_illumination
     notes: Transmitted source for brightfield.
     id: halogen_lamp_transmitted
-    modalities:
-    - transmitted_brightfield
   optical_path_elements:
   - name: Filter Turret
     stage_role: cube
     id: epi_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
-    - tirf
     positions:
       Pos_1:
         name: Filter set 38 HE (GFP)
@@ -250,10 +236,6 @@ hardware:
     id: trinocular_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - widefield_fluorescence
-    - transmitted_brightfield
-    - tirf
     supported_branch_modes:
     - selected
     supported_branch_count: 3

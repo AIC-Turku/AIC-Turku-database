@@ -78,8 +78,6 @@ hardware:
     notes: ''
     url: ''
     id: 488_nm_laser
-    modalities:
-    - light_sheet
   - kind: laser
     manufacturer: Coherent OBIS
     model: 561 nm laser
@@ -88,8 +86,6 @@ hardware:
     notes: ''
     url: ''
     id: 561_nm_laser
-    modalities:
-    - light_sheet
   - kind: laser
     manufacturer: Coherent OBIS
     model: 640 nm laser (LX)
@@ -98,15 +94,11 @@ hardware:
     notes: 'FIBER PIGTAIL:UFC: Galaxy'
     url: ''
     id: 640_nm_laser_lx
-    modalities:
-    - light_sheet
   optical_path_elements:
   - name: Emission Wheel
     stage_role: emission
     id: emission_wheel
     element_type: filter_wheel
-    modalities:
-    - light_sheet
     positions:
       Pos_1:
         name: GFP filter

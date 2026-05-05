@@ -118,10 +118,6 @@ hardware:
     notes: Transmitted light source for BF, DF, and PH. Broadband illumination.
     url: ''
     id: 12v_100w_halogen_bulb
-    modalities:
-    - transmitted_brightfield
-    - phase_contrast
-    - darkfield
   - kind: arc_lamp
     manufacturer: Leica
     model: 50W HBO short arc bulb
@@ -129,15 +125,11 @@ hardware:
     notes: Fluorescence excitation source. Broadband illumination.
     url: ''
     id: 50w_hbo_short_arc_bulb
-    modalities:
-    - widefield_fluorescence
   optical_path_elements:
   - name: Fluorescence Turret
     stage_role: cube
     id: fluorescence_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
     positions:
       Pos_1:
         name: Filter Cube A (DAPI/Hoechst)
@@ -196,9 +188,6 @@ hardware:
     id: camera_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - widefield_fluorescence
-    - transmitted_brightfield
     supported_branch_modes:
     - selected
     supported_branch_count: 2
