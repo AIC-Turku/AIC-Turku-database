@@ -90,8 +90,6 @@ hardware:
     notes: Blue Excitation (381-404 nm)
     url: ''
     id: high_power_led_blue
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Agilent
     model: High-power LED (Green)
@@ -101,8 +99,6 @@ hardware:
     notes: Green Excitation (473-491 nm)
     url: ''
     id: high_power_led_green
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Agilent
     model: High-power LED (Red)
@@ -112,23 +108,17 @@ hardware:
     notes: Red Excitation (584-605 nm)
     url: ''
     id: high_power_led_red
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Agilent
     model: Transmitted LED
     role: transmitted_illumination
     notes: For brightfield imaging
     id: transmitted_led
-    modalities:
-    - transmitted_brightfield
   optical_path_elements:
   - name: Internal Filter Turret
     stage_role: cube
     id: internal_filter_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
     positions:
       Pos_1:
         name: Blue Channel

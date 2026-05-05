@@ -2,12 +2,16 @@ terms:
 - id: spectral_imaging
   label: Spectral Imaging
   display_label: Spectral Imaging
+  description: Records fluorescence across wavelength bands rather than fixed channels. Enables unmixing of overlapping fluorophores and autofluorescence separation.
 - id: flim
   label: FLIM
   display_label: FLIM
+  description: "Fluorescence Lifetime Imaging Microscopy. Measures fluorescence decay timing rather than only intensity. Useful for environmental sensing and interaction readouts such as FRET changes."
 - id: fcs
   label: FCS
   display_label: FCS
+  description: "Fluorescence Correlation Spectroscopy. Analyzes fluorescence intensity fluctuations in a tiny observation volume. Used to estimate concentration, diffusion, and molecular kinetics."
 - id: fret
   label: FRET
   display_label: FRET
+  description: "Förster Resonance Energy Transfer. Measures non-radiative energy transfer between donor and acceptor fluorophores at nanometer distances. Used as a readout of molecular proximity or conformational change."

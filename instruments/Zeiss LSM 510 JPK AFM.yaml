@@ -78,17 +78,12 @@ hardware:
     notes: Placeholder excitation source.
     url: ''
     id: source_1
-    modalities:
-    - confocal_point
   optical_path_elements:
   - name: Trinocular Port
     stage_role: splitter
     id: trinocular_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - confocal_point
-    - transmitted_brightfield
     supported_branch_modes:
     - selected
     supported_branch_count: 2

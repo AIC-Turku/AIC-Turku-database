@@ -2,33 +2,44 @@ terms:
 - id: confocal_point
   display_label: Confocal point scanning
   label: Confocal point scanning
+  description: Scans a focused laser spot with a pinhole to reject out-of-focus light. Provides optical sectioning and improved contrast in thick specimens.
 - id: confocal_spinning_disk
   display_label: Confocal spinning disk
   label: Confocal spinning disk
+  description: Uses a rotating pinhole disk to image many points in parallel. Enables fast, lower-phototoxicity 3D optical sectioning in live samples.
 - id: widefield_fluorescence
   display_label: Widefield fluorescence
   label: Widefield fluorescence
+  description: Illuminates and captures fluorescence from the full field of view without optical sectioning. Best for fast imaging of bright samples and thin specimens.
 - id: tirf
   display_label: TIRF
   label: TIRF
+  description: "Total Internal Reflection Fluorescence. Excites fluorophores with an evanescent field near the coverslip interface. Ideal for membrane-proximal events within roughly the first 100\u2013200 nm."
 - id: multiphoton
   display_label: Multiphoton
   label: Multiphoton
+  description: Uses nonlinear excitation, typically with pulsed near-infrared lasers, to excite fluorophores only at the focal volume. Improves deep-tissue imaging and reduces out-of-plane photodamage.
 - id: light_sheet
   display_label: Light sheet
   label: Light sheet
+  description: Illuminates samples with a thin sheet orthogonal to detection. Supports gentle, rapid volumetric imaging with reduced out-of-focus exposure.
 - id: sim
   display_label: SIM
   label: SIM
+  description: "Structured Illumination Microscopy. Uses shifted illumination patterns and reconstruction to increase resolution and sectioning performance. Suitable for super-resolution with moderate light dose."
 - id: sted
   display_label: STED
   label: STED
+  description: "Stimulated Emission Depletion. Shrinks the effective fluorescence spot using a depletion beam around the excitation focus. Enables sub-diffraction super-resolution imaging."
 - id: resolft
   display_label: RESOLFT
   label: RESOLFT
+  description: "Reversibly Saturable Optical Linear Fluorescence Transitions. Achieves super-resolution using reversibly switchable fluorophores and targeted on/off control. Often allows lower light intensities than depletion-based methods."
 - id: smlm
   display_label: SMLM
   label: SMLM
+  description: "Single-Molecule Localization Microscopy. Builds super-resolved images by localizing sparse single emitters over many frames. Includes methods such as PALM and STORM."
 - id: ism
   display_label: ISM (AiryScan)
   label: ISM (AiryScan)
+  description: "Image Scanning Microscopy. Uses detector array information in scanning microscopy to improve resolution and signal usage. Airyscan is a common commercial implementation."

@@ -135,8 +135,6 @@ hardware:
     notes: Pulsed excitation source for the 488 nm channel.
     url: ''
     id: ldh_d_c_485
-    modalities:
-    - epi
   - kind: laser
     manufacturer: PicoQuant
     model: PDL-T 561
@@ -148,8 +146,6 @@ hardware:
     notes: Pulsed excitation source for the 561 nm channel.
     url: ''
     id: pdl_t_561
-    modalities:
-    - epi
   - kind: laser
     manufacturer: PicoQuant
     model: LDH-D-C-640
@@ -161,8 +157,6 @@ hardware:
     notes: Pulsed excitation source for the 640 nm channel.
     url: ''
     id: ldh_d_c_640
-    modalities:
-    - epi
   - kind: laser
     manufacturer: MPB Communications
     model: VFL-P-1000-580
@@ -174,8 +168,6 @@ hardware:
     notes: Continuous-wave STED depletion source for the 488 nm excitation channel.
     url: ''
     id: vfl_p_1000_580
-    modalities:
-    - epi
   - kind: laser
     manufacturer: OneFive / NKT Photonics
     model: Katana HP 775
@@ -190,16 +182,12 @@ hardware:
     notes: Pulsed STED depletion source for the 561 nm and 640 nm excitation channels.
     url: ''
     id: katana_hp_775
-    modalities:
-    - epi
   optical_path_elements:
   - name: Emission Filter Wheel
     slots: 3
     stage_role: emission
     id: emission_filter_wheel
     element_type: filter_wheel
-    modalities:
-    - epi
     positions:
       Pos_1:
         component_type: bandpass

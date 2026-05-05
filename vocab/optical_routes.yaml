@@ -3,6 +3,7 @@ terms:
     label: Point-scanning confocal
     display_label: Point-scanning confocal
     description: Broad point-scanning confocal route family, including point-scanning super-resolution or readout workflows implemented on the confocal scanner path.
+    synonyms: [LSM, laser scanning confocal, CLSM, point scanning confocal]
     covers:
       imaging_modes:
         - confocal_point
@@ -14,6 +15,7 @@ terms:
     label: Spinning-disk confocal
     display_label: Spinning-disk confocal
     description: Broad spinning-disk confocal route family, including CSU-W1 and Borealis spinning disk implementations.
+    synonyms: [SDC, spinning disk confocal, Nipkow disk confocal]
     covers:
       imaging_modes:
         - confocal_spinning_disk
@@ -22,6 +24,7 @@ terms:
     label: Widefield fluorescence
     display_label: Widefield fluorescence
     description: Broad widefield/epi fluorescence route family, including TIRF and widefield-based localization or structured illumination acquisitions when implemented through the widefield fluorescence path.
+    synonyms: [widefield, epifluorescence, epi fluorescence, widefield epi]
     covers:
       imaging_modes:
         - widefield_fluorescence
@@ -35,6 +38,7 @@ terms:
     label: Transmitted light
     display_label: Transmitted light
     description: Broad transmitted-light route family covering brightfield and transmitted contrast methods.
+    synonyms: [transmitted, brightfield, diascopic, transmitted illumination]
     covers:
       imaging_modes: []
       contrast_methods:
@@ -47,6 +51,7 @@ terms:
     label: Light sheet
     display_label: Light sheet
     description: Light-sheet illumination and detection route family, including SPIM variants.
+    synonyms: [SPIM, LSFM, light sheet fluorescence microscopy]
     covers:
       imaging_modes:
         - light_sheet
@@ -55,6 +60,7 @@ terms:
     label: Multiphoton
     display_label: Multiphoton
     description: Multiphoton excitation route family.
+    synonyms: [two-photon, 2p, nonlinear microscopy, non-linear microscopy]
     covers:
       imaging_modes:
         - multiphoton

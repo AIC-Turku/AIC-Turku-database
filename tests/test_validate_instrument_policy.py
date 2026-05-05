@@ -209,6 +209,53 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
 
 
 
+    def test_evaluate_required_if_supports_imaging_modes_any_of(self) -> None:
+        vocabulary = Vocabulary(vocab_registry={})
+        payload_with_confocal = {
+            'capabilities': {
+                'imaging_modes': ['confocal_point', 'widefield_fluorescence'],
+            },
+        }
+        payload_with_spinning = {
+            'capabilities': {
+                'imaging_modes': ['confocal_spinning_disk'],
+            },
+        }
+        payload_with_ism = {
+            'capabilities': {
+                'imaging_modes': ['ism', 'widefield_fluorescence'],
+            },
+        }
+        payload_widefield_only = {
+            'capabilities': {
+                'imaging_modes': ['widefield_fluorescence'],
+            },
+        }
+        payload_light_sheet = {
+            'capabilities': {
+                'imaging_modes': ['light_sheet'],
+            },
+        }
+        payload_no_capabilities = {}
+
+        confocal_condition = {'imaging_modes_any_of': ['confocal_point', 'confocal_spinning_disk', 'ism']}
+        light_sheet_condition = {'imaging_modes_any_of': ['light_sheet']}
+
+        # Matches confocal_point
+        self.assertTrue(_evaluate_required_if(confocal_condition, payload=payload_with_confocal, item_context=None, vocabulary=vocabulary))
+        # Matches confocal_spinning_disk
+        self.assertTrue(_evaluate_required_if(confocal_condition, payload=payload_with_spinning, item_context=None, vocabulary=vocabulary))
+        # Matches ism
+        self.assertTrue(_evaluate_required_if(confocal_condition, payload=payload_with_ism, item_context=None, vocabulary=vocabulary))
+        # Does not match widefield only
+        self.assertFalse(_evaluate_required_if(confocal_condition, payload=payload_widefield_only, item_context=None, vocabulary=vocabulary))
+        # Does not match when no capabilities
+        self.assertFalse(_evaluate_required_if(confocal_condition, payload=payload_no_capabilities, item_context=None, vocabulary=vocabulary))
+        # Matches light_sheet
+        self.assertTrue(_evaluate_required_if(light_sheet_condition, payload=payload_light_sheet, item_context=None, vocabulary=vocabulary))
+        # Light sheet condition does not match confocal
+        self.assertFalse(_evaluate_required_if(light_sheet_condition, payload=payload_with_confocal, item_context=None, vocabulary=vocabulary))
+
     def test_evaluate_required_if_modules_any_of_uses_type_field(self) -> None:
         vocabulary = Vocabulary(vocab_registry={'modules': {'source': 'inline', 'allowed_values': ['incubation']}})
         payload = {'modules': [{'type': 'incubation'}]}
@@ -1168,14 +1215,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
-                'vocab_registry': {'mechanism_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
+                'vocab_registry': {'optical_path_element_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
                 'sections': [
                     {
                         'id': 'lp',
                         'title': 'Light Path',
                         'rules': [
                             {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
-                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'mechanism_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
+                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'optical_path_element_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
                             {
                                 'path': 'hardware.light_path.excitation_mechanisms[].slots',
                                 'status': 'conditional',
@@ -1215,14 +1262,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
-                'vocab_registry': {'mechanism_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
+                'vocab_registry': {'optical_path_element_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
                 'sections': [
                     {
                         'id': 'lp',
                         'title': 'Light Path',
                         'rules': [
                             {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
-                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'mechanism_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
+                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'optical_path_element_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
                             {
                                 'path': 'hardware.light_path.excitation_mechanisms[].slots',
                                 'status': 'conditional',

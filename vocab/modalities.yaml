@@ -1,3 +1,12 @@
+status: legacy
+migration_guide: >
+  This vocabulary is a legacy flat list that combined imaging modes, contrast methods,
+  readouts, workflow tags, assay operations, and non-optical capabilities into a single axis.
+  These concepts have been split into separate axis-specific vocabularies. It is retained
+  for backward compatibility with hardware.sources[].modalities and
+  hardware.optical_path_elements[].modalities fields. New instrument YAML should use
+  capabilities.imaging_modes, capabilities.contrast_methods, capabilities.readouts,
+  capabilities.workflows, capabilities.assay_operations, and capabilities.non_optical instead.
 terms:
   - id: widefield_fluorescence
     label: "Widefield Fluorescence"

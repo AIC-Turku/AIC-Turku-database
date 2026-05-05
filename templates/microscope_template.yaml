@@ -29,7 +29,7 @@ capabilities:  # Capability axes: Canonical capability taxonomy that separates i
     - ""
   workflows:  # Capability workflow tags: Workflow/application tags; not optical route types. | Allowed values (canonical IDs): live_cell_imaging, high_content_screening, super_resolution, single_molecule, single_particle_tracking
     - ""
-  assay_operations:  # Capability assay operations: Assay-operation capabilities such as FRAP/photoactivation; distinct from readout-only axes. | Allowed values (canonical IDs): frap, photoactivation, photobleaching, uncaging
+  assay_operations:  # Capability assay operations: Assay-operation capabilities such as FRAP/photoactivation; distinct from readout-only axes. | Allowed values (canonical IDs): frap, photoactivation, photobleaching, uncaging, optogenetics
     - ""
   non_optical:  # Capability non-optical: Non-optical capability tags; not optical light-path route types. | Allowed values (canonical IDs): afm, impedance_cytometry
     - ""

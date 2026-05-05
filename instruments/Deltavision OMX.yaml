@@ -157,8 +157,6 @@ hardware:
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
     id: 405_nm
-    modalities:
-    - epi
   - kind: laser
     manufacturer: GE Healthcare
     model: 445 nm
@@ -169,8 +167,6 @@ hardware:
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
     id: 445_nm
-    modalities:
-    - epi
   - kind: laser
     manufacturer: GE Healthcare
     model: 488 nm
@@ -181,8 +177,6 @@ hardware:
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
     id: 488_nm
-    modalities:
-    - epi
   - kind: laser
     manufacturer: GE Healthcare
     model: 514 nm
@@ -193,8 +187,6 @@ hardware:
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
     id: 514_nm
-    modalities:
-    - epi
   - kind: laser
     manufacturer: GE Healthcare
     model: 568 nm
@@ -205,8 +197,6 @@ hardware:
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
     id: 568_nm
-    modalities:
-    - epi
   - kind: laser
     manufacturer: GE Healthcare
     model: 642 nm
@@ -217,15 +207,11 @@ hardware:
     notes: Ultra-high speed Galvanometer shutter (0.2 ms).
     url: ''
     id: 642_nm
-    modalities:
-    - epi
   optical_path_elements:
   - name: OMX Emission Filters
     stage_role: emission
     id: omx_emission_filters
     element_type: filter_wheel
-    modalities:
-    - epi
     positions:
       Pos_1:
         name: DAPI

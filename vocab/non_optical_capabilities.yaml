@@ -2,6 +2,8 @@ terms:
 - id: afm
   display_label: AFM
   label: AFM
+  description: "Atomic Force Microscopy. Uses a nanoscale cantilever probe to measure topography and mechanical properties at high spatial resolution. Can be combined with optical microscopy workflows."
 - id: impedance_cytometry
   display_label: Impedance cytometry
   label: Impedance cytometry
+  description: Measures electrical impedance changes as cells pass sensing regions to infer size and biophysical properties. Often used for label-free cell phenotyping.

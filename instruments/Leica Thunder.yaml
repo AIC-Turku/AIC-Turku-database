@@ -232,8 +232,6 @@ hardware:
     notes: 390 in software
     url: ''
     id: led_8
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Leica
     model: LED 8
@@ -243,8 +241,6 @@ hardware:
     notes: 440 in software
     url: ''
     id: led_8_2
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Leica
     model: LED 8
@@ -254,8 +250,6 @@ hardware:
     notes: ''
     url: ''
     id: led_8_3
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Leica
     model: LED 8
@@ -265,8 +259,6 @@ hardware:
     notes: 510 in software
     url: ''
     id: led_8_4
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Leica
     model: LED 8
@@ -276,8 +268,6 @@ hardware:
     notes: ''
     url: ''
     id: led_8_5
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Leica
     model: LED 8
@@ -287,8 +277,6 @@ hardware:
     notes: ''
     url: ''
     id: led_8_6
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Leica
     model: LED 8
@@ -298,8 +286,6 @@ hardware:
     notes: ''
     url: ''
     id: led_8_7
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Leica
     model: LED 8
@@ -309,15 +295,11 @@ hardware:
     notes: 747 in software
     url: ''
     id: led_8_8
-    modalities:
-    - widefield_fluorescence
   optical_path_elements:
   - name: Filter Turret
     stage_role: cube
     id: filter_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
     positions:
       Pos_1:
         name: CYR71010
@@ -400,8 +382,6 @@ hardware:
     stage_role: emission
     id: standalone_emission_wheel
     element_type: filter_wheel
-    modalities:
-    - widefield_fluorescence
     notes: External filter wheel; filter exchange time 21 ms (vs ~300 ms by microscope
       turret)
     positions:
@@ -441,9 +421,6 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 2
-    modalities:
-    - widefield_fluorescence
-    - transmitted_brightfield
 light_paths:
 - id: widefield_fluorescence
   illumination_sequence:

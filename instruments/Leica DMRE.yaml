@@ -128,18 +128,12 @@ hardware:
     notes: Transmitted light source for TL and DIC. Broadband illumination.
     url: ''
     id: 12v_100w_halogen_bulb
-    modalities:
-    - transmitted_brightfield
-    - dic
   optical_path_elements:
   - name: Camera Port
     stage_role: splitter
     id: camera_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - transmitted_brightfield
-    - dic
     supported_branch_modes:
     - selected
     supported_branch_count: 2

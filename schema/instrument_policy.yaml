@@ -166,11 +166,6 @@ vocab_registry:
     path: vocab/ocular_availability.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
-  mechanism_types:
-    source: file
-    path: vocab/mechanism_types.yaml
-    canonical_ids_only: true
-    allow_synonyms_on_input: true
   optical_component_types:
     source: file
     path: vocab/optical_component_types.yaml
@@ -229,11 +224,6 @@ vocab_registry:
   branch_modes:
     source: file
     path: vocab/branch_modes.yaml
-    canonical_ids_only: true
-    allow_synonyms_on_input: true
-  splitter_types:
-    source: file
-    path: vocab/splitter_types.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
   objective_specialties:
@@ -575,7 +565,7 @@ sections:
         type: string
         vocab: light_sheet_types
         required_if:
-          modalities_any_of: [light_sheet]
+          imaging_modes_any_of: [light_sheet]
         used_by: [audit_pdf, method_generator, dashboard]
         rationale: Clarifies the specific illumination geometry for light sheet systems.
 
@@ -686,7 +676,7 @@ sections:
         status: conditional
         type: positive_number
         required_if:
-          modalities_any_of: [confocal_point, confocal_spinning_disk, ism]
+          imaging_modes_any_of: [confocal_point, confocal_spinning_disk, ism]
         used_by: [audit_pdf, dashboard]
         rationale: Capability metadata.
 
@@ -966,7 +956,7 @@ sections:
         status: conditional
         type: string
         required_if:
-          modalities_any_of: [confocal_point, confocal_spinning_disk, ism]
+          imaging_modes_any_of: [confocal_point, confocal_spinning_disk, ism]
         used_by: [audit_pdf, dashboard]
         rationale: Helpful reference metadata, not usually minimal for methods.
 

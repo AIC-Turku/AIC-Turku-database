@@ -120,56 +120,41 @@ hardware:
     model: Transmitted Light LED
     notes: Broad spectrum overhead LED used for brightfield and phase contrast.
     id: transmitted_light_led
-    modalities:
-    - transmitted_brightfield
-    - phase_contrast
   - kind: led
     manufacturer: Thermo Fisher / AMG
     model: EVOS DAPI Light Cube LED
     wavelength_nm: 357
     notes: Integrated LED inside the DAPI Light Cube
     id: evos_dapi_light_cube_led
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Thermo Fisher / AMG
     model: EVOS CFP Light Cube LED
     wavelength_nm: 445
     notes: Integrated LED inside the CFP Light Cube
     id: evos_cfp_light_cube_led
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Thermo Fisher / AMG
     model: EVOS GFP Light Cube LED
     wavelength_nm: 470
     notes: Integrated LED inside the GFP Light Cube
     id: evos_gfp_light_cube_led
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Thermo Fisher / AMG
     model: EVOS RFP Light Cube LED
     wavelength_nm: 531
     notes: Integrated LED inside the RFP Light Cube
     id: evos_rfp_light_cube_led
-    modalities:
-    - widefield_fluorescence
   - kind: led
     manufacturer: Thermo Fisher / AMG
     model: EVOS Cy5 Light Cube LED
     wavelength_nm: 628
     notes: Integrated LED inside the Cy5 Light Cube
     id: evos_cy5_light_cube_led
-    modalities:
-    - widefield_fluorescence
   optical_path_elements:
   - name: Light Cube Turret
     stage_role: cube
     id: light_cube_turret
     element_type: turret
-    modalities:
-    - widefield_fluorescence
     notes: Filter sets must be changed manually. Only AIC personnel are allowed to
       change filter cubes.
     positions:

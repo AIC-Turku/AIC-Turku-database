@@ -170,9 +170,6 @@ hardware:
     notes: Part of BC43 excitation lines
     url: ''
     id: borealis_illumination
-    modalities:
-    - confocal_spinning_disk
-    - widefield_fluorescence
   - kind: laser
     manufacturer: Andor
     model: Borealis Illumination
@@ -181,9 +178,6 @@ hardware:
     notes: Part of BC43 excitation lines
     url: ''
     id: borealis_illumination_2
-    modalities:
-    - confocal_spinning_disk
-    - widefield_fluorescence
   - kind: laser
     manufacturer: Andor
     model: Borealis Illumination
@@ -192,9 +186,6 @@ hardware:
     notes: Part of BC43 excitation lines
     url: ''
     id: borealis_illumination_3
-    modalities:
-    - confocal_spinning_disk
-    - widefield_fluorescence
   - kind: laser
     manufacturer: Andor
     model: Borealis Illumination
@@ -203,9 +194,6 @@ hardware:
     notes: Part of BC43 excitation lines
     url: ''
     id: borealis_illumination_4
-    modalities:
-    - confocal_spinning_disk
-    - widefield_fluorescence
   - kind: led
     manufacturer: Andor
     model: Transmitted Light Illuminator
@@ -214,18 +202,11 @@ hardware:
       LED.
     url: ''
     id: transmitted_light_illuminator
-    modalities:
-    - transmitted_brightfield
-    - phase_contrast
   optical_path_elements:
   - name: BC43 Internal Dichroic
     stage_role: dichroic
     id: bc43_internal_dichroic
     element_type: fixed
-    modalities:
-    - confocal_spinning_disk
-    - widefield_fluorescence
-    - transmitted_brightfield
     positions:
       Pos_1:
         component_type: multiband_dichroic
@@ -245,10 +226,6 @@ hardware:
     stage_role: emission
     id: bc43_internal_emission_filters
     element_type: filter_wheel
-    modalities:
-    - confocal_spinning_disk
-    - widefield_fluorescence
-    - transmitted_brightfield
     positions:
       Pos_1:
         name: DAPI

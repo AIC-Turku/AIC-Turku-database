@@ -220,9 +220,6 @@ hardware:
     notes: ''
     url: ''
     id: 405_nm_diode
-    modalities:
-    - confocal_point
-    - ism
   - kind: laser
     manufacturer: Unknown
     model: 458 nm (Argon)
@@ -231,9 +228,6 @@ hardware:
     notes: ''
     url: ''
     id: 458_nm_argon
-    modalities:
-    - confocal_point
-    - ism
   - kind: laser
     manufacturer: Unknown
     model: 488 nm (Argon)
@@ -242,9 +236,6 @@ hardware:
     notes: ''
     url: ''
     id: 488_nm_argon
-    modalities:
-    - confocal_point
-    - ism
   - kind: laser
     manufacturer: Unknown
     model: 514 nm (Argon)
@@ -253,9 +244,6 @@ hardware:
     notes: ''
     url: ''
     id: 514_nm_argon
-    modalities:
-    - confocal_point
-    - ism
   - kind: laser
     manufacturer: Unknown
     model: 543 nm (HeNe)
@@ -264,9 +252,6 @@ hardware:
     notes: ''
     url: ''
     id: 543_nm_hene
-    modalities:
-    - confocal_point
-    - ism
   - kind: laser
     manufacturer: Unknown
     model: 633 nm (HeNe)
@@ -275,9 +260,6 @@ hardware:
     notes: ''
     url: ''
     id: 633_nm_hene
-    modalities:
-    - confocal_point
-    - ism
   - kind: halogen_lamp
     manufacturer: Zeiss
     model: Transmitted light illumination (HAL 100 / LED)
@@ -285,15 +267,11 @@ hardware:
     notes: Transmitted brightfield illumination source for the inverted stand.
     url: ''
     id: transmitted_illumination
-    modalities:
-    - transmitted_brightfield
   optical_path_elements:
   - name: AiryScan Emission Wheel
     stage_role: emission
     id: airyscan_emission_wheel
     element_type: filter_wheel
-    modalities:
-    - ism
     positions:
       Pos_1:
         name: AiryScan BP 420-488 + BP 495-550
@@ -348,10 +326,6 @@ hardware:
     id: trinocular_port
     element_type: splitter
     selection_mode: exclusive
-    modalities:
-    - confocal_point
-    - ism
-    - transmitted_brightfield
     supported_branch_modes:
     - selected
     supported_branch_count: 2

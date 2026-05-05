@@ -101,9 +101,6 @@ hardware:
     notes: Excitation line
     url: ''
     id: multi_led_excitation
-    modalities:
-    - widefield_fluorescence
-    - flim
   - kind: led
     manufacturer: Unknown
     model: Multi-LED excitation
@@ -112,9 +109,6 @@ hardware:
     notes: Excitation line
     url: ''
     id: multi_led_excitation_2
-    modalities:
-    - widefield_fluorescence
-    - flim
   - kind: led
     manufacturer: Unknown
     model: Multi-LED excitation
@@ -123,9 +117,6 @@ hardware:
     notes: Excitation line
     url: ''
     id: multi_led_excitation_3
-    modalities:
-    - widefield_fluorescence
-    - flim
   optical_path_elements:
   - id: trinocular_port_selector
     name: Trinocular Port Selector
@@ -135,9 +126,6 @@ hardware:
     supported_branch_modes:
     - selected
     supported_branch_count: 2
-    modalities:
-    - widefield_fluorescence
-    - flim
 light_paths:
 - id: widefield_fluorescence
   illumination_sequence:
