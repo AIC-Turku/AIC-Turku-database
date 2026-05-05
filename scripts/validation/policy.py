@@ -269,6 +269,15 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
                 targets = {str(v).strip() for v in modalities_any_of if isinstance(v, str)}
                 has_match = bool(modality_ids & targets)
             conditions.append(has_match)
+        imaging_modes_any_of = condition_spec.get('imaging_modes_any_of')
+        if isinstance(imaging_modes_any_of, list):
+            imaging_mode_nodes = _resolve_path_nodes(payload, 'capabilities.imaging_modes')
+            has_match = False
+            if imaging_mode_nodes and isinstance(imaging_mode_nodes[0].value, list):
+                imaging_mode_ids = {str(v).strip() for v in imaging_mode_nodes[0].value if isinstance(v, str)}
+                targets = {str(v).strip() for v in imaging_modes_any_of if isinstance(v, str)}
+                has_match = bool(imaging_mode_ids & targets)
+            conditions.append(has_match)
         scanner_type_in = condition_spec.get('scanner_type_in')
         if isinstance(scanner_type_in, list):
             scanner_nodes = _resolve_path_nodes(payload, 'hardware.scanner.type')
@@ -399,7 +408,7 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
         if not any_of_results or not any(any_of_results):
             return False
     simple_result = _evaluate_simple_conditions(required_if)
-    has_simple_conditions = any(key in required_if for key in ('parent_present', 'modalities_any_of', 'scanner_type_in', 'item_kind_in', 'modules_any_of', 'detector_kinds_any_of', 'software_roles_any_of', 'software_roles_none_of', 'item_field_in', 'any_item_field_in', 'any_item_matches', 'field_equals_any'))
+    has_simple_conditions = any(key in required_if for key in ('parent_present', 'modalities_any_of', 'imaging_modes_any_of', 'scanner_type_in', 'item_kind_in', 'modules_any_of', 'detector_kinds_any_of', 'software_roles_any_of', 'software_roles_none_of', 'item_field_in', 'any_item_field_in', 'any_item_matches', 'field_equals_any'))
     if has_simple_conditions:
         return simple_result
     return isinstance(all_of, list) or isinstance(any_of, list)
