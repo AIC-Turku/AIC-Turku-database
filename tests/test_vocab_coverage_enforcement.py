@@ -52,10 +52,10 @@ def _active_instrument_yamls() -> list[Path]:
 
 
 def _load_yaml_safe(path: Path) -> dict[str, Any] | None:
-    """Load YAML; return None on parse error or non-dict content."""
+    """Load YAML; return None on YAML parse error or non-dict content."""
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception:
+    except yaml.YAMLError:
         return None
     return data if isinstance(data, dict) else None
 
