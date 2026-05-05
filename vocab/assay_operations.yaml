@@ -15,3 +15,7 @@ terms:
   display_label: Uncaging
   label: Uncaging
   description: Releases biologically active molecules from a photo-labile cage compound using targeted illumination. Enables spatiotemporally controlled delivery of ligands, signaling molecules, or probes.
+- id: optogenetics
+  display_label: Optogenetics
+  label: Optogenetics
+  description: Provides patterned or wavelength-specific light stimulation for genetically encoded light-sensitive actuators. Used to control signaling, neural activity, or cellular behavior during imaging.
