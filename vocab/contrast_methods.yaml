@@ -2,21 +2,28 @@ terms:
 - id: transmitted_brightfield
   display_label: Transmitted brightfield
   label: Transmitted brightfield
+  description: Uses transmitted white light to image absorption and scattering contrast in unstained specimens. Common for routine morphology and context imaging.
 - id: reflected_brightfield
   display_label: Reflected brightfield
   label: Reflected brightfield
+  description: Uses incident reflected light rather than transmitted illumination to visualize opaque or thick specimens in brightfield mode.
 - id: phase_contrast
   display_label: Phase contrast
   label: Phase contrast
+  description: Converts phase shifts from transparent specimens into intensity differences. Useful for live, unlabeled cells on standard culture plastic.
 - id: dic
   display_label: DIC
   label: DIC
+  description: "Differential Interference Contrast. Uses polarized beam shearing to create relief-like contrast from optical path gradients. Useful for high-contrast imaging of unstained live samples."
 - id: darkfield
   display_label: Darkfield
   label: Darkfield
+  description: Collects only scattered light while excluding directly transmitted illumination. Highlights small structures and edges on a dark background.
 - id: polarized_light
   display_label: Polarized light
   label: Polarized light
+  description: Uses crossed polarizers to generate contrast from birefringent materials like crystals, amyloid fibrils, or muscle fibers.
 - id: optical_sectioning
   display_label: Optical sectioning
   label: Optical sectioning
+  description: Uses patterned illumination and computational processing to suppress out-of-focus signal. Common examples include ApoTome or grid-projection approaches.

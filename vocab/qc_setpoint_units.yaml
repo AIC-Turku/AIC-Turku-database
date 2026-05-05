@@ -5,4 +5,4 @@ terms:
 
   - id: mW_setpoint
     label: "mW Setpoint"
-    description: "Setpoint expressed directly in milliwatts."
+    description: "Device setpoint expressed in milliwatts as configured in acquisition software. This is a commanded drive value, not a measured optical power; use metric_unit.mW for measured power values."

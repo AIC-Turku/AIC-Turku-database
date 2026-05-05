@@ -2,12 +2,16 @@ terms:
 - id: frap
   display_label: FRAP
   label: FRAP
+  description: "Fluorescence Recovery After Photobleaching. Photobleaches a region and measures fluorescence recovery over time. Used to quantify mobility, exchange, and binding dynamics."
 - id: photoactivation
   display_label: Photoactivation
   label: Photoactivation
+  description: Activates photoactivatable fluorophores in selected regions or times. Supports pulse-chase imaging, sparse labeling, and dynamic experiments.
 - id: photobleaching
   display_label: Photobleaching
   label: Photobleaching
+  description: Selectively bleaches fluorophores in defined regions using high-intensity illumination. Used as a perturbation step in FRAP and related assays, or to reduce background from unwanted signal.
 - id: uncaging
   display_label: Uncaging
   label: Uncaging
+  description: Releases biologically active molecules from a photo-labile cage compound using targeted illumination. Enables spatiotemporally controlled delivery of ligands, signaling molecules, or probes.

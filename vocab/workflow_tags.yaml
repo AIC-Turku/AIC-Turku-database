@@ -2,17 +2,22 @@ terms:
 - id: live_cell_imaging
   display_label: Live cell imaging
   label: Live cell imaging
+  description: Imaging workflows optimized for viable cells over time with controlled environment and low phototoxicity. Can be combined with multiple optical modalities.
 - id: high_content_screening
   display_label: High-content screening
   label: High-content screening
+  description: Automated acquisition and analysis across many samples, fields, or conditions. Typically involves motorized stages, plate formats, and quantitative readout pipelines.
 - id: super_resolution
   display_label: Super-resolution
   label: Super-resolution
+  description: Workflows that achieve spatial resolution beyond the classical diffraction limit. Encompasses techniques including STED, RESOLFT, SIM, and SMLM.
 - id: single_molecule
   display_label: Single-molecule imaging
   label: Single-molecule imaging
+  description: Workflows that detect and analyze individual fluorescent molecules. Requires low labeling densities and sensitive detection conditions.
 - id: single_particle_tracking
   synonyms:
   - spt
   display_label: Single-particle tracking
   label: Single-particle tracking
+  description: Tracks individual particles or molecules over time to quantify motion and dynamics. Used for diffusion, transport, and interaction studies.
