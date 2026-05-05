@@ -1168,14 +1168,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
-                'vocab_registry': {'mechanism_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
+                'vocab_registry': {'optical_path_element_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
                 'sections': [
                     {
                         'id': 'lp',
                         'title': 'Light Path',
                         'rules': [
                             {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
-                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'mechanism_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
+                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'optical_path_element_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
                             {
                                 'path': 'hardware.light_path.excitation_mechanisms[].slots',
                                 'status': 'conditional',
@@ -1215,14 +1215,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self._write_json_yaml(
             'schema/instrument_policy.yaml',
             {
-                'vocab_registry': {'mechanism_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
+                'vocab_registry': {'optical_path_element_types': {'source': 'inline', 'allowed_values': ['filter_wheel', 'single_slot']}},
                 'sections': [
                     {
                         'id': 'lp',
                         'title': 'Light Path',
                         'rules': [
                             {'path': 'hardware.light_path.excitation_mechanisms', 'status': 'required', 'type': 'list', 'min_items': 1},
-                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'mechanism_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
+                            {'path': 'hardware.light_path.excitation_mechanisms[].type', 'status': 'conditional', 'type': 'string', 'vocab': 'optical_path_element_types', 'required_if': {'parent_present': 'hardware.light_path.excitation_mechanisms[]'}},
                             {
                                 'path': 'hardware.light_path.excitation_mechanisms[].slots',
                                 'status': 'conditional',

@@ -166,11 +166,6 @@ vocab_registry:
     path: vocab/ocular_availability.yaml
     canonical_ids_only: true
     allow_synonyms_on_input: true
-  mechanism_types:
-    source: file
-    path: vocab/mechanism_types.yaml
-    canonical_ids_only: true
-    allow_synonyms_on_input: true
   optical_component_types:
     source: file
     path: vocab/optical_component_types.yaml
