@@ -219,6 +219,27 @@
       border: 1px solid #fde68a;
     }
 
+    .dto-source {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      overflow-wrap: anywhere;
+    }
+
+    .dto-source code {
+      background: var(--table-header-bg);
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    .row-diagnostics {
+      margin: 6px 0 0;
+      padding-left: 18px;
+      color: var(--warning-text);
+      font-size: 11px;
+    }
+
     @page {
       size: A4;
       margin: 15mm;
@@ -286,7 +307,7 @@
         {% set parts = entry.label.split(' ') %}
         {% set prefix = '' %}
         
-        {% if parts | length > 1 and parts[0] in ['Objective', 'Detector', 'Software', 'Stage', 'Filter', 'Splitter'] %}
+        {% if parts | length > 1 and parts[0] in ['Objective', 'Detector', 'Software', 'Stage', 'Filter', 'Splitter', 'Module', 'Endpoint'] %}
           {% if parts[1] in valid_numbers %}
             {% set prefix = parts[0] ~ ' ' ~ parts[1] %}
           {% endif %}
@@ -297,6 +318,14 @@
         {% elif parts | length > 3 and parts[0] == 'Magnification' and parts[1] == 'Changer' %}
           {% if parts[2] in valid_numbers %}
             {% set prefix = 'Magnification Changer ' ~ parts[2] %}
+          {% endif %}
+        {% elif parts | length > 4 and parts[0] == 'Optical' and parts[1] == 'Path' and parts[2] == 'Element' %}
+          {% if parts[3] in valid_numbers %}
+            {% set prefix = 'Optical Path Element ' ~ parts[3] %}
+          {% endif %}
+        {% elif parts | length > 3 and parts[0] == 'Light' and parts[1] == 'Path' %}
+          {% if parts[2] in valid_numbers %}
+            {% set prefix = 'Light Path ' ~ parts[2] %}
           {% endif %}
         {% endif %}
 
@@ -313,7 +342,19 @@
         
         <tr>
           <th>{{ display_label }}</th>
-          <td>{{ render_value(entry) }}</td>
+          <td>
+            {{ render_value(entry) }}
+            {% if entry.diagnostics and entry.diagnostics | length > 0 %}
+              {% if entry.source_path %}
+                <span class="dto-source">DTO path: <code>{{ entry.source_path }}</code></span>
+              {% endif %}
+              <ul class="row-diagnostics">
+              {% for diagnostic in entry.diagnostics %}
+                <li>{{ diagnostic.severity | default('diagnostic') }}: {{ diagnostic.code | default(diagnostic.title | default('diagnostic')) }}{% if diagnostic.message %} — {{ diagnostic.message }}{% endif %}</li>
+              {% endfor %}
+              </ul>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
       </tbody>

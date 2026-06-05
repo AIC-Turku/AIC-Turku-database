@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -80,6 +81,146 @@ def _component_kind(component: dict[str, Any]) -> Any:
     return component.get("kind") if component.get("kind") is not None else component.get("type")
 
 
+def _humanize_key(value: str) -> str:
+    """Convert a DTO key into a compact staff-facing label fragment."""
+    return str(value).replace("_", " ").replace("-", " ").title()
+
+
+def _is_scalar(value: Any) -> bool:
+    return value is None or isinstance(value, (str, int, float, bool))
+
+
+def _flatten_dto_entries(
+    label: str,
+    value: Any,
+    *,
+    is_optional: bool = False,
+) -> list[dict[str, Any]]:
+    """Flatten arbitrary canonical DTO content into audit-table entries.
+
+    The audit PDF should expose new canonical keys instead of silently dropping
+    them when the DTO evolves. Scalar lists stay on one row for readability;
+    lists/dicts with nested structure are recursively expanded with numbered
+    labels that the template can group into sub-sections.
+    """
+    entries: list[dict[str, Any]] = []
+
+    def walk(current_label: str, current_value: Any) -> None:
+        if isinstance(current_value, dict):
+            if not current_value:
+                entries.append(_entry(current_label, {}, True, is_optional=is_optional))
+                return
+            for key, nested_value in current_value.items():
+                walk(f"{current_label} {_humanize_key(str(key))}", nested_value)
+            return
+
+        if isinstance(current_value, list):
+            if not current_value:
+                entries.append(_entry(current_label, [], True, is_optional=is_optional))
+                return
+            if all(_is_scalar(item) for item in current_value):
+                entries.append(_entry(current_label, current_value, is_optional=is_optional))
+                return
+            for index, item in enumerate(current_value, start=1):
+                if isinstance(item, dict):
+                    for key, nested_value in item.items():
+                        walk(f"{current_label} {index} {_humanize_key(str(key))}", nested_value)
+                else:
+                    serialized = (
+                        json.dumps(item, ensure_ascii=False, sort_keys=True)
+                        if not _is_scalar(item)
+                        else item
+                    )
+                    entries.append(
+                        _entry(f"{current_label} {index}", serialized, is_optional=is_optional)
+                    )
+            return
+
+        entries.append(_entry(current_label, current_value, is_optional=is_optional))
+
+    walk(label, value)
+    return entries
+
+
+def _policy_detail_entries(policy: dict[str, Any]) -> list[dict[str, Any]]:
+    """Summarize canonical policy DTO details without dumping every rule row."""
+    if not isinstance(policy, dict) or not policy:
+        return [_entry("Policy", {}, True, is_optional=True)]
+
+    sections = policy.get("sections") if isinstance(policy.get("sections"), list) else []
+    missing_required = (
+        policy.get("missing_required")
+        if isinstance(policy.get("missing_required"), list)
+        else []
+    )
+    missing_conditional = (
+        policy.get("missing_conditional")
+        if isinstance(policy.get("missing_conditional"), list)
+        else []
+    )
+    alias_fallbacks = (
+        policy.get("alias_fallbacks")
+        if isinstance(policy.get("alias_fallbacks"), list)
+        else []
+    )
+
+    entries: list[dict[str, Any]] = [
+        _entry("Policy Sections", len(sections), is_optional=True),
+        _entry("Policy Missing Required Count", len(missing_required), is_optional=True),
+        _entry("Policy Missing Conditional Count", len(missing_conditional), is_optional=True),
+        _entry("Policy Alias Fallback Count", len(alias_fallbacks), is_optional=True),
+    ]
+
+    for index, section in enumerate(sections, start=1):
+        if not isinstance(section, dict):
+            continue
+        rules = section.get("rules") if isinstance(section.get("rules"), list) else []
+        missing_rules = [
+            rule for rule in rules if isinstance(rule, dict) and rule.get("missing")
+        ]
+        required_rules = [
+            rule
+            for rule in rules
+            if isinstance(rule, dict) and rule.get("status") == "required"
+        ]
+        conditional_rules = [
+            rule
+            for rule in rules
+            if isinstance(rule, dict) and rule.get("status") == "conditional"
+        ]
+        entries.extend(
+            [
+                _entry(f"Policy Section {index} Id", section.get("id"), is_optional=True),
+                _entry(f"Policy Section {index} Title", section.get("title"), is_optional=True),
+                _entry(f"Policy Section {index} Rule Count", len(rules), is_optional=True),
+                _entry(
+                    f"Policy Section {index} Required Rule Count",
+                    len(required_rules),
+                    is_optional=True,
+                ),
+                _entry(
+                    f"Policy Section {index} Conditional Rule Count",
+                    len(conditional_rules),
+                    is_optional=True,
+                ),
+                _entry(f"Policy Section {index} Missing Rule Count", len(missing_rules), is_optional=True),
+            ]
+        )
+
+    entries.extend(
+        _flatten_dto_entries("Policy Missing Required", missing_required, is_optional=True)
+    )
+    entries.extend(
+        _flatten_dto_entries(
+            "Policy Missing Conditional", missing_conditional, is_optional=True
+        )
+    )
+    entries.extend(
+        _flatten_dto_entries("Policy Alias Fallback", alias_fallbacks, is_optional=True)
+    )
+    return entries
+
+
 def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any]:
     """Return completeness details for an instrument payload from ``load_instruments``."""
     canonical = instrument.get("canonical") or {}
@@ -107,8 +248,14 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
         _entry("Funding", instrument.get("funding"), is_optional=True),
     ]
 
+    capabilities = canonical.get("capabilities") if isinstance(canonical.get("capabilities"), dict) else {}
+    capabilities_entries = _flatten_dto_entries("Capabilities", capabilities)
+
     modalities = instrument.get("modalities")
     modalities_entries = [_entry("Modalities", modalities)]
+
+    modules = canonical.get("modules") if isinstance(canonical.get("modules"), list) else instrument.get("modules")
+    modules_entries = _flatten_dto_entries("Module", modules if modules is not None else [], is_optional=True)
 
     software = instrument.get("software")
     software_entries: list[dict[str, Any]] = []
@@ -269,23 +416,12 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
             )
 
     detectors = hardware.get("detectors")
-    modules = instrument.get("modules")
-    module_names = {
-        module.get("name")
-        for module in modules
-        if isinstance(module, dict) and module.get("name")
-    } if isinstance(modules, list) else set()
 
     detector_entries: list[dict[str, Any]] = []
     if not isinstance(detectors, list) or len(detectors) == 0:
-        if "camera_port" in module_names:
-            detector_entries.append(
-                _entry("Detector Capabilities", "External Camera Port Available", is_optional=True)
-            )
-        else:
-            detector_entries.append(
-                _entry("Detector Capabilities", "Manual Observation Only", is_optional=True)
-            )
+        detector_entries.append(
+            _entry("Detectors", detectors if detectors is not None else [], True, is_optional=True)
+        )
     else:
         for idx, detector in enumerate(detectors, start=1):
             if not isinstance(detector, dict):
@@ -305,6 +441,27 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
                 ]
             )
 
+
+    endpoints = hardware.get("endpoints")
+    endpoints_entries = _flatten_dto_entries(
+        "Endpoint", endpoints if endpoints is not None else [], is_optional=True
+    )
+
+    optical_path_elements = hardware.get("optical_path_elements")
+    optical_path_element_entries = _flatten_dto_entries(
+        "Optical Path Element",
+        optical_path_elements if optical_path_elements is not None else [],
+        is_optional=True,
+    )
+
+    light_paths = canonical.get("light_paths")
+    light_path_entries = _flatten_dto_entries(
+        "Light Path", light_paths if light_paths is not None else [], is_optional=True
+    )
+
+    policy_entries = _policy_detail_entries(policy if isinstance(policy, dict) else {})
+    provenance = canonical.get("provenance") if isinstance(canonical.get("provenance"), dict) else {}
+    provenance_entries = _flatten_dto_entries("Provenance", provenance, is_optional=True)
 
     def _yes_no(value: Any) -> str | None:
         if value is None:
@@ -356,8 +513,10 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
     return {
         "schema_errors": schema_errors,
         "general": general,
+        "capabilities": capabilities_entries,
         "modalities": modalities_entries,
         "software": software_entries,
+        "modules": modules_entries,
         "scanner": scanner_entries,
         "objectives": objectives_entries,
         "filters": filter_entries,
@@ -365,10 +524,15 @@ def analyze_instrument_completeness(instrument: dict[str, Any]) -> dict[str, Any
         "magnification_changers": magnification_changer_entries,
         "light_sources": light_source_entries,
         "detectors": detector_entries,
+        "endpoints": endpoints_entries,
+        "optical_path_elements": optical_path_element_entries,
+        "light_paths": light_path_entries,
         "environment": environment_entries,
         "stages": stages_entries,
         "autofocus": autofocus_entries,
         "triggering": triggering_entries,
+        "policy": policy_entries,
+        "provenance": provenance_entries,
     }
 
 __all__ = ["load_instruments", "analyze_instrument_completeness"]
