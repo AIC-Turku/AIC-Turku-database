@@ -39,7 +39,7 @@ modules:
 software:
 - role: acquisition
   name: Nikon NIS-Elements AR
-  version: '5.11'
+  version: '6.1'
   url: ''
 hardware:
   environment:
