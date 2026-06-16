@@ -1,0 +1,42 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-leica-stellaris-8-falcon-flim-resonant_20260616_405nm_led_drift_issue
+microscope: scope-leica-stellaris-8-falcon-flim-resonant
+
+service_provider: internal
+contact: AIC Staff
+
+started_utc: '2026-06-16T00:00:00Z'
+ended_utc: '2026-06-16T00:15:00Z'
+
+reason: issue_reported
+reason_details: >-
+  Staff reported that the 405 nm LED source is suffering from drift. The drift
+  is causing low power output at the sample plane and misalignment with the
+  white light laser excitation path used for all other channels.
+
+action: other
+action_details: >-
+  Usage advisory recorded: avoid the system when samples require 405 nm
+  excitation until the 405 nm LED source issue has been resolved. All other
+  excitation wavelengths remain functional.
+
+microscope_status_before: in_service
+microscope_status_after: limited
+status_notes: >-
+  Limited service: avoid 405 nm excitation-dependent experiments. Other
+  wavelengths remain functional.
+
+tags:
+  - 405nm
+  - LED
+  - drift
+  - low_power
+  - alignment
+  - usage_advisory
+
+notes: >-
+  Issue message from staff: the 405 nm LED source is drifting, causing low power
+  output on the sample plane and misalignment with the white light laser. Staff
+  recommend avoiding the system if the sample requires 405 nm excitation; all
+  other wavelengths are still functional.
