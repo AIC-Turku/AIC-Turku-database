@@ -207,7 +207,7 @@ hardware:
     product_code: '15506424'
     magnification: 10.0
     numerical_aperture: 0.4
-    working_distance: unknown
+    working_distance: 2.56 mm
     immersion: air
     correction: apochromat
     afc_compatible: true
@@ -221,7 +221,7 @@ hardware:
     product_code: '15506517'
     magnification: 20.0
     numerical_aperture: 0.75
-    working_distance: unknown
+    working_distance: 0.62 mm
     immersion: air
     correction: apochromat
     afc_compatible: true
@@ -235,7 +235,7 @@ hardware:
     product_code: '15506422'
     magnification: 40.0
     numerical_aperture: 1.25
-    working_distance: unknown
+    working_distance: 0.35 mm
     immersion: glycerol
     correction: apochromat
     afc_compatible: true
@@ -250,7 +250,7 @@ hardware:
     product_code: '15506350'
     magnification: 63.0
     numerical_aperture: 1.4
-    working_distance: unknown
+    working_distance: 0.14 mm
     immersion: oil
     correction: apochromat
     afc_compatible: true
@@ -264,7 +264,7 @@ hardware:
     product_code: '15506333'
     magnification: 86.0
     numerical_aperture: 1.2
-    working_distance: unknown
+    working_distance: 0.3 mm
     immersion: water
     correction: apochromat
     afc_compatible: true
