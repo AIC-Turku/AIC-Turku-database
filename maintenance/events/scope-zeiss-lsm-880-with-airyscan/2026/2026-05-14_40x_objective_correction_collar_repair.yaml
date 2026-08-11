@@ -22,13 +22,16 @@ action_details: >-
   operation after service.
 
 microscope_status_before: limited
-microscope_status_after: in_service
+microscope_status_after: limited
 status_notes: >-
   Objective 40x multi-immersion correction collar repaired; objective returned to
-  normal operation.
+  normal operation. The microscope remains in limited service because the scan-field
+  test failed during preventive maintenance on 2026-05-13 and a VM800 startup
+  communication error remains open.
 
 related_maintenance:
   - maint_scope-zeiss-lsm-880-with-airyscan_20260504_40x_objective_correction_collar_issue
+  - maint_scope-zeiss-lsm-880-with-airyscan_20260513_preventive_maintenance
 
 tags:
   - objective
@@ -38,4 +41,6 @@ tags:
 
 notes: >-
   This event closes the previously open collar issue for
-  hardware.objectives[id=40x_multi].
+  hardware.objectives[id=40x_multi]. It does not close the independent scanner or
+  VM800 communication issues documented by the 2026-05-13 preventive-maintenance
+  event.
