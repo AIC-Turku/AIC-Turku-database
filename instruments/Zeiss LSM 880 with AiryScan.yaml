@@ -160,7 +160,7 @@ hardware:
     specialties:
     - dic
     - ir_transmission
-    notes: 'Imm Korr (multi-immersion, correction collar). Correction collar repaired by field engineer on 2026-05-14 (maintenance_id: maint_scope-zeiss-lsm-880-with-airyscan_20260514_40x_objective_correction_collar_repair); objective operational.'
+    notes: 'Imm Korr (multi-immersion, correction collar). Correction collar repaired during the 2026-05-13 to 2026-05-14 vendor preventive-maintenance visit (maintenance_id: maint_scope-zeiss-lsm-880-with-airyscan_20260513_preventive_maintenance); objective operational.'
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420862-9970-790/Objective-LD-LCI-Plan-Apochromat-40x-1.2-Imm-autocorr-DIC-M27
     is_installed: true
   - id: 63x_oil
