@@ -62,6 +62,13 @@ from scripts.dashboard.methods_export import (
     build_methods_generator_page_config,
     build_plan_experiments_page_config,
 )
+from scripts.dashboard.qc_metrics import (
+    build_qc_laser_context_view,
+    build_qc_metric_view,
+    metric_display_lookup,
+    metric_name_lookup,
+    metric_raw_lookup,
+)
 
 
 METRIC_NAMES: dict[str, str] = {
@@ -173,7 +180,7 @@ def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
     for entry in qc_logs:
         payload = entry.get("data")
         if isinstance(payload, dict):
-            metrics = _metric_lookup(payload.get("metrics_computed"))
+            metrics = metric_raw_lookup(payload)
             all_metrics.update(metrics.keys())
 
     charts: dict[str, Any] = {}
@@ -191,9 +198,10 @@ def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
                 continue
 
             labels.append(parsed_started.strftime("%Y-%m-%d"))
-            metrics = _metric_lookup(payload.get("metrics_computed"))
+            metrics = metric_raw_lookup(payload)
             val = metrics.get(metric_id)
-            values.append(val if isinstance(val, (int, float)) else None)
+            is_number = isinstance(val, (int, float)) and not isinstance(val, bool)
+            values.append(val if is_number else None)
 
         if any(value is not None for value in values):
             charts[metric_id] = {
@@ -570,11 +578,14 @@ def render_site(
         charts_json = _build_all_charts_data(qc_logs)
 
         latest_metrics: dict[str, Any] = {}
+        metric_names = dict(METRIC_NAMES)
         for log in qc_logs:
             payload = log.get("data")
             if isinstance(payload, dict):
-                session_metrics = _metric_lookup(payload.get("metrics_computed"))
+                session_metrics = metric_display_lookup(payload)
                 latest_metrics.update(session_metrics)
+                for metric_id, label in metric_name_lookup(payload).items():
+                    metric_names.setdefault(metric_id, label)
 
         context = build_instrument_context(
             inst,
@@ -595,7 +606,7 @@ def render_site(
             instrument=inst,
             charts_json=charts_json,
             latest_metrics=latest_metrics,
-            metric_names=METRIC_NAMES,
+            metric_names=metric_names,
             policy=inst.get("canonical", {}).get("policy", {}),
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
@@ -638,7 +649,7 @@ def render_site(
         history_md = tpl_history.render(
             instrument=inst,
             charts_json=charts_json,
-            metric_names=METRIC_NAMES,
+            metric_names=metric_names,
             qc_events=history_events_qc,
             maintenance_events=history_events_maint,
         )
@@ -671,6 +682,8 @@ def render_site(
                 operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
                 raw_yaml_content=raw_yaml_text,
                 payload=event_payload,
+                qc_metrics=build_qc_metric_view(event_payload),
+                qc_laser_context=build_qc_laser_context_view(event_payload),
             )
             event_dir = docs_root / "events" / event_instrument
             event_dir.mkdir(parents=True, exist_ok=True)
