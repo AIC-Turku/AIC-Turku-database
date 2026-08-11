@@ -3,6 +3,7 @@ instrument:
   instrument_id: scope-zeiss-lsm-880-with-airyscan
   manufacturer: Zeiss
   model: LSM 880 with AiryScan
+  serial_number: '2850000143'
   year_of_purchase: ''
   funding: ''
   stand_orientation: inverted
@@ -58,7 +59,8 @@ modules:
 software:
 - role: acquisition
   name: Zeiss ZEN 2.3 SP1 (black edition)
-  version: ''
+  version: FP3 HF 30 FP3 (build 14.0.30.201)
+  notes: Version recorded during vendor preventive maintenance on 2026-05-13.
   url: ''
 hardware:
   environment:
