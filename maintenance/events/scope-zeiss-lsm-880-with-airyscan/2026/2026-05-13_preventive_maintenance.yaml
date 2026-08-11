@@ -1,0 +1,63 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-zeiss-lsm-880-with-airyscan_20260513_preventive_maintenance
+microscope: scope-zeiss-lsm-880-with-airyscan
+
+service_provider: vendor
+company: Carl Zeiss Oy
+contact: field service engineer
+reference: Worksheet 8583910132
+
+started_utc: '2026-05-13T00:00:00Z'
+
+reason: scheduled
+reason_details: >-
+  Annual vendor preventive maintenance for the Zeiss LSM 880 AS Fast. The official
+  checklist documents routine system, safety, cooling, laser, calibration, detector,
+  stage, focus, and application-level checks.
+
+action: service
+action_details: >-
+  Vendor preventive maintenance was completed. Environment, cabling, system condition,
+  anti-vibration table, fans and filters, surge protection, ECU voltage lines,
+  electrical safety, laser safety, microscope function, external cooling, equipotential
+  bonding, detector function and gain response, InVis collimation, QUASAR spectral
+  calibration, V-laser attenuator, laser beam profiles, AOTF settings, resolution,
+  stepper-motor test, laser linearization, pinhole and MBS calibrations, detector offset
+  and amplification, PMT linearization, detector SNR checks, XY stage control, Z focus,
+  Z stack, visible-channel application tests, and Airyscan tests were recorded in order.
+  PC ventilation was cleaned; the cooling liquid was replaced; MBS filter-wheel axles
+  were cleaned and lubricated; CanCheck was updated to 14.0.8.1; and Airyscan alignment
+  was checked and fine-tuned. The scan-field test failed, indicating scanner wear, and
+  the vendor recommended replacement of the scanners and scanner drive boards. A
+  Can29_E1 VM800 communication error was also observed when ZEN started.
+
+microscope_status_before: limited
+microscope_status_after: limited
+status_notes: >-
+  Limited service: images remain usable, especially with unidirectional scanning, but
+  the scan-field test failed and some bidirectional scan speeds show the issue. A VM800
+  startup communication error also remains open.
+
+related_qc:
+  - qc_scope-zeiss-lsm-880-with-airyscan_20260513T0000Z_vendor_pm_v1
+
+tags:
+  - scheduled
+  - vendor
+  - scanner
+  - scan-field
+  - vm800
+  - airyscan
+
+followup: >-
+  Replace the scanners and scanner drive boards to resolve the failed scan-field test.
+  Troubleshoot the VM800 communication error and the MICO HS LVDS interface during the
+  next preventive-maintenance visit.
+
+notes: >-
+  The source provides a service date but no authoritative start time, so started_utc is
+  normalized to 00:00 UTC on 2026-05-13. Instrument serial 2850000143. The checklist
+  marks the instrument as not fully operational. The signed source report is not stored
+  in this public repository because it contains personal contact and signature data;
+  all ledger text is anonymized.

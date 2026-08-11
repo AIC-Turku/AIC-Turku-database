@@ -1,0 +1,38 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-agilent-rtca-esight_20260811_out_of_service_awaiting_followup
+microscope: scope-agilent-rtca-esight
+
+service_provider: internal
+company: Advanced Imaging Core
+contact: AIC staff
+reference: Facility status report, 2026-08-11
+
+started_utc: '2026-08-11T00:00:00Z'
+
+reason: issue_reported
+reason_details: >-
+  The Agilent xCELLigence RTCA eSight is out of order and unavailable for use.
+
+action: other
+action_details: >-
+  Recorded the out-of-service status. No completed repair action has been documented.
+
+microscope_status_before: in_service
+microscope_status_after: out_of_service
+status_notes: >-
+  Out of service; awaiting further information and service action.
+
+tags:
+  - out_of_service
+  - awaiting_followup
+  - user_reported
+
+followup: >-
+  Await further information and service action before scheduling repair or returning
+  the system to use.
+
+notes: >-
+  Status reported on 2026-08-11. No authoritative event time or expected return-to-
+  service date was provided, so started_utc is normalized to 00:00 UTC and the event
+  remains open.

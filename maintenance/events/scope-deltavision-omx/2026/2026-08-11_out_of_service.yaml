@@ -1,0 +1,41 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-deltavision-omx_20260811_out_of_service
+microscope: scope-deltavision-omx
+
+service_provider: internal
+company: Advanced Imaging Core
+contact: AIC staff
+reference: Facility status report, 2026-08-11
+
+started_utc: '2026-08-11T00:00:00Z'
+
+reason: issue_reported
+reason_details: >-
+  The Deltavision OMX is out of service. Only the 405 nm and 647 nm TIRF functions
+  are reported working.
+
+action: other
+action_details: >-
+  Recorded the system as unavailable for general use and documented the two remaining
+  working TIRF wavelength functions.
+
+microscope_status_before: limited
+microscope_status_after: out_of_service
+status_notes: >-
+  Out of service. Only 405 nm and 647 nm TIRF are reported working; the system is not
+  available for general use.
+
+tags:
+  - out_of_service
+  - tirf
+  - laser
+  - user_reported
+
+followup: >-
+  Diagnose and repair the unavailable OMX functions before returning the system to
+  general service.
+
+notes: >-
+  Status reported on 2026-08-11. No authoritative event time or repair completion date
+  was provided, so started_utc is normalized to 00:00 UTC and the event remains open.
