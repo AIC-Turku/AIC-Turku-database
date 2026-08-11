@@ -114,12 +114,22 @@ hide:
 
 {% endif %}
 
-{% if payload.get('metrics_computed') %}
-## 📏 Computed Metrics
+{% if qc_laser_context %}
+## 🔦 Laser Measurement Context
 
-| Metric ID | Value |
+| Field | Value |
 |---|---|
-{% for m in payload.get('metrics_computed', []) %}| <code>{{ m.get('metric_id') }}</code> | **{{ m.get('value') }}** |
+{% for row in qc_laser_context %}| **{{ row.get('label') }}** | {{ row.get('value') | replace('|', '\\|') | replace('\n', ' ') }} |
+{% endfor %}
+
+{% endif %}
+
+{% if qc_metrics %}
+## 📏 QC Measurements
+
+| Measurement | Value | Source | Details |
+|---|---|---|---|
+{% for m in qc_metrics %}| **{{ m.get('label') }}**<br><code>{{ m.get('metric_id') }}</code> | **{{ m.get('display_value') }}** | {{ m.get('source') }} | {{ (m.get('details') or '—') | replace('|', '\\|') | replace('\n', ' ') }} |
 {% endfor %}
 
 {% endif %}
