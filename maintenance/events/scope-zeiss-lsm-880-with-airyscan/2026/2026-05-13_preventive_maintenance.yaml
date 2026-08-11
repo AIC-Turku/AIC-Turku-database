@@ -6,15 +6,20 @@ microscope: scope-zeiss-lsm-880-with-airyscan
 service_provider: vendor
 company: Carl Zeiss Oy
 contact: field service engineer
-reference: Worksheet 8583910132
+reference: >-
+  Worksheet 8583910132; field engineer objective-repair confirmation dated
+  2026-05-14
 
 started_utc: '2026-05-13T00:00:00Z'
+ended_utc: '2026-05-14T09:00:00Z'
 
 reason: scheduled
 reason_details: >-
   Annual vendor preventive maintenance for the Zeiss LSM 880 AS Fast. The official
   checklist documents routine system, safety, cooling, laser, calibration, detector,
-  stage, focus, and application-level checks.
+  stage, focus, and application-level checks. The same vendor visit also included
+  corrective follow-up for the previously reported broken correction collar on the
+  40x multi-immersion objective.
 
 action: service
 action_details: >-
@@ -31,16 +36,24 @@ action_details: >-
   was checked and fine-tuned. The scan-field test failed, indicating scanner wear, and
   the vendor recommended replacement of the scanners and scanner drive boards. A
   Can29_E1 VM800 communication error was also observed when ZEN started.
+  During the same visit, the field engineer repaired the correction collar on the
+  LD LCI Plan APOCHROMAT 40x/1.2 Imm Korr DIC (UV)VIS-IR objective (product code
+  420862-9970, serial 4932000043) and verified objective operation. The repair was
+  confirmed on 2026-05-14.
 
 microscope_status_before: limited
 microscope_status_after: limited
 status_notes: >-
   Limited service: images remain usable, especially with unidirectional scanning, but
   the scan-field test failed and some bidirectional scan speeds show the issue. A VM800
-  startup communication error also remains open.
+  startup communication error also remains open. The 40x multi-immersion objective's
+  correction collar was repaired and the objective returned to normal operation.
 
 related_qc:
   - qc_scope-zeiss-lsm-880-with-airyscan_20260513T0000Z_vendor_pm_v1
+
+related_maintenance:
+  - maint_scope-zeiss-lsm-880-with-airyscan_20260504_40x_objective_correction_collar_issue
 
 tags:
   - scheduled
@@ -49,6 +62,10 @@ tags:
   - scan-field
   - vm800
   - airyscan
+  - objective
+  - correction_collar
+  - repair
+  - resolved
 
 followup: >-
   Replace the scanners and scanner drive boards to resolve the failed scan-field test.
@@ -60,4 +77,6 @@ notes: >-
   normalized to 00:00 UTC on 2026-05-13. Instrument serial 2850000143. The checklist
   marks the instrument as not fully operational. The signed source report is not stored
   in this public repository because it contains personal contact and signature data;
-  all ledger text is anonymized.
+  all ledger text is anonymized. This consolidated event closes the 2026-05-04
+  correction-collar issue for hardware.objectives[id=40x_multi]. It does not close the
+  independent scanner or VM800 communication issues documented here.
