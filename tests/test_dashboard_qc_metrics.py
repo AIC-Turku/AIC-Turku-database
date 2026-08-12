@@ -218,6 +218,27 @@ class ZeissServiceLedgerTests(unittest.TestCase):
         self.assertEqual(metrics["laser.at_obj.405.100pct.power_mw"], "3.83 mW")
         self.assertEqual(metrics["stage.tile_scan_error_total_px"], "4 px")
 
+    def test_argon_optimal_tube_current_uses_one_metric_id_across_visits(self) -> None:
+        qc_root = Path("qc/sessions/scope-zeiss-lsm-880-with-airyscan")
+        paths = [
+            qc_root / "2025/2025-04-02_post_service_laser_stage_qc.yaml",
+            qc_root / "2026/2026-05-13_vendor_pm_qc.yaml",
+        ]
+        metrics_by_visit = [
+            metric_raw_lookup(yaml.safe_load(path.read_text(encoding="utf-8")))
+            for path in paths
+        ]
+        canonical_id = "laser.fiber.argon.optimal_tube_current_a"
+
+        self.assertEqual(
+            [metrics[canonical_id] for metrics in metrics_by_visit],
+            [6.2, 6.0],
+        )
+        self.assertNotIn(
+            "laser.fiber.argon.tube_current_a",
+            metrics_by_visit[1],
+        )
+
     def test_objective_repair_is_consolidated_into_vendor_visit(self) -> None:
         directory = Path(
             "maintenance/events/scope-zeiss-lsm-880-with-airyscan/2026"
