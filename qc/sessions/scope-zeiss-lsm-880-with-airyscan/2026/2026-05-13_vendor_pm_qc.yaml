@@ -40,7 +40,7 @@ inputs_human:
     value: 11.42
     unit: mW
     details: Argon power at the documented optimal setting; checklist result in order.
-  - metric_id: laser.fiber.argon.tube_current_a
+  - metric_id: laser.fiber.argon.optimal_tube_current_a
     metric_class: laser_power
     value: 6.0
     unit: A
