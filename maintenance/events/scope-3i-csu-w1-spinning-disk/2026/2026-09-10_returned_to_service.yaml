@@ -1,0 +1,32 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-3i-csu-w1-spinning-disk_20260910_returned_to_service
+microscope: scope-3i-csu-w1-spinning-disk
+service_provider: internal
+company: ''
+contact: ''
+reference: ''
+started_utc: '2026-09-10T00:00:00Z'
+reason: check
+reason_details: Operational status confirmed after preventive maintenance performed
+  the previous week.
+action: other
+action_details: Recorded confirmation that the previously reported issues were fixed
+  during preventive maintenance. Detailed maintenance information will be added when
+  it becomes available.
+microscope_status_before: limited
+microscope_status_after: in_service
+downtime_hours: 0.0
+related_qc: []
+related_maintenance:
+- maint_scope-3i-csu-w1-spinning-disk_20260309_issue-report
+- maint_scope-3i-csu-w1-spinning-disk_20260327_objective-change-fix
+attachments: []
+tags:
+- preventive-maintenance
+- status-update
+followup: Add the preventive-maintenance details when they become available.
+notes: This status update records only the confirmed operational outcome; maintenance
+  details are pending.
+status_notes: All previously reported issues are fixed and the instrument is fully
+  available for use.
