@@ -42,7 +42,7 @@ modules:
 software:
 - role: acquisition
   name: RTCA eSight Software
-  version: ''
+  version: 1.5.1
   url: https://www.agilent.com/lifesciences/eSight
 hardware:
   environment:

@@ -1,0 +1,46 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-agilent-rtca-esight_20260911_maintenance_completed
+microscope: scope-agilent-rtca-esight
+
+service_provider: unknown
+reference: Full maintenance report pending
+
+started_utc: '2026-09-11T00:00:00Z'
+
+reason: problem
+reason_details: >-
+  Repair and maintenance following the instrument outage reported on 2026-08-11.
+
+action: repair
+action_details: >-
+  Maintenance was completed and normal operation restored. RTCA eSight Software was
+  updated to version 1.5.1. Switching the affected pin in Cradle 2 did not resolve
+  its reported offset.
+
+microscope_status_before: out_of_service
+microscope_status_after: in_service
+status_notes: >-
+  Fully functional; use caution with Cradle 2 and report any anomalies.
+
+related_maintenance:
+  - maint_scope-agilent-rtca-esight_20260811_out_of_service_awaiting_followup
+
+attachments: []
+
+tags:
+  - repair
+  - software-update
+  - returned-to-service
+  - cradle-2
+  - usage-advisory
+
+followup: >-
+  Add the full maintenance report as soon as it becomes available, and investigate
+  any reported Cradle 2 anomalies.
+
+notes: >-
+  Maintenance was confirmed complete on 2026-09-11. The exact maintenance time and
+  service provider were not supplied, so the event uses 00:00 UTC and explicitly
+  records the provider as unknown. The full maintenance report is pending and will
+  be added as soon as possible.
