@@ -35,6 +35,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     let currentInst = null;
     let accumulatedEntries = new Map();
     let usedInstruments = new Map();
+    let runtimeCandidate = { source: "", config: null };
+    const runtimeConfirm = document.getElementById("runtime-confirm");
+
+    function optionalNumber(value) {
+        if (typeof value !== "number" && typeof value !== "string") return null;
+        if (typeof value === "string" && !value.trim()) return null;
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric : null;
+    }
+
+    function confirmedActionOptions(dto) {
+        const methods = dto.methods || {};
+        return dedupeSentences([
+            methods.environment_sentence,
+            ...(methods.stage_sentences || []),
+            methods.autofocus_sentence,
+            methods.triggering_sentence,
+            ...(methods.processing_sentences || []),
+        ]).map((text, index) => ({
+            id: `action-${index}`, display_label: text, method_sentence: text,
+        }));
+    }
 
     function cleanText(value) {
         return typeof value === "string" ? value.trim() : "";
@@ -173,7 +195,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return manufacturer ? [manufacturer] : [];
     }
 
-    function bindCheckboxes(containerId, items, prefix) {
+    function bindCheckboxes(containerId, items, prefix, selectedIds = new Set()) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
         if (Array.isArray(container.children)) container.children = [];
@@ -192,6 +214,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.type = "checkbox";
             checkbox.id = `${prefix}-${index}`;
             checkbox.value = item.id || `${prefix}-${index}`;
+            checkbox.checked = selectedIds.has(checkbox.value);
             checkbox.dataset.displayLabel = item.display_label || "";
             checkbox.dataset.methodSentence = item.method_sentence || "";
             checkbox.dataset.category = prefix;
@@ -345,7 +368,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         return modalities.length > 0 && (!!dto?.retired || !hasCapabilities);
     }
 
-    function updateHardwareVisibility(dto) {
+    function updateHardwareVisibility(dto, preserveSelections = true) {
+        const retained = Object.fromEntries(["light", "det", "filter", "splitter"].map(prefix =>
+            [prefix, new Set(preserveSelections ? getCheckedIds(prefix) : [])]
+        ));
         // Route selection is authoritative; fall back to legacy modality filter only
         // when no route checkboxes are checked.
         const checkedRouteIds = new Set(getCheckedIds("route"));
@@ -391,10 +417,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const allDetItems = inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
         const allFilterItems = inventoryItemsForClasses(dto, ["optical_element"]);
         const allSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
-        toggleSectionVisibility("section-light", bindCheckboxes("light-list", filterBySelection(allLightItems), "light") > 0);
-        toggleSectionVisibility("section-det", bindCheckboxes("det-list", filterBySelection(allDetItems), "det") > 0);
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterBySelection(allFilterItems), "filter") > 0);
-        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterBySelection(allSplitterItems), "splitter") > 0);
+        toggleSectionVisibility("section-light", bindCheckboxes("light-list", filterBySelection(allLightItems), "light", retained.light) > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", filterBySelection(allDetItems), "det", retained.det) > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterBySelection(allFilterItems), "filter", retained.filter) > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterBySelection(allSplitterItems), "splitter", retained.splitter) > 0);
     }
 
     function getCheckedSelections(prefix) {
@@ -487,8 +513,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function getRuntimeSelectedConfigurationFromLocalStorage() {
-        if (typeof window === "undefined" || !window.localStorage) return null;
         try {
+            if (typeof window === "undefined" || !window.localStorage) return null;
             const raw = window.localStorage.getItem("aic.virtualMicroscope.selectedConfiguration");
             if (!raw) return null;
             const parsed = JSON.parse(raw);
@@ -503,16 +529,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         const scopeId = cleanText(runtimeConfig.scope_id);
         const instrumentId = cleanText(runtimeConfig.instrument_id);
         const dtoId = cleanText(dto.id);
-        if (scopeId && dtoId && scopeId === dtoId) return true;
-        if (instrumentId && dtoId && instrumentId === dtoId) return true;
-        return false;
+        const identifiers = [scopeId, instrumentId].filter(Boolean);
+        return Boolean(dtoId) && identifiers.length > 0 && identifiers.every(id => id === dtoId);
     }
 
-    function resolveRuntimeSelectedConfiguration(dto) {
+    function availableRuntimeSelectedConfiguration(dto) {
         const exported = getExportedRuntimeSelectedConfiguration(dto);
-        // Exported runtime selection is authoritative for this page. Browser
-        // localStorage is legacy fallback when no exported runtime config exists.
+        // Prefer the DTO as a proposal, never as evidence of an acquisition.
         if (exported) {
+            const hasIdentity = cleanText(exported.scope_id) || cleanText(exported.instrument_id);
+            if (hasIdentity && !runtimeConfigurationMatchesInstrument(dto, exported)) {
+                return { source: "", config: null };
+            }
             return { source: "exported_dto", config: exported };
         }
         const localStorageFallback = getRuntimeSelectedConfigurationFromLocalStorage();
@@ -520,6 +548,27 @@ document.addEventListener("DOMContentLoaded", async () => {
             return { source: "local_storage", config: localStorageFallback };
         }
         return { source: "", config: null };
+    }
+
+    function renderRuntimeReview(dto) {
+        runtimeCandidate = availableRuntimeSelectedConfiguration(dto);
+        const candidate = runtimeCandidate.config;
+        const invalid = candidate && (candidate.validSelection === false || candidate.simulationError === true);
+        runtimeConfirm.checked = false;
+        runtimeConfirm.disabled = !candidate || invalid;
+        document.getElementById("runtime-review").style.display = candidate ? "" : "none";
+        document.getElementById("runtime-preview").textContent = candidate ? JSON.stringify(candidate, null, 2) : "";
+        document.getElementById("runtime-review-status").textContent = invalid
+            ? "This simulator plan is invalid and cannot be imported."
+            : "This is a planning record, not an acquisition record. Review it and confirm that these settings were actually used. Missing validation or historical information remains unverified.";
+    }
+
+    function resolveRuntimeSelectedConfiguration(dto) {
+        // Use the reviewed snapshot, not a fresh localStorage read after confirmation.
+        if (!runtimeConfirm.checked || runtimeConfirm.disabled || dto !== currentInst) {
+            return { source: "", config: null };
+        }
+        return runtimeCandidate;
     }
 
     function routeFactsSummarySentence(routeFacts) {
@@ -598,8 +647,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const routeFacts = matchedRoute?.route_optical_facts || null;
         const sourceLabels = uniqueTexts((Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).map((source) => {
             const label = cleanText(source?.display_label || source?.name || source?.id);
-            const wavelength = source?.wavelength_nm;
-            return label ? `${label}${Number.isFinite(Number(wavelength)) ? ` (${Number(wavelength)} nm)` : ""}` : "";
+            const wavelength = optionalNumber(source?.selected_wavelength_nm ?? source?.wavelength_nm);
+            return label ? `${label}${wavelength !== null && wavelength > 0 ? ` (${wavelength} nm)` : ""}` : "";
         }));
         const runtimeSourceKeys = uniqueTexts((Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).map((source) =>
             cleanText(source?.display_label || source?.name || source?.id)
@@ -624,8 +673,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         ));
         const detectorSelections = uniqueTexts((Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).map((detector) => {
             const label = cleanText(detector?.display_label || detector?.id);
-            const hasWindow = Number.isFinite(Number(detector?.collection_min_nm)) && Number.isFinite(Number(detector?.collection_max_nm));
-            return label ? `${label}${hasWindow ? ` (${Number(detector.collection_min_nm)}–${Number(detector.collection_max_nm)} nm)` : ""}` : "";
+            const minimum = optionalNumber(detector?.collection_min_nm);
+            const maximum = optionalNumber(detector?.collection_max_nm);
+            const hasWindow = minimum !== null && maximum !== null && minimum > 0 && maximum > minimum;
+            return label ? `${label}${hasWindow ? ` (${minimum}–${maximum} nm)` : ""}` : "";
         }));
         const runtimeEndpointKeys = uniqueTexts((Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).map((detector) =>
             cleanText(detector?.display_label || detector?.id)
@@ -758,13 +809,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         hwOptions.style.display = "block";
         renderMethodsMetadataWarning(currentInst);
+        renderRuntimeReview(currentInst);
+        toggleSectionVisibility("section-confirmed", bindCheckboxes("confirmed-list", confirmedActionOptions(currentInst), "confirmed") > 0);
 
         const dto = currentInst;
 
         const routeCount = bindRoutes(dto);
         toggleSectionVisibility("section-route", routeCount > 0);
         const showLegacyModalities = shouldUseLegacyModalities(dto);
-        const modalityCount = showLegacyModalities ? bindCheckboxes("modality-list", dto.modalities || [], "modality") : 0;
+        const modalityCount = bindCheckboxes("modality-list", showLegacyModalities ? (dto.modalities || []) : [], "modality");
         toggleSectionVisibility("section-modality", modalityCount > 0);
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
         toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
@@ -772,7 +825,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleSectionVisibility("section-magnification-changer", bindCheckboxes("magnification-changer-list", dto.hardware?.magnification_changers || [], "magnification-changer") > 0);
         toggleSectionVisibility("section-optical-modulator", bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator") > 0);
         toggleSectionVisibility("section-illumination-logic", bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic") > 0);
-        updateHardwareVisibility(dto);
+        updateHardwareVisibility(dto, false);
     });
 
     // Container-level change listener for modality checkboxes. Registered once at
@@ -783,8 +836,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Container-level change listener for route/readout checkboxes. Route selection
     // is authoritative; modality filter only activates when no route is checked.
-    document.getElementById("route-list").addEventListener("change", () => {
+    document.getElementById("route-list").addEventListener("change", (event) => {
+        const target = event?.target;
+        if (target?.dataset.category === "readout" && target.checked) {
+            document.querySelectorAll('input[id^="route-"]').forEach(route => {
+                if (route.value === target.dataset.routeId) route.checked = true;
+            });
+        } else if (target?.dataset.category === "route" && !target.checked) {
+            document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
+                if (readout.dataset.routeId === target.value) readout.checked = false;
+            });
+        }
         if (currentInst) updateHardwareVisibility(currentInst);
+    });
+
+    hwOptions.addEventListener("change", event => {
+        if (event.target !== runtimeConfirm) runtimeConfirm.checked = false;
     });
 
     addBtn.addEventListener("click", () => {
@@ -819,10 +886,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             groupedSelections.scanner,
             groupedSelections.objective,
             groupedSelections.magnificationChanger,
-            dto.methods?.environment_sentence,
-            ...(dto.methods?.stage_sentences || []),
-            dto.methods?.autofocus_sentence,
-            dto.methods?.triggering_sentence,
+            ...getCheckedSelections("confirmed").map(item => item.methodSentence),
         ]).join(" ");
 
         // Compatibility note: legacy modality selections are appended after the
@@ -856,7 +920,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const paragraphLightPath = combinedOpticalSentences.join(" ");
 
         const paragraphAcquisition = dedupeSentences([
-            ...(dto.methods?.processing_sentences || []),
             dto.methods?.specimen_preparation_recommendation,
             dto.methods?.acquisition_settings_recommendation,
             dto.methods?.nyquist_recommendation,
@@ -876,10 +939,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             paragraphMissingMetadata,
         ].map(cleanText).filter(Boolean);
 
-        accumulatedEntries.set(dto.id, {
-            instrumentId: dto.id,
-            text: textParts.join("\n\n"),
-        });
+        const acquisitionDate = cleanText(document.getElementById("acquisition-date").value);
+        const sessionLabel = cleanText(document.getElementById("session-label").value);
+        const sessionHeading = [sessionLabel, acquisitionDate].filter(Boolean).join(" / ");
+        const text = [sessionHeading, ...textParts].filter(Boolean).join("\n\n");
+        // An unchanged second click is idempotent; a different acquisition is not
+        // allowed to replace an earlier entry just because it used the same scope.
+        const selections = ["route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
+        const signature = JSON.stringify([dto.id, acquisitionDate, sessionLabel,
+            selections.map(prefix => getCheckedIds(prefix)), text]);
+        accumulatedEntries.set(signature, { instrumentId: dto.id, text });
         usedInstruments.set(dto.id, dto.display_name || dto.id);
         updateOutputText();
     });
@@ -890,12 +959,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateOutputText();
     });
 
-    copyBtn.addEventListener("click", () => {
+    copyBtn.addEventListener("click", async () => {
         if (accumulatedEntries.size === 0) return;
-        navigator.clipboard.writeText(outputText.value);
         const feedback = document.getElementById("copy-feedback");
-        feedback.style.display = "inline";
-        setTimeout(() => feedback.style.display = "none", 2000);
+        feedback.style.display = "none";
+        try {
+            await navigator.clipboard.writeText(outputText.value);
+            feedback.textContent = "Copied!";
+            feedback.style.display = "inline";
+            setTimeout(() => feedback.style.display = "none", 2000);
+        } catch (error) {
+            outputText.focus();
+            outputText.select();
+            feedback.textContent = "Automatic copying failed. The text is selected; copy it manually.";
+            feedback.style.display = "inline";
+        }
     });
 
     addBtn.disabled = true;

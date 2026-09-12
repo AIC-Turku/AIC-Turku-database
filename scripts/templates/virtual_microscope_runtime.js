@@ -2199,6 +2199,9 @@ function detectorCollectionMask(detector, grid) {
           const mergedTargets = inheritedTargets.length && localTargets.length
             ? inheritedTargets.filter((id) => localTargets.includes(id))
             : (inheritedTargets.length ? inheritedTargets.slice() : localTargets.slice());
+          // Two explicit, incompatible target constraints mean no reachable
+          // detector, not an unrestricted branch.
+          if (inheritedTargets.length && localTargets.length && !mergedTargets.length) return;
           nextBranches.push({
             id: `${branch.id}/${cleanString(branchDef && branchDef.id) || `branch_${branchIndex + 1}`}`,
             label: `${branch.label} -> ${cleanString(branchDef && (branchDef.label || branchDef.name)) || `Branch ${branchIndex + 1}`}`,
@@ -2209,7 +2212,7 @@ function detectorCollectionMask(detector, grid) {
           });
         });
       });
-      if (nextBranches.length) branches = nextBranches;
+      branches = nextBranches;
     });
     return branches;
   }
@@ -2417,11 +2420,10 @@ function detectorCollectionMask(detector, grid) {
         const bounds = detectorCollectionBounds(detector);
         const coverage = emTargets.reduce((sum, emMax) => sum + ((bounds.min === null || bounds.max === null || (emMax >= bounds.min && emMax <= bounds.max)) ? 1 : 0), 0);
         
-        const center = (bounds.min + bounds.max) / 2;
-        const width = Math.max(4, bounds.max - bounds.min);
-        const response = (bounds.min === null || bounds.max === null)
-          ? 1
-          : pointMaskScore({ component_type: 'bandpass', center_nm: (bounds.min + bounds.max) / 2, width_nm: Math.max(4, bounds.max - bounds.min) }, emTargets, 'emission');
+        // Collection windows are detector metadata, not parser optical components.
+        const response = emTargets.length
+          ? detectorCollectionMask(detector, emTargets).reduce((sum, value) => sum + value, 0) / emTargets.length
+          : 0;
         const qe = normalizePercent(detector && detector.qe_peak_pct, 0.5) ?? 0.5;
         const endpointBoost = detectorClass(detector && (detector.kind || detector.endpoint_type)) === 'eyepiece' ? 0.25 : 0;
         scored.push({ mechanismId: mechanism.id, slot: detector.slot, detector: { ...detector }, score: (coverage * 10) + response + (qe * 5) + endpointBoost });
@@ -2657,7 +2659,14 @@ function detectorCollectionMask(detector, grid) {
       return null;
     }
 
-    const leakFree = simulation.results.filter((row) =>
+    // Match the runtime's blocked-signal criterion. Zero signal is not a
+    // successful configuration merely because it also produces zero leakage.
+    const usefulRows = simulation.results.filter(row =>
+      Number.isFinite(row.detectorWeightedIntensity) && row.detectorWeightedIntensity > 1e-6
+      && Number.isFinite(row.excitationStrength) && row.excitationStrength > 0.02
+    );
+    if (!fluorophores.every(fluor => usefulRows.some(row => row.fluorophoreKey === fluor.key))) return null;
+    const leakFree = usefulRows.filter((row) =>
       (row.excitationLeakageWeightedIntensity || 0) <= tolerance
       && (row.excitationLeakageThroughput || 0) <= tolerance
     );
@@ -2876,14 +2885,14 @@ function detectorCollectionMask(detector, grid) {
     });
 
     const sharedResult = bestStrict || bestFallback;
-    if (sharedResult || fluorList.length <= 1) return sharedResult;
+    if (bestStrict || fluorList.length <= 1) return sharedResult;
 
     // No common configuration satisfies all fluorophores simultaneously.
     // Try optimizing per-fluorophore to detect sequential-acquisition scenarios.
     const perFluorophoreConfigs = [];
     fluorList.forEach((fluor) => {
       const single = optimizeLightPath([fluor], instrument, options);
-      if (single) {
+      if (single && single.strictLeakageSatisfied) {
         perFluorophoreConfigs.push({
           fluorophoreKey: fluor.key,
           fluorophoreName: fluor.name || fluor.key,
@@ -2892,7 +2901,7 @@ function detectorCollectionMask(detector, grid) {
       }
     });
 
-    if (perFluorophoreConfigs.length >= 2) {
+    if (perFluorophoreConfigs.length === fluorList.length) {
       const sequentialPlan = perFluorophoreConfigs.map((entry, index) => {
         const config = entry && entry.configuration ? entry.configuration : {};
         return {
@@ -2915,13 +2924,13 @@ function detectorCollectionMask(detector, grid) {
       });
       return {
         requiresSequentialAcquisition: true,
-        reason: 'No single optical path simultaneously satisfies all loaded fluorophores. Each fluorophore can be imaged individually with different settings.',
+        reason: 'No shared configuration met the signal and excitation-leakage constraints. A complete per-fluorophore acquisition plan is available.',
         perFluorophoreConfigs,
         sequentialPlan,
       };
     }
 
-    return null;
+    return sharedResult;
   }
 
   function selectionIsValid(validPaths, selectionMap) {

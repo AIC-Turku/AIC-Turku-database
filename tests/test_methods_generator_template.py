@@ -70,6 +70,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 }},
                 setSelectionRange() {{}},
                 select() {{}},
+                focus() {{}},
               }};
             }}
 
@@ -91,6 +92,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
 
             const requiredIds = [
               'methods-generator-config',
+              'runtime-confirm', 'runtime-review', 'runtime-preview', 'runtime-review-status',
+              'acquisition-date', 'session-label', 'section-confirmed', 'confirmed-list',
               'system-select',
               'hardware-options',
               'output-text',
@@ -146,10 +149,18 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 return node;
               }},
               querySelectorAll(selector) {{
-                const match = selector.match(/^input\\[id\\^="([^"]+)"\\]:checked$/);
+                const match = selector.match(/^input\\[id\\^="([^"]+)"\\](:checked)?$/);
                 if (!match) return [];
-                const prefix = match[1];
-                return state.inputs.filter((input) => input && typeof input.id === 'string' && input.id.startsWith(prefix) && input.checked);
+                const attached = new Set();
+                function visit(node) {{
+                  if (!node || attached.has(node)) return;
+                  attached.add(node);
+                  (node.children || []).forEach(visit);
+                }}
+                elements.forEach(visit);
+                return Array.from(attached).filter(input =>
+                  input.tagName === 'INPUT' && input.id.startsWith(match[1])
+                  && (!match[2] || input.checked));
               }},
             }};
 
@@ -565,6 +576,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-runtime-vm';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
             """,
@@ -623,6 +635,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-runtime-exported';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
             """,
@@ -682,6 +695,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-cube-structured';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
             """,
@@ -747,6 +761,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-cube-flattened';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
             """,
@@ -798,6 +813,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-source-dedupe';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('light-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
@@ -847,6 +863,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-filter-dedupe';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('filter-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
@@ -988,6 +1005,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-field-survival';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
             """,
@@ -1038,6 +1056,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-no-dup-route-runtime';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('add-btn').listeners.click();
             const output = document.getElementById('output-text').value;
             return {
@@ -1100,6 +1119,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-agilent-rtca-esight';
             systemSelect.listeners.change({ target: systemSelect });
+            document.getElementById("runtime-confirm").checked = true;
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
             """,

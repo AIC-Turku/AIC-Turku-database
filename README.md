@@ -158,10 +158,12 @@ The methods generator consumes `dashboard_docs/assets/instruments_data.json` and
 
 ### Current behavior
 
-- blocks generation when policy-critical metadata required for trustworthy method text is missing,
+- marks the draft incomplete when policy-critical instrument metadata is missing,
 - hides empty hardware sections for the currently selected instrument,
 - renders option details inline with the checkbox label when compact explanatory text is available,
-- deduplicates repeated add-clicks for the same instrument/selection signature,
+- requires confirmation before including acquisition actions or a reviewed simulator plan,
+- accepts an optional acquisition date/reference without claiming to resolve historical configurations,
+- deduplicates unchanged add-clicks while preserving different acquisitions on the same instrument,
 - groups some repeated hardware categories into cleaner sentences,
 - appends acknowledgements from config,
 - adds the xCELLigence acknowledgement when an xCELLigence instrument was actually used.
@@ -304,11 +306,22 @@ python scripts/generate_templates.py
 
 ## Tests
 
-Run the full test suite:
+Install the test dependencies and Chromium, then run the full test suite:
 
 ```bash
+pip install -r requirements-test.txt
+python -m playwright install chromium
 PYTHONPATH=. pytest -q
 ```
+
+The audit regressions use the production methods template and JavaScript in a
+real Chromium DOM with deterministic fetch/storage boundaries. They do not need
+FPbase or the live dashboard. A system `chromium` executable is used when present;
+otherwise Playwright uses its installed Chromium. Missing browser dependencies
+fail these tests rather than silently skipping them.
+
+See `docs/audit_fixes_2026-09-12.md` for the first correctness repair batch and
+remaining historical-configuration work.
 
 The current suite covers:
 
