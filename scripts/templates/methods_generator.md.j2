@@ -5,98 +5,98 @@ hide:
   - toc
 ---
 
-# 📝 Materials and Methods Generator
+# Methods generator
 
-!!! warning "Work in progress"
-    This tool is a work in progress. Please independently verify generated information, as not all features are working yet.
+Build a draft microscopy methods paragraph from the facility inventory. Choose the microscope and the hardware you actually used, then add experiment-specific acquisition settings before publication. The draft is structured around the **QUAREP-LiMi minimal reporting recommendations** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)).
 
+!!! note "Check before publication"
+    This tool uses the current facility record. It does not reconstruct historical configurations or recover acquisition settings that are absent from the inventory or image metadata.
 
-This tool generates a draft "Materials and Methods" text block aligned with the **QUAREP-LiMi minimal reporting requirements** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)). Select a system, choose the specific hardware you used, and click **"Add to Methods"**. You can repeat this process for multiple microscopes and then complete any placeholders with experiment-specific metadata before publication.
 <div class="aic-card" style="padding: 20px; margin-bottom: 20px; background-color: var(--md-default-bg-color);">
-  <label for="system-select"><strong>Select Microscope:</strong></label>
+  <label for="system-select"><strong>Microscope</strong></label>
   <select id="system-select" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light);">
     <option value="">-- Choose an instrument --</option>
   </select>
 
   <div id="methods-metadata-warning" class="admonition warning" style="display: none; margin-bottom: 15px;">
     <p class="admonition-title">Missing instrument metadata</p>
-    <p style="margin: 0 0 8px 0;">This draft is incomplete because instrument metadata is missing. Confirm the relevant details with facility staff before publication.</p>
+    <p style="margin: 0 0 8px 0;">The facility record is incomplete for this draft. Confirm the relevant details with AIC staff before publication.</p>
     <ul id="methods-metadata-blockers" style="margin: 0; padding-left: 20px;"></ul>
   </div>
 
   <div id="hardware-options" style="display: none;">
-    <p><label for="session-label">Acquisition / figure reference (optional):</label><br>
+    <p><label for="session-label">Acquisition or figure reference (optional)</label><br>
     <input id="session-label" type="text" maxlength="200" style="width: 100%;" placeholder="For example: Figure 2, fixed samples"></p>
-    <p><label for="acquisition-date">When did you use this microscope? (optional)</label><br>
+    <p><label for="acquisition-date">Acquisition date (optional)</label><br>
     <input id="acquisition-date" type="date"></p>
-    <p><strong>Historical configuration not verified:</strong> this form uses the current inventory. The date labels your acquisition; it does not reconstruct past hardware or software. Leave it blank when unknown and confirm historical settings with facility staff.</p>
+    <p><strong>Historical configuration:</strong> the form uses the current inventory. The date labels the acquisition; it does not reconstruct past hardware or software. Leave it blank when unknown and confirm historical settings with AIC staff.</p>
     <div id="runtime-review" style="display: none;">
-      <details><summary>Review available simulator plan</summary><pre id="runtime-preview" style="max-height: 18rem; overflow: auto;"></pre></details>
+      <details><summary>Review available Virtual Microscope plan</summary><pre id="runtime-preview" style="max-height: 18rem; overflow: auto;"></pre></details>
       <p id="runtime-review-status" role="status"></p>
-      <label><input id="runtime-confirm" type="checkbox"> I have reviewed this plan and confirm these were the settings actually used. Include it in this draft.</label>
+      <label><input id="runtime-confirm" type="checkbox"> I reviewed this plan and confirm that these were the settings actually used. Include them in the draft.</label>
     </div>
     <div id="section-confirmed" class="methods-option-section">
-      <strong>Confirm acquisition actions:</strong>
-      <p>Select only statements that describe what you actually did. Installed capabilities are not automatically included.</p>
+      <strong>Confirmed acquisition actions</strong>
+      <p>Select only statements that describe what you actually did. Installed capabilities are not included automatically.</p>
       <div id="confirmed-list"></div>
     </div>
     <div id="section-route" class="methods-option-section">
-      <strong>Optical Routes &amp; Readouts:</strong>
+      <strong>Optical routes and readouts</strong>
       <div id="route-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-modality" class="methods-option-section">
-      <strong>(Legacy) Imaging Modalities:</strong>
+      <strong>Legacy imaging modalities</strong>
       <div id="modality-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-module" class="methods-option-section">
-      <strong>Hardware Modules &amp; Environmental Control:</strong>
+      <strong>Hardware modules and environmental control</strong>
       <div id="module-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-scanner" class="methods-option-section">
-      <strong>Scanner:</strong>
+      <strong>Scanner</strong>
       <div id="scanner-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-obj" class="methods-option-section">
-      <strong>Objectives:</strong>
+      <strong>Objectives</strong>
       <div id="obj-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-light" class="methods-option-section">
-      <strong>Light Sources (Lasers/LEDs):</strong>
+      <strong>Light sources</strong>
       <div id="light-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-filter" class="md-typeset methods-option-section">
-      <h4>Filters / Dichroics:</h4>
+      <h4>Filters and dichroics</h4>
       <div id="filter-list" class="checkbox-group"></div>
     </div>
 
     <div class="md-typeset methods-option-section" id="section-splitter">
-      <h4>Camera / Emission Splitters:</h4>
+      <h4>Camera and emission splitters</h4>
       <div id="splitter-list" class="checkbox-group"></div>
     </div>
 
     <div id="section-det" class="methods-option-section">
-      <strong>Detectors:</strong>
+      <strong>Detectors</strong>
       <div id="det-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-magnification-changer" class="methods-option-section">
-      <strong>Magnification Changers:</strong>
+      <strong>Magnification changers</strong>
       <div id="magnification-changer-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-optical-modulator" class="methods-option-section">
-      <strong>Optical Modulators:</strong>
+      <strong>Optical modulators</strong>
       <div id="optical-modulator-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
     <div id="section-illumination-logic" class="methods-option-section">
-      <strong>Adaptive Illumination Logic:</strong>
+      <strong>Adaptive illumination logic</strong>
       <div id="illumination-logic-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
@@ -104,15 +104,11 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
   </div>
 </div>
 
-!!! tip "💡 Pro-Tip: Recover exact settings from raw metadata"
-    Need exact exposure times, pixel sizes, and laser powers? Use your raw files (`.nd2`, `.czi`, `.lif`, etc.) and let Fiji/ImageJ + an LLM do the extraction for you:
+### Recover acquisition settings from image metadata
 
-    1. Open the raw image in **Fiji / ImageJ**.
-    2. Press **`I`** (or use `Image > Show Info...`) to open complete acquisition metadata.
-    3. Copy the metadata text and paste it into an LLM (e.g., ChatGPT/Copilot) with a prompt such as:
-       *"Extract exact exposure times, pixel size (xy), z-step, pinhole size, and laser powers from this metadata."*
+Exact exposure times, pixel size, z-step, laser settings, and other acquisition parameters are often stored in the original image metadata. In Fiji/ImageJ, open the raw file and use **Image > Show Info...** (or press **I**) to inspect the metadata. Copy the relevant values into your records. If you use an assistant to extract fields from metadata text, verify every value against the raw metadata before publication.
 
-### Generated Methods Draft
+### Generated methods draft
 
 Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear All** to start again. Review all placeholders and acquisition-specific settings before publication.
 <div style="position: relative;">

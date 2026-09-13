@@ -4,19 +4,14 @@ hide:
   - toc
 ---
 
-# Retired Instruments
+# Retired instruments
 
-!!! warning "Work in progress"
-    This dashboard is a work in progress. Please independently verify critical information, as not all features are working yet.
+This archive lists instruments that are no longer in active service.
 
-
-This page is a separate archive of instruments that are no longer in active service.
-
-{# Make this page safe even if retired_instruments is not provided in context #}
 {% set retired_instruments = retired_instruments | default([], true) %}
 
 {% if retired_instruments %}
-| Instrument | Manufacturer | Model | Former Location |
+| Instrument | Manufacturer | Model | Former location |
 |:--|:--|:--|:--|
 {% for inst in retired_instruments -%}
 | [{{ inst.display_name | default(inst.id, true) | default("—", true) }}](../instruments/{{ inst.id }}/index.md) | {{ inst.manufacturer | default("—", true) }} | {{ inst.model | default("—", true) }} | {{ inst.location | default("—", true) }} |

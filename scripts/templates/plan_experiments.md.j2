@@ -1,20 +1,15 @@
 ---
-title: Plan Your Experiments
+title: Experiment planning
 hide:
   - navigation
   - toc
 ---
 
-# 🧪 Plan Your Experiments
+# Experiment planning
 
-!!! warning "Work in progress"
-    This tool is a work in progress. Please independently verify generated information, as not all features are working yet.
+Good imaging starts with the biological question, sample constraints, and the measurement you need. The references below are useful primers on quantitative fluorescence microscopy and experimental bias.
 
-
-**Plan your experiment before you book the microscope.** Careful experimental design is crucial for acquiring quantitative, unbiased, and reproducible imaging data.
-
-## 📖 Essential Reading
-Before starting your imaging project, we highly recommend reviewing these foundational guides:
+## Background reading
 
 * [Accuracy and precision in quantitative fluorescence microscopy – A foundational guide to collecting quantitative data](https://rupress.org/jcb/article/185/7/1135/35453/Accuracy-and-precision-in-quantitative)
 * [Designing a rigorous microscopy experiment – Validating methods and avoiding bias](https://rupress.org/jcb/article/218/5/1452/120908/Designing-a-rigorous-microscopy-experiment)
@@ -22,30 +17,32 @@ Before starting your imaging project, we highly recommend reviewing these founda
 
 ---
 
-## 🤖 AI-Assisted Microscope Selection
+## Compare microscopes with an assistant
 
-Choosing the right microscope for your specific biological question can be challenging. Because our facility maintains a highly structured database, you can use AI assistants (like ChatGPT, Claude, or Copilot) to recommend the best system for your needs based on our *actual* inventory!
+If you use ChatGPT, Claude, Copilot, or another assistant to compare AIC microscopes, attach the inventory below to the conversation. It contains the current structured inventory and recorded instrument status. Missing metadata remain explicit rather than being filled in automatically.
 
-### Step 1: Download our Facility Database
-Download the tailored, AI-ready snapshot of our active microscope inventory. This file includes current hardware capabilities and live instrument health statuses.
+!!! note "Planning aid"
+    An assistant can help narrow the options, but it cannot confirm instrument access, training, sample compatibility, or undocumented configuration details. Confirm the final plan with AIC staff before booking.
 
-[⬇️ Download `llm_inventory.json`]({{ llm_inventory_asset_url }}){: download="llm_inventory.json" .md-button .md-button--primary style="margin-top: 10px; margin-bottom: 20px;" }
+### 1. Download the facility inventory
 
-### Step 2: Open your preferred AI Assistant
-Go to your preferred AI tool (e.g., ChatGPT, Claude) and ensure it supports file uploads.
+[Download `llm_inventory.json`]({{ llm_inventory_asset_url }}){: download="llm_inventory.json" .md-button .md-button--primary style="margin-top: 10px; margin-bottom: 20px;" }
 
-### Step 3: Upload the file and use this prompt
-Upload the `llm_inventory.json` file you just downloaded. Then, describe your experiment in the input box below and copy the auto-generated prompt into your AI assistant.
+### 2. Describe the experiment
 
-<p>Fill in the box below with your experiment details. The AI prompt will automatically update. When you are ready, click <strong>Copy Prompt</strong> and paste it into ChatGPT or Claude.</p>
+Fill in the box below. Include the sample, fluorophores, live/fixed state, imaging depth, speed, duration, and any resolution or phototoxicity constraints that matter.
 
 <div style="background-color: var(--md-default-bg-color); padding: 15px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; margin-bottom: 15px;">
-  <label for="experiment-desc" style="font-weight: bold; display: block; margin-bottom: 8px;">Describe your experiment:</label>
-  <textarea id="experiment-desc" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; background-color: var(--md-default-bg-color); font-family: inherit; resize: vertical;" placeholder="E.g., I need to image live HeLa cells over 24 hours. I am using GFP and mCherry. Needs to be very gentle (low phototoxicity) and I want optical sectioning."></textarea>
+  <label for="experiment-desc" style="font-weight: bold; display: block; margin-bottom: 8px;">Experiment details</label>
+  <textarea id="experiment-desc" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; background-color: var(--md-default-bg-color); font-family: inherit; resize: vertical;" placeholder="For example: live HeLa cells expressing GFP and mCherry, imaged for 24 hours with optical sectioning and low phototoxicity."></textarea>
 </div>
 
+### 3. Copy the prompt
+
+Attach `llm_inventory.json` to your assistant, then copy the prompt below. The prompt is deliberately strict about missing metadata and optical-route evidence.
+
 <div style="position: relative; margin-bottom: 20px;">
-  <button id="copy-prompt-btn" class="md-button md-button--primary" style="position: absolute; top: 10px; right: 10px; z-index: 10;">📋 Copy Prompt</button>
+  <button id="copy-prompt-btn" class="md-button md-button--primary" style="position: absolute; top: 10px; right: 10px; z-index: 10;">Copy prompt</button>
   <textarea id="generated-prompt" rows="18" style="width: 100%; padding: 15px; padding-top: 50px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5; resize: vertical;" readonly></textarea>
 </div>
 
@@ -75,70 +72,50 @@ Upload the `llm_inventory.json` file you just downloaded. Then, describe your ex
     const outputArea = document.getElementById("generated-prompt");
     const copyBtn = document.getElementById("copy-prompt-btn");
 
-    const basePromptTop = `You are an expert microscopy advisor for a core imaging facility.
+    const basePromptTop = `You are helping me plan a microscopy experiment using the attached ${facilityShortName} inventory.
 
-Use only the attached JSON inventory as ground truth for hardware and status.
-Do not invent or infer absent hardware details. Specifically, if a field is null, missing, or listed under missing metadata, treat it as unknown and do not assume it exists.
-Use each microscope's hardware_focus_summary for quick screening, but verify recommendations against the underlying raw hardware fields before making a final recommendation.
-If critical details are missing (in the experiment description or inventory), explicitly state uncertainty and ask focused follow-up questions.
-Only recommend microscopes listed in the attached JSON file.
-Keep the response hardware focused: discuss optics, routes, sources, filters, detectors, objectives, environmental control, and operational status. Do not drift into generic biological interpretation.
+Rules:
+- Use the attached JSON as the only source for facility hardware, optical routes, and instrument status.
+- Treat missing, null, or unknown values as unknown. Do not infer installed hardware.
+- Recommend only microscopes and components present in the inventory.
+- Exclude unavailable or incompatible microscopes before ranking the remaining options.
+- Use llm_context.authoritative_route_contract.routes[] as the primary source for route truth. Use route_planning_summary only as a convenience view of the same data.
+- Raw hardware lists are secondary context and must not override route-contract data.
+- Do not claim an objective, source, filter, detector, or other component is usable on a route unless the inventory supports that connection.
+- If splitters or branch selectors are present, state the branch handling and final endpoint.
+- Separate known facts from unknowns, assumptions, and caveats.
+- If missing metadata could change the recommendation, say what is missing and advise me to confirm it with facility staff.
 
-I have attached a JSON file describing the microscopes available in my core facility, including operational status, capabilities, and known-vs-missing metadata.
-
-I want to plan an imaging experiment.
-
-Here is what I want to do:
+My experiment:
 `;
 
     const basePromptBottom = `
 
-Recommend the best 1 or 2 microscopes from the attached file for this experiment.
-Follow this required procedure in order:
-1) Eliminate unavailable or incompatible instruments first (offline, blocked, or missing critical required capabilities).
-2) For each remaining instrument, identify candidate route(s)/modality from \`llm_context.authoritative_route_contract\` first. Use \`llm_context.route_planning_summary\` only as a convenience view derived from that same truth.
-3) Choose one best route on the top instrument and one backup route/instrument.
-4) For each recommended route, extract key optics (sources, excitation/dichroic/emission optics, modulators), detector/endpoint, and relevant objective(s).
-5) If splitters/branch selectors exist, explicitly state branch handling and final endpoint per branch.
-6) Separate known facts from unknowns/assumptions/caveats using inventory completeness metadata and route caveat fields.
+Please return:
+1. The best-fit microscope and one backup, with brief evidence from the inventory.
+2. A suggested optical route and detector/readout for each recommendation, using only explicitly supported route data.
+3. Relevant objective options where the inventory explicitly supports them.
+4. Important trade-offs.
+5. Missing metadata or assumptions that need staff confirmation.
+6. A short acquisition plan and the settings I should record for methods reporting.
 
-Route-truth rules (mandatory):
-- Route truth comes from \`llm_context.authoritative_route_contract.routes[]\` (primary).
-- Raw hardware lists are secondary context and must not override route contract truth.
-- If route fields are missing or unresolved, report uncertainty and ask focused follow-up questions.
-
-Output requirements (must include all):
-- best instrument(s) with brief reasoned ranking (top choice + backup),
-- selected route for each recommendation,
-- key optics,
-- detector/endpoint,
-- objective(s),
-- branch/splitter handling,
-- known vs unknown facts (explicitly separated),
-- key tradeoffs and uncertainties.
-
-Keep the recommendation concise, hardware-focused, and grounded in the attached JSON only.
-Conclude by encouraging discussion with the ${facilityShortName} core facility staff before booking for final validation and training.`;
+Keep the answer concise and grounded in the attached inventory. Finish by identifying anything I should confirm with ${facilityShortName} staff before booking.`;
 
     function updatePrompt() {
       const userText = inputArea.value.trim();
-      const desc = userText ? userText : "[Just describe the experiment in your own words. E.g., sample type, live/fixed, fluorophores, thick/thin, fast dynamics, etc.]";
+      const desc = userText ? userText : "[Describe the sample, live/fixed state, fluorophores, imaging depth, required resolution, acquisition speed or duration, and phototoxicity constraints.]";
       outputArea.value = basePromptTop + desc + basePromptBottom;
     }
 
-    // Update the output whenever the user types
     inputArea.addEventListener("input", updatePrompt);
-
-    // Initialize the prompt on page load
     updatePrompt();
 
-    // Copy to clipboard functionality
     copyBtn.addEventListener("click", () => {
       outputArea.select();
-      outputArea.setSelectionRange(0, 99999); // For mobile devices
+      outputArea.setSelectionRange(0, 99999);
       navigator.clipboard.writeText(outputArea.value).then(() => {
         const originalText = copyBtn.innerText;
-        copyBtn.innerText = "✅ Copied!";
+        copyBtn.innerText = "Copied";
         setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
       }).catch(err => {
         console.error('Failed to copy text: ', err);
@@ -149,8 +126,8 @@ Conclude by encouraging discussion with the ${facilityShortName} core facility s
 
 ---
 
-## 💬 Consult Our Staff
+## Discuss the plan with AIC staff
 
-While AI is a great starting point for navigating our equipment, nothing beats human expertise! If you are unsure about your experimental design, fluorophore choices, or which microscope is the perfect fit for your research, please don't hesitate to contact our core facility staff.
+The inventory and prompt can narrow the options. AIC staff can check sample preparation, fluorophore choices, access, training, and instrument-specific constraints before you book.
 
-[✉️ {{ facility_contact_label }}]({{ facility_contact_url }}){: target="_blank" .md-button }
+[{{ facility_contact_label }}]({{ facility_contact_url }}){: target="_blank" .md-button }
