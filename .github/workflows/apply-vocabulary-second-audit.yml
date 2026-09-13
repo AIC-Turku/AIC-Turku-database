@@ -1,0 +1,91 @@
+name: Apply second vocabulary audit fixes
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    if: github.head_ref == 'fix/vocabulary-second-audit-2026-09-13'
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: "requirements-test.txt"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Apply deterministic audit patches
+        run: |
+          python -m scripts._vocab_audit_patch_validation
+          python -m scripts._vocab_audit_patch_consumers
+          python -m scripts._vocab_audit_patch_corrections
+          python -m scripts._vocab_audit_patch_tests
+          rm -rf .vocab-transfer
+          rm -f .github/workflows/apply-vocabulary-hardening.yml
+          rm -f scripts/_vocab_audit_patch_common.py
+          rm -f scripts/_vocab_audit_patch_validation.py
+          rm -f scripts/_vocab_audit_patch_consumers.py
+          rm -f scripts/_vocab_audit_patch_corrections.py
+          rm -f scripts/_vocab_audit_patch_tests.py
+          rm -f .github/workflows/apply-vocabulary-second-audit.yml
+          python -m scripts.generate_templates
+
+      - name: Syntax and generated-template checks
+        run: |
+          python -m compileall -q scripts tests
+          python -m scripts.generate_templates --check
+          git diff --check
+
+      - name: Validate repository
+        run: python -m scripts.validate
+
+      - name: Run full test suite
+        run: PYTHONPATH=. python -m pytest -q
+
+      - name: Run strict dashboard builder
+        run: python -m scripts.dashboard_builder --strict
+
+      - name: Build MkDocs strictly
+        run: mkdocs build --strict
+
+      - name: Ensure no temporary transfer machinery remains
+        run: |
+          test ! -e .vocab-transfer
+          test ! -e .github/workflows/apply-vocabulary-hardening.yml
+          test ! -e .github/workflows/apply-vocabulary-second-audit.yml
+          test ! -e scripts/_vocab_audit_patch_common.py
+          test ! -e scripts/_vocab_audit_patch_corrections.py
+          git diff --check
+
+      - name: Commit verified result to PR branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --stat
+          git commit -m "Fix second vocabulary audit findings"
+          git push origin HEAD:${{ github.head_ref }}
