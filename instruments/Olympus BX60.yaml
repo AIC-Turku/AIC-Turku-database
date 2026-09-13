@@ -37,8 +37,8 @@ hardware:
     manufacturer: Olympus
     model: DP71
     pixel_pitch_um: 6.45
-    sensor_format_px: 1360 x 1024
-    notes: Native effective array is 1360 x 1024 pixels. Pixel-shift acquisition produces 4080 x 3072 output images; this is not the native sensor array.
+    sensor_format_px: 1.45 MP
+    notes: Manufacturer specifies 1.45 million effective sensor pixels; the physical array dimensions are not confirmed here. The documented live image format is 1360 x 1024 and pixel-shift output is 4080 x 3072; these output formats must not be used as physical sensor dimensions.
     url: https://www.olympus.co.jp/jp/news/2006a/nr060427dp71j.html
     id: detector_1
   eyepieces:

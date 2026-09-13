@@ -231,6 +231,7 @@ Hi everyone, please help us complete the AIC website. For the *Olympus BX60*, co
 2. What version of Cell^D is installed?
 3. Is the optional U-MNIBA2 narrow GFP cube fitted or stored separately? Is the optional 60x/1.25 objective available, and do we have its part number/data sheet for working distance?
 4. Which phase-contrast condenser and phase-ring positions are fitted?
+5. Do we have a DP71 sensor specification with its physical pixel-array dimensions? Olympus gives a 1.45 MP sensor count, but its 1360 x 1024 live format and 4080 x 3072 pixel-shift output are image formats, not proof of the physical array dimensions.
 
 Screenshots of software information, accessible labels, data sheets or a simple sketch are all helpful. Please do not move or remove optics to answer these questions. Partial answers are welcome. Thanks!
 ```

@@ -28,7 +28,9 @@ def test_native_sensor_sizes_are_not_acquisition_output_sizes():
     assert nikon['sensor_format_px'] == '2048 x 2048'
     assert 'hamamatsu.com' in nikon['url']
     dp71 = ledger('Olympus BX60.yaml')['hardware']['detectors'][0]
-    assert dp71['sensor_format_px'] == '1360 x 1024'
+    assert dp71['sensor_format_px'] == '1.45 MP'
+    assert 'physical array dimensions are not confirmed' in dp71['notes']
+    assert '1360 x 1024' in dp71['notes']
     assert '4080 x 3072' in dp71['notes']
     assert 'pixel-shift' in dp71['notes'].lower()
     assert 'olympus.co.jp' in dp71['url']

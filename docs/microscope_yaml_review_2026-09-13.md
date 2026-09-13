@@ -9,7 +9,7 @@ The review covers instrument identity/location, software, objectives, sources, d
 | Instrument | Proposed correction | Evidence and boundary |
 |---|---|---|
 | Nikon Eclipse Ti2-E | Correct ORCA-Flash4.0 V3 native array from 2048 x 2044 to 2048 x 2048 | Exact already-recorded model; Hamamatsu [S1]. Not a session ROI. |
-| Olympus BX60 | Set DP71 native effective array to 1360 x 1024; retain 4080 x 3072 as pixel-shift output | Olympus [S2], consistent with existing pixel-shift notes. |
+| Olympus BX60 | Replace pixel-shift output in sensor field with documented 1.45 MP effective count; retain 1360 x 1024 live and 4080 x 3072 shifted output in notes | Olympus [S2], consistent with existing pixel-shift notes. |
 | Aurora Airy Beam | Convert 500 and 570 nm longpass cut-ons from one-element lists to scalars | Exact existing values; encoding correction, not new hardware. |
 | BioCity CSU-W1 | Replace false empty classification of installed NIR dichroic | Existing notes identify an installed dichroic. Spectra and part number remain unknown/unsupported. |
 | Med C CSU-W1 | Identify three named widefield cubes and structure existing emission bands | Existing product IDs and values only. Excitation/dichroic gaps remain open. |
@@ -129,7 +129,7 @@ High priority: location and NimOS/CODI versions are missing. The split image rea
 
 ID: `scope-olympus-bx60`. File: `instruments/Olympus BX60.yaml`.
 
-Medium priority: location and Cell^D version are missing. Confirm optional narrow GFP cube/60x objective availability, working distance and phase condenser configuration. Main fluorescence cubes and lamps are documented. The DP71 sensor-versus-pixel-shift-output error is corrected with manufacturer evidence.
+Medium priority: location and Cell^D version are missing. Confirm optional narrow GFP cube/60x objective availability, working distance and phase condenser configuration. Main fluorescence cubes and lamps are documented. The DP71 pixel-shift output is removed from the sensor field. The manufacturer confirms a 1.45 MP effective count but does not provide physical array dimensions in the cited source; those dimensions remain unverified.
 
 ### 18. Zeiss AxioZoom.V16
 
