@@ -109,6 +109,16 @@
     return (component && (component.display_label || component.name)) || fallback;
   }
 
+  function routeDisplayLabel(routeId) {
+    const normalized = cleanString(routeId).toLowerCase();
+    if (!normalized) return '';
+    const options = state.activeInstrument && Array.isArray(state.activeInstrument.routeOptions)
+      ? state.activeInstrument.routeOptions
+      : [];
+    const match = options.find((entry) => cleanString(entry && entry.id).toLowerCase() === normalized);
+    return cleanString(match && match.label) || normalized;
+  }
+
   function rgbaFromHex(hex, alpha) {
     const cleaned = String(hex || '').replace('#', '');
     if (cleaned.length !== 6) return `rgba(59, 130, 246, ${alpha})`;
@@ -1946,7 +1956,7 @@
         source.role_label ? `role: ${source.role_label}` : (source.role ? `role: ${source.role}` : ''),
         source.kind_label ? `kind: ${source.kind_label}` : (source.kind ? `kind: ${source.kind}` : ''),
         source.route_label ? `route: ${source.route_label}` : '',
-        normalizeSourceRoutes(source).length ? `routes: ${normalizeSourceRoutes(source).join(', ')}` : '',
+        normalizeSourceRoutes(source).length ? `routes: ${normalizeSourceRoutes(source).map(routeDisplayLabel).join(', ')}` : '',
       ].filter(Boolean).join(' • ');
       if (meta.textContent) card.appendChild(meta);
 

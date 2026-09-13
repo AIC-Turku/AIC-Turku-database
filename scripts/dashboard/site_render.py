@@ -141,6 +141,18 @@ def _build_llm_inventory_record_from_build_input(instrument: dict[str, Any]) -> 
     }
 
 
+def filter_public_instruments(
+    instruments: list[dict[str, Any]],
+    excluded_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Remove explicitly presentation-excluded records from public dashboard surfaces."""
+    return [
+        inst
+        for inst in instruments
+        if isinstance(inst, dict) and inst.get("id") not in excluded_ids
+    ]
+
+
 def build_nav(
     instruments: list[dict[str, Any]],
     retired_instruments: list[dict[str, Any]],
@@ -156,15 +168,15 @@ def build_nav(
     ]
 
     return [
-        {"Fleet Overview": "index.md"},
-        {"System Health": "status.md"},
+        {"Fleet overview": "index.md"},
+        {"Instrument status": "status.md"},
         {"Microscopes": microscopes},
         {"Objectives": "objective_pool.md"},
-        {"Plan Your Experiments": "plan_experiments.md"},
+        {"Experiment planning": "plan_experiments.md"},
         {"Virtual Microscope": "virtual_microscope.md"},
-        {"Methods Generator": "methods_generator.md"},
-        {"Vocabulary Dictionary": "vocabulary_dictionary.md"},
-        {"Retired Instruments": [{"Overview": "retired/index.md"}, *retired]},
+        {"Methods generator": "methods_generator.md"},
+        {"Vocabulary dictionary": "vocabulary_dictionary.md"},
+        {"Retired instruments": [{"Overview": "retired/index.md"}, *retired]},
     ]
 
 
@@ -455,6 +467,15 @@ def render_site(
         return 1
     catalogue_instruments = {item["id"] for item in catalogue["instruments"]}
 
+    # Reuse the facility's explicit presentation exclusion list for every public
+    # dashboard surface. The excluded records remain loaded and validated, but
+    # synthetic/development fixtures must not enter generated pages, search,
+    # navigation, or researcher-facing exports.
+    presentation_excluded_ids = set(catalogue.get("excluded_instrument_ids") or [])
+    public_retired_instruments = filter_public_instruments(
+        retired_instruments, presentation_excluded_ids
+    )
+
     (docs_root / "vocabulary_dictionary.md").write_text(
         build_vocabulary_dictionary_markdown(vocabulary),
         encoding="utf-8",
@@ -508,10 +529,10 @@ def render_site(
 
     fleet_counts = {"total": len(instruments), "green": 0, "yellow": 0, "red": 0}
     flagged: list[dict[str, Any]] = []
-    retired_instrument_ids = {inst["id"] for inst in retired_instruments}
+    retired_instrument_ids = {inst["id"] for inst in public_retired_instruments}
     global_vm_payloads: dict[str, dict[str, Any]] = {}
 
-    for inst in [*instruments, *retired_instruments]:
+    for inst in [*instruments, *public_retired_instruments]:
         instrument_id = inst["id"]
         is_retired_instrument = instrument_id in retired_instrument_ids
 
@@ -689,7 +710,7 @@ def render_site(
                 else build_methods_generator_instrument_export(inst)
             )
             for inst in sorted(
-                [*instruments, *retired_instruments],
+                [*instruments, *public_retired_instruments],
                 key=lambda item: item.get("id", ""),
             )
         ],
@@ -726,7 +747,7 @@ def render_site(
     status_md = tpl_status.render(issues=flagged)
     (docs_root / "status.md").write_text(status_md, encoding="utf-8")
 
-    retired_md = tpl_retired.render(retired_instruments=retired_instruments)
+    retired_md = tpl_retired.render(retired_instruments=public_retired_instruments)
     retired_docs_dir = docs_root / "retired"
     retired_docs_dir.mkdir(parents=True, exist_ok=True)
     (retired_docs_dir / "index.md").write_text(retired_md, encoding="utf-8")
@@ -735,7 +756,7 @@ def render_site(
         facility=facility,
         branding=branding,
         instruments=instruments,
-        retired_instruments=retired_instruments,
+        retired_instruments=public_retired_instruments,
     )
     (repo_root / "mkdocs.yml").write_text(
         yaml.safe_dump(mkdocs_config, sort_keys=False, allow_unicode=True),
