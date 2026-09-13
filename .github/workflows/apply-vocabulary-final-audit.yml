@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -68,7 +68,7 @@ jobs:
           git diff --check
           python -m scripts.validate
 
-      - name: Reproduce full test failure and preserve evidence
+      - name: Reproduce full test failure
         shell: bash
         run: |
           set +e
@@ -76,23 +76,12 @@ jobs:
           code=$?
           set -e
           if [ "$code" -ne 0 ]; then
-            {
-              echo '# Diagnostic pytest failure from post-merge vocabulary audit'
-              echo
-              echo 'Exit code:' "$code"
-              echo
-              echo '```text'
-              tail -n 300 /tmp/pytest.log
-              echo '```'
-            } > CI_PYTEST_FAILURE.md
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Materialize vocabulary fixes and preserve failing test evidence"
-            git push origin HEAD:${{ github.head_ref }}
+            echo '===== pytest failure tail ====='
+            tail -n 400 /tmp/pytest.log
+            echo '===== end pytest failure tail ====='
             exit "$code"
           fi
-          rm -f CI_PYTEST_FAILURE.md
+          cat /tmp/pytest.log
 
       - name: Remaining release gates
         run: |
@@ -110,12 +99,3 @@ jobs:
           test -z "$(find scripts -maxdepth 1 -name '_vocab_audit_patch_*.py' -print -quit)"
           test ! -e scripts/_vocab_final_audit_patch.py
           git diff --check
-
-      - name: Commit verified clean result
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --cached --stat
-          git commit -m "Fix final vocabulary audit findings"
-          git push origin HEAD:${{ github.head_ref }}
