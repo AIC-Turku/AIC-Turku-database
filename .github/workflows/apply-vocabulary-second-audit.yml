@@ -40,9 +40,9 @@ jobs:
 
       - name: Apply deterministic audit patches
         run: |
-          python scripts/_vocab_audit_patch_validation.py
-          python scripts/_vocab_audit_patch_consumers.py
-          python scripts/_vocab_audit_patch_tests.py
+          python -m scripts._vocab_audit_patch_validation
+          python -m scripts._vocab_audit_patch_consumers
+          python -m scripts._vocab_audit_patch_tests
           rm -rf .vocab-transfer
           rm -f .github/workflows/apply-vocabulary-hardening.yml
           rm -f scripts/_vocab_audit_patch_common.py
