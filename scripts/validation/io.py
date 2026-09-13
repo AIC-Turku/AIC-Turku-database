@@ -22,9 +22,23 @@ def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
 def _load_yaml(
     path: Path, *, reject_duplicate_keys: bool = False
 ) -> tuple[dict[str, Any] | None, str | None]:
-    loader: type[yaml.SafeLoader] = yaml.SafeLoader
+    safe_loader = getattr(yaml, "SafeLoader", None)
+    if safe_loader is None:
+        if reject_duplicate_keys:
+            return None, "YAML loader cannot enforce duplicate-key rejection."
+        try:
+            payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as exc:
+            return None, str(exc)
+        if payload is None:
+            return None, "YAML document is empty."
+        if not isinstance(payload, dict):
+            return None, f"Expected YAML mapping/object at top level, found {type(payload).__name__}."
+        return payload, None
+
+    loader = safe_loader
     if reject_duplicate_keys:
-        class UniqueKeyLoader(yaml.SafeLoader):
+        class UniqueKeyLoader(safe_loader):
             pass
 
         def construct_unique_mapping(
