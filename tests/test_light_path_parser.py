@@ -2788,7 +2788,7 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(by_index["hal_1"]["kind"], "halogen_lamp")
         self.assertEqual(by_index["hal_1"]["spectral_mode"], "broadband")
 
-        self.assertEqual(by_index["mp_1"]["kind"], "multiphoton_laser")
+        self.assertEqual(by_index["mp_1"]["kind"], "ti_sapphire")
         self.assertEqual(by_index["mp_1"]["spectral_mode"], "tunable_line")
         self.assertEqual(by_index["mp_1"]["timing_mode"], "pulsed")
         self.assertEqual(by_index["mp_1"]["pulse_width_ps"], 120.0)

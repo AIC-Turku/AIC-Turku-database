@@ -121,7 +121,7 @@ hardware:
       correction: ""  # Objective correction class: Important to characterize the objective class. | Allowed values (canonical IDs): plan_apochromat, apochromat, plan_fluorite, fluorite, plan_achromat, achromat
       afc_compatible: false  # AFC compatible: Operational capability metadata.
       is_installed: false  # Is objective installed: Prevents methods generator and dashboard from advertising unavailable optics.
-      specialties:  # Objective specialties: Useful capability annotations. | Allowed values (canonical IDs): long_working_distance, coverslip_correction, water_dipping, phase, dic, uv_transmission, ir_transmission, correction_collar, tirf, sim, sted, polarization, cleared_tissue_imaging, other
+      specialties:  # Objective specialties: Useful capability annotations. | Allowed values (canonical IDs): long_working_distance, cover_glass_specification, coverslip_correction, water_dipping, phase, dic, uv_transmission, ir_transmission, correction_collar, multi_immersion, tirf, sim, sted, polarization, cleared_tissue_imaging, other
         - ""
       notes: ""  # Objective notes: Useful free-text nuance.
       url: ""  # Objective URL: Reference only.

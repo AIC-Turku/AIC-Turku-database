@@ -46,7 +46,7 @@ from scripts.dashboard.objective_catalogue import (
 )
 from scripts.display_labels import resolve_vocab_section_title
 from scripts.validate import Vocabulary, load_policy, print_validation_report, validate_event_ledgers
-from scripts.validation.vocabulary import merge_vocab_registries
+from scripts.validation.vocabulary import build_repository_vocabulary
 
 from scripts.dashboard.instrument_view import build_instrument_mega_dto, vocab_label
 from scripts.dashboard.llm_export import build_llm_inventory_payload
@@ -185,37 +185,50 @@ def _metric_lookup(metric_entries: Any) -> dict[str, Any]:
 
 
 def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
-    all_metrics: set[str] = set()
+    dated_metrics: list[tuple[str, dict[str, dict[str, Any]]]] = []
+    units_by_metric: dict[str, set[str]] = {}
+
     for entry in qc_logs:
         payload = entry.get("data")
-        if isinstance(payload, dict):
-            metrics = metric_raw_lookup(payload)
-            all_metrics.update(metrics.keys())
+        if not isinstance(payload, dict):
+            continue
+        parsed_started = _parse_iso_datetime(payload.get("started_utc"))
+        if parsed_started is None:
+            continue
+        metrics = {
+            item["metric_id"]: item
+            for item in build_qc_metric_view(payload)
+            if isinstance(item.get("metric_id"), str)
+        }
+        dated_metrics.append((parsed_started.strftime("%Y-%m-%d"), metrics))
+        for metric_id, item in metrics.items():
+            value = item.get("value")
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                units_by_metric.setdefault(metric_id, set()).add(str(item.get("unit") or ""))
 
     charts: dict[str, Any] = {}
-    for metric_id in sorted(all_metrics):
-        labels: list[str] = []
-        values: list[Any] = []
+    for metric_id in sorted(units_by_metric):
+        units = sorted(units_by_metric[metric_id])
+        split_by_unit = len(units) > 1
+        for unit in units:
+            labels: list[str] = []
+            values: list[Any] = []
+            for date_label, metrics in dated_metrics:
+                labels.append(date_label)
+                item = metrics.get(metric_id)
+                value = item.get("value") if isinstance(item, dict) and str(item.get("unit") or "") == unit else None
+                is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
+                values.append(value if is_number else None)
 
-        for entry in qc_logs:
-            payload = entry.get("data")
-            if not isinstance(payload, dict):
+            if not any(value is not None for value in values):
                 continue
-
-            parsed_started = _parse_iso_datetime(payload.get("started_utc"))
-            if parsed_started is None:
-                continue
-
-            labels.append(parsed_started.strftime("%Y-%m-%d"))
-            metrics = metric_raw_lookup(payload)
-            val = metrics.get(metric_id)
-            is_number = isinstance(val, (int, float)) and not isinstance(val, bool)
-            values.append(val if is_number else None)
-
-        if any(value is not None for value in values):
-            charts[metric_id] = {
+            series_key = metric_id if not split_by_unit else f"{metric_id}::unit={unit or 'none'}"
+            charts[series_key] = {
                 "labels": labels,
                 "values": values,
+                "metric_id": metric_id,
+                "unit": unit,
+                "split_by_unit": split_by_unit,
             }
 
     return json.dumps(charts)
@@ -227,106 +240,56 @@ def _markdown_table_cell(value: Any) -> str:
 
 
 def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
-    """Render the controlled-vocabulary dictionary markdown page."""
-    vocab_md_lines = [
-        "---",
-        "title: Vocabulary Dictionary",
-        "description: Controlled terminology used in the AIC database.",
-        "---",
-        "",
+    """Render canonical sources once, grouped by authoring task."""
+    lines = [
+        "---", "title: Vocabulary Dictionary", "description: Controlled terminology used in the AIC database.", "---", "",
         "# 📖 Vocabulary Dictionary\n",
-        (
-            "This page defines the strictly controlled terminology used across the AIC database. "
-            "Use the **Canonical ID** when writing YAML files, though the validation scripts "
-            "will gracefully suggest corrections if you use a known **Synonym**.\n"
-        ),
+        "Use the **Canonical ID** when authoring controlled fields. **Synonyms** are rewrite-safe lexical aliases. **Classified values** are more specific scientific descriptions that map to a broader category but are preserved verbatim and never automatically rewritten.\n",
     ]
-
-    categories = {
-        "🔬 Instruments": [
-            "modalities",
-            "modules",
-            "detector_kinds",
-            "light_source_kinds",
-            "scanner_types",
-            "objective_corrections",
-            "objective_immersion",
-        ],
-        "🛠️ Maintenance": [
-            "maintenance_action",
-            "maintenance_reason",
-            "maintenance_status",
-            "service_provider",
-        ],
-        "✅ Quality Control": [
-            "qc_type",
-            "qc_metric_classes",
-            "qc_evaluation_status",
-            "qc_artifact_roles",
-            "qc_measurement_positions",
-            "qc_setpoint_units",
-            "metric_unit",
-        ],
-    }
-
-    rendered_vocabs: set[str] = set()
-
-    for cat_title, expected_vocabs in categories.items():
-        vocab_md_lines.append(f'=== "{cat_title}"\n')
-
-        has_content = False
-        for vocab_name in expected_vocabs:
-            if vocab_name not in vocabulary.terms_by_vocab:
-                continue
-
-            has_content = True
-            rendered_vocabs.add(vocab_name)
-            title = resolve_vocab_section_title(vocab_name)
-            vocab_md_lines.append(f"    ## {title}\n")
-            vocab_md_lines.append("    | Label | Canonical ID | Synonyms | Description |")
-            vocab_md_lines.append("    | :--- | :--- | :--- | :--- |")
-
-            for term in sorted(
-                vocabulary.terms_by_vocab[vocab_name].values(),
-                key=lambda item: item.label.lower(),
-            ):
-                label = f"**{_markdown_table_cell(term.label)}**"
-                code_id = f"`{term.id}`"
-                syns = ", ".join([f"`{_markdown_table_cell(synonym).replace(chr(96), chr(92)+chr(96))}`" for synonym in term.synonyms]) if term.synonyms else "-"
-                desc = _markdown_table_cell(term.description) if term.description else "-"
-                vocab_md_lines.append(f"    | {label} | {code_id} | {syns} | {desc} |")
-
-            vocab_md_lines.append("\n")
-
-        if not has_content:
-            vocab_md_lines.append("    _No vocabularies currently defined for this category._\n\n")
-
-    other_vocabs = [
-        vocab_name
-        for vocab_name in vocabulary.terms_by_vocab.keys()
-        if vocab_name not in rendered_vocabs
+    source_groups: dict[str, dict[str, Any]] = {}
+    for namespace, terms in vocabulary.terms_by_vocab.items():
+        spec = vocabulary.registry_spec_by_vocab.get(namespace, {})
+        raw_path = spec.get("path") or spec.get("file")
+        if isinstance(raw_path, str) and raw_path.strip():
+            source = raw_path.strip(); source_key = f"file:{source}"; source_name = Path(source).stem
+        else:
+            source = "inline policy vocabulary"; source_key = f"inline:{namespace}"; source_name = namespace
+        group = source_groups.setdefault(source_key, {"source": source, "source_name": source_name, "namespaces": [], "terms": terms})
+        group["namespaces"].append(namespace)
+    categories = [
+        ("🧭 Capabilities & Workflows", {"modalities", "modules", "imaging_modes", "contrast_methods", "measurement_readouts", "workflow_tags", "assay_operations", "non_optical_capabilities", "optical_routes"}),
+        ("🔬 Light Paths & Hardware", {"scanner_types", "light_source_kinds", "light_source_roles", "detector_kinds", "stage_types", "autofocus_types", "triggering_modes", "optical_component_types", "endpoint_types", "branch_modes", "ocular_availability"}),
+        ("🔭 Objectives", {"objective_immersion", "objective_corrections", "objective_specialties"}),
+        ("💻 Software", {"software_roles"}),
+        ("✅ Quality Control", {"qc_type", "qc_metric_classes", "qc_evaluation_status", "qc_artifact_roles", "qc_measurement_positions", "qc_setpoint_units", "metric_unit"}),
+        ("🛠️ Maintenance", {"maintenance_action", "maintenance_reason", "maintenance_status", "service_provider"}),
     ]
-    if other_vocabs:
-        vocab_md_lines.append('=== "📦 Other"\n')
-        for vocab_name in sorted(other_vocabs):
-            title = resolve_vocab_section_title(vocab_name)
-            vocab_md_lines.append(f"    ## {title}\n")
-            vocab_md_lines.append("    | Label | Canonical ID | Synonyms | Description |")
-            vocab_md_lines.append("    | :--- | :--- | :--- | :--- |")
-
-            for term in sorted(
-                vocabulary.terms_by_vocab[vocab_name].values(),
-                key=lambda item: item.label.lower(),
-            ):
-                label = f"**{_markdown_table_cell(term.label)}**"
-                code_id = f"`{term.id}`"
-                syns = ", ".join([f"`{_markdown_table_cell(synonym).replace(chr(96), chr(92)+chr(96))}`" for synonym in term.synonyms]) if term.synonyms else "-"
-                desc = _markdown_table_cell(term.description) if term.description else "-"
-                vocab_md_lines.append(f"    | {label} | {code_id} | {syns} | {desc} |")
-
-            vocab_md_lines.append("\n")
-
-    return "\n".join(vocab_md_lines)
+    rendered: set[str] = set()
+    def render_group(source_key: str, group: dict[str, Any]) -> None:
+        lines.append(f"    ## {resolve_vocab_section_title(str(group['source_name']))}\n")
+        namespaces = ", ".join(f"`{_markdown_table_cell(name)}`" for name in sorted(set(group["namespaces"])))
+        lines.append(f"    **Canonical source:** `{_markdown_table_cell(group['source'])}`  ")
+        lines.append(f"    **Used by namespaces:** {namespaces}\n")
+        lines.append("    | Label | Canonical ID | Synonyms (rewrite-safe) | Classified values (preserved) | Description |")
+        lines.append("    | :--- | :--- | :--- | :--- | :--- |")
+        for term in sorted(group["terms"].values(), key=lambda item: item.label.lower()):
+            synonyms = ", ".join(f"`{_markdown_table_cell(value).replace(chr(96), chr(92)+chr(96))}`" for value in term.synonyms) if term.synonyms else "-"
+            raw_classified = term.metadata.get("classified_values", [])
+            classified = ", ".join(f"`{_markdown_table_cell(value).replace(chr(96), chr(92)+chr(96))}`" for value in raw_classified if isinstance(value, str)) if isinstance(raw_classified, list) and raw_classified else "-"
+            lines.append(f"    | **{_markdown_table_cell(term.label)}** | `{_markdown_table_cell(term.id)}` | {synonyms} | {classified} | {_markdown_table_cell(term.description) if term.description else '-'} |")
+        lines.append("\n"); rendered.add(source_key)
+    for title, names in categories:
+        matching = [(key, group) for key, group in source_groups.items() if group["source_name"] in names]
+        if matching:
+            lines.append(f'=== "{title}"\n')
+            for key, group in sorted(matching, key=lambda item: str(item[1]["source_name"])):
+                render_group(key, group)
+    remaining = [(key, group) for key, group in source_groups.items() if key not in rendered]
+    if remaining:
+        lines.append('=== "📦 Other"\n')
+        for key, group in sorted(remaining, key=lambda item: str(item[1]["source_name"])):
+            render_group(key, group)
+    return "\n".join(lines)
 
 
 def build_mkdocs_config(
@@ -398,27 +361,7 @@ def build_mkdocs_config(
 
 
 def _build_vocabulary(repo_root: Path) -> Vocabulary:
-    """Build the Vocabulary object with all policy vocab registries merged."""
-    combined_registry: dict[str, dict[str, Any]] = {}
-
-    for policy_file in (
-        "schema/instrument_policy.yaml",
-        "schema/QC_policy.yaml",
-        "schema/maintenance_policy.yaml",
-    ):
-        policy_path = repo_root / policy_file
-        if not policy_path.exists():
-            continue
-
-        payload, _ = load_policy(policy_path)
-        if not isinstance(payload, dict):
-            continue
-
-        vocab_registry = payload.get("vocab_registry")
-        if isinstance(vocab_registry, dict):
-            combined_registry = merge_vocab_registries(combined_registry, vocab_registry)
-
-    return Vocabulary(repo_root / "vocab", vocab_registry=combined_registry)
+    return build_repository_vocabulary(repo_root)
 
 
 def _annotate_display_labels(

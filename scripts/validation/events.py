@@ -237,6 +237,7 @@ def validate_event_ledgers(
                 errors.append(ValidationIssue(code='missing_policy_for_record_type', path=event_file.as_posix(), message=f"No event policy loaded for record_type '{record_type}'."))
                 continue
 
+            path_vocab_index = {rule.get('path'): rule.get('vocab') for rule in policy.field_rules if isinstance(rule.get('path'), str) and isinstance(rule.get('vocab'), str)}
             allowed_roots = set()
             for rule in policy.field_rules:
                 path_value = rule.get('path')
@@ -265,7 +266,7 @@ def validate_event_ledgers(
                     if not isinstance(required_if, dict):
                         warnings.append(ValidationIssue(code='unsupported_required_if_condition', path=policy.policy_path.as_posix(), message=f"Conditionally required rule '{path_value}' is missing required_if mapping."))
                         continue
-                    required_eval, condition_error = _evaluate_event_required_if(required_if, payload=payload, item_context=None)
+                    required_eval, condition_error = _evaluate_event_required_if(required_if, payload=payload, item_context=None, vocabulary=vocabulary, path_vocabs=path_vocab_index)
                     if condition_error is not None or required_eval is None:
                         warnings.append(ValidationIssue(code='unsupported_required_if_condition', path=policy.policy_path.as_posix(), message=condition_error or f"Unsupported required_if for '{path_value}'."))
                         continue
@@ -289,6 +290,8 @@ def validate_event_ledgers(
                 vocab_name = rule.get('vocab') if isinstance(rule.get('vocab'), str) else None
                 for node in resolved:
                     full_path = f"{event_file.as_posix()}:{node.path}"
+                    if node.value == '' and rule.get('allow_empty') is True:
+                        continue
                     if not _check_event_type(node.value, field_type):
                         warnings.append(ValidationIssue(code='invalid_field_type', path=full_path, message=f"Invalid value for '{path_value}'. Expected type '{field_type}'."))
                         continue
@@ -308,7 +311,8 @@ def validate_event_ledgers(
                                 issue = ValidationIssue(code='vocab_synonym_used', path=full_path, message=f"Value '{vocab_value}' maps to canonical '{suggestion}' in vocab '{vocab_name}'.")
                                 (errors if vocabulary.requires_canonical_ids(vocab_name) else warnings).append(issue)
                             else:
-                                warnings.append(ValidationIssue(code='unknown_vocab_term', path=full_path, message=f"Unknown value '{vocab_value}' for vocabulary '{vocab_name}'."))
+                                issue = ValidationIssue(code='unknown_vocab_term', path=full_path, message=f"Unknown value '{vocab_value}' for vocabulary '{vocab_name}'.")
+                                (errors if vocabulary.requires_canonical_ids(vocab_name) else warnings).append(issue)
 
             for legacy_rule in policy.legacy_and_migration_rules:
                 legacy_path = legacy_rule.get('path')

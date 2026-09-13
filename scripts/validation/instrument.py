@@ -12,6 +12,7 @@ from scripts.lightpath.validate_contract import validate_filter_cube_warnings, v
 from scripts.validation.io import _iter_yaml_files, _is_non_empty_string, _is_number, _load_yaml
 from scripts.validation.policy import (
     _build_item_field_vocab_index,
+    _build_path_vocab_index,
     _context_item_alias_present,
     _evaluate_required_if,
     _get_software_roles,
@@ -21,7 +22,7 @@ from scripts.validation.policy import (
     _resolve_rule_nodes,
     _resolve_path_nodes,
 )
-from scripts.validation.vocabulary import Vocabulary, VocabularyDefinitionError
+from scripts.validation.vocabulary import Vocabulary
 
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
 
@@ -85,12 +86,9 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
             alias_fallbacks=[],
         )
 
-    try:
-        vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
-    except VocabularyDefinitionError as exc:
-        issues.append(ValidationIssue(code='vocabulary_definition_error', path='vocab', message=str(exc)))
-        return instrument_ids, issues, warnings
+    vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
     item_field_vocab_index = _build_item_field_vocab_index(policy.rules)
+    path_vocab_index = _build_path_vocab_index(policy.rules)
     sections: dict[tuple[str | None, str | None], list[dict[str, Any]]] = {}
     missing_required: list[dict[str, Any]] = []
     missing_conditional: list[dict[str, Any]] = []
@@ -138,6 +136,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
                 item_context=None,
                 vocabulary=vocabulary,
                 item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
+                path_vocabs=path_vocab_index,
             )
             if condition_triggered and not present:
                 missing = True
@@ -149,6 +148,7 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
                         item_context=node.context_item,
                         vocabulary=vocabulary,
                         item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
+                path_vocabs=path_vocab_index,
                     ):
                         missing = True
                         break
@@ -496,6 +496,7 @@ def validate_instrument_ledgers(
 
     vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
     item_field_vocab_index = _build_item_field_vocab_index(policy.rules)
+    path_vocab_index = _build_path_vocab_index(policy.rules)
 
     for instrument_file in _iter_yaml_files(instruments_dir):
         file_issue_count_before = len(issues)
@@ -564,6 +565,7 @@ def validate_instrument_ledgers(
                     item_context=None,
                     vocabulary=vocabulary,
                     item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
+                path_vocabs=path_vocab_index,
                 )
 
             if is_required and not (resolved_has_value or alias_has_value):
@@ -592,6 +594,7 @@ def validate_instrument_ledgers(
                         item_context=node.context_item,
                         vocabulary=vocabulary,
                         item_field_vocabs=item_field_vocab_index.get(_list_context_path(rule.path) or ''),
+                path_vocabs=path_vocab_index,
                     )
                     if required_for_item and value in (None, ''):
                         if _context_item_alias_present(rule, node.context_item):
@@ -750,8 +753,10 @@ def validate_instrument_ledgers(
                 if isinstance(canonical, str)
             }
 
-        digital_detector_kinds = {'scmos', 'cmos', 'ccd', 'emccd', 'pmt', 'gaasp_pmt', 'hyd', 'apd', 'spad'}
-        has_digital_detector = bool(detector_kinds & digital_detector_kinds)
+        has_digital_detector = any(
+            vocabulary.get_term('detector_kinds', detector_kind) is not None
+            for detector_kind in detector_kinds
+        )
 
         software_roles = _get_software_roles(canonical_payload)
         software_status = str(canonical_payload.get("software_status") or "").strip().lower()
