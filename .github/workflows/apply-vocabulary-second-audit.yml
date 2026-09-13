@@ -42,12 +42,14 @@ jobs:
         run: |
           python -m scripts._vocab_audit_patch_validation
           python -m scripts._vocab_audit_patch_consumers
+          python -m scripts._vocab_audit_patch_corrections
           python -m scripts._vocab_audit_patch_tests
           rm -rf .vocab-transfer
           rm -f .github/workflows/apply-vocabulary-hardening.yml
           rm -f scripts/_vocab_audit_patch_common.py
           rm -f scripts/_vocab_audit_patch_validation.py
           rm -f scripts/_vocab_audit_patch_consumers.py
+          rm -f scripts/_vocab_audit_patch_corrections.py
           rm -f scripts/_vocab_audit_patch_tests.py
           rm -f .github/workflows/apply-vocabulary-second-audit.yml
           python -m scripts.generate_templates
@@ -76,6 +78,7 @@ jobs:
           test ! -e .github/workflows/apply-vocabulary-hardening.yml
           test ! -e .github/workflows/apply-vocabulary-second-audit.yml
           test ! -e scripts/_vocab_audit_patch_common.py
+          test ! -e scripts/_vocab_audit_patch_corrections.py
           git diff --check
 
       - name: Commit verified result to PR branch
