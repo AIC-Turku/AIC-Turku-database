@@ -4,8 +4,8 @@ maintenance_id: maint-2019-03-12-pm
 started_utc: '2019-03-12T09:00:00Z'
 completed_utc: '2019-03-12T17:00:00Z'
 status: completed
-reason: preventative_maintenance
-action: software_update
+reason: scheduled
+action: update
 action_details: 'Preventative Maintenance Visit. CSU-W was upgraded with YOKOGAWA
   dust-measurements (sponge for cable-optic-tunnel) and internal cleaning.  To address
   EMCCD connection issues, the driver was updated to PVCAM 3.7.5.7, which resolved

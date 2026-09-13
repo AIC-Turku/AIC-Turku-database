@@ -466,7 +466,7 @@ sections:
         title: Software status
         status: optional
         type: string
-        allowed:
+        allowed_values:
           - documented
           - not_applicable
           - unknown
@@ -1907,6 +1907,14 @@ sections:
           parent_present: light_paths[].detection_sequence[].branches
         used_by: [dashboard, method_generator]
         rationale: Explicit route-owned branch definitions nested under a detection sequence item.
+
+      - path: light_paths[].detection_sequence[].branches.items[].mode
+        title: Detection branch mode
+        status: optional
+        type: string
+        vocab: branch_modes
+        used_by: [dashboard, method_generator, virtual_microscope]
+        rationale: Canonical routing semantics for each explicit branch.
 
       - path: light_paths[].detection_sequence[].branches.items[].branch_id
         title: Detection branch ID

@@ -4,8 +4,8 @@ maintenance_id: maint-2018-02-05-pm
 started_utc: '2018-02-05T09:00:00Z'
 completed_utc: '2018-02-06T17:00:00Z'
 status: completed
-reason: preventative_maintenance
-action: part_replacement
+reason: scheduled
+action: replace
 action_details: 'Preventative Maintenance Visit. Addressed EMCCD connectivity issues
   by replacing the fire-wire board and cable, and re-installing the PVCAM 3.7.1 driver.  Kohler
   alignment was fully off and was corrected. The incubator housing clamp was noted

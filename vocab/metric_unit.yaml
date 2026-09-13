@@ -22,3 +22,19 @@ terms:
   - id: celsius
     label: "Degrees Celsius"
     description: "Temperature expressed in degrees Celsius."
+    synonyms: ["C", "°C"]
+
+  - id: px
+    label: "Pixel"
+    description: "Image-space distance or count expressed in pixels."
+    synonyms: ["pixel", "pixels"]
+
+  - id: A
+    label: "Ampere"
+    description: "Electrical current expressed in amperes."
+    synonyms: ["amp", "amps", "ampere"]
+
+  - id: h
+    label: "Hour"
+    description: "Elapsed time expressed in hours."
+    synonyms: ["hour", "hours"]

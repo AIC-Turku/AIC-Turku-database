@@ -18,7 +18,7 @@ performed:
 inputs_human:
 - metric_id: environment.room_temperature_c
   value: 20
-  unit: C
+  unit: celsius
   details: Recorded from PSF report metadata.
   metric_class: signal_to_noise
 laser_inputs_human:

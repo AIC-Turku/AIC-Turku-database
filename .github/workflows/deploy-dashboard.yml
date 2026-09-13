@@ -10,6 +10,8 @@ on:
       - "instruments/**"
       - "qc/**"
       - "maintenance/**"
+      - "vocab/**"
+      - "schema/**"
       - "scripts/**"
       - "assets/**"
       - "templates/**"

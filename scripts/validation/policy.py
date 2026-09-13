@@ -67,6 +67,11 @@ def _load_instrument_policy(
         for raw_rule in section.get('rules', []):
             if not isinstance(raw_rule, dict):
                 continue
+            if 'allowed' in raw_rule:
+                return None, (
+                    f"Policy '{selected.as_posix()}' rule '{raw_rule.get('path', '<unknown>')}' uses unsupported key "
+                    "'allowed'; use 'allowed_values'."
+                )
             path_value = raw_rule.get('path')
             status = raw_rule.get('status')
             field_type = raw_rule.get('type')
@@ -91,6 +96,7 @@ def _load_instrument_policy(
                     superseded_by=raw_rule.get('superseded_by') if isinstance(raw_rule.get('superseded_by'), str) else None,
                     min_items=raw_rule.get('min_items') if isinstance(raw_rule.get('min_items'), int) else None,
                     item_type=raw_rule.get('item_type') if isinstance(raw_rule.get('item_type'), str) else None,
+                    allowed_values=list(raw_rule.get('allowed_values')) if isinstance(raw_rule.get('allowed_values'), list) else None,
                     used_by=[str(v).strip() for v in raw_rule.get('used_by') if isinstance(v, str)]
                     if isinstance(raw_rule.get('used_by'), list)
                     else None,
@@ -473,6 +479,12 @@ def _load_event_policy(policy_path: Path) -> tuple[EventPolicy | None, str | Non
     field_rules = payload.get('field_rules')
     if not isinstance(field_rules, list):
         return None, f"Policy '{policy_path.as_posix()}' missing required list 'field_rules'."
+    for raw_rule in field_rules:
+        if isinstance(raw_rule, dict) and 'allowed' in raw_rule:
+            return None, (
+                f"Policy '{policy_path.as_posix()}' rule '{raw_rule.get('path', '<unknown>')}' uses unsupported key "
+                "'allowed'; use 'allowed_values'."
+            )
     vocab_registry = payload.get('vocab_registry')
     if not isinstance(vocab_registry, dict):
         vocab_registry = {}

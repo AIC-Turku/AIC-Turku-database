@@ -7,7 +7,7 @@ from typing import Any, Iterable
 from scripts.validation.io import _iter_yaml_files, _is_non_empty_string, _is_number, _load_yaml
 from scripts.validation.model import EventValidationReport, ValidationIssue
 from scripts.validation.policy import _evaluate_event_required_if, _load_event_policy, _resolve_path_nodes
-from scripts.validation.vocabulary import Vocabulary
+from scripts.validation.vocabulary import Vocabulary, VocabularyDefinitionError, merge_vocab_registries
 
 DEFAULT_ALLOWED_RECORD_TYPES: tuple[str, ...] = ("qc_session", "maintenance_event")
 YEAR_PATTERN = re.compile(r"^\d{4}$")
@@ -78,9 +78,16 @@ def validate_event_ledgers(
             errors.append(ValidationIssue(code='event_policy_load_error', path=policy_path.as_posix(), message=policy_error or 'Unknown event policy load error.'))
             continue
         event_policies[policy.record_type] = policy
-        combined_registry.update(policy.vocab_registry)
+        try:
+            combined_registry = merge_vocab_registries(combined_registry, policy.vocab_registry)
+        except VocabularyDefinitionError as exc:
+            errors.append(ValidationIssue(code='vocabulary_registry_conflict', path=policy_path.as_posix(), message=str(exc)))
 
-    vocabulary = Vocabulary(vocab_registry=combined_registry or None)
+    try:
+        vocabulary = Vocabulary(vocab_registry=combined_registry)
+    except VocabularyDefinitionError as exc:
+        errors.append(ValidationIssue(code='vocabulary_definition_error', path='vocab', message=str(exc)))
+        return EventValidationReport(errors=errors, warnings=warnings, migration_notices=migration_notices)
 
     event_sources = [
         (qc_base_dir, "qc_session"),
@@ -298,7 +305,8 @@ def validate_event_ledgers(
                             if is_match:
                                 continue
                             if suggestion is not None:
-                                warnings.append(ValidationIssue(code='vocab_synonym_used', path=full_path, message=f"Value '{vocab_value}' maps to canonical '{suggestion}' in vocab '{vocab_name}'."))
+                                issue = ValidationIssue(code='vocab_synonym_used', path=full_path, message=f"Value '{vocab_value}' maps to canonical '{suggestion}' in vocab '{vocab_name}'.")
+                                (errors if vocabulary.requires_canonical_ids(vocab_name) else warnings).append(issue)
                             else:
                                 warnings.append(ValidationIssue(code='unknown_vocab_term', path=full_path, message=f"Unknown value '{vocab_value}' for vocabulary '{vocab_name}'."))
 

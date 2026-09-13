@@ -183,6 +183,7 @@ field_rules:
   - path: inputs_human[].unit
     status: optional
     type: string
+    vocab: metric_unit
     written_by: human
     used_by: [dashboard]
     rationale: Unit may be empty for checklist values.
@@ -285,6 +286,7 @@ field_rules:
   - path: laser_inputs_human.linearity_series[].power_units
     status: required
     type: string
+    vocab: metric_unit
     written_by: human
     used_by: [dashboard]
     rationale: Required to interpret the measured power values.
@@ -369,6 +371,7 @@ field_rules:
   - path: laser_inputs_human.stability_series[].power_units
     status: required
     type: string
+    vocab: metric_unit
     written_by: human
     used_by: [dashboard]
     rationale: Required to interpret power values.
@@ -450,6 +453,7 @@ field_rules:
   - path: laser_inputs_human.single_point_measurements[].power_units
     status: required
     type: string
+    vocab: metric_unit
     written_by: human
     used_by: [dashboard]
     rationale: Required to interpret the measured power values.
@@ -536,6 +540,7 @@ field_rules:
   - path: metrics_computed[].unit
     status: required
     type: string
+    vocab: metric_unit
     written_by: script
     used_by: [dashboard, trending, evaluation]
     rationale: Required for display and threshold interpretation.

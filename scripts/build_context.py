@@ -290,6 +290,8 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
     """Normalize software metadata to schema-native `software[]` role rows."""
     allowed_roles = {"acquisition", "processing", "analysis", "hardware_control", "other"}
     legacy_role_map = {
+        "capture": "acquisition",
+        "quantification": "analysis",
         "acquisition": "acquisition",
         "analysis": "analysis",
         "deconvolution": "processing",
@@ -306,7 +308,9 @@ def normalize_software(raw: Any) -> list[dict[str, str]]:
             return role
         if role in legacy_role_map:
             return legacy_role_map[role]
-        return fallback
+        # Preserve an unfamiliar role rather than silently changing its meaning to
+        # `other`; validation is responsible for rejecting unsupported terms.
+        return role or fallback
 
     rows: list[dict[str, str]] = []
 

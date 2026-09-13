@@ -4,8 +4,8 @@ maintenance_id: maint-2017-05-17-pm
 started_utc: '2017-05-17T09:00:00Z'
 completed_utc: '2017-05-17T17:00:00Z'
 status: completed
-reason: preventative_maintenance
-action: part_replacement
+reason: scheduled
+action: replace
 action_details: 'Preventative Maintenance Visit. Addressed MPU-AC issue where the
   main switch was broken. The main switch at the MPU was replaced and functionality
   restored.  The Evolve camera was found misaligned and was realigned/calibrated using

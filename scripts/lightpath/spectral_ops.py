@@ -327,8 +327,12 @@ def _spectral_ops_for_component(component: dict[str, Any]) -> dict[str, list[dic
 
     passthrough: list[dict[str, Any]] = [{"op": "passthrough"}]
 
-    if not ctype or ctype in {"mirror", "empty", "passthrough", "neutral_density"}:
+    if not ctype or ctype in {"mirror", "empty", "passthrough"}:
         return {"illumination": list(passthrough), "detection": list(passthrough)}
+
+    if ctype == "neutral_density":
+        limited = [{"op": "passthrough", "unsupported_reason": "neutral_density_attenuation_not_modeled"}]
+        return {"illumination": list(limited), "detection": list(limited)}
 
     if ctype in {"block", "blocker"}:
         both: list[dict[str, Any]] = [{"op": "block"}]

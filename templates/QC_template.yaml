@@ -69,7 +69,7 @@ inputs_human:  # Inputs Human: Flexible slot for manual checks and environment r
     metric_id: ""  # Metric Id: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
     metric_class: ""  # Metric Class: Controlled category used to group related metrics across instruments and modalities. | Allowed values (canonical IDs): fwhm_lateral, fwhm_axial, signal_to_noise, chromatic_shift, stage_repeatability, laser_power, illumination_uniformity, detector_dark_noise
     value: ""  # Value: Stores numeric or categorical observations.
-    unit: ""  # Unit: Unit may be empty for checklist values.
+    unit: ""  # Unit: Unit may be empty for checklist values. | Allowed values (canonical IDs): unitless, percent, mW, nm, um, celsius, px, A, h
     details: ""  # Details: Useful supporting context for manual metrics.
 
 # -----------------------------------------------------------------------------
@@ -88,7 +88,7 @@ laser_inputs_human:  # Laser Inputs Human: Laser QC should be represented with s
     -
       laser: ""  # Laser: Identifies the laser line under test.
       setpoint_units: ""  # Setpoint Units: Required to interpret linearity points correctly. | Allowed values (canonical IDs): percent, mW_setpoint
-      power_units: ""  # Power Units: Required to interpret the measured power values.
+      power_units: ""  # Power Units: Required to interpret the measured power values. | Allowed values (canonical IDs): unitless, percent, mW, nm, um, celsius, px, A, h
       points:  # Points: Inline points are required unless the full series is stored as an artifact.
         -
           setpoint: 0.0  # Setpoint: Required for linearity analysis.
@@ -101,7 +101,7 @@ laser_inputs_human:  # Laser Inputs Human: Laser QC should be represented with s
       setpoint: 0.0  # Setpoint: Needed to interpret drift measurements.
       setpoint_units: ""  # Setpoint Units: Keeps setpoint semantics machine-readable. | Allowed values (canonical IDs): percent, mW_setpoint
       sampling: ""  # Sampling: Required when full timestamps are not embedded inline.
-      power_units: ""  # Power Units: Required to interpret power values.
+      power_units: ""  # Power Units: Required to interpret power values. | Allowed values (canonical IDs): unitless, percent, mW, nm, um, celsius, px, A, h
       timepoints:  # Timepoints: Inline timepoints are required unless a CSV artifact is provided.
         -
           t_s: 0.0  # T S: Required for time-resolved stability analysis.
@@ -114,7 +114,7 @@ laser_inputs_human:  # Laser Inputs Human: Laser QC should be represented with s
       setpoint: 0.0  # Setpoint: Required to interpret the measurement target.
       setpoint_units: ""  # Setpoint Units: Keeps setpoint semantics machine-readable. | Allowed values (canonical IDs): percent, mW_setpoint
       power: 0.0  # Power: Captures measured output power for quick checks.
-      power_units: ""  # Power Units: Required to interpret the measured power values.
+      power_units: ""  # Power Units: Required to interpret the measured power values. | Allowed values (canonical IDs): unitless, percent, mW, nm, um, celsius, px, A, h
       details: ""  # Details: Optional context such as tolerance checks or pass/fail notes.
 
 # -----------------------------------------------------------------------------
@@ -134,7 +134,7 @@ metrics_computed:  # Metrics Computed: Computed outputs are optional at authorin
     metric_id: ""  # Metric Id: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
     metric_class: ""  # Metric Class: Controlled category used to group related computed metrics for filtering and automation. | Allowed values (canonical IDs): fwhm_lateral, fwhm_axial, signal_to_noise, chromatic_shift, stage_repeatability, laser_power, illumination_uniformity, detector_dark_noise
     value: ""  # Value: Numeric or categorical result payload.
-    unit: ""  # Unit: Required for display and threshold interpretation.
+    unit: ""  # Unit: Required for display and threshold interpretation. | Allowed values (canonical IDs): unitless, percent, mW, nm, um, celsius, px, A, h
     details: ""  # Details: Stores fit details or aggregation notes.
 
 # -----------------------------------------------------------------------------
