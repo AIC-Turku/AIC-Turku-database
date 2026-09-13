@@ -1,5 +1,5 @@
 ---
-title: instrument spec
+title: Instrument details
 hide:
   - toc  
 ---
@@ -21,16 +21,16 @@ hide:
 
 # {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
-!!! warning "Work in progress"
-    This dashboard is a work in progress. Please independently verify critical information, as not all features are working yet.
+!!! note "About this record"
+    This page shows the current facility record. Confirm access, training and experiment-specific configurations with AIC staff.
 
 
 {% set status_class = 'success' if dto.status.color == 'green' else 'warning' if dto.status.color == 'yellow' else 'danger' %}
-!!! {{ status_class }} "Current Status: {{ dto.status.badge }}"
+!!! {{ status_class }} "Current status: {{ dto.status.badge }}"
     {{ dto.status.reason }}
     
-    [📊 View QC & Maintenance History](history.md){ .md-button .md-button--primary }
-    [🔬 Open Virtual Microscope](../../virtual_microscope.md?scope={{ identity.id }}){ .md-button }
+    [QC and maintenance history](history.md){ .md-button .md-button--primary }
+    [Open Virtual Microscope](../../virtual_microscope.md?scope={{ identity.id }}){ .md-button }
 
 <div class="aic-hero">
   <div class="aic-hero__media">
@@ -76,7 +76,7 @@ hide:
 
 <div class="aic-section" style="margin-top: 20px;">
   <div class="aic-section__title">Capabilities</div>
-  <div class="aic-muted" style="margin-bottom: 6px;">Use these chips to quickly decide if this microscope supports your planned imaging mode, contrast method, or readout.</div>
+  <div class="aic-muted" style="margin-bottom: 6px;">Recorded imaging modes, contrast methods and readouts. Check the route details below before planning a configuration.</div>
   <div class="aic-chiprow">{% for mod in dto.capabilities_flat %}<span class="aic-chip">{{ mod.display_label }}</span>{% else %}<span class="aic-muted">—</span>{% endfor %}</div>
 </div>
 
@@ -98,7 +98,7 @@ hide:
 <br>
 
 
-## Software Environment
+## Software
 
 {% if dto.software %}
 <div class="grid cards" markdown>
@@ -116,10 +116,10 @@ hide:
 
 ---
 
-## Hardware Configuration
+## Hardware
 
 {% if hw.environment.present %}
-### 🌡️ Environmental Control
+### Environmental control
 
 <div class="grid cards" markdown>
 {{ render_spec_card(hw.environment) }}
@@ -127,7 +127,7 @@ hide:
 {% endif %}
 
 {% if hw.light_sources %}
-### 💡 Light Sources
+### Light sources
 
 <div class="grid cards" markdown>
 {% for item in hw.light_sources %}
@@ -137,7 +137,7 @@ hide:
 {% endif %}
 
 {% if hw.scanner.present %}
-### 🧭 Scanner
+### Scanner
 
 <div class="grid cards" markdown>
 {{ render_spec_card(hw.scanner) }}
@@ -145,7 +145,7 @@ hide:
 {% endif %}
 
 {% if hw.detectors %}
-### 📷 Detectors
+### Detectors
 
 <div class="grid cards" markdown>
 {% for item in hw.detectors %}
@@ -155,7 +155,7 @@ hide:
 {% endif %}
 
 {% if hw.objectives %}
-### 🔬 Objectives { #objectives }
+### Objectives { #objectives }
 
 {% if objective_catalogue_url %}
 [View this microscope's objectives in the catalogue]({{ objective_catalogue_url }}){ .md-button }
@@ -165,7 +165,7 @@ hide:
 {% for obj in hw.objectives %}
 {% if obj.is_installed == false %}
 <div style="opacity: 0.9;" markdown>
-- **{% if obj.url %}[{{ obj.display_label }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.display_label }}{% endif %}<a href="#" class="md-button" style="background-color: #dc2626; color: white; padding: 2px 8px; font-size: 11px; border-radius: 4px; border: none; margin-left: 8px;">Ask Staff to Install</a>**
+- **{% if obj.url %}[{{ obj.display_label }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.display_label }}{% endif %}<span class="aic-chip aic-chip--muted" style="margin-left: 8px;">Not installed</span>**
   {% if obj.display_subtitle %}<br><small class="aic-muted">{{ obj.display_subtitle }}</small>{% endif %}
   {% for line in obj.spec_lines %}<br>{{ line }}{% endfor %}
 </div>
@@ -177,7 +177,7 @@ hide:
 {% endif %}
 
 {% if hw.magnification_changers %}
-### 🔍 Magnification Changers
+### Magnification changers
 
 <div class="grid cards" markdown>
 {% for item in hw.magnification_changers %}
@@ -187,7 +187,7 @@ hide:
 {% endif %}
 
 {% if hw.optical_modulators %}
-### 🌀 Optical Modulators
+### Optical modulators
 
 <div class="grid cards" markdown>
 {% for item in hw.optical_modulators %}
@@ -197,7 +197,7 @@ hide:
 {% endif %}
 
 {% if hw.illumination_logic %}
-### 🧠 Adaptive Illumination Logic
+### Illumination control
 
 <div class="grid cards" markdown>
 {% for item in hw.illumination_logic %}
@@ -207,7 +207,7 @@ hide:
 {% endif %}
 
 {% if hw.stages %}
-### 🧭 Stages & Focus Drives
+### Stages and focus drives
 
 <div class="grid cards" markdown>
 {% for item in hw.stages %}
@@ -217,7 +217,7 @@ hide:
 {% endif %}
 
 {% if hw.hardware_autofocus.present or hw.triggering.present %}
-### ⚙️ Advanced Hardware
+### Autofocus and triggering
 
 <div class="grid cards" markdown>
 {% if hw.hardware_autofocus.present %}
@@ -231,7 +231,7 @@ hide:
 
 {% set _optical_element_sections = hw.optical_path.sections | selectattr("id", "equalto", "optical_path_elements") | list if hw.optical_path.sections else [] %}
 {% if _optical_element_sections %}
-### 🎛️ Optical Path Elements
+### Optical-path elements
 
 {% for section in _optical_element_sections %}
 <div class="grid cards" markdown>
@@ -245,7 +245,7 @@ hide:
 
 ---
 
-## QC Metrics: Latest Measurements
+## Latest QC measurements
 
 {% set laser_metrics = {} %}
 {% set other_metrics = {} %}
@@ -257,7 +257,7 @@ hide:
   {% endif %}
 {% endfor %}
 
-### 🔦 Laser Performance
+### Laser performance
 
 {% if laser_metrics %}
 <div class="grid cards" markdown>
@@ -277,7 +277,7 @@ hide:
 > *No laser performance metrics recorded recently.*
 {% endif %}
 
-### 🔬 Optical Resolution (PSF & Alignment)
+### Optical resolution (PSF and alignment)
 
 {% if hw.objectives %}
   {% set obj_with_data = [] %}
@@ -339,7 +339,7 @@ hide:
 {% endif %}
 
 {% if other_metrics %}
-### ⚙️ Environment & Stage Performance
+### Environment and stage performance
 
 <div class="grid cards" markdown>
 
@@ -357,7 +357,7 @@ hide:
 {% endif %}
 
 {% if policy.missing_required or policy.missing_conditional or policy.alias_fallbacks %}
-## Metadata Completeness
+## Metadata completeness
 
 {% if policy.missing_required %}
 - **Missing required fields:**

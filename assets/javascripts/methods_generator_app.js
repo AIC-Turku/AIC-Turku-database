@@ -750,7 +750,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function updateOutputText() {
         if (accumulatedEntries.size === 0) {
-            outputText.value = 'Please select an instrument and click "Add to Methods".';
+            outputText.value = 'Select an instrument, then choose “Add to methods”.';
             return;
         }
 

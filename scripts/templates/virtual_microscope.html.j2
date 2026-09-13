@@ -4,10 +4,10 @@ hide:
   - navigation
   - toc
 ---
-# 🔬 Optical Flow Simulator
+# Virtual Microscope
 
-!!! warning "Work in progress"
-    This simulator is a work in progress. Please independently verify outputs, as not all features are working yet.
+!!! note "Planning model"
+    Results are relative estimates from the recorded optical route and available spectra, not measured microscope performance. Confirm the selected hardware and acquisition settings with AIC staff.
 
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
@@ -430,7 +430,7 @@ hide:
   <main class="vm-main">
     <div class="vm-main-left">
       <section class="vm-panel">
-        <h2 class="vm-section-title">1. Fluorophore Reference Spectra</h2>
+        <h2 class="vm-section-title">1. Fluorophore reference spectra</h2>
         <p class="vm-panel-copy">Use the local dye library and FPbase separately. The top chart focuses on excitation light reaching the sample; the lower chart focuses on emitted light that survives the collection path.</p>
 
         <div class="vm-search-grid">
@@ -515,12 +515,12 @@ hide:
   <section class="vm-panel">
     <div class="vm-path-head">
       <div>
-        <h2 class="vm-section-title">2. Controlling the Optical Path</h2>
-        <p class="vm-panel-copy">Choose the microscope route, then tune the optics and light sources below. The pipe colors visualize how the spectrum evolves along the path.</p>
+        <h2 class="vm-section-title">2. Optical path</h2>
+        <p class="vm-panel-copy">Choose a recorded route, then select its available optics and light sources. Pipe colours show the modelled spectrum along the path.</p>
       </div>
     </div>
     <div class="vm-utility-row">
-      <button id="vm-btn-autoconfig" class="vm-btn vm-btn-primary">✨ Auto-Configure optimal path</button>
+      <button id="vm-btn-autoconfig" class="vm-btn vm-btn-primary">Suggest a configuration</button>
       <p id="vm-autoconfig-status" class="vm-autoconfig-status"></p>
     </div>
     <div id="lightPathGraph" class="light-path-graph"></div>
@@ -530,8 +530,8 @@ hide:
   <section class="vm-panel vm-results-panel">
     <div class="vm-path-head">
       <div>
-        <h2 class="vm-section-title">3. Collected Light per Fluorophore</h2>
-        <p class="vm-panel-copy">Results now live below the pipeline so the optical workspace stays wide. Each endpoint receives its own routed path, benchmark score, and leakage readout.</p>
+        <h2 class="vm-section-title">3. Modelled collection by fluorophore</h2>
+        <p class="vm-panel-copy">Each endpoint has a separate routed path, relative collection score and excitation-leakage estimate.</p>
       </div>
     </div>
     <div class="vm-results-grid">

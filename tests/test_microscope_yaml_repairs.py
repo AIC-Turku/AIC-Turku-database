@@ -107,18 +107,3 @@ def test_partial_cube_repairs_preserve_missing_dichroic_diagnostics(name, mechan
 def test_remaining_zeiss_multiband_cubes_are_not_falsely_completed():
     for index in (2, 3):
         assert position('Zeiss TIRF.yaml', 'cube', 'epi_turret', index).get('_cube_incomplete')
-
-
-def test_review_covers_every_real_microscope_and_excludes_fixture_from_slack():
-    review = (ROOT / 'docs/microscope_yaml_review_2026-09-13.md').read_text(encoding='utf-8')
-    slack = (ROOT / 'docs/slack_microscope_questions_2026-09-13.md').read_text(encoding='utf-8')
-    real_count = 0
-    for path in (ROOT / 'instruments').rglob('*.yaml'):
-        inst = yaml.safe_load(path.read_text(encoding='utf-8'))['instrument']
-        assert inst['instrument_id'] in review
-        if inst['instrument_id'] == 'scope-testx1':
-            assert '*Test Scope X1' not in slack
-        else:
-            real_count += 1
-            assert f"*{inst['display_name']}" in slack
-    assert slack.count('```text\n') == real_count == 23

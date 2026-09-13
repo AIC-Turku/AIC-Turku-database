@@ -1,59 +1,82 @@
-# Microscopy database, virtual microscope, methods generator, and AI planning exports
+# AIC microscopy database and planning tools
 
-This repository is a YAML-driven source tree for a microscopy facility dashboard.
+This repository contains the structured instrument database and public dashboard for the Cell Imaging and Cytometry Core (AIC) in Turku.
 
 **Public dashboard:** https://aic-turku.github.io/AIC-Turku-database/
 
-It does four things:
+The project combines four related functions:
 
-1. stores instrument, QC, maintenance, vocabulary, and policy data as versioned YAML,
-2. builds a documentation site and per-instrument spec pages,
-3. generates a browser-based virtual microscope for first-order light-path planning,
-4. exports structured JSON for a methods generator page and an LLM-assisted experiment-planning workflow.
+1. versioned YAML records for microscopes, QC, maintenance, and controlled vocabularies;
+2. a searchable public instrument dashboard;
+3. a browser-based Virtual Microscope for inspecting optical routes and first-order spectral propagation;
+4. tools for experiment planning and microscopy methods reporting.
 
-The generated site is built from repository data. The browser UI does not invent hardware that is not present upstream.
+The YAML records are the authored source of truth. Generated pages and browser tools use validated, normalized representations of those records and do not fill missing hardware metadata by assumption.
 
-## What lives where
+## Public tools
 
-- `facility.yaml` — facility/site identity, public URLs, acknowledgements, branding, and small page-level defaults.
-- `instruments/*.yaml` — active instrument ledgers.
+### Instrument catalogue
+
+The dashboard lists active microscopes, recorded capabilities, objectives, instrument status, and QC/maintenance history. Missing metadata are shown as missing rather than inferred.
+
+### Objectives catalogue
+
+The **Objectives** page combines objectives attached to microscopes with the separate spare pool. Installation, condition, and availability are represented separately. Optional objectives are not treated as shared spares unless the source data say so.
+
+### Virtual Microscope
+
+The Virtual Microscope lets users inspect the recorded optical routes of a microscope and compare excitation/emission spectra against the configured sources, filters, splitters, and detectors.
+
+It is a planning and visualization tool, not a calibrated photon-budget model. It does not claim absolute photon counts, measured system throughput, or detector performance that is not present in the source data.
+
+### Methods generator
+
+The methods generator builds a reviewable draft from the microscope inventory. Users select the hardware and acquisition actions they actually used, then add acquisition-specific settings before publication.
+
+The generated text is intended as a reporting aid and is structured around QUAREP-LiMi reporting recommendations. It does not reconstruct historical configurations or replace acquisition metadata.
+
+### Experiment planning
+
+The experiment-planning page provides a structured inventory export that can be attached to an AI assistant. The accompanying prompt tells the assistant to use the inventory as its hardware source, preserve explicit unknowns, and identify details that still need confirmation with facility staff.
+
+## Repository structure
+
+- `facility.yaml` — facility identity, public URLs, acknowledgements, branding, and page-level defaults.
+- `instruments/*.yaml` — active instrument records.
 - `instruments/retired/*.yaml` — retired instruments.
-- `qc/sessions/**` — QC ledgers.
-- `maintenance/events/**` — maintenance ledgers.
+- `qc/sessions/**` — QC records.
+- `maintenance/events/**` — maintenance records.
 - `vocab/*.yaml` — controlled vocabularies.
-- `schema/instrument_policy.yaml` — policy for required / conditional / optional instrument metadata.
-- `scripts/validate.py` — validation CLI / compatibility façade; implementations in `scripts/validation/*`.
-- `scripts/light_path_parser.py` — light-path compatibility shim; implementations in `scripts/lightpath/*`.
-- `scripts/dashboard_builder.py` — site-builder CLI / compatibility shim; implementations in `scripts/dashboard/*`.
+- `schema/instrument_policy.yaml` — instrument metadata policy.
 - `scripts/build_context.py` — canonical build context and DTO transfer hub.
-- `docs/light_path_v2_migration.md` — canonical v2 light-path architecture contract.
-- `docs/dataflow_contract.md` — authoritative production dataflow and module map.
-- `scripts/templates/virtual_microscope.html.j2` — virtual microscope page shell.
-- `scripts/templates/virtual_microscope_app.js` — browser app logic.
-- `scripts/templates/virtual_microscope_runtime.js` — route normalization, spectra handling, and propagation model.
-- `scripts/templates/methods_generator.md.j2` — methods generator page.
-- `scripts/templates/plan_experiments.md.j2` — LLM planning/export page.
-- `dashboard_docs/assets/instruments_data.json` — browser-facing methods-generator export.
-- `dashboard_docs/assets/llm_inventory.json` — LLM-facing inventory export.
+- `scripts/validation/*` — validation and completeness logic.
+- `scripts/lightpath/*` — optical-path normalization and route logic.
+- `scripts/dashboard/*` — dashboard generation and exports.
+- `scripts/templates/*` — public page templates and browser runtime.
+- `docs/dataflow_contract.md` — production data-flow and module contract.
+- `docs/light_path_v2_migration.md` — canonical light-path authoring model.
+- `docs/objective_pool.md` — objective catalogue source boundaries and maintenance notes.
+
+Compatibility entry points such as `scripts/validate.py`, `scripts/light_path_parser.py`, and `scripts/dashboard_builder.py` remain available for existing workflows.
 
 ## Data flow
 
-The intended flow is:
+The intended production flow is:
 
-`YAML ledgers -> validation / completeness audit -> normalized hardware -> DTO / JSON exports -> browser runtime`
+`YAML records -> validation/completeness -> normalized hardware -> canonical DTOs/exports -> public tools`
 
-Important consequences:
+Key rules:
 
-- route choice in the virtual microscope is driven by validated payload data, not by ad hoc browser inference,
-- methods-generator blockers are derived from policy-driven completeness metadata,
-- LLM planning exports include explicit known-vs-missing inventory metadata,
-- vocabularies live in `vocab/*.yaml` and are referenced from policy rather than duplicated in multiple places.
+- YAML remains the authored source of truth.
+- Canonical DTOs are the downstream source of truth.
+- Missing required canonical fields produce diagnostics rather than silent defaults.
+- Optical-route topology comes from validated route data, not browser-side inference.
+- Controlled vocabulary lives in `vocab/*.yaml` rather than duplicated private mappings.
+- Legacy adapters are compatibility or migration paths, not alternative canonical models.
 
-### Canonical light-path architecture
+## Canonical light-path model
 
-The repository's canonical light-path authoring model is documented in `docs/light_path_v2_migration.md`.
-
-Canonical authoring structure:
+The current authoring structure is documented in `docs/light_path_v2_migration.md` and uses:
 
 - `hardware.sources`
 - `hardware.optical_path_elements`
@@ -64,217 +87,66 @@ Canonical authoring structure:
   - `illumination_sequence[]`
   - `detection_sequence[]`
 
-Interpretation rules:
+Ordered route sequences are the primary topology source. Branches, splitters, and selectors remain explicit through the YAML, validation, DTO, and browser layers.
 
-- ordered sequences are the primary topology source of truth,
-- `modalities` on sources/elements/endpoints are validation aids only,
-- branching/selectors/splitters must remain explicitly representable through `YAML -> schema/validator -> DTO -> consumers`,
-- legacy `hardware.light_path.*` structures are compatibility-only layers, not canonical authoring targets.
+For multiband dichroics/polychroics, explicit `transmission_bands` and/or `reflection_bands` are preferred. See `docs/dichroic_migration_note.md` for the compatibility rules around legacy cutoff representations.
 
-## Virtual microscope
+## Virtual Microscope model
 
-The virtual microscope is a planning tool for fluorescence microscopy. It is not a calibrated photon-budget engine.
+The simulator can use:
 
-### What it models
+- configured excitation sources;
+- route-owned optical components;
+- filter, cube, and splitter positions;
+- detector routing;
+- fluorophore excitation and emission spectra;
+- first-order spectral propagation through the selected path.
 
-- configured excitation sources,
-- route-tagged optical components,
-- filter / cube / splitter choices,
-- detector routing,
-- fluorophore excitation and emission spectra,
-- first-order propagated excitation and emission through the selected light path.
+The default runtime follows explicit validated route data. Approximation behavior, where available, is non-authoritative and must be explicitly enabled.
 
-### What it does not claim
+Fluorophore spectra can come from FPbase, bundled records, or synthetic spectra derived from maxima when no measured spectrum is available. Spectrum provenance remains explicit so synthetic curves are not presented as measured FPbase spectra.
 
-- absolute detected photon counts,
-- microscope-specific calibration,
-- detector gain behavior as a physically meaningful sensitivity knob,
-- exact throughput without full measured vendor/filter data.
+## Methods reporting
 
-### Optical route selection
+The methods generator consumes `dashboard_docs/assets/instruments_data.json` and builds deterministic draft text from the exported instrument DTOs.
 
-If a microscope exposes more than one valid optical route, for example confocal and epi, the UI now shows an explicit route selector.
+It can:
 
-That selector is populated from the validated / normalized payload (`available_routes`, `default_route`). The selected route controls:
+- flag missing policy-critical metadata;
+- show only hardware recorded for the selected instrument;
+- include confirmed acquisition actions and reviewed simulator configurations;
+- preserve separate acquisition references for repeated use of the same microscope;
+- add configured facility acknowledgements.
 
-- source availability,
-- visible route-relevant optical components,
-- detector routing,
-- propagated spectra and simulation results.
+The user remains responsible for checking acquisition-specific settings and placeholders before publication.
 
-If only one route is available, the selector stays hidden.
+## Assistant-ready inventory export
 
-### Runtime strictness vs simulator approximations
+`dashboard_docs/assets/llm_inventory.json` contains an assistant-ready view of the active instrument inventory. It includes structured hardware, route data, operational status, and completeness information.
 
-The runtime now distinguishes between:
+The planning workflow is designed so that missing fields remain unknown. The prompt asks downstream assistants to recommend only recorded instruments and routes and to separate known facts from assumptions and caveats.
 
-- **Strict hardware-truth mode (default):** honors only explicit validated graph data from canonical `light_paths` traversal, including route-owned `branches` blocks, explicit branch-local endpoint sequences, explicit route catalogs, and explicit detector selections. In this mode the runtime/UI do **not** auto-select missing routes, invent detector targets, create virtual detectors, or auto-repair blocked paths.
-- **Approximation mode (explicit opt-in):** keeps usability-oriented simulator fallbacks for exploratory workflows (for example inferred route catalog fallback, default branch/target conveniences, and blocked-path auto-repair in the app).
+## Validation and completeness
 
-Approximation behavior is non-authoritative by design and should not be interpreted as hardware source-of-truth.
-
-### FPbase integration
-
-Fluorophore spectra are loaded in this order:
-
-1. FPbase detail payload spectra when present,
-2. FPbase spectra API payloads when present,
-3. bundled fallback records shipped with the runtime,
-4. synthetic spectra generated from maxima only when no real spectrum is available.
-
-The runtime keeps the spectrum provenance explicit. Examples include:
-
-- `api`
-- `detail`
-- `bundled_cache`
-- `synthetic`
-- mixed labels such as `detail+synthetic`
-
-Synthetic spectra are no longer presented as if they were FPbase spectra. Real FPbase or bundled spectra are used for overlap and propagation whenever available.
-
-### Virtual microscope layout
-
-The page now shows:
-
-- route selection near the experiment controls,
-- source controls in a compact row layout,
-- a top-to-bottom propagated-path panel,
-- propagated light beside the reference spectra panel for easier comparison.
-
-### Dichroic spectral windows (preferred model)
-
-For `multiband_dichroic` / `polychroic` components, the preferred representation is explicit
-`transmission_bands` and/or `reflection_bands` (`center_nm` + `width_nm`).
-
-Legacy `cutoffs_nm` remains supported for simple single-edge dichroics and backward-compatible
-fallbacks, but should not be treated as the authoritative model for modern spinning-disk multiband
-dichroics.
-
-See `docs/dichroic_migration_note.md` for encoding guidance and compatibility details.
-
-## Methods generator
-
-The methods generator consumes `dashboard_docs/assets/instruments_data.json` and builds deterministic, reviewable draft text from the exported DTO.
-
-### Current behavior
-
-- marks the draft incomplete when policy-critical instrument metadata is missing,
-- hides empty hardware sections for the currently selected instrument,
-- renders option details inline with the checkbox label when compact explanatory text is available,
-- requires confirmation before including acquisition actions or a reviewed simulator plan,
-- accepts an optional acquisition date/reference without claiming to resolve historical configurations,
-- deduplicates unchanged add-clicks while preserving different acquisitions on the same instrument,
-- groups some repeated hardware categories into cleaner sentences,
-- appends acknowledgements from config,
-- adds the xCELLigence acknowledgement when an xCELLigence instrument was actually used.
-
-### Safety and robustness changes
-
-- Jinja-to-JavaScript string injection was replaced with JSON config payloads embedded in `<script type="application/json">`.
-- Config JSON is serialized safely for inline embedding.
-- Instrument fetch failures now produce a user-facing message instead of a silent broken page.
-- The methods page reads `methods_generation` blockers directly from the exported instrument JSON.
-
-## LLM planning / file-generation workflow
-
-The experiment-planning page is driven by `dashboard_docs/assets/llm_inventory.json`.
-
-That export is designed to reduce ungrounded recommendations by including:
-
-- facility identity,
-- active microscopes only,
-- structured instrument DTO data,
-- `hardware_focus_summary` for quick hardware-first screening,
-- null/missing-field inventory completeness,
-- policy-derived missing required fields,
-- policy-derived missing conditional fields,
-- alias-fallback audit metadata.
-
-The planning prompt instructs downstream assistants to use only the attached JSON as ground truth and to treat missing fields as unknown.
-
-The page-level facility strings are injected through a JSON config block rather than raw string interpolation inside JavaScript.
-
-## Validation and completeness auditing
-
-Run validation:
+Run validation with:
 
 ```bash
 python -m scripts.validate
 ```
 
-or directly:
+The validator uses repository policy and controlled vocabularies to check authored data and report missing or inconsistent metadata.
 
-```bash
-python scripts/validate.py
-```
-
-Both use `schema/instrument_policy.yaml` plus `vocab/*.yaml`.
-
-The completeness audit is intended to report what is missing, not just fail without context. Missing entries now carry audit metadata such as:
-
-- `path`
-- `title`
-- `section_id`
-- `section_title`
-- `used_by`
-- alias information
-- conditional-trigger state
-
-That metadata is reused by the methods generator and LLM inventory export.
-
-Repository-wide audit output can also be generated with:
+A repository-wide audit can be generated when needed with:
 
 ```bash
 PYTHONPATH=. python scripts/full_audit.py --repo-root . --json-out audit.json --markdown-out audit.md
 ```
 
-That report summarizes:
+Generated audit output is intended for local/CI review and should not be committed as permanent project documentation unless it documents an enduring contract.
 
-- top missing required policy fields,
-- top missing conditional policy fields,
-- common alias-fallback paths,
-- fields currently blocking trustworthy methods generation,
-- virtual microscope readiness,
-- FPbase/browser runtime contract health.
+## Build locally
 
-## Reusing this repository as a template
-
-A new facility should usually only need to edit a small set of YAML/config files.
-
-### Files to change first
-
-1. `facility.yaml`
-   - facility name
-   - site URL
-   - contact URL
-   - acknowledgements
-   - branding asset paths
-   - optional page-level config such as methods-generator JSON URL or LLM inventory URL
-
-2. `instruments/*.yaml`
-   - instrument inventory and hardware metadata
-
-3. `vocab/*.yaml`
-   - only if your facility uses different canonical terms or additional controlled terms
-
-4. `schema/instrument_policy.yaml`
-   - only if your facility has a different completeness policy
-
-5. `acknowledgements.yaml` (optional override)
-   - only if acknowledgements should be maintained separately from `facility.yaml`
-
-### What should not need editing for a new site
-
-- virtual microscope browser logic,
-- methods generator logic,
-- builder logic,
-- FPbase runtime logic.
-
-If you find yourself editing application JavaScript just to change facility identity or acknowledgements, that is the wrong layer.
-
-## Build and local development
-
-Install the Python dependencies used by the builder and docs site.
+Install the documentation dependencies:
 
 ```bash
 pip install -r requirements-docs.txt
@@ -286,19 +158,19 @@ Build the dashboard and exports:
 PYTHONPATH=. python scripts/dashboard_builder.py --no-strict
 ```
 
-Use `--strict` when you want the build to exit non-zero on YAML / validation errors:
+For CI/policy work, use the strict build:
 
 ```bash
 PYTHONPATH=. python scripts/dashboard_builder.py --strict
 ```
 
-Serve the generated site locally:
+Serve the generated site:
 
 ```bash
 mkdocs serve
 ```
 
-Regenerate starter templates from policy files when schema/policy changes:
+Regenerate starter templates after policy/schema changes with:
 
 ```bash
 python scripts/generate_templates.py
@@ -306,7 +178,7 @@ python scripts/generate_templates.py
 
 ## Tests
 
-Install the test dependencies and Chromium, then run the full test suite:
+Install the test dependencies and Chromium, then run:
 
 ```bash
 pip install -r requirements-test.txt
@@ -314,63 +186,30 @@ python -m playwright install chromium
 PYTHONPATH=. pytest -q
 ```
 
-The audit regressions use the production methods template and JavaScript in a
-real Chromium DOM with deterministic fetch/storage boundaries. They do not need
-FPbase or the live dashboard. A system `chromium` executable is used when present;
-otherwise Playwright uses its installed Chromium. Missing browser dependencies
-fail these tests rather than silently skipping them.
+The suite covers validation, completeness, canonical route export, browser propagation, spectrum provenance, methods-generator behavior, config serialization, and dashboard/DTO contracts.
 
-See `docs/audit_fixes_2026-09-12.md` for the first correctness repair batch and
-remaining historical-configuration work.
+## Reusing the project for another facility
 
-The current suite covers:
+A new facility should normally start by changing:
 
-- validation / completeness audit behavior,
-- light-path parsing and route export,
-- virtual microscope runtime propagation and FPbase spectrum provenance,
-- methods generator browser behavior for acknowledgements, deduplication, and fetch failures,
-- JSON script-config serialization safety,
-- DTO export helpers used by the builder.
+1. `facility.yaml` for facility identity, links, acknowledgements, and branding;
+2. `instruments/*.yaml` for the local microscope inventory;
+3. `vocab/*.yaml` only when additional controlled terms are required;
+4. `schema/instrument_policy.yaml` only when the local completeness policy differs.
 
-## Important limitations
+Facility identity and data belong in configuration/YAML. A new deployment should not need browser-code changes simply to rename the facility or change acknowledgements.
 
-### Upstream metadata limitations
+## Limitations
 
-The repository can still contain instruments or event ledgers with incomplete or legacy metadata. Those are surfaced by validation and completeness audits. They are not automatically invented away by the browser tools.
+- Some legacy instrument and event records may still have incomplete metadata; validation reports these gaps rather than filling them automatically.
+- The Virtual Microscope supports route-aware, first-order comparison but is not a substitute for measured transmission curves, detector characterization, or system calibration.
+- FPbase coverage is not complete for every fluorophore or state; fallback spectra retain explicit provenance.
+- Strict builds may surface legacy QC or maintenance records that still need migration.
 
-### Modeling limitations
+## Maintainer principles
 
-The virtual microscope is a first-order planning simulator. It supports sensible relative comparisons and route-aware path checks, but it is not a substitute for calibrated transmission curves, detector characterization, or instrument-specific acceptance measurements.
-
-### FPbase limitations
-
-FPbase coverage is not complete for every fluorophore or state. When no real spectrum is available, the runtime falls back to a synthetic spectrum derived from maxima and labels that provenance explicitly.
-
-### Builder strictness
-
-`--strict` is useful for CI and policy cleanup. On repositories with legacy maintenance/QC ledgers, it may still fail until those ledgers are migrated to current policy.
-
-## Notes for maintainers
-
-- Keep vocab additions in `vocab/*.yaml` and reference them from policy.
-- Prefer fixing payload/data-flow problems upstream instead of adding browser-only exceptions.
-- Keep facility/site strings in `facility.yaml` or other small config files, not hardcoded in JavaScript.
-- Treat generated methods text and LLM recommendations as assisted drafts that still require microscopy review.
-
-
-## Objectives catalogue
-
-The **Objectives** page combines canonical microscope objective records with the
-separate spare pool. Use **All objectives**, **On microscopes** or **Spare pool**,
-then filter by microscope and installation status. Explicit installed/not-installed
-flags are preserved; missing flags remain unconfirmed. Optional objectives are not
-automatically shared spares. Historical associations are labelled and hidden by
-default, and the synthetic fixture is explicitly excluded through facility config.
-
-Each microscope entry links back to its instrument's Objectives section. Microscope
-pages link to their filtered catalogue. The existing `objective_pool/` URL and pool
-record anchors are retained. The unified export is `assets/objectives.json`;
-`assets/objective_pool.json` stays pool-only. Neither export installs hardware or
-adds spare objectives to the methods generator, LLM instrument data or simulator.
-
-See `docs/objective_pool.md` for source boundaries, maintenance and staff questions.
+- Add vocabulary terms in `vocab/*.yaml` rather than private downstream mappings.
+- Fix data-flow problems upstream instead of adding browser-only exceptions.
+- Keep facility/site strings in `facility.yaml` or other small configuration files.
+- Preserve explicit unknowns.
+- Treat methods text and assistant recommendations as drafts that require microscopy review.
