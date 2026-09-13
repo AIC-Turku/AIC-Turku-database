@@ -2763,7 +2763,7 @@ class LightPathParserTests(unittest.TestCase):
             {"id": "led_1", "kind": "led", "wavelength_nm": 470, "width_nm": 30},
             {"id": "arc_1", "kind": "arc_lamp"},
             {"id": "hal_1", "kind": "halogen_lamp"},
-            {"id": "mp_1", "kind": "ti:sapphire", "tunable_min_nm": 700, "tunable_max_nm": 1040, "timing_mode": "pulsed", "pulse_width_ps": 120, "repetition_rate_mhz": 80},
+            {"id": "mp_1", "kind": "multiphoton_laser", "technology": "ti_sapphire", "tunable_min_nm": 700, "tunable_max_nm": 1040, "timing_mode": "pulsed", "pulse_width_ps": 120, "repetition_rate_mhz": 80},
             {"id": "sc_1", "kind": "white supercontinuum laser", "tunable_min_nm": 420, "tunable_max_nm": 2400, "depletion_targets_nm": [592, 775], "power": "2 W"},
         ]
         payload = generate_virtual_microscope_payload({"hardware": {"sources": source_rows}})

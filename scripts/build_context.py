@@ -16,6 +16,7 @@ from typing import Any
 from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 from scripts.lightpath.parse_canonical import canonicalize_light_path_model_strict
 from scripts.validate import build_instrument_completeness_report
+from scripts.validation.vocabulary import Vocabulary, build_repository_vocabulary
 
 
 @dataclass
@@ -286,31 +287,25 @@ def strip_empty_values(data: Any) -> Any:
     return data
 
 
-def normalize_software(raw: Any) -> list[dict[str, str]]:
-    """Normalize software metadata to schema-native `software[]` role rows."""
-    allowed_roles = {"acquisition", "processing", "analysis", "hardware_control", "other"}
-    legacy_role_map = {
-        "capture": "acquisition",
-        "quantification": "analysis",
-        "acquisition": "acquisition",
-        "analysis": "analysis",
-        "deconvolution": "processing",
-        "reconstruction": "processing",
-        "post_processing": "processing",
-        "flim": "analysis",
-        "control": "hardware_control",
-        "hardware_control": "hardware_control",
-    }
+_DEFAULT_REPOSITORY_VOCABULARY: Vocabulary | None = None
+
+
+def _default_repository_vocabulary() -> Vocabulary:
+    global _DEFAULT_REPOSITORY_VOCABULARY
+    if _DEFAULT_REPOSITORY_VOCABULARY is None:
+        _DEFAULT_REPOSITORY_VOCABULARY = build_repository_vocabulary(Path(__file__).resolve().parents[1])
+    return _DEFAULT_REPOSITORY_VOCABULARY
+
+
+def normalize_software(raw: Any, *, vocabulary: Vocabulary | None = None) -> list[dict[str, str]]:
+    """Normalize software metadata through the authoritative role vocabulary."""
+    vocabulary = vocabulary or _default_repository_vocabulary()
 
     def normalize_role(value: Any, fallback: str = "other") -> str:
-        role = clean_text(value).lower()
-        if role in allowed_roles:
-            return role
-        if role in legacy_role_map:
-            return legacy_role_map[role]
-        # Preserve an unfamiliar role rather than silently changing its meaning to
-        # `other`; validation is responsible for rejecting unsupported terms.
-        return role or fallback
+        role = clean_text(value)
+        if not role:
+            return fallback
+        return vocabulary.resolve_canonical("software_roles", role) or role.lower()
 
     rows: list[dict[str, str]] = []
 
@@ -562,7 +557,8 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
         capabilities = _derive_capabilities_from_legacy_modalities(modalities)
 
 
-    software = strip_empty_values(normalize_software(payload.get("software")))
+    vocabulary = _default_repository_vocabulary()
+    software = strip_empty_values(normalize_software(payload.get("software"), vocabulary=vocabulary))
     software_status = normalize_software_status(payload.get("software_status"))
     raw_hardware = payload.get("hardware") or {}
     if not isinstance(raw_hardware, dict):
@@ -578,7 +574,7 @@ def normalize_instrument_dto(payload: dict[str, Any], source_file: Path, *, reti
     hardware = strip_empty_values(normalize_hardware(raw_hardware))
     policy = build_instrument_completeness_report(payload)
 
-    software_roles = ("acquisition", "processing", "analysis", "hardware_control", "other")
+    software_roles = tuple(vocabulary.terms_by_vocab.get("software_roles", {}).keys())
 
     software_by_role: dict[str, dict[str, Any]] = {}
     for role in software_roles:

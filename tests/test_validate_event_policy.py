@@ -4,20 +4,6 @@ import unittest
 from pathlib import Path
 
 import json
-import sys
-import types
-
-yaml_stub = types.ModuleType('yaml')
-
-class _YamlError(Exception):
-    pass
-
-def _safe_load(value):
-    return json.loads(value)
-
-yaml_stub.safe_load = _safe_load
-yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault('yaml', yaml_stub)
 
 from scripts.validate import validate_event_ledgers
 
@@ -27,16 +13,14 @@ class EventPolicyValidationTests(unittest.TestCase):
         self._tmpdir = tempfile.TemporaryDirectory()
         self.repo = Path(self._tmpdir.name)
         self.prev_cwd = Path.cwd()
+        self.addCleanup(self._tmpdir.cleanup)
+        self.addCleanup(os.chdir, self.prev_cwd)
         os.chdir(self.repo)
 
         (self.repo / 'schema').mkdir(parents=True, exist_ok=True)
         (self.repo / 'vocab').mkdir(parents=True, exist_ok=True)
         (self.repo / 'qc/sessions/scope-1/2026').mkdir(parents=True, exist_ok=True)
         (self.repo / 'maintenance/events/scope-1/2026').mkdir(parents=True, exist_ok=True)
-
-    def tearDown(self) -> None:
-        os.chdir(self.prev_cwd)
-        self._tmpdir.cleanup()
 
     def _write_yaml(self, relative: str, payload: dict) -> None:
         path = self.repo / relative

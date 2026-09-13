@@ -24,12 +24,24 @@ def _load_yaml(
 ) -> tuple[dict[str, Any] | None, str | None]:
     safe_loader = getattr(yaml, "SafeLoader", None)
     if safe_loader is None:
-        if reject_duplicate_keys:
-            return None, "YAML loader cannot enforce duplicate-key rejection."
+        text = path.read_text(encoding="utf-8")
         try:
-            payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-        except (OSError, yaml.YAMLError) as exc:
-            return None, str(exc)
+            from ruamel.yaml import YAML as RuamelYAML
+            from ruamel.yaml.error import YAMLError as RuamelYAMLError
+        except ImportError:
+            if reject_duplicate_keys:
+                return None, "YAML loader cannot enforce duplicate-key rejection."
+            try:
+                payload = yaml.safe_load(text)
+            except (OSError, yaml.YAMLError) as exc:
+                return None, str(exc)
+        else:
+            try:
+                fallback_yaml = RuamelYAML(typ="safe")
+                fallback_yaml.allow_duplicate_keys = not reject_duplicate_keys
+                payload = fallback_yaml.load(text)
+            except (OSError, RuamelYAMLError) as exc:
+                return None, str(exc)
         if payload is None:
             return None, "YAML document is empty."
         if not isinstance(payload, dict):

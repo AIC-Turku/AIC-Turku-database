@@ -184,9 +184,13 @@ field_rules:
     status: optional
     type: string
     vocab: metric_unit
+    allow_empty: true
     written_by: human
     used_by: [dashboard]
-    rationale: Unit may be empty for checklist values.
+    rationale: >-
+      Unit may be empty for checklist or categorical values. Empty means no unit
+      was supplied or applicable and is distinct from canonical `unitless`, which
+      means the measured quantity is dimensionless.
 
   - path: inputs_human[].details
     status: optional

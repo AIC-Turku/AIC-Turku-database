@@ -1,7 +1,6 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
 from pathlib import Path
 
 import json
@@ -22,20 +21,10 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self._tmpdir = tempfile.TemporaryDirectory()
         self.repo = Path(self._tmpdir.name)
         self.prev_cwd = Path.cwd()
+        self.addCleanup(self._tmpdir.cleanup)
+        self.addCleanup(os.chdir, self.prev_cwd)
         os.chdir(self.repo)
         (self.repo / 'schema').mkdir(parents=True, exist_ok=True)
-        self._patchers = [
-            patch('scripts.validation.policy.yaml.safe_load', side_effect=json.loads),
-            patch('scripts.validation.io.yaml.safe_load', side_effect=json.loads),
-        ]
-        for p in self._patchers:
-            p.start()
-
-    def tearDown(self) -> None:
-        for p in reversed(self._patchers):
-            p.stop()
-        os.chdir(self.prev_cwd)
-        self._tmpdir.cleanup()
 
     def _write_json_yaml(self, relative: str, payload: dict) -> None:
         path = self.repo / relative

@@ -2,31 +2,29 @@ terms:
   - id: long_working_distance
     label: "Long Working Distance"
     description: "Objective designed for increased working distance."
-    synonyms:
-      - LWD
-      - ELWD
-      - ELWD ADM
-  - id: coverslip_correction
-    label: "Coverslip Correction"
-    description: "Objective supports adjustable coverslip correction."
-    synonyms:
+    synonyms: [LWD, ELWD]
+    classified_values: [ELWD ADM]
+  - id: cover_glass_specification
+    label: "Cover Glass Specification"
+    description: "Objective has an explicit cover-glass thickness or specification; this does not imply an adjustable correction collar."
+    classified_values:
       - cover glass 0.17
       - cover glass 0.75
-      - correction collar for 0-1.5mm glass
-      - correction ring for 0.17 mm cover glass
+  - id: coverslip_correction
+    label: "Coverslip Correction"
+    description: "Objective is explicitly described as supporting coverslip correction."
   - id: water_dipping
     label: "Water Dipping"
     description: "Objective designed for direct immersion into sample medium."
   - id: phase
     label: "Phase"
     description: "Objective supports phase-contrast use."
-    synonyms:
+    classified_values:
       - Ph1
       - phase contrast (ph)
       - phase contrast (ph 0)
       - phase contrast (ph 1)
       - phase contrast (ph1 dl)
-      - phase contrast (ph2)
       - phase contrast (ph2)
       - phase contrast (ext ph4)
       - phase contrast (ph1)
@@ -34,8 +32,8 @@ terms:
   - id: dic
     label: "DIC"
     description: "Objective supports differential interference contrast."
-    synonyms:
-      - DIC
+    synonyms: [DIC]
+    classified_values:
       - DIC (Suitable)
       - DIC (Recommended)
       - dic compatible
@@ -52,52 +50,48 @@ terms:
   - id: uv_transmission
     label: "UV Transmission"
     description: "Objective optimized for UV transmission."
-    synonyms:
-      - UV ≥340 nm
-      - UV ≥365 nm
+    classified_values: ["UV ≥340 nm", "UV ≥365 nm"]
   - id: ir_transmission
     label: "IR Transmission"
     description: "Objective optimized for IR / multiphoton transmission."
-    synonyms:
+    classified_values:
       - UV-VIS-IR
       - (UV)VIS-IR
       - VISIR
       - IR-compatible to 1300 nm
   - id: correction_collar
     label: "Correction Collar"
-    description: "Objective includes correction collar."
-    synonyms:
-      - Correction Ring
-      - Correction Ring (CORR)
-      - correction collar
+    description: "Objective is explicitly described as having an adjustable correction collar or correction ring."
+    synonyms: [Correction Ring, "Correction Ring (CORR)", correction collar]
+    classified_values:
+      - correction collar for 0-1.5mm glass
+      - correction ring for 0.17 mm cover glass
+  - id: multi_immersion
+    label: "Multi-immersion"
+    description: "Objective is explicitly described as supporting multiple immersion media; this does not imply a correction collar."
+    classified_values:
       - Multi-immersion
       - Multi-immersion (BABB/W/Glyc/Sil-Oil)
   - id: tirf
     label: "TIRF"
     description: "Objective optimized for total internal reflection fluorescence imaging."
-    synonyms:
-      - TIRF
+    synonyms: [TIRF]
   - id: sim
     label: "SIM"
     description: "Objective suitable for structured illumination microscopy workflows."
-    synonyms:
-      - SIM
+    synonyms: [SIM]
   - id: sted
     label: "STED"
     description: "Objective suitable for stimulated emission depletion microscopy workflows."
-    synonyms:
-      - STED
+    synonyms: [STED]
   - id: polarization
     label: "Polarization"
     description: "Objective supports polarization imaging workflows."
-    synonyms:
-      - Polarization (Possible)
-      - Polarization (Suitable)
+    classified_values: ["Polarization (Possible)", "Polarization (Suitable)"]
   - id: cleared_tissue_imaging
     label: "Cleared Tissue Imaging"
     description: "Objective suitable for imaging optically cleared tissue samples."
-    synonyms:
-      - Cleared Tissue Imaging (CLARITY and TDE)
+    classified_values: ["Cleared Tissue Imaging (CLARITY and TDE)"]
   - id: other
     label: "Other"
     description: "Specialty not covered by the predefined terms."

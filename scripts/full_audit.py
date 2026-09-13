@@ -40,15 +40,13 @@ from scripts.lightpath.parse_canonical import canonicalize_light_path_model
 from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 from scripts.lightpath.spectral_ops import infer_light_source_role
 from scripts.lightpath.legacy_import import has_legacy_light_path_input
+from scripts.validation.vocabulary import Vocabulary, build_repository_vocabulary
 from scripts.validate import (
     DEFAULT_ALLOWED_RECORD_TYPES,
     build_instrument_completeness_report,
     validate_event_ledgers,
     validate_instrument_ledgers,
 )
-
-
-POINT_DETECTOR_KINDS = {"pmt", "gaasp_pmt", "hyd", "apd", "spad"}
 
 
 def _as_serializable(value: Any) -> Any:
@@ -157,7 +155,7 @@ def _source_readiness_issue(index: int, source: dict[str, Any]) -> list[dict[str
     return issues
 
 
-def _detector_readiness_issue(index: int, detector: dict[str, Any]) -> list[dict[str, str]]:
+def _detector_readiness_issue(index: int, detector: dict[str, Any], vocabulary: Vocabulary) -> list[dict[str, str]]:
     label = detector.get("model") or detector.get("manufacturer") or detector.get("name") or f"detector_{index + 1}"
     issues: list[dict[str, str]] = []
     if not detector.get("kind"):
@@ -170,7 +168,11 @@ def _detector_readiness_issue(index: int, detector: dict[str, Any]) -> list[dict
                 "message": f"Detector '{label}' has no explicit channel/path label; UI routing may be less clear.",
             }
         )
-    if detector.get("kind") in POINT_DETECTOR_KINDS and detector.get("supports_time_gating") is None:
+    raw_kind = detector.get("kind")
+    canonical_kind = vocabulary.resolve_canonical("detector_kinds", raw_kind) if isinstance(raw_kind, str) else None
+    detector_term = vocabulary.get_term("detector_kinds", canonical_kind) if canonical_kind else None
+    is_point_detector = detector_term is not None and detector_term.tag_value("architecture") == "point_scanning"
+    if is_point_detector and detector.get("supports_time_gating") is None:
         issues.append(
             {
                 "severity": "info",
@@ -181,12 +183,13 @@ def _detector_readiness_issue(index: int, detector: dict[str, Any]) -> list[dict
     return issues
 
 
-def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str, Any]:
+def audit_virtual_microscope_instrument(instrument: dict[str, Any], vocabulary: Vocabulary | None = None) -> dict[str, Any]:
+    vocabulary = vocabulary or build_repository_vocabulary(Path(__file__).resolve().parents[1])
     canonical = instrument.get("canonical") if isinstance(instrument.get("canonical"), dict) else {}
     hardware = canonical.get("hardware") if isinstance(canonical.get("hardware"), dict) else {}
     light_path = hardware.get("light_path") if isinstance(hardware.get("light_path"), dict) else {}
     legacy_topology_detected = has_legacy_light_path_input(canonical)
-    payload = generate_virtual_microscope_payload(canonical, compatibility_mode=True)
+    payload = generate_virtual_microscope_payload(canonical, compatibility_mode=True, vocab=vocabulary)
     runtime_projection = (
         ((payload.get("projections") or {}).get("virtual_microscope") or {})
         if isinstance(payload, dict)
@@ -222,7 +225,7 @@ def audit_virtual_microscope_instrument(instrument: dict[str, Any]) -> dict[str,
                 infos.append(issue)
 
     for index, detector in enumerate(detector_rows):
-        for issue in _detector_readiness_issue(index, detector):
+        for issue in _detector_readiness_issue(index, detector, vocabulary):
             if issue["severity"] == "warning":
                 warnings.append(issue)
             else:
@@ -779,7 +782,8 @@ def generate_full_audit(
             alias_counter.update(entry.get("path") for entry in report.alias_fallbacks if entry.get("path"))
             methods_blocker_counter.update(entry.get("path") for entry in methods_blockers if entry.get("path"))
 
-        vm_rows = [audit_virtual_microscope_instrument(instrument) for instrument in [*instruments, *retired_instruments]]
+        vocabulary = build_repository_vocabulary(repo_root)
+        vm_rows = [audit_virtual_microscope_instrument(instrument, vocabulary) for instrument in [*instruments, *retired_instruments]]
         vm_readiness_counter = Counter(row.get("readiness", "unknown") for row in vm_rows)
 
         inventory = {

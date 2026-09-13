@@ -1,10 +1,4 @@
-from __future__ import annotations
-
-from scripts._vocab_audit_patch_common import ROOT, write
-
-write(
-    "tests/test_vocabulary_second_audit.py",
-    '''from pathlib import Path
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -78,7 +72,7 @@ def test_explicit_allow_empty_skips_vocab_validation_without_inventing_unitless(
 
 def test_policy_duplicate_keys_are_rejected(tmp_path):
     path = tmp_path / 'policy.yaml'
-    path.write_text('record_type: qc_session\\nrecord_type: maintenance_event\\nfield_rules: []\\n', encoding='utf-8')
+    path.write_text('record_type: qc_session\nrecord_type: maintenance_event\nfield_rules: []\n', encoding='utf-8')
     payload, error = load_policy(path)
     assert payload is None
     assert 'Duplicate YAML key' in error
@@ -107,7 +101,8 @@ def test_autofix_is_read_only_by_default_and_validates_before_pr():
     source = (ROOT / 'scripts/autofix_yaml.py').read_text(encoding='utf-8')
     assert 'load_vocabs' not in source and 'metric_class_rules' not in source
     workflow = (ROOT / '.github/workflows/autofix.yml').read_text(encoding='utf-8')
-    assert 'scripts/autofix_yaml.py --write' in workflow
+    assert 'python -m scripts.autofix_yaml --write' in workflow
+    assert 'python scripts/autofix_yaml.py --write' not in workflow
     assert workflow.index('python -m scripts.validate') < workflow.index('peter-evans/create-pull-request')
     assert workflow.index('python -m scripts.dashboard_builder --strict') < workflow.index('peter-evans/create-pull-request')
 
@@ -158,7 +153,3 @@ def test_dictionary_deduplicates_registry_aliases_and_labels_classification(tmp_
 def test_temporary_vocabulary_transfer_machinery_is_removed():
     assert not (ROOT / '.vocab-transfer').exists()
     assert not (ROOT / '.github/workflows/apply-vocabulary-hardening.yml').exists()
-''',
-)
-
-print("Added second-audit regression tests")
