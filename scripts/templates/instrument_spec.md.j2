@@ -21,8 +21,8 @@ hide:
 
 # {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
-!!! note "About this record"
-    This page shows the current facility record. Confirm access, training and experiment-specific configurations with AIC staff.
+!!! note "About this microscope"
+    Here you’ll find the hardware and capabilities currently recorded for this microscope. If you are planning an experiment, AIC staff can help with access, training, and configuration choices.
 
 
 {% set status_class = 'success' if dto.status.color == 'green' else 'warning' if dto.status.color == 'yellow' else 'danger' %}
@@ -76,7 +76,7 @@ hide:
 
 <div class="aic-section" style="margin-top: 20px;">
   <div class="aic-section__title">Capabilities</div>
-  <div class="aic-muted" style="margin-bottom: 6px;">Recorded imaging modes, contrast methods and readouts. Check the route details below before planning a configuration.</div>
+  <div class="aic-muted" style="margin-bottom: 6px;">These are the capabilities recorded for this microscope. Open the optical-route details below to see how the hardware is connected.</div>
   <div class="aic-chiprow">{% for mod in dto.capabilities_flat %}<span class="aic-chip">{{ mod.display_label }}</span>{% else %}<span class="aic-muted">—</span>{% endfor %}</div>
 </div>
 
@@ -109,9 +109,9 @@ hide:
 {% elif dto.software_status == 'not_applicable' %}
 > *No acquisition/control software — manual or standalone system.*
 {% elif dto.software_status == 'unknown' %}
-> *Software applicability has not yet been curated for this instrument.*
+> *Whether this microscope uses acquisition/control software has not yet been recorded.*
 {% else %}
-> *No software configurations recorded yet — not documented.*
+> *No software configuration is recorded for this microscope.*
 {% endif %}
 
 ---
@@ -274,7 +274,7 @@ hide:
 
 </div>
 {% else %}
-> *No laser performance metrics recorded recently.*
+> *No recent laser-performance measurements are recorded.*
 {% endif %}
 
 ### Optical resolution (PSF and alignment)
@@ -323,19 +323,19 @@ hide:
 
     {% endfor %}
   {% else %}
-> *No recent PSF or chromatic shift metrics available for any objectives.*
+> *No recent PSF or chromatic-shift measurements are recorded for these objectives.*
   {% endif %}
 
   {# 3. Collapse objectives without data into an expandable block #}
   {% if obj_without_data %}
-??? info "Objectives without recent data"
+??? info "Objectives without recent measurements"
     {% for obj in obj_without_data %}
     - **{{ obj.display_label }}** <small class="aic-muted">(`{{ obj.id }}`)</small>
     {% endfor %}
   {% endif %}
 
 {% else %}
-> *No objectives defined for this instrument.*
+> *No objectives are recorded for this instrument.*
 {% endif %}
 
 {% if other_metrics %}
@@ -357,26 +357,29 @@ hide:
 {% endif %}
 
 {% if policy.missing_required or policy.missing_conditional or policy.alias_fallbacks %}
-## Metadata completeness
+## Information still to confirm
+
+Some details in the facility record are incomplete. If any of these matter for your experiment, please check them with AIC staff.
 
 {% if policy.missing_required %}
-- **Missing required fields:**
+- **Not yet recorded:**
 {% for item in policy.missing_required %}
-  - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
+  - {% if item.title and item.title != item.path %}{{ item.title }} <small class="aic-muted">(`{{ item.path }}`)</small>{% else %}<code>{{ item.path }}</code>{% endif %}
 {% endfor %}
 {% endif %}
 
 {% if policy.missing_conditional %}
-- **Missing conditional fields (currently applicable):**
+- **Details needed for this configuration:**
 {% for item in policy.missing_conditional %}
-  - `{{ item.path }}`{% if item.title and item.title != item.path %} — {{ item.title }}{% endif %}
+  - {% if item.title and item.title != item.path %}{{ item.title }} <small class="aic-muted">(`{{ item.path }}`)</small>{% else %}<code>{{ item.path }}</code>{% endif %}
 {% endfor %}
 {% endif %}
 
 {% if policy.alias_fallbacks %}
-- **Legacy aliases in use (fallback accepted):**
+??? info "Record maintenance details"
+    Some older terms are still accepted for compatibility:
 {% for item in policy.alias_fallbacks %}
-  - `{{ item.alias }}` → `{{ item.path }}`
+    - `{{ item.alias }}` → `{{ item.path }}`
 {% endfor %}
 {% endif %}
 
