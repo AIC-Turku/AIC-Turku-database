@@ -64,4 +64,81 @@ replace_once(
     "    assert 'python -m scripts.autofix_yaml --write' in workflow\n",
 )
 
+# A local --write must not leave the repository in an invalid state. Preserve
+# original bytes for every changed file, run the authoritative validators after
+# the complete proposed transformation, and roll all writes back on any error.
+replace_once(
+    "scripts/autofix_yaml.py",
+    "from scripts.validation.io import _iter_yaml_files, _load_yaml\n",
+    "from scripts.validation.events import validate_event_ledgers\nfrom scripts.validation.instrument import validate_instrument_ledgers\nfrom scripts.validation.io import _iter_yaml_files, _load_yaml\n",
+)
+replace_once(
+    "scripts/autofix_yaml.py",
+    '''def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    base = get_base_path()
+    changed_files: list[Path] = []
+    total_replacements = 0
+    for spec in build_specs(base):
+        for filepath in _iter_yaml_files(spec.target_dir):
+            changed, replacements = autofix_file(filepath, spec, write_changes=args.write)
+            if changed:
+                changed_files.append(filepath)
+                total_replacements += replacements
+    mode = 'Updated' if args.write else 'Would update'
+    print(f'{mode} {len(changed_files)} file(s); replacements: {total_replacements}.')
+    for filepath in changed_files:
+        print(f' - {filepath.relative_to(base)}')
+    return 1 if (not args.write and changed_files) else 0
+''',
+    '''def _validate_repository_after_write() -> None:
+    instrument_ids, instrument_errors, _ = validate_instrument_ledgers()
+    event_report = validate_event_ledgers(instrument_ids=instrument_ids)
+    errors = [*instrument_errors, *event_report.errors]
+    if errors:
+        preview = '; '.join(f"{item.code}: {item.path}" for item in errors[:10])
+        suffix = '' if len(errors) <= 10 else f"; ... and {len(errors) - 10} more"
+        raise RuntimeError(
+            f"Autofix produced {len(errors)} validation error(s); writes were rolled back. "
+            f"{preview}{suffix}"
+        )
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    base = get_base_path()
+    changed_files: list[Path] = []
+    total_replacements = 0
+    originals: dict[Path, str] = {}
+    try:
+        for spec in build_specs(base):
+            for filepath in _iter_yaml_files(spec.target_dir):
+                original = filepath.read_text(encoding='utf-8') if args.write else None
+                changed, replacements = autofix_file(filepath, spec, write_changes=args.write)
+                if changed:
+                    changed_files.append(filepath)
+                    total_replacements += replacements
+                    if args.write and original is not None:
+                        originals[filepath] = original
+        if args.write and originals:
+            _validate_repository_after_write()
+    except Exception:
+        for filepath, original in originals.items():
+            filepath.write_text(original, encoding='utf-8')
+        raise
+
+    mode = 'Updated' if args.write else 'Would update'
+    print(f'{mode} {len(changed_files)} file(s); replacements: {total_replacements}.')
+    for filepath in changed_files:
+        print(f' - {filepath.relative_to(base)}')
+    return 1 if (not args.write and changed_files) else 0
+''',
+)
+
+replace_once(
+    "tests/test_vocabulary_second_audit.py",
+    "    assert 'load_vocabs' not in source and 'metric_class_rules' not in source\n",
+    "    assert 'load_vocabs' not in source and 'metric_class_rules' not in source\n    assert '_validate_repository_after_write' in source and 'writes were rolled back' in source\n",
+)
+
 print("Applied post-merge CI corrections")
