@@ -33,7 +33,7 @@ def test_generated_site_catalogue_round_trip_and_export_boundaries(browser, tmp_
     page.on('pageerror', lambda error: errors.append(str(error)))
     try:
         page.goto(origin + '/')
-        page.get_by_role('link', name='Browse all objectives', exact=True).click()
+        page.get_by_role('link', name='Browse the objective catalogue', exact=True).click()
         expect(page.get_by_role('heading', name='Objectives', exact=True)).to_be_visible()
         expect(page.locator('.pool-item:visible')).to_have_count(135)
         assert page.locator('.pool-item').count() == 137

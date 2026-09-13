@@ -4,16 +4,11 @@ hide:
   - toc
 ---
 
-# 📝 Event: {{ event_id }}
-
-!!! warning "Work in progress"
-    This dashboard is a work in progress. Please independently verify critical information, as not all features are working yet.
-
+# Event: {{ event_id }}
 
 <div class="aic-topactions" markdown="span">
-  <!-- Use markdown source targets for GitHub Pages + use_directory_urls compatibility. -->
-  [🔙 Back to Overview](../../instruments/{{ instrument_id }}/index.md){ .md-button }
-  [📊 View Full History](../../instruments/{{ instrument_id }}/history.md){ .md-button .md-button--primary }
+  [Back to instrument](../../instruments/{{ instrument_id }}/index.md){ .md-button }
+  [View history](../../instruments/{{ instrument_id }}/history.md){ .md-button .md-button--primary }
 </div>
 
 {% set record_type = payload.get('record_type', '') | lower %}
@@ -22,23 +17,23 @@ hide:
 {% set maintenance_reason_details = payload.get('reason_details') or payload.get('reason') or '—' %}
 {% set maintenance_action_details = payload.get('action_details') or payload.get('action') or '—' %}
 
-## 📊 Report Overview
+## Event overview
 
 <div class="aic-grid">
 
   <div class="aic-card aic-card--full">
     <div class="aic-card__body">
-      <div class="aic-card__title">Event Metadata</div>
+      <div class="aic-card__title">Event metadata</div>
       <div class="aic-kv">
-        <div><span class="aic-muted">Record Type</span><br>{{ payload.get('record_type', '—') | replace('_', ' ') | title }}</div>
-        <div><span class="aic-muted">Reason / Suite</span><br>{{ reason_or_suite | string | title }}</div>
-        
+        <div><span class="aic-muted">Record type</span><br>{{ payload.get('record_type', '—') | replace('_', ' ') | title }}</div>
+        <div><span class="aic-muted">Reason / suite</span><br>{{ reason_or_suite | string | title }}</div>
+
         {% if is_maintenance %}
-        <div><span class="aic-muted">Service Provider</span><br>{{ payload.get('service_provider', '—') }}</div>
+        <div><span class="aic-muted">Service provider</span><br>{{ payload.get('service_provider', '—') }}</div>
         {% else %}
         <div><span class="aic-muted">Operator</span><br>{{ operator | default('—', true) }}</div>
         {% endif %}
-        
+
         <div><span class="aic-muted">Instrument</span><br><code>{{ instrument | default(instrument_id, true) }}</code></div>
       </div>
     </div>
@@ -47,8 +42,8 @@ hide:
   {% if payload.get('record_type') == 'qc_session' or payload.get('evaluation') %}
   <div class="aic-card aic-card--full">
     <div class="aic-card__body">
-      <div class="aic-card__title">QC Summary & Evaluation</div>
-      
+      <div class="aic-card__title">QC summary and evaluation</div>
+
       {% if payload.get('summary') %}
         <p style="font-size: 0.95rem; margin-bottom: 0.8rem;"><strong>Summary:</strong> {{ payload.get('summary') }}</p>
       {% endif %}
@@ -57,11 +52,11 @@ hide:
       {% if eval %}
         {% set status = eval.get('overall_status', 'unknown') %}
         {% set badge_color = 'green' if status == 'pass' else 'yellow' if status == 'warn' else 'red' if status == 'fail' else 'gray' %}
-        
+
         <div style="margin: 0.5rem 0 1rem;">
           <span class="aic-badge aic-badge--{{ badge_color }}">{{ status | upper }}</span>
         </div>
-        
+
         {% if eval.get('results') %}
           {% for res in eval.get('results', []) %}
             <div style="font-size: 0.9rem; margin-bottom: 0.4rem;">
@@ -77,24 +72,24 @@ hide:
   {% if is_maintenance or payload.get('action') or payload.get('action_details') %}
   <div class="aic-card aic-card--full">
     <div class="aic-card__body">
-      <div class="aic-card__title">Maintenance Action</div>
+      <div class="aic-card__title">Maintenance action</div>
 
       {% if is_maintenance %}
       <div style="font-size: 0.95rem; margin-bottom: 0.6rem;">
-        <strong>Reason Details:</strong><br>
+        <strong>Reason details:</strong><br>
         {{ maintenance_reason_details }}
       </div>
       <div style="font-size: 0.95rem; margin-bottom: 0.5rem;">
-        <strong>Action Details:</strong><br>
+        <strong>Action details:</strong><br>
         {{ maintenance_action_details }}
       </div>
       {% else %}
       <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ payload.get('action', payload.get('action_details', '—')) }}</p>
       {% endif %}
-      
+
       {% if payload.get('microscope_status_after') %}
       <div style="margin-top: 1rem;">
-        <span class="aic-muted" style="font-size: 0.85rem;">Status After Fix:</span><br>
+        <span class="aic-muted" style="font-size: 0.85rem;">Status after event:</span><br>
         <code>{{ payload.get('microscope_status_after', '—') | upper }}</code>
       </div>
       {% endif %}
@@ -105,9 +100,9 @@ hide:
 </div>
 
 {% if payload.get('performed') %}
-## 🔬 Tests Performed
+## Tests performed
 
-| Test Type | Details |
+| Test type | Details |
 |---|---|
 {% for task in payload.get('performed', []) %}| **{{ task.get('qc_type', '—') | replace('_', ' ') | title }}** | {{ task.get('details', '—') }} |
 {% endfor %}
@@ -115,7 +110,7 @@ hide:
 {% endif %}
 
 {% if qc_laser_context %}
-## 🔦 Laser Measurement Context
+## Laser measurement context
 
 | Field | Value |
 |---|---|
@@ -125,7 +120,7 @@ hide:
 {% endif %}
 
 {% if qc_metrics %}
-## 📏 QC Measurements
+## QC measurements
 
 | Measurement | Value | Source | Details |
 |---|---|---|---|
@@ -135,7 +130,7 @@ hide:
 {% endif %}
 
 {% if payload.get('artifacts') %}
-## 📎 Artifacts & References
+## Artifacts and references
 
 | Artifact ID | Role | Description |
 |---|---|---|
@@ -145,12 +140,12 @@ hide:
 {% endif %}
 
 {% if payload.get('notes') %}
-!!! quote "Additional Notes"
+!!! quote "Additional notes"
     {{ payload.get('notes') }}
 
 {% endif %}
 
-## 📄 Raw YAML Ledger
+## Raw YAML record
 
 ??? quote "View `{{ event_id }}.yaml`"
 

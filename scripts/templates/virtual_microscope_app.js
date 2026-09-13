@@ -1005,7 +1005,7 @@
     state.lastAcquisitionPlan = null;
     applyOptimizedConfiguration(result);
     setStatusMessage(
-      result.strictLeakageSatisfied === false ? 'Optimized the best near-zero-leakage configuration.' : 'Configuration Optimized!',
+      result.strictLeakageSatisfied === false ? 'Suggested the highest-scoring available configuration; excitation leakage remains.' : 'Suggested the highest-scoring available configuration.',
       result.strictLeakageSatisfied === false ? 'warning' : 'success'
     );
   }

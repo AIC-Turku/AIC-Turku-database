@@ -381,12 +381,12 @@
       {% endif %}
     </header>
 
-    <div class="wip-banner">⚠️ Work in progress: This report is still under development. Please verify all information independently, as not all features are working yet.</div>
+    <div class="wip-banner">This report checks the current repository record. Missing fields and review items are shown explicitly; verify unresolved items against facility records.</div>
 
     {% if audit_data.schema_errors and audit_data.schema_errors | length > 0 %}
     <div class="schema-errors-box">
-      <h3>⚠️ Critical Schema Violations</h3>
-      <p style="margin-top: 0; font-size: 13px;">The following fields are strictly required by your YAML schema policy but are missing:</p>
+      <h3>Schema errors</h3>
+      <p style="margin-top: 0; font-size: 13px;">These fields are required by the YAML schema policy but are missing:</p>
       <ul>
         {% for err in audit_data.schema_errors %}
         <li><strong>{{ err.level }}:</strong> {{ err.title }} (<code>{{ err.path }}</code>)</li>

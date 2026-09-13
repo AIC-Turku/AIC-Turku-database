@@ -8,27 +8,14 @@ hide:
   .aic-actions {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;            /* spacing between buttons */
-    align-items: flex-start; /* keep natural button width */
+    gap: 0.5rem;
+    align-items: flex-start;
   }
-
-  /* Optional: uncomment if you want both buttons full-width */
-  /*
-  .aic-actions a.md-button {
-    width: 100%;
-    text-align: center;
-  }
-  */
 </style>
 
-# System Health
+# Instrument status
 
-!!! warning "Work in progress"
-    This dashboard is a work in progress. Please independently verify critical information, as not all features are working yet.
-
-
-!!! info "System Health Overview"
-    This page lists instruments currently in a degraded state (**Warning** or **Offline**) and why.
+This page lists instruments currently marked **Warning** or **Offline**, together with the recorded reason and latest QC and maintenance dates.
 
 {% if issues %}
 
@@ -46,12 +33,12 @@ hide:
 
       <div class="aic-kv">
         <div><span class="aic-muted">Last QC</span><br>{{ inst.status.last_qc_date or '—' }}</div>
-        <div><span class="aic-muted">Last Maintenance</span><br>{{ inst.status.last_maint_date or '—' }}</div>
+        <div><span class="aic-muted">Last maintenance</span><br>{{ inst.status.last_maint_date or '—' }}</div>
       </div>
 
       <div class="aic-actions">
-        <a href="../instruments/{{ inst.id }}/" class="md-button md-button--small">Overview</a>
-        <a href="../instruments/{{ inst.id }}/history/" class="md-button md-button--primary md-button--small">View History</a>
+        <a href="../instruments/{{ inst.id }}/" class="md-button md-button--small">Instrument</a>
+        <a href="../instruments/{{ inst.id }}/history/" class="md-button md-button--primary md-button--small">QC and maintenance history</a>
       </div>
     </div>
   </div>
@@ -60,7 +47,7 @@ hide:
 
 {% else %}
 
-!!! success "No Active Issues"
-    All instruments are currently healthy.
+!!! success "No active warnings"
+    No instruments are currently marked **Warning** or **Offline**.
 
 {% endif %}

@@ -9,7 +9,7 @@ class InstrumentSpecTemplateTests(unittest.TestCase):
         self.assertIn("optical_path.light_paths or []", template)
         self.assertIn("hardware_inventory = optical_path.hardware_inventory", template)
         self.assertIn("hardware_index_map = optical_path.hardware_index_map", template)
-        self.assertIn("Optical Path Elements", template)
+        self.assertIn("Optical-path elements", template)
         self.assertNotIn("Route Graph Topology", template)
         self.assertNotIn("Supplementary Optical Path Summaries", template)
         self.assertNotIn("{% for route in route_graphs %}", template)

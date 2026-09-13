@@ -128,17 +128,3 @@ The schema owns filter labels. The browser never infers missing hardware. Update
 Keep catalogue IDs stable. Split physical records only when multiple distinguishable copies are confirmed. `quantity: null` means unknown, not one. A serviceability check can be recorded as `condition: verified_serviceable`, `inspection: {date: 'YYYY-MM-DD', by: 'Reviewer'}` and appropriate notes. Only then can `availability: available` be used. Update availability promptly: this remains a staff-maintained snapshot, not a booking system. Microscope compatibility remains unverified in this first version, even for serviceable items.
 
 Do not erase problem history without documenting reassessment. Use actual inspection dates, not commit dates. Confirm installations and their effective dates in microscope ledgers; do not let catalogue status alter them implicitly. Future compatibility records need configuration-specific evidence, separately from stock and condition.
-
-## Copy-ready Slack draft (not sent)
-
-Hi everyone, please help us complete the new spare-objective section of the AIC website. We have entered Jari's list and kept the reported problems visible. Could you help with these remaining details?
-
-1. Does "020426" mean 2 April 2026? Are all working-distance values in the list in millimetres?
-2. Where is the pool stored, who should users contact, and are these lenses still in the pool? Please flag anything installed, on loan or no longer held. Are any entries multiple physical copies?
-3. Have these problems been repaired or reassessed: ZEISS 1022-818 (internal droplets); Leica 506007/506316 (stuck iris) and 506082 (UV transmission); Olympus 20x/40x CDPlan (stuck collars); IncuCyte 4628/4629 (damaged lenses)? Please give the check date and who checked them.
-4. What is the working distance of Leica 506170? Do we have working distances and immersion details for the Olympus/IncuCyte lenses, and immersion/mounting details for Nikon MRH 00041?
-5. What do "thread 20" and "thread -23" mean, and what is the Leica M25 pitch? Are the group-level thread labels correct for every objective in each group?
-6. Which objective/microscope combinations have actually been checked, and do any need adapters or particular settings? Please distinguish optical suitability from simply being able to screw a lens in.
-7. Is ZEISS APO Calibration LSM 420639-9000-700 (SN 53811) calibration-only, and who should authorise its use?
-
-Photos of accessible labels, a storage list or partial answers are welcome. Please do not install or remove objectives just to answer these questions. Thanks!

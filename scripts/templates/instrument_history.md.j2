@@ -1,17 +1,13 @@
 {% set dto = instrument.dto %}
 {% set identity = dto.identity if dto.identity else {} %}
 
-# 📊 {{ identity.display_name }} · History
-
-!!! warning "Work in progress"
-    This dashboard is a work in progress. Please independently verify critical information, as not all features are working yet.
-
+# {{ identity.display_name }} · History
 
 <div class="aic-topactions" markdown="span">
-  [🔙 Back to Overview](index.md){ .md-button }
+  [Back to instrument](index.md){ .md-button }
 </div>
 
-## 📈 Metrics Over Time
+## QC metrics over time
 
 <div id="charts-root"
      data-aic-charts='{{ charts_json }}'
@@ -19,16 +15,14 @@
 
 ---
 
-## 📜 Event Timeline
+## Event timeline
 
 <style>
-/* Responsive Split Timeline CSS */
 .aic-split-timeline {
   position: relative;
   max-width: 100%;
   margin: 2rem auto;
 }
-/* The central vertical line */
 .aic-split-timeline::after {
   content: '';
   position: absolute;
@@ -40,7 +34,6 @@
   margin-left: -2px;
   border-radius: 2px;
 }
-/* Individual event container */
 .aic-timeline-container {
   padding: 10px 40px;
   position: relative;
@@ -48,15 +41,12 @@
   width: 50%;
   box-sizing: border-box;
 }
-/* QC on the Left */
 .aic-timeline-left {
   left: 0;
 }
-/* Maintenance on the Right */
 .aic-timeline-right {
   left: 50%;
 }
-/* The circles on the timeline */
 .aic-timeline-marker {
   position: absolute;
   width: 44px;
@@ -76,7 +66,6 @@
 .aic-timeline-right .aic-timeline-marker {
   left: -22px;
 }
-/* The actual content card */
 .aic-timeline-content {
   padding: 1.2rem;
   background-color: var(--md-default-bg-color);
@@ -85,8 +74,6 @@
   border: 1px solid var(--md-default-fg-color--lightest);
   box-shadow: 0 4px 6px rgba(0,0,0,0.02);
 }
-
-/* Status pill (works for hex colors AND CSS vars) */
 .aic-status-pill {
   --aic-status-color: var(--md-default-fg-color--light);
   background-color: color-mix(in srgb, var(--aic-status-color) 12%, transparent);
@@ -97,8 +84,6 @@
   font-weight: bold;
   border: 1px solid var(--aic-status-color);
 }
-
-/* Media query for mobile: push line to the left */
 @media screen and (max-width: 768px) {
   .aic-split-timeline::after {
     left: 31px;
@@ -118,7 +103,6 @@
 }
 </style>
 
-{# Make qc/maintenance safe even if undefined #}
 {% set qc_list = qc_events | default([], true) %}
 {% set maintenance_list = maintenance_events | default([], true) %}
 {% set all_events = qc_list + maintenance_list %}
@@ -128,13 +112,9 @@
 <div class="aic-split-timeline">
   {% for event in sorted_events %}
     {% set is_qc = event in qc_list %}
-
-    {# QC goes on the left, Maintenance goes on the right #}
     {% set side_class = 'aic-timeline-left' if is_qc else 'aic-timeline-right' %}
     {% set event_icon = '🔬' if is_qc else '🔧' %}
-    {% set event_label = 'QC Session' if is_qc else 'Maintenance' %}
-
-    {# Dynamic Color Coding #}
+    {% set event_label = 'QC session' if is_qc else 'Maintenance' %}
     {% set s_lower = (event.status | default('', true)) | lower %}
     {% set status_color = '#00e676' if s_lower in ['pass', 'completed', 'online', 'in_service']
       else '#ffea00' if s_lower in ['warn', 'limited']
@@ -150,7 +130,7 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
           <div>
             <strong style="font-size: 1.1rem; color: var(--md-default-fg-color);">
-              {{ event.date | default('Unknown Date', true) }}
+              {{ event.date | default('Unknown date', true) }}
             </strong>
             <span class="aic-muted" style="margin-left: 0.5rem; font-size: 0.85rem;">
               {{ event_label }}
@@ -163,14 +143,14 @@
         </div>
 
         <div style="margin-bottom: 1rem; color: var(--md-default-fg-color--light);">
-          {{ event.suite | default(event.type, true) | default('Routine Event', true) }}
+          {{ event.suite | default(event.type, true) | default('Routine event', true) }}
         </div>
 
         {% if event.event_href %}
         <a href="{{ event.event_href }}"
            class="md-button md-button--primary"
            style="font-size:0.8rem; padding:0.3rem 0.8rem; border-radius:0.2rem;">
-          View Full Report
+          View event
         </a>
         {% endif %}
       </div>
@@ -178,5 +158,5 @@
   {% endfor %}
 </div>
 {% else %}
-> 📭 *No QC or Maintenance events recorded yet.*
+*No QC or maintenance events recorded yet.*
 {% endif %}

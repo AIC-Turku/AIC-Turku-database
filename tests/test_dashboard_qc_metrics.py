@@ -197,8 +197,8 @@ class DashboardQcMetricViewTests(unittest.TestCase):
             qc_laser_context=build_qc_laser_context_view(self.payload),
         )
 
-        self.assertIn("Laser Measurement Context", rendered)
-        self.assertIn("QC Measurements", rendered)
+        self.assertIn("Laser measurement context", rendered)
+        self.assertIn("QC measurements", rendered)
         self.assertIn("stage.tile_scan_error_x_px", rendered)
         self.assertIn("laser.at_obj.405.100pct.power_mw", rendered)
         self.assertIn("3.83 mW", rendered)
