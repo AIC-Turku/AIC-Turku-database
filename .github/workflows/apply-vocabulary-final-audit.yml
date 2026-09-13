@@ -1,4 +1,4 @@
-name: Apply final vocabulary audit fixes
+name: Diagnose and apply final vocabulary audit fixes
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ env:
 
 jobs:
   apply-and-verify:
-    if: github.head_ref == 'fix/vocabulary-final-audit-2026-09-13'
+    if: github.head_ref == 'fix/vocabulary-post-merge-final-2026-09-13'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout audit branch
@@ -39,7 +39,7 @@ jobs:
           pip install -r requirements-test.txt
           python -m playwright install --with-deps chromium
 
-      - name: Apply second-audit transformations and final corrections
+      - name: Apply transformations
         run: |
           python -m scripts._vocab_audit_patch_validation
           python -m scripts._vocab_audit_patch_consumers
@@ -58,7 +58,7 @@ jobs:
           rm -f scripts/_vocab_final_audit_patch.py
           python -m scripts.generate_templates
 
-      - name: Syntax and source checks
+      - name: Syntax and repository validation
         run: |
           python -m compileall -q scripts tests
           python -m scripts.generate_templates --check
@@ -66,31 +66,43 @@ jobs:
           node --check scripts/templates/virtual_microscope_runtime.js
           node --check scripts/templates/virtual_microscope_app.js
           git diff --check
+          python -m scripts.validate
 
-      - name: Validate repository
-        run: python -m scripts.validate
+      - name: Reproduce full test failure and preserve evidence
+        shell: bash
+        run: |
+          set +e
+          PYTHONPATH=. python -m pytest -q > /tmp/pytest.log 2>&1
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            {
+              echo '# Diagnostic pytest failure from post-merge vocabulary audit'
+              echo
+              echo 'Exit code:' "$code"
+              echo
+              echo '```text'
+              tail -n 300 /tmp/pytest.log
+              echo '```'
+            } > CI_PYTEST_FAILURE.md
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Materialize vocabulary fixes and preserve failing test evidence"
+            git push origin HEAD:${{ github.head_ref }}
+            exit "$code"
+          fi
+          rm -f CI_PYTEST_FAILURE.md
 
-      - name: Run full test suite
-        run: PYTHONPATH=. python -m pytest -q
-
-      - name: Check conservative autofix
+      - name: Remaining release gates
         run: |
           set +e
           python -m scripts.autofix_yaml --check
           code=$?
           set -e
-          if [ "$code" -ne 0 ] && [ "$code" -ne 1 ]; then
-            exit "$code"
-          fi
-
-      - name: Run strict dashboard builder
-        run: python -m scripts.dashboard_builder --strict
-
-      - name: Build MkDocs strictly
-        run: mkdocs build --strict
-
-      - name: Assert clean production tree
-        run: |
+          if [ "$code" -ne 0 ] && [ "$code" -ne 1 ]; then exit "$code"; fi
+          python -m scripts.dashboard_builder --strict
+          mkdocs build --strict
           test ! -e .vocab-transfer
           test ! -e .github/workflows/apply-vocabulary-hardening.yml
           test ! -e .github/workflows/apply-vocabulary-second-audit.yml
