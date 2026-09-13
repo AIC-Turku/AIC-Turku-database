@@ -1,4 +1,4 @@
-name: Apply final vocabulary audit fixes
+name: Apply verified vocabulary repair
 
 on:
   pull_request:
@@ -12,10 +12,10 @@ env:
 
 jobs:
   apply-and-verify:
-    if: github.head_ref == 'fix/vocabulary-final-audit-2026-09-13'
+    if: github.head_ref == 'fix/vocabulary-postmerge-ci-2026-09-13'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout audit branch
+      - name: Checkout repair branch
         uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
@@ -39,13 +39,14 @@ jobs:
           pip install -r requirements-test.txt
           python -m playwright install --with-deps chromium
 
-      - name: Apply second-audit transformations and final corrections
+      - name: Apply vocabulary transformations and post-merge corrections
         run: |
           python -m scripts._vocab_audit_patch_validation
           python -m scripts._vocab_audit_patch_consumers
           python -m scripts._vocab_audit_patch_corrections
           python -m scripts._vocab_audit_patch_tests
           python -m scripts._vocab_final_audit_patch
+          python -m scripts._vocab_postmerge_ci_patch
           rm -rf .vocab-transfer
           rm -f .github/workflows/apply-vocabulary-hardening.yml
           rm -f .github/workflows/apply-vocabulary-second-audit.yml
@@ -56,6 +57,7 @@ jobs:
           rm -f scripts/_vocab_audit_patch_corrections.py
           rm -f scripts/_vocab_audit_patch_tests.py
           rm -f scripts/_vocab_final_audit_patch.py
+          rm -f scripts/_vocab_postmerge_ci_patch.py
           python -m scripts.generate_templates
 
       - name: Syntax and source checks
@@ -97,6 +99,7 @@ jobs:
           test ! -e .github/workflows/apply-vocabulary-final-audit.yml
           test -z "$(find scripts -maxdepth 1 -name '_vocab_audit_patch_*.py' -print -quit)"
           test ! -e scripts/_vocab_final_audit_patch.py
+          test ! -e scripts/_vocab_postmerge_ci_patch.py
           git diff --check
 
       - name: Commit verified clean result
@@ -105,5 +108,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --stat
-          git commit -m "Fix final vocabulary audit findings"
+          git commit -m "Fix post-merge vocabulary audit and CI regressions"
           git push origin HEAD:${{ github.head_ref }}
