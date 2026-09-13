@@ -1,0 +1,71 @@
+---
+title: Spare objectives
+hide:
+  - navigation
+  - toc
+---
+
+# Spare objectives
+
+Find an objective for your experiment, then ask staff to check its availability and suitability.
+
+<div id="objective-pool">
+  <div class="pool-notice">
+    <strong>Staff approval is required before use or installation.</strong>
+    This is not a live stock list. Matching a brand or thread does not guarantee microscope compatibility.
+  </div>
+  <p><strong>{{ pool.total }} source records</strong> ({{ pool.objective_count }} objectives and {{ pool.total - pool.objective_count }} calibration item{% if pool.total - pool.objective_count != 1 %}s{% endif %}) &middot; <strong>{{ pool.problem_count }} with reported problems</strong>.</p>
+  <p>{% if staff_url %}<a href="{{ staff_url }}">Contact staff</a> &middot; {% endif %}<a href="../assets/objective_pool.json" download>Download data (JSON)</a></p>
+
+  <div id="pool-controls" class="pool-controls" hidden>
+    <div class="pool-search"><label for="pool-search">Search objectives</label><input id="pool-search" type="search" placeholder="Try 63x water, 506170 or Ph2" aria-controls="pool-items"></div>
+    <div><label for="pool-family">Manufacturer / source group</label><select id="pool-family" data-pool-filter="family_id"><option value="">All groups</option>{% for family in pool.families %}<option value="{{ family.id }}">{{ family.label }}</option>{% endfor %}</select></div>
+    {% for key, title in [('immersion', 'Immersion'), ('condition', 'Condition'), ('kind', 'Item type')] %}
+    <div><label for="pool-{{ key }}">{{ title }}</label><select id="pool-{{ key }}" data-pool-filter="{{ key }}"><option value="">All</option>{% for option in pool.filters[key] %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></div>
+    {% endfor %}
+    <div><label for="pool-sort">Sort</label><select id="pool-sort"><option value="source">Source order</option><option value="mag-asc">Magnification: low to high</option><option value="mag-desc">Magnification: high to low</option></select></div>
+    <button type="button" class="md-button" data-pool-reset>Reset filters</button>
+  </div>
+  <noscript><p>The complete catalogue is shown below. Use your browser's Find command to search. Enquiry text can be selected and copied manually.</p></noscript>
+  <p id="pool-count" role="status" aria-live="polite" aria-atomic="true">Showing all {{ pool.total }} records.</p>
+  <p id="pool-no-results" hidden>No matching records. Try another search or <button type="button" data-pool-reset>reset the filters</button>.</p>
+
+  <div id="pool-items" class="pool-items">
+  {% for item in pool['items'] %}
+    <article class="pool-item" id="{{ item.id }}" data-family_id="{{ item.family_id }}" data-immersion="{{ item.immersion }}" data-condition="{{ item.condition }}" data-kind="{{ item.kind }}" data-magnification="{{ item.magnification if item.magnification is not none else '' }}" data-order="{{ item.order }}" data-search="{{ item.search_text }}">
+      <p class="pool-group">{{ item.family_label }} &middot; {{ item.kind_label }}</p>
+      <h2>{{ item.name }}</h2>
+      <p class="pool-code">Product code: <strong>{{ item.product_code or 'Not recorded' }}</strong></p>
+      <p class="pool-condition" data-state="{{ item.condition }}"><strong>{{ item.condition_label }}</strong>{% if item.condition_note %}: {{ item.condition_note }}{% endif %}</p>
+      <p class="pool-muted">{{ item.condition_description }}</p>
+      <dl class="pool-specs">
+        <div><dt>Magnification</dt><dd>{{ item.magnification_label }}</dd></div>
+        <div><dt>Numerical aperture (NA)</dt><dd>{{ item.numerical_aperture_text or 'Not recorded' }}</dd></div>
+        <div><dt>Immersion</dt><dd>{{ item.immersion_label }}</dd></div>
+        <div><dt>Working distance{% if not pool.source.working_distance_unit %} (unit unconfirmed){% endif %}</dt><dd>{{ item.working_distance_text or 'Not recorded' }}{% if item.working_distance_text and pool.source.working_distance_unit %} {{ pool.source.working_distance_unit }}{% endif %}</dd></div>
+        <div><dt>Mounting (source group)</dt><dd>{{ item.mount_label }}</dd></div>
+        <div><dt>Availability</dt><dd>{{ item.availability_label }}</dd></div>
+      </dl>
+      <details class="pool-details">
+        <summary>Details and enquiry</summary>
+        <p><strong>Storage:</strong> {{ item.location or 'Not recorded; ask staff' }}.<br><strong>Quantity:</strong> {{ item.quantity if item.quantity is not none else 'Not verified' }}.<br><strong>Microscope compatibility:</strong> Not verified.</p>
+        {% if item.inspection %}<p><strong>Inspection:</strong> {{ item.inspection.date }} by {{ item.inspection.by }}.</p>{% endif %}
+        <p><strong>Original source, page {{ item.source_page }}:</strong></p>
+        <pre class="pool-source">{{ item.source_heading }}
+{{ item.source_text }}</pre>
+        <label for="enquiry-{{ item.id }}">{% if item.condition == 'reported_unusable' %}Ask about this item's status{% else %}Enquiry to staff{% endif %} (edit the placeholders after copying)</label>
+        <textarea id="enquiry-{{ item.id }}" class="pool-enquiry" rows="9" readonly>{{ item.enquiry }}</textarea>
+        <p class="pool-actions"><button type="button" class="md-button" data-copy-enquiry hidden>Copy enquiry</button> <a href="#{{ item.id }}">Link to this record</a></p>
+        <p class="pool-feedback" role="status" aria-live="polite"></p>
+        <p class="pool-muted">Nothing is sent by this page. Record ID: {{ item.id }} (catalogue ID, not a physical asset tag).</p>
+      </details>
+    </article>
+  {% endfor %}
+  </div>
+  <details class="pool-provenance"><summary>Source, units and limitations</summary>
+    <p class="pool-muted">Source: {{ pool.source.file_name }}, compiled by {{ pool.source.compiled_by }}. Date as written: <strong>{{ pool.source.date_text }}</strong>{% if pool.source.date_iso %} ({{ pool.source.date_iso }}){% else %} (date format not yet confirmed){% endif %}. Working-distance (WD) values are reproduced as supplied{% if pool.source.working_distance_unit %}, in {{ pool.source.working_distance_unit }}{% else %}; their units are not stated in the source and need confirmation{% endif %}. A record is not a verified count of physical copies.</p>
+    <p>These records are not installed microscope configurations. Spare records are not added to the methods generator or simulator. Staff must check suitability for the intended microscope and experiment.</p>
+  </details>
+</div>
+<link rel="stylesheet" href="../assets/stylesheets/objective_pool.css">
+<script src="../assets/javascripts/objective_pool.js" defer></script>

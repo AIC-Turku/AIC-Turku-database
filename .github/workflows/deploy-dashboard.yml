@@ -3,7 +3,10 @@ on:
   push:
     branches: ["main", "master"]
     paths:
+      - "schema/objective_pool.schema.json"
+      - "facility.yaml"
       - "docs/**"
+      - "inventory/**"
       - "instruments/**"
       - "qc/**"
       - "maintenance/**"
@@ -11,6 +14,7 @@ on:
       - "assets/**"
       - "templates/**"
       - "mkdocs.yml"
+      - "requirements.txt"
       - "requirements-docs.txt"
       - ".github/workflows/deploy-dashboard.yml"
   workflow_dispatch:

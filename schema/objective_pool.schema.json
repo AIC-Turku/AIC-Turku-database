@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shared objective pool",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "compiled_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "date_text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "date_iso": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "working_distance_unit": {
+          "enum": [
+            null,
+            "mm"
+          ]
+        }
+      },
+      "required": [
+        "file_name",
+        "sha256",
+        "compiled_by",
+        "date_text",
+        "date_iso",
+        "working_distance_unit"
+      ]
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mount_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "source_heading": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "mount_text",
+          "source_heading"
+        ]
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^pool-[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "family_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "$ref": "#/$defs/kind"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "product_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "magnification": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "numerical_aperture_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d+(?:\\.\\d+)?(?:-\\d+(?:\\.\\d+)?)?$"
+          },
+          "immersion": {
+            "$ref": "#/$defs/immersion"
+          },
+          "working_distance_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "condition": {
+            "$ref": "#/$defs/condition"
+          },
+          "condition_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "availability": {
+            "$ref": "#/$defs/availability"
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "quantity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "inspection": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "by": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "date",
+                  "by"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source_text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "family_id",
+          "kind",
+          "name",
+          "product_code",
+          "magnification",
+          "numerical_aperture_text",
+          "immersion",
+          "working_distance_text",
+          "condition",
+          "condition_note",
+          "availability",
+          "location",
+          "quantity",
+          "inspection",
+          "source_page",
+          "source_text"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "source",
+    "families",
+    "items"
+  ],
+  "$defs": {
+    "kind": {
+      "oneOf": [
+        {
+          "const": "objective",
+          "title": "Objective"
+        },
+        {
+          "const": "calibration",
+          "title": "Calibration item"
+        }
+      ]
+    },
+    "immersion": {
+      "oneOf": [
+        {
+          "const": "dry",
+          "title": "Dry"
+        },
+        {
+          "const": "water",
+          "title": "Water immersion"
+        },
+        {
+          "const": "oil",
+          "title": "Oil immersion"
+        },
+        {
+          "const": "water_dipping",
+          "title": "Water dipping"
+        },
+        {
+          "const": "universal",
+          "title": "Universal immersion"
+        },
+        {
+          "const": "not_recorded",
+          "title": "Not recorded"
+        }
+      ]
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "const": "not_assessed",
+          "title": "Not assessed"
+        },
+        {
+          "const": "reported_issue",
+          "title": "Reported problem"
+        },
+        {
+          "const": "reported_unusable",
+          "title": "Reported unusable"
+        },
+        {
+          "const": "verified_serviceable",
+          "title": "Checked serviceable"
+        }
+      ]
+    },
+    "availability": {
+      "oneOf": [
+        {
+          "const": "unconfirmed",
+          "title": "Availability unconfirmed"
+        },
+        {
+          "const": "available",
+          "title": "In pool (staff confirmed)"
+        },
+        {
+          "const": "on_loan",
+          "title": "On loan"
+        },
+        {
+          "const": "installed",
+          "title": "Installed elsewhere"
+        },
+        {
+          "const": "not_available",
+          "title": "Not available"
+        }
+      ]
+    }
+  }
+}

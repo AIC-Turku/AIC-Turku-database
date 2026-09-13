@@ -6,3 +6,4 @@ pymdown-extensions>=10.0
 ruamel.yaml>=0.18,<1.0
 weasyprint>=62.0
 pytest>=7.4
+jsonschema>=4.18,<5
