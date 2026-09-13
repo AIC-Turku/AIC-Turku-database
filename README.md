@@ -356,3 +356,21 @@ FPbase coverage is not complete for every fluorophore or state. When no real spe
 - Prefer fixing payload/data-flow problems upstream instead of adding browser-only exceptions.
 - Keep facility/site strings in `facility.yaml` or other small config files, not hardcoded in JavaScript.
 - Treat generated methods text and LLM recommendations as assisted drafts that still require microscopy review.
+
+
+## Objectives catalogue
+
+The **Objectives** page combines canonical microscope objective records with the
+separate spare pool. Use **All objectives**, **On microscopes** or **Spare pool**,
+then filter by microscope and installation status. Explicit installed/not-installed
+flags are preserved; missing flags remain unconfirmed. Optional objectives are not
+automatically shared spares. Historical associations are labelled and hidden by
+default, and the synthetic fixture is explicitly excluded through facility config.
+
+Each microscope entry links back to its instrument's Objectives section. Microscope
+pages link to their filtered catalogue. The existing `objective_pool/` URL and pool
+record anchors are retained. The unified export is `assets/objectives.json`;
+`assets/objective_pool.json` stays pool-only. Neither export installs hardware or
+adds spare objectives to the methods generator, LLM instrument data or simulator.
+
+See `docs/objective_pool.md` for source boundaries, maintenance and staff questions.

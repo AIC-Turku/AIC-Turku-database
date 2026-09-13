@@ -1,0 +1,630 @@
+# Spare-pool records are NOT installed instrument hardware. See docs/objective_pool.md.
+schema_version: 1
+source:
+  file_name: ZEISSThread M27.docx
+  sha256: 5fadd6249bba1aab08f40120d580a1fac1403353166b0d5615459068cffbc9c9
+  compiled_by: Jari Korhonen
+  date_text: '020426'
+  date_iso: null
+  working_distance_unit: null
+families:
+- id: zeiss
+  label: ZEISS
+  mount_text: Thread M27/0.75
+  source_heading: "ZEISS\tThread M27/0.75"
+- id: leica
+  label: Leica
+  mount_text: Thread M25
+  source_heading: "Leica \tThread M25"
+- id: olympus
+  label: OLYMPUS, Japan
+  mount_text: thread 20 (as written)
+  source_heading: 'OLYMPUS, Japan
+
+    -tubus length 160, thread 20'
+- id: incucyte
+  label: IncuCyte by ESSEN BIOSCIENCE
+  mount_text: thread -23 (as written)
+  source_heading: 'IncuCyte by ESSEN BIOSCIENCE
+
+    -thread -23'
+- id: nikon
+  label: Nikon, Japan
+  mount_text: null
+  source_heading: Nikon, Japan
+items:
+- id: pool-zeiss-441371-9970
+  family_id: zeiss
+  kind: objective
+  name: LD Plan-NEOFLUAR 63x/0.75 Ph2 Korr
+  product_code: 441371-9970
+  magnification: 63
+  numerical_aperture_text: '0.75'
+  immersion: dry
+  working_distance_text: 0,75
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "441371-9970 LD Plan-NEOFLUAR 63x/0.75 Ph2 Korr\tWD 0,75"
+- id: pool-zeiss-44-03-50
+  family_id: zeiss
+  kind: objective
+  name: Plan-NEOFLUAR 40x/0.75
+  product_code: 44 03 50
+  magnification: 40
+  numerical_aperture_text: '0.75'
+  immersion: dry
+  working_distance_text: '0.71'
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "44 03 50 Plan-NEOFLUAR 40x/0.75\t\tWD 0.71"
+- id: pool-zeiss-441351-9970
+  family_id: zeiss
+  kind: objective
+  name: LD Plan-NEOFLUAR 40x/0.6 Ph2 Korr
+  product_code: 441351-9970
+  magnification: 40
+  numerical_aperture_text: '0.6'
+  immersion: dry
+  working_distance_text: 2,9 at cover glass 0,75
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "441351-9970 LD Plan-NEOFLUAR 40x/0.6 Ph2 Korr\tWD 2,9 at cover glass 0,75"
+- id: pool-zeiss-420650-9901
+  family_id: zeiss
+  kind: objective
+  name: Plan-APOCHROMAT 20x/0.8
+  product_code: 420650-9901
+  magnification: 20
+  numerical_aperture_text: '0.8'
+  immersion: dry
+  working_distance_text: '0.55'
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "420650-9901 Plan-APOCHROMAT 20x/0.8\t\tWD 0.55"
+- id: pool-zeiss-1006-592
+  family_id: zeiss
+  kind: objective
+  name: LD A-Plan 20x/0.30 Ph1 Var1
+  product_code: 1006-592
+  magnification: 20
+  numerical_aperture_text: '0.30'
+  immersion: dry
+  working_distance_text: 4,3
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "1006-592 LD A-Plan 20x/0.30 Ph1 Var1\t\tWD 4,3"
+- id: pool-zeiss-44-03-30
+  family_id: zeiss
+  kind: objective
+  name: Plan-NEOFLUAR 10x/0.30
+  product_code: 44 03 30
+  magnification: 10
+  numerical_aperture_text: '0.30'
+  immersion: dry
+  working_distance_text: 5,2
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "44 03 30 Plan-NEOFLUAR 10x/0.30\t\tWD 5,2"
+- id: pool-zeiss-420340-9901
+  family_id: zeiss
+  kind: objective
+  name: EC Plan-NEOFLUAR 10x/0.3
+  product_code: 420340-9901
+  magnification: 10
+  numerical_aperture_text: '0.3'
+  immersion: dry
+  working_distance_text: 5,2
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "420340-9901 EC Plan-NEOFLUAR 10x/0.3\t\tWD 5,2"
+- id: pool-zeiss-422320-9960
+  family_id: zeiss
+  kind: objective
+  name: EC Epiplan-NEOFLUAR 2.5x/0.06 HD
+  product_code: 422320-9960
+  magnification: 2.5
+  numerical_aperture_text: '0.06'
+  immersion: dry
+  working_distance_text: 15,1
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "422320-9960 EC Epiplan-NEOFLUAR 2.5x/0.06 HD\tWD 15,1"
+- id: pool-zeiss-420300-9900
+  family_id: zeiss
+  kind: objective
+  name: EC Plan-NEOFLUAR 1x/0.025
+  product_code: 420300-9900
+  magnification: 1
+  numerical_aperture_text: '0.025'
+  immersion: dry
+  working_distance_text: 2,9
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "420300-9900 EC Plan-NEOFLUAR 1x/0.025\t\tWD 2,9"
+- id: pool-zeiss-421787-9970
+  family_id: zeiss
+  kind: objective
+  name: C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR
+  product_code: 421787–9970
+  magnification: 63
+  numerical_aperture_text: '1.2'
+  immersion: water
+  working_distance_text: '0.28'
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "421787–9970 C-APOCHROMAT 63x/1.2 W Korr UV-VIS-IR \tWD 0.28"
+- id: pool-zeiss-421887-9970
+  family_id: zeiss
+  kind: objective
+  name: LD C-APOCHROMAT 63x/1.15 W Korr UV-VIS-IR
+  product_code: 421887–9970
+  magnification: 63
+  numerical_aperture_text: '1.15'
+  immersion: water
+  working_distance_text: 0,60
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "421887–9970 LD C-APOCHROMAT 63x/1.15 W Korr UV-VIS-IR\tWD 0,60"
+- id: pool-zeiss-440782-9902
+  family_id: zeiss
+  kind: objective
+  name: Plan-APOCHROMAT 100x/1.4 Oil DIC
+  product_code: 440782-9902
+  magnification: 100
+  numerical_aperture_text: '1.4'
+  immersion: oil
+  working_distance_text: 0,17
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "440782-9902 Plan-APOCHROMAT 100x/1.4 Oil DIC\tWD 0,17"
+- id: pool-zeiss-44-04-61
+  family_id: zeiss
+  kind: objective
+  name: Plan-NEOFLUAR 63x/1.25 Oil PH3
+  product_code: 44 04 61
+  magnification: 63
+  numerical_aperture_text: '1.25'
+  immersion: oil
+  working_distance_text: 0,10
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "44 04 61 Plan-NEOFLUAR 63x/1.25 Oil PH3\t\tWD 0,10"
+- id: pool-zeiss-44-07-60
+  family_id: zeiss
+  kind: objective
+  name: Plan-APOCHROMAT 63x/1.4 Oil
+  product_code: 44 07 60 (1100-829)
+  magnification: 63
+  numerical_aperture_text: '1.4'
+  immersion: oil
+  working_distance_text: 0,19
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "44 07 60 (1100-829) Plan-APOCHROMAT 63x/1.4 Oil\tWD 0,19"
+- id: pool-zeiss-440762-9904
+  family_id: zeiss
+  kind: objective
+  name: Plan-APOCHROMAT 63x/1.4 Oil DIC
+  product_code: 440762-9904
+  magnification: 63
+  numerical_aperture_text: '1.4'
+  immersion: oil
+  working_distance_text: 0,19
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "440762-9904 Plan-APOCHROMAT 63x/1.4 Oil DIC\tWD 0,19"
+- id: pool-zeiss-1022-818
+  family_id: zeiss
+  kind: objective
+  name: Plan-NEOFLUAR 40x/1.3 Oil
+  product_code: 1022-818 (1080-398)
+  magnification: 40
+  numerical_aperture_text: '1.3'
+  immersion: oil
+  working_distance_text: 0,21
+  condition: reported_issue
+  condition_note: Inner lenses with droplets!
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "1022-818 (1080-398) Plan-NEOFLUAR 40x/1.3 Oil\tWD 0,21\nInner lenses with droplets!"
+- id: pool-zeiss-420852-9871
+  family_id: zeiss
+  kind: objective
+  name: LD LCI Plan-APOCHROMAT 25x/0.8 Imm Korr DIC (UV)-VIS-IR
+  product_code: 420852-9871
+  magnification: 25
+  numerical_aperture_text: '0.8'
+  immersion: universal
+  working_distance_text: 0,57
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: "420852-9871 LD LCI Plan-APOCHROMAT 25x/0.8 Imm\tWD 0,57\nKorr DIC (UV)-VIS-IR"
+- id: pool-zeiss-420639-9000-700
+  family_id: zeiss
+  kind: calibration
+  name: APO Calibration LSM (SN 53811)
+  product_code: 420639-9000-700
+  magnification: null
+  numerical_aperture_text: null
+  immersion: not_recorded
+  working_distance_text: null
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 1
+  source_text: 420639-9000-700 APO Calibration LSM (SN 53811)
+- id: pool-leica-506170
+  family_id: leica
+  kind: objective
+  name: HC Plan Apo 20x/0.70 PH2
+  product_code: '506170'
+  magnification: 20
+  numerical_aperture_text: '0.70'
+  immersion: dry
+  working_distance_text: null
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506170 HC Plan Apo 20x/0.70 PH2\t\tWD "
+- id: pool-leica-506147
+  family_id: leica
+  kind: objective
+  name: L 20x/0.50 W U-V-I
+  product_code: '506147'
+  magnification: 20
+  numerical_aperture_text: '0.50'
+  immersion: water_dipping
+  working_distance_text: 3,5
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506147\tL 20x/0.50 W U-V-I\t\t\tWD 3,5"
+- id: pool-leica-506155
+  family_id: leica
+  kind: objective
+  name: L 40x/0.80 W U-V-I
+  product_code: '506155'
+  magnification: 40
+  numerical_aperture_text: '0.80'
+  immersion: water_dipping
+  working_distance_text: 3,3
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506155\tL 40x/0.80 W U-V-I\t\t\tWD 3,3"
+- id: pool-leica-506131
+  family_id: leica
+  kind: objective
+  name: PL APO 63x/1.20 W CORR
+  product_code: '506131'
+  magnification: 63
+  numerical_aperture_text: '1.20'
+  immersion: water
+  working_distance_text: 0,22
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506131\tPL APO 63x/1.20 W CORR\t\tWD 0,22"
+- id: pool-leica-506279
+  family_id: leica
+  kind: objective
+  name: HCX PL APO 63x/1.20 W CORR CS
+  product_code: '506279'
+  magnification: 63
+  numerical_aperture_text: '1.20'
+  immersion: water
+  working_distance_text: 0,22
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506279\tHCX PL APO 63x/1.20 W CORR CS\tWD 0,22"
+- id: pool-leica-506006
+  family_id: leica
+  kind: objective
+  name: PL FLUOTAR 25x/0.75 OIL
+  product_code: '506006'
+  magnification: 25
+  numerical_aperture_text: '0.75'
+  immersion: oil
+  working_distance_text: 0,18
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506006\tPL FLUOTAR 25x/0.75 OIL\t\tWD 0,18"
+- id: pool-leica-506007
+  family_id: leica
+  kind: objective
+  name: PL FLUOTAR 40x/1.00-0.50 OIL
+  product_code: '506007'
+  magnification: 40
+  numerical_aperture_text: 1.00-0.50
+  immersion: oil
+  working_distance_text: 0,08
+  condition: reported_issue
+  condition_note: iris diaphragm stuck
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506007\tPL FLUOTAR 40x/1.00-0.50 OIL\t\tWD 0,08\tiris diaphragm stuck"
+- id: pool-leica-506082
+  family_id: leica
+  kind: objective
+  name: PL APO 63x/1.32 OIL PH3
+  product_code: '506082'
+  magnification: 63
+  numerical_aperture_text: '1.32'
+  immersion: oil
+  working_distance_text: 0,17
+  condition: reported_issue
+  condition_note: problem with UV transmission
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506082\tPL APO 63x/1.32 OIL PH3\t\tWD 0,17\tproblem with UV transmission"
+- id: pool-leica-506188
+  family_id: leica
+  kind: objective
+  name: HCX PL APO 63x/1.40-0.60 OIL CS
+  product_code: '506188'
+  magnification: 63
+  numerical_aperture_text: 1.40-0.60
+  immersion: oil
+  working_distance_text: 0,14
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506188\tHCX PL APO 63x/1.40-0.60 OIL CS\tWD 0,14"
+- id: pool-leica-506316
+  family_id: leica
+  kind: objective
+  name: PL APO 100x/1.40-0.70 OIL
+  product_code: '506316'
+  magnification: 100
+  numerical_aperture_text: 1.40-0.70
+  immersion: oil
+  working_distance_text: 0,09
+  condition: reported_issue
+  condition_note: iris diaphragm stuck
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506316\tPL APO 100x/1.40-0.70 OIL \t\tWD 0,09\tiris diaphragm stuck"
+- id: pool-leica-506002
+  family_id: leica
+  kind: objective
+  name: PL FLUOTAR 16x/0.50 IMM
+  product_code: '506002'
+  magnification: 16
+  numerical_aperture_text: '0.50'
+  immersion: universal
+  working_distance_text: 0,15
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "506002\tPL FLUOTAR 16x/0.50 IMM\t\tWD 0,15"
+- id: pool-olympus-a10x-0-25
+  family_id: olympus
+  kind: objective
+  name: A10x/0.25
+  product_code: null
+  magnification: 10
+  numerical_aperture_text: '0.25'
+  immersion: not_recorded
+  working_distance_text: null
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: A10x/0.25
+- id: pool-olympus-lwd-cdplan-20x-0-40-pl
+  family_id: olympus
+  kind: objective
+  name: LWD CDPlan 20x/0.40 PL
+  product_code: null
+  magnification: 20
+  numerical_aperture_text: '0.40'
+  immersion: not_recorded
+  working_distance_text: null
+  condition: reported_issue
+  condition_note: correction collar stuck
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "LWD CDPlan 20x/0.40 PL\tphase, correction collar stuck"
+- id: pool-olympus-lwd-cdplan-40x-0-55-pl
+  family_id: olympus
+  kind: objective
+  name: LWD CDPlan 40x/0.55 PL
+  product_code: null
+  magnification: 40
+  numerical_aperture_text: '0.55'
+  immersion: not_recorded
+  working_distance_text: null
+  condition: reported_issue
+  condition_note: correction collar stuck
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "LWD CDPlan 40x/0.55 PL \tphase, correction collar stuck"
+- id: pool-incucyte-4628
+  family_id: incucyte
+  kind: objective
+  name: 10x/0.30
+  product_code: '4628'
+  magnification: 10
+  numerical_aperture_text: '0.30'
+  immersion: not_recorded
+  working_distance_text: null
+  condition: reported_unusable
+  condition_note: LENSES TOTALLY RUINED!
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "4628\t10x/0.30\tLENSES TOTALLY RUINED!"
+- id: pool-incucyte-4629
+  family_id: incucyte
+  kind: objective
+  name: 20x/0.45
+  product_code: '4629'
+  magnification: 20
+  numerical_aperture_text: '0.45'
+  immersion: not_recorded
+  working_distance_text: null
+  condition: reported_issue
+  condition_note: LENSES IN POOR CONDITION!
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: "4629\t20x/0.45\tLENSES IN POOR CONDITION!"
+- id: pool-nikon-mrh-00041
+  family_id: nikon
+  kind: objective
+  name: Plan Fluo 4x/0.13 OFN 25
+  product_code: MRH 00041
+  magnification: 4
+  numerical_aperture_text: '0.13'
+  immersion: not_recorded
+  working_distance_text: 17,2
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: null
+  quantity: null
+  inspection: null
+  source_page: 2
+  source_text: MRH 00041 Plan Fluo 4x/0.13 OFN 25 WD 17,2

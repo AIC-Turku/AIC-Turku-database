@@ -1,0 +1,89 @@
+---
+title: Objectives
+hide:
+  - navigation
+  - toc
+---
+
+# Objectives
+
+Find objectives recorded on microscopes or in the spare pool. Use the filters to narrow the catalogue, then check the microscope page or contact staff.
+
+<div id="objective-pool">
+  <div class="pool-notice">
+    <strong>Listed, installed and available are different things.</strong>
+    Installation status is reproduced from the microscope record, not a live check. Pool entries are not installed microscope configurations. Staff must approve any move or installation; matching a brand or thread does not establish compatibility.
+  </div>
+  <p><strong>{{ pool.current_count }} current source records</strong>: {{ pool.instrument_count }} associated with active microscopes and {{ pool.spare_count }} in the pool (including calibration items). {{ pool.historical_count }} historical records can be included below. These are records, not counts of physical lenses. <strong>{{ pool.problem_count }} pool records have reported problems.</strong></p>
+  <p>{% if staff_url %}<a href="{{ staff_url }}">Contact staff</a> &middot; {% endif %}<a href="../assets/objectives.json" download>Download catalogue (JSON)</a> &middot; <a href="../assets/objective_pool.json" download>Spare-pool data only</a></p>
+
+  <div id="pool-controls" class="pool-controls" hidden>
+    <div class="pool-search"><label for="pool-search">Search objectives</label><input id="pool-search" type="search" placeholder="Try 63x water, 506170 or a microscope name" aria-controls="pool-items"></div>
+    <div><label for="pool-view">Catalogue view</label><select id="pool-view" data-pool-filter="source_kind"><option value="">All objectives</option><option value="instrument">On microscopes</option><option value="spare_pool">Spare pool</option></select></div>
+    <div><label for="pool-instrument">Microscope</label><select id="pool-instrument" data-pool-filter="instrument_id"><option value="">All microscopes</option>{% for inst in pool.instruments %}<option value="{{ inst.id }}" data-retired="{{ 'true' if inst.retired else 'false' }}">{{ inst.label }}{% if inst.retired %} (retired){% endif %}</option>{% endfor %}</select></div>
+    <div><label for="pool-installation">Installation status</label><select id="pool-installation" data-pool-filter="installation_status"><option value="">All states</option>{% for option in pool.filters.installation_status %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></div>
+    <div><label for="pool-family">Manufacturer / source group</label><select id="pool-family" data-pool-filter="family_id"><option value="">All groups</option>{% for family in pool.families %}<option value="{{ family.id }}">{{ family.label }}</option>{% endfor %}</select></div>
+    {% for key, title in [('immersion', 'Immersion'), ('condition', 'Condition'), ('kind', 'Item type')] %}
+    <div><label for="pool-{{ key }}">{{ title }}</label><select id="pool-{{ key }}" data-pool-filter="{{ 'immersion_filter' if key == 'immersion' else key }}"><option value="">All</option>{% for option in pool.filters[key] %}<option value="{{ option.id }}">{{ option.label }}</option>{% endfor %}</select></div>
+    {% endfor %}
+    <div><label for="pool-sort">Sort</label><select id="pool-sort"><option value="source">Microscope / source order</option><option value="mag-asc">Magnification: low to high</option><option value="mag-desc">Magnification: high to low</option></select></div>
+    <label class="pool-history"><input id="pool-history" type="checkbox"> Include historical / retired microscope records</label>
+    <button type="button" class="md-button" data-pool-reset>Reset filters</button>
+  </div>
+  <noscript><p>All {{ pool.total }} source records, including clearly labelled historical records, are shown below. Use your browser's Find command to search. Enquiry text can be selected and copied manually.</p></noscript>
+  <p id="pool-link-feedback" role="status" hidden></p>
+  <p id="pool-count" role="status" aria-live="polite" aria-atomic="true">Showing all {{ pool.total }} records, including historical records.</p>
+  <p class="pool-muted">On microscopes includes installed, associated-but-not-installed and unconfirmed entries. A non-installed entry is not automatically shared spare stock.</p>
+  <p id="pool-no-results" hidden>No matching records. Try another search or <button type="button" data-pool-reset>reset the filters</button>.</p>
+
+  <div id="pool-items" class="pool-items">
+  {% for item in pool['items'] %}
+    <article class="pool-item" id="{{ item.id }}" data-source_kind="{{ item.source_kind }}" data-instrument_id="{{ item.instrument_id }}" data-installation_status="{{ item.installation_status }}" data-retired="{{ 'true' if item.retired else 'false' }}" data-family_id="{{ item.family_id }}" data-immersion_filter="{{ item.immersion_filter }}" data-condition="{{ item.condition }}" data-kind="{{ item.kind }}" data-magnification="{{ item.magnification if item.magnification is not none else '' }}" data-order="{{ item.order }}" data-search="{{ item.search_text }}">
+      <p class="pool-group">{{ item.family_label }} &middot; {{ item.kind_label }}</p>
+      <h2>{{ item.name }}</h2>
+      <p class="pool-association" data-state="{{ item.installation_status }}"><strong>{{ item.association_label }}</strong>{% if item.instrument_url %}<br><a href="{{ item.instrument_url }}">{{ item.instrument_name }}</a>{% endif %}</p>
+      <p class="pool-code">Product code: <strong>{{ item.product_code or 'Not recorded' }}</strong></p>
+      {% if item.source_kind == 'instrument' and item.notes %}<p class="pool-record-note"><strong>Recorded note:</strong> {{ item.notes }}</p>{% endif %}
+      <p class="pool-condition" data-state="{{ item.condition }}"><strong>{{ item.condition_label }}</strong>{% if item.condition_note %}: {{ item.condition_note }}{% endif %}</p>
+      <p class="pool-muted">{{ item.condition_description }}</p>
+      <dl class="pool-specs">
+        <div><dt>Magnification</dt><dd>{{ item.magnification_label }}</dd></div>
+        <div><dt>Numerical aperture (NA)</dt><dd>{{ item.numerical_aperture_text or 'Not recorded' }}</dd></div>
+        <div><dt>Immersion</dt><dd>{{ item.immersion_label }}</dd></div>
+        <div><dt>{{ item.working_distance_heading }}</dt><dd>{{ item.working_distance_label }}</dd></div>
+        {% if item.source_kind == 'spare_pool' %}<div><dt>Mounting (source group)</dt><dd>{{ item.mount_label }}</dd></div>{% endif %}
+        <div><dt>Availability</dt><dd>{{ item.availability_label }}</dd></div>
+      </dl>
+      {% if item.instrument_url %}<p class="pool-actions"><a class="md-button" href="{{ item.instrument_url }}">View microscope</a></p>{% endif %}
+      <details class="pool-details">
+        <summary>{% if item.source_kind == 'spare_pool' %}Details and enquiry{% else %}Details and source record{% endif %}</summary>
+        {% if item.source_kind == 'spare_pool' %}
+        <p><strong>Storage:</strong> {{ item.location or 'Not recorded; ask staff' }}.<br><strong>Quantity:</strong> {{ item.quantity if item.quantity is not none else 'Not verified' }}.<br><strong>Microscope compatibility:</strong> Not verified.</p>
+        {% if item.inspection %}<p><strong>Inspection:</strong> {{ item.inspection.date }} by {{ item.inspection.by }}.</p>{% endif %}
+        <p><strong>Original source, page {{ item.source_page }}:</strong></p>
+        {% else %}
+        <p><strong>{% if item.retired %}Historical instrument location{% else %}Instrument location (recorded){% endif %}:</strong> {{ item.location or 'Not recorded' }}.</p>
+        <p>This association is not a loan offer or approval to move the lens. Identical models in other records are not merged into one physical asset.</p>
+        <p><strong>Canonical microscope specification:</strong></p>
+        {% endif %}
+        <pre class="pool-source">{{ item.source_heading }}
+{{ item.source_text }}</pre>
+        {% if item.enquiry %}
+        <label for="enquiry-{{ item.id }}">{% if item.condition == 'reported_unusable' %}Ask about this item's status{% else %}Enquiry to staff{% endif %} (edit the placeholders after copying)</label>
+        <textarea id="enquiry-{{ item.id }}" class="pool-enquiry" rows="9" readonly>{{ item.enquiry }}</textarea>
+        {% endif %}
+        <p class="pool-actions">{% if item.enquiry %}<button type="button" class="md-button" data-copy-enquiry hidden>Copy enquiry</button> {% endif %}<a href="#{{ item.anchor }}">Link to this record</a></p>
+        <p class="pool-feedback" role="status" aria-live="polite"></p>
+        <p class="pool-muted">Nothing is sent by this page. Record ID: {{ item.id }} (catalogue ID, not a physical asset tag).</p>
+      </details>
+    </article>
+  {% endfor %}
+  </div>
+  <details class="pool-provenance"><summary>Sources, units and limitations</summary>
+    <p>Microscope entries are derived from their existing canonical objective records, not copied into the pool. Explicit installed/not-installed flags are preserved; missing flags remain unconfirmed. Retired-instrument associations are historical, not current locations or spare-stock declarations.</p>
+    <p class="pool-muted">Pool source: {{ pool.source.file_name }}, compiled by {{ pool.source.compiled_by }}. Date as written: <strong>{{ pool.source.date_text }}</strong>{% if pool.source.date_iso %} ({{ pool.source.date_iso }}){% else %} (date format not yet confirmed){% endif %}. Pool working-distance values are reproduced as supplied{% if pool.source.working_distance_unit %}, in {{ pool.source.working_distance_unit }}{% else %}; their units are not stated in the source and need confirmation{% endif %}. Microscope working distances retain their own recorded units. A record is not a verified count of physical copies.</p>
+    <p>Spare records are not added to the methods generator or simulator. This combined catalogue does not change either tool's installed-hardware data.</p>
+  </details>
+</div>
+<link rel="stylesheet" href="../assets/stylesheets/objective_pool.css">
+<script src="../assets/javascripts/objective_pool.js" defer></script>

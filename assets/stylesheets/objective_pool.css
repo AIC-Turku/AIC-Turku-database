@@ -1,0 +1,35 @@
+/* Scoped to the pool; no dashboard-wide selectors or fixed-size content boxes. */
+#objective-pool [hidden] { display: none !important; }
+#objective-pool { --pool-border: var(--md-default-fg-color--lightest, #ccc); }
+#objective-pool .pool-notice { padding: 1rem; border-left: .25rem solid var(--md-primary-fg-color, #4051b5); background: var(--md-code-bg-color, #f5f5f5); }
+#objective-pool .pool-muted { font-size: .8rem; color: var(--md-default-fg-color--light, #555); }
+#objective-pool .pool-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .65rem; align-items: end; padding: 1rem; background: var(--md-code-bg-color, #f5f5f5); border-radius: .3rem; }
+#objective-pool .pool-search { grid-column: 1 / -1; }
+#objective-pool label { display: block; font-size: .75rem; margin-bottom: .3rem; }
+#objective-pool input, #objective-pool select, #objective-pool textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--pool-border); padding: .5rem; border-radius: .2rem; color: var(--md-default-fg-color, #222); background: var(--md-default-bg-color, white); font: inherit; }
+#objective-pool :focus-visible { outline: 3px solid var(--md-accent-fg-color, #4051b5); outline-offset: 3px; }
+#objective-pool .pool-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr)); gap: 1rem; align-items: start; }
+#objective-pool .pool-item { border: 1px solid var(--pool-border); border-radius: .4rem; padding: 1rem; min-width: 0; overflow-wrap: anywhere; scroll-margin-top: 5rem; }
+#objective-pool .pool-item:target { border: 2px solid var(--md-accent-fg-color, #4051b5); }
+#objective-pool .pool-item h2 { margin: .25rem 0 .5rem; font-size: 1rem; font-weight: 600; }
+#objective-pool .pool-group, #objective-pool .pool-code { margin: .3rem 0; font-size: .75rem; }
+#objective-pool .pool-condition { border-left: .2rem solid var(--pool-border); padding-left: .5rem; font-size: .8rem; }
+#objective-pool .pool-condition[data-state="reported_issue"], #objective-pool .pool-condition[data-state="reported_unusable"] { border-left-color: #d77b11; font-weight: 600; }
+#objective-pool .pool-specs { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; font-size: .75rem; }
+#objective-pool .pool-specs dt { color: var(--md-default-fg-color--light, #555); font-weight: 400; }
+#objective-pool .pool-specs dd { margin: 0; }
+#objective-pool .pool-details { margin-top: .75rem; border: 0; box-shadow: none; padding: 0; }
+#objective-pool .pool-details summary { cursor: pointer; font-weight: 600; font-size: .8rem; }
+#objective-pool .pool-source { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .7rem; }
+#objective-pool .pool-enquiry { resize: vertical; min-height: 10rem; font-size: .75rem; }
+#objective-pool .pool-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; font-size: .75rem; }
+#objective-pool .pool-feedback { font-size: .75rem; }
+#objective-pool .pool-provenance { margin-top: 1rem; font-size: .8rem; }
+@media print { #objective-pool .pool-controls, #objective-pool .pool-actions { display: none; } #objective-pool .pool-item { break-inside: avoid; } }
+
+/* Unified catalogue association and history controls. */
+#objective-pool .pool-association { background: var(--md-code-bg-color, #f5f5f5); padding: .5rem; border-radius: .2rem; font-size: .8rem; }
+#objective-pool .pool-record-note { font-size: .8rem; }
+#objective-pool .pool-history { grid-column: 1 / -1; display: flex; align-items: center; gap: .5rem; }
+#objective-pool .pool-history input { width: auto; }
+#objective-pool select:disabled { opacity: .6; }

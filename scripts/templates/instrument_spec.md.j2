@@ -155,7 +155,11 @@ hide:
 {% endif %}
 
 {% if hw.objectives %}
-### 🔬 Objectives
+### 🔬 Objectives { #objectives }
+
+{% if objective_catalogue_url %}
+[View this microscope's objectives in the catalogue]({{ objective_catalogue_url }}){ .md-button }
+{% endif %}
 
 <div class="grid cards" markdown>
 {% for obj in hw.objectives %}
