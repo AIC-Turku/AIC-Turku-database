@@ -493,10 +493,11 @@ class ContractInvariantTests(unittest.TestCase):
         # Must not read static route_steps as optical truth
         self.assertNotIn("runtimeConfig.route_steps", methods_source)
 
-    def test_methods_template_keeps_exported_runtime_primary_and_legacy_fallback_only(self) -> None:
+    def test_methods_runtime_proposals_require_explicit_confirmation(self) -> None:
         methods_source = METHODS_APP_PATH.read_text(encoding="utf-8")
-        self.assertIn("Exported runtime selection is authoritative for this page", methods_source)
-        self.assertIn("localStorage is legacy fallback", methods_source)
+        self.assertIn("Prefer the DTO as a proposal", methods_source)
+        self.assertIn("!runtimeConfirm.checked || runtimeConfirm.disabled", methods_source)
+        self.assertIn("Use the reviewed snapshot", methods_source)
         self.assertNotIn("paragraphRuntimeSelectedConfig", methods_source)
 
     def test_authoritative_route_contract_route_optical_facts_source_selected_route_steps(self) -> None:

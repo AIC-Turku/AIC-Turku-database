@@ -19,12 +19,27 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
   </select>
 
   <div id="methods-metadata-warning" class="admonition warning" style="display: none; margin-bottom: 15px;">
-    <p class="admonition-title">Methods metadata blocker</p>
-    <p style="margin: 0 0 8px 0;">This instrument is missing policy-critical metadata required for trustworthy method text generation.</p>
+    <p class="admonition-title">Missing instrument metadata</p>
+    <p style="margin: 0 0 8px 0;">This draft is incomplete because instrument metadata is missing. Confirm the relevant details with facility staff before publication.</p>
     <ul id="methods-metadata-blockers" style="margin: 0; padding-left: 20px;"></ul>
   </div>
 
   <div id="hardware-options" style="display: none;">
+    <p><label for="session-label">Acquisition / figure reference (optional):</label><br>
+    <input id="session-label" type="text" maxlength="200" style="width: 100%;" placeholder="For example: Figure 2, fixed samples"></p>
+    <p><label for="acquisition-date">When did you use this microscope? (optional)</label><br>
+    <input id="acquisition-date" type="date"></p>
+    <p><strong>Historical configuration not verified:</strong> this form uses the current inventory. The date labels your acquisition; it does not reconstruct past hardware or software. Leave it blank when unknown and confirm historical settings with facility staff.</p>
+    <div id="runtime-review" style="display: none;">
+      <details><summary>Review available simulator plan</summary><pre id="runtime-preview" style="max-height: 18rem; overflow: auto;"></pre></details>
+      <p id="runtime-review-status" role="status"></p>
+      <label><input id="runtime-confirm" type="checkbox"> I have reviewed this plan and confirm these were the settings actually used. Include it in this draft.</label>
+    </div>
+    <div id="section-confirmed" class="methods-option-section">
+      <strong>Confirm acquisition actions:</strong>
+      <p>Select only statements that describe what you actually did. Installed capabilities are not automatically included.</p>
+      <div id="confirmed-list"></div>
+    </div>
     <div id="section-route" class="methods-option-section">
       <strong>Optical Routes &amp; Readouts:</strong>
       <div id="route-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
@@ -97,13 +112,15 @@ This tool generates a draft "Materials and Methods" text block aligned with the 
     3. Copy the metadata text and paste it into an LLM (e.g., ChatGPT/Copilot) with a prompt such as:
        *"Extract exact exposure times, pixel size (xy), z-step, pinhole size, and laser powers from this metadata."*
 
-### Generated Methods Text
+### Generated Methods Draft
+
+Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear All** to start again. Review all placeholders and acquisition-specific settings before publication.
 <div style="position: relative;">
   <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Please select an instrument and click "Add to Methods".</textarea>
   <div style="margin-top: 10px; display: flex; gap: 10px;">
       <button id="copy-btn" class="md-button md-button--primary">Copy to Clipboard</button>
       <button id="clear-btn" class="md-button">Clear All</button>
-      <span id="copy-feedback" style="color: green; margin-top: 8px; display: none;">Copied!</span>
+      <span id="copy-feedback" role="status" style="color: var(--md-default-fg-color); margin-top: 8px; display: none;">Copied!</span>
   </div>
 </div>
 

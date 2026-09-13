@@ -243,9 +243,10 @@
   }
 
   function persistSelectedConfiguration() {
-    if (typeof window === 'undefined' || !window.localStorage) return;
     try {
-      const payload = state.lastSelectedConfiguration || null;
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      const failed = state.lastSimulation && (state.lastSimulation.simulationError || state.lastSimulation.validSelection === false);
+      const payload = failed ? null : (state.lastSelectedConfiguration || null);
       if (!payload) {
         window.localStorage.removeItem('aic.virtualMicroscope.selectedConfiguration');
         return;
@@ -2755,6 +2756,8 @@ if (block.dataset.mechanismType === 'spectral_array') {
       scope_id: cleanString(currentInstrumentId || (inst.metadata && inst.metadata.instrument_id) || ''),
       instrument_id: cleanString((inst.metadata && inst.metadata.instrument_id) || ''),
       route: state.activeRoute || null,
+      validSelection: simulation ? simulation.validSelection : null,
+      simulationError: Boolean(simulation && simulation.simulationError),
       timestamp: new Date().toISOString(),      
       sources: (selection.sources || []).map((source) => ({
         mechanismId: cleanString(source.mechanismId),
@@ -3652,8 +3655,8 @@ if (block.dataset.mechanismType === 'spectral_array') {
         card.className = 'vm-info-card';
         card.style.borderLeft = `4px solid ${dyeColor}`;
   
-        const depletionText = Number(result.depletionOverlap || 0) > 0
-          ? `${Math.round((result.depletionOverlap || 0) * 100)}%`
+        const depletionText = Number(result.sted?.emissionOverlap || 0) > 0
+          ? `${Math.round((result.sted?.emissionOverlap || 0) * 100)}%`
           : '0%';
   
         const leakPct = ((result.excitationLeakageThroughput || 0) * 100).toFixed(1);
@@ -3668,7 +3671,7 @@ if (block.dataset.mechanismType === 'spectral_array') {
             <div class="vm-info-row"><span>Path benchmark</span><strong>${Number(result.benchmarkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Theoretical benchmark</span><strong>${Number(result.theoreticalBenchmarkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Generated → detector</span><strong>${((result.emissionPathThroughput || 0) * 100).toFixed(1)}%</strong></div>
-            <div class="vm-info-row"><span>Excitation</span><strong>${((result.excitationEfficiency || 0) * 100).toFixed(1)}%</strong></div>
+            <div class="vm-info-row"><span>Excitation</span><strong>${((result.excitationStrength || 0) * 100).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Crosstalk</span><strong>${Number(result.pairwiseCrosstalkPct || result.crosstalkPct || 0).toFixed(1)}%</strong></div>
             <div class="vm-info-row"><span>Leakage</span><strong>${leakPct}%</strong></div>
             <div class="vm-info-row"><span>Depletion overlap</span><strong>${depletionText}</strong></div>
