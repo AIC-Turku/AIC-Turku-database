@@ -159,7 +159,7 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.page.click("#add-btn")
         for expected in ["2024-09-12", "2025-09-12", "20x", "40x"]:
             self.assertIn(expected, self.output())
-        expect(self.page.get_by_text("Historical configuration not verified:", exact=True)).to_be_visible()
+        expect(self.page.get_by_text("Historical configuration:", exact=True)).to_be_visible()
 
     def test_clipboard_rejection_reports_failure_instead_of_success(self):
         self.open_methods()
