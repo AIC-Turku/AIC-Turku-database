@@ -48,7 +48,7 @@ modules:  # Installed modules: Only present when installed modules materially ch
 # -----------------------------------------------------------------------------
 # SOFTWARE STATUS
 # -----------------------------------------------------------------------------
-software_status: ""  # Software status: Declares whether software metadata is documented, unknown, or not applicable for manual/standalone instruments.
+software_status: "documented"  # Software status: Declares whether software metadata is documented, unknown, or not applicable for manual/standalone instruments. | Allowed values: documented, not_applicable, unknown
 
 # -----------------------------------------------------------------------------
 # SOFTWARE
@@ -256,6 +256,7 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
           selection_mode: ""  # Detection branch selection mode: Branch selection mode for an explicit detection route fork. | Allowed values (canonical IDs): fixed, exclusive, multiple
           items:  # Detection branch items: Explicit route-owned branch definitions nested under a detection sequence item.
             -
+              mode: ""  # Detection branch mode: Canonical routing semantics for each explicit branch. | Allowed values (canonical IDs): transmitted, reflected, selected, passthrough
               branch_id: ""  # Detection branch ID: Stable branch identifier scoped to the branch block.
               label: ""  # Detection branch label: Human-readable label for a detection branch.
               sequence:  # Detection branch sequence: Linear branch-local traversal sequence for a detection route fork; each branch-local item must declare exactly one of optical_path_element_id or endpoint_id.

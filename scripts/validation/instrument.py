@@ -21,7 +21,7 @@ from scripts.validation.policy import (
     _resolve_rule_nodes,
     _resolve_path_nodes,
 )
-from scripts.validation.vocabulary import Vocabulary
+from scripts.validation.vocabulary import Vocabulary, VocabularyDefinitionError
 
 INSTRUMENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
 
@@ -85,7 +85,11 @@ def build_instrument_completeness_report(payload: dict[str, Any]) -> InstrumentC
             alias_fallbacks=[],
         )
 
-    vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
+    try:
+        vocabulary = Vocabulary(vocab_registry=policy.vocab_registry)
+    except VocabularyDefinitionError as exc:
+        issues.append(ValidationIssue(code='vocabulary_definition_error', path='vocab', message=str(exc)))
+        return instrument_ids, issues, warnings
     item_field_vocab_index = _build_item_field_vocab_index(policy.rules)
     sections: dict[tuple[str | None, str | None], list[dict[str, Any]]] = {}
     missing_required: list[dict[str, Any]] = []
@@ -617,6 +621,18 @@ def validate_instrument_ledgers(
                     )
                     continue
 
+                if rule.allowed_values is not None and value not in rule.allowed_values:
+                    issues.append(
+                        ValidationIssue(
+                            code='invalid_allowed_value',
+                            path=full_path,
+                            message=(
+                                f"Invalid value '{value}' for '{rule.path}'. "
+                                f"Expected one of: {', '.join(map(str, rule.allowed_values))}."
+                            ),
+                        )
+                    )
+
                 if rule.field_type == 'list' and isinstance(value, list) and isinstance(rule.min_items, int):
                     if len(value) < rule.min_items:
                         warnings.append(
@@ -673,15 +689,14 @@ def validate_instrument_ledgers(
                         if is_match:
                             continue
                         if suggestion is not None:
-                            warnings.append(
-                                ValidationIssue(
-                                    code='vocab_synonym_used',
-                                    path=vocab_path,
-                                    message=(
-                                        f"Value '{vocab_value}' is a synonym in '{rule.vocab}'. Prefer canonical id '{suggestion}'."
-                                    ),
-                                )
+                            issue = ValidationIssue(
+                                code='vocab_synonym_used',
+                                path=vocab_path,
+                                message=(
+                                    f"Value '{vocab_value}' is a synonym in '{rule.vocab}'. Use canonical id '{suggestion}'."
+                                ),
                             )
+                            (issues if vocabulary.requires_canonical_ids(rule.vocab) else warnings).append(issue)
                         else:
                             known = ', '.join(sorted(vocabulary.terms_by_vocab.get(rule.vocab, {}).keys()))
                             issues.append(

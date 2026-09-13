@@ -4,7 +4,7 @@ maintenance_id: maint-2016-10-27-pm
 started_utc: '2016-10-27T09:00:00Z'
 completed_utc: '2016-10-27T17:00:00Z'
 status: completed
-reason: preventative_maintenance
+reason: scheduled
 action_details: calibration_and_alignment
 service_provider: vendor
 company: 3i (Intelligent Imaging Innovations)

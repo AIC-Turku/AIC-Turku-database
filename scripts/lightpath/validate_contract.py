@@ -617,6 +617,12 @@ def validate_light_path_diagnostics(
 
                 seen_branch_ids.add(branch_id)
 
+                branch_mode = _clean_string(branch.get("mode")).lower()
+                if branch_mode and branch_mode not in {"transmitted", "reflected", "selected", "passthrough"}:
+                    local_errors.append(
+                        f"{branch_context}.mode: must be one of transmitted, reflected, selected, passthrough."
+                    )
+
                 branch_sequence = branch.get("sequence")
                 if not isinstance(branch_sequence, list) or not branch_sequence:
                     local_errors.append(

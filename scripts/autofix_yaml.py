@@ -31,6 +31,31 @@ def load_vocabs(vocab_dir: Path) -> dict:
         vocabs[v_file.stem] = term_map
     return vocabs
 
+def bind_registry_aliases(vocabs: dict, schema_file: Path) -> dict:
+    """Expose policy registry names as aliases of the vocabulary file they reference."""
+    if not schema_file.exists():
+        return dict(vocabs)
+    with open(schema_file, 'r', encoding='utf-8') as f:
+        policy = yaml.safe_load(f) or {}
+    registry = policy.get('vocab_registry')
+    if not isinstance(registry, dict):
+        return dict(vocabs)
+    bound = dict(vocabs)
+    for vocab_name, spec in registry.items():
+        if not isinstance(spec, dict):
+            continue
+        if spec.get('source') == 'inline' and isinstance(spec.get('allowed_values'), list):
+            values = [str(value).strip() for value in spec['allowed_values'] if str(value).strip()]
+            bound[vocab_name] = {value.lower(): value for value in values}
+            continue
+        raw_path = spec.get('path') or spec.get('file')
+        if isinstance(raw_path, str) and raw_path.strip():
+            stem = Path(raw_path.strip()).stem
+            if stem in vocabs:
+                bound[vocab_name] = vocabs[stem]
+    return bound
+
+
 def load_schema_rules(schema_file: Path) -> dict:
     """Returns a dict mapping dot-notation paths to vocabulary names."""
     if not schema_file.exists(): return {}
@@ -108,28 +133,28 @@ def fix_legacy_fields(data: dict) -> bool:
         data["performed_by"] = data.pop("contact")
         changed = True
 
-    # 2. Add other legacy maps
-    legacy_map = {
-        "event_id": "maintenance_id",
-        "type": "reason",
-        "parts_replaced": "action_details",
-    }
-    
-    for old_k, new_k in legacy_map.items():
-        if old_k in data:
-            data[new_k] = data.pop(old_k)
+    # 2. Maintenance-only legacy maps. Never apply event-field migrations to
+    # QC or instrument records, and never overwrite an already-populated target.
+    if record_type == "maintenance_event":
+        legacy_map = {
+            "event_id": "maintenance_id",
+            "type": "reason",
+            "parts_replaced": "action_details",
+        }
+        for old_k, new_k in legacy_map.items():
+            if old_k in data and new_k not in data:
+                data[new_k] = data.pop(old_k)
+                changed = True
+
+        # Long-form action text is legacy free text; preserve it as details.
+        if "action" in data and len(str(data["action"])) > 20 and "action_details" not in data:
+            data["action_details"] = data.pop("action")
+            data["action"] = "other"
             changed = True
 
-    # 3. Move long-form action strings into action_details
-    if "action" in data and len(str(data["action"])) > 20:
-        data["action_details"] = data.pop("action")
-        data["action"] = "other"
-        changed = True
-            
-    # Quick fix for common service provider casing issues in older datasets
-    if "service_provider" in data and data["service_provider"] == "Internal":
-        data["service_provider"] = "internal"
-        changed = True
+        if data.get("service_provider") == "Internal":
+            data["service_provider"] = "internal"
+            changed = True
 
     return changed
 
@@ -185,8 +210,8 @@ def autofix_file(filepath: Path, path_to_vocab: dict, vocabs: dict, check_only: 
         data = yaml.safe_load(f) or {}
 
     changed = fix_legacy_fields(data)
-    if inject_qc_metric_classes(data):
-        changed = True
+    # Metric-class inference is semantic classification, not lexical normalization;
+    # keep it out of the automatic write path.
     replacements = 1 if changed else 0
 
     for path, vocab_name in path_to_vocab.items():
@@ -210,24 +235,23 @@ def main() -> int:
     args = parse_args()
     base = get_base_path()
     
-    # Load all capabilities dynamically
-    vocabs = load_vocabs(base / "vocab")
-    
-    # Load rules from schemas
-    inst_rules = load_schema_rules(base / "schema" / "instrument_policy.yaml")
-    qc_rules = load_schema_rules(base / "schema" / "QC_policy.yaml")
-    maint_rules = load_schema_rules(base / "schema" / "maintenance_policy.yaml")
-
+    # Load vocabularies once, then bind policy registry aliases (for example
+    # maintenance `reason` -> vocab/maintenance_reason.yaml).
+    raw_vocabs = load_vocabs(base / "vocab")
+    policies = [
+        (base / "instruments", base / "schema" / "instrument_policy.yaml"),
+        (base / "qc/sessions", base / "schema" / "QC_policy.yaml"),
+        (base / "maintenance/events", base / "schema" / "maintenance_policy.yaml"),
+    ]
     targets = [
-        (base / "instruments", inst_rules),
-        (base / "qc/sessions", qc_rules),
-        (base / "maintenance/events", maint_rules)
+        (target_dir, load_schema_rules(policy_file), bind_registry_aliases(raw_vocabs, policy_file))
+        for target_dir, policy_file in policies
     ]
 
     changed_files = []
     total_replacements = 0
 
-    for target_dir, rules in targets:
+    for target_dir, rules, vocabs in targets:
         if not target_dir.exists(): continue
         
         for file in list(target_dir.rglob("*.yaml")) + list(target_dir.rglob("*.yml")):

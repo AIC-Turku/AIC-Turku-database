@@ -45,6 +45,7 @@ class PolicyRule:
     superseded_by: str | None = None
     min_items: int | None = None
     item_type: str | None = None
+    allowed_values: list[Any] | None = None
     used_by: list[str] | None = None
 
 

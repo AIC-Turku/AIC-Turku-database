@@ -46,6 +46,7 @@ from scripts.dashboard.objective_catalogue import (
 )
 from scripts.display_labels import resolve_vocab_section_title
 from scripts.validate import Vocabulary, load_policy, print_validation_report, validate_event_ledgers
+from scripts.validation.vocabulary import merge_vocab_registries
 
 from scripts.dashboard.instrument_view import build_instrument_mega_dto, vocab_label
 from scripts.dashboard.llm_export import build_llm_inventory_payload
@@ -220,6 +221,11 @@ def _build_all_charts_data(qc_logs: list[dict[str, Any]]) -> str:
     return json.dumps(charts)
 
 
+def _markdown_table_cell(value: Any) -> str:
+    text = str(value or "").replace("\n", " ").strip()
+    return text.replace("\\", "\\\\").replace("|", "\\|")
+
+
 def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
     """Render the controlled-vocabulary dictionary markdown page."""
     vocab_md_lines = [
@@ -284,10 +290,10 @@ def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
                 vocabulary.terms_by_vocab[vocab_name].values(),
                 key=lambda item: item.label.lower(),
             ):
-                label = f"**{term.label}**"
+                label = f"**{_markdown_table_cell(term.label)}**"
                 code_id = f"`{term.id}`"
-                syns = ", ".join([f"`{synonym}`" for synonym in term.synonyms]) if term.synonyms else "-"
-                desc = term.description.replace("\n", " ").strip() if term.description else "-"
+                syns = ", ".join([f"`{_markdown_table_cell(synonym).replace(chr(96), chr(92)+chr(96))}`" for synonym in term.synonyms]) if term.synonyms else "-"
+                desc = _markdown_table_cell(term.description) if term.description else "-"
                 vocab_md_lines.append(f"    | {label} | {code_id} | {syns} | {desc} |")
 
             vocab_md_lines.append("\n")
@@ -312,10 +318,10 @@ def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
                 vocabulary.terms_by_vocab[vocab_name].values(),
                 key=lambda item: item.label.lower(),
             ):
-                label = f"**{term.label}**"
+                label = f"**{_markdown_table_cell(term.label)}**"
                 code_id = f"`{term.id}`"
-                syns = ", ".join([f"`{synonym}`" for synonym in term.synonyms]) if term.synonyms else "-"
-                desc = term.description.replace("\n", " ").strip() if term.description else "-"
+                syns = ", ".join([f"`{_markdown_table_cell(synonym).replace(chr(96), chr(92)+chr(96))}`" for synonym in term.synonyms]) if term.synonyms else "-"
+                desc = _markdown_table_cell(term.description) if term.description else "-"
                 vocab_md_lines.append(f"    | {label} | {code_id} | {syns} | {desc} |")
 
             vocab_md_lines.append("\n")
@@ -410,9 +416,9 @@ def _build_vocabulary(repo_root: Path) -> Vocabulary:
 
         vocab_registry = payload.get("vocab_registry")
         if isinstance(vocab_registry, dict):
-            combined_registry.update(vocab_registry)
+            combined_registry = merge_vocab_registries(combined_registry, vocab_registry)
 
-    return Vocabulary(repo_root / "vocab", vocab_registry=combined_registry or None)
+    return Vocabulary(repo_root / "vocab", vocab_registry=combined_registry)
 
 
 def _annotate_display_labels(
@@ -582,7 +588,7 @@ def render_site(
         latest_qc = qc_logs[-1]["data"] if qc_logs else None
         latest_maint = maint_logs[-1]["data"] if maint_logs else None
 
-        status = evaluate_instrument_status(latest_qc, latest_maint)
+        status = evaluate_instrument_status(latest_qc, latest_maint, vocabulary)
         inst["status"] = status
 
         if not is_retired_instrument:

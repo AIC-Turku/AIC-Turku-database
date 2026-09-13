@@ -2361,7 +2361,7 @@ function detectorCollectionMask(detector, grid) {
     mechanisms.forEach((mechanism) => {
       positionValuesForRoute(mechanism, route).forEach((source) => {
         const role = cleanString(source && source.role).toLowerCase();
-        if (role === 'depletion' || role === 'transmitted_illumination') return;
+        if (role === 'depletion' || role === 'transmitted_illumination' || role === 'alignment') return;
         targets.forEach((target) => {
           const distance = nearestSourceDistance(source, target);
           if (!Number.isFinite(distance)) return;
@@ -3106,7 +3106,7 @@ function detectorCollectionMask(detector, grid) {
 
     const excitationSources = selectedSources.filter((source) => {
       const role = cleanString(source.role).toLowerCase();
-      return role !== 'depletion' && role !== 'transmitted_illumination';
+      return role !== 'depletion' && role !== 'transmitted_illumination' && role !== 'alignment';
     });
     const depletionSources = selectedSources.filter((source) => cleanString(source.role).toLowerCase() === 'depletion');
     const resolvedDetectors = explicitDetectorSelections.map((detector) => hydrateDetectorSelection(detector, normalizedInstrument));

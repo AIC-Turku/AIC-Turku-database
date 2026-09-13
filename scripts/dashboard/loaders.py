@@ -35,6 +35,8 @@ from scripts.validate import (
     validate_instrument_ledgers,
 )
 
+from scripts.validation.vocabulary import Vocabulary
+
 from scripts.build_context import (
     clean_text,
     normalize_instrument_dto,
@@ -83,22 +85,21 @@ def load_facility_config(repo_root: Path) -> dict[str, Any]:
 
 
 def load_vocabularies(vocab_dir: Path) -> dict[str, dict[str, Any]]:
-    """Load vocabulary YAML files for JSON export to dashboard assets."""
-    vocabs: dict[str, dict[str, Any]] = {}
-
-    if not vocab_dir.exists():
-        return vocabs
-
-    for yaml_file in vocab_dir.glob("*.yaml"):
-        try:
-            data = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
-            if data and "terms" in data:
-                vocabs[yaml_file.stem] = {term["id"]: term for term in data["terms"]}
-        except Exception:
-            # Keep the historical dashboard behavior: vocabulary export is best-effort.
-            pass
-
-    return vocabs
+    """Load vocabulary JSON export through the same strict vocabulary reader."""
+    vocabulary = Vocabulary(vocab_dir)
+    exported: dict[str, dict[str, Any]] = {}
+    for vocab_name, terms in vocabulary.terms_by_vocab.items():
+        exported[vocab_name] = {}
+        for term_id, term in terms.items():
+            row = {
+                "id": term.id,
+                "label": term.label,
+                "description": term.description,
+                "synonyms": list(term.synonyms),
+                **dict(term.metadata),
+            }
+            exported[vocab_name][term_id] = row
+    return exported
 
 
 def _iter_yaml_files(base_dir: Path) -> Iterable[Path]:
@@ -397,6 +398,7 @@ def index_instrument_logs(
 def evaluate_instrument_status(
     latest_qc: dict[str, Any] | None,
     latest_maint: dict[str, Any] | None,
+    vocabulary: Any | None = None,
 ) -> dict[str, str]:
     """Evaluate dashboard status from latest QC and maintenance event payloads."""
     last_qc_date = _extract_log_date(latest_qc)
@@ -408,7 +410,9 @@ def evaluate_instrument_status(
     if isinstance(latest_maint, dict):
         raw_maint_status = latest_maint.get("microscope_status_after")
         if isinstance(raw_maint_status, str):
-            maint_status = raw_maint_status.strip().lower()
+            raw_value = raw_maint_status.strip()
+            resolved = vocabulary.resolve_canonical("maintenance_status", raw_value) if vocabulary is not None else None
+            maint_status = resolved or raw_value.lower()
 
         for key in (
             "status_notes",
@@ -431,7 +435,9 @@ def evaluate_instrument_status(
         if isinstance(evaluation, dict):
             raw_qc_status = evaluation.get("overall_status")
             if isinstance(raw_qc_status, str):
-                qc_status = raw_qc_status.strip().lower()
+                raw_value = raw_qc_status.strip()
+                resolved = vocabulary.resolve_canonical("evaluation_status", raw_value) if vocabulary is not None else None
+                qc_status = resolved or raw_value.lower()
 
             results = evaluation.get("results")
             if isinstance(results, list) and results:
@@ -457,6 +463,17 @@ def evaluate_instrument_status(
             "color": "yellow",
             "badge": "🟡 Warning",
             "reason": reason,
+            "last_qc_date": last_qc_date,
+            "last_maint_date": last_maint_date,
+        }
+
+    known_maintenance = {"", "in_service", "limited", "out_of_service"}
+    known_qc = {"", "pass", "warn", "fail"}
+    if maint_status not in known_maintenance or qc_status not in known_qc:
+        return {
+            "color": "yellow",
+            "badge": "🟡 Status unknown",
+            "reason": maint_reason or qc_reason or "Unrecognized status value in ledger",
             "last_qc_date": last_qc_date,
             "last_maint_date": last_maint_date,
         }
