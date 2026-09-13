@@ -127,6 +127,11 @@ hardware:
         - center_nm: 445
           width_nm: 35
         notes: 'e.g., DAPI/Hoechst. Excitation: 381-404 nm.'
+        # Recorded emission band only. Excitation filter and dichroic specifications remain unverified.
+        emission_filter:
+          component_type: bandpass
+          center_nm: 445
+          width_nm: 35
       Pos_2:
         name: Green Channel
         component_type: filter_cube
@@ -134,6 +139,11 @@ hardware:
         - center_nm: 532
           width_nm: 58
         notes: 'e.g., FITC/GFP. Excitation: 473-491 nm.'
+        # Recorded emission band only. Excitation filter and dichroic specifications remain unverified.
+        emission_filter:
+          component_type: bandpass
+          center_nm: 532
+          width_nm: 58
       Pos_3:
         name: Red Channel
         component_type: filter_cube
@@ -141,6 +151,11 @@ hardware:
         - center_nm: 671
           width_nm: 99
         notes: 'e.g., Cy3/Texas Red. Excitation: 584-605 nm.'
+        # Recorded emission band only. Excitation filter and dichroic specifications remain unverified.
+        emission_filter:
+          component_type: bandpass
+          center_nm: 671
+          width_nm: 99
 light_paths:
 - id: widefield_fluorescence
   illumination_sequence:

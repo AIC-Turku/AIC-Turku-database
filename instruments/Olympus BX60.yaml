@@ -37,9 +37,9 @@ hardware:
     manufacturer: Olympus
     model: DP71
     pixel_pitch_um: 6.45
-    sensor_format_px: 4080 x 3072
-    notes: 1.45 megapixel CCD that uses pixel-shifting to achieve 12.5 megapixel resolution.
-    url: ''
+    sensor_format_px: 1360 x 1024
+    notes: Native effective array is 1360 x 1024 pixels. Pixel-shift acquisition produces 4080 x 3072 output images; this is not the native sensor array.
+    url: https://www.olympus.co.jp/jp/news/2006a/nr060427dp71j.html
     id: detector_1
   eyepieces:
   - id: eyepieces

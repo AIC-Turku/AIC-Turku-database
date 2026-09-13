@@ -254,21 +254,39 @@ hardware:
     positions:
       Pos_1:
         product_code: LED-DAPI-A-ZHE-Zero
+        component_type: filter_cube
         notes: DAPI Filter Cube. Nominal DAPI band 445/45nm.
         bands:
         - center_nm: 445
           width_nm: 45
+        # Emission band copied from the existing ledger. Excitation and dichroic data remain unknown.
+        emission_filter:
+          component_type: bandpass
+          center_nm: 445
+          width_nm: 45
       Pos_2:
         product_code: LED-FITC-A-ZHE-Zero
+        component_type: filter_cube
         notes: FITC Filter Cube. Nominal GFP band 525/30nm.
         bands:
         - center_nm: 525
           width_nm: 30
+        # Emission band copied from the existing ledger. Excitation and dichroic data remain unknown.
+        emission_filter:
+          component_type: bandpass
+          center_nm: 525
+          width_nm: 30
       Pos_3:
         product_code: LED-TRITC-A-ZHE-Zero
+        component_type: filter_cube
         notes: TRITC Filter Cube. Nominal Cy3/Alexa 568 band 617/73nm.
         bands:
         - center_nm: 617
+          width_nm: 73
+        # Emission band copied from the existing ledger. Excitation and dichroic data remain unknown.
+        emission_filter:
+          component_type: bandpass
+          center_nm: 617
           width_nm: 73
   - id: csu_w1_dichroic_slider
     name: CSU-W1 Dichroic Slider

@@ -109,13 +109,11 @@ hardware:
       Pos_2:
         name: GFP longpass
         component_type: longpass
-        cut_on_nm:
-        - 500
+        cut_on_nm: 500
       Pos_3:
         name: RFP longpass
         component_type: longpass
-        cut_on_nm:
-        - 570
+        cut_on_nm: 570
 light_paths:
 - id: light_sheet
   illumination_sequence:
