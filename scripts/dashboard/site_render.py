@@ -41,6 +41,9 @@ from scripts.objective_pool import (
     build_objective_pool_view, staff_contact_url,
 )
 from scripts.build_context import build_instrument_context, clean_text
+from scripts.dashboard.objective_catalogue import (
+    ObjectiveCatalogueError, build_objective_catalogue_view, instrument_catalogue_link,
+)
 from scripts.display_labels import resolve_vocab_section_title
 from scripts.validate import Vocabulary, load_policy, print_validation_report, validate_event_ledgers
 
@@ -155,7 +158,7 @@ def build_nav(
         {"Fleet Overview": "index.md"},
         {"System Health": "status.md"},
         {"Microscopes": microscopes},
-        {"Spare objectives": "objective_pool.md"},
+        {"Objectives": "objective_pool.md"},
         {"Plan Your Experiments": "plan_experiments.md"},
         {"Virtual Microscope": "virtual_microscope.md"},
         {"Methods Generator": "methods_generator.md"},
@@ -496,6 +499,12 @@ def render_site(
     )
 
     _annotate_display_labels(instruments, retired_instruments, vocabulary)
+    try:
+        catalogue = build_objective_catalogue_view(pool, [*instruments, *retired_instruments], vocabulary, facility)
+    except ObjectiveCatalogueError as error:
+        print(f"Objective catalogue validation failed: {error}")
+        return 1
+    catalogue_instruments = {item["id"] for item in catalogue["instruments"]}
 
     (docs_root / "vocabulary_dictionary.md").write_text(
         build_vocabulary_dictionary_markdown(vocabulary),
@@ -620,6 +629,7 @@ def render_site(
             latest_metrics=latest_metrics,
             metric_names=metric_names,
             policy=inst.get("canonical", {}).get("policy", {}),
+            objective_catalogue_url=instrument_catalogue_link(instrument_id) if instrument_id in catalogue_instruments else None,
         )
         (instrument_dir / "index.md").write_text(overview_md, encoding="utf-8")
 
@@ -703,9 +713,12 @@ def render_site(
 
     pool_template = Environment(loader=FileSystemLoader(templates_dir), autoescape=True).get_template("objective_pool.html.j2")
     (docs_root / "objective_pool.md").write_text(
-        pool_template.render(pool=pool, staff_url=staff_contact_url(facility)), encoding="utf-8")
+        pool_template.render(pool=catalogue, staff_url=staff_contact_url(facility)), encoding="utf-8")
     (docs_root / "assets" / "objective_pool.json").write_text(
         json.dumps(pool, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    (docs_root / "assets" / "objectives.json").write_text(
+        json.dumps(catalogue, ensure_ascii=False, indent=2), encoding="utf-8")
 
     vm_html = tpl_vm.render(lightpath_data_json=json_script_data(global_vm_payloads))
     (docs_root / "virtual_microscope.md").write_text(vm_html, encoding="utf-8")

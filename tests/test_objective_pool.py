@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import pytest
 from jinja2 import Environment, FileSystemLoader
 
+from scripts.dashboard.objective_catalogue import build_objective_catalogue_view
+
 from scripts.objective_pool import (
     ObjectivePoolError, build_objective_pool_view, load_objective_pool,
     pool_schema, staff_contact_url, validate_pool,
@@ -26,7 +28,7 @@ def by_code(data, code):
 def render(data=None):
     view = build_objective_pool_view(data or canonical(), pool_schema(ROOT))
     env = Environment(loader=FileSystemLoader(ROOT / 'scripts/templates'), autoescape=True)
-    return env.get_template('objective_pool.html.j2').render(pool=view, staff_url='https://example.org/contact')
+    return env.get_template('objective_pool.html.j2').render(pool=build_objective_catalogue_view(view, [], None), staff_url='https://example.org/contact')
 
 
 def test_source_inventory_coverage_and_faults():
@@ -137,17 +139,17 @@ def test_html_escapes_source_and_config_urls_are_checked():
 
 def test_empty_inventory_is_readable():
     data = canonical();data['items']=[]
-    assert '0 source records' in render(data)
+    assert '0 current source records' in render(data)
 
 
 def test_navigation_and_ci_watch_pool_changes():
     from scripts.dashboard.site_render import build_nav
-    assert {'Spare objectives':'objective_pool.md'} in build_nav([],[])
+    assert {'Objectives':'objective_pool.md'} in build_nav([],[])
     for name in ['validate.yml','deploy-dashboard.yml']:
         assert '"inventory/**"' in (ROOT/'.github/workflows'/name).read_text()
     source = (ROOT/'scripts/dashboard/site_render.py').read_text()
     assert 'assets" / "objective_pool.json' in source
-    assert 'pool_template.render(pool=pool' in source
+    assert 'pool_template.render(pool=catalogue' in source
     for name in ['methods_export.py','llm_export.py']:
         assert 'objective_pool' not in (ROOT/'scripts/dashboard'/name).read_text()
 

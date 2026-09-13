@@ -1,6 +1,80 @@
-# Spare objectives: design and maintenance
+# Objectives catalogue: design and maintenance
 
-## Options and adversarial review
+## Unified catalogue (PR #432 extension)
+
+**Objectives** is now one discovery page for microscope records and the spare pool.
+The existing `objective_pool/` URL and `pool-*` anchors remain valid. There is no
+second manually maintained copy of microscope objective specifications.
+
+The main views are **All objectives**, **On microscopes** and **Spare pool**.
+Filter further by microscope, installation state, manufacturer, immersion, condition
+and item type. Current records are shown by default; a separate checkbox includes
+clearly labelled retired-instrument records. A microscope-specific link enables the
+historical view when necessary. The instrument page and catalogue link in both
+directions, to its Objectives section and to a prefiltered catalogue respectively.
+
+Installation is a three-state fact taken only from canonical `is_installed`:
+
+| Source flag | Catalogue label | What it does not establish |
+|---|---|---|
+| `true` | Installed - as recorded | Serviceability, availability for borrowing, or a fresh physical check |
+| `false` | Associated - not installed | Membership of the shared spare pool |
+| missing/null | Installation unconfirmed | Either installed or spare |
+
+Optional-objective notes remain visible without inferring optional status from every
+false flag. Historical flags retain their original meaning within a historical record;
+retired objectives are not automatically spare. Pool entries remain **Spare-pool
+listings** with their original condition and availability, not confirmed live stock.
+
+`inventory/objective_pool.yaml` remains authoritative for pool records only.
+`scripts/dashboard/objective_catalogue.py` projects those validated pool views and
+canonical instrument DTOs into the shared page and `assets/objectives.json`.
+`assets/objective_pool.json` remains the original pool-only export. Catalogue filters
+are display metadata, never new capabilities. The Air/dry filter groups the pool's
+Dry descriptor with canonical Air; source values and per-item labels are preserved.
+Working distances on microscopes retain their recorded units; pool units remain
+unconfirmed where the source does not specify them.
+
+As of this source snapshot the page has **135 current records**: 100 on active
+microscopes (90 explicitly installed and 10 explicitly not installed), plus 35 pool
+records including one calibration item. Two retired-SP5 objective records are
+available in the historical view. Counts refer to source records, not physical assets.
+`facility.objective_catalogue.exclude_instrument_ids` explicitly excludes the existing
+synthetic `scope-testx1` fixture; exclusions must be known, unique IDs. No name-based
+synthetic detection or browser-side hardware inference is used.
+
+### Adversarial boundaries
+
+- Product codes identify models, not physical copies. No installed/pool records or
+  equal models across microscopes are merged. Stable instrument keys combine the
+  instrument ID and objective ID; missing/duplicate source IDs fail rather than
+  causing a silent merge or a position-dependent link.
+- Instrument entries offer **View microscope**, not a borrowing request. Catalogue
+  associations are not portable compatibility approvals. Pool enquiries retain their
+  original fault warnings; faults on one source record are not copied to equal models.
+- No source YAML objective, installed-instrument export, methods-generator input,
+  LLM instrument inventory or simulator configuration is expanded by this feature.
+  Joining these records for discovery is not installing an objective.
+- The complete server-rendered catalogue is readable without JavaScript, including
+  labelled historical entries. JavaScript applies the current-only default and filters.
+  Shared item links reveal their target despite conflicting filters; unknown microscope
+  links produce a notice, not a misleading empty catalogue.
+- Unknown quantities, whereabouts, compatibility, condition and inspection dates
+  remain unknown. Verified physical IDs, loans and movement history require subsequent
+  evidence-backed work, not automatic reconciliation by this catalogue.
+
+### Validation
+
+Unit tests cover all three installation states, duplicate/missing IDs, nonmutation,
+source coverage, optional notes, units and exclusion validation. Chromium interaction
+tests cover filters, history, unknown state, old anchors and query input (only the
+query-string boundary is stubbed for offline execution). A separate generated-MkDocs
+acceptance test exercises real navigation, assets, instrument links, historical queries,
+mobile overflow and browser errors on a local HTTP server. That test explicitly skips
+only when MkDocs is absent; CI installs the build dependencies and runs it.
+
+## Original spare-pool design review
+
 
 | Option | Benefit | Objection | Decision |
 |---|---|---|---|
@@ -9,7 +83,7 @@
 | Separate searchable catalogue | Fits the existing YAML/MkDocs architecture | Could still look like live stock or compatibility approval | Selected with explicit condition, availability and staff-check boundaries |
 | Full booking/loan application | Tracks movements | No physical IDs, stock counts, storage locations or lending process supplied; static site has no transaction backend | Defer; do not fake bookings with browser storage |
 
-The new **Spare objectives** navigation category and homepage link lead to a server-rendered catalogue with search, filters, sorting, stable record links, original source details and copyable enquiries. It never adds pool records to installed instrument hardware, the methods generator or the simulator. No message or booking is sent.
+The original spare-pool page, now included in the unified **Objectives** catalogue, uses a server-rendered catalogue with search, filters, sorting, stable record links, original source details and copyable enquiries. The unified discovery view never adds pool records to installed instrument hardware, the methods generator or the simulator. No message or booking is sent.
 
 ## Source and boundaries
 

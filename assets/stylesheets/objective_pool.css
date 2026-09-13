@@ -26,3 +26,10 @@
 #objective-pool .pool-feedback { font-size: .75rem; }
 #objective-pool .pool-provenance { margin-top: 1rem; font-size: .8rem; }
 @media print { #objective-pool .pool-controls, #objective-pool .pool-actions { display: none; } #objective-pool .pool-item { break-inside: avoid; } }
+
+/* Unified catalogue association and history controls. */
+#objective-pool .pool-association { background: var(--md-code-bg-color, #f5f5f5); padding: .5rem; border-radius: .2rem; font-size: .8rem; }
+#objective-pool .pool-record-note { font-size: .8rem; }
+#objective-pool .pool-history { grid-column: 1 / -1; display: flex; align-items: center; gap: .5rem; }
+#objective-pool .pool-history input { width: auto; }
+#objective-pool select:disabled { opacity: .6; }
