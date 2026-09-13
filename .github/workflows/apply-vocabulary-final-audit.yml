@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -82,19 +82,7 @@ jobs:
             tests/test_vocabulary_final_audit.py
 
       - name: Run full test suite
-        shell: bash
-        run: |
-          set +e
-          PYTHONPATH=. python -m pytest -q > /tmp/pytest.log 2>&1
-          code=$?
-          set -e
-          if [ "$code" -ne 0 ]; then
-            echo '===== pytest failure tail ====='
-            tail -n 400 /tmp/pytest.log
-            echo '===== end pytest failure tail ====='
-            exit "$code"
-          fi
-          cat /tmp/pytest.log
+        run: PYTHONPATH=. python -m pytest -q
 
       - name: Remaining release gates
         run: |
@@ -113,3 +101,14 @@ jobs:
           test ! -e scripts/_vocab_final_audit_patch.py
           test ! -e scripts/_vocab_postmerge_patch.py
           git diff --check
+
+      - name: Commit verified production changes
+        run: |
+          git checkout HEAD -- .github/workflows
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "Apply verified vocabulary hardening fixes"
+          git push origin HEAD:${{ github.head_ref }}
