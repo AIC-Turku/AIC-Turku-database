@@ -22,12 +22,12 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 
 # Keep strict duplicate-key rejection even when a fixture/local module shadows
-# PyYAML and exposes only safe_load. Production PyYAML continues to use the
-# existing UniqueKeyLoader path; ruamel is only a strict fallback.
+# PyYAML. Production PyYAML continues to use the existing UniqueKeyLoader path;
+# ruamel is the complete parser fallback when SafeLoader is unavailable.
 replace_once(
     "scripts/validation/io.py",
     '''    if safe_loader is None:\n        if reject_duplicate_keys:\n            return None, "YAML loader cannot enforce duplicate-key rejection."\n        try:\n            payload = yaml.safe_load(path.read_text(encoding="utf-8"))\n        except (OSError, yaml.YAMLError) as exc:\n            return None, str(exc)\n''',
-    '''    if safe_loader is None:\n        text = path.read_text(encoding="utf-8")\n        if reject_duplicate_keys:\n            try:\n                from ruamel.yaml import YAML as RuamelYAML\n                from ruamel.yaml.error import YAMLError as RuamelYAMLError\n\n                strict_yaml = RuamelYAML(typ="safe")\n                strict_yaml.allow_duplicate_keys = False\n                strict_yaml.load(text)\n            except (OSError, RuamelYAMLError) as exc:\n                return None, str(exc)\n            except ImportError:\n                return None, "YAML loader cannot enforce duplicate-key rejection."\n        try:\n            payload = yaml.safe_load(text)\n        except (OSError, yaml.YAMLError) as exc:\n            return None, str(exc)\n''',
+    '''    if safe_loader is None:\n        text = path.read_text(encoding="utf-8")\n        try:\n            from ruamel.yaml import YAML as RuamelYAML\n            from ruamel.yaml.error import YAMLError as RuamelYAMLError\n        except ImportError:\n            if reject_duplicate_keys:\n                return None, "YAML loader cannot enforce duplicate-key rejection."\n            try:\n                payload = yaml.safe_load(text)\n            except (OSError, yaml.YAMLError) as exc:\n                return None, str(exc)\n        else:\n            try:\n                fallback_yaml = RuamelYAML(typ="safe")\n                fallback_yaml.allow_duplicate_keys = not reject_duplicate_keys\n                payload = fallback_yaml.load(text)\n            except (OSError, RuamelYAMLError) as exc:\n                return None, str(exc)\n''',
 )
 
 # The validation package now owns YAML loading centrally in validation.io.
