@@ -406,7 +406,8 @@ class ParserComponentMatrixTests(unittest.TestCase):
     def test_non_upgradeable_cubes_remain_identified(self) -> None:
         """YAMLs that could not be safely upgraded still emit cube warnings."""
         still_degraded = [
-            ("Zeiss TIRF.yaml", 4),
+            # 38 HE/43 HE are now documented; 76 HE/77 HE remain incomplete.
+            ("Zeiss TIRF.yaml", 2),
             ("Zeiss AxioZoom V16.yaml", 4),
             ("xCELLigence RTCA eSight.yaml", 3),
             ("Nikon Eclipse Ti2-E.yaml", 1),

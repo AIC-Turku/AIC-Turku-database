@@ -314,10 +314,11 @@ hardware:
         notes: Standard multiband spinning-disk dichroic for 405/488/561/640-class
           excitation.
       Pos_2:
-        component_type: empty
+        component_type: dichroic
         name: NIR dichroic position
-        notes: Placeholder for the installed NIR dichroic used with the 730 nm excitation
-          / 809 nm emission route.
+        notes: Installed NIR dichroic used with the 730 nm excitation / 809 nm emission
+          route. Product code and spectral data are unverified; this is not an empty
+          or spectrally transparent position.
   - name: Widefield Dichroic
     stage_role: dichroic
     id: widefield_dichroic

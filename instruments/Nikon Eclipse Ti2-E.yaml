@@ -59,9 +59,9 @@ hardware:
     manufacturer: Hamamatsu
     model: Orca Flash4.0 V3
     pixel_pitch_um: 6.5
-    sensor_format_px: 2048 x 2044
-    notes: sCMOS
-    url: ''
+    sensor_format_px: 2048 x 2048
+    notes: sCMOS. Native effective pixel array from the ORCA-Flash4.0 V3 manufacturer specification; not a session ROI.
+    url: https://www.hamamatsu.com/us/en/product/cameras/cmos-cameras/C13440-20CU.html
     id: detector_1
   - kind: cmos
     manufacturer: Nikon

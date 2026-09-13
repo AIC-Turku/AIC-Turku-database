@@ -44,3 +44,13 @@ YAML instrument specs
 ## Change Scope Guardrail
 
 Do not change runtime behavior in this step except adding AGENTS.md.
+
+## Microscope inventory reviews
+
+- Read complete instrument YAML files, including retired records, not just generated pages or audit totals. Keep synthetic fixtures separate from staff questions.
+- Trace each declared route from its sources, through optics and branches, to the actual detector or eyepiece. Look for unreferenced hardware and conflicts between installed capabilities and route definitions. Do not assume every microscope has an epi-fluorescence layout.
+- Distinguish missing hardware facts from not-applicable metadata, unsupported models, historical uncertainty and experiment-specific settings. A broadband lamp does not need an invented single wavelength.
+- Correct only facts supported by existing records or primary documentation for the exact recorded component. Link evidence in the ledger or review document. Unknown optics are not empty positions; nominal specifications are not measured transmission curves.
+- For unresolved facts, draft short microscope-specific Slack questions in plain language: the software name/version, component label, data sheet, room, or a simple light-path drawing. Do not repeat information already present or ask staff to dismantle instruments.
+- Ask when hardware/software changes took effect and how that date is known. Do not use Git commit dates as installation dates.
+- Keep staff questions separate from implementation defects. Never invent data to make a completeness check pass. Submit fixes in a PR; do not merge or post Slack messages without explicit authorization.

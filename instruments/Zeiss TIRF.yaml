@@ -199,6 +199,19 @@ hardware:
         - center_nm: 525
           width_nm: 50
         notes: 'Excitation: 470/40 nm.'
+        # Nominal ZEISS specification for the filter-set ID already recorded; not a measured transmission curve.
+        url: https://www.micro-shop.zeiss.com/fr/ch/system/axio%2Bobserver-axio%2Bobserver%2B7-microscopes/10303/
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 470
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 495
+        emission_filter:
+          component_type: bandpass
+          center_nm: 525
+          width_nm: 50
       Pos_2:
         name: Filter set 43 HE (DsRed)
         product_code: 43 HE
@@ -207,6 +220,19 @@ hardware:
         - center_nm: 605
           width_nm: 70
         notes: 'Excitation: 550/25 nm.'
+        # Nominal ZEISS specification for the filter-set ID already recorded; not a measured transmission curve.
+        url: https://www.micro-shop.zeiss.com/fr/ch/system/axio%2Bobserver-axio%2Bobserver%2B7-microscopes/10303/
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 550
+          width_nm: 25
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 570
+        emission_filter:
+          component_type: bandpass
+          center_nm: 605
+          width_nm: 70
       Pos_3:
         name: Filter set 76 HE (CFP/GFP/DsRed)
         product_code: 76 HE

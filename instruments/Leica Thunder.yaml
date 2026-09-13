@@ -316,6 +316,29 @@ hardware:
           width_nm: 80
         notes: 'Quad-band. Excitation: 436/28, 506/21, 578/24, 730/40 nm. Dichroic
           Cutoffs: 459, 523, 598, 763 nm.'
+        # Bands transcribed from existing notes. Dichroic transmission/reflection bands still need confirmation.
+        excitation_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 436
+            width_nm: 28
+          - center_nm: 506
+            width_nm: 21
+          - center_nm: 578
+            width_nm: 24
+          - center_nm: 730
+            width_nm: 40
+        emission_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 473
+            width_nm: 22
+          - center_nm: 539
+            width_nm: 24
+          - center_nm: 641
+            width_nm: 78
+          - center_nm: 810
+            width_nm: 80
       Pos_2:
         name: DFT51010
         product_code: '11525418'
@@ -331,6 +354,29 @@ hardware:
           width_nm: 58
         notes: 'Quad-band. Excitation: 391/32, 479/33, 554/24, 638/31 nm. Dichroic
           Cutoffs: 415, 500, 572, 660 nm.'
+        # Bands transcribed from existing notes. Dichroic transmission/reflection bands still need confirmation.
+        excitation_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 391
+            width_nm: 32
+          - center_nm: 479
+            width_nm: 33
+          - center_nm: 554
+            width_nm: 24
+          - center_nm: 638
+            width_nm: 31
+        emission_filter:
+          component_type: multiband_bandpass
+          bands:
+          - center_nm: 435
+            width_nm: 30
+          - center_nm: 519
+            width_nm: 25
+          - center_nm: 594
+            width_nm: 32
+          - center_nm: 695
+            width_nm: 58
       Pos_3:
         name: CY3
         component_type: filter_cube
