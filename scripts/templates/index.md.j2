@@ -36,6 +36,14 @@ Need a particular objective? [Browse the objective catalogue](objective_pool.md)
   </div>
 </div>
 
+<p id="aicResultCount" class="aic-muted aic-resultcount">Showing all {{ instruments | length }} microscopes.</p>
+
+<div id="aicNoResults" class="aic-noresults" hidden>
+  <strong>No microscopes match this search.</strong>
+  <span>Try a shorter search term, or reset the filters to see the whole fleet.</span>
+  <button id="aicResetFilters" type="button" class="md-button">Show all microscopes</button>
+</div>
+
 <div class="aic-grid">
   {% for inst in instruments %}
   <a class="aic-card aic-card--link" href="instruments/{{ inst.id }}/"
@@ -73,6 +81,9 @@ Need a particular objective? [Browse the objective catalogue](objective_pool.md)
 (function() {
   const capabilityEl = document.getElementById('aicModality');
   const searchEl = document.getElementById('aicSearch');
+  const countEl = document.getElementById('aicResultCount');
+  const emptyEl = document.getElementById('aicNoResults');
+  const resetEl = document.getElementById('aicResetFilters');
   const cards = Array.from(document.querySelectorAll('.aic-card'));
 
   function applyFilters() {
@@ -94,9 +105,27 @@ Need a particular objective? [Browse the objective catalogue](objective_pool.md)
 
       card.style.display = (matchesCapability && matchesQ) ? '' : 'none';
     });
+
+    // Filtering every card out leaves a blank page, which reads as a broken
+    // site rather than an empty result. Always say what happened.
+    const shown = cards.filter(card => card.style.display !== 'none').length;
+    const filtered = (selectedCapability !== 'all') || Boolean(q);
+    countEl.textContent = filtered
+      ? `Showing ${shown} of ${cards.length} microscopes.`
+      : `Showing all ${cards.length} microscopes.`;
+    emptyEl.hidden = shown !== 0;
+  }
+
+  function resetFilters() {
+    searchEl.value = '';
+    capabilityEl.value = 'all';
+    applyFilters();
+    searchEl.focus();
   }
 
   capabilityEl.addEventListener('change', applyFilters);
   searchEl.addEventListener('input', applyFilters);
+  resetEl.addEventListener('click', resetFilters);
+  applyFilters();
 })();
 </script>

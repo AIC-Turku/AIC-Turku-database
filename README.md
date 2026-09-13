@@ -41,7 +41,7 @@ The experiment-planning page provides a structured inventory export that can be 
 
 ## Repository structure
 
-- `facility.yaml` — facility identity, public URLs, acknowledgements, branding, and page-level defaults.
+- `facility.yaml` — facility identity, public URLs, acknowledgements, branding, page-level defaults, and the instrument records withheld from the public site.
 - `instruments/*.yaml` — active instrument records.
 - `instruments/retired/*.yaml` — retired instruments.
 - `qc/sessions/**` — QC records.
@@ -188,6 +188,23 @@ PYTHONPATH=. pytest -q
 
 The suite covers validation, completeness, canonical route export, browser propagation, spectrum provenance, methods-generator behavior, config serialization, and dashboard/DTO contracts.
 
+## Withholding a record from the public site
+
+Some ledger records exist for testing rather than for researchers. List their IDs
+under `facility.non_public_instrument_ids` to keep them out of the generated site:
+
+```yaml
+facility:
+  non_public_instrument_ids: [scope-testx1]
+```
+
+Withheld records are still loaded, validated, and available to the test suite. They
+are removed from navigation, generated instrument/history/event pages, the site
+search index, the Methods generator inventory, and the Virtual Microscope. IDs must
+be explicit, unique, and known: a renamed or deleted record fails the build rather
+than silently reappearing on the public site. Exclusions are never inferred from
+display names, notes, or manufacturers.
+
 ## Reusing the project for another facility
 
 A new facility should normally start by changing:
@@ -195,7 +212,8 @@ A new facility should normally start by changing:
 1. `facility.yaml` for facility identity, links, acknowledgements, and branding;
 2. `instruments/*.yaml` for the local microscope inventory;
 3. `vocab/*.yaml` only when additional controlled terms are required;
-4. `schema/instrument_policy.yaml` only when the local completeness policy differs.
+4. `schema/instrument_policy.yaml` only when the local completeness policy differs;
+5. `facility.non_public_instrument_ids` for any local fixture records that must not be published.
 
 Facility identity and data belong in configuration/YAML. A new deployment should not need browser-code changes simply to rename the facility or change acknowledgements.
 

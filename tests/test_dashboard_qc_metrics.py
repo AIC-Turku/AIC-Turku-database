@@ -12,7 +12,8 @@ from scripts.dashboard.qc_metrics import (
     metric_name_lookup,
     metric_raw_lookup,
 )
-from scripts.dashboard.site_render import _build_all_charts_data
+from scripts.dashboard.site_render import _build_all_charts_data, build_event_display
+from scripts.validation.vocabulary import Vocabulary
 
 
 class DashboardQcMetricViewTests(unittest.TestCase):
@@ -188,6 +189,7 @@ class DashboardQcMetricViewTests(unittest.TestCase):
         template = environment.get_template("event_detail.md.j2")
         rendered = template.render(
             event_id="qc_example",
+            date="2026-06-12",
             instrument="scope-example",
             instrument_id="scope-example",
             operator="operator",
@@ -195,6 +197,12 @@ class DashboardQcMetricViewTests(unittest.TestCase):
             payload=self.payload,
             qc_metrics=build_qc_metric_view(self.payload),
             qc_laser_context=build_qc_laser_context_view(self.payload),
+            display=build_event_display(
+                self.payload,
+                vocabulary=Vocabulary(Path("vocab")),
+                event_date="2026-06-12",
+                instrument_display_name="Example Microscope",
+            ),
         )
 
         self.assertIn("Laser measurement context", rendered)
@@ -203,6 +211,54 @@ class DashboardQcMetricViewTests(unittest.TestCase):
         self.assertIn("laser.at_obj.405.100pct.power_mw", rendered)
         self.assertIn("3.83 mW", rendered)
         self.assertIn("Human input", rendered)
+
+    def test_event_page_shows_human_labels_not_ledger_identifiers(self) -> None:
+        """Event pages are public, so they must not surface file stems or slugs."""
+        environment = Environment(loader=FileSystemLoader("scripts/templates"))
+        template = environment.get_template("event_detail.md.j2")
+        vocabulary = Vocabulary(Path("vocab"))
+
+        qc_rendered = template.render(
+            event_id="2026-05-13_vendor_pm_qc",
+            date="2026-05-13",
+            instrument="scope-example",
+            instrument_id="scope-example",
+            operator="operator",
+            raw_yaml_content="record_type: qc_session",
+            payload=self.payload,
+            qc_metrics=build_qc_metric_view(self.payload),
+            qc_laser_context=build_qc_laser_context_view(self.payload),
+            display=build_event_display(
+                self.payload,
+                vocabulary=vocabulary,
+                event_date="2026-05-13",
+                instrument_display_name="Example Microscope",
+            ),
+        )
+
+        self.assertIn("# QC session · 2026-05-13", qc_rendered)
+        self.assertNotIn("# Event: 2026-05-13_vendor_pm_qc", qc_rendered)
+        self.assertIn("Example Microscope", qc_rendered)
+
+        maintenance_payload = {
+            "record_type": "maintenance_event",
+            "reason": "preventive_maintenance",
+            "service_provider": "vendor",
+            "microscope_status_after": "limited",
+        }
+        maintenance_display = build_event_display(
+            maintenance_payload,
+            vocabulary=vocabulary,
+            event_date="2026-05-13",
+            instrument_display_name="Example Microscope",
+        )
+
+        # `reason`, `service_provider` and `microscope_status_after` are
+        # vocabulary-backed in schema/maintenance_policy.yaml.
+        self.assertEqual(maintenance_display["record_type_label"], "Maintenance event")
+        self.assertEqual(maintenance_display["reason_label"], "Scheduled")
+        self.assertEqual(maintenance_display["service_provider_label"], "Vendor")
+        self.assertEqual(maintenance_display["status_after_label"], "Limited Service")
 
 
 class ZeissServiceLedgerTests(unittest.TestCase):

@@ -5,6 +5,10 @@ facility:
   public_site_url: "https://aic-turku.github.io/AIC-Turku-database/"
   contact_url: "https://bioscience.fi/aic/"
   organization_url: "https://bioscience.fi/aic/"
+  # Ledger records that exist for testing rather than for researchers. They are
+  # still validated, but they are withheld from navigation, generated pages,
+  # search, and the browser tools. IDs must be explicit, unique and known.
+  non_public_instrument_ids: [scope-testx1]
   objective_catalogue:
     # The ledger identifies this instrument as synthetic integration-test data.
     exclude_instrument_ids: [scope-testx1]

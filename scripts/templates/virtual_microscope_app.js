@@ -41,6 +41,7 @@
   let detectionChart = null;
 
   const DOM = {
+    chartsUnavailable: document.getElementById('vm-charts-unavailable'),
     referenceChart: document.getElementById('referenceSpectraChart'),
     propagationChart: document.getElementById('propagationSpectraChart'),
     detectionChart: document.getElementById('detectionChart'),
@@ -3057,6 +3058,15 @@ if (block.dataset.mechanismType === 'spectral_array') {
   }
 
   function initCharts() {
+    // Chart.js is loaded from a CDN. If that request fails, the route selector,
+    // hardware view and path summary are still useful, so keep the charts null
+    // (every renderer already guards on that) and say what is missing instead
+    // of letting the whole page fail to initialise.
+    if (typeof Chart === 'undefined') {
+      if (DOM.chartsUnavailable) DOM.chartsUnavailable.hidden = false;
+      console.warn('Chart.js is unavailable; the Virtual Microscope is running without spectrum charts.');
+      return;
+    }
     referenceChart = initLineChart(DOM.referenceChart, 'Relative absorption / excitation (%)');
     propagationChart = initLineChart(DOM.propagationChart, 'Relative emission / collection (%)');
     detectionChart = initBarChart(DOM.detectionChart);

@@ -1,10 +1,13 @@
 ---
+title: {{ display.record_type_label }} · {{ display.instrument_display_name }}{% if date %}, {{ date }}{% endif %}
 hide:
   - navigation
   - toc
 ---
 
-# Event: {{ event_id }}
+# {{ display.page_title }}
+
+[{{ display.instrument_display_name }}](../../instruments/{{ instrument_id }}/index.md)
 
 <div class="aic-topactions" markdown="span">
   [Back to instrument](../../instruments/{{ instrument_id }}/index.md){ .md-button }
@@ -25,16 +28,17 @@ hide:
     <div class="aic-card__body">
       <div class="aic-card__title">Event metadata</div>
       <div class="aic-kv">
-        <div><span class="aic-muted">Record type</span><br>{{ payload.get('record_type', '—') | replace('_', ' ') | title }}</div>
-        <div><span class="aic-muted">Reason / suite</span><br>{{ reason_or_suite | string | title }}</div>
+        <div><span class="aic-muted">Record type</span><br>{{ display.record_type_label }}</div>
+        <div><span class="aic-muted">Reason / suite</span><br>{{ display.reason_label }}</div>
 
         {% if is_maintenance %}
-        <div><span class="aic-muted">Service provider</span><br>{{ payload.get('service_provider', '—') }}</div>
+        <div><span class="aic-muted">Service provider</span><br>{{ display.service_provider_label }}</div>
         {% else %}
         <div><span class="aic-muted">Operator</span><br>{{ operator | default('—', true) }}</div>
         {% endif %}
 
-        <div><span class="aic-muted">Instrument</span><br><code>{{ instrument | default(instrument_id, true) }}</code></div>
+        <div><span class="aic-muted">Microscope</span><br><a href="../../instruments/{{ instrument_id }}/">{{ display.instrument_display_name }}</a></div>
+        <div><span class="aic-muted">Record ID</span><br><code>{{ event_id }}</code></div>
       </div>
     </div>
   </div>
@@ -87,10 +91,10 @@ hide:
       <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ payload.get('action', payload.get('action_details', '—')) }}</p>
       {% endif %}
 
-      {% if payload.get('microscope_status_after') %}
+      {% if display.status_after_label %}
       <div style="margin-top: 1rem;">
         <span class="aic-muted" style="font-size: 0.85rem;">Status after event:</span><br>
-        <code>{{ payload.get('microscope_status_after', '—') | upper }}</code>
+        {{ display.status_after_label }}
       </div>
       {% endif %}
     </div>
