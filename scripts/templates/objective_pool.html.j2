@@ -12,9 +12,9 @@ Use this catalogue to compare objectives recorded on AIC microscopes and in the 
 <div id="objective-pool">
   <div class="pool-notice">
     <strong>Before choosing an objective</strong>
-    An objective can be listed without being installed or currently available. The catalogue shows the status recorded in the facility database; it is not a live availability check. Spare-pool objectives require staff confirmation before use or installation, and a matching manufacturer or thread alone does not confirm compatibility.
+    An objective can be listed without being installed or currently available. Installation status comes from the microscope record and is not a live check. Spare-pool entries are not installed microscope configurations. Staff must confirm compatibility before an objective is moved or installed; a matching manufacturer or thread alone is not enough.
   </div>
-  <p><strong>{{ pool.current_count }} current catalogue records</strong>: {{ pool.instrument_count }} associated with active microscopes and {{ pool.spare_count }} in the spare pool (including calibration items). {{ pool.historical_count }} historical records can be included below. These are catalogue records, not counts of physical lenses. <strong>{{ pool.problem_count }} spare-pool records have reported problems.</strong></p>
+  <p><strong>{{ pool.current_count }} current source records</strong>: {{ pool.instrument_count }} associated with active microscopes and {{ pool.spare_count }} in the spare pool (including calibration items). {{ pool.historical_count }} historical records can be included below. These are source records, not counts of physical lenses. <strong>{{ pool.problem_count }} spare-pool records have reported problems.</strong></p>
   <p>{% if staff_url %}<a href="{{ staff_url }}">Contact AIC staff</a> &middot; {% endif %}<a href="../assets/objectives.json" download>Download catalogue (JSON)</a> &middot; <a href="../assets/objective_pool.json" download>Spare-pool data only</a></p>
 
   <div id="pool-controls" class="pool-controls" hidden>
