@@ -40,8 +40,8 @@ extra_javascript:
 - https://cdn.jsdelivr.net/npm/chart.js
 - assets/javascripts/charts.js
 nav:
-- Fleet Overview: index.md
-- System Health: status.md
+- Fleet overview: index.md
+- Instrument status: status.md
 - Microscopes:
   - Abberior STED: instruments/scope-1e33f909/index.md
   - 3i CSU-W1 Spinning Disk: instruments/scope-3i-csu-w1-spinning-disk/index.md
@@ -66,11 +66,11 @@ nav:
   - Zeiss LSM 880 with AiryScan: instruments/scope-zeiss-lsm-880-with-airyscan/index.md
   - Zeiss TIRF: instruments/scope-zeiss-tirf/index.md
 - Objectives: objective_pool.md
-- Plan Your Experiments: plan_experiments.md
+- Experiment planning: plan_experiments.md
 - Virtual Microscope: virtual_microscope.md
-- Methods Generator: methods_generator.md
-- Vocabulary Dictionary: vocabulary_dictionary.md
-- Retired Instruments:
+- Methods generator: methods_generator.md
+- Vocabulary dictionary: vocabulary_dictionary.md
+- Retired instruments:
   - Overview: retired/index.md
   - Leica TCS SP5 Multiphoton: instruments/scope-leica-tcs-sp5-multiphoton/index.md
   - Test Scope X1: instruments/scope-testx1/index.md

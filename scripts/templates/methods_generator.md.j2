@@ -7,10 +7,10 @@ hide:
 
 # Methods generator
 
-Build a draft microscopy methods paragraph from the facility inventory. Choose the microscope and the hardware you actually used, then add experiment-specific acquisition settings before publication. The draft is structured around the **QUAREP-LiMi minimal reporting recommendations** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)).
+Choose the microscope and hardware you used to build a draft microscopy methods paragraph, then add your acquisition settings and review the text before publication. The draft follows the **QUAREP-LiMi minimal reporting recommendations** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)).
 
-!!! note "Check before publication"
-    This tool uses the current facility record. It does not reconstruct historical configurations or recover acquisition settings that are absent from the inventory or image metadata.
+!!! note "For older acquisitions"
+    The draft uses the current facility record. Instrument configurations may have changed, so check older acquisitions against the original image metadata or facility records.
 
 <div class="aic-card" style="padding: 20px; margin-bottom: 20px; background-color: var(--md-default-bg-color);">
   <label for="system-select"><strong>Microscope</strong></label>
@@ -19,8 +19,8 @@ Build a draft microscopy methods paragraph from the facility inventory. Choose t
   </select>
 
   <div id="methods-metadata-warning" class="admonition warning" style="display: none; margin-bottom: 15px;">
-    <p class="admonition-title">Missing instrument metadata</p>
-    <p style="margin: 0 0 8px 0;">The facility record is incomplete for this draft. Confirm the relevant details with AIC staff before publication.</p>
+    <p class="admonition-title">Details to confirm</p>
+    <p style="margin: 0 0 8px 0;">Some instrument details needed for this draft are not yet recorded. Check the items below with AIC staff before publication.</p>
     <ul id="methods-metadata-blockers" style="margin: 0; padding-left: 20px;"></ul>
   </div>
 
@@ -29,7 +29,7 @@ Build a draft microscopy methods paragraph from the facility inventory. Choose t
     <input id="session-label" type="text" maxlength="200" style="width: 100%;" placeholder="For example: Figure 2, fixed samples"></p>
     <p><label for="acquisition-date">Acquisition date (optional)</label><br>
     <input id="acquisition-date" type="date"></p>
-    <p><strong>Historical configuration:</strong> the form uses the current inventory. The date labels the acquisition; it does not reconstruct past hardware or software. Leave it blank when unknown and confirm historical settings with AIC staff.</p>
+    <p><strong>Historical configuration:</strong> the date labels your experiment, but the form still uses the current facility record. For older acquisitions, check the hardware and software against your image metadata or with AIC staff.</p>
     <div id="runtime-review" style="display: none;">
       <details><summary>Review available Virtual Microscope plan</summary><pre id="runtime-preview" style="max-height: 18rem; overflow: auto;"></pre></details>
       <p id="runtime-review-status" role="status"></p>
@@ -46,7 +46,7 @@ Build a draft microscopy methods paragraph from the facility inventory. Choose t
     </div>
 
     <div id="section-modality" class="methods-option-section">
-      <strong>Legacy imaging modalities</strong>
+      <strong>Legacy imaging modes</strong>
       <div id="modality-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
@@ -96,7 +96,7 @@ Build a draft microscopy methods paragraph from the facility inventory. Choose t
     </div>
 
     <div id="section-illumination-logic" class="methods-option-section">
-      <strong>Adaptive illumination logic</strong>
+      <strong>Illumination control</strong>
       <div id="illumination-logic-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
@@ -110,7 +110,7 @@ Exact exposure times, pixel size, z-step, laser settings, and other acquisition 
 
 ### Generated methods draft
 
-Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear All** to start again. Review all placeholders and acquisition-specific settings before publication.
+Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear all** to start again. Review all placeholders and acquisition-specific settings before publication.
 <div style="position: relative;">
   <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Select an instrument, then choose “Add to methods”.</textarea>
   <div style="margin-top: 10px; display: flex; gap: 10px;">

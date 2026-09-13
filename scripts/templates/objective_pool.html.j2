@@ -7,15 +7,15 @@ hide:
 
 # Objectives
 
-Find objectives recorded on microscopes or in the spare pool. Use the filters to narrow the catalogue, then check the microscope page or contact staff.
+Use this catalogue to compare objectives recorded on AIC microscopes and in the spare pool. Filter by microscope, immersion, condition, or availability. If you are considering a spare or non-installed objective, AIC staff can help check compatibility and arrange installation.
 
 <div id="objective-pool">
   <div class="pool-notice">
-    <strong>Listed, installed and available are different things.</strong>
-    Installation status is reproduced from the microscope record, not a live check. Pool entries are not installed microscope configurations. Staff must approve any move or installation; matching a brand or thread does not establish compatibility.
+    <strong>Before choosing an objective</strong>
+    An objective can be listed without being installed or currently available. Installation status comes from the microscope record and is not a live check. Spare-pool entries are not installed microscope configurations. Staff must confirm compatibility before an objective is moved or installed; a matching manufacturer or thread alone is not enough.
   </div>
-  <p><strong>{{ pool.current_count }} current source records</strong>: {{ pool.instrument_count }} associated with active microscopes and {{ pool.spare_count }} in the pool (including calibration items). {{ pool.historical_count }} historical records can be included below. These are records, not counts of physical lenses. <strong>{{ pool.problem_count }} pool records have reported problems.</strong></p>
-  <p>{% if staff_url %}<a href="{{ staff_url }}">Contact staff</a> &middot; {% endif %}<a href="../assets/objectives.json" download>Download catalogue (JSON)</a> &middot; <a href="../assets/objective_pool.json" download>Spare-pool data only</a></p>
+  <p><strong>{{ pool.current_count }} current source records</strong>: {{ pool.instrument_count }} associated with active microscopes and {{ pool.spare_count }} in the spare pool (including calibration items). {{ pool.historical_count }} historical records can be included below. These are source records, not counts of physical lenses. <strong>{{ pool.problem_count }} spare-pool records have reported problems.</strong></p>
+  <p>{% if staff_url %}<a href="{{ staff_url }}">Contact AIC staff</a> &middot; {% endif %}<a href="../assets/objectives.json" download>Download catalogue (JSON)</a> &middot; <a href="../assets/objective_pool.json" download>Spare-pool data only</a></p>
 
   <div id="pool-controls" class="pool-controls" hidden>
     <div class="pool-search"><label for="pool-search">Search objectives</label><input id="pool-search" type="search" placeholder="Try 63x water, 506170 or a microscope name" aria-controls="pool-items"></div>
@@ -30,11 +30,11 @@ Find objectives recorded on microscopes or in the spare pool. Use the filters to
     <label class="pool-history"><input id="pool-history" type="checkbox"> Include historical / retired microscope records</label>
     <button type="button" class="md-button" data-pool-reset>Reset filters</button>
   </div>
-  <noscript><p>All {{ pool.total }} source records, including clearly labelled historical records, are shown below. Use your browser's Find command to search. Enquiry text can be selected and copied manually.</p></noscript>
+  <noscript><p>All {{ pool.total }} catalogue records, including clearly labelled historical records, are shown below. Use your browser's Find command to search. Enquiry text can be selected and copied manually.</p></noscript>
   <p id="pool-link-feedback" role="status" hidden></p>
   <p id="pool-count" role="status" aria-live="polite" aria-atomic="true">Showing all {{ pool.total }} records, including historical records.</p>
-  <p class="pool-muted">On microscopes includes installed, associated-but-not-installed and unconfirmed entries. A non-installed entry is not automatically shared spare stock.</p>
-  <p id="pool-no-results" hidden>No matching records. Try another search or <button type="button" data-pool-reset>reset the filters</button>.</p>
+  <p class="pool-muted">Objectives associated with microscopes may be installed, stored separately, or not yet confirmed. A non-installed objective is not automatically part of the shared spare pool.</p>
+  <p id="pool-no-results" hidden>No matching objectives. Try another search or <button type="button" data-pool-reset>reset the filters</button>.</p>
 
   <div id="pool-items" class="pool-items">
   {% for item in pool['items'] %}
@@ -62,9 +62,9 @@ Find objectives recorded on microscopes or in the spare pool. Use the filters to
         {% if item.inspection %}<p><strong>Inspection:</strong> {{ item.inspection.date }} by {{ item.inspection.by }}.</p>{% endif %}
         <p><strong>Original source, page {{ item.source_page }}:</strong></p>
         {% else %}
-        <p><strong>{% if item.retired %}Historical instrument location{% else %}Instrument location (recorded){% endif %}:</strong> {{ item.location or 'Not recorded' }}.</p>
-        <p>This association is not a loan offer or approval to move the lens. Identical models in other records are not merged into one physical asset.</p>
-        <p><strong>Canonical microscope specification:</strong></p>
+        <p><strong>{% if item.retired %}Historical instrument location{% else %}Recorded instrument location{% endif %}:</strong> {{ item.location or 'Not recorded' }}.</p>
+        <p>This objective is associated with the microscope record; that does not mean it is available to move or borrow. Identical models in separate records may represent different physical objectives.</p>
+        <p><strong>Instrument record:</strong></p>
         {% endif %}
         <pre class="pool-source">{{ item.source_heading }}
 {{ item.source_text }}</pre>
@@ -74,15 +74,15 @@ Find objectives recorded on microscopes or in the spare pool. Use the filters to
         {% endif %}
         <p class="pool-actions">{% if item.enquiry %}<button type="button" class="md-button" data-copy-enquiry hidden>Copy enquiry</button> {% endif %}<a href="#{{ item.anchor }}">Link to this record</a></p>
         <p class="pool-feedback" role="status" aria-live="polite"></p>
-        <p class="pool-muted">Nothing is sent by this page. Record ID: {{ item.id }} (catalogue ID, not a physical asset tag).</p>
+        <p class="pool-muted">Copying an enquiry does not send anything; you can edit it before contacting staff. Record ID: {{ item.id }} (catalogue ID, not a physical asset tag).</p>
       </details>
     </article>
   {% endfor %}
   </div>
   <details class="pool-provenance"><summary>Sources, units and limitations</summary>
-    <p>Microscope entries are derived from their existing canonical objective records, not copied into the pool. Explicit installed/not-installed flags are preserved; missing flags remain unconfirmed. Retired-instrument associations are historical, not current locations or spare-stock declarations.</p>
-    <p class="pool-muted">Pool source: {{ pool.source.file_name }}, compiled by {{ pool.source.compiled_by }}. Date as written: <strong>{{ pool.source.date_text }}</strong>{% if pool.source.date_iso %} ({{ pool.source.date_iso }}){% else %} (date format not yet confirmed){% endif %}. Pool working-distance values are reproduced as supplied{% if pool.source.working_distance_unit %}, in {{ pool.source.working_distance_unit }}{% else %}; their units are not stated in the source and need confirmation{% endif %}. Microscope working distances retain their own recorded units. A record is not a verified count of physical copies.</p>
-    <p>Spare records are not added to the methods generator or simulator. This combined catalogue does not change either tool's installed-hardware data.</p>
+    <p>Microscope entries come from their existing objective records rather than being copied into the spare pool. Explicit installed/not-installed flags are preserved; missing flags remain unconfirmed. Retired-instrument associations are historical, not current locations or spare-stock declarations.</p>
+    <p class="pool-muted">Pool source: {{ pool.source.file_name }}, compiled by {{ pool.source.compiled_by }}. Date as written: <strong>{{ pool.source.date_text }}</strong>{% if pool.source.date_iso %} ({{ pool.source.date_iso }}){% else %} (date format not yet confirmed){% endif %}. Pool working-distance values are reproduced as supplied{% if pool.source.working_distance_unit %}, in {{ pool.source.working_distance_unit }}{% else %}; their units are not stated in the source and need confirmation{% endif %}. Microscope working distances retain their own recorded units. A catalogue record is not a verified count of physical copies.</p>
+    <p>Spare records are not added to the Methods Generator or Virtual Microscope. This combined catalogue does not change either tool's installed-hardware data.</p>
   </details>
 </div>
 <link rel="stylesheet" href="../assets/stylesheets/objective_pool.css">
