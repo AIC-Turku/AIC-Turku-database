@@ -140,5 +140,46 @@ replace_once(
     "    assert 'load_vocabs' not in source and 'metric_class_rules' not in source\n",
     "    assert 'load_vocabs' not in source and 'metric_class_rules' not in source\n    assert '_validate_repository_after_write' in source and 'writes were rolled back' in source\n",
 )
+replace_once(
+    "tests/test_vocabulary_second_audit.py",
+    "from scripts.autofix_yaml import _canonicalize_rule_values, parse_args\n",
+    "import scripts.autofix_yaml as autofix_yaml\nfrom scripts.autofix_yaml import _canonicalize_rule_values, parse_args\n",
+)
+replace_once(
+    "tests/test_vocabulary_second_audit.py",
+    '''    assert workflow.index('python -m scripts.dashboard_builder --strict') < workflow.index('peter-evans/create-pull-request')
+
+
+def test_required_if_canonicalizes_generic_membership_operators''',
+    '''    assert workflow.index('python -m scripts.dashboard_builder --strict') < workflow.index('peter-evans/create-pull-request')
+
+
+def test_autofix_write_rolls_back_when_repository_validation_fails(tmp_path, monkeypatch):
+    target = tmp_path / 'instrument.yaml'
+    original = 'kind: legacy\\n'
+    target.write_text(original, encoding='utf-8')
+    spec = type('Spec', (), {'target_dir': tmp_path})()
+    monkeypatch.setattr(autofix_yaml, 'get_base_path', lambda: tmp_path)
+    monkeypatch.setattr(autofix_yaml, 'build_specs', lambda base: [spec])
+    monkeypatch.setattr(autofix_yaml, '_iter_yaml_files', lambda base: [target])
+
+    def fake_autofix(filepath, spec, *, write_changes):
+        assert write_changes is True
+        filepath.write_text('kind: changed\\n', encoding='utf-8')
+        return True, 1
+
+    monkeypatch.setattr(autofix_yaml, 'autofix_file', fake_autofix)
+    monkeypatch.setattr(
+        autofix_yaml,
+        '_validate_repository_after_write',
+        lambda: (_ for _ in ()).throw(RuntimeError('invalid transformed repository')),
+    )
+    with pytest.raises(RuntimeError, match='invalid transformed repository'):
+        autofix_yaml.main(['--write'])
+    assert target.read_text(encoding='utf-8') == original
+
+
+def test_required_if_canonicalizes_generic_membership_operators''',
+)
 
 print("Applied post-merge CI corrections")
