@@ -69,7 +69,7 @@ inputs_human:  # Inputs Human: Flexible slot for manual checks and environment r
     metric_id: ""  # Metric Id: Free-text metric identifier that should include specific context (for example objective and wavelength) for longitudinal plotting.
     metric_class: ""  # Metric Class: Controlled category used to group related metrics across instruments and modalities. | Allowed values (canonical IDs): fwhm_lateral, fwhm_axial, signal_to_noise, chromatic_shift, stage_repeatability, laser_power, illumination_uniformity, detector_dark_noise
     value: ""  # Value: Stores numeric or categorical observations.
-    unit: ""  # Unit: Unit may be empty for checklist values. | Allowed values (canonical IDs): unitless, percent, mW, nm, um, celsius, px, A, h
+    unit: ""  # Unit: Unit may be empty for checklist or categorical values. Empty means no unit was supplied or applicable and is distinct from canonical `unitless`, which means the measured quantity is dimensionless. | Allowed values (canonical IDs): unitless, percent, mW, nm, um, celsius, px, A, h
     details: ""  # Details: Useful supporting context for manual metrics.
 
 # -----------------------------------------------------------------------------

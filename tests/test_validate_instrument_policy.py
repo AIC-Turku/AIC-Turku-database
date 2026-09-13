@@ -24,12 +24,10 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
         self.prev_cwd = Path.cwd()
         os.chdir(self.repo)
         (self.repo / 'schema').mkdir(parents=True, exist_ok=True)
-        self._patchers = [
-            patch('scripts.validation.policy.yaml.safe_load', side_effect=json.loads),
-            patch('scripts.validation.io.yaml.safe_load', side_effect=json.loads),
-        ]
-        for p in self._patchers:
-            p.start()
+        # Policy parsing is exercised through the real strict YAML loader.
+        # Do not patch removed implementation details after changing CWD: a
+        # failed setUp would prevent tearDown from restoring the repository.
+        self._patchers = []
 
     def tearDown(self) -> None:
         for p in reversed(self._patchers):

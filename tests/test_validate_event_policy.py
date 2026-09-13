@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import importlib.util
 import json
 import sys
 import types
@@ -17,7 +18,8 @@ def _safe_load(value):
 
 yaml_stub.safe_load = _safe_load
 yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault('yaml', yaml_stub)
+if importlib.util.find_spec('yaml') is None:
+    sys.modules.setdefault('yaml', yaml_stub)
 
 from scripts.validate import validate_event_ledgers
 

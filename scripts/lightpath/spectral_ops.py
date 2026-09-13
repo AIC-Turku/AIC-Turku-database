@@ -43,6 +43,7 @@ from scripts.lightpath.model import (
     _resolve_component_type_label,
     _resolve_cube_link_label,
     _resolve_light_source_kind,
+    _vocab_context,
     get_active_vocab,
 )
 
@@ -748,6 +749,16 @@ def _source_role(source: dict[str, Any]) -> str:
     return _clean_string(source.get("role")).lower()
 
 
+def _source_behavior_kind(kind: str) -> str:
+    vocabulary = _vocab_context()
+    classify = getattr(vocabulary, "classify_canonical", None)
+    if callable(classify):
+        classified = classify("light_source_kinds", kind)
+        if isinstance(classified, str) and classified:
+            return classified
+    return kind
+
+
 def _source_spectral_mode(
     kind: str,
     wavelength: Any,
@@ -755,11 +766,12 @@ def _source_spectral_mode(
     tunable_min_nm: Any,
     tunable_max_nm: Any,
 ) -> str:
+    behavior_kind = _source_behavior_kind(kind)
     if (
         _coerce_number(tunable_min_nm) is not None
         and _coerce_number(tunable_max_nm) is not None
     ):
-        if kind in {
+        if behavior_kind in {
             "laser",
             "white_light_laser",
             "multiphoton_laser",
@@ -768,7 +780,7 @@ def _source_spectral_mode(
             return "tunable_line"
         return "tunable_band"
 
-    if kind in {"arc_lamp", "halogen_lamp", "metal_halide"}:
+    if behavior_kind in {"arc_lamp", "halogen_lamp", "metal_halide"}:
         return "broadband"
 
     if _coerce_number(width_nm) is not None and _coerce_number(width_nm) > 0:
@@ -787,6 +799,7 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
     wavelength = source.get("wavelength_nm")
     width_nm = source.get("width_nm")
     kind = _normalize_light_source_kind(source.get("kind") or source.get("type") or "light_source")
+    behavior_kind = _source_behavior_kind(kind)
 
     display_label = _light_source_display_label(
         {
@@ -801,7 +814,7 @@ def _source_position(slot: int, source: dict[str, Any]) -> dict[str, Any]:
         "slot": slot,
         "component_type": (
             "laser"
-            if kind in {
+            if behavior_kind in {
                 "laser",
                 "white_light_laser",
                 "multiphoton_laser",

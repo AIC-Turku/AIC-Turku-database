@@ -4,27 +4,15 @@ from pathlib import Path
 import re
 from typing import Any
 
-import yaml
-
-from scripts.validation.io import _is_non_empty_string
+from scripts.validation.io import _is_non_empty_string, _load_yaml
 from scripts.validation.model import EventPolicy, InstrumentPolicy, PolicyRule, ResolvedNode
 from scripts.validation.vocabulary import Vocabulary
 
 
 def load_policy(policy_path: Path) -> tuple[dict[str, Any] | None, str | None]:
-    try:
-        raw_text = policy_path.read_text(encoding='utf-8')
-        payload = yaml.safe_load(raw_text)
-    except (OSError, yaml.YAMLError) as exc:
-        return None, f"Failed loading policy '{policy_path.as_posix()}': {exc}"
-
-    if payload is None:
-        return None, f"Failed loading policy '{policy_path.as_posix()}': YAML document is empty."
-    if not isinstance(payload, dict):
-        return None, (
-            f"Failed loading policy '{policy_path.as_posix()}': expected YAML mapping/object at top level, "
-            f"found {type(payload).__name__}."
-        )
+    payload, load_error = _load_yaml(policy_path, reject_duplicate_keys=True)
+    if load_error is not None or payload is None:
+        return None, f"Failed loading policy '{policy_path.as_posix()}': {load_error or 'unknown YAML load error'}"
     return payload, None
 
 
@@ -243,6 +231,14 @@ def _build_item_field_vocab_index(rules: list[PolicyRule]) -> dict[str, dict[str
     return index
 
 
+def _build_path_vocab_index(rules: list[PolicyRule]) -> dict[str, str]:
+    return {
+        rule.path: rule.vocab
+        for rule in rules
+        if isinstance(rule.path, str) and isinstance(rule.vocab, str) and rule.vocab
+    }
+
+
 def _get_software_roles(payload: dict[str, Any]) -> set[str]:
     software_nodes = _resolve_path_nodes(payload, 'software')
     roles: set[str] = set()
@@ -255,7 +251,9 @@ def _get_software_roles(payload: dict[str, Any]) -> set[str]:
     return roles
 
 
-def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any], item_context: dict[str, Any] | None, vocabulary: Vocabulary, item_field_vocabs: dict[str, str] | None = None) -> bool:
+def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any], item_context: dict[str, Any] | None, vocabulary: Vocabulary, item_field_vocabs: dict[str, str] | None = None, path_vocabs: dict[str, str] | None = None) -> bool:
+    item_field_vocabs = item_field_vocabs or {}
+    path_vocabs = path_vocabs or {}
     def _normalize_scalar(value: Any) -> str | None:
         if isinstance(value, (str, int, float, bool)):
             return str(value).strip().casefold()
@@ -280,15 +278,17 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
             imaging_mode_nodes = _resolve_path_nodes(payload, 'capabilities.imaging_modes')
             has_match = False
             if imaging_mode_nodes and isinstance(imaging_mode_nodes[0].value, list):
-                imaging_mode_ids = {str(v).strip() for v in imaging_mode_nodes[0].value if isinstance(v, str)}
-                targets = {str(v).strip() for v in imaging_modes_any_of if isinstance(v, str)}
+                imaging_mode_ids = {vocabulary.resolve_canonical('imaging_modes', v) or str(v).strip() for v in imaging_mode_nodes[0].value if isinstance(v, str)}
+                targets = {vocabulary.resolve_canonical('imaging_modes', v) or str(v).strip() for v in imaging_modes_any_of if isinstance(v, str)}
                 has_match = bool(imaging_mode_ids & targets)
             conditions.append(has_match)
         scanner_type_in = condition_spec.get('scanner_type_in')
         if isinstance(scanner_type_in, list):
             scanner_nodes = _resolve_path_nodes(payload, 'hardware.scanner.type')
             scanner_type = scanner_nodes[0].value if scanner_nodes else None
-            conditions.append(isinstance(scanner_type, str) and scanner_type in {str(v).strip() for v in scanner_type_in if isinstance(v, str)})
+            canonical_scanner = vocabulary.resolve_canonical('scanner_types', scanner_type) or scanner_type if isinstance(scanner_type, str) else None
+            targets = {vocabulary.resolve_canonical('scanner_types', v) or str(v).strip() for v in scanner_type_in if isinstance(v, str)}
+            conditions.append(isinstance(canonical_scanner, str) and canonical_scanner in targets)
         item_kind_in = condition_spec.get('item_kind_in')
         if isinstance(item_kind_in, list):
             kind = item_context.get('kind') if isinstance(item_context, dict) else None
@@ -334,13 +334,16 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
                 matches = False
             else:
                 nodes = _resolve_path_nodes(payload, list_path)
-                normalized_allowed = {str(v).strip().casefold() for v in allowed_values if isinstance(v, (str, int, float, bool))}
+                field_vocab = path_vocabs.get(f"{list_path}.{field_name}") or path_vocabs.get(f"{list_path}[].{field_name}") or item_field_vocabs.get(field_name)
+                normalized_allowed = {_normalize_scalar(vocabulary.resolve_canonical(field_vocab, v) or v if isinstance(v, str) and isinstance(field_vocab, str) else v) for v in allowed_values if isinstance(v, (str, int, float, bool))}
                 matches = False
                 for node in nodes:
                     if not isinstance(node.value, dict):
                         continue
                     raw_value = node.value.get(field_name)
-                    if isinstance(raw_value, (str, int, float, bool)) and str(raw_value).strip().casefold() in normalized_allowed:
+                    if isinstance(raw_value, str) and isinstance(field_vocab, str):
+                        raw_value = vocabulary.resolve_canonical(field_vocab, raw_value) or raw_value
+                    if _normalize_scalar(raw_value) in normalized_allowed:
                         matches = True
                         break
             conditions.append(matches)
@@ -358,9 +361,12 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
                     for field_name, allowed_values in field_in.items():
                         if not isinstance(field_name, str) or not isinstance(allowed_values, list):
                             item_ok = False; break
-                        normalized_allowed = {str(v).strip().casefold() for v in allowed_values if isinstance(v, (str, int, float, bool))}
+                        field_vocab = path_vocabs.get(f"{list_path}.{field_name}") or path_vocabs.get(f"{list_path}[].{field_name}") or item_field_vocabs.get(field_name)
+                        normalized_allowed = {_normalize_scalar(vocabulary.resolve_canonical(field_vocab, v) or v if isinstance(v, str) and isinstance(field_vocab, str) else v) for v in allowed_values if isinstance(v, (str, int, float, bool))}
                         raw_value = node.value.get(field_name)
-                        if not isinstance(raw_value, (str, int, float, bool)) or str(raw_value).strip().casefold() not in normalized_allowed:
+                        if isinstance(raw_value, str) and isinstance(field_vocab, str):
+                            raw_value = vocabulary.resolve_canonical(field_vocab, raw_value) or raw_value
+                        if _normalize_scalar(raw_value) not in normalized_allowed:
                             item_ok = False; break
                     if item_ok:
                         matches = True; break
@@ -372,8 +378,16 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
                 matches = False
             else:
                 nodes = _resolve_path_nodes(payload, field_path)
-                normalized_allowed = {str(v).strip().casefold() for v in allowed_values if isinstance(v, (str, int, float, bool))}
-                matches = any(isinstance(node.value, (str, int, float, bool)) and str(node.value).strip().casefold() in normalized_allowed for node in nodes)
+                field_vocab = path_vocabs.get(field_path)
+                normalized_allowed = {_normalize_scalar(vocabulary.resolve_canonical(field_vocab, v) or v if isinstance(v, str) and isinstance(field_vocab, str) else v) for v in allowed_values if isinstance(v, (str, int, float, bool))}
+                matches = False
+                for node in nodes:
+                    raw_value = node.value
+                    if isinstance(raw_value, str) and isinstance(field_vocab, str):
+                        raw_value = vocabulary.resolve_canonical(field_vocab, raw_value) or raw_value
+                    if _normalize_scalar(raw_value) in normalized_allowed:
+                        matches = True
+                        break
             conditions.append(matches)
         modules_any_of = condition_spec.get('modules_any_of')
         if isinstance(modules_any_of, list):
@@ -405,12 +419,12 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
 
     all_of = required_if.get('all_of')
     if isinstance(all_of, list):
-        all_of_results = [_evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary, item_field_vocabs=item_field_vocabs) for condition in all_of if isinstance(condition, dict)]
+        all_of_results = [_evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary, item_field_vocabs=item_field_vocabs, path_vocabs=path_vocabs) for condition in all_of if isinstance(condition, dict)]
         if not all_of_results or not all(all_of_results):
             return False
     any_of = required_if.get('any_of')
     if isinstance(any_of, list):
-        any_of_results = [_evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary, item_field_vocabs=item_field_vocabs) for condition in any_of if isinstance(condition, dict)]
+        any_of_results = [_evaluate_required_if(condition, payload=payload, item_context=item_context, vocabulary=vocabulary, item_field_vocabs=item_field_vocabs, path_vocabs=path_vocabs) for condition in any_of if isinstance(condition, dict)]
         if not any_of_results or not any(any_of_results):
             return False
     simple_result = _evaluate_simple_conditions(required_if)
@@ -420,7 +434,13 @@ def _evaluate_required_if(required_if: dict[str, Any], *, payload: dict[str, Any
     return isinstance(all_of, list) or isinstance(any_of, list)
 
 
-def _evaluate_event_required_if(required_if: dict[str, Any], *, payload: dict[str, Any], item_context: dict[str, Any] | None) -> tuple[bool | None, str | None]:
+def _evaluate_event_required_if(required_if: dict[str, Any], *, payload: dict[str, Any], item_context: dict[str, Any] | None, vocabulary: Vocabulary | None = None, path_vocabs: dict[str, str] | None = None) -> tuple[bool | None, str | None]:
+    path_vocabs = path_vocabs or {}
+    def _canonical(path: str, value: Any) -> Any:
+        vocab_name = path_vocabs.get(path)
+        if vocabulary is not None and isinstance(vocab_name, str) and isinstance(value, str):
+            return vocabulary.resolve_canonical(vocab_name, value) or value
+        return value
     supported_keys = {'performed_contains_qc_type','service_provider_in','missing_legacy_event_id','no_stability_series','no_linearity_series','missing_csv_artifact','metrics_computed_present','evaluation_present','evaluation_computed_provenance_present'}
     unknown = [key for key in required_if if key not in supported_keys]
     if unknown:
@@ -429,13 +449,16 @@ def _evaluate_event_required_if(required_if: dict[str, Any], *, payload: dict[st
     if 'performed_contains_qc_type' in required_if:
         expected = required_if.get('performed_contains_qc_type')
         performed_nodes = _resolve_path_nodes(payload, 'performed[]')
-        found = {item.value.get('qc_type') for item in performed_nodes if isinstance(item.value, dict) and isinstance(item.value.get('qc_type'), str)}
+        expected = _canonical('performed[].qc_type', expected)
+        found = {_canonical('performed[].qc_type', item.value.get('qc_type')) for item in performed_nodes if isinstance(item.value, dict) and isinstance(item.value.get('qc_type'), str)}
         conditions.append(isinstance(expected, str) and expected in found)
     if 'service_provider_in' in required_if:
         allowed = required_if.get('service_provider_in'); provider = payload.get('service_provider')
         if not isinstance(allowed, list):
             return None, "Condition 'service_provider_in' must be a list."
-        conditions.append(isinstance(provider, str) and provider in {str(v).strip() for v in allowed if isinstance(v, str)})
+        provider = _canonical('service_provider', provider)
+        canonical_allowed = {_canonical('service_provider', str(v).strip()) for v in allowed if isinstance(v, str)}
+        conditions.append(isinstance(provider, str) and provider in canonical_allowed)
     if required_if.get('missing_legacy_event_id') is True:
         conditions.append(not _is_non_empty_string(payload.get('event_id')))
     if required_if.get('no_stability_series') is True:

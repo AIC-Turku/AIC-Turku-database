@@ -33,7 +33,10 @@
 
     const title = document.createElement('div');
     title.className = 'aic-chartcard__title';
-    title.textContent = (metricNames && metricNames[metricId]) ? metricNames[metricId] : metricId;
+    const baseMetricId = chartData.metric_id || metricId;
+    const baseTitle = (metricNames && metricNames[baseMetricId]) ? metricNames[baseMetricId] : baseMetricId;
+    const unitSuffix = chartData.split_by_unit ? ` (${chartData.unit || 'no unit'})` : '';
+    title.textContent = `${baseTitle}${unitSuffix}`;
     wrapper.appendChild(title);
 
     const canvasWrapper = document.createElement('div');

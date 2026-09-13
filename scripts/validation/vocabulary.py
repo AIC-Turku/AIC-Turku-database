@@ -60,6 +60,7 @@ class Vocabulary:
         self.terms_by_vocab: dict[str, dict[str, VocabularyTerm]] = {}
         self.valid_ids_by_vocab: dict[str, set[str]] = {}
         self.synonyms_by_vocab: dict[str, dict[str, str]] = {}
+        self.classifications_by_vocab: dict[str, dict[str, str]] = {}
         self.registry_spec_by_vocab: dict[str, dict[str, Any]] = {}
         self._load_all()
 
@@ -88,6 +89,7 @@ class Vocabulary:
         terms: dict[str, VocabularyTerm] = {}
         valid_ids: set[str] = set()
         synonym_lookup: dict[str, str] = {}
+        classification_lookup: dict[str, str] = {}
         canonical_casefold: dict[str, str] = {}
 
         for index, raw_term in enumerate(raw_terms):
@@ -153,9 +155,48 @@ class Vocabulary:
                     )
                 synonym_lookup[key] = canonical_id
 
+        for canonical_id, term in terms.items():
+            raw_classified = term.metadata.get("classified_values", [])
+            if raw_classified is None:
+                raw_classified = []
+            if not isinstance(raw_classified, list):
+                raise VocabularyDefinitionError(
+                    f"{source}: term '{canonical_id}' classified_values must be a list."
+                )
+            seen_classified: set[str] = set()
+            for classified_value in raw_classified:
+                if not isinstance(classified_value, str) or not classified_value.strip():
+                    raise VocabularyDefinitionError(
+                        f"{source}: term '{canonical_id}' has an invalid classified value."
+                    )
+                cleaned = classified_value.strip()
+                key = cleaned.casefold()
+                if key in seen_classified:
+                    continue
+                seen_classified.add(key)
+                shadowed_id = canonical_casefold.get(key)
+                if shadowed_id is not None and shadowed_id != canonical_id:
+                    raise VocabularyDefinitionError(
+                        f"{source}: classified value '{cleaned}' for '{canonical_id}' shadows canonical id '{shadowed_id}'."
+                    )
+                synonym_owner = synonym_lookup.get(key)
+                if synonym_owner is not None:
+                    if synonym_owner != canonical_id:
+                        raise VocabularyDefinitionError(
+                            f"{source}: classified value '{cleaned}' for '{canonical_id}' conflicts with synonym of '{synonym_owner}'."
+                        )
+                    continue
+                previous = classification_lookup.get(key)
+                if previous is not None and previous != canonical_id:
+                    raise VocabularyDefinitionError(
+                        f"{source}: classified value '{cleaned}' is ambiguous between '{previous}' and '{canonical_id}'."
+                    )
+                classification_lookup[key] = canonical_id
+
         self.terms_by_vocab[vocab_name] = terms
         self.valid_ids_by_vocab[vocab_name] = valid_ids
         self.synonyms_by_vocab[vocab_name] = synonym_lookup
+        self.classifications_by_vocab[vocab_name] = classification_lookup
 
     def _load_all(self) -> None:
         if self.vocab_registry is not None:
@@ -281,6 +322,19 @@ class Vocabulary:
         return self.synonyms_by_vocab[vocab_name].get(cleaned.casefold())
 
 
+    def classify_canonical(self, vocab_name: str, value: Any) -> str | None:
+        """Return a category match without authorizing automatic rewriting."""
+        if not isinstance(value, str):
+            return None
+        resolved = self.resolve_canonical(vocab_name, value)
+        if resolved is not None:
+            return resolved
+        cleaned = self._normalize(value)
+        if not cleaned or vocab_name not in self.valid_ids_by_vocab:
+            return None
+        return self.classifications_by_vocab.get(vocab_name, {}).get(cleaned.casefold())
+
+
     def requires_canonical_ids(self, vocab_name: str) -> bool:
         spec = self.registry_spec_by_vocab.get(vocab_name, {})
         if spec.get("canonical_ids_only") is True:
@@ -290,3 +344,38 @@ class Vocabulary:
 
     def get_term(self, vocab_name: str, canonical_id: str) -> VocabularyTerm | None:
         return self.terms_by_vocab.get(vocab_name, {}).get(canonical_id)
+
+
+REPOSITORY_POLICY_PATHS: tuple[str, ...] = (
+    "schema/instrument_policy.yaml",
+    "schema/QC_policy.yaml",
+    "schema/maintenance_policy.yaml",
+)
+
+
+def build_repository_vocabulary(repo_root: Path) -> Vocabulary:
+    """Build the authoritative repository vocabulary from all sources and policies."""
+    repo_root = Path(repo_root).resolve()
+    vocab_dir = repo_root / "vocab"
+    combined_registry: dict[str, dict[str, Any]] = {
+        path.stem: {"source": "file", "path": f"vocab/{path.name}"}
+        for path in sorted(vocab_dir.glob("*.yaml"))
+    }
+    for relative_path in REPOSITORY_POLICY_PATHS:
+        policy_path = repo_root / relative_path
+        if not policy_path.exists():
+            continue
+        payload, error = _load_yaml(policy_path, reject_duplicate_keys=True)
+        if error is not None or payload is None:
+            raise VocabularyDefinitionError(
+                f"Failed loading policy '{policy_path.as_posix()}': {error or 'unknown policy load error'}"
+            )
+        registry = payload.get("vocab_registry")
+        if registry is None:
+            continue
+        if not isinstance(registry, dict):
+            raise VocabularyDefinitionError(
+                f"Policy '{policy_path.as_posix()}' has non-mapping vocab_registry."
+            )
+        combined_registry = merge_vocab_registries(combined_registry, registry)
+    return Vocabulary(vocab_dir, vocab_registry=combined_registry)

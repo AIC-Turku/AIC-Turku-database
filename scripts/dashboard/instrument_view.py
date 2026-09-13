@@ -12,13 +12,12 @@ from typing import Any, Iterable
 
 from scripts.build_context import clean_text
 from scripts.dashboard.optical_path_view import build_optical_path_view_dto
-from scripts.display_labels import resolve_endpoint_type_label
+from scripts.display_labels import resolve_endpoint_type_label, resolve_vocab_label
 from scripts.validate import Vocabulary
 
 def vocab_label(vocabulary: Vocabulary, vocab_name: str, term_id: str) -> str:
-    """Return a friendly vocabulary label for a canonical ID."""
-    term = vocabulary.terms_by_vocab.get(vocab_name, {}).get(term_id)
-    return term.label if term else term_id
+    """Resolve a vocabulary label through the central diagnostic boundary."""
+    return resolve_vocab_label(vocabulary, vocab_name, term_id)
 
 
 def normalize_optional_bool(value: Any) -> bool | None:

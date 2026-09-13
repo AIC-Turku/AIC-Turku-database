@@ -25,7 +25,8 @@ def _safe_load(value):
 
 yaml_stub.safe_load = _safe_load
 yaml_stub.YAMLError = _YamlError
-sys.modules.setdefault("yaml", yaml_stub)
+if importlib.util.find_spec("yaml") is None:
+    sys.modules.setdefault("yaml", yaml_stub)
 
 jinja2_stub = types.ModuleType("jinja2")
 
@@ -42,7 +43,8 @@ class _DummyLoader:
 
 jinja2_stub.Environment = _DummyEnvironment
 jinja2_stub.FileSystemLoader = _DummyLoader
-sys.modules.setdefault("jinja2", jinja2_stub)
+if importlib.util.find_spec("jinja2") is None:
+    sys.modules.setdefault("jinja2", jinja2_stub)
 
 from scripts.full_audit import (
     audit_fpbase_runtime_contract,

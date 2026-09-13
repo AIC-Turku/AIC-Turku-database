@@ -14,6 +14,7 @@ selected execution, validation, spectral operations, or VM payload generation.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 from scripts.display_labels import (
@@ -45,20 +46,6 @@ CUBE_LINK_KEYS = (
     "dichroic",
     "emission_filter",
 )
-CAMERA_DETECTOR_KINDS = {
-    "camera",
-    "scmos",
-    "cmos",
-    "ccd",
-    "emccd",
-}
-POINT_DETECTOR_KINDS = {
-    "pmt",
-    "gaasp_pmt",
-    "hyd",
-    "apd",
-    "spad",
-}
 POWER_VALUE_RE = re.compile(r"(\d+(?:\.\d+)?)")
 CANONICAL_ENDPOINT_COLLECTION_KEYS = (
     "endpoints",
@@ -303,101 +290,57 @@ def _normalize_power_weight(raw_power: Any) -> float | None:
         return None
 
 
-_LIGHT_SOURCE_KIND_ALIASES = {
-    "laser_diode": "laser",
-    "laser_dpss": "laser",
-    "diode": "laser",
-    "dpss": "laser",
-    "wll": "white_light_laser",
-    "tunable_laser": "white_light_laser",
-    "mercury_lamp": "arc_lamp",
-    "xenon_lamp": "arc_lamp",
-    "tungsten_halogen": "halogen_lamp",
-    "quartz_halogen": "halogen_lamp",
-    "ti_sapphire": "multiphoton_laser",
-    "fs_laser": "multiphoton_laser",
-    "white_supercontinuum_laser": "supercontinuum",
-}
+_fallback_vocab: Any | None = None
 
-_CANONICAL_LIGHT_SOURCE_KINDS = {
-    "laser",
-    "white_light_laser",
-    "led",
-    "arc_lamp",
-    "metal_halide",
-    "halogen_lamp",
-    "multiphoton_laser",
-    "supercontinuum",
-}
+
+def _vocab_context() -> VocabLookup | Any | None:
+    global _fallback_vocab
+    if _active_vocab is not None:
+        return _active_vocab
+    if _fallback_vocab is None:
+        # Lazy import avoids validation -> lightpath -> validation import cycles.
+        from scripts.validation.vocabulary import build_repository_vocabulary
+        _fallback_vocab = build_repository_vocabulary(Path(__file__).resolve().parents[2])
+    return _fallback_vocab
 
 
 def _normalize_light_source_kind(value: Any) -> str:
-    """Normalize light-source kind aliases into canonical kind IDs."""
-    normalized = _clean_identifier(value) or "light_source"
-    normalized = _LIGHT_SOURCE_KIND_ALIASES.get(normalized, normalized)
-
-    return normalized if normalized in _CANONICAL_LIGHT_SOURCE_KINDS else normalized
+    raw = _clean_string(value)
+    token = _clean_identifier(raw) or "light_source"
+    vocabulary = _vocab_context()
+    resolver = getattr(vocabulary, "resolve_canonical", None)
+    if callable(resolver):
+        return resolver("light_source_kinds", raw) or resolver("light_source_kinds", token) or token
+    return token
 
 
 def _detector_class(kind: str) -> str:
-    """Normalize endpoint/detector kind into frontend detector class."""
-    normalized = kind.lower().strip()
-
-    if normalized in {"eyepiece", "eyepieces", "ocular", "oculars"}:
-        return "eyepiece"
-
-    if normalized in {"camera_port", "cameraport"}:
-        return "camera_port"
-
-    if normalized in CAMERA_DETECTOR_KINDS:
-        return "camera"
-
-    if normalized in {"hyd"}:
-        return "hybrid"
-
-    if normalized in {"apd", "spad"}:
-        return "apd"
-
-    if normalized in POINT_DETECTOR_KINDS:
-        return "point"
-
+    vocabulary = _vocab_context()
+    resolver = getattr(vocabulary, "resolve_canonical", None)
+    get_term = getattr(vocabulary, "get_term", None)
+    canonical = resolver("detector_kinds", kind) if callable(resolver) else None
+    canonical = canonical or _clean_identifier(kind)
+    term = get_term("detector_kinds", canonical) if callable(get_term) else None
+    if term is not None:
+        frontend_class = term.tag_value("frontend_class")
+        if isinstance(frontend_class, str) and frontend_class.strip():
+            return frontend_class.strip()
     return "detector"
 
 
 def _normalize_endpoint_type(value: Any) -> str:
-    """Normalize endpoint type aliases into canonical endpoint type IDs."""
-    raw = _clean_string(value).lower()
+    raw = _clean_string(value)
     token = _clean_identifier(raw)
-
     if not raw and not token:
         return "detector"
-
-    if (
-        any(keyword in raw for keyword in ("eyepiece", "ocular"))
-        or token
-        in {
-            "eyepiece",
-            "eyepieces",
-            "ocular",
-            "oculars",
-            "binocular",
-            "trinocular",
-        }
-    ):
-        return "eyepiece"
-
-    if ("camera" in raw and "port" in raw) or token in {"camera_port", "cameraport"}:
-        return "camera_port"
-
-    if token in CAMERA_DETECTOR_KINDS | POINT_DETECTOR_KINDS | {
-        "hyd",
-        "apd",
-        "spad",
-        "detector",
-        "camera",
-    }:
-        return "detector"
-
+    vocabulary = _vocab_context()
+    resolver = getattr(vocabulary, "resolve_canonical", None)
+    if callable(resolver):
+        endpoint_type = resolver("endpoint_types", raw) or resolver("endpoint_types", token)
+        if endpoint_type:
+            return endpoint_type
+        if resolver("detector_kinds", raw) or resolver("detector_kinds", token):
+            return "detector"
     return token or "detector"
 
 
@@ -407,8 +350,6 @@ __all__ = [
     "NO_WAVELENGTH_TYPES",
     "CUBE_FILTER_COMPONENT_TYPES",
     "CUBE_LINK_KEYS",
-    "CAMERA_DETECTOR_KINDS",
-    "POINT_DETECTOR_KINDS",
     "POWER_VALUE_RE",
     "CANONICAL_ENDPOINT_COLLECTION_KEYS",
     "ENDPOINT_CAPABLE_INVENTORY_KEYS",

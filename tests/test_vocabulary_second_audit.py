@@ -1,15 +1,10 @@
-from __future__ import annotations
-
-from scripts._vocab_audit_patch_common import ROOT, write
-
-write(
-    "tests/test_vocabulary_second_audit.py",
-    '''from pathlib import Path
+from pathlib import Path
 from unittest import mock
 
 import pytest
 import yaml
 
+import scripts.autofix_yaml as autofix_yaml
 from scripts.autofix_yaml import _canonicalize_rule_values, parse_args
 from scripts.build_context import normalize_software
 from scripts.dashboard.site_render import build_vocabulary_dictionary_markdown
@@ -78,7 +73,7 @@ def test_explicit_allow_empty_skips_vocab_validation_without_inventing_unitless(
 
 def test_policy_duplicate_keys_are_rejected(tmp_path):
     path = tmp_path / 'policy.yaml'
-    path.write_text('record_type: qc_session\\nrecord_type: maintenance_event\\nfield_rules: []\\n', encoding='utf-8')
+    path.write_text('record_type: qc_session\nrecord_type: maintenance_event\nfield_rules: []\n', encoding='utf-8')
     payload, error = load_policy(path)
     assert payload is None
     assert 'Duplicate YAML key' in error
@@ -106,10 +101,36 @@ def test_autofix_is_read_only_by_default_and_validates_before_pr():
     assert parse_args([]).write is False
     source = (ROOT / 'scripts/autofix_yaml.py').read_text(encoding='utf-8')
     assert 'load_vocabs' not in source and 'metric_class_rules' not in source
+    assert '_validate_repository_after_write' in source and 'writes were rolled back' in source
     workflow = (ROOT / '.github/workflows/autofix.yml').read_text(encoding='utf-8')
-    assert 'scripts/autofix_yaml.py --write' in workflow
+    assert 'python -m scripts.autofix_yaml --write' in workflow
     assert workflow.index('python -m scripts.validate') < workflow.index('peter-evans/create-pull-request')
     assert workflow.index('python -m scripts.dashboard_builder --strict') < workflow.index('peter-evans/create-pull-request')
+
+
+def test_autofix_write_rolls_back_when_repository_validation_fails(tmp_path, monkeypatch):
+    target = tmp_path / 'instrument.yaml'
+    original = 'kind: legacy\n'
+    target.write_text(original, encoding='utf-8')
+    spec = type('Spec', (), {'target_dir': tmp_path})()
+    monkeypatch.setattr(autofix_yaml, 'get_base_path', lambda: tmp_path)
+    monkeypatch.setattr(autofix_yaml, 'build_specs', lambda base: [spec])
+    monkeypatch.setattr(autofix_yaml, '_iter_yaml_files', lambda base: [target])
+
+    def fake_autofix(filepath, spec, *, write_changes):
+        assert write_changes is True
+        filepath.write_text('kind: changed\n', encoding='utf-8')
+        return True, 1
+
+    monkeypatch.setattr(autofix_yaml, 'autofix_file', fake_autofix)
+    monkeypatch.setattr(
+        autofix_yaml,
+        '_validate_repository_after_write',
+        lambda: (_ for _ in ()).throw(RuntimeError('invalid transformed repository')),
+    )
+    with pytest.raises(RuntimeError, match='invalid transformed repository'):
+        autofix_yaml.main(['--write'])
+    assert target.read_text(encoding='utf-8') == original
 
 
 def test_required_if_canonicalizes_generic_membership_operators(tmp_path):
@@ -158,7 +179,3 @@ def test_dictionary_deduplicates_registry_aliases_and_labels_classification(tmp_
 def test_temporary_vocabulary_transfer_machinery_is_removed():
     assert not (ROOT / '.vocab-transfer').exists()
     assert not (ROOT / '.github/workflows/apply-vocabulary-hardening.yml').exists()
-''',
-)
-
-print("Added second-audit regression tests")
