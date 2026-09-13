@@ -42,6 +42,7 @@ jobs:
       - name: Apply presentation fixes
         run: |
           python -m scripts.apply_presentation_redteam_fixes_temp
+          python -m scripts.refine_presentation_redteam_fixes_temp
           python -m scripts.dashboard_builder --strict
 
       - name: Run full validation gate
@@ -75,7 +76,6 @@ jobs:
           PY
           python -m scripts.presentation_browser_redteam_temp
           python - <<'PY'
-          from pathlib import Path
           from playwright.sync_api import sync_playwright
 
           base = 'http://127.0.0.1:8765/'
@@ -83,7 +83,6 @@ jobs:
               browser = p.chromium.launch(headless=True)
               page = browser.new_page(viewport={"width": 1440, "height": 900})
 
-              # Exercise both history and concrete QC / maintenance event pages.
               for rel in (
                   'instruments/scope-3i-csu-w1-spinning-disk/history/',
                   'events/scope-3i-csu-w1-spinning-disk/2016-10-27_laser_power_qc/',
@@ -93,7 +92,6 @@ jobs:
                   assert response and response.status == 200, (rel, response.status if response else None)
                   assert 'Test Scope X1' not in page.locator('body').inner_text()
 
-              # Methods Generator: choose a real instrument and add a draft entry.
               page.goto(base + 'methods_generator/', wait_until='domcontentloaded')
               page.wait_for_function("document.querySelectorAll('#system-select option').length > 2")
               option_text = page.locator('#system-select option').all_inner_texts()
@@ -117,7 +115,6 @@ jobs:
               assert 'Test Scope X1' not in after
               page.screenshot(path='presentation_redteam_artifacts/after_laptop_methods_interaction.png', full_page=True)
 
-              # Virtual Microscope: raw canonical route IDs must not leak when a human label exists.
               page.goto(base + 'virtual_microscope/', wait_until='domcontentloaded')
               page.get_by_role('button', name='Suggest a configuration').click()
               page.wait_for_timeout(250)
@@ -125,7 +122,6 @@ jobs:
               assert 'routes: confocal_point' not in text
               page.screenshot(path='presentation_redteam_artifacts/after_laptop_virtual_microscope.png', full_page=True)
 
-              # Synthetic fixture must be absent from normal public surfaces and search/navigation DOM.
               for rel in ('', 'retired/', 'methods_generator/', 'status/', 'objective_pool/'):
                   page.goto(base + rel, wait_until='domcontentloaded')
                   assert 'Test Scope X1' not in page.locator('body').inner_text(), rel
@@ -136,18 +132,18 @@ jobs:
       - name: Upload browser audit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: presentation-browser-redteam-after
+          name: presentation-browser-redteam-final
           path: presentation_redteam_artifacts/
           retention-days: 7
 
-      - name: Commit presentation fixes and generated dashboard
+      - name: Commit presentation fixes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/dashboard/site_render.py scripts/templates/virtual_microscope_app.js tests/test_public_dashboard_presentation.py dashboard_docs mkdocs.yml
+          git add scripts/dashboard/site_render.py scripts/templates/virtual_microscope_app.js tests/test_public_dashboard_presentation.py mkdocs.yml
           if git diff --cached --quiet; then
             echo "No final presentation changes to commit."
           else
-            git commit -m "Harden public dashboard for presentation"
+            git commit -m "Harden public dashboard for presentation [skip ci]"
             git push origin HEAD:redteam/presentation-browser-chatgpt-2026-09-13
           fi
