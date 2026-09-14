@@ -51,7 +51,28 @@ def test_screening_summary_uses_canonical_environment_and_autofocus_fields() -> 
     assert "hardware triggering" in summary["supporting_feature_labels"]
 
 
-def test_crest_dualcam_route_allows_both_camera_branches() -> None:
+def test_screening_summary_preserves_triggering_mode_semantics() -> None:
+    software = _build_hardware_focus_summary(
+        {
+            "capabilities": {"imaging_modes": []},
+            "hardware": {"triggering": {"primary_mode": "software"}},
+        },
+        {},
+    )
+    mixed = _build_hardware_focus_summary(
+        {
+            "capabilities": {"imaging_modes": []},
+            "hardware": {"triggering": {"primary_mode": "mixed"}},
+        },
+        {},
+    )
+
+    assert "software triggering" in software["supporting_feature_labels"]
+    assert "hardware triggering" not in software["supporting_feature_labels"]
+    assert "mixed triggering" in mixed["supporting_feature_labels"]
+
+
+def test_crest_dualcam_route_binds_multiple_branches_to_dualcam_splitter() -> None:
     payload = yaml.safe_load(
         (REPO_ROOT / "instruments" / "Nikon Ti2-E Crest V3 Spinning Disk.yaml").read_text(
             encoding="utf-8"
@@ -60,14 +81,24 @@ def test_crest_dualcam_route_allows_both_camera_branches() -> None:
     route = next(
         row for row in payload["light_paths"] if row["id"] == "confocal_spinning_disk"
     )
-    branch_block = next(
-        step["branches"] for step in route["detection_sequence"] if "branches" in step
-    )
+    steps = route["detection_sequence"]
+    branch_index = next(index for index, step in enumerate(steps) if "branches" in step)
+    branch_block = steps[branch_index]["branches"]
 
+    # The route parser binds a branch block to the immediately preceding optical
+    # path element. This must be the DualCam splitter, not the exclusive
+    # trinocular port.
+    assert steps[branch_index - 1]["optical_path_element_id"] == (
+        "mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set"
+    )
     assert branch_block["selection_mode"] == "multiple"
     assert {branch["branch_id"] for branch in branch_block["items"]} == {
         "to_master",
         "to_slave",
+    }
+    assert {branch.get("mode") for branch in branch_block["items"]} == {
+        "transmitted",
+        "reflected",
     }
     endpoints = {
         step["endpoint_id"]
@@ -76,6 +107,11 @@ def test_crest_dualcam_route_allows_both_camera_branches() -> None:
         if "endpoint_id" in step
     }
     assert endpoints == {"kinetix_master_camera", "kinetix_slave_camera"}
+    assert all(
+        "optical_path_element_id" not in step
+        for branch in branch_block["items"]
+        for step in branch["sequence"]
+    )
 
 
 def test_planning_prompt_permits_general_guidance_but_keeps_facility_claims_grounded() -> None:
