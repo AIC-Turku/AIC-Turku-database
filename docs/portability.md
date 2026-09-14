@@ -17,7 +17,6 @@ names AIC.
 | `facility.yaml` | Facility identity, public URLs, acknowledgements, branding, and withheld records. Everything the generated site says *about the facility* comes from here. |
 | `instruments/*.yaml` | The local microscope inventory. Instrument IDs here are the IDs every other layer refers to. |
 | `inventory/objective_pool.yaml` | **Required.** The build fails before writing any page if this file is missing or invalid. A facility with no spare pool still needs a valid file with an empty `items` list. |
-| `assets/images/<instrument_id>.jpg` | Optional per-instrument photos, resolved by instrument ID. Missing photos fall back to `assets/images/placeholder.svg`; nothing needs to be configured. |
 
 Edited only when the local situation differs:
 
@@ -26,6 +25,7 @@ Edited only when the local situation differs:
 | `vocab/*.yaml` | Local hardware needs controlled terms the shipped vocabularies do not cover. Validation rejects unknown terms rather than passing them through, so this is where new terms belong. |
 | `schema/instrument_policy.yaml`, `schema/QC_policy.yaml`, `schema/maintenance_policy.yaml` | The local completeness or event policy differs. |
 | `assets/images/logo.svg`, `assets/images/favicon.svg` | Facility branding. The shipped files are a generic microscope glyph, not AIC branding, so they can also be left as they are. `branding.logo` / `branding.favicon` in `facility.yaml` can point elsewhere instead. |
+| `assets/images/<instrument_id>.jpg` | Optional local instrument photos, resolved by instrument ID. Missing photos fall back to `assets/images/placeholder.svg`. Remove production AIC instrument photos when creating a reusable fork so an identical instrument ID cannot accidentally select an AIC photo. |
 | `qc/sessions/**`, `maintenance/events/**` | Local QC and maintenance history. Both are optional; instruments with no events render an explicit "no events recorded" note rather than an empty page. |
 
 Nothing else has to be touched to get a working, correctly branded site.
@@ -42,10 +42,11 @@ Nothing else has to be touched to get a working, correctly branded site.
   `facility.yaml` plus the instrument ledger — site name, site URL, logo,
   favicon, and the full navigation including every instrument page. Editing it
   by hand is reverted by the next build.
-- **`.github/workflows/`.** The deploy workflow derives the published URL from
-  `github.repository_owner` and the repository name, so a fork publishes to its
-  own GitHub Pages URL with no edit. `MKDOCS_SITE_URL` overrides it for
-  non-Pages hosting.
+- **`.github/workflows/`.** The deploy workflow leaves the authored site URL to
+  `facility.public_site_url`, so a fork can use its normal GitHub Pages URL, a
+  Pages custom domain, or another canonical public URL without changing Python
+  or JavaScript. The GitHub environment link is reported from the Pages deploy
+  action itself rather than being hard-coded from the repository owner/name.
 - **`vocab/`, `schema/`, `assets/data/spectra/`** as shipped, unless the local
   inventory needs more terms or stricter policy.
 
@@ -78,7 +79,8 @@ branding:
 `short_name` (falling back to `full_name`) is the name every generated page uses
 when it tells a reader who to ask about access, training, or missing metadata.
 With neither set, pages read "Core Imaging Facility" rather than naming any real
-facility.
+facility. The fallback is applied after loading `facility.yaml`, so a deployment
+that authors only `full_name` does not inherit the neutral default short name.
 
 `acknowledgements.additional[]` binds a conditional credit to **recorded
 instrument IDs**. An unknown ID fails the build instead of silently detaching
@@ -112,7 +114,9 @@ These are deliberate and do not block reuse:
    restyle every page for no portability gain.
 2. **The production data itself.** `instruments/`, `qc/`, `maintenance/`,
    `inventory/objective_pool.yaml` and the instrument photos in
-   `assets/images/` are AIC records. A fork replaces them.
+   `assets/images/` are AIC records. A fork replaces them. The portability test
+   intentionally reuses only generic runtime assets and generic glyphs, not AIC
+   instrument photos.
 3. **Inventory-specific tests.** Several suites assert against AIC's own records
    — objective counts, specific instrument IDs, QC metric histories. A fork that
    replaces the inventory must update or drop these. The portability boundaries
