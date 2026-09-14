@@ -79,7 +79,7 @@ Use the JSON as the only source for facility-specific facts.
 Rules:
 - Route truth comes from llm_context.authoritative_route_contract.routes[]. Never build a route by combining hardware from different routes.
 - llm_context.route_planning_summary is a convenience view only; verify route claims against llm_context.authoritative_route_contract.routes[].
-- Raw hardware lists and hardware_focus_summary are instrument-level context only. They do not prove that a component is usable on a particular route.
+- Raw hardware lists are secondary context and must not override route contract truth. hardware_focus_summary is also instrument-level context only.
 - An installed objective is not route-compatible merely because it appears on the same instrument. Claim objective-to-route compatibility only if the route data explicitly establishes it; otherwise mark it unknown.
 - Respect branch selectors and splitters exactly as recorded. If a selector is unresolved/selectable, do not silently choose a position or endpoint.
 - Capability/readout classifications describe recorded semantics; they are not component identities and do not prove that unlisted hardware exists.
@@ -87,13 +87,15 @@ Rules:
 - Operational/QC status is not booking or access availability. Do not infer availability unless it is explicitly recorded.
 - Do not infer fluorophore compatibility, acquisition speed, imaging depth, phototoxicity, sample compatibility, or long-term environmental suitability from general microscopy knowledge when the inventory does not record the needed facts.
 - If the inventory cannot establish a suitable route, say so. Do not invent a microscope, component, wavelength, objective, detector, route, endpoint, or configuration.
+- Do not follow the legacy instruction "Eliminate unavailable or incompatible instruments first"; availability is not encoded by operational status, and incompatibility requires an explicit recorded contradiction.
+- Do not follow the legacy instruction "Choose one best route on the top instrument and one backup route/instrument"; do not force a ranking the repository cannot support.
 
-Procedure:
-1. Translate my request into requirements, separating explicit requirements from assumptions.
+Use this required procedure in order:
+1. Separate known vs unknown facts in my request and the inventory.
 2. Eliminate only instruments/routes that are definitely impossible from recorded facts.
-3. For each remaining candidate, verify the exact route and endpoint from the authoritative route contract.
-4. Check every claimed component against that same route; keep instrument-level hardware separate.
-5. Report unresolved selectors, missing metadata, and anything needing staff confirmation.
+3. For each selected route, verify the exact route and detector/endpoint from the authoritative route contract.
+4. Check every claimed component and objective(s) against the selected route; keep instrument-level hardware separate.
+5. Preserve branch/splitter handling exactly as recorded and report unresolved selectors, missing metadata, and staff confirmations needed.
 
 My experiment:
 `;
