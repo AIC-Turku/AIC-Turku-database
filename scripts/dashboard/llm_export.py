@@ -24,6 +24,163 @@ from typing import Any
 from scripts.build_context import clean_text
 
 
+# Fields whose absence is a recorded fact rather than a gap.
+#
+# Route membership is authored as ordered `light_paths[]` sequences, so the
+# hardware a route uses is a complete enumeration: a component missing from
+# these lists is not part of that route. Everywhere else in this export a
+# missing value means unknown. Without this distinction the two rules collide —
+# "treat missing as unknown" would make route exclusivity unreadable, and the
+# only way left to decide whether a laser can be used on a route is to guess.
+CLOSED_WORLD_FIELDS = (
+    "llm_context.authoritative_route_contract.route_hardware_usage[].hardware_inventory_ids",
+    "llm_context.authoritative_route_contract.route_hardware_usage[].illumination_hardware_inventory_ids",
+    "llm_context.authoritative_route_contract.route_hardware_usage[].detection_hardware_inventory_ids",
+    "llm_context.authoritative_route_contract.route_hardware_usage[].endpoint_inventory_ids",
+    "llm_context.authoritative_route_contract.hardware_inventory[].route_usage_summary",
+    "llm_context.authoritative_route_contract.available_routes",
+)
+
+
+def _build_planning_contract() -> dict[str, Any]:
+    """State what this export does and does not establish.
+
+    Each entry answers a question a planner would otherwise have to answer by
+    assumption. None of it adds hardware facts: it describes the shape and
+    provenance of the data already exported.
+    """
+    return {
+        "contract_version": "planning_contract.v1",
+        "closed_world_fields": {
+            "fields": list(CLOSED_WORLD_FIELDS),
+            "meaning": (
+                "These lists are complete enumerations built from the authored "
+                "route sequences. A component absent from them is not part of "
+                "that route. Everywhere else, a missing or null value means "
+                "unknown."
+            ),
+        },
+        "availability": {
+            "records_booking_availability": False,
+            "meaning": (
+                "This export contains no booking, scheduling, access or training "
+                "data. 'available_routes', 'available_positions' and "
+                "'selected_or_selectable_*' mean recorded or selectable in the "
+                "ledger, never free to book. Whether an instrument can actually "
+                "be used is a question for facility staff."
+            ),
+        },
+        "status_semantics": {
+            "field": "hardware_focus_summary.status",
+            "meaning": (
+                "Status is derived only from the most recent QC and maintenance "
+                "records. Read status.evidence before repeating it: "
+                "'no_qc_or_maintenance_record' means the instrument is reported "
+                "operational because nothing has been recorded against it, not "
+                "because a check passed."
+            ),
+        },
+        "objective_scope": {
+            "field": "llm_context.route_planning_summary.routes[].instrument_level_context.installed_objectives",
+            "meaning": (
+                "Objectives are recorded per instrument, not per route. They are "
+                "shown as instrument-level context alongside each route and do not "
+                "establish that a given objective is usable on that route."
+            ),
+        },
+        "capability_vs_route": {
+            "field": "capability_route_reconciliation",
+            "meaning": (
+                "capabilities.imaging_modes and light_paths[].route_type are "
+                "different authored axes. Route types are a coarse family "
+                "vocabulary: a TIRF or STED acquisition is recorded as a "
+                "widefield_fluorescence or confocal_point route. Use "
+                "route_family_coverage to relate them instead of inferring a "
+                "route that is not recorded."
+            ),
+        },
+    }
+
+
+def _build_capability_route_reconciliation(
+    capabilities: dict[str, Any],
+    route_types: list[str],
+    route_family_coverage: dict[str, Any],
+) -> dict[str, Any]:
+    """Reconcile declared imaging modes against recorded route families.
+
+    `capabilities.imaging_modes` and route types disagree on their face: an
+    instrument can declare `tirf` while every recorded route is
+    `widefield_fluorescence`. `vocab/optical_routes.yaml` already authors which
+    imaging modes each route family covers, so the reconciliation is a lookup,
+    not an inference. Exporting it stops a planner having to choose between
+    inventing a TIRF route and concluding the facility has none.
+    """
+    declared = [
+        clean_text(mode)
+        for mode in (capabilities.get("imaging_modes") or [])
+        if isinstance(mode, str) and clean_text(mode)
+    ]
+
+    covered_modes: set[str] = set()
+    for route_type in route_types:
+        entry = route_family_coverage.get(route_type)
+        if isinstance(entry, dict):
+            covered_modes.update(entry.get("covers_imaging_modes") or [])
+
+    covered = [mode for mode in declared if mode in covered_modes]
+    uncovered = [mode for mode in declared if mode not in covered_modes]
+
+    return {
+        "declared_imaging_modes": declared,
+        "recorded_route_types": sorted(dict.fromkeys(route_types)),
+        "modes_covered_by_a_recorded_route": covered,
+        "modes_without_a_covering_recorded_route": uncovered,
+        "note": (
+            "A mode listed under modes_without_a_covering_recorded_route has no "
+            "recorded optical route in this export. Do not describe a route for "
+            "it; ask facility staff."
+            if uncovered
+            else "Every declared imaging mode is covered by a recorded route family."
+        ),
+    }
+
+
+def _status_with_evidence(status: dict[str, Any]) -> dict[str, Any]:
+    """Say what a reported status is based on.
+
+    `evaluate_instrument_status` returns green when neither a QC nor a
+    maintenance record contradicts it, so "Operational" is also what an
+    instrument with no recorded history reports. On a dashboard that is a
+    reasonable default; repeated to a researcher by an assistant it becomes a
+    claim that a check passed.
+    """
+    row = copy.deepcopy(status or {})
+    if not row:
+        return row
+
+    has_qc = bool(clean_text(row.get("last_qc_date")))
+    has_maintenance = bool(clean_text(row.get("last_maint_date")))
+
+    if has_qc and has_maintenance:
+        evidence = "qc_and_maintenance_record"
+    elif has_qc:
+        evidence = "qc_record_only"
+    elif has_maintenance:
+        evidence = "maintenance_record_only"
+    else:
+        evidence = "no_qc_or_maintenance_record"
+
+    row["evidence"] = evidence
+    row["evidence_note"] = (
+        "No QC or maintenance record exists for this instrument. The status is "
+        "the absence of a recorded problem, not a passed check."
+        if evidence == "no_qc_or_maintenance_record"
+        else "Status is derived from the most recent recorded QC/maintenance event."
+    )
+    return row
+
+
 def _collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str], list[str]]:
     """Return dotted known/missing field paths for an arbitrary JSON-like value."""
     known_fields: list[str] = []
@@ -59,13 +216,19 @@ def _collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str
 
 
 def _display_labels(rows: Any, *, installed_only: bool = False) -> list[str]:
-    """Extract stable display labels from canonical row dictionaries."""
+    """Extract stable labels from canonical string or row-list fields."""
     labels: list[str] = []
 
     if not isinstance(rows, list):
         return labels
 
     for row in rows:
+        if isinstance(row, str):
+            label = clean_text(row)
+            if label:
+                labels.append(label)
+            continue
+
         if not isinstance(row, dict):
             continue
 
@@ -126,7 +289,15 @@ def _build_hardware_focus_summary(
         if isinstance(hardware.get("environment"), dict)
         else {}
     )
-    if environment.get("present"):
+    if environment.get("present") or any(
+        environment.get(key) is True
+        for key in (
+            "temperature_control",
+            "co2_control",
+            "humidity_control",
+            "oxygen_control",
+        )
+    ):
         supporting_features.append("environmental control")
 
     hardware_autofocus = (
@@ -134,7 +305,7 @@ def _build_hardware_focus_summary(
         if isinstance(hardware.get("hardware_autofocus"), dict)
         else {}
     )
-    if hardware_autofocus.get("present"):
+    if hardware_autofocus.get("present") or hardware_autofocus.get("is_installed") is True:
         supporting_features.append("hardware autofocus")
 
     triggering = (
@@ -142,8 +313,11 @@ def _build_hardware_focus_summary(
         if isinstance(hardware.get("triggering"), dict)
         else {}
     )
-    if triggering.get("present"):
-        supporting_features.append("hardware triggering")
+    trigger_mode = clean_text(triggering.get("primary_mode")).lower()
+    if trigger_mode in {"hardware", "software", "mixed"}:
+        supporting_features.append(f"{trigger_mode} triggering")
+    elif triggering.get("present"):
+        supporting_features.append("triggering")
 
     if _display_labels(hardware.get("optical_modulators")):
         supporting_features.append("optical modulation")
@@ -174,20 +348,83 @@ def _build_hardware_focus_summary(
         if isinstance(entry, dict) and clean_text(entry.get("title") or entry.get("path"))
     ]
 
+    # The screening labels are re-derived from raw hardware rows, which collapses
+    # distinct components onto one string: four LaserStack v4 lasers at 405, 488,
+    # 561 and 640 nm all read "LaserStack v4". The route contract already carries
+    # labels that keep them apart, so prefer those and keep the IDs alongside so a
+    # screening claim can be traced back to a component.
+    inventory_rows = [
+        row
+        for row in (authoritative_route_contract.get("hardware_inventory") or [])
+        if isinstance(row, dict)
+    ]
+
+    def inventory_entries(inventory_class: str) -> list[dict[str, str]]:
+        return [
+            {
+                "id": clean_text(row.get("id")),
+                "display_label": clean_text(row.get("display_label")),
+            }
+            for row in inventory_rows
+            if clean_text(row.get("inventory_class")) == inventory_class
+            and clean_text(row.get("id"))
+            and clean_text(row.get("display_label"))
+        ]
+
+    light_sources = inventory_entries("light_source")
+
+    # `hardware_inventory[].endpoint_type` is empty in this contract; the
+    # authored value lives in `normalized_endpoints`, keyed by the bare hardware
+    # id rather than the `endpoint:` inventory id. Filtering on the empty field
+    # matched nothing, so every instrument published `detectors: []` while
+    # `detector_labels` stayed full — leaving detectors with labels and no
+    # traceable ids, which is exactly the shape that invites a reader to invent
+    # an id from a label.
+    detector_hardware_ids = {
+        clean_text(row.get("id"))
+        for row in (authoritative_route_contract.get("normalized_endpoints") or [])
+        if isinstance(row, dict)
+        and clean_text(row.get("endpoint_type")) == "detector"
+        and clean_text(row.get("id"))
+    }
+
+    def is_detector(entry: dict[str, str]) -> bool:
+        inventory_id = entry["id"]
+        hardware_id = inventory_id.split(":", 1)[1] if ":" in inventory_id else inventory_id
+        return hardware_id in detector_hardware_ids
+
+    detectors = [entry for entry in inventory_entries("endpoint") if is_detector(entry)]
+
     return {
         "modality_labels": (_display_labels(canonical_instrument_dto.get("modalities")) or _display_labels((canonical_instrument_dto.get("capabilities") or {}).get("imaging_modes"))),
         "route_labels": route_labels,
+        "route_ids": [
+            clean_text(route.get("id"))
+            for route in route_rows
+            if isinstance(route, dict) and clean_text(route.get("id"))
+        ],
         "installed_objective_labels": _display_labels(
             hardware.get("objectives"),
             installed_only=True,
         ),
-        "light_source_labels": _display_labels(
-            hardware.get("sources") or hardware.get("light_sources")
+        "light_source_labels": (
+            [entry["display_label"] for entry in light_sources]
+            or _display_labels(hardware.get("sources") or hardware.get("light_sources"))
         ),
-        "detector_labels": _display_labels(hardware.get("detectors")),
+        "light_sources": light_sources,
+        "detector_labels": (
+            [entry["display_label"] for entry in detectors]
+            or _display_labels(hardware.get("detectors"))
+        ),
+        "detectors": detectors,
         "supporting_feature_labels": sorted(dict.fromkeys(supporting_features)),
         "planning_caveat_labels": caveat_titles[:8],
-        "status": copy.deepcopy(status or {}),
+        "status": _status_with_evidence(status or {}),
+        "screening_scope_note": (
+            "Screening labels only. They are not bound to a route: use "
+            "llm_context.authoritative_route_contract.route_hardware_usage to "
+            "decide what a route actually uses."
+        ),
     }
 
 
@@ -203,6 +440,23 @@ def _build_route_planning_summary(
     )
 
     hardware = dto.get("hardware") if isinstance(dto.get("hardware"), dict) else {}
+
+    # Per-route component membership lives in the authoritative contract, not in
+    # route_optical_facts, which is empty for every route in this export. A claim
+    # boundary derived from the empty side would publish
+    # "route_component_ids": [] everywhere and read as "this route has no
+    # components".
+    route_component_ids_by_route = {
+        clean_text(usage.get("route_id")): sorted(
+            {
+                clean_text(value)
+                for value in (usage.get("hardware_inventory_ids") or [])
+                if clean_text(value)
+            }
+        )
+        for usage in (authoritative_route_contract.get("route_hardware_usage") or [])
+        if isinstance(usage, dict) and clean_text(usage.get("route_id"))
+    }
 
     installed_objectives = [
         {
@@ -220,6 +474,14 @@ def _build_route_planning_summary(
         for obj in (hardware.get("objectives") or [])
         if isinstance(obj, dict) and obj.get("is_installed") is not False
     ]
+
+    installed_objective_ids = sorted(
+        {
+            clean_text(obj.get("id"))
+            for obj in installed_objectives
+            if clean_text(obj.get("id"))
+        }
+    )
 
     route_rows: list[dict[str, Any]] = []
 
@@ -239,6 +501,16 @@ def _build_route_planning_summary(
                 for item in (route_facts.get(key) or [])
                 if isinstance(item, dict)
             ]
+
+        explicit_route_objective_ids = sorted(
+            {
+                clean_text(row.get("id"))
+                for key, value in route_facts.items()
+                if "objective" in str(key).lower()
+                for row in (value if isinstance(value, list) else [value])
+                if isinstance(row, dict) and clean_text(row.get("id"))
+            }
+        )
 
         sources = fact_rows("selected_or_selectable_sources")
         excitation_filters = fact_rows("selected_or_selectable_excitation_filters")
@@ -342,9 +614,31 @@ def _build_route_planning_summary(
                     "selected_or_selectable_branch_selectors": branch_selectors,
                     "selected_or_selectable_endpoints": endpoints,
                     "selected_or_selectable_modulators": modulators,
-                    "highly_relevant_installed_objectives": copy.deepcopy(
-                        installed_objectives
+                },
+                "instrument_level_context": {
+                    "installed_objectives": copy.deepcopy(installed_objectives),
+                    "objective_scope_note": (
+                        "These objectives are installed on the instrument, not on "
+                        "this route. Their presence does not establish route compatibility."
                     ),
+                },
+                "claim_boundaries": {
+                    "route_component_ids": route_component_ids_by_route.get(
+                        clean_text(route.get("id")), []
+                    ),
+                    "route_component_ids_source": (
+                        "llm_context.authoritative_route_contract.route_hardware_usage"
+                    ),
+                    "must_not_combine_with_other_routes": True,
+                    "instrument_installed_objective_ids": installed_objective_ids,
+                    "explicit_route_objective_ids": explicit_route_objective_ids,
+                    "objective_route_compatibility": (
+                        "explicit_route_links_present"
+                        if explicit_route_objective_ids
+                        else "unknown_no_route_objective_link"
+                    ),
+                    "selector_resolution_required": has_unresolved_selectors,
+                    "booking_or_access_availability": "not_encoded_by_route_or_status",
                 },
                 "route_specific_vs_generic": {
                     "route_specific_facts_source": "route_optical_facts",
@@ -379,11 +673,12 @@ def _build_route_planning_summary(
         )
 
     return {
-        "contract_version": "route_planning_summary.v1",
+        "contract_version": "route_planning_summary.v2",
         "authoritative_source": "llm_context.authoritative_route_contract.routes",
         "usage_note": (
             "Use this summary for route planning convenience, but treat "
-            "llm_context.authoritative_route_contract as the source of truth."
+            "llm_context.authoritative_route_contract as the source of truth. "
+            "Instrument-level objectives are context only, not route evidence."
         ),
         "routes": route_rows,
     }
@@ -392,8 +687,15 @@ def _build_route_planning_summary(
 def build_llm_inventory_payload(
     facility: dict[str, Any],
     instruments: list[dict[str, Any]],
+    route_family_coverage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the LLM-safe experiment-planning inventory export."""
+    """Build the LLM-safe experiment-planning inventory export.
+
+    `route_family_coverage` is the authored `covers` mapping from
+    `vocab/optical_routes.yaml`. It is passed in rather than read here so this
+    module keeps consuming canonical inputs only.
+    """
+    coverage = route_family_coverage if isinstance(route_family_coverage, dict) else {}
     llm_payload: dict[str, Any] = {
         "facility_name": str(
             facility.get("short_name")
@@ -431,8 +733,16 @@ def build_llm_inventory_payload(
                     "When required details are missing, ask follow-up questions or "
                     "clearly state uncertainty."
                 ),
+                (
+                    "Read planning_contract before ranking instruments. It states "
+                    "which lists are complete enumerations, that no booking "
+                    "availability is recorded, and what an instrument status is "
+                    "based on."
+                ),
             ],
         },
+        "planning_contract": _build_planning_contract(),
+        "route_family_coverage": copy.deepcopy(coverage),
         "active_microscopes": [],
     }
 
@@ -516,6 +826,21 @@ def build_llm_inventory_payload(
             status=inst.get("status") if isinstance(inst.get("status"), dict) else {},
         )
 
+        recorded_route_types = [
+            clean_text(
+                ((route.get("route_identity") or {}).get("route_type"))
+                or route.get("route_type")
+                or route.get("id")
+            )
+            for route in (canonical_lightpath_dto.get("light_paths") or [])
+            if isinstance(route, dict)
+        ]
+        llm_record["capability_route_reconciliation"] = _build_capability_route_reconciliation(
+            llm_record.get("capabilities") or {},
+            [route_type for route_type in recorded_route_types if route_type],
+            coverage,
+        )
+
         authoritative_route_contract = copy.deepcopy(
             (((canonical_lightpath_dto.get("projections") or {}).get("llm")) or {}).get(
                 "authoritative_route_contract"
@@ -594,7 +919,11 @@ def build_llm_inventory_payload(
 
 
 __all__ = [
+    "CLOSED_WORLD_FIELDS",
     "build_llm_inventory_payload",
+    "_build_planning_contract",
+    "_build_capability_route_reconciliation",
+    "_status_with_evidence",
     "_build_hardware_focus_summary",
     "_build_route_planning_summary",
 ]

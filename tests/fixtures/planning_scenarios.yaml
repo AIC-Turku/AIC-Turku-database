@@ -1,0 +1,236 @@
+# Red-team scenarios for the AI experiment-planning workflow.
+#
+# These scenarios test what the inventory can establish without injecting
+# microscopy advice into the fixtures. A controlled imaging mode/readout is only
+# placed under `requires` when the user request explicitly names it. Vague goals
+# such as "fast", "deep", "low phototoxicity" or "cleared sample" are deliberately
+# NOT translated into a preferred modality.
+#
+# `tests/test_planning_grounding.py` recomputes expectations that depend on the
+# repository, so the fixture cannot quietly drift into a stale recommendation.
+
+schema_version: 2
+
+never_recorded:
+  - booking_availability
+  - training_requirements
+  - access_policy
+  - measured_system_throughput
+  - detector_quantum_efficiency_curves
+
+scenarios:
+  - id: live_two_colour_24h
+    title: Live GFP/mCherry imaging over 24 hours
+    request: >-
+      Live cells expressing GFP and mCherry, imaged every 15 minutes for 24 hours.
+    requires: {}
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: []
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - gfp_route_compatibility
+        - mcherry_route_compatibility
+        - maximum_unattended_run_duration
+        - long_term_environmental_suitability
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        The request does not name a microscopy modality. Fluorophore compatibility,
+        unattended duration and long-run environmental suitability must not be
+        inferred from general microscopy knowledge.
+
+  - id: fast_two_colour_dynamics
+    title: Very fast two-colour dynamics
+    request: >-
+      Two-colour imaging of fast dynamics, ideally both channels captured at the
+      same time.
+    requires: {}
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: []
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - required_frame_rate
+        - simultaneous_two_colour_acquisition
+        - detector_speed
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        "Fast" and "simultaneous" are performance requirements, not modality
+        names. The inventory must not silently translate them into a preferred
+        microscope family.
+
+  - id: tirf_adhesions
+    title: TIRF imaging
+    request: TIRF imaging, two colours.
+    requires:
+      imaging_modes: [tirf]
+    expect:
+      instruments_declaring_requirements:
+        - scope-deltavision-omx
+        - scope-oni-nanoimager
+        - scope-zeiss-tirf
+      covering_route_families: [widefield_fluorescence]
+      route_types_absent_from_vocabulary: [tirf]
+      cross_route_traps:
+        - instrument: scope-zeiss-tirf
+          component: source:halogen_lamp_transmitted
+          not_on_route: widefield_fluorescence
+      exclusive_branch_blocks:
+        - instrument: scope-zeiss-tirf
+          route: widefield_fluorescence
+      must_remain_unknown:
+        - tirf_angle_range
+        - objective_route_compatibility
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        TIRF is explicitly requested, so its recorded capability may be used. The
+        route-family mapping comes from the repository vocabulary; angle and
+        objective-to-route compatibility remain unknown unless recorded.
+
+  - id: flim_lifetime
+    title: FLIM
+    request: FLIM measurement.
+    requires:
+      readouts: [flim]
+    expect:
+      instruments_declaring_requirements:
+        - scope-lambert-flim-frequency-domain
+        - scope-leica-stellaris-8-falcon-flim-resonant
+      covering_route_families: []
+      cross_route_traps:
+        - instrument: scope-leica-stellaris-8-falcon-flim-resonant
+          component: source:white_light_laser_wll
+          not_on_route: widefield_fluorescence
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - lifetime_resolution_ps
+        - photon_count_requirements
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        FLIM is explicitly requested and is recorded as a readout. Performance
+        figures not present in the inventory remain unknown.
+
+  - id: deep_3d_imaging
+    title: Deep 3D imaging
+    request: 3D imaging several hundred micrometres into a thick sample.
+    requires: {}
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: []
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - maximum_imaging_depth_um
+        - scattering_performance
+        - objective_working_distance_suitability
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        Imaging depth is a performance requirement. The fixture intentionally does
+        not translate it into multiphoton, light-sheet, confocal or another modality.
+
+  - id: sted_super_resolution
+    title: STED
+    request: STED imaging.
+    requires:
+      imaging_modes: [sted]
+    expect:
+      instruments_declaring_requirements: [scope-1e33f909]
+      covering_route_families: [confocal_point]
+      route_types_absent_from_vocabulary: [sted]
+      cross_route_traps: []
+      exclusive_branch_blocks:
+        - instrument: scope-1e33f909
+          route: confocal_point
+      must_remain_unknown:
+        - achievable_resolution_nm
+        - depletion_laser_power
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        STED is explicitly requested. The confocal-point family relationship is
+        authored in the route vocabulary; performance values remain unknown.
+
+  - id: low_phototoxicity_timelapse
+    title: Low-phototoxicity long time-lapse
+    request: Gentle long time-lapse of light-sensitive live cells over 48 hours.
+    requires: {}
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: []
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - delivered_illumination_dose
+        - phototoxicity_thresholds
+        - safe_duration
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        Low phototoxicity and long duration are suitability/performance goals. The
+        fixture intentionally does not map them to light-sheet, spinning-disk or
+        any other modality.
+
+  - id: thick_cleared_sample
+    title: Thick cleared sample
+    request: Imaging a thick cleared sample in a high-refractive-index medium.
+    requires: {}
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: []
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - objective_refractive_index_compatibility
+        - sample_chamber_dimensions
+        - maximum_sample_thickness
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        Sample thickness and clearing-medium compatibility do not themselves name
+        a microscopy modality. Suitability must remain unknown unless explicitly
+        supported by inventory fields.
+
+  - id: three_colour_route_conflict
+    title: Three-colour route mixing risk
+    request: >-
+      Three-colour fluorescence imaging, ideally all three channels acquired at
+      the same time.
+    requires: {}
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: []
+      cross_route_traps:
+        - instrument: scope-leica-stellaris-8-falcon-flim-resonant
+          component: optical_path_element:aobs
+          not_on_route: widefield_fluorescence
+        - instrument: scope-3i-csu-w1-spinning-disk
+          component: source:laserstack_v4_2
+          not_on_route: widefield_fluorescence
+      exclusive_branch_blocks:
+        - instrument: scope-deltavision-omx
+          route: widefield_fluorescence
+      must_remain_unknown:
+        - simultaneous_three_channel_acquisition
+        - fluorophore_route_compatibility
+        - channel_crosstalk
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        The request is deliberately modality-neutral. The test checks that an LLM
+        cannot create a synthetic configuration by mixing components across routes
+        or assume simultaneous acquisition from multiple recorded endpoints.
+
+  - id: unsatisfiable_multiphoton_request
+    title: Explicit request absent from the recorded inventory
+    request: I need multiphoton imaging.
+    requires:
+      imaging_modes: [multiphoton]
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: [multiphoton]
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown: []
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        Multiphoton is explicitly requested, but no active instrument declares the
+        required mode. The recorded inventory therefore has no supported candidate;
+        the assistant must not substitute another modality.

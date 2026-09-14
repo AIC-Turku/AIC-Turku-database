@@ -52,11 +52,13 @@ The experiment-planning page provides a structured inventory export that can be 
 - `scripts/validation/*` — validation and completeness logic.
 - `scripts/lightpath/*` — optical-path normalization and route logic.
 - `scripts/dashboard/*` — dashboard generation and exports.
+- `scripts/planning_eval.py` — offline grounding check for saved planning answers.
 - `scripts/templates/*` — public page templates and browser runtime.
 - `docs/dataflow_contract.md` — production data-flow and module contract.
 - `docs/light_path_v2_migration.md` — canonical light-path authoring model.
 - `docs/objective_pool.md` — objective catalogue source boundaries and maintenance notes.
 - `docs/portability.md` — what another facility must edit to reuse this project.
+- `docs/planning_grounding.md` — what the planning export establishes, and how to check an assistant's answer.
 
 Compatibility entry points such as `scripts/validate.py`, `scripts/light_path_parser.py`, and `scripts/dashboard_builder.py` remain available for existing workflows.
 
@@ -126,6 +128,18 @@ The user remains responsible for checking acquisition-specific settings and plac
 `dashboard_docs/assets/llm_inventory.json` contains an assistant-ready view of the active instrument inventory. It includes structured hardware, route data, operational status, and completeness information.
 
 The planning workflow is designed so that missing fields remain unknown. The prompt asks downstream assistants to recommend only recorded instruments and routes and to separate known facts from assumptions and caveats.
+
+The export opens with a `planning_contract` block stating which lists are complete enumerations (so a component absent from a route is not on that route), that no booking or training availability is recorded at all, what an instrument status is derived from, and that objectives are recorded per instrument rather than per route. `route_family_coverage` and each instrument's `capability_route_reconciliation` relate capability terms such as `tirf` or `sted` to the route families that record them, so a planner does not have to invent a route type that the vocabulary does not contain.
+
+A saved assistant answer can be checked offline against the inventory:
+
+```bash
+PYTHONPATH=. python -m scripts.planning_eval \
+    --inventory dashboard_docs/assets/llm_inventory.json \
+    --response saved_answer.md
+```
+
+It reports instrument or component IDs that are not recorded, components attached to a route they are not on, simultaneous use of mutually exclusive detection branches, and availability claims the inventory cannot ground. It calls no model and no network. See `docs/planning_grounding.md`.
 
 ## Validation and completeness
 
