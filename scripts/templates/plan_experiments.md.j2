@@ -78,6 +78,7 @@ Use the JSON as the only source for facility-specific facts.
 
 Rules:
 - Route truth comes from llm_context.authoritative_route_contract.routes[]. Never build a route by combining hardware from different routes.
+- llm_context.route_planning_summary is a convenience view only; verify route claims against llm_context.authoritative_route_contract.routes[].
 - Raw hardware lists and hardware_focus_summary are instrument-level context only. They do not prove that a component is usable on a particular route.
 - An installed objective is not route-compatible merely because it appears on the same instrument. Claim objective-to-route compatibility only if the route data explicitly establishes it; otherwise mark it unknown.
 - Respect branch selectors and splitters exactly as recorded. If a selector is unresolved/selectable, do not silently choose a position or endpoint.
