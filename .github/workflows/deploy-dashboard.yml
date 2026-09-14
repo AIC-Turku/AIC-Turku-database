@@ -34,7 +34,7 @@ jobs:
   build-and-deploy:
     environment:
       name: github-pages
-      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -49,7 +49,7 @@ jobs:
           python-version: "3.10"
           cache: "pip"
           # FIXED: Tell the caching action to use our custom requirements file name
-          cache-dependency-path: "requirements-docs.txt" 
+          cache-dependency-path: "requirements-docs.txt"
 
       - name: Install dependencies
         run: |
@@ -57,9 +57,9 @@ jobs:
           pip install -r requirements-docs.txt
 
       - name: Run dashboard builder
+        # facility.public_site_url is the authored site URL. Do not override it
+        # here: a fork may use a GitHub Pages custom domain or another public URL.
         run: python scripts/dashboard_builder.py
-        env:
-          MKDOCS_SITE_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
       - name: Generate Audit PDFs
         run: python scripts/generate_audit_pdfs.py
