@@ -7,7 +7,7 @@ hide:
 
 # Experiment planning
 
-Good imaging starts with the biological question, sample constraints, and the measurement you need. The references below are useful primers on quantitative fluorescence microscopy and experimental bias.
+Good imaging starts with a clear measurement need and a realistic understanding of the available instrumentation. The references below are useful primers on quantitative fluorescence microscopy and experimental bias.
 
 ## Background reading
 
@@ -19,27 +19,27 @@ Good imaging starts with the biological question, sample constraints, and the me
 
 ## Compare microscopes with an assistant
 
-You can use ChatGPT, Claude, Copilot, or another assistant to compare {{ facility_short_name }} microscopes using the facility inventory below. Attach the inventory to the conversation so the comparison stays grounded in the hardware and instrument status recorded by {{ facility_short_name }}.
+You can use ChatGPT, Claude, Copilot, or another assistant to explore {{ facility_short_name }} microscopes using the facility inventory below. Attach the inventory to the conversation so facility-specific claims stay grounded in what {{ facility_short_name }} records.
 
 !!! note "Planning aid"
-    Use the assistant to narrow the options, then discuss the shortlist with {{ facility_short_name }} staff. Staff can help with sample compatibility, access, training, and configuration details that are not captured in the inventory.
+    Use the assistant to identify recorded options and questions to follow up. Staff can confirm sample compatibility, access, training, availability, and configuration details that are not captured in the inventory.
 
 ### 1. Download the facility inventory
 
 [Download the facility inventory (JSON)]({{ llm_inventory_asset_url }}){: download="llm_inventory.json" .md-button .md-button--primary style="margin-top: 10px; margin-bottom: 20px;" }
 
-### 2. Describe the experiment
+### 2. Describe what you need
 
-Fill in the box below. Include the sample, fluorophores, live/fixed state, imaging depth, speed, duration, and any resolution or phototoxicity constraints that matter.
+Fill in the box below in your own words. Be as specific as useful, but you do not need to translate your experiment into microscope terminology first.
 
 <div style="background-color: var(--md-default-bg-color); padding: 15px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; margin-bottom: 15px;">
-  <label for="experiment-desc" style="font-weight: bold; display: block; margin-bottom: 8px;">Experiment details</label>
-  <textarea id="experiment-desc" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; background-color: var(--md-default-bg-color); font-family: inherit; resize: vertical;" placeholder="For example: live HeLa cells expressing GFP and mCherry, imaged for 24 hours with optical sectioning and low phototoxicity."></textarea>
+  <label for="experiment-desc" style="font-weight: bold; display: block; margin-bottom: 8px;">What do you want to do?</label>
+  <textarea id="experiment-desc" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--md-default-fg-color--light); border-radius: 4px; background-color: var(--md-default-bg-color); font-family: inherit; resize: vertical;" placeholder="For example: I need TIRF imaging, or I need to compare the recorded options for a long two-colour time-lapse."></textarea>
 </div>
 
 ### 3. Copy the prompt
 
-Attach the inventory file you just downloaded to your assistant, then copy the prompt below. It tells the assistant to stay within the recorded inventory and to flag anything that still needs staff confirmation.
+Attach the inventory file you just downloaded to your assistant, then copy the prompt below. It tells the assistant to use the inventory as the source for facility-specific claims and to keep unrecorded details explicit.
 
 <div style="position: relative; margin-bottom: 20px;">
   <button id="copy-prompt-btn" class="md-button md-button--primary" style="position: absolute; top: 10px; right: 10px; z-index: 10;">Copy prompt</button>
@@ -72,49 +72,46 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
     const outputArea = document.getElementById("generated-prompt");
     const copyBtn = document.getElementById("copy-prompt-btn");
 
-    const basePromptTop = `You are helping me plan a microscopy experiment using the attached ${facilityShortName} inventory.
+    const basePromptTop = `You are helping me explore microscopy options using the attached ${facilityShortName} inventory.
+
+Use the JSON as the only source for facility-specific facts.
 
 Rules:
-- Use the attached JSON as the only source for facility hardware, optical routes, and instrument status.
-- Read planning_contract first. It says which lists are complete and what this inventory does not record.
-- A component missing from a route's hardware list is not on that route. A missing or null value anywhere else is unknown, and unknown never means "fine" or "absent".
-- Recommend only microscopes and components present in the inventory.
-- The inventory records no booking, access or training availability. Report each instrument's status together with its status.evidence field, and never judge whether a microscope is free to use.
-- Use llm_context.authoritative_route_contract as the primary source for route truth. llm_context.route_planning_summary and hardware_focus_summary are convenience views; raw hardware lists are secondary context and must not override route contract truth.
-- Do not claim an objective, source, filter, detector, or other component is usable on a route unless the route contract supports that connection. Objectives are recorded per instrument, not per route.
-- To relate a capability such as TIRF, STED or SIM to a route, use capability_route_reconciliation and route_family_coverage. Do not invent a route type that is not recorded.
-- If splitters or branch selectors are present, state the branch handling and final endpoint.
-- Separate known facts from unknowns, assumptions, and caveats.
-- If missing metadata could change the recommendation, say what is missing and advise me to confirm it with facility staff.
+- Read planning_contract first. It explains which route lists are complete and which information is not recorded.
+- A component missing from a complete route hardware list is not on that route. A missing or null value anywhere else is unknown.
+- Use llm_context.authoritative_route_contract as the source of truth for routes. llm_context.route_planning_summary and hardware_focus_summary are convenience views; raw hardware lists are secondary context and must not override route contract truth.
+- Never build a configuration by combining components from different routes.
+- Objectives are recorded per instrument, not per route. Do not claim objective-to-route compatibility unless the inventory explicitly establishes it.
+- Respect branch selectors and splitters exactly as recorded. Do not silently choose an unresolved/selectable branch or endpoint.
+- Use capability_route_reconciliation and route_family_coverage to relate recorded capabilities such as TIRF, STED or SIM to their recorded route families. Do not invent a route type.
+- The inventory records no booking, access or training availability. Operational/QC status is not booking availability.
+- Do not turn an unrecorded performance or suitability detail into a facility fact. If the inventory does not establish speed, depth, phototoxicity, sample compatibility, long-run suitability, fluorophore compatibility or another requested constraint, label it unknown and say what should be confirmed.
+- Do not force a ranking. In particular, do not follow the legacy instruction "Choose one best route on the top instrument and one backup route/instrument" when the inventory does not support that conclusion.
 
-Follow this required procedure in order:
-1. Exclude instruments whose recorded routes cannot support the experiment.
-2. Identify candidate routes from the authoritative route contract.
-3. Choose one best route on the top instrument and one backup route/instrument.
-4. Check the selected route, optics, endpoint and relevant objectives against the route data.
-5. Report branch handling for any splitter.
-6. Separate known vs unknown facts.
+Use this required procedure in order:
+1. Separate known vs unknown facts in my request and the inventory.
+2. Exclude instruments whose recorded routes cannot support the experiment only when an explicit inventory fact establishes the mismatch.
+3. Identify the supported candidate routes from the authoritative route contract without inventing missing suitability information.
+4. For each selected route, verify the detector/endpoint and any claimed route components. Keep instrument-level objective(s) separate unless route compatibility is explicit.
+5. Preserve branch/splitter handling exactly as recorded and list unresolved points or staff confirmations.
 
-My experiment:
+My request:
 `;
 
     const basePromptBottom = `
 
-Please return:
-1. The best-fit microscope and one backup, with brief evidence from the inventory.
-2. The selected route and detector/readout for each recommendation, using only explicitly supported route data.
-3. Relevant objective options where the inventory explicitly supports them.
-4. Important trade-offs.
-5. Missing metadata or assumptions that need staff confirmation, including anything the inventory does not record.
-6. A short acquisition plan and the settings I should record for methods reporting.
+Return a concise answer with:
+1. What the inventory clearly establishes.
+2. Candidate instruments/routes supported by those recorded facts; if the inventory cannot narrow the options, say so.
+3. For each candidate you discuss, the selected route, detector/endpoint, and recorded route components without mixing routes.
+4. Instrument-level objective(s) only when useful, clearly labelled as instrument-level unless route compatibility is explicit.
+5. Unknown or unrecorded details that matter, and what to confirm with ${facilityShortName} staff.
 
-For each option, label the selected route, detector/endpoint, objective(s), and branch/splitter handling.
-
-Keep the answer concise and grounded in the attached inventory. Finish by identifying anything I should confirm with ${facilityShortName} staff before booking.`;
+Do not invent facility specifications or force a best microscope or backup when the inventory does not justify one.`;
 
     function updatePrompt() {
       const userText = inputArea.value.trim();
-      const desc = userText ? userText : "[Describe the sample, live/fixed state, fluorophores, imaging depth, required resolution, acquisition speed or duration, and phototoxicity constraints.]";
+      const desc = userText ? userText : "[Describe what you want to image or measure, in your own words.]";
       outputArea.value = basePromptTop + desc + basePromptBottom;
     }
 
@@ -139,6 +136,6 @@ Keep the answer concise and grounded in the attached inventory. Finish by identi
 
 ## Discuss the plan with {{ facility_short_name }} staff
 
-The inventory and prompt can narrow the options. {{ facility_short_name }} staff can check sample preparation, fluorophore choices, access, training, and instrument-specific constraints before you book.
+The inventory and prompt can identify recorded options and gaps. {{ facility_short_name }} staff can check sample preparation, fluorophore choices, access, training, availability, and instrument-specific constraints before you book.
 
 [{{ facility_contact_label }}]({{ facility_contact_url }}){: target="_blank" .md-button }
