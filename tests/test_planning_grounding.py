@@ -172,8 +172,30 @@ class StatusEvidenceTests(unittest.TestCase):
         self.assertEqual(status["evidence"], "no_qc_or_maintenance_record")
         self.assertIn("not a passed check", status["evidence_note"])
 
+    def test_fleet_contains_evidence_free_statuses(self) -> None:
+        evidence_free = [
+            record["id"]
+            for record in _inventory()["active_microscopes"]
+            if record["hardware_focus_summary"]["status"]["evidence"]
+            == "no_qc_or_maintenance_record"
+        ]
+        self.assertTrue(
+            evidence_free,
+            "The status guard became vacuous because every instrument now has QC/maintenance evidence.",
+        )
+
 
 class ScreeningSummaryTests(unittest.TestCase):
+    def test_light_source_labels_are_unique_per_instrument(self) -> None:
+        for record in _inventory()["active_microscopes"]:
+            labels = record["hardware_focus_summary"]["light_source_labels"]
+            with self.subTest(instrument=record["id"]):
+                self.assertEqual(
+                    len(labels),
+                    len(set(labels)),
+                    f"duplicate screening labels hide distinct sources: {labels}",
+                )
+
     def test_screening_summary_carries_traceable_ids(self) -> None:
         for record in _inventory()["active_microscopes"]:
             summary = record["hardware_focus_summary"]
@@ -198,14 +220,25 @@ class ObjectiveScopeTests(unittest.TestCase):
             _paths_containing(_inventory(), "highly_relevant_installed_objectives"), []
         )
 
-    def test_every_route_declares_objectives_are_instrument_level(self) -> None:
+    def test_route_planning_summary_is_v2(self) -> None:
+        for record in _inventory()["active_microscopes"]:
+            summary = record["llm_context"]["route_planning_summary"]
+            if summary.get("status") == "blocked":
+                continue
+            with self.subTest(instrument=record["id"]):
+                self.assertEqual(summary["contract_version"], "route_planning_summary.v2")
+
+    def test_objectives_are_separate_from_route_optics(self) -> None:
         for record in _inventory()["active_microscopes"]:
             summary = record["llm_context"]["route_planning_summary"]
             for route in summary.get("routes") or []:
                 with self.subTest(instrument=record["id"], route=route["route_id"]):
                     optics = route["planning_optics"]
-                    self.assertIn("instrument_installed_objectives", optics)
-                    self.assertIn("per instrument, not per route", optics["objective_scope_note"])
+                    self.assertNotIn("instrument_installed_objectives", optics)
+                    self.assertNotIn("objective_scope_note", optics)
+                    context = route["instrument_level_context"]
+                    self.assertIn("installed_objectives", context)
+                    self.assertIn("not on this route", context["objective_scope_note"])
 
 
 class CapabilityRouteReconciliationTests(unittest.TestCase):
@@ -280,10 +313,8 @@ class GeneratedPromptTests(unittest.TestCase):
     def test_prompt_does_not_force_best_or_backup(self) -> None:
         prompt = self._prompt().lower()
         self.assertNotIn("the best-fit microscope and one backup", prompt)
-        self.assertIn(
-            'do not follow the legacy instruction "choose one best route on the top instrument and one backup route/instrument"',
-            prompt,
-        )
+        self.assertNotIn("choose one best route on the top instrument and one backup route/instrument", prompt)
+        self.assertNotIn("legacy instruction", prompt)
         self.assertIn("do not force a best microscope or backup", prompt)
 
     def test_prompt_does_not_claim_availability(self) -> None:
@@ -294,7 +325,7 @@ class GeneratedPromptTests(unittest.TestCase):
     def test_prompt_preserves_closed_world_route_membership(self) -> None:
         prompt = self._prompt().lower()
         self.assertIn("component missing from a complete route hardware list is not on that route", prompt)
-        self.assertIn("missing or null value anywhere else is unknown", prompt)
+        self.assertIn("other missing or null values are unknown", prompt)
 
     def test_prompt_points_at_capability_reconciliation(self) -> None:
         prompt = self._prompt()
@@ -308,7 +339,7 @@ class GeneratedPromptTests(unittest.TestCase):
                 self.assertIn(term, prompt)
 
     def test_prompt_remains_compact(self) -> None:
-        self.assertLess(len(self._prompt().split()), 520)
+        self.assertLess(len(self._prompt().split()), 450)
 
 
 def test_scenario_fixture_has_exact_red_team_cases() -> None:
@@ -466,6 +497,14 @@ class GroundingHarnessTests(unittest.TestCase):
             }
             <= codes
         )
+
+    def test_untagged_invented_instrument_id_is_caught(self) -> None:
+        context = load_context(_inventory())
+        findings = check_response(
+            "I would use scope-invented-super-microscope for this experiment.",
+            context,
+        )
+        self.assertIn("unknown_instrument_id", {finding.code for finding in findings})
 
     def test_availability_caveat_is_not_flagged(self) -> None:
         context = load_context(_inventory())
