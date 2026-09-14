@@ -175,7 +175,12 @@ def _build_hardware_focus_summary(
     ]
 
     return {
-        "modality_labels": (_display_labels(canonical_instrument_dto.get("modalities")) or _display_labels((canonical_instrument_dto.get("capabilities") or {}).get("imaging_modes"))),
+        "modality_labels": (
+            _display_labels(canonical_instrument_dto.get("modalities"))
+            or _display_labels(
+                (canonical_instrument_dto.get("capabilities") or {}).get("imaging_modes")
+            )
+        ),
         "route_labels": route_labels,
         "installed_objective_labels": _display_labels(
             hardware.get("objectives"),
@@ -188,6 +193,10 @@ def _build_hardware_focus_summary(
         "supporting_feature_labels": sorted(dict.fromkeys(supporting_features)),
         "planning_caveat_labels": caveat_titles[:8],
         "status": copy.deepcopy(status or {}),
+        "status_scope_note": (
+            "Status reflects recorded QC/maintenance operational state. It does not "
+            "encode booking availability, access permission, or staff scheduling."
+        ),
     }
 
 
@@ -220,6 +229,13 @@ def _build_route_planning_summary(
         for obj in (hardware.get("objectives") or [])
         if isinstance(obj, dict) and obj.get("is_installed") is not False
     ]
+    installed_objective_ids = sorted(
+        {
+            clean_text(obj.get("id"))
+            for obj in installed_objectives
+            if clean_text(obj.get("id"))
+        }
+    )
 
     route_rows: list[dict[str, Any]] = []
 
@@ -259,6 +275,22 @@ def _build_route_planning_summary(
             *endpoints,
             *modulators,
         ]
+        route_component_ids = sorted(
+            {
+                clean_text(row.get("id"))
+                for row in all_fact_rows
+                if isinstance(row, dict) and clean_text(row.get("id"))
+            }
+        )
+
+        explicit_route_objective_ids: set[str] = set()
+        for key, value in route_facts.items():
+            if "objective" not in str(key).lower():
+                continue
+            rows = value if isinstance(value, list) else [value]
+            for row in rows:
+                if isinstance(row, dict) and clean_text(row.get("id")):
+                    explicit_route_objective_ids.add(clean_text(row.get("id")))
 
         has_incomplete_or_unsupported = any(
             row.get("_cube_incomplete") or row.get("_unsupported_spectral_model")
@@ -316,6 +348,12 @@ def _build_route_planning_summary(
                 "Route optics are deterministically specified in exported route facts."
             )
 
+        objective_compatibility_state = (
+            "explicit_route_links_present"
+            if explicit_route_objective_ids
+            else "unknown_no_route_objective_link"
+        )
+
         route_rows.append(
             {
                 "route_id": clean_text(route.get("id")),
@@ -342,18 +380,41 @@ def _build_route_planning_summary(
                     "selected_or_selectable_branch_selectors": branch_selectors,
                     "selected_or_selectable_endpoints": endpoints,
                     "selected_or_selectable_modulators": modulators,
-                    "highly_relevant_installed_objectives": copy.deepcopy(
-                        installed_objectives
+                },
+                "instrument_level_context": {
+                    "installed_objectives": copy.deepcopy(installed_objectives),
+                    "objective_scope_note": (
+                        "These objectives are installed on the instrument. Their presence "
+                        "does not establish compatibility with this route."
                     ),
+                },
+                "claim_boundaries": {
+                    "route_component_ids": route_component_ids,
+                    "must_not_combine_with_other_routes": True,
+                    "instrument_installed_objective_ids": installed_objective_ids,
+                    "explicit_route_objective_ids": sorted(explicit_route_objective_ids),
+                    "objective_route_compatibility": objective_compatibility_state,
+                    "selector_resolution_required": has_unresolved_selectors,
+                    "booking_or_access_availability": "not_encoded_by_route_or_status",
+                    "classification_is_not_component_identity": True,
                 },
                 "route_specific_vs_generic": {
                     "route_specific_facts_source": "route_optical_facts",
                     "generic_installed_hardware_reference": copy.deepcopy(
                         route.get("relevant_hardware") or {}
                     ),
+                    "generic_hardware_scope_note": (
+                        "Generic installed hardware is instrument-level context only and "
+                        "must not be treated as proof of membership in this route."
+                    ),
                 },
                 "known_vs_unknown": {
                     "is_deterministic": (
+                        has_route_specific_facts
+                        and not has_incomplete_or_unsupported
+                        and not has_unresolved_selectors
+                    ),
+                    "route_optics_are_deterministic": (
                         has_route_specific_facts
                         and not has_incomplete_or_unsupported
                         and not has_unresolved_selectors
@@ -363,6 +424,10 @@ def _build_route_planning_summary(
                     ),
                     "has_unresolved_selectors": has_unresolved_selectors,
                     "has_missing_route_optics": has_missing_route_optics,
+                    "objective_route_compatibility_unknown": not bool(
+                        explicit_route_objective_ids
+                    ),
+                    "booking_or_access_availability_unknown": True,
                     "missing_categories": missing_categories,
                     "actionable_note": actionable_note,
                 },
@@ -379,11 +444,12 @@ def _build_route_planning_summary(
         )
 
     return {
-        "contract_version": "route_planning_summary.v1",
+        "contract_version": "route_planning_summary.v2",
         "authoritative_source": "llm_context.authoritative_route_contract.routes",
         "usage_note": (
-            "Use this summary for route planning convenience, but treat "
-            "llm_context.authoritative_route_contract as the source of truth."
+            "Use this summary for convenience only. Route component claims must come "
+            "from the same authoritative route contract; instrument-level hardware, "
+            "including objectives, does not prove route compatibility."
         ),
         "routes": route_rows,
     }
@@ -414,9 +480,26 @@ def build_llm_inventory_payload(
                 "from that truth. Prefer capabilities (grouped axes) and "
                 "route_identity.readouts in authoritative_route_contract.routes "
                 "as semantic facts; the flat modalities list is compatibility-only "
-                "and must not be used as primary truth. "
-                "Cite raw hardware fields only for supplemental detail."
+                "and must not be used as primary truth. Raw hardware is instrument-level "
+                "context only and does not establish route membership."
             ),
+            "claim_scope": {
+                "route_hardware_authority": (
+                    "active_microscopes[].llm_context.authoritative_route_contract.routes[]"
+                    ".route_optical_facts"
+                ),
+                "generic_hardware_scope": "instrument_only_not_route_evidence",
+                "objective_route_compatibility": (
+                    "unknown_unless_explicitly_linked_in_authoritative_route_facts"
+                ),
+                "status_scope": (
+                    "qc_maintenance_operational_state_not_booking_or_access_availability"
+                ),
+                "classification_scope": (
+                    "semantic_classification_not_hardware_identity_or_connectivity"
+                ),
+                "missing_value_semantics": "unknown_not_false_and_not_available",
+            },
             "do_not_infer_constraints": [
                 (
                     "Do not invent hardware specifications, accessories, wavelengths, "
@@ -424,8 +507,28 @@ def build_llm_inventory_payload(
                     "not explicitly listed."
                 ),
                 (
+                    "Never combine components from different authoritative routes into a "
+                    "synthetic route or configuration."
+                ),
+                (
+                    "Installed objectives and raw hardware lists are instrument-level facts; "
+                    "do not claim route compatibility without an explicit route link."
+                ),
+                (
+                    "Respect unresolved/selectable branch selectors as unresolved; do not "
+                    "silently choose a branch, slot, or endpoint."
+                ),
+                (
+                    "Operational status is derived from QC/maintenance records and must not "
+                    "be interpreted as booking availability or access permission."
+                ),
+                (
+                    "Capability and readout classifications are semantic labels, not proof "
+                    "that an unlisted component exists or is connected to a route."
+                ),
+                (
                     "Treat null values and listed missing fields as unknown. "
-                    "Unknown does not mean available."
+                    "Unknown does not mean false or available."
                 ),
                 (
                     "When required details are missing, ask follow-up questions or "
