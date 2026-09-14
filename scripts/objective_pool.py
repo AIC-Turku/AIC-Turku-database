@@ -102,7 +102,12 @@ def build_objective_pool_view(pool: dict, schema: dict, facility: dict | None = 
     """Pure projection: formatted fields and enquiry text, no compatibility guesses."""
     validate_pool(pool, schema)
     labels = {key: _labels(schema, key) for key in ("kind", "immersion", "condition", "availability")}
-    facility_name = str((facility or {}).get("short_name") or "imaging facility").strip()
+    facility_cfg = facility or {}
+    facility_name = str(
+        facility_cfg.get("short_name")
+        or facility_cfg.get("full_name")
+        or "imaging facility"
+    ).strip()
     family_index = {row["id"]: row for row in pool["families"]}
     items = []
     for index, item in enumerate(pool["items"]):
