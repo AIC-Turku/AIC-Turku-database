@@ -297,7 +297,7 @@ class LlmPlanningRedTeamTests(unittest.TestCase):
             expectations["required_readouts"],
             ["__intentionally_absent_readout__"],
         )
-        self.assertIn("no supported route", expectations["supported_routes_rule"])
+        self.assertIn("must be empty", expectations["supported_routes_rule"])
 
 
 if __name__ == "__main__":
