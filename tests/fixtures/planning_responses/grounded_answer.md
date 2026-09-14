@@ -4,7 +4,7 @@ This is a hand-written example of an answer that stays inside the inventory.
 It exists so `scripts/planning_eval.py` has a known-clean input in the test
 suite. It is not advice and not a real assistant transcript.
 
-## Best fit
+## Candidate A
 
 **3i CSU-W1 Spinning Disk** (`scope-3i-csu-w1-spinning-disk`)
 
@@ -17,7 +17,7 @@ suite. It is not advice and not a real assistant transcript.
 - Objectives are recorded per instrument, not per route, so objective choice
   needs staff confirmation.
 
-## Backup
+## Candidate B
 
 **Nikon Ti2-E Crest V3** (`scope-nikon-crest-v3`), route `confocal_spinning_disk`.
 
