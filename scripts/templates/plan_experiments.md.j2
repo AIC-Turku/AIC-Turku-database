@@ -79,7 +79,7 @@ Use the JSON as the only source for facility-specific facts.
 Rules:
 - Read planning_contract first. It states which route lists are complete and which information is not recorded.
 - A component missing from a complete route hardware list is not on that route; other missing or null values are unknown.
-- Treat llm_context.authoritative_route_contract as route truth. route_planning_summary and hardware_focus_summary are convenience views; raw hardware must not override the route contract.
+- Treat llm_context.authoritative_route_contract as route truth. llm_context.route_planning_summary and hardware_focus_summary are convenience views; raw hardware must not override the route contract.
 - Never combine components from different routes.
 - Objectives are instrument-level unless explicit route compatibility is recorded.
 - Preserve unresolved/selectable branches, splitters and endpoints; do not silently choose one.
