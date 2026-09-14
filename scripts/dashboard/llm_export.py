@@ -372,15 +372,28 @@ def _build_hardware_focus_summary(
         ]
 
     light_sources = inventory_entries("light_source")
-    detectors = [
-        entry
-        for entry in inventory_entries("endpoint")
-        if any(
-            clean_text(row.get("endpoint_type")) == "detector"
-            for row in inventory_rows
-            if clean_text(row.get("id")) == entry["id"]
-        )
-    ]
+
+    # `hardware_inventory[].endpoint_type` is empty in this contract; the
+    # authored value lives in `normalized_endpoints`, keyed by the bare hardware
+    # id rather than the `endpoint:` inventory id. Filtering on the empty field
+    # matched nothing, so every instrument published `detectors: []` while
+    # `detector_labels` stayed full — leaving detectors with labels and no
+    # traceable ids, which is exactly the shape that invites a reader to invent
+    # an id from a label.
+    detector_hardware_ids = {
+        clean_text(row.get("id"))
+        for row in (authoritative_route_contract.get("normalized_endpoints") or [])
+        if isinstance(row, dict)
+        and clean_text(row.get("endpoint_type")) == "detector"
+        and clean_text(row.get("id"))
+    }
+
+    def is_detector(entry: dict[str, str]) -> bool:
+        inventory_id = entry["id"]
+        hardware_id = inventory_id.split(":", 1)[1] if ":" in inventory_id else inventory_id
+        return hardware_id in detector_hardware_ids
+
+    detectors = [entry for entry in inventory_entries("endpoint") if is_detector(entry)]
 
     return {
         "modality_labels": (_display_labels(canonical_instrument_dto.get("modalities")) or _display_labels((canonical_instrument_dto.get("capabilities") or {}).get("imaging_modes"))),

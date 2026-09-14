@@ -205,6 +205,38 @@ class ScreeningSummaryTests(unittest.TestCase):
                 for entry in summary["light_sources"] + summary["detectors"]:
                     self.assertIn(entry["id"], known)
 
+    def test_every_screening_label_has_a_traceable_id(self) -> None:
+        """A label without an id is what makes a reader invent one.
+
+        The id lists were previously allowed to be empty while the label lists
+        stayed full, and the check above passed vacuously by iterating nothing.
+        Comparing the counts is what makes it bite.
+        """
+        for record in _inventory()["active_microscopes"]:
+            summary = record["hardware_focus_summary"]
+            for labels_key, ids_key in (
+                ("light_source_labels", "light_sources"),
+                ("detector_labels", "detectors"),
+            ):
+                with self.subTest(instrument=record["id"], field=ids_key):
+                    self.assertEqual(
+                        len(summary[ids_key]),
+                        len(summary[labels_key]),
+                        f"{ids_key} has {len(summary[ids_key])} entries but "
+                        f"{labels_key} has {len(summary[labels_key])}: "
+                        "labels without ids invite invented ids",
+                    )
+
+    def test_the_fleet_actually_has_screening_ids_to_check(self) -> None:
+        """Guard against the comparison above passing on two empty lists."""
+        totals = {"light_sources": 0, "detectors": 0}
+        for record in _inventory()["active_microscopes"]:
+            for key in totals:
+                totals[key] += len(record["hardware_focus_summary"][key])
+        for key, total in totals.items():
+            with self.subTest(field=key):
+                self.assertGreater(total, 0, f"no {key} entries anywhere in the fleet")
+
     def test_screening_summary_says_it_is_not_route_bound(self) -> None:
         for record in _inventory()["active_microscopes"]:
             with self.subTest(instrument=record["id"]):
@@ -429,6 +461,25 @@ class GeneratedPromptTests(unittest.TestCase):
             with self.subTest(term=term):
                 self.assertIn(term, prompt)
 
+    def test_prompt_invites_one_clarifying_question(self) -> None:
+        """Asking beats guessing, and the prompt should not leave it to chance.
+
+        In the simulated planning runs the answers that asked a single question
+        about the sample were consistently more useful, but nothing in the
+        prompt requested it, so it happened only when the model volunteered.
+        The invitation is capped at one question: a prompt that invites a
+        questionnaire gets a questionnaire.
+        """
+        prompt = self._prompt().lower()
+        self.assertIn("clarifying question", prompt)
+        self.assertIn("one clarifying question", prompt)
+
+    def test_prompt_does_not_ask_for_a_question_list(self) -> None:
+        prompt = self._prompt().lower()
+        for plural in ("clarifying questions", "any questions you have"):
+            with self.subTest(phrase=plural):
+                self.assertNotIn(plural, prompt)
+
     def test_prompt_remains_compact(self) -> None:
         self.assertLess(len(self._prompt().split()), 450)
 
@@ -648,3 +699,129 @@ class GroundingHarnessTests(unittest.TestCase):
             text=True,
         )
         self.assertEqual(result.returncode, 0, result.stdout)
+
+
+class FalseAbsenceTests(unittest.TestCase):
+    """A fabricated absence sends a researcher away from recorded capability.
+
+    It is the one hallucination class that reads as caution, and every
+    identifier-based check in the evaluator passes it, because such a sentence
+    names nothing that does not exist. The terms below are taken from the
+    generated inventory rather than written into the test, so the suite fails
+    with the data instead of drifting from it.
+    """
+
+    def setUp(self) -> None:
+        self.context = load_context(_inventory())
+        self.recorded = sorted(
+            term
+            for term, owners in self.context.recorded_terms.items()
+            if owners and " " in term and len(term) >= 8
+        )
+        self.assertTrue(self.recorded, "no multi-word capability terms were indexed")
+
+    def _codes(self, text: str) -> set[str]:
+        return {finding.code for finding in check_response(text, self.context)}
+
+    def test_capability_terms_are_indexed_from_the_inventory(self) -> None:
+        declared = {
+            value
+            for record in _inventory()["active_microscopes"]
+            for values in record["capabilities"].values()
+            if isinstance(values, list)
+            for value in values
+            if isinstance(value, str)
+        }
+        self.assertTrue(declared)
+        missing = sorted(
+            value for value in declared if value.replace("_", " ") not in self.context.recorded_terms
+        )
+        self.assertEqual(missing, [], "declared capabilities missing from the absence index")
+
+    def test_fleet_wide_denial_of_a_recorded_capability_is_caught(self) -> None:
+        for term in self.recorded[:5]:
+            for sentence in (
+                f"{term.capitalize()} is recorded for none of the active instruments.",
+                f"No instrument records {term}.",
+                f"{term.capitalize()} is not recorded for any microscope here.",
+                f"None of the instruments records {term}.",
+            ):
+                with self.subTest(sentence=sentence):
+                    self.assertIn("false_absence_claim", self._codes(sentence))
+
+    def test_a_denial_split_by_a_line_wrap_is_still_caught(self) -> None:
+        term = self.recorded[0]
+        wrapped = f"{term.capitalize()} is recorded for\nnone of the active instruments."
+        self.assertIn("false_absence_claim", self._codes(wrapped))
+
+    def test_a_truthful_absence_is_not_flagged(self) -> None:
+        absent = "plate handling and unattended run duration"
+        self.assertNotIn(absent, self.context.recorded_terms)
+        self.assertNotIn(
+            "false_absence_claim",
+            self._codes(f"{absent.capitalize()} is recorded for no instrument."),
+        )
+
+    def test_an_unrelated_capability_later_in_the_sentence_is_not_the_subject(self) -> None:
+        """The denial is about what precedes it, not everything in the line.
+
+        This is the shape that produced the first false positive: a sentence
+        denying one unrecorded thing while correctly naming a recorded
+        capability alongside it.
+        """
+        term = self.recorded[0]
+        sentence = (
+            "Plate handling is recorded for no instrument, and "
+            f'"{term}" here is a capability label, not a description of hardware.'
+        )
+        self.assertNotIn("false_absence_claim", self._codes(sentence))
+
+    def test_denial_scoped_to_one_instrument_uses_that_instrument(self) -> None:
+        term = next(
+            term
+            for term in self.recorded
+            if 0 < len(self.context.recorded_terms[term]) < len(self.context.instrument_ids)
+        )
+        recorders = self.context.recorded_terms[term]
+        owner = sorted(recorders)[0]
+        other = sorted(self.context.instrument_ids - recorders)[0]
+
+        with self.subTest(case="records it"):
+            self.assertIn(
+                "false_absence_claim",
+                self._codes(f"For {owner}, {term} is not recorded for any route."),
+            )
+        with self.subTest(case="genuinely does not"):
+            self.assertNotIn(
+                "false_absence_claim",
+                self._codes(f"For {other}, {term} is not recorded for any route."),
+            )
+
+    def test_a_term_inside_an_instrument_id_is_not_read_as_the_subject(self) -> None:
+        """Instrument ids embed capability words, and a substring match inverts
+        the sentence being checked.
+
+        `scope-zeiss-tirf` contains `tirf`, so a scoped denial of something else
+        entirely was reported as a denial of TIRF on the very instrument that
+        records it.
+        """
+        embedded = [
+            (instrument_id, term)
+            for instrument_id in self.context.instrument_ids
+            for term in self.context.recorded_terms
+            if " " not in term and term in instrument_id and term != instrument_id
+        ]
+        self.assertTrue(embedded, "no instrument id embeds a capability term")
+        for instrument_id, term in embedded:
+            sentence = f"For {instrument_id}, plate handling is not recorded for any route."
+            with self.subTest(instrument=instrument_id, term=term):
+                self.assertNotIn("false_absence_claim", self._codes(sentence))
+
+    def test_one_finding_per_denial_not_one_per_overlapping_term(self) -> None:
+        term = next((t for t in self.recorded if " " in t), self.recorded[0])
+        findings = [
+            finding
+            for finding in check_response(f"No instrument records {term}.", self.context)
+            if finding.code == "false_absence_claim"
+        ]
+        self.assertEqual(len(findings), 1)

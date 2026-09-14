@@ -1201,17 +1201,28 @@ class LightPathParserTests(unittest.TestCase):
         self.assertTrue(any(item.get("kind") == "optical_component" for item in branches[0]["sequence"]))
         self.assertTrue(any(item.get("kind") == "optical_component" for item in branches[1]["sequence"]))
 
+        # Find the splitter by the branches this route actually declares. The
+        # dual-camera branches used to hang off the trinocular port and now hang
+        # off the DualCam element itself; naming a routing component here only
+        # records where the branches happened to live when the test was written.
+        branch_ids = [branch["branch_id"] for branch in branches]
+        self.assertEqual(branch_ids, ["to_master", "to_slave"])
         splitter = next(
             row for row in _runtime_projection(payload)["splitters"]
-            if row.get("id") == "trinocular_port"
+            if {branch["id"] for branch in row["branches"]} >= set(branch_ids)
         )
         branch_map = {branch["id"]: branch for branch in splitter["branches"]}
-        self.assertIn("to_master", branch_map)
-        self.assertIn("to_slave", branch_map)
         self.assertEqual(branch_map["to_master"]["target_ids"], ["kinetix_master_camera"])
         self.assertEqual(branch_map["to_slave"]["target_ids"], ["kinetix_slave_camera"])
-        self.assertIn("spectral_ops", branch_map["to_master"]["component"])
-        self.assertIn("spectral_ops", branch_map["to_slave"]["component"])
+        for branch_id in branch_ids:
+            with self.subTest(branch=branch_id):
+                component = branch_map[branch_id]["component"]
+                self.assertIn("spectral_ops", component)
+                # "Parser resolved" is the point of the test: an unresolved
+                # branch still carries spectral_ops, as passthrough with an
+                # unsupported reason, so asserting the key alone passes on the
+                # failure this test exists to catch.
+                self.assertNotEqual(component.get("component_type"), "unknown")
 
     def test_oni_internal_emission_splitter_passthrough_is_flagged_when_branch_has_no_optics(self) -> None:
         instrument = yaml.safe_load(

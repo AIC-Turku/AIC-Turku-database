@@ -128,6 +128,12 @@ the user's explicit request justify that step.
 The generated prompt is also kept under a regression-tested length budget so
 additional safeguards do not gradually turn it into an unreadable policy dump.
 
+The prompt invites exactly one clarifying question when the answer would change
+the shortlist. Simulated planning runs were consistently more useful when the
+assistant asked about the sample before recommending, but that happened only
+when it volunteered; the invitation makes it reliable, and the cap of one keeps
+it from becoming an intake form.
+
 ## Checking a saved answer
 
 `scripts/planning_eval.py` checks an answer offline. It calls no model and no
@@ -158,9 +164,22 @@ It reports:
 | `exclusive_branch_used_simultaneously` | Two endpoints the records mark mutually exclusive, claimed at once. |
 | `availability_claim` | A booking, access or training assertion the inventory cannot ground. |
 | `status_claim_without_evidence` | "Operational" repeated for an instrument whose status has no QC or maintenance evidence. |
+| `false_absence_claim` | "Nothing here records X" when the capability axes do record X. |
 
 Exit code is 1 when an error-severity finding is present and 0 otherwise. An
 answer that explicitly says availability is unrecorded is not flagged.
+
+`false_absence_claim` deserves a note, because it is the one class whose
+identifiers are all real. A fabricated absence reads as appropriate caution
+while sending a researcher away from capability the facility has, so no
+identifier check can see it. The evaluator indexes every value in
+`capabilities.*`, the supporting-feature labels and the recorded route readouts,
+in both their authored slug and prose spellings, then reads denial sentences
+against that index. Only the side of the denial the subject sits on is searched
+— "X is recorded for none" looks before it, "no instrument records X" after —
+so a sentence that correctly denies one unrecorded thing while naming a recorded
+one alongside it is not flagged. A denial naming exactly one instrument is
+checked against that instrument; otherwise it is checked fleet-wide.
 
 The evaluator cannot decide whether microscopy advice is scientifically good. It
 only checks grounding against the inventory.
@@ -199,3 +218,8 @@ preferred microscope.
 4. **The evaluator is not a scientific oracle.** It cannot tell whether a
    recommendation is experimentally sensible; it can only check what the
    repository actually establishes.
+5. **Absence checking is limited to indexed vocabulary.** A denial phrased
+   around something the capability axes never name — sample handling, run
+   duration, plate formats — cannot be verified either way, so it is left
+   alone. The check catches denials of recorded capability, not every
+   unsupported negative.

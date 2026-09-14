@@ -53,6 +53,26 @@ CAVEAT_PATTERN = re.compile(
     r"|\b(?:confirm|check|ask)\b[^.]{0,40}\bstaff\b",
     re.I,
 )
+# Claims that the facility records nothing of a kind. A hallucinated absence is
+# as harmful as a hallucinated presence and reads as appropriate caution: it
+# sends a researcher away from capability the facility actually has.
+#
+# Each entry pairs a phrasing with the side of it the claim's subject sits on:
+# "X is recorded for none" puts X before, "no instrument records X" after.
+# Searching only that side keeps an unrelated capability named later in the same
+# sentence from being read as the thing being denied.
+ABSENCE_CLAIM_PATTERNS = (
+    (re.compile(r"recorded\s+(?:for|on|by)\s+(?:none|no\s+instrument)", re.I), "before"),
+    (re.compile(r"\bnot\s+recorded\s+(?:for|on)\s+any\b", re.I), "before"),
+    (re.compile(r"\bis\s+not\s+recorded\s+anywhere\b", re.I), "before"),
+    (re.compile(r"\brecorded\s+for\s+neither\b", re.I), "before"),
+    (re.compile(r"\bno\s+(?:active\s+)?instruments?\s+(?:here\s+)?records?\b", re.I), "after"),
+    (
+        re.compile(r"\bnone\s+of\s+(?:the\s+)?(?:\d+\s+)?instruments?\s+records?\b", re.I),
+        "after",
+    ),
+)
+
 SIMULTANEITY_PATTERN = re.compile(
     r"\b(?:simultaneous(?:ly)?|at\s+the\s+same\s+time|in\s+parallel|both\s+cameras|"
     r"concurrently|dual[- ]camera)\b",
@@ -82,6 +102,9 @@ class AuthoritativeContext:
     components_by_route: dict[tuple[str, str], set[str]] = field(default_factory=dict)
     status_without_evidence: set[str] = field(default_factory=set)
     exclusive_endpoint_groups: dict[tuple[str, str], list[set[str]]] = field(default_factory=dict)
+    # Searchable phrase -> instruments recording it. Lets an "X is recorded for
+    # none" claim be checked rather than taken on trust.
+    recorded_terms: dict[str, set[str]] = field(default_factory=dict)
 
     @property
     def all_components(self) -> set[str]:
@@ -176,7 +199,51 @@ def load_context(inventory: dict[str, Any]) -> AuthoritativeContext:
         if isinstance(status, dict) and status.get("evidence") == "no_qc_or_maintenance_record":
             context.status_without_evidence.add(instrument_id)
 
+        _record_capability_terms(context, instrument_id, record, contract)
+
     return context
+
+
+def _record_capability_terms(
+    context: AuthoritativeContext,
+    instrument_id: str,
+    record: dict[str, Any],
+    contract: dict[str, Any],
+) -> None:
+    """Index every capability the inventory records, in searchable forms.
+
+    Controlled terms are authored as slugs (`live_cell_imaging`), while an answer
+    writes prose ("live cell imaging"), so both spellings are indexed. Supporting
+    features are already prose and are indexed as-is.
+    """
+
+    def add(term: Any) -> None:
+        text = str(term or "").strip().lower()
+        if not text:
+            return
+        for spelling in {text, text.replace("_", " ")}:
+            context.recorded_terms.setdefault(spelling, set()).add(instrument_id)
+
+    capabilities = record.get("capabilities") if isinstance(record.get("capabilities"), dict) else {}
+    for values in capabilities.values():
+        if isinstance(values, list):
+            for value in values:
+                if isinstance(value, str):
+                    add(value)
+
+    summary = (
+        record.get("hardware_focus_summary")
+        if isinstance(record.get("hardware_focus_summary"), dict)
+        else {}
+    )
+    for label in summary.get("supporting_feature_labels") or []:
+        add(label)
+
+    for route in contract.get("routes") or []:
+        if not isinstance(route, dict):
+            continue
+        for readout in ((route.get("route_identity") or {}).get("readouts") or []):
+            add(readout.get("id") if isinstance(readout, dict) else readout)
 
 
 def _contains_token(text: str, token: str) -> bool:
@@ -381,6 +448,107 @@ def _check_exclusive_branches(response: str, context: AuthoritativeContext) -> l
     return findings
 
 
+def _iter_sentences(response: str) -> Iterable[str]:
+    """Yield sentences, reuniting a claim that a line wrap split in two.
+
+    The line-based scanners above are fine for short assertions, but an absence
+    claim routinely reads "environmental control is recorded for none of the 22
+    instruments" and a wrapped copy of that sentence hides either the claim or
+    the term it is about. Blank lines and list bullets end a sentence so an
+    unpunctuated bullet does not swallow the next one.
+    """
+    buffer: list[str] = []
+    for raw_line in response.splitlines():
+        line = raw_line.strip()
+        starts_new_block = not line or re.match(r"^(?:[-*+]|#|\d+[.)])\s", line)
+        if starts_new_block and buffer:
+            yield " ".join(buffer)
+            buffer = []
+        if not line:
+            continue
+        buffer.append(re.sub(r"^(?:[-*+]|\d+[.)])\s+", "", line))
+    if buffer:
+        yield " ".join(buffer)
+
+
+def _split_sentences(block: str) -> Iterable[str]:
+    for sentence in re.split(r"(?<=[.!?;])\s+", block):
+        cleaned = sentence.strip()
+        if cleaned:
+            yield cleaned
+
+
+def _mentions_capability(text: str, term: str) -> bool:
+    """Match a capability term as whole words, letting punctuation end it.
+
+    `_contains_token` is for identifiers and treats a trailing "." as part of
+    the token, which never matches prose ending a sentence. Hyphen and
+    underscore still bind, so `tirf` does not match inside `scope-zeiss-tirf` —
+    reading an instrument id as the denied capability inverts the sentence.
+    """
+    pattern = rf"(?<![A-Za-z0-9_-]){re.escape(term)}(?![A-Za-z0-9_-])"
+    return bool(re.search(pattern, text))
+
+
+def _check_false_absence(response: str, context: AuthoritativeContext) -> list[Finding]:
+    """Flag "nothing here records X" when the inventory in fact records X.
+
+    A fabricated absence is not the cautious failure it looks like: it steers a
+    researcher away from capability the facility has, and no other check in this
+    module can see it, because every identifier in such a sentence is real.
+    """
+    findings: list[Finding] = []
+    seen: set[tuple[str, str | None]] = set()
+
+    for block in _iter_sentences(response):
+        for sentence in _split_sentences(block):
+            named = _instruments_mentioned(sentence, context)
+            # "no instrument records X" stays a fleet claim even when it names an
+            # example; only a single named instrument narrows the scope.
+            scope = next(iter(named)) if len(named) == 1 else None
+
+            for pattern, side in ABSENCE_CLAIM_PATTERNS:
+                match = pattern.search(sentence)
+                if match is None:
+                    continue
+                subject = (
+                    sentence[: match.start()] if side == "before" else sentence[match.end() :]
+                ).casefold()
+
+                for term in sorted(context.recorded_terms, key=len, reverse=True):
+                    if len(term) < 4 or not _mentions_capability(subject, term):
+                        continue
+                    recorders = context.recorded_terms[term]
+                    if scope is not None:
+                        if scope not in recorders:
+                            continue
+                        detail = f"{scope} does record {term!r}."
+                    elif recorders:
+                        detail = (
+                            f"{term!r} is recorded for {len(recorders)} active instrument(s), "
+                            f"including {sorted(recorders)[0]}."
+                        )
+                    else:
+                        continue
+                    key = (term, scope)
+                    if key not in seen:
+                        seen.add(key)
+                        findings.append(
+                            Finding(
+                                code="false_absence_claim",
+                                severity="error",
+                                detail=detail,
+                                evidence=sentence,
+                            )
+                        )
+                    # One finding per phrasing: terms are checked longest first,
+                    # so a hit on "live cell imaging" must not also report
+                    # "imaging".
+                    break
+
+    return findings
+
+
 def check_response(response: str, context: AuthoritativeContext) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -408,6 +576,7 @@ def check_response(response: str, context: AuthoritativeContext) -> list[Finding
     findings.extend(_check_component_attribution(response, context))
     findings.extend(_check_route_attribution(response, context))
     findings.extend(_check_exclusive_branches(response, context))
+    findings.extend(_check_false_absence(response, context))
 
     for line, _ in _lines_with(response, OPERATIONAL_CLAIM_PATTERN):
         for instrument_id in _instruments_mentioned(line, context) & context.status_without_evidence:
