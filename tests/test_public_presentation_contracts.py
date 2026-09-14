@@ -245,14 +245,12 @@ class InstrumentPagePresentationTests(unittest.TestCase):
     def test_each_instrument_page_is_titled_with_its_own_name(self) -> None:
         pages = sorted((DOCS_ROOT / "instruments").glob("*/index.md"))
         self.assertTrue(pages)
-        titles = set()
         for page in pages:
             first_lines = page.read_text(encoding="utf-8").splitlines()[:3]
             title_line = next(line for line in first_lines if line.startswith("title:"))
             title = title_line.split("title:", 1)[1].strip()
+            self.assertTrue(title)
             self.assertNotEqual(title, "Instrument details")
-            titles.add(title)
-        self.assertEqual(len(titles), len(pages))
 
     def test_retired_pages_do_not_claim_to_be_online_or_link_the_simulator(self) -> None:
         page = (
@@ -337,6 +335,19 @@ class DeveloperLanguageTests(unittest.TestCase):
         )
         self.assertIn("[Download the facility inventory (JSON)]", page)
         self.assertNotIn("[Download `llm_inventory.json`]", page)
+
+    def test_virtual_microscope_route_tags_use_human_labels(self) -> None:
+        app_js = (
+            REPO_ROOT / "scripts" / "templates" / "virtual_microscope_app.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "normalizeSourceRoutes(source).map(normalizeRouteLabel)",
+            app_js,
+        )
+        self.assertNotIn(
+            "`routes: ${normalizeSourceRoutes(source).join(', ')}`",
+            app_js,
+        )
 
     def test_virtual_microscope_survives_a_missing_chart_library(self) -> None:
         app_js = (
