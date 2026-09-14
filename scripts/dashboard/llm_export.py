@@ -313,8 +313,11 @@ def _build_hardware_focus_summary(
         if isinstance(hardware.get("triggering"), dict)
         else {}
     )
-    if triggering.get("present") or clean_text(triggering.get("primary_mode")):
-        supporting_features.append("hardware triggering")
+    trigger_mode = clean_text(triggering.get("primary_mode")).lower()
+    if trigger_mode in {"hardware", "software", "mixed"}:
+        supporting_features.append(f"{trigger_mode} triggering")
+    elif triggering.get("present"):
+        supporting_features.append("triggering")
 
     if _display_labels(hardware.get("optical_modulators")):
         supporting_features.append("optical modulation")
