@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 from scripts.dashboard.llm_export import _build_hardware_focus_summary
+from scripts.planning_eval import AuthoritativeContext, check_response
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -112,6 +113,26 @@ def test_crest_dualcam_route_binds_multiple_branches_to_dualcam_splitter() -> No
         for branch in branch_block["items"]
         for step in branch["sequence"]
     )
+
+
+def test_planning_evaluator_scopes_component_ownership_locally() -> None:
+    context = AuthoritativeContext(
+        instrument_ids={"scope-a", "scope-b"},
+        components_by_instrument={
+            "scope-a": {"endpoint:a"},
+            "scope-b": {"endpoint:b"},
+        },
+        route_ids_by_instrument={"scope-a": set(), "scope-b": set()},
+    )
+    response = """scope-a
+Use endpoint:b for acquisition.
+
+scope-b
+This is a second candidate.
+"""
+
+    codes = {finding.code for finding in check_response(response, context)}
+    assert "component_not_on_named_instrument" in codes
 
 
 def test_planning_prompt_permits_general_guidance_but_keeps_facility_claims_grounded() -> None:
