@@ -37,7 +37,9 @@ hide:
         <div><span class="aic-muted">Operator</span><br>{{ operator | default('—', true) }}</div>
         {% endif %}
 
-        <div><span class="aic-muted">Microscope</span><br><a href="../../instruments/{{ instrument_id }}/">{{ display.instrument_display_name }}</a></div>
+        {# Raw HTML hrefs are not rewritten by MkDocs, so this is relative to the built
+   page URL /events/<instrument>/<event>/ - three levels up, matching event_href. #}
+        <div><span class="aic-muted">Microscope</span><br><a href="../../../instruments/{{ instrument_id }}/">{{ display.instrument_display_name }}</a></div>
         <div><span class="aic-muted">Record ID</span><br><code>{{ event_id }}</code></div>
       </div>
     </div>

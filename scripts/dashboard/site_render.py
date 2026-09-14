@@ -176,6 +176,11 @@ def build_nav(
 # Record types come from event policy (`DEFAULT_ALLOWED_RECORD_TYPES`), not from a
 # controlled vocabulary, so they are named here rather than prettified in a
 # template. Anything unrecognised is shown as recorded instead of reworded.
+# Acronyms that must survive sentence-casing of authored free text, so
+# "monthly_qc" does not read "Monthly qc". This capitalises, it never translates.
+_FREE_TEXT_ACRONYMS = {"qc", "psf", "snr", "flim", "fret", "tirf", "sim", "sted"}
+
+
 _RECORD_TYPE_LABELS = {
     "qc_session": "QC session",
     "maintenance_event": "Maintenance event",
@@ -193,7 +198,11 @@ def _readable_free_text(value: Any) -> str:
     if not text:
         return ""
     spaced = text.replace("_", " ")
-    return spaced[:1].upper() + spaced[1:]
+    sentence = spaced[:1].upper() + spaced[1:]
+    return " ".join(
+        word.upper() if word.lower() in _FREE_TEXT_ACRONYMS else word
+        for word in sentence.split(" ")
+    )
 
 
 def build_event_display(

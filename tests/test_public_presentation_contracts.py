@@ -7,10 +7,12 @@ that read as broken pages, and ledger identifiers shown where a human label
 exists.
 """
 
+import re
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import pytest
 import yaml
@@ -215,6 +217,47 @@ class InstrumentPagePresentationTests(unittest.TestCase):
             DOCS_ROOT / "instruments" / "scope-1e33f909" / "index.md"
         ).read_text(encoding="utf-8")
         self.assertIn("Open Virtual Microscope", page)
+
+
+class InternalLinkTests(unittest.TestCase):
+    """Raw-HTML hrefs are not rewritten by MkDocs, so they must resolve as authored.
+
+    Markdown links are rewritten relative to the SOURCE file; a hand-written
+    <a href> in a template is resolved by the browser relative to the BUILT page
+    URL. Mixing the two conventions in one template silently produces 404s, so
+    every generated relative link is resolved here against the built tree.
+    """
+
+    def _built_site(self) -> Path:
+        site = REPO_ROOT / "site"
+        if not site.exists():
+            subprocess.run(
+                [sys.executable, "-m", "mkdocs", "build", "-q", "-d", str(site)],
+                cwd=REPO_ROOT,
+                check=True,
+                capture_output=True,
+            )
+        return site
+
+    def test_every_relative_link_in_the_built_site_resolves(self) -> None:
+        site = self._built_site()
+        broken: list[str] = []
+        for page in site.rglob("*.html"):
+            if page.name == "404.html":
+                continue  # 404.html intentionally uses absolute deploy-root paths
+            html = page.read_text(encoding="utf-8", errors="replace")
+            for raw in re.findall(r'(?:href|src)="([^"]+)"', html):
+                if raw.startswith(("http://", "https://", "//", "#", "mailto:", "data:", "javascript:")):
+                    continue
+                target = unquote(urlparse(raw).path)
+                if not target or target.startswith("/"):
+                    continue
+                resolved = (page.parent / target).resolve()
+                if resolved.is_dir():
+                    resolved = resolved / "index.html"
+                if not resolved.exists():
+                    broken.append(f"{page.relative_to(site)} -> {raw}")
+        self.assertEqual(broken, [], f"{len(broken)} unresolved relative link(s): {broken[:10]}")
 
 
 class DeveloperLanguageTests(unittest.TestCase):
