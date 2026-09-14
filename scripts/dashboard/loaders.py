@@ -81,7 +81,23 @@ def load_facility_config(repo_root: Path) -> dict[str, Any]:
                 merged[key] = value
         return merged
 
-    return merged_dict(default_config, loaded)
+    merged = merged_dict(default_config, loaded)
+
+    # Identity fallbacks must reflect what the deploying facility actually
+    # authored. If a facility.yaml supplies only full_name, retaining the
+    # default short_name here would make the later short_name -> full_name
+    # fallback unreachable and the public site would call itself "Core Imaging
+    # Facility". Keep neutral defaults for a completely missing config, but do
+    # not inject one identity field when the facility mapping exists and omitted
+    # it intentionally.
+    authored_facility = loaded.get("facility")
+    merged_facility = merged.get("facility")
+    if isinstance(authored_facility, dict) and isinstance(merged_facility, dict):
+        for identity_key in ("short_name", "full_name"):
+            if identity_key not in authored_facility:
+                merged_facility[identity_key] = ""
+
+    return merged
 
 
 DEFAULT_FACILITY_SHORT_NAME = "Core Imaging Facility"
