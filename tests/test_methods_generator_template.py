@@ -31,7 +31,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         config_payload = config if config is not None else {
             "acknowledgements": {
                 "standard": "Standard acknowledgement.",
-                "xcelligence_addition": "xCELL acknowledgement.",
+                "additional": [],
             },
             "output_title": "Light Microscopy Methods",
             "instrument_data_url": "../assets/instruments_data.json",
@@ -209,7 +209,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertNotIn("Unknown detector", self.script_source)
         self.assertNotIn("Unknown source", self.script_source)
 
-    def test_xcelligence_acknowledgement_is_emitted_when_matching_instrument_is_used(self) -> None:
+    def test_conditional_acknowledgement_is_emitted_when_its_instrument_is_used(self) -> None:
         instrument = {
             "id": "scope-agilent-rtca-esight",
             "display_name": "Agilent xCELLigence RTCA eSight",
@@ -234,7 +234,16 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             config={
                 "acknowledgements": {
                     "standard": "Standard acknowledgement.",
-                    "xcelligence_addition": "xCELL acknowledgement.",
+                    "additional": [
+                        {
+                            "text": "Conditional acknowledgement.",
+                            "instrument_ids": ["scope-agilent-rtca-esight"],
+                        },
+                        {
+                            "text": "Unrelated acknowledgement.",
+                            "instrument_ids": ["scope-some-other-instrument"],
+                        },
+                    ],
                 },
                 "output_title": "Methods",
                 "instrument_data_url": "../assets/instruments_data.json",
@@ -249,7 +258,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         )
 
         self.assertIn("Standard acknowledgement.", result["output"])
-        self.assertIn("xCELL acknowledgement.", result["output"])
+        self.assertIn("Conditional acknowledgement.", result["output"])
+        # A conditional acknowledgement belongs to the instruments its config
+        # names, not to every draft.
+        self.assertNotIn("Unrelated acknowledgement.", result["output"])
         self.assertIn("Base method block.", result["output"])
 
     def test_duplicate_add_clicks_do_not_duplicate_same_method_block(self) -> None:

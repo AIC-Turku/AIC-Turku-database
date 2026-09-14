@@ -25,19 +25,90 @@ from typing import Any
 import yaml
 
 from scripts.build_context import clean_text
+from scripts.dashboard.loaders import facility_short_name
 
 
-def _build_ack_data(ack: dict[str, Any]) -> dict[str, Any]:
-    """Normalize acknowledgement copy for frontend configuration."""
+class AcknowledgementConfigError(ValueError):
+    """`facility.acknowledgements` cannot be applied faithfully."""
+
+
+LEGACY_ACK_KEYS = ("xcelligence_addition",)
+
+
+def _build_ack_data(
+    ack: dict[str, Any],
+    known_instrument_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Normalize acknowledgement copy for frontend configuration.
+
+    `standard` is added to every draft. Each `additional` entry is added only
+    when one of its `instrument_ids` was used, so a funder or donor credit that
+    belongs to a single instrument stays bound to that instrument's recorded ID
+    rather than to a name the frontend has to recognise.
+    """
+    legacy = [key for key in LEGACY_ACK_KEYS if key in ack]
+    if legacy:
+        raise AcknowledgementConfigError(
+            "facility.acknowledgements." + ", ".join(legacy) + " is no longer read. "
+            "Move the text to acknowledgements.additional[] and list the "
+            "instrument_ids it applies to."
+        )
+
+    raw_additional = ack.get("additional", [])
+    if not isinstance(raw_additional, list):
+        raise AcknowledgementConfigError(
+            "facility.acknowledgements.additional must be a list"
+        )
+
+    additional: list[dict[str, Any]] = []
+    for entry in raw_additional:
+        if not isinstance(entry, dict):
+            raise AcknowledgementConfigError(
+                "facility.acknowledgements.additional[] entries must be mappings "
+                "with 'text' and 'instrument_ids'"
+            )
+        text = entry.get("text")
+        if not isinstance(text, str) or not text.strip():
+            raise AcknowledgementConfigError(
+                "facility.acknowledgements.additional[].text must be non-empty text"
+            )
+        instrument_ids = entry.get("instrument_ids")
+        if (
+            not isinstance(instrument_ids, list)
+            or not instrument_ids
+            or any(not isinstance(value, str) or not value.strip() for value in instrument_ids)
+        ):
+            raise AcknowledgementConfigError(
+                "facility.acknowledgements.additional[].instrument_ids must be a "
+                "non-empty list of instrument IDs"
+            )
+        # An acknowledgement that silently stops appearing because a record was
+        # renamed is worse than a failed build, so unknown IDs are rejected the
+        # same way `facility.non_public_instrument_ids` rejects them.
+        if known_instrument_ids is not None:
+            unknown = sorted({value for value in instrument_ids} - known_instrument_ids)
+            if unknown:
+                raise AcknowledgementConfigError(
+                    "facility.acknowledgements.additional[].instrument_ids refers to "
+                    "unknown instrument IDs: " + ", ".join(unknown)
+                )
+        additional.append(
+            {
+                "text": text.strip(),
+                "instrument_ids": [value.strip() for value in instrument_ids],
+            }
+        )
+
     return {
         "standard": str(ack.get("standard", "")),
-        "xcelligence_addition": str(ack.get("xcelligence_addition", "")),
+        "additional": additional,
     }
 
 
 def build_methods_generator_page_config(
     facility: dict[str, Any],
     repo_root: Path,
+    known_instrument_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Build frontend config for the methods generator page."""
     ack_override_path = repo_root / "acknowledgements.yaml"
@@ -49,14 +120,14 @@ def build_methods_generator_page_config(
         if not isinstance(override_ack, dict):
             override_ack = {}
 
-        ack_data = _build_ack_data(override_ack)
+        ack_data = _build_ack_data(override_ack, known_instrument_ids)
     else:
         facility_ack = (
             facility.get("acknowledgements", {})
             if isinstance(facility.get("acknowledgements"), dict)
             else {}
         )
-        ack_data = _build_ack_data(facility_ack)
+        ack_data = _build_ack_data(facility_ack, known_instrument_ids)
 
     methods_config = (
         facility.get("methods_generator", {})
@@ -86,20 +157,16 @@ def build_plan_experiments_page_config(facility: dict[str, Any]) -> dict[str, An
         else {}
     )
 
-    facility_short_name = str(
-        facility.get("short_name")
-        or facility.get("full_name")
-        or "Core Imaging Facility"
-    )
+    short_name = facility_short_name(facility)
     facility_contact_url = str(facility.get("contact_url", "#"))
 
     return {
-        "facility_short_name": facility_short_name,
+        "facility_short_name": short_name,
         "facility_contact_url": facility_contact_url,
         "facility_contact_label": str(
             planner_config.get(
                 "contact_button_label",
-                f"Contact {facility_short_name} Staff",
+                f"Contact {short_name} Staff",
             )
         ),
         "llm_inventory_asset_url": str(
@@ -266,6 +333,7 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
 
 
 __all__ = [
+    "AcknowledgementConfigError",
     "build_methods_generator_page_config",
     "build_plan_experiments_page_config",
     "build_methods_generator_instrument_export",

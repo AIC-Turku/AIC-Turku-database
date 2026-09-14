@@ -925,14 +925,16 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             (repo_root / "acknowledgements.yaml").write_text(
                 json.dumps({
                     "standard": 'Standard ack with "quotes" and </script>',
-                    "xcelligence_addition": "xCELL ack",
+                    "additional": [
+                        {"text": "Donor ack", "instrument_ids": ["scope-example"]},
+                    ],
                 }),
                 encoding="utf-8",
             )
 
             config = build_methods_generator_page_config(
                 {
-                    "acknowledgements": {"standard": "fallback", "xcelligence_addition": "fallback x"},
+                    "acknowledgements": {"standard": "fallback"},
                     "methods_generator": {"instrument_data_url": "../assets/custom.json"},
                 },
                 repo_root,
@@ -945,6 +947,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             match = rendered.split('<script id="methods-generator-config" type="application/json">', 1)[1].split('</script>', 1)[0].strip()
             parsed = json.loads(match)
             self.assertEqual(parsed["acknowledgements"]["standard"], 'Standard ack with "quotes" and </script>')
+            self.assertEqual(
+                parsed["acknowledgements"]["additional"],
+                [{"text": "Donor ack", "instrument_ids": ["scope-example"]}],
+            )
             self.assertNotIn("</script>", match)
 
     def test_plan_template_config_round_trips_with_escaped_facility_strings(self) -> None:

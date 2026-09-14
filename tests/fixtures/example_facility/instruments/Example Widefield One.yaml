@@ -1,0 +1,150 @@
+instrument:
+  display_name: Example Widefield One
+  instrument_id: scope-example-widefield-one
+  manufacturer: Example Optics
+  model: EW-1
+  year_of_purchase: '2024'
+  funding: Example Research Infrastructure Programme
+  stand_orientation: inverted
+  ocular_availability: trinocular
+  location: Example Building, Room 101
+  notes: Synthetic record used to test reuse of this project by another facility.
+  url: ''
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
+modules: []
+software:
+- role: acquisition
+  name: Example Acquire
+  version: '1.0'
+  notes: ''
+  url: ''
+hardware:
+  scanner:
+    type: none
+    notes: ''
+    url: ''
+  detectors:
+  - kind: scmos
+    manufacturer: Example Optics
+    model: EX-Cam 2
+    pixel_pitch_um: 6.5
+    notes: ''
+    url: ''
+    id: example_scmos
+  objectives:
+  - id: 20x_air
+    manufacturer: Example Optics
+    model: Example Plan Apo 20x/0.75
+    product_code: EX-20X-075
+    magnification: 20.0
+    numerical_aperture: 0.75
+    working_distance: 0.6 mm
+    immersion: air
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
+  - id: 63x_oil
+    manufacturer: Example Optics
+    model: Example Plan Apo 63x/1.40 Oil
+    product_code: EX-63X-140
+    magnification: 63.0
+    numerical_aperture: 1.4
+    working_distance: 0.19 mm
+    immersion: oil
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
+  sources:
+  - kind: led
+    manufacturer: Example Optics
+    model: EX-LED Transmitted
+    notes: Broad-spectrum transmitted-light LED.
+    id: example_transmitted_led
+  - kind: led
+    manufacturer: Example Optics
+    model: EX-LED 470
+    wavelength_nm: 470
+    notes: ''
+    id: example_led_470
+  - kind: led
+    manufacturer: Example Optics
+    model: EX-LED 555
+    wavelength_nm: 555
+    notes: ''
+    id: example_led_555
+  optical_path_elements:
+  - name: Filter Cube Turret
+    stage_role: cube
+    id: example_cube_turret
+    element_type: turret
+    notes: ''
+    positions:
+      Pos_1:
+        name: GFP
+        component_type: filter_cube
+        product_code: EX-CUBE-GFP
+        bands:
+        - center_nm: 525
+          width_nm: 50
+        notes: ''
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 470
+          width_nm: 40
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 495
+        emission_filter:
+          component_type: bandpass
+          center_nm: 525
+          width_nm: 50
+      Pos_2:
+        name: RFP
+        component_type: filter_cube
+        product_code: EX-CUBE-RFP
+        bands:
+        - center_nm: 595
+          width_nm: 50
+        notes: ''
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 555
+          width_nm: 25
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 570
+        emission_filter:
+          component_type: bandpass
+          center_nm: 595
+          width_nm: 50
+  endpoints: []
+light_paths:
+- id: widefield_fluorescence
+  illumination_sequence:
+  - source_id: example_led_470
+  - source_id: example_led_555
+  - optical_path_element_id: example_cube_turret
+  detection_sequence:
+  - optical_path_element_id: example_cube_turret
+  - endpoint_id: example_scmos
+  route_type: widefield_fluorescence
+- id: transmitted_light
+  illumination_sequence:
+  - source_id: example_transmitted_led
+  detection_sequence:
+  - endpoint_id: example_scmos
+  route_type: transmitted_light

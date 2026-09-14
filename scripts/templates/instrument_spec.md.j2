@@ -27,7 +27,7 @@ hide:
     This microscope has been retired from service. The hardware and capabilities below are kept as a record of its final recorded configuration, so earlier work can still be described accurately.
 {% else %}
 !!! note "About this microscope"
-    Here you’ll find the hardware and capabilities currently recorded for this microscope. If you are planning an experiment, AIC staff can help with access, training, and configuration choices.
+    Here you’ll find the hardware and capabilities currently recorded for this microscope. If you are planning an experiment, {{ facility_short_name }} staff can help with access, training, and configuration choices.
 {% endif %}
 
 
@@ -372,7 +372,7 @@ hide:
 {% if policy.missing_required or policy.missing_conditional or policy.alias_fallbacks %}
 ## Information still to confirm
 
-Some details in the facility record are incomplete. If any of these matter for your experiment, please check them with AIC staff.
+Some details in the facility record are incomplete. If any of these matter for your experiment, please check them with {{ facility_short_name }} staff.
 
 {% if policy.missing_required %}
 - **Not yet recorded:**
