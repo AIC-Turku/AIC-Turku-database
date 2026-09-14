@@ -29,7 +29,9 @@ COMPONENT_ID_PATTERN = re.compile(
 TAGGED_INSTRUMENT_PATTERN = re.compile(
     r"(?im)\binstrument_id\s*[:=]\s*[`\"']?(?P<value>[A-Za-z0-9][A-Za-z0-9_.:-]*)"
 )
-ID_TOKEN_PATTERN = re.compile(r"(?<![A-Za-z0-9_.:-])[A-Za-z0-9][A-Za-z0-9_.:-]*(?![A-Za-z0-9_.:-])")
+ID_TOKEN_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_.:-])[A-Za-z0-9][A-Za-z0-9_.:-]*(?![A-Za-z0-9_.:-])"
+)
 
 AVAILABILITY_CLAIM_PATTERNS = (
     re.compile(r"\b(?:is|are|remains?)\s+(?:currently\s+)?(?:available|free|bookable)\b", re.I),
@@ -127,7 +129,10 @@ def load_context(inventory: dict[str, Any]) -> AuthoritativeContext:
             if not component_id:
                 continue
             components.add(component_id)
-            if str(row.get("inventory_class") or "").strip() == "objective" or component_id.startswith("objective:"):
+            if (
+                str(row.get("inventory_class") or "").strip() == "objective"
+                or component_id.startswith("objective:")
+            ):
                 objectives.add(component_id)
         context.components_by_instrument[instrument_id] = components
         context.objective_ids_by_instrument[instrument_id] = objectives
@@ -175,7 +180,9 @@ def load_context(inventory: dict[str, Any]) -> AuthoritativeContext:
 
 
 def _contains_token(text: str, token: str) -> bool:
-    return bool(re.search(rf"(?<![A-Za-z0-9_.:-]){re.escape(token)}(?![A-Za-z0-9_.:-])", text))
+    return bool(
+        re.search(rf"(?<![A-Za-z0-9_.:-]){re.escape(token)}(?![A-Za-z0-9_.:-])", text)
+    )
 
 
 def _tagged_instrument_claims(response: str) -> set[str]:
@@ -248,6 +255,46 @@ def _iter_scoped_lines(
         yield line, current
 
 
+def _check_component_attribution(
+    response: str,
+    context: AuthoritativeContext,
+) -> list[Finding]:
+    """Check component ownership against the locally scoped instrument.
+
+    A response may discuss several microscopes. Comparing a component against the
+    set of every instrument named anywhere in the answer can hide a bad assignment
+    under one candidate merely because the true owner appears in a later section.
+    """
+    findings: list[Finding] = []
+    known_components = context.all_components
+
+    for line, instrument_id in _iter_scoped_lines(response, context):
+        if instrument_id is None:
+            continue
+        owned = context.components_by_instrument.get(instrument_id, set())
+        for claimed in sorted(_component_claims(line)):
+            if claimed not in known_components or claimed in owned:
+                continue
+            owners = sorted(
+                owner
+                for owner, components in context.components_by_instrument.items()
+                if claimed in components
+            )
+            findings.append(
+                Finding(
+                    code="component_not_on_named_instrument",
+                    severity="error",
+                    detail=(
+                        f"{claimed} is recorded on {owners}, not on the locally named "
+                        f"instrument {instrument_id}."
+                    ),
+                    evidence=line.strip(),
+                )
+            )
+
+    return findings
+
+
 def _check_route_attribution(response: str, context: AuthoritativeContext) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -285,7 +332,10 @@ def _check_route_attribution(response: str, context: AuthoritativeContext) -> li
                     Finding(
                         code="component_not_on_route",
                         severity="error",
-                        detail=f"{claimed} is recorded on {instrument_id} but not on route '{route_id}'.",
+                        detail=(
+                            f"{claimed} is recorded on {instrument_id} but not on route "
+                            f"'{route_id}'."
+                        ),
                         evidence=line.strip(),
                     )
                 )
@@ -344,9 +394,7 @@ def check_response(response: str, context: AuthoritativeContext) -> list[Finding
                 )
             )
 
-    mentioned_instruments = _instruments_mentioned(response, context)
     known_components = context.all_components
-
     for claimed in sorted(_component_claims(response)):
         if claimed not in known_components:
             findings.append(
@@ -356,25 +404,8 @@ def check_response(response: str, context: AuthoritativeContext) -> list[Finding
                     detail=f"{claimed} is not recorded on any active instrument.",
                 )
             )
-            continue
 
-        owners = {
-            instrument_id
-            for instrument_id, components in context.components_by_instrument.items()
-            if claimed in components
-        }
-        if mentioned_instruments and not (owners & mentioned_instruments):
-            findings.append(
-                Finding(
-                    code="component_not_on_named_instrument",
-                    severity="error",
-                    detail=(
-                        f"{claimed} is recorded on {sorted(owners)}, but the answer "
-                        f"discusses {sorted(mentioned_instruments)}."
-                    ),
-                )
-            )
-
+    findings.extend(_check_component_attribution(response, context))
     findings.extend(_check_route_attribution(response, context))
     findings.extend(_check_exclusive_branches(response, context))
 
