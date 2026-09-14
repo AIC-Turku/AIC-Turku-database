@@ -29,6 +29,7 @@ COMPONENT_ID_PATTERN = re.compile(
 TAGGED_INSTRUMENT_PATTERN = re.compile(
     r"(?im)\binstrument_id\s*[:=]\s*[`\"']?(?P<value>[A-Za-z0-9][A-Za-z0-9_.:-]*)"
 )
+ID_TOKEN_PATTERN = re.compile(r"(?<![A-Za-z0-9_.:-])[A-Za-z0-9][A-Za-z0-9_.:-]*(?![A-Za-z0-9_.:-])")
 
 AVAILABILITY_CLAIM_PATTERNS = (
     re.compile(r"\b(?:is|are|remains?)\s+(?:currently\s+)?(?:available|free|bookable)\b", re.I),
@@ -83,6 +84,16 @@ class AuthoritativeContext:
     @property
     def all_components(self) -> set[str]:
         return {value for values in self.components_by_instrument.values() for value in values}
+
+    @property
+    def instrument_id_prefixes(self) -> set[str]:
+        """Prefixes learned from the inventory for spotting ID-shaped prose claims."""
+        prefixes: set[str] = set()
+        for instrument_id in self.instrument_ids:
+            match = re.match(r"^([A-Za-z0-9]+[-_:])", instrument_id)
+            if match:
+                prefixes.add(match.group(1))
+        return prefixes
 
 
 def load_context(inventory: dict[str, Any]) -> AuthoritativeContext:
@@ -171,6 +182,31 @@ def _tagged_instrument_claims(response: str) -> set[str]:
     return {match.group("value") for match in TAGGED_INSTRUMENT_PATTERN.finditer(response)}
 
 
+def _free_prose_instrument_claims(
+    response: str,
+    context: AuthoritativeContext,
+) -> set[str]:
+    """Find instrument-ID-shaped tokens using prefixes learned from the inventory.
+
+    This restores checking of ordinary saved LLM prose without assuming that a
+    facility uses AIC's ``scope-`` prefix. For example, if the inventory contains
+    IDs beginning ``scope-`` or ``microscope-``, an untagged token with that same
+    learned prefix is treated as an instrument-ID claim and validated.
+    """
+    prefixes = context.instrument_id_prefixes
+    if not prefixes:
+        return set()
+    return {
+        token
+        for token in ID_TOKEN_PATTERN.findall(response)
+        if any(token.startswith(prefix) for prefix in prefixes)
+    }
+
+
+def _instrument_claims(response: str, context: AuthoritativeContext) -> set[str]:
+    return _tagged_instrument_claims(response) | _free_prose_instrument_claims(response, context)
+
+
 def _instruments_mentioned(response: str, context: AuthoritativeContext) -> set[str]:
     mentioned = {
         instrument_id
@@ -182,7 +218,7 @@ def _instruments_mentioned(response: str, context: AuthoritativeContext) -> set[
         if display_name and display_name in folded:
             mentioned.add(instrument_id)
     mentioned.update(
-        claim for claim in _tagged_instrument_claims(response) if claim in context.instrument_ids
+        claim for claim in _instrument_claims(response, context) if claim in context.instrument_ids
     )
     return mentioned
 
@@ -298,9 +334,7 @@ def _check_exclusive_branches(response: str, context: AuthoritativeContext) -> l
 def check_response(response: str, context: AuthoritativeContext) -> list[Finding]:
     findings: list[Finding] = []
 
-    # Unknown instrument claims are checked through an explicit portable tag.
-    # Known instrument IDs and display names are still recognized anywhere in prose.
-    for claimed in sorted(_tagged_instrument_claims(response)):
+    for claimed in sorted(_instrument_claims(response, context)):
         if claimed not in context.instrument_ids:
             findings.append(
                 Finding(
