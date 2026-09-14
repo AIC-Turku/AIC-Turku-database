@@ -1,0 +1,299 @@
+# Red-team scenarios for the AI experiment-planning workflow.
+#
+# Every expectation here is a statement about what the repository records, not a
+# recommendation about which microscope to use. `tests/test_planning_grounding.py`
+# recomputes each expectation from the generated `llm_inventory.json` and fails if
+# the fixture and the ledger disagree, so a scenario cannot quietly encode a stale
+# opinion or a fact the records do not support.
+#
+# Field meanings:
+#   requires.imaging_modes / requires.readouts
+#       Controlled terms the scenario needs. Checked to exist in the vocabulary.
+#   expect.instruments_declaring_requirements
+#       Active instruments whose records declare ALL required terms. Recomputed.
+#   expect.covering_route_families
+#       Route families that `vocab/optical_routes.yaml` records as covering the
+#       required imaging modes. Recomputed from route_family_coverage.
+#   expect.cross_route_traps
+#       (instrument, component, route) triples where the component is recorded on
+#       at least one route of that instrument but NOT on the named route. An answer
+#       attaching the component to that route is ungrounded. Recomputed.
+#   expect.exclusive_branch_blocks
+#       Routes whose endpoint choice is recorded as mutually exclusive, so
+#       simultaneous use of two endpoints is not supported by the records.
+#   expect.must_remain_unknown
+#       Facts the export does not contain. An answer asserting them is invented.
+
+schema_version: 1
+
+# Facts the inventory never records, for any scenario. Checked once, globally.
+never_recorded:
+  - booking_availability
+  - training_requirements
+  - access_policy
+  - measured_system_throughput
+  - detector_quantum_efficiency_curves
+
+scenarios:
+  - id: live_two_colour_24h
+    title: Live GFP/mCherry imaging over 24 hours
+    request: >-
+      Live HeLa cells expressing GFP and mCherry, imaged every 15 minutes for 24
+      hours with optical sectioning and low phototoxicity.
+    requires:
+      imaging_modes: [confocal_spinning_disk]
+    expect:
+      instruments_declaring_requirements:
+        - scope-3i-csu-w1-spinning-disk
+        - scope-3i-csu-w1-spinning-disk-med-c
+        - scope-andor-bc43
+        - scope-nikon-crest-v3
+      covering_route_families: [confocal_spinning_disk]
+      cross_route_traps:
+        - instrument: scope-3i-csu-w1-spinning-disk
+          component: source:x_cite_xled1
+          not_on_route: confocal_spinning_disk
+      exclusive_branch_blocks:
+        - instrument: scope-3i-csu-w1-spinning-disk
+          route: confocal_spinning_disk
+      must_remain_unknown:
+        - photobleaching_rate
+        - maximum_unattended_run_duration
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        Environmental control and unattended run length are not recorded as
+        acquisition limits, so suitability for a 24 h run is not established.
+
+  - id: fast_two_colour_dynamics
+    title: Very fast two-colour dynamics
+    request: >-
+      Two-colour imaging of vesicle dynamics at the highest frame rate possible,
+      ideally both channels captured at the same time.
+    requires:
+      imaging_modes: [confocal_spinning_disk]
+    expect:
+      instruments_declaring_requirements:
+        - scope-3i-csu-w1-spinning-disk
+        - scope-3i-csu-w1-spinning-disk-med-c
+        - scope-andor-bc43
+        - scope-nikon-crest-v3
+      covering_route_families: [confocal_spinning_disk]
+      cross_route_traps: []
+      exclusive_branch_blocks:
+        - instrument: scope-3i-csu-w1-spinning-disk
+          route: confocal_spinning_disk
+        - instrument: scope-nikon-crest-v3
+          route: confocal_spinning_disk
+      must_remain_unknown:
+        - camera_frame_rate
+        - simultaneous_dual_camera_acquisition
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        The recorded detection branches are mutually exclusive, so simultaneous
+        two-camera capture is not established by the records, and no frame rates
+        are recorded.
+
+  - id: tirf_adhesions
+    title: TIRF imaging of adhesion complexes
+    request: >-
+      TIRF imaging of focal adhesions in fixed and live cells, two colours.
+    requires:
+      imaging_modes: [tirf]
+    expect:
+      instruments_declaring_requirements:
+        - scope-deltavision-omx
+        - scope-oni-nanoimager
+        - scope-zeiss-tirf
+      # The route vocabulary has no `tirf` term: a TIRF acquisition is recorded
+      # as a widefield_fluorescence route. Answers must not invent a TIRF route.
+      covering_route_families: [widefield_fluorescence]
+      route_types_absent_from_vocabulary: [tirf]
+      cross_route_traps:
+        - instrument: scope-zeiss-tirf
+          component: source:halogen_lamp_transmitted
+          not_on_route: widefield_fluorescence
+      exclusive_branch_blocks:
+        - instrument: scope-zeiss-tirf
+          route: widefield_fluorescence
+      must_remain_unknown:
+        - penetration_depth_nm
+        - tirf_angle_range
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        No instrument records a TIRF-specific route, angle or penetration depth;
+        the TIRF capability is recorded on the widefield route family only.
+
+  - id: flim_lifetime
+    title: Fluorescence lifetime imaging
+    request: >-
+      FLIM measurement of a FRET biosensor in live cells.
+    requires:
+      readouts: [flim]
+    expect:
+      instruments_declaring_requirements:
+        - scope-lambert-flim-frequency-domain
+        - scope-leica-stellaris-8-falcon-flim-resonant
+      covering_route_families: []
+      cross_route_traps:
+        - instrument: scope-leica-stellaris-8-falcon-flim-resonant
+          component: source:white_light_laser_wll
+          not_on_route: widefield_fluorescence
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - lifetime_resolution_ps
+        - photon_count_requirements
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        FLIM is recorded as a route readout only; no lifetime performance figures
+        are recorded.
+
+  - id: deep_3d_imaging
+    title: Deep 3D imaging in thick tissue
+    request: >-
+      3D imaging 300-500 um deep into fixed brain tissue.
+    requires:
+      imaging_modes: [multiphoton]
+    expect:
+      # No active instrument declares multiphoton. This scenario must resolve to
+      # "not supported by the recorded inventory", not to a substitute.
+      instruments_declaring_requirements: []
+      covering_route_families: [multiphoton]
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - maximum_imaging_depth_um
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        No active instrument records a multiphoton imaging mode or route. Depth
+        limits are not recorded for any instrument.
+
+  - id: sted_super_resolution
+    title: STED super-resolution
+    request: >-
+      STED imaging of cytoskeletal structure in fixed cells.
+    requires:
+      imaging_modes: [sted]
+    expect:
+      instruments_declaring_requirements: [scope-1e33f909]
+      # As with TIRF, there is no `sted` route term: STED is recorded on the
+      # point-scanning confocal route family.
+      covering_route_families: [confocal_point]
+      route_types_absent_from_vocabulary: [sted]
+      cross_route_traps: []
+      exclusive_branch_blocks:
+        - instrument: scope-1e33f909
+          route: confocal_point
+      must_remain_unknown:
+        - achievable_resolution_nm
+        - depletion_laser_power
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        One instrument records a STED imaging mode; no achievable resolution or
+        depletion settings are recorded, and its detection branches are exclusive.
+
+  - id: low_phototoxicity_timelapse
+    title: Low-phototoxicity long time-lapse
+    request: >-
+      Gentle long time-lapse of a light-sensitive primary cell line over 48 hours.
+    requires:
+      imaging_modes: [light_sheet]
+    expect:
+      instruments_declaring_requirements: [scope-msquared-aurora-airy-beam]
+      covering_route_families: [light_sheet]
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - delivered_illumination_dose
+        - phototoxicity_thresholds
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        No instrument records illumination dose or phototoxicity limits, so a
+        gentleness ranking cannot be derived from the inventory.
+
+  - id: thick_cleared_sample
+    title: Thick cleared sample
+    request: >-
+      Imaging a 2 mm cleared organoid with a high-refractive-index clearing medium.
+    requires:
+      imaging_modes: [light_sheet]
+    expect:
+      instruments_declaring_requirements: [scope-msquared-aurora-airy-beam]
+      covering_route_families: [light_sheet]
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - objective_refractive_index_compatibility
+        - sample_chamber_dimensions
+        - maximum_sample_thickness
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        Objective immersion is recorded, but clearing-medium refractive-index
+        compatibility, chamber size and working sample thickness are not.
+
+  - id: three_colour_route_conflict
+    title: Three-colour imaging with potentially incompatible routes
+    request: >-
+      Three-colour imaging of DAPI, GFP and mCherry, ideally all three channels
+      acquired simultaneously.
+    requires:
+      imaging_modes: [widefield_fluorescence]
+    expect:
+      # Recomputed; widefield fluorescence is the broadest declared mode.
+      instruments_declaring_requirements:
+        - scope-3i-csu-w1-spinning-disk
+        - scope-3i-csu-w1-spinning-disk-med-c
+        - scope-agilent-rtca-esight
+        - scope-andor-bc43
+        - scope-deltavision-omx
+        - scope-evos-fl
+        - scope-lambert-flim-frequency-domain
+        - scope-leica-dm-irbe
+        - scope-leica-dm-rb
+        - scope-leica-stellaris-8-falcon-flim-resonant
+        - scope-leica-thunder
+        - scope-nikon-crest-v3
+        - scope-nikon-eclipse-ti2-e
+        - scope-olympus-bx60
+        - scope-zeiss-axiozoom-v16
+        - scope-zeiss-tirf
+      covering_route_families: [widefield_fluorescence]
+      cross_route_traps:
+        - instrument: scope-leica-stellaris-8-falcon-flim-resonant
+          component: optical_path_element:aobs
+          not_on_route: widefield_fluorescence
+        - instrument: scope-3i-csu-w1-spinning-disk
+          component: source:laserstack_v4_2
+          not_on_route: widefield_fluorescence
+      # Three cameras are recorded on the OMX, but the branch block is exclusive:
+      # the records do not establish simultaneous three-camera acquisition.
+      exclusive_branch_blocks:
+        - instrument: scope-deltavision-omx
+          route: widefield_fluorescence
+      must_remain_unknown:
+        - simultaneous_three_channel_acquisition
+        - channel_crosstalk
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        Recorded detection branches are exclusive, so simultaneous three-channel
+        capture is not established, and no crosstalk data are recorded.
+
+  - id: unsatisfiable_multiphoton_request
+    title: Request that the recorded inventory cannot satisfy
+    request: >-
+      I need in vivo two-photon imaging through a cranial window with a tunable
+      Ti:Sapphire laser.
+    requires:
+      imaging_modes: [multiphoton]
+    expect:
+      instruments_declaring_requirements: []
+      covering_route_families: [multiphoton]
+      cross_route_traps: []
+      exclusive_branch_blocks: []
+      must_remain_unknown:
+        - in_vivo_capability
+        - tunable_laser_range
+      staff_confirmation_required: true
+      confirmation_reason: >-
+        No active instrument records a multiphoton mode or route, and no record
+        describes in vivo imaging. The correct answer is that the recorded
+        inventory does not support this request.

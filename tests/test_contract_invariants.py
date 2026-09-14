@@ -751,9 +751,16 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertIn("llm_context.authoritative_route_contract", rendered)
         self.assertIn("llm_context.route_planning_summary", rendered)
         self.assertIn("required procedure in order", rendered)
-        self.assertIn("Eliminate unavailable or incompatible instruments first", rendered)
+        # The first procedure step used to read "Eliminate unavailable or
+        # incompatible instruments first". The export records no booking, access
+        # or training availability, so that asked the assistant for a judgement
+        # nothing in the data supports. The step now turns on recorded routes,
+        # and the availability gap is stated instead of being ranked on.
+        self.assertIn("Exclude instruments whose recorded routes cannot support the experiment", rendered)
+        self.assertNotIn("Eliminate unavailable or incompatible instruments first", rendered)
+        self.assertIn("records no booking, access or training availability", rendered)
         self.assertIn("Choose one best route on the top instrument and one backup route/instrument", rendered)
-        self.assertIn("Raw hardware lists are secondary context and must not override route contract truth", rendered)
+        self.assertIn("raw hardware lists are secondary context and must not override route contract truth", rendered.lower())
         self.assertIn("known vs unknown facts", rendered)
         self.assertIn("selected route", rendered)
         self.assertIn("detector/endpoint", rendered)

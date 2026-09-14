@@ -450,6 +450,31 @@ def build_mkdocs_config(
     }
 
 
+def route_family_coverage(vocabulary: Vocabulary) -> dict[str, Any]:
+    """Export the authored route-family -> imaging-mode mapping for planners.
+
+    `vocab/optical_routes.yaml` records which imaging modes each route family
+    covers, so a `tirf` capability on a `widefield_fluorescence` route is an
+    authored relationship rather than a contradiction. Without it, a planning
+    assistant reading only the inventory has to either invent a TIRF route or
+    conclude the facility has none.
+    """
+    coverage: dict[str, Any] = {}
+    for route_id, term in (vocabulary.terms_by_vocab.get("optical_routes") or {}).items():
+        covers = term.metadata.get("covers") if isinstance(term.metadata, dict) else None
+        covers = covers if isinstance(covers, dict) else {}
+        coverage[route_id] = {
+            "label": term.label,
+            "covers_imaging_modes": sorted(
+                value for value in (covers.get("imaging_modes") or []) if isinstance(value, str)
+            ),
+            "covers_contrast_methods": sorted(
+                value for value in (covers.get("contrast_methods") or []) if isinstance(value, str)
+            ),
+        }
+    return coverage
+
+
 def _build_vocabulary(repo_root: Path) -> Vocabulary:
     return build_repository_vocabulary(repo_root)
 
@@ -842,7 +867,11 @@ def render_site(
             llm_records.append(copy.deepcopy(context.llm_inventory_record))
         else:
             llm_records.append(copy.deepcopy(inst))
-    llm_payload = build_llm_inventory_payload(facility, llm_records)
+    llm_payload = build_llm_inventory_payload(
+        facility,
+        llm_records,
+        route_family_coverage=route_family_coverage(vocabulary),
+    )
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
     try:
@@ -915,6 +944,7 @@ __all__ = [
     "_build_llm_inventory_record_from_build_input",
     "build_vocabulary_dictionary_markdown",
     "build_mkdocs_config",
+    "route_family_coverage",
     "render_site",
     "_metric_lookup",
     "_build_all_charts_data",

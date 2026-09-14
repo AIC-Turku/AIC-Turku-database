@@ -24,6 +24,163 @@ from typing import Any
 from scripts.build_context import clean_text
 
 
+# Fields whose absence is a recorded fact rather than a gap.
+#
+# Route membership is authored as ordered `light_paths[]` sequences, so the
+# hardware a route uses is a complete enumeration: a component missing from
+# these lists is not part of that route. Everywhere else in this export a
+# missing value means unknown. Without this distinction the two rules collide —
+# "treat missing as unknown" would make route exclusivity unreadable, and the
+# only way left to decide whether a laser can be used on a route is to guess.
+CLOSED_WORLD_FIELDS = (
+    "llm_context.authoritative_route_contract.route_hardware_usage[].hardware_inventory_ids",
+    "llm_context.authoritative_route_contract.route_hardware_usage[].illumination_hardware_inventory_ids",
+    "llm_context.authoritative_route_contract.route_hardware_usage[].detection_hardware_inventory_ids",
+    "llm_context.authoritative_route_contract.route_hardware_usage[].endpoint_inventory_ids",
+    "llm_context.authoritative_route_contract.hardware_inventory[].route_usage_summary",
+    "llm_context.authoritative_route_contract.available_routes",
+)
+
+
+def _build_planning_contract() -> dict[str, Any]:
+    """State what this export does and does not establish.
+
+    Each entry answers a question a planner would otherwise have to answer by
+    assumption. None of it adds hardware facts: it describes the shape and
+    provenance of the data already exported.
+    """
+    return {
+        "contract_version": "planning_contract.v1",
+        "closed_world_fields": {
+            "fields": list(CLOSED_WORLD_FIELDS),
+            "meaning": (
+                "These lists are complete enumerations built from the authored "
+                "route sequences. A component absent from them is not part of "
+                "that route. Everywhere else, a missing or null value means "
+                "unknown."
+            ),
+        },
+        "availability": {
+            "records_booking_availability": False,
+            "meaning": (
+                "This export contains no booking, scheduling, access or training "
+                "data. 'available_routes', 'available_positions' and "
+                "'selected_or_selectable_*' mean recorded or selectable in the "
+                "ledger, never free to book. Whether an instrument can actually "
+                "be used is a question for facility staff."
+            ),
+        },
+        "status_semantics": {
+            "field": "hardware_focus_summary.status",
+            "meaning": (
+                "Status is derived only from the most recent QC and maintenance "
+                "records. Read status.evidence before repeating it: "
+                "'no_qc_or_maintenance_record' means the instrument is reported "
+                "operational because nothing has been recorded against it, not "
+                "because a check passed."
+            ),
+        },
+        "objective_scope": {
+            "field": "llm_context.route_planning_summary.routes[].planning_optics.instrument_installed_objectives",
+            "meaning": (
+                "Objectives are recorded per instrument, not per route. The same "
+                "installed list is repeated for every route. This export does not "
+                "establish that a given objective is usable on a given route."
+            ),
+        },
+        "capability_vs_route": {
+            "field": "capability_route_reconciliation",
+            "meaning": (
+                "capabilities.imaging_modes and light_paths[].route_type are "
+                "different authored axes. Route types are a coarse family "
+                "vocabulary: a TIRF or STED acquisition is recorded as a "
+                "widefield_fluorescence or confocal_point route. Use "
+                "route_family_coverage to relate them instead of inferring a "
+                "route that is not recorded."
+            ),
+        },
+    }
+
+
+def _build_capability_route_reconciliation(
+    capabilities: dict[str, Any],
+    route_types: list[str],
+    route_family_coverage: dict[str, Any],
+) -> dict[str, Any]:
+    """Reconcile declared imaging modes against recorded route families.
+
+    `capabilities.imaging_modes` and route types disagree on their face: an
+    instrument can declare `tirf` while every recorded route is
+    `widefield_fluorescence`. `vocab/optical_routes.yaml` already authors which
+    imaging modes each route family covers, so the reconciliation is a lookup,
+    not an inference. Exporting it stops a planner having to choose between
+    inventing a TIRF route and concluding the facility has none.
+    """
+    declared = [
+        clean_text(mode)
+        for mode in (capabilities.get("imaging_modes") or [])
+        if isinstance(mode, str) and clean_text(mode)
+    ]
+
+    covered_modes: set[str] = set()
+    for route_type in route_types:
+        entry = route_family_coverage.get(route_type)
+        if isinstance(entry, dict):
+            covered_modes.update(entry.get("covers_imaging_modes") or [])
+
+    covered = [mode for mode in declared if mode in covered_modes]
+    uncovered = [mode for mode in declared if mode not in covered_modes]
+
+    return {
+        "declared_imaging_modes": declared,
+        "recorded_route_types": sorted(dict.fromkeys(route_types)),
+        "modes_covered_by_a_recorded_route": covered,
+        "modes_without_a_covering_recorded_route": uncovered,
+        "note": (
+            "A mode listed under modes_without_a_covering_recorded_route has no "
+            "recorded optical route in this export. Do not describe a route for "
+            "it; ask facility staff."
+            if uncovered
+            else "Every declared imaging mode is covered by a recorded route family."
+        ),
+    }
+
+
+def _status_with_evidence(status: dict[str, Any]) -> dict[str, Any]:
+    """Say what a reported status is based on.
+
+    `evaluate_instrument_status` returns green when neither a QC nor a
+    maintenance record contradicts it, so "Operational" is also what an
+    instrument with no recorded history reports. On a dashboard that is a
+    reasonable default; repeated to a researcher by an assistant it becomes a
+    claim that a check passed.
+    """
+    row = copy.deepcopy(status or {})
+    if not row:
+        return row
+
+    has_qc = bool(clean_text(row.get("last_qc_date")))
+    has_maintenance = bool(clean_text(row.get("last_maint_date")))
+
+    if has_qc and has_maintenance:
+        evidence = "qc_and_maintenance_record"
+    elif has_qc:
+        evidence = "qc_record_only"
+    elif has_maintenance:
+        evidence = "maintenance_record_only"
+    else:
+        evidence = "no_qc_or_maintenance_record"
+
+    row["evidence"] = evidence
+    row["evidence_note"] = (
+        "No QC or maintenance record exists for this instrument. The status is "
+        "the absence of a recorded problem, not a passed check."
+        if evidence == "no_qc_or_maintenance_record"
+        else "Status is derived from the most recent recorded QC/maintenance event."
+    )
+    return row
+
+
 def _collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str], list[str]]:
     """Return dotted known/missing field paths for an arbitrary JSON-like value."""
     known_fields: list[str] = []
@@ -174,20 +331,70 @@ def _build_hardware_focus_summary(
         if isinstance(entry, dict) and clean_text(entry.get("title") or entry.get("path"))
     ]
 
+    # The screening labels are re-derived from raw hardware rows, which collapses
+    # distinct components onto one string: four LaserStack v4 lasers at 405, 488,
+    # 561 and 640 nm all read "LaserStack v4". The route contract already carries
+    # labels that keep them apart, so prefer those and keep the IDs alongside so a
+    # screening claim can be traced back to a component.
+    inventory_rows = [
+        row
+        for row in (authoritative_route_contract.get("hardware_inventory") or [])
+        if isinstance(row, dict)
+    ]
+
+    def inventory_entries(inventory_class: str) -> list[dict[str, str]]:
+        return [
+            {
+                "id": clean_text(row.get("id")),
+                "display_label": clean_text(row.get("display_label")),
+            }
+            for row in inventory_rows
+            if clean_text(row.get("inventory_class")) == inventory_class
+            and clean_text(row.get("id"))
+            and clean_text(row.get("display_label"))
+        ]
+
+    light_sources = inventory_entries("light_source")
+    detectors = [
+        entry
+        for entry in inventory_entries("endpoint")
+        if any(
+            clean_text(row.get("endpoint_type")) == "detector"
+            for row in inventory_rows
+            if clean_text(row.get("id")) == entry["id"]
+        )
+    ]
+
     return {
         "modality_labels": (_display_labels(canonical_instrument_dto.get("modalities")) or _display_labels((canonical_instrument_dto.get("capabilities") or {}).get("imaging_modes"))),
         "route_labels": route_labels,
+        "route_ids": [
+            clean_text(route.get("id"))
+            for route in route_rows
+            if isinstance(route, dict) and clean_text(route.get("id"))
+        ],
         "installed_objective_labels": _display_labels(
             hardware.get("objectives"),
             installed_only=True,
         ),
-        "light_source_labels": _display_labels(
-            hardware.get("sources") or hardware.get("light_sources")
+        "light_source_labels": (
+            [entry["display_label"] for entry in light_sources]
+            or _display_labels(hardware.get("sources") or hardware.get("light_sources"))
         ),
-        "detector_labels": _display_labels(hardware.get("detectors")),
+        "light_sources": light_sources,
+        "detector_labels": (
+            [entry["display_label"] for entry in detectors]
+            or _display_labels(hardware.get("detectors"))
+        ),
+        "detectors": detectors,
         "supporting_feature_labels": sorted(dict.fromkeys(supporting_features)),
         "planning_caveat_labels": caveat_titles[:8],
-        "status": copy.deepcopy(status or {}),
+        "status": _status_with_evidence(status or {}),
+        "screening_scope_note": (
+            "Screening labels only. They are not bound to a route: use "
+            "llm_context.authoritative_route_contract.route_hardware_usage to "
+            "decide what a route actually uses."
+        ),
     }
 
 
@@ -342,8 +549,16 @@ def _build_route_planning_summary(
                     "selected_or_selectable_branch_selectors": branch_selectors,
                     "selected_or_selectable_endpoints": endpoints,
                     "selected_or_selectable_modulators": modulators,
-                    "highly_relevant_installed_objectives": copy.deepcopy(
+                    # Objectives are authored on the instrument, not the route,
+                    # so this is the same installed list on every route. The
+                    # previous key name ("highly_relevant_installed_objectives")
+                    # asserted a route relevance the records do not establish.
+                    "instrument_installed_objectives": copy.deepcopy(
                         installed_objectives
+                    ),
+                    "objective_scope_note": (
+                        "Recorded per instrument, not per route. This export does "
+                        "not establish that an objective is usable on this route."
                     ),
                 },
                 "route_specific_vs_generic": {
@@ -392,8 +607,15 @@ def _build_route_planning_summary(
 def build_llm_inventory_payload(
     facility: dict[str, Any],
     instruments: list[dict[str, Any]],
+    route_family_coverage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the LLM-safe experiment-planning inventory export."""
+    """Build the LLM-safe experiment-planning inventory export.
+
+    `route_family_coverage` is the authored `covers` mapping from
+    `vocab/optical_routes.yaml`. It is passed in rather than read here so this
+    module keeps consuming canonical inputs only.
+    """
+    coverage = route_family_coverage if isinstance(route_family_coverage, dict) else {}
     llm_payload: dict[str, Any] = {
         "facility_name": str(
             facility.get("short_name")
@@ -431,8 +653,16 @@ def build_llm_inventory_payload(
                     "When required details are missing, ask follow-up questions or "
                     "clearly state uncertainty."
                 ),
+                (
+                    "Read planning_contract before ranking instruments. It states "
+                    "which lists are complete enumerations, that no booking "
+                    "availability is recorded, and what an instrument status is "
+                    "based on."
+                ),
             ],
         },
+        "planning_contract": _build_planning_contract(),
+        "route_family_coverage": copy.deepcopy(coverage),
         "active_microscopes": [],
     }
 
@@ -516,6 +746,21 @@ def build_llm_inventory_payload(
             status=inst.get("status") if isinstance(inst.get("status"), dict) else {},
         )
 
+        recorded_route_types = [
+            clean_text(
+                ((route.get("route_identity") or {}).get("route_type"))
+                or route.get("route_type")
+                or route.get("id")
+            )
+            for route in (canonical_lightpath_dto.get("light_paths") or [])
+            if isinstance(route, dict)
+        ]
+        llm_record["capability_route_reconciliation"] = _build_capability_route_reconciliation(
+            llm_record.get("capabilities") or {},
+            [route_type for route_type in recorded_route_types if route_type],
+            coverage,
+        )
+
         authoritative_route_contract = copy.deepcopy(
             (((canonical_lightpath_dto.get("projections") or {}).get("llm")) or {}).get(
                 "authoritative_route_contract"
@@ -594,7 +839,11 @@ def build_llm_inventory_payload(
 
 
 __all__ = [
+    "CLOSED_WORLD_FIELDS",
     "build_llm_inventory_payload",
+    "_build_planning_contract",
+    "_build_capability_route_reconciliation",
+    "_status_with_evidence",
     "_build_hardware_focus_summary",
     "_build_route_planning_summary",
 ]
