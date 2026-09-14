@@ -7,7 +7,8 @@ tests pin the boundaries that promise depends on:
 - generated pages address the facility named in configuration, not AIC;
 - a complete site builds from a synthetic second facility's data alone;
 - conditional acknowledgements are bound to recorded instrument IDs rather than
-  to instrument names a frontend has to recognise.
+  to instrument names a frontend has to recognise;
+- deployment and fallback behaviour still honor authored facility configuration.
 
 The synthetic facility lives in `tests/fixtures/example_facility/` and is
 assembled into a temporary directory. It is never part of the production
@@ -20,6 +21,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -37,28 +39,31 @@ from scripts.dashboard.methods_export import (
     build_plan_experiments_page_config,
 )
 from scripts.dashboard.site_render import build_mkdocs_config
+from scripts.objective_pool import build_objective_pool_view, pool_schema
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "example_facility"
 
-# Directories a second facility reuses unchanged. Everything else in the
-# synthetic deployment is authored data.
-SHARED_DIRS = ("scripts", "vocab", "schema", "assets", "templates")
+# Directories a second facility reuses unchanged. Facility-specific images are
+# deliberately excluded; _assemble_example_facility reuses only generic asset
+# subtrees and generic glyphs.
+SHARED_DIRS = ("scripts", "vocab", "schema", "templates")
 
 # Tokens that identify the AIC deployment specifically, as opposed to generic
 # microscopy or dashboard terminology.
 FACILITY_IDENTITY_TOKENS = ("aic", "turku", "bioscience", "bioimaging", "biocentre")
 
 # Deliberate uses of the `aic` string that are private identifier namespaces
-# rather than facility identity: CSS class names and custom properties, `data-`
-# attributes, DOM element IDs, the browser storage key the Virtual Microscope
-# and Methods generator share, and a console log prefix. Renaming these would
-# invalidate stored configurations and restyle every page for no portability
-# gain, so they are scrubbed before a line is judged.
+# rather than facility identity. Keep the exceptions narrow: notably,
+# "AIC-Turku" must still be detected as a facility identity rather than being
+# swallowed by the generic aic-* CSS exception.
 PRIVATE_AIC_NAMESPACE = re.compile(
-    r"\[AIC\]|\baic[-._]?[A-Za-z][A-Za-z0-9_-]*",
-    re.IGNORECASE,
+    r"(?i:\[AIC\]|--aic-[A-Za-z0-9_-]+|data-aic-[A-Za-z0-9_-]+|"
+    r"\baic-(?!turku\b)[A-Za-z][A-Za-z0-9_-]*|"
+    r"\baic\.[A-Za-z][A-Za-z0-9_.-]*)"
+    r"|\baic[A-Z][A-Za-z0-9_-]*"
+    r"|__aic[A-Z][A-Za-z0-9_-]*"
 )
 
 _IDENTITY_TOKEN = re.compile(
@@ -68,7 +73,7 @@ _IDENTITY_TOKEN = re.compile(
 
 
 def _identity_leaks(text: str) -> list[str]:
-    """Lines naming the AIC deployment, ignoring the private `aic` namespaces."""
+    """Lines naming the AIC deployment, ignoring only private `aic` namespaces."""
     leaks = []
     for line in text.splitlines():
         if _IDENTITY_TOKEN.search(PRIVATE_AIC_NAMESPACE.sub("", line)):
@@ -85,6 +90,7 @@ class IdentityLeakDetectorTests(unittest.TestCase):
             "microscopes available at AIC.",
             "Imaging was performed in Turku.",
             "Turku Bioscience Centre",
+            "https://github.com/AIC-Turku/AIC-Turku-database",
         ):
             with self.subTest(line=line):
                 self.assertEqual(_identity_leaks(line), [line])
@@ -118,6 +124,18 @@ class FacilityShortNameTests(unittest.TestCase):
             "Example Imaging Facility",
         )
 
+    def test_loader_does_not_mask_full_name_with_default_short_name(self) -> None:
+        """Exercise the real facility.yaml merge, not only the resolver in isolation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "facility.yaml").write_text(
+                "facility:\n  full_name: Example Imaging Facility\n",
+                encoding="utf-8",
+            )
+            facility = load_facility_config(root)["facility"]
+        self.assertEqual(facility_short_name(facility), "Example Imaging Facility")
+        self.assertEqual(facility["short_name"], "")
+
     def test_blank_or_absent_configuration_yields_a_neutral_name(self) -> None:
         for facility in ({}, {"short_name": "   "}, {"short_name": None}):
             with self.subTest(facility=facility):
@@ -125,6 +143,19 @@ class FacilityShortNameTests(unittest.TestCase):
 
     def test_default_name_is_not_aic(self) -> None:
         self.assertEqual(_identity_leaks(DEFAULT_FACILITY_SHORT_NAME), [])
+
+    def test_objective_enquiry_uses_full_name_fallback(self) -> None:
+        pool = yaml.safe_load(
+            (FIXTURE_ROOT / "inventory" / "objective_pool.yaml").read_text(encoding="utf-8")
+        )
+        view = build_objective_pool_view(
+            pool,
+            pool_schema(REPO_ROOT),
+            {"full_name": "Example Imaging Facility"},
+        )
+        self.assertTrue(view["items"])
+        for item in view["items"]:
+            self.assertTrue(item["enquiry"].startswith("Hi Example Imaging Facility team,"))
 
 
 class TemplateIdentityTests(unittest.TestCase):
@@ -179,6 +210,13 @@ class MkdocsConfigTests(unittest.TestCase):
         self.assertEqual(config["theme"]["logo"], "assets/images/example-logo.svg")
         self.assertEqual(config["theme"]["favicon"], "assets/images/example-favicon.svg")
         self.assertEqual(_identity_leaks(yaml.safe_dump(config)), [])
+
+    def test_deploy_workflow_does_not_override_configured_site_url(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy-dashboard.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("MKDOCS_SITE_URL", workflow)
+        self.assertIn("steps.deployment.outputs.page_url", workflow)
 
 
 class AcknowledgementConfigTests(unittest.TestCase):
@@ -264,6 +302,21 @@ def _assemble_example_facility(root: Path) -> None:
     """Lay out a synthetic deployment: shared code plus the fixture's own data."""
     for name in SHARED_DIRS:
         (root / name).symlink_to(REPO_ROOT / name, target_is_directory=True)
+
+    # Runtime/data assets are reusable; production microscope photos are not.
+    assets_root = root / "assets"
+    assets_root.mkdir()
+    for name in ("javascripts", "stylesheets", "data"):
+        source = REPO_ROOT / "assets" / name
+        if source.exists():
+            (assets_root / name).symlink_to(source, target_is_directory=True)
+    images_root = assets_root / "images"
+    images_root.mkdir()
+    for name in ("logo.svg", "favicon.svg", "placeholder.svg"):
+        source = REPO_ROOT / "assets" / "images" / name
+        if source.exists():
+            (images_root / name).symlink_to(source)
+
     for name in ("facility.yaml", "instruments", "inventory"):
         source = FIXTURE_ROOT / name
         if source.is_dir():
@@ -312,14 +365,29 @@ def test_second_facility_builds_every_public_tool(example_facility_site: Path) -
         assert (docs / page).is_file(), f"{page} was not generated for the second facility"
 
 
+def test_second_facility_does_not_inherit_production_instrument_photos(
+    example_facility_site: Path,
+) -> None:
+    source_images = example_facility_site / "assets" / "images"
+    assert not any(path.name.startswith("scope-") for path in source_images.iterdir())
+    for instrument_id in ("scope-example-confocal", "scope-example-widefield-one"):
+        page = (
+            example_facility_site
+            / "dashboard_docs"
+            / "instruments"
+            / instrument_id
+            / "index.md"
+        ).read_text(encoding="utf-8")
+        assert "placeholder.svg" in page
+
+
 def test_second_facility_site_never_names_aic(example_facility_site: Path) -> None:
     """No generated page tells an Example Imaging visitor to contact AIC staff."""
     docs = example_facility_site / "dashboard_docs"
     offenders: dict[str, list[str]] = {}
+    text_suffixes = {".md", ".html", ".json", ".js", ".css", ".svg", ".yml", ".yaml"}
     for path in sorted(docs.rglob("*")):
-        # `assets/` is copied verbatim from the shared project; its own identity
-        # is covered by TemplateIdentityTests.
-        if not path.is_file() or "assets" in path.relative_to(docs).parts:
+        if not path.is_file() or path.suffix.lower() not in text_suffixes:
             continue
         leaks = _identity_leaks(path.read_text(encoding="utf-8", errors="replace"))
         if leaks:
