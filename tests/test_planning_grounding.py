@@ -33,13 +33,9 @@ RESPONSE_DIR = Path(__file__).resolve().parent / "fixtures" / "planning_response
 
 
 @pytest.fixture(scope="module", autouse=True)
-def _generated_inventory() -> None:
-    subprocess.run(
-        [sys.executable, "-m", "scripts.dashboard_builder", "--strict"],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-    )
+def _generated_inventory(generated_dashboard: Path) -> None:
+    """Declare this module's dependency on the shared generated inventory."""
+    assert generated_dashboard == REPO_ROOT / "dashboard_docs"
 
 
 def _inventory() -> dict:

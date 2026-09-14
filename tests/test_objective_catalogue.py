@@ -30,8 +30,14 @@ def inputs():
     return copy.deepcopy(pool), copy.deepcopy(instruments), vocab, copy.deepcopy(facility)
 
 
-def catalogue():
+@lru_cache(maxsize=1)
+def _catalogue():
     return build_objective_catalogue_view(*inputs())
+
+
+def catalogue():
+    """Return an isolated copy of the shared, immutable production view."""
+    return copy.deepcopy(_catalogue())
 
 
 def render_catalogue(view=None):
