@@ -183,7 +183,10 @@ class LlmPlanningRedTeamTests(unittest.TestCase):
             "unknown_unless_explicitly_linked_in_authoritative_route_facts",
         )
         microscope = payload["active_microscopes"][0]
-        self.assertIn("not booking availability", microscope["hardware_focus_summary"]["status_scope_note"])
+        self.assertIn(
+            "does not encode booking availability",
+            microscope["hardware_focus_summary"]["status_scope_note"],
+        )
         planning_routes = microscope["llm_context"]["route_planning_summary"]["routes"]
         route_a = next(route for route in planning_routes if route["route_id"] == "route-a")
         self.assertNotIn("highly_relevant_installed_objectives", route_a["planning_optics"])
