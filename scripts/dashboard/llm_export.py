@@ -216,13 +216,19 @@ def _collect_known_missing_paths(value: Any, prefix: str = "") -> tuple[list[str
 
 
 def _display_labels(rows: Any, *, installed_only: bool = False) -> list[str]:
-    """Extract stable display labels from canonical row dictionaries."""
+    """Extract stable labels from canonical string or row-list fields."""
     labels: list[str] = []
 
     if not isinstance(rows, list):
         return labels
 
     for row in rows:
+        if isinstance(row, str):
+            label = clean_text(row)
+            if label:
+                labels.append(label)
+            continue
+
         if not isinstance(row, dict):
             continue
 
@@ -283,7 +289,15 @@ def _build_hardware_focus_summary(
         if isinstance(hardware.get("environment"), dict)
         else {}
     )
-    if environment.get("present"):
+    if environment.get("present") or any(
+        environment.get(key) is True
+        for key in (
+            "temperature_control",
+            "co2_control",
+            "humidity_control",
+            "oxygen_control",
+        )
+    ):
         supporting_features.append("environmental control")
 
     hardware_autofocus = (
@@ -291,7 +305,7 @@ def _build_hardware_focus_summary(
         if isinstance(hardware.get("hardware_autofocus"), dict)
         else {}
     )
-    if hardware_autofocus.get("present"):
+    if hardware_autofocus.get("present") or hardware_autofocus.get("is_installed") is True:
         supporting_features.append("hardware autofocus")
 
     triggering = (
@@ -299,7 +313,7 @@ def _build_hardware_focus_summary(
         if isinstance(hardware.get("triggering"), dict)
         else {}
     )
-    if triggering.get("present"):
+    if triggering.get("present") or clean_text(triggering.get("primary_mode")):
         supporting_features.append("hardware triggering")
 
     if _display_labels(hardware.get("optical_modulators")):
@@ -592,8 +606,6 @@ def _build_route_planning_summary(
                         "this route. Their presence does not establish route compatibility."
                     ),
                 },
-                # The same limits the surrounding prose states, as values a
-                # planner can act on without parsing English.
                 "claim_boundaries": {
                     "route_component_ids": route_component_ids_by_route.get(
                         clean_text(route.get("id")), []
