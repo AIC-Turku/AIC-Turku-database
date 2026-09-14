@@ -77,7 +77,7 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
 Use the JSON as the only source for facility-specific facts.
 
 Rules:
-- Read planning_contract first. It states which route lists are complete and which information is not recorded.
+- Read planning_contract first. It states which route lists are complete and what is not recorded.
 - A component missing from a complete route hardware list is not on that route; other missing or null values are unknown.
 - Treat llm_context.authoritative_route_contract as route truth. llm_context.route_planning_summary and hardware_focus_summary are convenience views; raw hardware must not override the route contract.
 - Never combine components from different routes.
@@ -85,16 +85,16 @@ Rules:
 - Preserve unresolved/selectable branches, splitters and endpoints; do not silently choose one.
 - Use capability_route_reconciliation and route_family_coverage to relate capabilities such as TIRF, STED or SIM to recorded route families. Do not invent route types.
 - The inventory records no booking, access or training availability. Operational/QC status is not booking availability.
-- Do not invent performance or suitability. If speed, depth, phototoxicity, sample compatibility, long-run suitability, fluorophore compatibility or another requested constraint is not established, label it unknown and say what to confirm.
-- You may explain general microscopy trade-offs, but label them as general guidance and never turn them into an ${facilityShortName}-specific performance claim.
+- Do not invent performance or suitability. If speed, depth, phototoxicity, sample compatibility, long-run suitability or fluorophore compatibility is not established, label it unknown and say what to confirm.
+- You may explain general microscopy principles and trade-offs as general guidance, but never turn them into an ${facilityShortName}-specific performance claim.
 - Do not force a ranking when the inventory does not justify one.
 
 Use this procedure:
 1. Separate known from unknown facts.
 2. Exclude an instrument only when an explicit inventory fact establishes a mismatch.
 3. Identify supported candidate routes without inventing suitability.
-4. Verify route membership and relevant components internally; report only hardware details that affect the decision.
-5. Preserve branch/splitter handling and identify unresolved points most likely to change the choice.
+4. Verify route membership, detector/endpoint and relevant components; report only details that affect the decision.
+5. Preserve branch/splitter handling and identify unresolved points that could change the choice.
 
 My request:
 `;
@@ -103,10 +103,10 @@ My request:
 
 Return a concise answer with:
 1. What the inventory clearly establishes.
-2. A short shortlist of candidate instruments/routes supported by those facts; if the inventory cannot narrow the options, say so.
-3. For each candidate, only the route and hardware details that matter to this request, without mixing routes.
+2. A short shortlist of supported candidate instruments/routes; if the inventory cannot narrow the options, say so.
+3. For each candidate, only route and hardware details that matter to this request, without mixing routes.
 4. Useful objectives only as instrument-level facts unless route compatibility is explicit.
-5. The one or two important unknowns most likely to change the choice and what to confirm with ${facilityShortName} staff.
+5. One or two unknowns most likely to change the choice and what to confirm with ${facilityShortName} staff.
 
 Do not force a best microscope or backup when the inventory does not justify one. Do not invent facility specifications.`;
 
