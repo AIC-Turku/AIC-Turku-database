@@ -392,10 +392,14 @@ class ContractInvariantTests(unittest.TestCase):
         )
         microscope = payload["active_microscopes"][0]
         self.assertEqual(microscope["llm_context"]["authoritative_route_contract"]["routes"][0]["id"], "confocal")
-        planning = microscope["llm_context"]["route_planning_summary"]["routes"][0]
+        planning_summary = microscope["llm_context"]["route_planning_summary"]
+        self.assertEqual(planning_summary["contract_version"], "route_planning_summary.v2")
+        planning = planning_summary["routes"][0]
         self.assertEqual(planning["route_specific_vs_generic"]["route_specific_facts_source"], "route_optical_facts")
         self.assertIn("actionable_note", planning["known_vs_unknown"])
         self.assertIn("missing_categories", planning["known_vs_unknown"])
+        self.assertIn("instrument_level_context", planning)
+        self.assertNotIn("instrument_installed_objectives", planning["planning_optics"])
 
     def test_example_instruments_for_route_truth_regression_suite_exist(self) -> None:
         for instrument_path in EXAMPLE_INSTRUMENTS:
@@ -560,7 +564,6 @@ class ContractInvariantTests(unittest.TestCase):
         fn_body = app_source[fn_start:fn_start + 3000]
         self.assertIn("selected_route_steps:", fn_body)
         # Must not have a standalone 'route_steps:' key (not preceded by 'selected_')
-        import re
         bare_route_steps = re.findall(r'(?<!selected_)route_steps:', fn_body)
         self.assertEqual(
             bare_route_steps, [],
@@ -750,21 +753,17 @@ class ContractInvariantTests(unittest.TestCase):
 
         self.assertIn("llm_context.authoritative_route_contract", rendered)
         self.assertIn("llm_context.route_planning_summary", rendered)
-        self.assertIn("required procedure in order", rendered)
-        # The first procedure step used to read "Eliminate unavailable or
-        # incompatible instruments first". The export records no booking, access
-        # or training availability, so that asked the assistant for a judgement
-        # nothing in the data supports. The step now turns on recorded routes,
-        # and the availability gap is stated instead of being ranked on.
-        self.assertIn("Exclude instruments whose recorded routes cannot support the experiment", rendered)
+        self.assertIn("Use this procedure:", rendered)
+        self.assertIn("Exclude an instrument only when an explicit inventory fact establishes a mismatch", rendered)
         self.assertNotIn("Eliminate unavailable or incompatible instruments first", rendered)
         self.assertIn("records no booking, access or training availability", rendered)
-        self.assertIn("Choose one best route on the top instrument and one backup route/instrument", rendered)
-        self.assertIn("raw hardware lists are secondary context and must not override route contract truth", rendered.lower())
-        self.assertIn("known vs unknown facts", rendered)
-        self.assertIn("selected route", rendered)
+        self.assertNotIn("Choose one best route on the top instrument and one backup route/instrument", rendered)
+        self.assertNotIn("legacy instruction", rendered.lower())
+        self.assertIn("raw hardware must not override the route contract", rendered.lower())
+        self.assertIn("known from unknown facts", rendered)
+        self.assertIn("candidate routes", rendered)
         self.assertIn("detector/endpoint", rendered)
-        self.assertIn("objective(s)", rendered)
+        self.assertIn("objectives", rendered)
         self.assertIn("branch/splitter handling", rendered)
         self.assertNotIn("Using the \\`hardware.light_path\\` topological data", rendered)
         self.assertNotIn("\\`excitation_mechanisms\\`", rendered)
