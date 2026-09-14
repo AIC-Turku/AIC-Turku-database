@@ -280,7 +280,10 @@ class GeneratedPromptTests(unittest.TestCase):
     def test_prompt_does_not_force_best_or_backup(self) -> None:
         prompt = self._prompt().lower()
         self.assertNotIn("the best-fit microscope and one backup", prompt)
-        self.assertNotIn("choose one best route on the top instrument", prompt)
+        self.assertIn(
+            'do not follow the legacy instruction "choose one best route on the top instrument and one backup route/instrument"',
+            prompt,
+        )
         self.assertIn("do not force a best microscope or backup", prompt)
 
     def test_prompt_does_not_claim_availability(self) -> None:
