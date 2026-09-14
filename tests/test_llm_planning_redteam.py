@@ -167,7 +167,14 @@ class LlmPlanningRedTeamTests(unittest.TestCase):
         ]
         for phrase in required_phrases:
             self.assertIn(phrase, source)
-        self.assertNotIn("Choose one best route on the top instrument", source)
+        self.assertIn(
+            'Do not follow the legacy instruction "Choose one best route on the top instrument and one backup route/instrument"',
+            source,
+        )
+        self.assertIn(
+            'Do not follow the legacy instruction "Eliminate unavailable or incompatible instruments first"',
+            source,
+        )
         self.assertNotIn("The best-fit microscope and one backup", source)
         self.assertNotIn("Exclude unavailable or incompatible microscopes", source)
 
