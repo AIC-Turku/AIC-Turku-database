@@ -7,7 +7,7 @@ hide:
 
 # Objectives
 
-Use this catalogue to compare objectives recorded on AIC microscopes and in the spare pool. Filter by microscope, immersion, condition, or availability. If you are considering a spare or non-installed objective, AIC staff can help check compatibility and arrange installation.
+Use this catalogue to compare objectives recorded on {{ facility_short_name }} microscopes and in the spare pool. Filter by microscope, immersion, condition, or availability. If you are considering a spare or non-installed objective, {{ facility_short_name }} staff can help check compatibility and arrange installation.
 
 <div id="objective-pool">
   <div class="pool-notice">
@@ -15,7 +15,7 @@ Use this catalogue to compare objectives recorded on AIC microscopes and in the 
     An objective can be listed without being installed or currently available. Installation status comes from the microscope record and is not a live check. Spare-pool entries are not installed microscope configurations. Staff must confirm compatibility before an objective is moved or installed; a matching manufacturer or thread alone is not enough.
   </div>
   <p><strong>{{ pool.current_count }} current source records</strong>: {{ pool.instrument_count }} associated with active microscopes and {{ pool.spare_count }} in the spare pool (including calibration items). {{ pool.historical_count }} historical records can be included below. These are source records, not counts of physical lenses. <strong>{{ pool.problem_count }} spare-pool records have reported problems.</strong></p>
-  <p>{% if staff_url %}<a href="{{ staff_url }}">Contact AIC staff</a> &middot; {% endif %}<a href="../assets/objectives.json" download>Download catalogue (JSON)</a> &middot; <a href="../assets/objective_pool.json" download>Spare-pool data only</a></p>
+  <p>{% if staff_url %}<a href="{{ staff_url }}">Contact {{ facility_short_name }} staff</a> &middot; {% endif %}<a href="../assets/objectives.json" download>Download catalogue (JSON)</a> &middot; <a href="../assets/objective_pool.json" download>Spare-pool data only</a></p>
 
   <div id="pool-controls" class="pool-controls" hidden>
     <div class="pool-search"><label for="pool-search">Search objectives</label><input id="pool-search" type="search" placeholder="Try 63x water, 506170 or a microscope name" aria-controls="pool-items"></div>

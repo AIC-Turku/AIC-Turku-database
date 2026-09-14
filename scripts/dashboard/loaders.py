@@ -55,7 +55,7 @@ def load_facility_config(repo_root: Path) -> dict[str, Any]:
             "organization_url": "#",
             "acknowledgements": {
                 "standard": "",
-                "xcelligence_addition": "",
+                "additional": [],
             },
         },
         "branding": {
@@ -81,7 +81,42 @@ def load_facility_config(repo_root: Path) -> dict[str, Any]:
                 merged[key] = value
         return merged
 
-    return merged_dict(default_config, loaded)
+    merged = merged_dict(default_config, loaded)
+
+    # Identity fallbacks must reflect what the deploying facility actually
+    # authored. If a facility.yaml supplies only full_name, retaining the
+    # default short_name here would make the later short_name -> full_name
+    # fallback unreachable and the public site would call itself "Core Imaging
+    # Facility". Keep neutral defaults for a completely missing config, but do
+    # not inject one identity field when the facility mapping exists and omitted
+    # it intentionally.
+    authored_facility = loaded.get("facility")
+    merged_facility = merged.get("facility")
+    if isinstance(authored_facility, dict) and isinstance(merged_facility, dict):
+        for identity_key in ("short_name", "full_name"):
+            if identity_key not in authored_facility:
+                merged_facility[identity_key] = ""
+
+    return merged
+
+
+DEFAULT_FACILITY_SHORT_NAME = "Core Imaging Facility"
+
+
+def facility_short_name(facility: dict[str, Any]) -> str:
+    """The facility's own name as it appears in page copy addressed to visitors.
+
+    Public pages tell readers who to ask about access, training, and missing
+    metadata. That name is facility identity, so it is authored in
+    `facility.yaml` rather than written into templates. `full_name` is the
+    fallback because a deployment that sets only one of the two still has a
+    name to show.
+    """
+    for key in ("short_name", "full_name"):
+        value = facility.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return DEFAULT_FACILITY_SHORT_NAME
 
 
 class NonPublicInstrumentConfigError(ValueError):
@@ -543,6 +578,8 @@ def _event_output_instrument(payload: dict[str, Any], fallback_instrument: str) 
 __all__ = [
     "YamlLoadError",
     "load_facility_config",
+    "facility_short_name",
+    "DEFAULT_FACILITY_SHORT_NAME",
     "load_vocabularies",
     "_iter_yaml_files",
     "_load_yaml_file",

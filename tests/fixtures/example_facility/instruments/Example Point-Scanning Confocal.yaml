@@ -1,0 +1,116 @@
+instrument:
+  display_name: Example Point-Scanning Confocal
+  instrument_id: scope-example-confocal
+  manufacturer: Example Optics
+  model: EC-2
+  year_of_purchase: '2025'
+  funding: Example Research Infrastructure Programme
+  stand_orientation: inverted
+  ocular_availability: binocular
+  location: Example Building, Room 102
+  notes: Synthetic record used to test reuse of this project by another facility.
+  url: ''
+capabilities:
+  imaging_modes:
+  - confocal_point
+  contrast_methods: []
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical: []
+modules: []
+software:
+- role: acquisition
+  name: Example Confocal Suite
+  version: '2.1'
+  notes: ''
+  url: ''
+hardware:
+  scanner:
+    type: galvo
+    notes: ''
+    url: ''
+  detectors:
+  - kind: pmt
+    manufacturer: Example Optics
+    model: EX-PMT
+    notes: ''
+    url: ''
+    id: example_pmt
+  objectives:
+  - id: 40x_water
+    manufacturer: Example Optics
+    model: Example Plan Apo 40x/1.10 W
+    product_code: EX-40X-110W
+    magnification: 40.0
+    numerical_aperture: 1.1
+    working_distance: 0.65 mm
+    immersion: water
+    correction: plan_apochromat
+    afc_compatible: false
+    specialties: []
+    notes: ''
+    url: ''
+    is_installed: true
+  sources:
+  - kind: laser
+    manufacturer: Example Optics
+    model: EX-Laser 488
+    wavelength_nm: 488
+    notes: ''
+    id: example_laser_488
+  - kind: laser
+    manufacturer: Example Optics
+    model: EX-Laser 561
+    wavelength_nm: 561
+    notes: ''
+    id: example_laser_561
+  optical_path_elements:
+  - name: Main Beamsplitter
+    stage_role: dichroic
+    id: example_main_beamsplitter
+    element_type: fixed
+    notes: ''
+    positions:
+      Pos_1:
+        name: MBS 488/561
+        component_type: dichroic
+        product_code: EX-MBS-488-561
+        notes: ''
+        reflection_bands:
+        - center_nm: 488
+          width_nm: 10
+        - center_nm: 561
+          width_nm: 10
+  - name: Emission Filter Wheel
+    stage_role: emission
+    id: example_emission_wheel
+    element_type: filter_wheel
+    notes: ''
+    positions:
+      Pos_1:
+        name: Green
+        component_type: bandpass
+        product_code: EX-EM-525-50
+        center_nm: 525
+        width_nm: 50
+        notes: ''
+      Pos_2:
+        name: Red
+        component_type: bandpass
+        product_code: EX-EM-600-50
+        center_nm: 600
+        width_nm: 50
+        notes: ''
+  endpoints: []
+light_paths:
+- id: confocal_point
+  illumination_sequence:
+  - source_id: example_laser_488
+  - source_id: example_laser_561
+  - optical_path_element_id: example_main_beamsplitter
+  detection_sequence:
+  - optical_path_element_id: example_main_beamsplitter
+  - optical_path_element_id: example_emission_wheel
+  - endpoint_id: example_pmt
+  route_type: confocal_point

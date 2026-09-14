@@ -13,7 +13,12 @@ facility:
   non_public_instrument_ids: [scope-testx1]
   acknowledgements:
     standard: "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577."
-    xcelligence_addition: "Testament funds from Henna Ruusunen also supported this work."
+    # Added to a draft only when one of the listed instruments was used. The
+    # binding is by recorded instrument ID, so renaming a record cannot detach
+    # its acknowledgement and an unknown ID fails the build.
+    additional:
+      - text: "Testament funds from Henna Ruusunen also supported this work."
+        instrument_ids: [scope-agilent-rtca-esight]
 branding:
   logo: "assets/images/logo.svg"
   favicon: "assets/images/favicon.svg"

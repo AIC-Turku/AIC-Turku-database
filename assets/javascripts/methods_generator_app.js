@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let pageConfig = {
         acknowledgements: {
             standard: "",
-            xcelligence_addition: "",
+            additional: [],
         },
         output_title: "Light Microscopy Methods",
     };
@@ -17,7 +17,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const acknowledgements = pageConfig?.acknowledgements || {};
     const ackStandard = String(acknowledgements.standard || "");
-    const ackXcelligence = String(acknowledgements.xcelligence_addition || "");
+    // Conditional acknowledgements are bound to recorded instrument IDs by
+    // facility.yaml. The frontend never decides which instrument a credit
+    // belongs to by reading its name.
+    const ackAdditional = (Array.isArray(acknowledgements.additional) ? acknowledgements.additional : [])
+        .map(entry => ({
+            text: String(entry?.text || ""),
+            instrumentIds: new Set(
+                (Array.isArray(entry?.instrument_ids) ? entry.instrument_ids : []).map(value => String(value)),
+            ),
+        }))
+        .filter(entry => entry.text && entry.instrumentIds.size);
     const outputTitle = String(pageConfig?.output_title || "Light Microscopy Methods");
     const instrumentDataUrl = String(pageConfig?.instrument_data_url || "../assets/instruments_data.json");
 
@@ -743,11 +753,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     }
 
-    function instrumentTriggersXcelligence(nameOrId) {
-        const normalized = cleanText(nameOrId).toLowerCase();
-        return ["xcelligence", "rtca esight"].some(token => normalized.includes(token));
-    }
-
     function updateOutputText() {
         if (accumulatedEntries.size === 0) {
             outputText.value = 'Select an instrument, then choose “Add to methods”.';
@@ -757,11 +762,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const blocks = Array.from(accumulatedEntries.values()).map(entry => entry.text).filter(Boolean);
         let finalOutput = `${outputTitle}:\n\n${blocks.join("\n\n")}`;
 
-        const acknowledgementParts = [ackStandard];
-        const usedXcell = Array.from(usedInstruments.entries()).some(([instrumentId, displayName]) => {
-            return instrumentTriggersXcelligence(instrumentId) || instrumentTriggersXcelligence(displayName);
-        });
-        if (usedXcell) acknowledgementParts.push(ackXcelligence);
+        const usedInstrumentIds = new Set(Array.from(usedInstruments.keys()).map(value => String(value)));
+        const acknowledgementParts = [
+            ackStandard,
+            ...ackAdditional
+                .filter(entry => Array.from(entry.instrumentIds).some(id => usedInstrumentIds.has(id)))
+                .map(entry => entry.text),
+        ];
 
         const filteredAcknowledgements = acknowledgementParts.map(cleanText).filter(Boolean);
         if (filteredAcknowledgements.length) {

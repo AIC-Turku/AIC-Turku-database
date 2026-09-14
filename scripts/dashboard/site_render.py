@@ -59,6 +59,7 @@ from scripts.dashboard.loaders import (
     _print_agent_fix_prompt,
     _print_yaml_error_report,
     evaluate_instrument_status,
+    facility_short_name,
     get_all_instrument_logs,
     index_instrument_logs,
     load_facility_config,
@@ -68,6 +69,7 @@ from scripts.dashboard.loaders import (
     validated_instrument_selection,
 )
 from scripts.dashboard.methods_export import (
+    AcknowledgementConfigError,
     build_methods_generator_instrument_export,
     build_methods_generator_page_config,
     build_plan_experiments_page_config,
@@ -328,7 +330,7 @@ def _markdown_table_cell(value: Any) -> str:
 def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
     """Render canonical sources once, grouped by authoring task."""
     lines = [
-        "---", "title: Vocabulary dictionary", "description: Controlled terminology used in the AIC database.", "---", "",
+        "---", "title: Vocabulary dictionary", "description: Controlled terminology used in this instrument database.", "---", "",
         "# 📖 Vocabulary dictionary\n",
         "Use the **Canonical ID** when authoring controlled fields. **Synonyms** are rewrite-safe lexical aliases. **Classified values** are more specific scientific descriptions that map to a broader category but are preserved verbatim and never automatically rewritten.\n",
     ]
@@ -495,6 +497,7 @@ def render_site(
     facility_cfg = load_facility_config(repo_root)
     facility = facility_cfg.get("facility", {}) if isinstance(facility_cfg.get("facility"), dict) else {}
     branding = facility_cfg.get("branding", {}) if isinstance(facility_cfg.get("branding"), dict) else {}
+    facility_name = facility_short_name(facility)
     docs_root = repo_root / "dashboard_docs"
 
     # Fail before replacing generated pages; do not publish a partial pool.
@@ -571,6 +574,10 @@ def render_site(
 
     templates_dir = Path(__file__).resolve().parents[1] / "templates"
     jinja_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
+    # Page copy addressed to visitors names the facility they are visiting. That
+    # name is configuration, so every template reads the same resolved value
+    # instead of each one restating a deployment's identity.
+    jinja_env.globals["facility_short_name"] = facility_name
 
     tpl_index = jinja_env.get_template("index.md.j2")
     tpl_status = jinja_env.get_template("status.md.j2")
@@ -789,7 +796,9 @@ def render_site(
             event_dir.mkdir(parents=True, exist_ok=True)
             (event_dir / f"{event_id}.md").write_text(event_md, encoding="utf-8")
 
-    pool_template = Environment(loader=FileSystemLoader(templates_dir), autoescape=True).get_template("objective_pool.html.j2")
+    pool_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=True)
+    pool_env.globals["facility_short_name"] = facility_name
+    pool_template = pool_env.get_template("objective_pool.html.j2")
     (docs_root / "objective_pool.md").write_text(
         pool_template.render(pool=catalogue, staff_url=staff_contact_url(facility)), encoding="utf-8")
     (docs_root / "assets" / "objective_pool.json").write_text(
@@ -836,7 +845,17 @@ def render_site(
     llm_payload = build_llm_inventory_payload(facility, llm_records)
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
-    methods_page_config = build_methods_generator_page_config(facility, repo_root)
+    try:
+        methods_page_config = build_methods_generator_page_config(
+            facility,
+            repo_root,
+            known_instrument_ids={
+                inst["id"] for inst in [*instruments, *retired_instruments]
+            },
+        )
+    except AcknowledgementConfigError as error:
+        print(f"Facility acknowledgement configuration failed: {error}")
+        return 1
     methods_md = tpl_methods.render(
         methods_generator_config_json=json_script_data(methods_page_config),
     )

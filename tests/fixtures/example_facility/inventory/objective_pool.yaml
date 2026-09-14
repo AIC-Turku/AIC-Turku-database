@@ -1,0 +1,31 @@
+schema_version: 1
+source:
+  file_name: ExampleObjectiveSpares.docx
+  sha256: '0000000000000000000000000000000000000000000000000000000000000000'
+  compiled_by: Example Facility Manager
+  date_text: '2026-01-05'
+  date_iso: '2026-01-05'
+  working_distance_unit: mm
+families:
+- id: example
+  label: Example Optics
+  mount_text: Thread M25
+  source_heading: "Example Optics\tThread M25"
+items:
+- id: pool-example-obj-20x
+  family_id: example
+  kind: objective
+  name: Example Plan Apo 20x/0.75
+  product_code: EX-20X-075
+  magnification: 20.0
+  numerical_aperture_text: '0.75'
+  immersion: dry
+  working_distance_text: '0.6'
+  condition: not_assessed
+  condition_note: null
+  availability: unconfirmed
+  location: Example spare cabinet
+  quantity: 1
+  inspection: null
+  source_page: 1
+  source_text: "Example Plan Apo 20x/0.75 EX-20X-075"
