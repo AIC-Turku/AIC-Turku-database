@@ -74,44 +74,40 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
 
     const basePromptTop = `You are helping me plan a microscopy experiment using the attached ${facilityShortName} inventory.
 
+Use the JSON as the only source for facility-specific facts.
+
 Rules:
-- Use the attached JSON as the only source for facility hardware, optical routes, and instrument status.
-- Treat missing, null, or unknown values as unknown. Do not infer installed hardware.
-- Recommend only microscopes and components present in the inventory.
-- Exclude unavailable or incompatible microscopes before ranking the remaining options.
-- Use llm_context.authoritative_route_contract.routes[] as the primary source for route truth. Use llm_context.route_planning_summary only as a convenience view of the same data.
-- Raw hardware lists are secondary context and must not override route-contract data.
-- Do not claim an objective, source, filter, detector, or other component is usable on a route unless the inventory supports that connection.
-- If splitters or branch selectors are present, state the branch handling and final endpoint.
-- Separate known facts from unknowns, assumptions, and caveats.
-- If missing metadata could change the recommendation, say what is missing and advise me to confirm it with facility staff.
+- Route truth comes from llm_context.authoritative_route_contract.routes[]. Never build a route by combining hardware from different routes.
+- Raw hardware lists and hardware_focus_summary are instrument-level context only. They do not prove that a component is usable on a particular route.
+- An installed objective is not route-compatible merely because it appears on the same instrument. Claim objective-to-route compatibility only if the route data explicitly establishes it; otherwise mark it unknown.
+- Respect branch selectors and splitters exactly as recorded. If a selector is unresolved/selectable, do not silently choose a position or endpoint.
+- Capability/readout classifications describe recorded semantics; they are not component identities and do not prove that unlisted hardware exists.
+- Treat missing, null, empty, or unrecorded values as unknown, not as false and not as available.
+- Operational/QC status is not booking or access availability. Do not infer availability unless it is explicitly recorded.
+- Do not infer fluorophore compatibility, acquisition speed, imaging depth, phototoxicity, sample compatibility, or long-term environmental suitability from general microscopy knowledge when the inventory does not record the needed facts.
+- If the inventory cannot establish a suitable route, say so. Do not invent a microscope, component, wavelength, objective, detector, route, endpoint, or configuration.
 
-Follow this required procedure in order:
-1. Eliminate unavailable or incompatible instruments first.
-2. Identify candidate routes from the authoritative route contract.
-3. Choose one best route on the top instrument and one backup route/instrument.
-4. Check the selected route, optics, endpoint and relevant objectives against the route data.
-5. Report branch handling for any splitter.
-6. Separate known vs unknown facts.
-
-Raw hardware lists are secondary context and must not override route contract truth.
+Procedure:
+1. Translate my request into requirements, separating explicit requirements from assumptions.
+2. Eliminate only instruments/routes that are definitely impossible from recorded facts.
+3. For each remaining candidate, verify the exact route and endpoint from the authoritative route contract.
+4. Check every claimed component against that same route; keep instrument-level hardware separate.
+5. Report unresolved selectors, missing metadata, and anything needing staff confirmation.
 
 My experiment:
 `;
 
     const basePromptBottom = `
 
-Please return:
-1. The best-fit microscope and one backup, with brief evidence from the inventory.
-2. The selected route and detector/readout for each recommendation, using only explicitly supported route data.
-3. Relevant objective options where the inventory explicitly supports them.
-4. Important trade-offs.
-5. Missing metadata or assumptions that need staff confirmation.
-6. A short acquisition plan and the settings I should record for methods reporting.
+Return a concise answer with:
+1. Recorded requirements and unknowns.
+2. Definitely impossible instruments/routes, with the inventory fact that excludes them.
+3. Supported candidate routes and endpoints. If none can be established, say that clearly.
+4. Components you can claim for each route, without mixing routes.
+5. Instrument-level objective options only when useful, clearly labelled as not route-compatibility evidence unless explicitly linked.
+6. Missing information and staff confirmations needed before booking.
 
-For each option, label the selected route, detector/endpoint, objective(s), and branch/splitter handling.
-
-Keep the answer concise and grounded in the attached inventory. Finish by identifying anything I should confirm with ${facilityShortName} staff before booking.`;
+Do not force a best microscope or backup when the repository does not support that conclusion. Finish with the items I should confirm with ${facilityShortName} staff.`;
 
     function updatePrompt() {
       const userText = inputArea.value.trim();
