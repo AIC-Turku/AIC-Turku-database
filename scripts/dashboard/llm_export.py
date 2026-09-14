@@ -81,11 +81,11 @@ def _build_planning_contract() -> dict[str, Any]:
             ),
         },
         "objective_scope": {
-            "field": "llm_context.route_planning_summary.routes[].planning_optics.instrument_installed_objectives",
+            "field": "llm_context.route_planning_summary.routes[].instrument_level_context.installed_objectives",
             "meaning": (
-                "Objectives are recorded per instrument, not per route. The same "
-                "installed list is repeated for every route. This export does not "
-                "establish that a given objective is usable on a given route."
+                "Objectives are recorded per instrument, not per route. They are "
+                "shown as instrument-level context alongside each route and do not "
+                "establish that a given objective is usable on that route."
             ),
         },
         "capability_vs_route": {
@@ -549,16 +549,12 @@ def _build_route_planning_summary(
                     "selected_or_selectable_branch_selectors": branch_selectors,
                     "selected_or_selectable_endpoints": endpoints,
                     "selected_or_selectable_modulators": modulators,
-                    # Objectives are authored on the instrument, not the route,
-                    # so this is the same installed list on every route. The
-                    # previous key name ("highly_relevant_installed_objectives")
-                    # asserted a route relevance the records do not establish.
-                    "instrument_installed_objectives": copy.deepcopy(
-                        installed_objectives
-                    ),
+                },
+                "instrument_level_context": {
+                    "installed_objectives": copy.deepcopy(installed_objectives),
                     "objective_scope_note": (
-                        "Recorded per instrument, not per route. This export does "
-                        "not establish that an objective is usable on this route."
+                        "These objectives are installed on the instrument, not on "
+                        "this route. Their presence does not establish route compatibility."
                     ),
                 },
                 "route_specific_vs_generic": {
@@ -594,11 +590,12 @@ def _build_route_planning_summary(
         )
 
     return {
-        "contract_version": "route_planning_summary.v1",
+        "contract_version": "route_planning_summary.v2",
         "authoritative_source": "llm_context.authoritative_route_contract.routes",
         "usage_note": (
             "Use this summary for route planning convenience, but treat "
-            "llm_context.authoritative_route_contract as the source of truth."
+            "llm_context.authoritative_route_contract as the source of truth. "
+            "Instrument-level objectives are context only, not route evidence."
         ),
         "routes": route_rows,
     }
