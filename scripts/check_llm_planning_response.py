@@ -64,6 +64,7 @@ def _clean_id(value: Any) -> str:
 
 
 def _collect_ids(value: Any) -> set[str]:
+    """Collect nested IDs for generic inventory membership only."""
     ids: set[str] = set()
     if isinstance(value, dict):
         item_id = _clean_id(value.get("id"))
@@ -75,6 +76,16 @@ def _collect_ids(value: Any) -> set[str]:
         for child in value:
             ids.update(_collect_ids(child))
     return ids
+
+
+def _route_fact_row_ids(value: Any) -> set[str]:
+    """Return only top-level route-fact row IDs, not nested selector positions."""
+    rows = value if isinstance(value, list) else [value]
+    return {
+        _clean_id(row.get("id"))
+        for row in rows
+        if isinstance(row, dict) and _clean_id(row.get("id"))
+    }
 
 
 def build_authoritative_claim_index(inventory: dict[str, Any]) -> dict[str, Any]:
@@ -97,6 +108,7 @@ def build_authoritative_claim_index(inventory: dict[str, Any]) -> dict[str, Any]
         all_hardware_ids.update(generic_hardware_ids)
 
         route_map: dict[str, Any] = {}
+        route_component_locations: dict[str, set[str]] = {}
         contract = (
             ((microscope.get("llm_context") or {}).get("authoritative_route_contract") or {})
             if isinstance(microscope.get("llm_context"), dict)
@@ -114,15 +126,17 @@ def build_authoritative_claim_index(inventory: dict[str, Any]) -> dict[str, Any]
             route_facts = route.get("route_optical_facts") if isinstance(route.get("route_optical_facts"), dict) else {}
             component_ids: set[str] = set()
             for key in ROUTE_FACT_KEYS:
-                component_ids.update(_collect_ids(route_facts.get(key) or []))
+                component_ids.update(_route_fact_row_ids(route_facts.get(key) or []))
             all_route_component_ids.update(component_ids)
+            for component_id in component_ids:
+                route_component_locations.setdefault(component_id, set()).add(route_id)
 
             # Future-proof: objective compatibility is considered proven only if
             # an authoritative route fact explicitly carries an objective relation.
             route_objective_ids: set[str] = set()
             for key, value in route_facts.items():
                 if "objective" in str(key).lower():
-                    route_objective_ids.update(_collect_ids(value))
+                    route_objective_ids.update(_route_fact_row_ids(value))
 
             route_map[route_id] = {
                 "component_ids": component_ids,
@@ -131,6 +145,7 @@ def build_authoritative_claim_index(inventory: dict[str, Any]) -> dict[str, Any]
 
         instruments[instrument_id] = {
             "route_map": route_map,
+            "route_component_locations": route_component_locations,
             "generic_hardware_ids": generic_hardware_ids,
             "objective_ids": objective_ids,
         }
@@ -286,11 +301,13 @@ def audit_response_claims(inventory: dict[str, Any], response_text: str) -> dict
                         "message": f"Route ID {route_id!r} is not authoritative for instrument {instrument_id!r}.",
                     })
                 elif claim_id not in route["component_ids"]:
-                    code = (
-                        "generic_hardware_not_route_evidence"
-                        if claim_id in instrument["generic_hardware_ids"]
-                        else "component_not_on_route"
-                    )
+                    component_routes = instrument["route_component_locations"].get(claim_id, set())
+                    if component_routes:
+                        code = "component_not_on_route"
+                    elif claim_id in instrument["generic_hardware_ids"]:
+                        code = "generic_hardware_not_route_evidence"
+                    else:
+                        code = "component_not_on_route"
                     violations.append({
                         "code": code,
                         "claim_id": claim_id,
