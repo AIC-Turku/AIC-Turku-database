@@ -159,9 +159,10 @@ def build_nav(
 
     # These labels are the public navigation. mkdocs.yml is generated, so they
     # belong here: editing the generated file is reverted by the next build.
-    # Each label matches the heading on the page it opens.
+    # The wording is the facility's own, from commit a14e927; this function
+    # exists to reproduce it, not to re-decide it.
     return [
-        {"Instrument fleet": "index.md"},
+        {"Fleet overview": "index.md"},
         {"Instrument status": "status.md"},
         {"Microscopes": microscopes},
         {"Objectives": "objective_pool.md"},

@@ -41,7 +41,7 @@ extra_javascript:
 - https://cdn.jsdelivr.net/npm/chart.js
 - assets/javascripts/charts.js
 nav:
-- Instrument fleet: index.md
+- Fleet overview: index.md
 - Instrument status: status.md
 - Microscopes:
   - Abberior STED: instruments/scope-1e33f909/index.md

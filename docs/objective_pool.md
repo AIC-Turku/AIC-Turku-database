@@ -39,9 +39,12 @@ As of this source snapshot the page has **135 current records**: 100 on active
 microscopes (90 explicitly installed and 10 explicitly not installed), plus 35 pool
 records including one calibration item. Two retired-SP5 objective records are
 available in the historical view. Counts refer to source records, not physical assets.
-`facility.objective_catalogue.exclude_instrument_ids` explicitly excludes the existing
-synthetic `scope-testx1` fixture; exclusions must be known, unique IDs. No name-based
-synthetic detection or browser-side hardware inference is used.
+`facility.non_public_instrument_ids` explicitly excludes the existing synthetic
+`scope-testx1` fixture. The catalogue honours that site-wide list, so a record
+withheld from the public site cannot reappear here through a second list drifting out
+of sync; `facility.objective_catalogue.exclude_instrument_ids` remains available for
+catalogue-only exclusions. Exclusions from either list must be known, unique IDs. No
+name-based synthetic detection or browser-side hardware inference is used.
 
 ### Adversarial boundaries
 

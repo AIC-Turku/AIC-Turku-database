@@ -7,6 +7,7 @@ that read as broken pages, and ledger identifiers shown where a human label
 exists.
 """
 
+import json
 import re
 import subprocess
 import sys
@@ -91,6 +92,43 @@ class NonPublicInstrumentTests(unittest.TestCase):
         )
         self.assertNotIn("scope-testx1", data)
 
+    def test_one_authored_list_governs_the_site_and_the_catalogue(self) -> None:
+        """A second exclusion list could drift and republish the fixture.
+
+        The objective catalogue must honour the same withheld set the rest of
+        the site uses, so there is nothing to keep in sync.
+        """
+        from scripts.dashboard.objective_catalogue import excluded_instruments
+
+        known = {"scope-testx1", "scope-real"}
+        self.assertEqual(
+            excluded_instruments({"non_public_instrument_ids": ["scope-testx1"]}, known),
+            {"scope-testx1"},
+        )
+        # A catalogue-only exclusion stays expressible alongside it.
+        self.assertEqual(
+            excluded_instruments(
+                {
+                    "non_public_instrument_ids": ["scope-testx1"],
+                    "objective_catalogue": {"exclude_instrument_ids": ["scope-real"]},
+                },
+                known,
+            ),
+            {"scope-testx1", "scope-real"},
+        )
+
+    def test_catalogue_export_withholds_the_fixture(self) -> None:
+        catalogue = json.loads(
+            (DOCS_ROOT / "assets" / "objectives.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            [row for row in catalogue["items"] if row.get("instrument_id") == "scope-testx1"],
+            [],
+        )
+        self.assertNotIn(
+            "scope-testx1", {inst["id"] for inst in catalogue["instruments"]}
+        )
+
     def test_fixture_record_is_still_present_for_tests(self) -> None:
         """The fixture is withheld from the site, not deleted from the ledger."""
         retired = load_instruments("instruments", include_retired=True)
@@ -124,12 +162,27 @@ class GeneratedNavigationTests(unittest.TestCase):
         ]
         self.assertEqual(generated["nav"], build_nav(instruments, retired))
 
-    def test_top_level_labels_match_the_headings_of_the_pages_they_open(self) -> None:
-        nav = {key: value for entry in build_nav([], []) for key, value in entry.items()}
-        self.assertEqual(nav["Instrument fleet"], "index.md")
-        self.assertEqual(nav["Instrument status"], "status.md")
-        self.assertEqual(nav["Experiment planning"], "plan_experiments.md")
-        self.assertEqual(nav["Methods generator"], "methods_generator.md")
+    def test_top_level_labels_reproduce_the_facility_wording(self) -> None:
+        """The generator must emit the labels the facility authored in a14e927.
+
+        Sentence case was a deliberate editorial decision; regenerating Title
+        Case silently undoes it on the next build.
+        """
+        labels = [next(iter(entry)) for entry in build_nav([], [])]
+        self.assertEqual(
+            labels,
+            [
+                "Fleet overview",
+                "Instrument status",
+                "Microscopes",
+                "Objectives",
+                "Experiment planning",
+                "Virtual Microscope",
+                "Methods generator",
+                "Vocabulary dictionary",
+                "Retired instruments",
+            ],
+        )
 
     def test_material_tabs_use_the_alternate_style(self) -> None:
         """Without alternate_style Material renders no tab bar and stacks panels."""

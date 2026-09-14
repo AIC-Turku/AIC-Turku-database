@@ -200,10 +200,15 @@ facility:
 
 Withheld records are still loaded, validated, and available to the test suite. They
 are removed from navigation, generated instrument/history/event pages, the site
-search index, the Methods generator inventory, and the Virtual Microscope. IDs must
-be explicit, unique, and known: a renamed or deleted record fails the build rather
-than silently reappearing on the public site. Exclusions are never inferred from
-display names, notes, or manufacturers.
+search index, the objective catalogue, the Methods generator inventory, and the
+Virtual Microscope. IDs must be explicit, unique, and known: a renamed or deleted
+record fails the build rather than silently reappearing on the public site.
+Exclusions are never inferred from display names, notes, or manufacturers.
+
+This is the single authored list for withholding a record. `objective_catalogue.
+exclude_instrument_ids` remains available for the narrower case of dropping an
+instrument's objectives from the catalogue while the instrument itself stays
+published.
 
 ## Reusing the project for another facility
 

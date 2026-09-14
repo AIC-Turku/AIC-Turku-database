@@ -1947,7 +1947,9 @@
         source.role_label ? `role: ${source.role_label}` : (source.role ? `role: ${source.role}` : ''),
         source.kind_label ? `kind: ${source.kind_label}` : (source.kind ? `kind: ${source.kind}` : ''),
         source.route_label ? `route: ${source.route_label}` : '',
-        normalizeSourceRoutes(source).length ? `routes: ${normalizeSourceRoutes(source).join(', ')}` : '',
+        // Route tags are canonical IDs; resolve each through the instrument's own
+        // route catalogue so the card shows the same label as the route selector.
+        normalizeSourceRoutes(source).length ? `routes: ${normalizeSourceRoutes(source).map(normalizeRouteLabel).join(', ')}` : '',
       ].filter(Boolean).join(' • ');
       if (meta.textContent) card.appendChild(meta);
 
