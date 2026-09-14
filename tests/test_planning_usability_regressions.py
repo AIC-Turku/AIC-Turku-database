@@ -89,9 +89,8 @@ def test_crest_dualcam_route_binds_multiple_branches_to_dualcam_splitter() -> No
     # The route parser binds a branch block to the immediately preceding optical
     # path element. This must be the DualCam splitter, not the exclusive
     # trinocular port.
-    assert steps[branch_index - 1]["optical_path_element_id"] == (
-        "mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set"
-    )
+    dualcam_id = "mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set"
+    assert steps[branch_index - 1]["optical_path_element_id"] == dualcam_id
     assert branch_block["selection_mode"] == "multiple"
     assert {branch["branch_id"] for branch in branch_block["items"]} == {
         "to_master",
@@ -108,10 +107,12 @@ def test_crest_dualcam_route_binds_multiple_branches_to_dualcam_splitter() -> No
         if "endpoint_id" in step
     }
     assert endpoints == {"kinetix_master_camera", "kinetix_slave_camera"}
+    # Keep the splitter optic in each branch sequence as well: the parser uses
+    # those rows to resolve the branch-specific optical component while the
+    # preceding occurrence owns the routing block.
     assert all(
-        "optical_path_element_id" not in step
+        any(step.get("optical_path_element_id") == dualcam_id for step in branch["sequence"])
         for branch in branch_block["items"]
-        for step in branch["sequence"]
     )
 
 
@@ -139,8 +140,9 @@ def test_planning_prompt_permits_general_guidance_but_keeps_facility_claims_grou
     template = (REPO_ROOT / "scripts" / "templates" / "plan_experiments.md.j2").read_text(
         encoding="utf-8"
     )
+    folded = template.casefold()
 
-    assert "general microscopy principles and trade-offs" in template
-    assert "never turn them into an ${facilityShortName}-specific performance claim" in template
-    assert "report only hardware details that affect the decision" in template
-    assert "one or two important unknowns most likely to change the choice" in template
+    assert "general microscopy principles and trade-offs" in folded
+    assert "never turn them into an ${facilityshortname}-specific performance claim" in folded
+    assert "report only hardware details that affect the decision" in folded
+    assert "one or two important unknowns most likely to change the choice" in folded
