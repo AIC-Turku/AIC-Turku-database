@@ -46,6 +46,38 @@
   .aic-fleetbar__hint { display: none; }
 }
 
+/* Fleet result count and empty state */
+.aic-resultcount {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+}
+
+.aic-noresults {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: var(--aic-gap);
+  padding: 1.25rem;
+  border: 1px dashed var(--md-default-fg-color--lighter);
+  border-radius: 0.4rem;
+  background: var(--md-code-bg-color);
+}
+
+/* `display: flex` above outranks the user-agent [hidden] rule, so restate it. */
+.aic-noresults[hidden] {
+  display: none;
+}
+
+.aic-noresults span {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.85rem;
+}
+
+.aic-noresults .md-button {
+  margin: 0.25rem 0 0;
+}
+
 /* Card grid */
 .aic-grid {
   display: grid;
@@ -154,6 +186,7 @@
 .aic-badge--green { border-color: rgba(0, 160, 80, 0.6); color: rgba(0, 140, 70, 1); }
 .aic-badge--yellow { border-color: rgba(230, 170, 20, 0.7); color: rgba(200, 140, 10, 1); }
 .aic-badge--red { border-color: rgba(220, 60, 60, 0.7); color: rgba(200, 40, 40, 1); }
+.aic-badge--gray { border-color: var(--md-default-fg-color--lighter); color: var(--md-default-fg-color--light); }
 
 [data-md-color-scheme="slate"] .aic-badge--green { color: rgba(60, 200, 120, 1); }
 [data-md-color-scheme="slate"] .aic-badge--yellow { color: rgba(240, 190, 60, 1); }

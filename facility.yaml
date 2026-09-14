@@ -5,9 +5,12 @@ facility:
   public_site_url: "https://aic-turku.github.io/AIC-Turku-database/"
   contact_url: "https://bioscience.fi/aic/"
   organization_url: "https://bioscience.fi/aic/"
-  objective_catalogue:
-    # The ledger identifies this instrument as synthetic integration-test data.
-    exclude_instrument_ids: [scope-testx1]
+  # Ledger records that exist for testing rather than for researchers. They are
+  # still validated, but they are withheld from navigation, generated pages,
+  # search, the objective catalogue, and the browser tools. IDs must be
+  # explicit, unique and known. The ledger identifies scope-testx1 as synthetic
+  # integration-test data.
+  non_public_instrument_ids: [scope-testx1]
   acknowledgements:
     standard: "Imaging was performed at the Advanced Imaging Core Facility at Turku Bioscience Centre, supported by Biocentre Finland, the Finnish Advanced Microscopy Node of Euro-BioImaging Finland (Turku, Finland), and Turku Bioimaging. This work was supported by the Research Council of Finland, FIRI 2023 grant decision numbers 359073 and 358879, and FIRI 2024 grant decision numbers 367582 and 367577."
     xcelligence_addition: "Testament funds from Henna Ruusunen also supported this work."

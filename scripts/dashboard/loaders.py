@@ -84,6 +84,41 @@ def load_facility_config(repo_root: Path) -> dict[str, Any]:
     return merged_dict(default_config, loaded)
 
 
+class NonPublicInstrumentConfigError(ValueError):
+    """`facility.non_public_instrument_ids` cannot be applied faithfully."""
+
+
+def non_public_instrument_ids(
+    facility: dict[str, Any],
+    known_ids: set[str],
+) -> set[str]:
+    """Instrument IDs the facility has excluded from the public site.
+
+    These are explicit presentation exclusions for records that exist in the
+    ledger but are not facility instruments a visitor should be offered, such
+    as synthetic integration-test fixtures. Exclusions are never inferred from
+    display names, notes, or manufacturers: the IDs must be known and unique,
+    so a renamed or removed record fails the build instead of silently
+    publishing.
+    """
+    values = facility.get("non_public_instrument_ids", [])
+    if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
+        raise NonPublicInstrumentConfigError(
+            "facility.non_public_instrument_ids must be a list of instrument IDs"
+        )
+    if len(values) != len(set(values)):
+        raise NonPublicInstrumentConfigError(
+            "facility.non_public_instrument_ids must not repeat an instrument ID"
+        )
+    unknown = sorted(set(values) - known_ids)
+    if unknown:
+        raise NonPublicInstrumentConfigError(
+            "facility.non_public_instrument_ids refers to unknown instrument IDs: "
+            + ", ".join(unknown)
+        )
+    return set(values)
+
+
 def load_vocabularies(vocab_dir: Path) -> dict[str, dict[str, Any]]:
     """Load vocabulary JSON export through the same strict vocabulary reader."""
     vocabulary = Vocabulary(vocab_dir)

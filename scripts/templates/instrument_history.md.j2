@@ -7,6 +7,9 @@
   [Back to instrument](index.md){ .md-button }
 </div>
 
+{# An empty chart container under a bare heading reads as a broken page, so the
+   section only appears when there are recorded QC measurements to plot. #}
+{% if has_qc_charts %}
 ## QC metrics over time
 
 <div id="charts-root"
@@ -14,6 +17,7 @@
      data-aic-metric-names='{{ metric_names | tojson | safe }}'></div>
 
 ---
+{% endif %}
 
 ## Event timeline
 
@@ -158,5 +162,6 @@
   {% endfor %}
 </div>
 {% else %}
-*No QC or maintenance events recorded yet.*
+!!! info "No events recorded yet"
+    No QC or maintenance events have been recorded for this microscope in the database. This is a gap in the record rather than a statement that no work was done. AIC staff can confirm the service history for a specific period.
 {% endif %}

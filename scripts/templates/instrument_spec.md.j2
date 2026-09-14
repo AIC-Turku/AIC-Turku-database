@@ -1,5 +1,5 @@
 ---
-title: Instrument details
+title: {{ instrument.dto.identity.display_name | default(instrument.display_name, true) }}
 hide:
   - toc  
 ---
@@ -21,16 +21,29 @@ hide:
 
 # {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
 
+{% set is_retired = instrument.retired %}
+{% if is_retired %}
+!!! note "About this microscope"
+    This microscope has been retired from service. The hardware and capabilities below are kept as a record of its final recorded configuration, so earlier work can still be described accurately.
+{% else %}
 !!! note "About this microscope"
     Here you’ll find the hardware and capabilities currently recorded for this microscope. If you are planning an experiment, AIC staff can help with access, training, and configuration choices.
+{% endif %}
 
 
+{% if is_retired %}
+!!! abstract "Retired from service"
+    This microscope is no longer available for booking. The Virtual Microscope covers microscopes currently in service, so it does not include this record.
+
+    [QC and maintenance history](history.md){ .md-button .md-button--primary }
+{% else %}
 {% set status_class = 'success' if dto.status.color == 'green' else 'warning' if dto.status.color == 'yellow' else 'danger' %}
 !!! {{ status_class }} "Current status: {{ dto.status.badge }}"
     {{ dto.status.reason }}
     
     [QC and maintenance history](history.md){ .md-button .md-button--primary }
     [Open Virtual Microscope](../../virtual_microscope.md?scope={{ identity.id }}){ .md-button }
+{% endif %}
 
 <div class="aic-hero">
   <div class="aic-hero__media">

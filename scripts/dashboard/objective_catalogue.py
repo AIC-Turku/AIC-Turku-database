@@ -24,17 +24,41 @@ INSTALLATION_LABELS = {
 }
 
 
+def _exclusion_ids(values, known_ids: set[str], setting: str) -> set[str]:
+    """Validate one authored exclusion list; never infer from model names."""
+    if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
+        raise ObjectiveCatalogueError(f"{setting} must be a list of instrument IDs")
+    if len(values) != len(set(values)) or set(values) - known_ids:
+        raise ObjectiveCatalogueError(f"{setting} must be unique, known instrument IDs")
+    return set(values)
+
+
 def excluded_instruments(facility: dict, known_ids: set[str]) -> set[str]:
-    """Explicit presentation exclusions, never inferred from model names."""
+    """Explicit presentation exclusions, never inferred from model names.
+
+    A record withheld from the whole public site is necessarily withheld from
+    the catalogue, so `facility.non_public_instrument_ids` is honoured here
+    too. Keeping one authored list for that case means a withheld instrument
+    cannot reappear on the Objectives page through a second list drifting out
+    of sync. `objective_catalogue.exclude_instrument_ids` remains available for
+    the narrower case: dropping an instrument's objectives from the catalogue
+    while the instrument itself stays published.
+    """
     config = facility.get("objective_catalogue", {})
     if not isinstance(config, dict) or set(config) - {"exclude_instrument_ids"}:
         raise ObjectiveCatalogueError("objective_catalogue: expected exclude_instrument_ids only")
-    values = config.get("exclude_instrument_ids", [])
-    if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
-        raise ObjectiveCatalogueError("objective_catalogue.exclude_instrument_ids must be a list of instrument IDs")
-    if len(values) != len(set(values)) or set(values) - known_ids:
-        raise ObjectiveCatalogueError("objective_catalogue exclusions must be unique, known instrument IDs")
-    return set(values)
+
+    catalogue_only = _exclusion_ids(
+        config.get("exclude_instrument_ids", []),
+        known_ids,
+        "objective_catalogue.exclude_instrument_ids",
+    )
+    withheld = _exclusion_ids(
+        facility.get("non_public_instrument_ids", []),
+        known_ids,
+        "facility.non_public_instrument_ids",
+    )
+    return catalogue_only | withheld
 
 
 def _text(value) -> str:

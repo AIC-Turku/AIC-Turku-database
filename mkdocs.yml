@@ -32,7 +32,8 @@ markdown_extensions:
 - tables
 - pymdownx.details
 - pymdownx.superfences
-- pymdownx.tabbed
+- pymdownx.tabbed:
+    alternate_style: true
 extra_css:
 - assets/stylesheets/dashboard.css
 extra_javascript:
@@ -73,7 +74,6 @@ nav:
 - Retired instruments:
   - Overview: retired/index.md
   - Leica TCS SP5 Multiphoton: instruments/scope-leica-tcs-sp5-multiphoton/index.md
-  - Test Scope X1: instruments/scope-testx1/index.md
 validation:
   nav:
     omitted_files: info

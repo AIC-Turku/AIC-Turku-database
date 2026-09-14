@@ -51,6 +51,7 @@ from scripts.validation.vocabulary import build_repository_vocabulary
 from scripts.dashboard.instrument_view import build_instrument_mega_dto, vocab_label
 from scripts.dashboard.llm_export import build_llm_inventory_payload
 from scripts.dashboard.loaders import (
+    NonPublicInstrumentConfigError,
     YamlLoadError,
     _event_output_instrument,
     _extract_log_date,
@@ -63,6 +64,7 @@ from scripts.dashboard.loaders import (
     load_facility_config,
     load_instruments,
     load_vocabularies,
+    non_public_instrument_ids,
     validated_instrument_selection,
 )
 from scripts.dashboard.methods_export import (
@@ -155,17 +157,101 @@ def build_nav(
         for inst in retired_instruments
     ]
 
+    # These labels are the public navigation. mkdocs.yml is generated, so they
+    # belong here: editing the generated file is reverted by the next build.
+    # The wording is the facility's own, from commit a14e927; this function
+    # exists to reproduce it, not to re-decide it.
     return [
-        {"Fleet Overview": "index.md"},
-        {"System Health": "status.md"},
+        {"Fleet overview": "index.md"},
+        {"Instrument status": "status.md"},
         {"Microscopes": microscopes},
         {"Objectives": "objective_pool.md"},
-        {"Plan Your Experiments": "plan_experiments.md"},
+        {"Experiment planning": "plan_experiments.md"},
         {"Virtual Microscope": "virtual_microscope.md"},
-        {"Methods Generator": "methods_generator.md"},
-        {"Vocabulary Dictionary": "vocabulary_dictionary.md"},
-        {"Retired Instruments": [{"Overview": "retired/index.md"}, *retired]},
+        {"Methods generator": "methods_generator.md"},
+        {"Vocabulary dictionary": "vocabulary_dictionary.md"},
+        {"Retired instruments": [{"Overview": "retired/index.md"}, *retired]},
     ]
+
+
+# Record types come from event policy (`DEFAULT_ALLOWED_RECORD_TYPES`), not from a
+# controlled vocabulary, so they are named here rather than prettified in a
+# template. Anything unrecognised is shown as recorded instead of reworded.
+# Acronyms that must survive sentence-casing of authored free text, so
+# "monthly_qc" does not read "Monthly qc". This capitalises, it never translates.
+_FREE_TEXT_ACRONYMS = {"qc", "psf", "snr", "flim", "fret", "tirf", "sim", "sted"}
+
+
+_RECORD_TYPE_LABELS = {
+    "qc_session": "QC session",
+    "maintenance_event": "Maintenance event",
+}
+
+
+def _readable_free_text(value: Any) -> str:
+    """Present an authored free-text value without inventing vocabulary.
+
+    QC `reason` is free text under `schema/QC_policy.yaml`, so there is no label
+    to resolve. Underscores are separated for reading; the words themselves are
+    left exactly as the author recorded them.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    spaced = text.replace("_", " ")
+    sentence = spaced[:1].upper() + spaced[1:]
+    return " ".join(
+        word.upper() if word.lower() in _FREE_TEXT_ACRONYMS else word
+        for word in sentence.split(" ")
+    )
+
+
+def build_event_display(
+    payload: dict[str, Any],
+    *,
+    vocabulary: Any,
+    event_date: str,
+    instrument_display_name: str,
+) -> dict[str, str]:
+    """Human-facing labels for an event page.
+
+    Event pages are a public destination from instrument history, so they must
+    not present file stems, snake_case ledger values, or instrument IDs as if
+    they were the human record.
+    """
+    record_type = str(payload.get("record_type") or "").strip()
+    record_type_label = _RECORD_TYPE_LABELS.get(record_type, "") or _readable_free_text(record_type) or "Event"
+
+    is_maintenance = record_type.startswith("maintenance")
+    raw_reason = payload.get("reason") or payload.get("type") or payload.get("reason_details")
+    if is_maintenance and isinstance(raw_reason, str):
+        # Maintenance `reason` is vocabulary-backed in schema/maintenance_policy.yaml.
+        canonical = vocabulary.resolve_canonical("maintenance_reason", raw_reason)
+        term = vocabulary.get_term("maintenance_reason", canonical) if canonical else None
+        reason_label = getattr(term, "label", None) or _readable_free_text(raw_reason)
+    else:
+        reason_label = _readable_free_text(raw_reason)
+
+    def vocab_display(vocab_name: str, raw: Any) -> str:
+        if not isinstance(raw, str) or not raw.strip():
+            return ""
+        canonical = vocabulary.resolve_canonical(vocab_name, raw)
+        term = vocabulary.get_term(vocab_name, canonical) if canonical else None
+        return getattr(term, "label", None) or _readable_free_text(raw)
+
+    return {
+        "record_type_label": record_type_label,
+        "reason_label": reason_label or "—",
+        # Both fields are vocabulary-backed in schema/maintenance_policy.yaml.
+        "service_provider_label": vocab_display(
+            "service_provider", payload.get("service_provider")
+        ) or "—",
+        "status_after_label": vocab_display(
+            "maintenance_status", payload.get("microscope_status_after")
+        ),
+        "instrument_display_name": instrument_display_name,
+        "page_title": " · ".join(part for part in (record_type_label, event_date) if part),
+    }
 
 
 def _metric_lookup(metric_entries: Any) -> dict[str, Any]:
@@ -242,8 +328,8 @@ def _markdown_table_cell(value: Any) -> str:
 def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
     """Render canonical sources once, grouped by authoring task."""
     lines = [
-        "---", "title: Vocabulary Dictionary", "description: Controlled terminology used in the AIC database.", "---", "",
-        "# 📖 Vocabulary Dictionary\n",
+        "---", "title: Vocabulary dictionary", "description: Controlled terminology used in the AIC database.", "---", "",
+        "# 📖 Vocabulary dictionary\n",
         "Use the **Canonical ID** when authoring controlled fields. **Synonyms** are rewrite-safe lexical aliases. **Classified values** are more specific scientific descriptions that map to a broader category but are preserved verbatim and never automatically rewritten.\n",
     ]
     source_groups: dict[str, dict[str, Any]] = {}
@@ -345,7 +431,9 @@ def build_mkdocs_config(
             "tables",
             "pymdownx.details",
             "pymdownx.superfences",
-            "pymdownx.tabbed",
+            # Material only renders a tab bar for the alternate style; the
+            # legacy style leaves the labels as stray text and stacks panels.
+            {"pymdownx.tabbed": {"alternate_style": True}},
         ],
         "extra_css": ["assets/stylesheets/dashboard.css"],
         "extra_javascript": [
@@ -455,6 +543,23 @@ def render_site(
         return 1
     catalogue_instruments = {item["id"] for item in catalogue["instruments"]}
 
+    # Ledger records the facility has marked as not public (for example the
+    # synthetic integration-test fixture) are validated like any other record
+    # but must not reach navigation, generated pages, or the browser tools.
+    try:
+        withheld_instrument_ids = non_public_instrument_ids(
+            facility,
+            {inst["id"] for inst in [*instruments, *retired_instruments]},
+        )
+    except NonPublicInstrumentConfigError as error:
+        print(f"Facility configuration failed: {error}")
+        return 1
+
+    instruments = [inst for inst in instruments if inst["id"] not in withheld_instrument_ids]
+    retired_instruments = [
+        inst for inst in retired_instruments if inst["id"] not in withheld_instrument_ids
+    ]
+
     (docs_root / "vocabulary_dictionary.md").write_text(
         build_vocabulary_dictionary_markdown(vocabulary),
         encoding="utf-8",
@@ -509,6 +614,10 @@ def render_site(
     fleet_counts = {"total": len(instruments), "green": 0, "yellow": 0, "red": 0}
     flagged: list[dict[str, Any]] = []
     retired_instrument_ids = {inst["id"] for inst in retired_instruments}
+    instrument_display_names = {
+        inst["id"]: inst.get("display_name") or inst["id"]
+        for inst in [*instruments, *retired_instruments]
+    }
     global_vm_payloads: dict[str, dict[str, Any]] = {}
 
     for inst in [*instruments, *retired_instruments]:
@@ -532,6 +641,15 @@ def render_site(
         latest_maint = maint_logs[-1]["data"] if maint_logs else None
 
         status = evaluate_instrument_status(latest_qc, latest_maint, vocabulary)
+        if is_retired_instrument:
+            # QC/maintenance status describes instruments in service. A retired
+            # record showing "Online" reads as a live, bookable microscope.
+            status = {
+                **status,
+                "color": "gray",
+                "badge": "⚪ Retired",
+                "reason": "Retired from service",
+            }
         inst["status"] = status
 
         if not is_retired_instrument:
@@ -620,6 +738,7 @@ def render_site(
         history_md = tpl_history.render(
             instrument=inst,
             charts_json=charts_json,
+            has_qc_charts=charts_json not in ("", "{}"),
             metric_names=metric_names,
             qc_events=history_events_qc,
             maintenance_events=history_events_maint,
@@ -645,9 +764,18 @@ def render_site(
                     allow_unicode=True,
                 )
 
+            event_date = _extract_log_date(event_payload)
+            event_display = build_event_display(
+                event_payload,
+                vocabulary=vocabulary,
+                event_date=event_date,
+                instrument_display_name=instrument_display_names.get(
+                    event_instrument, event_instrument
+                ),
+            )
             event_md = tpl_event.render(
                 event_id=event_id,
-                date=_extract_log_date(event_payload),
+                date=event_date,
                 instrument=event_payload.get("microscope"),
                 instrument_id=event_instrument,
                 operator=event_payload.get("performed_by") or event_payload.get("service_provider"),
@@ -655,6 +783,7 @@ def render_site(
                 payload=event_payload,
                 qc_metrics=build_qc_metric_view(event_payload),
                 qc_laser_context=build_qc_laser_context_view(event_payload),
+                display=event_display,
             )
             event_dir = docs_root / "events" / event_instrument
             event_dir.mkdir(parents=True, exist_ok=True)
@@ -763,6 +892,7 @@ __all__ = [
     "METRIC_NAMES",
     "json_script_data",
     "build_nav",
+    "build_event_display",
     "_build_llm_inventory_record_from_build_input",
     "build_vocabulary_dictionary_markdown",
     "build_mkdocs_config",

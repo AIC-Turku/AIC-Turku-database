@@ -213,6 +213,12 @@ def resolve_inventory_class_label(
     return f"{inventory_class} {_MISSING_MARKER}"
 
 
+# Acronyms that must not be title-cased into words such as "Qc".  This applies
+# to documentation *headings* built from vocabulary file names only; controlled
+# field values are still resolved through the vocabulary, never prettified.
+_SECTION_TITLE_ACRONYMS = {"qc"}
+
+
 def resolve_vocab_section_title(vocab_name: str) -> str:
     """Return a presentable section title for a vocabulary name.
 
@@ -221,4 +227,8 @@ def resolve_vocab_section_title(vocab_name: str) -> str:
     identifiers to title-case section headers, which is intentional for
     documentation headings – not for controlled-field display values.
     """
-    return vocab_name.replace("_", " ").title()
+    words = vocab_name.replace("_", " ").title().split(" ")
+    return " ".join(
+        word.upper() if word.lower() in _SECTION_TITLE_ACRONYMS else word
+        for word in words
+    )
