@@ -3,7 +3,7 @@
 Deliberately wrong. Every defect below is one `scripts/planning_eval.py` must
 catch. Not advice, and not a real assistant transcript.
 
-## Best fit
+## Candidate A
 
 **3i CSU-W1 Spinning Disk** (`scope-3i-csu-w1-spinning-disk`)
 
@@ -13,10 +13,11 @@ catch. Not advice, and not a real assistant transcript.
 - The system is fully operational and is currently available, so no training is
   required before your session.
 
-## Backup
+## Invented candidate
 
-**Zeiss LSM 990 Airyscan 3** (`scope-zeiss-lsm-990-airyscan-3`) with
-`objective:100x_silicone_na_1_45` for deeper imaging.
+instrument_id: `scope-zeiss-lsm-990-airyscan-3`
+
+Use `objective:100x_silicone_na_1_45` for deeper imaging.
 
 ## Notes
 
