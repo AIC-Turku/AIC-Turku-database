@@ -411,6 +411,23 @@ def _build_route_planning_summary(
 
     hardware = dto.get("hardware") if isinstance(dto.get("hardware"), dict) else {}
 
+    # Per-route component membership lives in the authoritative contract, not in
+    # route_optical_facts, which is empty for every route in this export. A claim
+    # boundary derived from the empty side would publish
+    # "route_component_ids": [] everywhere and read as "this route has no
+    # components".
+    route_component_ids_by_route = {
+        clean_text(usage.get("route_id")): sorted(
+            {
+                clean_text(value)
+                for value in (usage.get("hardware_inventory_ids") or [])
+                if clean_text(value)
+            }
+        )
+        for usage in (authoritative_route_contract.get("route_hardware_usage") or [])
+        if isinstance(usage, dict) and clean_text(usage.get("route_id"))
+    }
+
     installed_objectives = [
         {
             "id": clean_text(obj.get("id")),
@@ -427,6 +444,14 @@ def _build_route_planning_summary(
         for obj in (hardware.get("objectives") or [])
         if isinstance(obj, dict) and obj.get("is_installed") is not False
     ]
+
+    installed_objective_ids = sorted(
+        {
+            clean_text(obj.get("id"))
+            for obj in installed_objectives
+            if clean_text(obj.get("id"))
+        }
+    )
 
     route_rows: list[dict[str, Any]] = []
 
@@ -446,6 +471,16 @@ def _build_route_planning_summary(
                 for item in (route_facts.get(key) or [])
                 if isinstance(item, dict)
             ]
+
+        explicit_route_objective_ids = sorted(
+            {
+                clean_text(row.get("id"))
+                for key, value in route_facts.items()
+                if "objective" in str(key).lower()
+                for row in (value if isinstance(value, list) else [value])
+                if isinstance(row, dict) and clean_text(row.get("id"))
+            }
+        )
 
         sources = fact_rows("selected_or_selectable_sources")
         excitation_filters = fact_rows("selected_or_selectable_excitation_filters")
@@ -556,6 +591,26 @@ def _build_route_planning_summary(
                         "These objectives are installed on the instrument, not on "
                         "this route. Their presence does not establish route compatibility."
                     ),
+                },
+                # The same limits the surrounding prose states, as values a
+                # planner can act on without parsing English.
+                "claim_boundaries": {
+                    "route_component_ids": route_component_ids_by_route.get(
+                        clean_text(route.get("id")), []
+                    ),
+                    "route_component_ids_source": (
+                        "llm_context.authoritative_route_contract.route_hardware_usage"
+                    ),
+                    "must_not_combine_with_other_routes": True,
+                    "instrument_installed_objective_ids": installed_objective_ids,
+                    "explicit_route_objective_ids": explicit_route_objective_ids,
+                    "objective_route_compatibility": (
+                        "explicit_route_links_present"
+                        if explicit_route_objective_ids
+                        else "unknown_no_route_objective_link"
+                    ),
+                    "selector_resolution_required": has_unresolved_selectors,
+                    "booking_or_access_availability": "not_encoded_by_route_or_status",
                 },
                 "route_specific_vs_generic": {
                     "route_specific_facts_source": "route_optical_facts",

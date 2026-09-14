@@ -75,6 +75,27 @@ Every exported status therefore carries `evidence`:
 | `qc_record_only` / `maintenance_record_only` | One of the two exists. |
 | `no_qc_or_maintenance_record` | Neither exists. The status is the absence of a recorded problem, not a passed check. |
 
+### Route claim boundaries
+
+Each route in `route_planning_summary` (contract `route_planning_summary.v2`)
+carries a `claim_boundaries` block, so the limits are values a planner can act
+on rather than prose it has to interpret:
+
+| Field | Meaning |
+| --- | --- |
+| `route_component_ids` | The components recorded on this route, sourced from `authoritative_route_contract.route_hardware_usage`. A complete list. |
+| `must_not_combine_with_other_routes` | Components from two routes are not a configuration. |
+| `instrument_installed_objective_ids` | Objectives installed on the instrument, not on this route. |
+| `explicit_route_objective_ids` | Objectives a route fact actually names — usually none. |
+| `objective_route_compatibility` | `explicit_route_links_present` only when the previous field is non-empty; otherwise `unknown_no_route_objective_link`. |
+| `selector_resolution_required` | The route has a selector with no resolved position. |
+| `booking_or_access_availability` | Always `not_encoded_by_route_or_status`. |
+
+`route_component_ids` is deliberately read from the route contract rather than
+from `route_optical_facts`, which is empty for every route in this export. A
+boundary derived from the empty side would publish `[]` on all 43 routes and
+read as "this route has no components".
+
 ## What the export does not establish
 
 The inventory does not record booking, scheduling, access or training. Terms such

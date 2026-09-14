@@ -214,6 +214,76 @@ class ScreeningSummaryTests(unittest.TestCase):
                 )
 
 
+class ClaimBoundaryTests(unittest.TestCase):
+    """Route limits must be readable as values, not only as prose."""
+
+    def _routes(self):
+        for record in _inventory()["active_microscopes"]:
+            summary = record["llm_context"]["route_planning_summary"]
+            for route in summary.get("routes") or []:
+                yield record["id"], summary, route
+
+    def test_summary_version_moves_with_its_shape(self) -> None:
+        for _, summary, _ in self._routes():
+            self.assertEqual(summary["contract_version"], "route_planning_summary.v2")
+
+    def test_every_route_publishes_claim_boundaries(self) -> None:
+        for instrument_id, _, route in self._routes():
+            with self.subTest(instrument=instrument_id, route=route["route_id"]):
+                boundaries = route["claim_boundaries"]
+                self.assertIn("route_component_ids", boundaries)
+                self.assertTrue(boundaries["must_not_combine_with_other_routes"])
+                self.assertEqual(
+                    boundaries["booking_or_access_availability"],
+                    "not_encoded_by_route_or_status",
+                )
+
+    def test_component_lists_match_the_authoritative_contract(self) -> None:
+        for record in _inventory()["active_microscopes"]:
+            usage = {
+                row["route_id"]: sorted(set(row.get("hardware_inventory_ids") or []))
+                for row in _route_contract(record).get("route_hardware_usage") or []
+            }
+            for route in record["llm_context"]["route_planning_summary"].get("routes") or []:
+                with self.subTest(instrument=record["id"], route=route["route_id"]):
+                    self.assertEqual(
+                        route["claim_boundaries"]["route_component_ids"],
+                        usage.get(route["route_id"], []),
+                    )
+
+    def test_component_lists_are_not_uniformly_empty(self) -> None:
+        """An empty list reads as "this route has no components".
+
+        Deriving it from route_optical_facts, which is empty for every route in
+        this export, would publish exactly that everywhere.
+        """
+        populated = [
+            route
+            for _, _, route in self._routes()
+            if route["claim_boundaries"]["route_component_ids"]
+        ]
+        self.assertGreater(len(populated), 1)
+
+    def test_objective_route_compatibility_is_derived_not_asserted(self) -> None:
+        for instrument_id, _, route in self._routes():
+            boundaries = route["claim_boundaries"]
+            expected = (
+                "explicit_route_links_present"
+                if boundaries["explicit_route_objective_ids"]
+                else "unknown_no_route_objective_link"
+            )
+            with self.subTest(instrument=instrument_id, route=route["route_id"]):
+                self.assertEqual(boundaries["objective_route_compatibility"], expected)
+
+    def test_selector_resolution_flag_matches_the_route_state(self) -> None:
+        for instrument_id, _, route in self._routes():
+            with self.subTest(instrument=instrument_id, route=route["route_id"]):
+                self.assertEqual(
+                    route["claim_boundaries"]["selector_resolution_required"],
+                    route["known_vs_unknown"]["has_unresolved_selectors"],
+                )
+
+
 class ObjectiveScopeTests(unittest.TestCase):
     def test_old_route_relevance_name_is_gone(self) -> None:
         self.assertEqual(
@@ -309,6 +379,27 @@ class GeneratedPromptTests(unittest.TestCase):
         self.assertIsNotNone(top)
         self.assertIsNotNone(bottom)
         return top.group(1) + bottom.group(1)
+
+    def test_prompt_stays_short_enough_to_read(self) -> None:
+        """A prompt nobody reads is a prompt nobody checks.
+
+        Every safeguard here is a sentence a researcher has to paste and skim.
+        Without a budget the rule list grows on each audit until it is scrolled
+        past.
+        """
+        words = len(self._prompt().split())
+        self.assertLess(words, 380, f"planning prompt has grown to {words} words")
+
+    def test_prompt_does_not_restate_the_instructions_it_removed(self) -> None:
+        """Negating a bad instruction still puts it in front of the reader."""
+        prompt = self._prompt()
+        for removed in (
+            "Eliminate unavailable or incompatible instruments first",
+            "Choose one best route on the top instrument and one backup route/instrument",
+            "legacy instruction",
+        ):
+            with self.subTest(removed=removed):
+                self.assertNotIn(removed, prompt)
 
     def test_prompt_does_not_force_best_or_backup(self) -> None:
         prompt = self._prompt().lower()
