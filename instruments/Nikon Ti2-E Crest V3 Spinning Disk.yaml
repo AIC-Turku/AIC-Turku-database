@@ -551,18 +551,19 @@ light_paths:
   - optical_path_element_id: crest_dichroic_wheel
   - optical_path_element_id: crest_emission_wheel
   - optical_path_element_id: trinocular_port
+  - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
   - branches:
       selection_mode: multiple
       items:
       - branch_id: to_master
-        label: To Kinetix Master (via Dual Camera Splitter)
+        label: To Kinetix Master
+        mode: transmitted
         sequence:
-        - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
         - endpoint_id: kinetix_master_camera
       - branch_id: to_slave
-        label: To Kinetix Slave (via Dual Camera Splitter)
+        label: To Kinetix Slave
+        mode: reflected
         sequence:
-        - optical_path_element_id: mxr00547_v3_dualcam_gfp_mcherry_2_bands_celesta_set
         - endpoint_id: kinetix_slave_camera
   route_type: confocal_spinning_disk
 - id: widefield_fluorescence
