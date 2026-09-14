@@ -19,7 +19,7 @@ about the shape and provenance of the inventory.
 | `closed_world_fields` | Which route lists are complete enumerations, so absence means "not on this route" rather than "unknown". |
 | `availability` | That no booking, access or training data is recorded. |
 | `status_semantics` | What an instrument status is derived from, and how to read `status.evidence`. |
-| `objective_scope` | That objectives are recorded per instrument, not per route. |
+| `objective_scope` | That objectives are instrument-level context, not route evidence. |
 | `capability_vs_route` | That imaging modes and route types are different authored axes, related by `route_family_coverage`. |
 
 ### Open world and closed world
@@ -50,6 +50,16 @@ family without inventing a new route type.
 
 `modes_without_a_covering_recorded_route` is the honest "ask staff" signal: it
 lists declared modes for which this inventory has no covering recorded route.
+
+### Route-planning summary v2
+
+`llm_context.route_planning_summary` is a convenience view over the authoritative
+route contract. Its contract is `route_planning_summary.v2`.
+
+Route-specific optical facts live under `planning_optics`. Installed objectives
+are kept separately under `instrument_level_context.installed_objectives` with an
+explicit scope note. This separation is deliberate: an objective can be installed
+on the microscope without being proven compatible with a particular optical route.
 
 ### Instrument status
 
@@ -94,6 +104,9 @@ vague requirement such as "fast", "deep", "low phototoxicity" or "thick cleared
 sample" into a facility-specific modality recommendation unless the inventory and
 the user's explicit request justify that step.
 
+The generated prompt is also kept under a regression-tested length budget so
+additional safeguards do not gradually turn it into an unreadable policy dump.
+
 ## Checking a saved answer
 
 `scripts/planning_eval.py` checks an answer offline. It calls no model and no
@@ -107,15 +120,16 @@ PYTHONPATH=. python -m scripts.planning_eval \
 ```
 
 The evaluator derives valid instrument IDs, component IDs and route membership
-from the inventory itself. It does not assume a facility-specific instrument-ID
-prefix. Unknown instruments can be made machine-checkable in arbitrary text with
-an explicit `instrument_id: ...` tag.
+from the inventory itself. It also derives the instrument-ID prefix shape from the
+actual inventory, so ordinary untagged prose such as an invented `scope-...` ID is
+checked without hard-coding AIC's prefix convention. Explicit `instrument_id: ...`
+tags remain supported, but they are not required for normal saved LLM answers.
 
 It reports:
 
 | Finding | Meaning |
 | --- | --- |
-| `unknown_instrument_id` | An explicitly tagged instrument ID the inventory does not record. |
+| `unknown_instrument_id` | An instrument-ID-shaped claim, tagged or ordinary prose, that the inventory does not record. |
 | `unknown_component_id` | A component ID recorded on no active instrument. |
 | `component_not_on_named_instrument` | A real component attributed to the wrong instrument. |
 | `component_not_on_route` | A component of that instrument attached to a route it is not on. |
