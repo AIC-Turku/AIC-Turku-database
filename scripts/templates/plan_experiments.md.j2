@@ -77,23 +77,23 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
 Use the JSON as the only source for facility-specific facts.
 
 Rules:
-- Read planning_contract first. It explains which route lists are complete and which information is not recorded.
-- A component missing from a complete route hardware list is not on that route. A missing or null value anywhere else is unknown.
-- Use llm_context.authoritative_route_contract as the source of truth for routes. llm_context.route_planning_summary and hardware_focus_summary are convenience views; raw hardware lists are secondary context and must not override route contract truth.
-- Never build a configuration by combining components from different routes.
-- Objectives are recorded per instrument, not per route. Do not claim objective-to-route compatibility unless the inventory explicitly establishes it.
-- Respect branch selectors and splitters exactly as recorded. Do not silently choose an unresolved/selectable branch or endpoint.
-- Use capability_route_reconciliation and route_family_coverage to relate recorded capabilities such as TIRF, STED or SIM to their recorded route families. Do not invent a route type.
+- Read planning_contract first. It states which route lists are complete and which information is not recorded.
+- A component missing from a complete route hardware list is not on that route; other missing or null values are unknown.
+- Treat llm_context.authoritative_route_contract as route truth. route_planning_summary and hardware_focus_summary are convenience views; raw hardware must not override the route contract.
+- Never combine components from different routes.
+- Objectives are instrument-level unless explicit route compatibility is recorded.
+- Preserve unresolved/selectable branches, splitters and endpoints; do not silently choose one.
+- Use capability_route_reconciliation and route_family_coverage to relate capabilities such as TIRF, STED or SIM to recorded route families. Do not invent route types.
 - The inventory records no booking, access or training availability. Operational/QC status is not booking availability.
-- Do not turn an unrecorded performance or suitability detail into a facility fact. If the inventory does not establish speed, depth, phototoxicity, sample compatibility, long-run suitability, fluorophore compatibility or another requested constraint, label it unknown and say what should be confirmed.
-- Do not force a ranking. In particular, do not follow the legacy instruction "Choose one best route on the top instrument and one backup route/instrument" when the inventory does not support that conclusion.
+- Do not invent performance or suitability. If speed, depth, phototoxicity, sample compatibility, long-run suitability, fluorophore compatibility or another requested constraint is not established, label it unknown and say what to confirm.
+- Do not force a ranking when the inventory does not justify one.
 
-Use this required procedure in order:
-1. Separate known vs unknown facts in my request and the inventory.
-2. Exclude instruments whose recorded routes cannot support the experiment only when an explicit inventory fact establishes the mismatch.
-3. Identify the supported candidate routes from the authoritative route contract without inventing missing suitability information.
-4. For each selected route, verify the detector/endpoint and any claimed route components. Keep instrument-level objective(s) separate unless route compatibility is explicit.
-5. Preserve branch/splitter handling exactly as recorded and list unresolved points or staff confirmations.
+Use this procedure:
+1. Separate known from unknown facts.
+2. Exclude an instrument only when an explicit inventory fact establishes a mismatch.
+3. Identify supported candidate routes without inventing suitability.
+4. Verify each candidate's detector/endpoint and route components; keep objectives separate unless route compatibility is explicit.
+5. Preserve branch/splitter handling and list unresolved points or staff confirmations.
 
 My request:
 `;
@@ -102,10 +102,10 @@ My request:
 
 Return a concise answer with:
 1. What the inventory clearly establishes.
-2. Candidate instruments/routes supported by those recorded facts; if the inventory cannot narrow the options, say so.
-3. For each candidate you discuss, the selected route, detector/endpoint, and recorded route components without mixing routes.
-4. Instrument-level objective(s) only when useful, clearly labelled as instrument-level unless route compatibility is explicit.
-5. Unknown or unrecorded details that matter, and what to confirm with ${facilityShortName} staff.
+2. Candidate instruments/routes supported by those facts; if the inventory cannot narrow the options, say so.
+3. For each candidate, the selected route, detector/endpoint and recorded route components without mixing routes.
+4. Useful objectives only as instrument-level facts unless route compatibility is explicit.
+5. Important unknowns and what to confirm with ${facilityShortName} staff.
 
 Do not force a best microscope or backup when the inventory does not justify one. Do not invent facility specifications.`;
 
