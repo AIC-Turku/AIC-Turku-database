@@ -15,9 +15,8 @@ catch. Not advice, and not a real assistant transcript.
 
 ## Invented candidate
 
-instrument_id: `scope-zeiss-lsm-990-airyscan-3`
-
-Use `objective:100x_silicone_na_1_45` for deeper imaging.
+**Zeiss LSM 990 Airyscan 3** (`scope-zeiss-lsm-990-airyscan-3`) with
+`objective:100x_silicone_na_1_45` for deeper imaging.
 
 ## Notes
 
