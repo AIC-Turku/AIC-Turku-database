@@ -15,8 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.skipif(shutil.which('mkdocs') is None, reason='MkDocs build dependencies are required for generated-site acceptance')
-def test_generated_site_catalogue_round_trip_and_export_boundaries(browser, tmp_path):
-    subprocess.run(['python', '-m', 'scripts.dashboard_builder', '--strict'], cwd=ROOT, check=True, capture_output=True)
+def test_generated_site_catalogue_round_trip_and_export_boundaries(browser, tmp_path, generated_dashboard):
+    assert generated_dashboard == ROOT / 'dashboard_docs'
     site = tmp_path/'site'
     subprocess.run(['mkdocs', 'build', '--strict', '--site-dir', str(site)], cwd=ROOT, check=True, capture_output=True)
     class QuietHandler(SimpleHTTPRequestHandler):

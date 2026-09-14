@@ -56,6 +56,56 @@ from scripts.full_audit import (
 
 
 class FullAuditScriptTests(unittest.TestCase):
+    _cli_tmpdir: tempfile.TemporaryDirectory | None = None
+    _cli_result: subprocess.CompletedProcess[str] | None = None
+    _cli_json: dict | None = None
+    _cli_markdown: str | None = None
+
+    @classmethod
+    def _full_audit_cli_outputs(
+        cls,
+    ) -> tuple[subprocess.CompletedProcess[str], dict, str]:
+        """Run the expensive repository audit once for all CLI report checks."""
+        if cls._cli_result is None:
+            cls._cli_tmpdir = tempfile.TemporaryDirectory()
+            output_dir = Path(cls._cli_tmpdir.name)
+            json_path = output_dir / "audit.json"
+            markdown_path = output_dir / "audit.md"
+            cls._cli_result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/full_audit.py",
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "--json-out",
+                    str(json_path),
+                    "--markdown-out",
+                    str(markdown_path),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if json_path.exists():
+                cls._cli_json = json.loads(json_path.read_text(encoding="utf-8"))
+            if markdown_path.exists():
+                cls._cli_markdown = markdown_path.read_text(encoding="utf-8")
+
+        assert cls._cli_result is not None
+        if cls._cli_json is None or cls._cli_markdown is None:
+            raise AssertionError(
+                "Full audit CLI did not create both reports:\n"
+                f"stdout:\n{cls._cli_result.stdout}\n"
+                f"stderr:\n{cls._cli_result.stderr}"
+            )
+        return cls._cli_result, cls._cli_json, cls._cli_markdown
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if cls._cli_tmpdir is not None:
+            cls._cli_tmpdir.cleanup()
+
     def test_virtual_microscope_audit_detects_payload_health(self) -> None:
         instrument = {
             "id": "test-scope",
@@ -450,40 +500,11 @@ class FullAuditScriptTests(unittest.TestCase):
         )
 
     def test_cli_writes_outputs(self) -> None:
-        dependency_check = subprocess.run(
-            [sys.executable, "-c", "import yaml"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if dependency_check.returncode != 0:
-            self.skipTest("PyYAML is required to execute scripts/full_audit.py in a subprocess.")
-        with tempfile.TemporaryDirectory() as tmpdir:
-            json_path = Path(tmpdir) / "audit.json"
-            md_path = Path(tmpdir) / "audit.md"
-            proc = subprocess.run(
-                [
-                    "python",
-                    "scripts/full_audit.py",
-                    "--repo-root",
-                    str(REPO_ROOT),
-                    "--json-out",
-                    str(json_path),
-                    "--markdown-out",
-                    str(md_path),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            self.assertTrue(json_path.exists(), msg=proc.stderr)
-            self.assertTrue(md_path.exists(), msg=proc.stderr)
-            payload = json.loads(json_path.read_text(encoding="utf-8"))
-            self.assertIn("summary", payload)
-            # The repository may currently contain validation failures; the CLI is allowed to exit non-zero.
-            self.assertIn(proc.returncode, {0, 1})
+        proc, payload, markdown = self._full_audit_cli_outputs()
+        self.assertIn("summary", payload)
+        self.assertTrue(markdown)
+        # The repository may currently contain validation failures; the CLI is allowed to exit non-zero.
+        self.assertIn(proc.returncode, {0, 1})
 
     # ── JS runtime authority audit tests ──
 
@@ -583,78 +604,21 @@ class FullAuditScriptTests(unittest.TestCase):
 
     def test_full_audit_report_includes_category_breakdown(self) -> None:
         """The full audit report summary must include by_category breakdown."""
-        dependency_check = subprocess.run(
-            [sys.executable, "-c", "import yaml"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if dependency_check.returncode != 0:
-            self.skipTest("PyYAML is required for full audit report generation.")
-        with tempfile.TemporaryDirectory() as tmpdir:
-            json_path = Path(tmpdir) / "audit.json"
-            md_path = Path(tmpdir) / "audit.md"
-            subprocess.run(
-                ["python", "scripts/full_audit.py", "--repo-root", str(REPO_ROOT),
-                 "--json-out", str(json_path), "--markdown-out", str(md_path)],
-                cwd=REPO_ROOT, capture_output=True, text=True, check=False,
-            )
-            if not json_path.exists():
-                self.skipTest("Audit JSON not generated.")
-            report = json.loads(json_path.read_text(encoding="utf-8"))
-            self.assertIn("by_category", report["summary"])
-            self.assertIsInstance(report["summary"]["by_category"], dict)
+        _, report, _ = self._full_audit_cli_outputs()
+        self.assertIn("by_category", report["summary"])
+        self.assertIsInstance(report["summary"]["by_category"], dict)
 
     def test_full_audit_report_includes_js_runtime_authority(self) -> None:
         """The full audit report must include the js_runtime_authority section."""
-        dependency_check = subprocess.run(
-            [sys.executable, "-c", "import yaml"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if dependency_check.returncode != 0:
-            self.skipTest("PyYAML is required for full audit report generation.")
-        with tempfile.TemporaryDirectory() as tmpdir:
-            json_path = Path(tmpdir) / "audit.json"
-            md_path = Path(tmpdir) / "audit.md"
-            subprocess.run(
-                ["python", "scripts/full_audit.py", "--repo-root", str(REPO_ROOT),
-                 "--json-out", str(json_path), "--markdown-out", str(md_path)],
-                cwd=REPO_ROOT, capture_output=True, text=True, check=False,
-            )
-            if not json_path.exists():
-                self.skipTest("Audit JSON not generated.")
-            report = json.loads(json_path.read_text(encoding="utf-8"))
-            self.assertIn("js_runtime_authority", report)
-            self.assertIn("status", report["js_runtime_authority"])
-            self.assertIn("issues", report["js_runtime_authority"])
+        _, report, _ = self._full_audit_cli_outputs()
+        self.assertIn("js_runtime_authority", report)
+        self.assertIn("status", report["js_runtime_authority"])
+        self.assertIn("issues", report["js_runtime_authority"])
 
     def test_markdown_report_includes_js_runtime_and_categories(self) -> None:
         """The markdown report must include JS runtime authority and category sections."""
-        dependency_check = subprocess.run(
-            [sys.executable, "-c", "import yaml"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if dependency_check.returncode != 0:
-            self.skipTest("PyYAML is required for full audit report generation.")
-        with tempfile.TemporaryDirectory() as tmpdir:
-            json_path = Path(tmpdir) / "audit.json"
-            md_path = Path(tmpdir) / "audit.md"
-            subprocess.run(
-                ["python", "scripts/full_audit.py", "--repo-root", str(REPO_ROOT),
-                 "--json-out", str(json_path), "--markdown-out", str(md_path)],
-                cwd=REPO_ROOT, capture_output=True, text=True, check=False,
-            )
-            if not md_path.exists():
-                self.skipTest("Audit markdown not generated.")
-            md = md_path.read_text(encoding="utf-8")
-            self.assertIn("JS runtime execution authority", md)
+        _, _, markdown = self._full_audit_cli_outputs()
+        self.assertIn("JS runtime execution authority", markdown)
 
 
 if __name__ == "__main__":

@@ -33,18 +33,13 @@ DOCS_ROOT = REPO_ROOT / "dashboard_docs"
 
 
 @pytest.fixture(scope="module", autouse=True)
-def _generated_site() -> None:
+def _generated_site(generated_dashboard: Path) -> None:
     """`dashboard_docs/` and `mkdocs.yml` are generated, so build them here.
 
     CI runs the test suite before the dashboard build, so a fresh checkout has
     no generated output to assert against.
     """
-    subprocess.run(
-        [sys.executable, "-m", "scripts.dashboard_builder", "--strict"],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-    )
+    assert generated_dashboard == DOCS_ROOT
 
 
 def _template_env() -> Environment:
@@ -142,22 +137,20 @@ class GeneratedNavigationTests(unittest.TestCase):
         """A hand-edit to mkdocs.yml is reverted by the next build, so the
         generator must already produce exactly what ships."""
         generated = yaml.safe_load((REPO_ROOT / "mkdocs.yml").read_text(encoding="utf-8"))
+        active_records = load_instruments("instruments")
+        retired_records = load_instruments("instruments", include_retired=True)
         withheld = non_public_instrument_ids(
             load_facility_config(REPO_ROOT).get("facility", {}),
-            {
-                inst["id"]
-                for inst in load_instruments("instruments")
-                + load_instruments("instruments", include_retired=True)
-            },
+            {inst["id"] for inst in active_records + retired_records},
         )
         instruments = [
             {"id": inst["id"], "display_name": inst["display_name"]}
-            for inst in load_instruments("instruments")
+            for inst in active_records
             if inst["id"] not in withheld
         ]
         retired = [
             {"id": inst["id"], "display_name": inst["display_name"]}
-            for inst in load_instruments("instruments", include_retired=True)
+            for inst in retired_records
             if inst["id"] not in withheld
         ]
         self.assertEqual(generated["nav"], build_nav(instruments, retired))
