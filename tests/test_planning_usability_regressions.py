@@ -142,7 +142,7 @@ def test_planning_prompt_permits_general_guidance_but_keeps_facility_claims_grou
     )
     folded = template.casefold()
 
-    assert "general microscopy principles and trade-offs" in folded
-    assert "never turn them into an ${facilityshortname}-specific performance claim" in folded
-    assert "report only hardware details that affect the decision" in folded
-    assert "one or two important unknowns most likely to change the choice" in folded
+    assert "use general microscopy knowledge" in folded
+    assert "explain trade-offs" in folded
+    assert "never invent facility-specific performance" in folded
+    assert "mention only one or two unknowns that could change the choice" in folded
