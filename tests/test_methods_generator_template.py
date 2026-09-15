@@ -563,12 +563,17 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                     "hardware_inventory_renderables": [
                         {"id": "source:laser_561", "inventory_class": "light_source",
                          "display_label": "Laser 561", "publication_label": "Laser 561",
+                         "source_metadata": {"wavelength_nm": 561},
                          "publication_template": "Excitation was provided by {label}."},
                         {"id": "optical_path_element:filter_wheel", "inventory_class": "optical_element",
                          "display_label": "Filter wheel", "publication_label": "Filter wheel",
+                         "selectable_positions": [{"id": "Pos_1", "display_label": "GFP cube",
+                                                   "route_ids": ["confocal_spinning_disk"]}],
                          "publication_template": "The light path included {label}."},
                         {"id": "optical_path_element:analyzer", "inventory_class": "optical_element",
                          "display_label": "Analyzer", "publication_label": "Analyzer",
+                         "selectable_positions": [{"id": "Pos_2", "display_label": "Polariser",
+                                                   "route_ids": ["confocal_spinning_disk"]}],
                          "publication_template": "The light path included {label}."},
                         {"id": "splitter:dual_view", "inventory_class": "splitter",
                          "display_label": "Dual-view splitter", "publication_label": "Dual-view splitter",
@@ -624,7 +629,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         # The confirmed plan is rendered as publication prose, not as the internal
         # wording the renderer used to emit for a later pass to rewrite.
         self.assertIn("with the Spinning-disk confocal route.", result["output"])
-        self.assertIn("The light path included Filter wheel (position Pos_1)", result["output"])
+        self.assertIn("The light path included GFP cube in the Filter wheel", result["output"])
         self.assertIn("The emission light was divided by Dual-view splitter", result["output"])
         self.assertIn("Images were recorded using sCMOS camera (detection 600–700 nm).", result["output"])
         self.assertIn("DAPI and mCherry require sequential acquisition", result["output"])
@@ -666,9 +671,12 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                     "hardware_inventory_renderables": [
                         {"id": "source:dto_laser", "inventory_class": "light_source",
                          "display_label": "DTO Laser", "publication_label": "DTO Laser",
+                         "source_metadata": {"wavelength_nm": 488},
                          "publication_template": "Excitation was provided by {label}."},
                         {"id": "optical_path_element:dto_wheel", "inventory_class": "optical_element",
                          "display_label": "DTO Wheel", "publication_label": "DTO Wheel",
+                         "selectable_positions": [{"id": "Pos_1", "display_label": "DTO cube",
+                                                   "route_ids": ["dto_route"]}],
                          "publication_template": "The light path included {label}."},
                     ],
                     "authoritative_route_contract": {"routes": [
@@ -703,7 +711,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         )
 
         self.assertIn("with the DTO route route.", result["output"])
-        self.assertIn("The light path included DTO Wheel (position Pos_1).", result["output"])
+        self.assertIn("The light path included DTO cube in the DTO Wheel.", result["output"])
         self.assertIn("DTO Laser (488 nm)", result["output"])
         self.assertNotIn("local_storage_route", result["output"])
         self.assertNotIn("LS Laser", result["output"])
@@ -865,6 +873,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                         {
                             "id": "source:laser_488",
                             "inventory_class": "light_source",
+                            "source_metadata": {"wavelength_nm": 488},
                             "display_label": "Laser 488",
                             "method_sentence": "Excitation was provided by Laser 488.",
                         }
@@ -921,6 +930,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                             "id": "filter:wheel",
                             "inventory_class": "optical_element",
                             "display_label": "Filter wheel",
+                            "selectable_positions": [{"id": "Pos_2", "display_label": "TRITC cube",
+                                                      "route_ids": ["route_2"]}],
                             "method_sentence": "The optical path included Filter wheel.",
                         }
                     ],
@@ -942,9 +953,11 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        # Same component, stated once, using the plan's more specific reading.
-        self.assertIn("Filter wheel (position Pos_2)", result["output"])
-        self.assertEqual(result["output"].count("Filter wheel"), 1)
+        # Same component, stated once in the prose, using the plan's more specific
+        # reading. The review block may mention it again; that is not a claim.
+        prose = result["output"].split("Review before publication:")[0]
+        self.assertIn("TRITC cube in the Filter wheel", prose)
+        self.assertEqual(prose.count("Filter wheel"), 1)
 
     def test_duplicate_endpoint_prose_with_same_label_is_non_duplicative(self) -> None:
         instrument = {
@@ -1112,6 +1125,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                     "hardware_inventory_renderables": [
                         {"id": "optical_path_element:filter_wheel", "inventory_class": "optical_element",
                          "display_label": "Filter wheel", "publication_label": "Filter wheel",
+                         "selectable_positions": [{"id": "Pos_1", "display_label": "GFP cube",
+                                                   "route_ids": ["route_main"]}],
                          "publication_template": "The light path included {label}."},
                     ],
                     "authoritative_route_contract": {
@@ -1143,14 +1158,14 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const output = document.getElementById('output-text').value;
             return {
               output,
-              wheelCount: (output.match(/Filter wheel/g) || []).length
+              wheelCount: (output.split("Review before publication:")[0].match(/Filter wheel/g) || []).length
             };
             """,
         )
         # The confirmed plan and the route's declared facts both mention the same
         # wheel. Only the plan speaks, and it speaks once.
         self.assertEqual(result["wheelCount"], 1)
-        self.assertIn("The light path included Filter wheel (position Pos_1).", result["output"])
+        self.assertIn("The light path included GFP cube in the Filter wheel.", result["output"])
 
     def test_xcelligence_style_flattened_channel_facts_are_not_promoted_into_prose(self) -> None:
         """Regression guard for xCELLigence-style flattened cubes: known channel/positions must still render."""

@@ -759,6 +759,111 @@ document.addEventListener("DOMContentLoaded", async () => {
         return label.includes(`${wavelength} nm`) ? label : `${label} (${wavelength} nm)`;
     }
 
+    /**
+     * Check a plan's excitation wavelength against what the source can produce.
+     *
+     * Matching a component by its canonical id says the right laser was named; it
+     * says nothing about the line. A fixed 488 nm laser matched by id while the
+     * plan carries 594 would otherwise be published as "488 nm laser (594 nm)".
+     */
+    function resolveRuntimeWavelength(recorded, wavelength, label) {
+        if (wavelength === null || !(wavelength > 0)) return { wavelength: null, prompt: "" };
+        const metadata = recorded?.source_metadata && typeof recorded.source_metadata === "object"
+            ? recorded.source_metadata
+            : {};
+        const tunableMin = optionalNumber(metadata.tunable_min_nm);
+        const tunableMax = optionalNumber(metadata.tunable_max_nm);
+        const fixed = optionalNumber(metadata.wavelength_nm);
+
+        if (tunableMin !== null && tunableMax !== null) {
+            if (wavelength < tunableMin || wavelength > tunableMax) {
+                return {
+                    wavelength: null,
+                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which is outside its recorded tunable range of ${tunableMin}–${tunableMax} nm; confirm the excitation wavelength used]`,
+                };
+            }
+            return { wavelength, prompt: "" };
+        }
+        if (fixed !== null) {
+            if (fixed !== wavelength) {
+                return {
+                    wavelength: null,
+                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which the instrument record gives as a fixed ${fixed} nm source; confirm the excitation wavelength used]`,
+                };
+            }
+            return { wavelength, prompt: "" };
+        }
+        return {
+            wavelength: null,
+            prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, but no wavelength is recorded for this source; confirm the excitation wavelength used]`,
+        };
+    }
+
+    /**
+     * Check a plan's detection window against the detector's recorded range.
+     *
+     * Where the record states no range there is nothing to contradict, so the
+     * confirmed setting stands; where it does, a window outside it is a question.
+     */
+    function resolveRuntimeDetectionWindow(recorded, minimum, maximum, label) {
+        const hasWindow = minimum !== null && maximum !== null && minimum > 0 && maximum > minimum;
+        if (!hasWindow) return { window: "", prompt: "" };
+        const metadata = recorded?.endpoint_metadata && typeof recorded.endpoint_metadata === "object"
+            ? recorded.endpoint_metadata
+            : {};
+        const recordedMin = optionalNumber(metadata.collection_min_nm ?? metadata.min_nm);
+        const recordedMax = optionalNumber(metadata.collection_max_nm ?? metadata.max_nm);
+        if (recordedMin !== null && recordedMax !== null && (minimum < recordedMin || maximum > recordedMax)) {
+            return {
+                window: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports a ${minimum}–${maximum} nm detection window on ${label}, which lies outside its recorded collection range of ${recordedMin}–${recordedMax} nm; confirm the window used]`,
+            };
+        }
+        return { window: `${minimum}–${maximum} nm`, prompt: "" };
+    }
+
+    /**
+     * Resolve a plan's position against the positions recorded for the element.
+     *
+     * A plan can name the right turret and the wrong position. The reported
+     * position is taken from the record, never from the plan, and must be one the
+     * element offers on the route being reported.
+     */
+    function resolveRuntimePosition(recorded, step, routeId, label) {
+        const raw = cleanText(step?.position_label) || cleanText(step?.position_key) || cleanText(step?.position_id);
+        if (!raw) return { position: "", prompt: "" };
+        const positions = Array.isArray(recorded?.selectable_positions) ? recorded.selectable_positions : [];
+        if (!positions.length) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${raw}”, but the instrument record does not list the positions of this element; confirm the filter that was used]`,
+            };
+        }
+        const wanted = raw.toLowerCase();
+        const match = positions.find(position =>
+            [position?.id, position?.display_label].map(cleanText)
+                .some(value => value && value.toLowerCase() === wanted));
+        if (!match) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${raw}”, which is not one of its recorded positions; confirm the filter that was used]`,
+            };
+        }
+        const positionRoutes = Array.isArray(match.route_ids) ? match.route_ids.map(cleanText) : [];
+        if (routeId && positionRoutes.length && !positionRoutes.includes(routeId)) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${cleanText(match.display_label)}”, which is not recorded on the route being reported; confirm the route and filter that were used]`,
+            };
+        }
+        const productCode = cleanText(match.product_code);
+        const identity = cleanText(match.display_label);
+        return {
+            position: productCode ? `${identity} (catalogue no. ${productCode})` : identity,
+            prompt: "",
+        };
+    }
+
     function branchLabelLookup(route) {
         const lookup = new Map();
         const branches = Array.isArray(route?.branch_summary?.branches) ? route.branch_summary.branches : [];
@@ -795,6 +900,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Only a recorded display label may name a route in prose; an internal id
         // is not a route name, so an unlabelled route is reported as a gap instead.
         const routeLabel = cleanText(matchedRoute.display_label);
+        const routeId = cleanText(matchedRoute.id);
 
         function addFact(template, label, recorded, planLabel) {
             if (!template || !label) return;
@@ -818,13 +924,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 prompts.push(unresolvedComponentPrompt(planLabel, reason));
                 return;
             }
-            const wavelength = optionalNumber(source?.selected_wavelength_nm ?? source?.wavelength_nm);
             // The role comes from the instrument record, never from the plan: a plan
             // knows which source was switched on, not what it was used for.
             (recorded.review_prompts || []).forEach(prompt => prompts.push(cleanText(prompt)));
+            const label = recordedLabel(recorded);
+            const { wavelength, prompt: wavelengthPrompt } = resolveRuntimeWavelength(
+                recorded, optionalNumber(source?.selected_wavelength_nm ?? source?.wavelength_nm), label);
+            if (wavelengthPrompt) prompts.push(wavelengthPrompt);
             addFact(
                 cleanText(recorded.publication_template) || "Illumination was provided by {label}.",
-                withWavelength(recordedLabel(recorded), wavelength),
+                withWavelength(label, wavelength),
                 recorded,
                 planLabel,
             );
@@ -840,12 +949,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return;
             }
             const label = recordedLabel(recorded);
-            const minimum = optionalNumber(detector?.collection_min_nm);
-            const maximum = optionalNumber(detector?.collection_max_nm);
-            const hasWindow = minimum !== null && maximum !== null && minimum > 0 && maximum > minimum;
+            const { window, prompt: windowPrompt } = resolveRuntimeDetectionWindow(
+                recorded,
+                optionalNumber(detector?.collection_min_nm),
+                optionalNumber(detector?.collection_max_nm),
+                label,
+            );
+            if (windowPrompt) prompts.push(windowPrompt);
             addFact(
                 cleanText(recorded.publication_template) || "Images were recorded using {label}.",
-                hasWindow ? `${label} (detection ${minimum}–${maximum} nm)` : label,
+                window ? `${label} (detection ${window})` : label,
                 recorded,
                 planLabel,
             );
@@ -862,10 +975,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return;
             }
             const label = recordedLabel(recorded);
-            const position = cleanText(step?.position_label) || cleanText(step?.position_key) || cleanText(step?.position_id);
+            const { position, prompt: positionPrompt } = resolveRuntimePosition(recorded, step, routeId, label);
+            if (positionPrompt) prompts.push(positionPrompt);
             addFact(
                 cleanText(recorded.publication_template) || "The light path included {label}.",
-                position ? `${label} (position ${position})` : label,
+                position ? `${position} in the ${label}` : label,
                 recorded,
                 planLabel,
             );

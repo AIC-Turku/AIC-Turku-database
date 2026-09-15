@@ -440,7 +440,11 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         ]
         if part
     ).strip() or model or kind_label or "Light source"
-    tech_power_parts = [part for part in [technology, power] if part]
+    # `hardware.sources[].power` is the source's nominal rating, which the schema
+    # marks as "not experiment-level truth". A reader would take a bare figure in a
+    # Methods sentence as the power delivered to the sample, so it is labelled as
+    # nominal wherever it appears.
+    tech_power_parts = [part for part in [technology, f"nominal {power}" if power else ""] if part]
     tech_power_clause = f" ({', '.join(tech_power_parts)})" if tech_power_parts else ""
     if normalized_role == "depletion":
         pulse_details = []

@@ -113,6 +113,7 @@ class AuditBrowserRegressions(unittest.TestCase):
         instrument = scope()
         inventory = instrument["hardware"]["optical_path"]["hardware_inventory_renderables"]
         inventory[0].update({"publication_label": "Plan laser",
+                             "source_metadata": {"wavelength_nm": 561},
                              "publication_template": "Excitation used {label}."})
         inventory[1].update({"publication_label": "Plan camera",
                              "publication_template": "Images were recorded using {label}."})

@@ -227,7 +227,18 @@ class CapabilityIsNotUse(unittest.TestCase):
 def _instrument(**overrides):
     source = {"id": "laser", "display_label": "488 nm laser", "inventory_class": "light_source",
               "publication_label": "488 nm laser", "publication_template": "Excitation was provided by {label}.",
+              "source_metadata": {"kind": "laser", "wavelength_nm": 488},
               "method_sentence": "Excitation was provided by 488 nm laser."}
+    tunable = {"id": "wll", "display_label": "White light laser", "inventory_class": "light_source",
+               "publication_label": "white light laser", "publication_template": "Excitation was provided by {label}.",
+               "source_metadata": {"kind": "white_light_laser", "tunable_min_nm": 440, "tunable_max_nm": 790},
+               "method_sentence": "Excitation was provided by white light laser."}
+    spectral = {"id": "spectral_det", "display_label": "Spectral detector", "inventory_class": "endpoint",
+                "publication_label": "Spectral detector",
+                "publication_template": "Images were recorded using {label}.",
+                "endpoint_metadata": {"endpoint_type": "detector",
+                                      "collection_min_nm": 400, "collection_max_nm": 700},
+                "method_sentence": "Images were recorded using Spectral detector."}
     camera_a = {"id": "cam_a", "display_label": "Acme Cam", "inventory_class": "endpoint",
                 "publication_label": "Acme Cam", "publication_template": "Images were recorded using {label}.",
                 "method_sentence": "Images were recorded using Acme Cam."}
@@ -244,10 +255,11 @@ def _instrument(**overrides):
         "methods_generation": {"is_blocked": False, "blockers": []},
         "methods": {"base_sentence": "Images were acquired using the Regression Scope."},
         "hardware": {"objectives": [], "optical_path": {
-            "hardware_inventory_renderables": [source, camera_a, camera_b, turret],
+            "hardware_inventory_renderables": [source, camera_a, camera_b, turret, tunable, spectral],
             "authoritative_route_contract": {"routes": [
                 {"id": "epi", "display_label": "Epifluorescence",
-                 "relevant_hardware": {"sources": [source], "endpoints": [camera_a, camera_b],
+                 "relevant_hardware": {"sources": [source, tunable],
+                                       "endpoints": [camera_a, camera_b, spectral],
                                        "filters": [turret]}},
             ]}}},
     }
@@ -341,6 +353,83 @@ class BrowserGroundingRegressions(unittest.TestCase):
             self.assertIn(absent, self.output(), msg=f"unsupported component not flagged: {absent}")
         self.assertEqual(self.output().count("which is not in the current instrument record"), 4)
 
+    def test_a_wavelength_a_fixed_source_cannot_emit_is_not_reported(self):
+        # Matching the laser by id says the right laser was named; it says nothing
+        # about the line. "488 nm laser (594 nm)" would be a fabricated setting.
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "sources": [{"id": "laser", "display_label": "488 nm laser", "selected_wavelength_nm": 594}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        prose = self._prose()
+        self.assertIn("Excitation was provided by 488 nm laser.", prose)
+        self.assertNotIn("594", prose)
+        self.assertIn("which the instrument record gives as a fixed 488 nm source", self.output())
+
+    def test_a_wavelength_within_a_tunable_range_is_reported(self):
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "sources": [{"id": "wll", "display_label": "White light laser", "selected_wavelength_nm": 561}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        self.assertIn("white light laser (561 nm)", self._prose())
+        self.assertNotIn("outside its recorded tunable range", self.output())
+
+    def test_a_wavelength_outside_a_tunable_range_is_not_reported(self):
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "sources": [{"id": "wll", "display_label": "White light laser", "selected_wavelength_nm": 900}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        self.assertNotIn("900", self._prose())
+        self.assertIn("outside its recorded tunable range of 440–790 nm", self.output())
+
+    def test_a_detection_window_outside_the_recorded_range_is_not_reported(self):
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "detectors": [{"id": "spectral_det", "display_label": "Spectral detector",
+                           "collection_min_nm": 300, "collection_max_nm": 900}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        prose = self._prose()
+        self.assertIn("Images were recorded using Spectral detector.", prose)
+        self.assertNotIn("300", prose)
+        self.assertIn("outside its recorded collection range of 400–700 nm", self.output())
+
+    def test_a_detection_window_within_the_recorded_range_is_reported(self):
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "detectors": [{"id": "spectral_det", "display_label": "Spectral detector",
+                           "collection_min_nm": 500, "collection_max_nm": 550}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        self.assertIn("Spectral detector (detection 500–550 nm)", self._prose())
+
+    def test_a_position_the_component_does_not_have_is_not_reported(self):
+        # The same failure one level down: the right turret, the wrong position.
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "selected_route_steps": [{"kind": "optical_component", "component_id": "turret",
+                                      "display_label": "Filter Turret",
+                                      "position_label": "Nonexistent GFP cube"}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        prose = self._prose()
+        self.assertIn("The light path included Filter Turret.", prose)
+        self.assertNotIn("Nonexistent GFP cube", prose)
+        self.assertIn("which is not one of its recorded positions", self.output())
+
+    def test_a_recorded_position_is_reported_from_the_record_not_the_plan(self):
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "selected_route_steps": [{"kind": "optical_component", "component_id": "turret",
+                                      "display_label": "Filter Turret", "position_key": "Pos_1"}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        # The plan named the position by key; the prose uses the record's own name
+        # and catalogue number.
+        self.assertIn("GFP cube (catalogue no. 49002) in the Filter Turret", self._prose())
+
     def test_an_ambiguous_label_binds_to_nothing_and_asserts_nothing(self):
         # Two recorded cameras share a display label, so a plan naming that label
         # identifies neither; binding to whichever was indexed first would produce
@@ -385,7 +474,8 @@ class BrowserGroundingRegressions(unittest.TestCase):
         instrument = _instrument()
         routes = instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"]
         routes.append({"id": "confocal", "display_label": "Point-scanning confocal", "relevant_hardware": {}})
-        turret = instrument["hardware"]["optical_path"]["hardware_inventory_renderables"][-1]
+        turret = next(item for item in instrument["hardware"]["optical_path"]["hardware_inventory_renderables"]
+                      if item["id"] == "turret")
         turret["selectable_positions"] = [
             {"id": "Pos_1", "display_label": "GFP cube", "product_code": "49002",
              "incomplete": False, "route_ids": ["epi"], "route_labels": ["Epifluorescence"]},
