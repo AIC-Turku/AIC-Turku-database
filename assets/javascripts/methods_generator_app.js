@@ -315,6 +315,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             routeCheckbox.dataset.displayLabel = routeLabel;
             routeCheckbox.dataset.methodSentence = `Images were acquired using the ${routeLabel} route.`;
             routeCheckbox.dataset.category = "route";
+            routeCheckbox.dataset.routeType = cleanText(route.route_type);
 
             const routeLabelEl = document.createElement("label");
             routeLabelEl.htmlFor = routeCheckbox.id;
@@ -459,6 +460,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             displayLabel: cleanText(cb.dataset.displayLabel),
             methodSentence: cleanText(cb.dataset.methodSentence),
             role: cleanText(cb.dataset.role),
+            routeType: cleanText(cb.dataset.routeType),
             publicationTemplate: cleanText(cb.dataset.publicationTemplate),
             publicationLabel: cleanText(cb.dataset.publicationLabel),
             reviewPrompts: parseJsonArray(cb.dataset.reviewPrompts),
@@ -966,6 +968,31 @@ document.addEventListener("DOMContentLoaded", async () => {
             "Your selection changed, so the Virtual Microscope plan is no longer included. Review it again and re-confirm it if those were the settings used.";
     });
 
+    // The generic settings list is the same for a brightfield snapshot and a FLIM
+    // measurement. These are the parameters a reader needs for the specific
+    // technique, which no reviewer can reconstruct from the instrument record.
+    const MODALITY_SETTINGS_PROMPTS = {
+        confocal_point: "[PLEASE SPECIFY: confocal pinhole diameter (in Airy units), scan zoom, pixel dwell time, and line/frame averaging]",
+        confocal_spinning_disk: "[PLEASE SPECIFY: spinning-disk pinhole size and spacing, disk rotation speed, and camera exposure per channel]",
+        multiphoton: "[PLEASE SPECIFY: excitation wavelength, mean power at the sample, and pulse width]",
+        light_sheet: "[PLEASE SPECIFY: light-sheet thickness, sheet numerical aperture, and detection/illumination objective pairing]",
+    };
+    const READOUT_SETTINGS_PROMPTS = {
+        "flim": "[PLEASE SPECIFY: FLIM acquisition and analysis settings: laser repetition rate, photons collected per pixel, instrument response function, and the lifetime fitting model]",
+        "spectral imaging": "[PLEASE SPECIFY: spectral detection windows (start, end and step) and the reference spectra used for linear unmixing]",
+        "fcs": "[PLEASE SPECIFY: FCS measurement duration, number of repeats, confocal volume calibration, and the fitting model]",
+        "fret": "[PLEASE SPECIFY: FRET channel definitions and the bleed-through/cross-excitation correction factors]",
+    };
+
+    function modalitySettingsPrompts(routeSelections, readoutSelections) {
+        const prompts = uniqueTexts(routeSelections.map(item => MODALITY_SETTINGS_PROMPTS[item.routeType] || ""));
+        readoutSelections.forEach((item) => {
+            const prompt = READOUT_SETTINGS_PROMPTS[cleanText(item.displayLabel).toLowerCase()];
+            if (prompt) prompts.push(prompt);
+        });
+        return uniqueTexts(prompts);
+    }
+
     /**
      * Assemble one acquisition entry: finished prose, then the review block.
      *
@@ -1003,7 +1030,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? `${identitySentence.slice(0, -1)}${routeClause}.`
             : identitySentence;
 
-        const readoutSentences = dedupeSentences(getCheckedSelections("readout").map(item => item.methodSentence));
+        const readoutSelections = getCheckedSelections("readout");
+        const readoutSentences = dedupeSentences(readoutSelections.map(item => item.methodSentence));
+        prompts.push(...modalitySettingsPrompts(routeSelections, readoutSelections));
         const objectives = mergeByPublicationTemplate(getCheckedSelections("obj"));
         prompts.push(...objectives.prompts);
 

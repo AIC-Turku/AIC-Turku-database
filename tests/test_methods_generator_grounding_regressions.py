@@ -378,6 +378,26 @@ class BrowserGroundingRegressions(unittest.TestCase):
         # for markers and no recorded name can be mistaken for one.
         self.assertIn("[PLEASE SPECIFY: fake] route", self.output())
 
+    def test_technique_specific_settings_are_requested(self):
+        instrument = _instrument()
+        routes = instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"]
+        routes[0]["route_type"] = "confocal_point"
+        routes[0]["route_identity"] = {"readouts": [{"id": "flim", "display_label": "FLIM"}]}
+        self.open_methods(instrument)
+        self.page.check("#readout-0-0")
+        self.page.click("#add-btn")
+        output = self.output()
+        # The generic settings list is identical for every acquisition; these are the
+        # parameters that make this particular measurement reproducible.
+        self.assertIn("confocal pinhole diameter (in Airy units)", output)
+        self.assertIn("instrument response function", output)
+
+    def test_widefield_acquisition_gets_no_confocal_prompt(self):
+        self.open_methods()
+        self.page.check("#route-0")
+        self.page.click("#add-btn")
+        self.assertNotIn("Airy units", self.output())
+
     def test_the_filter_actually_used_can_be_stated_not_just_its_holder(self):
         # Ticking the holder only says light passed through it. The position is the
         # filter, and the filter is the fact a fluorescence Methods section needs.
