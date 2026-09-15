@@ -208,7 +208,11 @@ class CapabilityIsNotUse(unittest.TestCase):
             "supported_phase_masks": ["vortex", "bottle", "3d_sted"],
         })
         self.assertNotIn("using Vortex, Bottle", dto["method_sentence"])
-        self.assertIn("[PLEASE SPECIFY: which phase mask profile was applied", dto["method_sentence"])
+        # The request belongs in the review block like every other one, not inside
+        # the finished sentence.
+        self.assertNotIn("PLEASE SPECIFY", dto["method_sentence"])
+        self.assertTrue(any("which phase mask profile was applied" in prompt
+                            for prompt in dto["review_prompts"]))
 
     def test_no_method_sentence_interpolates_an_availability_field(self):
         """A `supported_*`/`available_*` list records capability, never use."""
@@ -309,14 +313,95 @@ class BrowserGroundingRegressions(unittest.TestCase):
         for wording in INTERNAL_WORDING:
             self.assertNotIn(wording, self.output())
 
-    def test_plan_component_absent_from_the_record_is_flagged_not_asserted(self):
+    def _prose(self):
+        """The finished prose only: everything a reader takes as stated fact."""
+        blocks = []
+        for block in self.output().split("\n\n"):
+            if block.startswith(("Review before publication:", "Acknowledgements:", "Light Microscopy Methods:")):
+                continue
+            blocks.append(block)
+        return "\n\n".join(blocks)
+
+    def test_plan_component_absent_from_the_record_is_flagged_and_never_asserted(self):
+        # A warning next to a sentence does not undo the sentence: a reader takes
+        # the prose. An unresolved component must produce the question ONLY.
         self.open_methods(storage={
             "scope_id": "scope-reg", "route": "epi", "validSelection": True,
             "sources": [{"display_label": "Decommissioned 594 nm laser", "selected_wavelength_nm": 594}],
+            "detectors": [{"display_label": "Sold EMCCD", "collection_min_nm": 500, "collection_max_nm": 600}],
+            "splitters": [{"display_label": "Removed Optosplit", "selected_branch_ids": ["a", "b"]}],
+            "selected_route_steps": [{"kind": "optical_component", "display_label": "Scrapped cube",
+                                      "position_key": "3"}],
         })
         self.page.check("#runtime-confirm")
         self.page.click("#add-btn")
-        self.assertIn("which is not in the current instrument record", self.output())
+        prose = self._prose()
+        for absent in ["Decommissioned 594 nm laser", "Sold EMCCD", "Removed Optosplit", "Scrapped cube"]:
+            self.assertNotIn(absent, prose, msg=f"unsupported component asserted in prose: {absent}")
+            self.assertIn(absent, self.output(), msg=f"unsupported component not flagged: {absent}")
+        self.assertEqual(self.output().count("which is not in the current instrument record"), 4)
+
+    def test_an_ambiguous_label_binds_to_nothing_and_asserts_nothing(self):
+        # Two recorded cameras share a display label, so a plan naming that label
+        # identifies neither; binding to whichever was indexed first would produce
+        # a confident sentence about the wrong physical component.
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "detectors": [{"display_label": "Acme Cam", "collection_min_nm": 500, "collection_max_nm": 550}],
+        })
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        self.assertNotIn("Acme Cam", self._prose())
+        self.assertIn("more than one recorded component is called", self.output())
+
+    def test_a_plan_matched_by_canonical_id_is_reported_normally(self):
+        # The guard must not block the case it exists to protect: an id resolves to
+        # exactly one component, so the claim is made.
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "detectors": [{"id": "cam_a", "display_label": "Acme Cam",
+                           "collection_min_nm": 500, "collection_max_nm": 550}],
+        })
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        self.assertIn("Images were recorded using Acme Cam (detection 500–550 nm).", self._prose())
+        self.assertNotIn("more than one recorded component", self.output())
+
+    def test_a_route_named_by_a_shared_illumination_mode_binds_to_nothing(self):
+        instrument = _instrument()
+        routes = instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"]
+        routes[0]["illumination_mode"] = "widefield"
+        routes.append({"id": "wf2", "display_label": "Second widefield path",
+                       "illumination_mode": "widefield", "relevant_hardware": {}})
+        self.open_methods(instrument, storage={
+            "scope_id": "scope-reg", "route": "widefield", "validSelection": True,
+            "sources": [{"id": "laser", "display_label": "488 nm laser"}]})
+        # Two routes answer to the same broad mode, so it identifies neither.
+        expect(self.page.locator("#runtime-confirm")).to_be_disabled()
+        self.page.click("#add-btn")
+        self.assertNotIn("488 nm laser", self._prose())
+
+    def test_a_filter_position_from_another_route_is_neither_offered_nor_claimed(self):
+        instrument = _instrument()
+        routes = instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"]
+        routes.append({"id": "confocal", "display_label": "Point-scanning confocal", "relevant_hardware": {}})
+        turret = instrument["hardware"]["optical_path"]["hardware_inventory_renderables"][-1]
+        turret["selectable_positions"] = [
+            {"id": "Pos_1", "display_label": "GFP cube", "product_code": "49002",
+             "incomplete": False, "route_ids": ["epi"], "route_labels": ["Epifluorescence"]},
+            {"id": "Pos_9", "display_label": "Confocal-only cube", "product_code": "49009",
+             "incomplete": False, "route_ids": ["confocal"], "route_labels": ["Point-scanning confocal"]},
+        ]
+        self.open_methods(instrument)
+        self.page.check("#route-0")
+        # Only the position that exists on the selected route is offered at all.
+        positions = self.page.locator('input[id^="filterposition-"]')
+        self.assertEqual(positions.count(), 1)
+        self.page.check("#filterposition-0-0")
+        self.page.click("#add-btn")
+        prose = self._prose()
+        self.assertIn("GFP cube (catalogue no. 49002)", prose)
+        self.assertNotIn("Confocal-only cube", prose)
 
     def test_exported_configuration_without_identity_is_not_offered(self):
         # The localStorage path already required identity; the exported path treated
@@ -408,7 +493,7 @@ class BrowserGroundingRegressions(unittest.TestCase):
         # The generic settings list is identical for every acquisition; these are the
         # parameters that make this particular measurement reproducible.
         self.assertIn("confocal pinhole diameter (in Airy units)", output)
-        self.assertIn("instrument response function", output)
+        self.assertIn("how the instrument response was determined", output)
 
     def test_widefield_acquisition_gets_no_confocal_prompt(self):
         self.open_methods()

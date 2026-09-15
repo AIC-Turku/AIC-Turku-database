@@ -559,6 +559,24 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "optical_path": {
                     "filters": [],
                     "splitters": [],
+                    # A plan can only report components this instrument records.
+                    "hardware_inventory_renderables": [
+                        {"id": "source:laser_561", "inventory_class": "light_source",
+                         "display_label": "Laser 561", "publication_label": "Laser 561",
+                         "publication_template": "Excitation was provided by {label}."},
+                        {"id": "optical_path_element:filter_wheel", "inventory_class": "optical_element",
+                         "display_label": "Filter wheel", "publication_label": "Filter wheel",
+                         "publication_template": "The light path included {label}."},
+                        {"id": "optical_path_element:analyzer", "inventory_class": "optical_element",
+                         "display_label": "Analyzer", "publication_label": "Analyzer",
+                         "publication_template": "The light path included {label}."},
+                        {"id": "splitter:dual_view", "inventory_class": "splitter",
+                         "display_label": "Dual-view splitter", "publication_label": "Dual-view splitter",
+                         "publication_template": "The emission light was divided by {label}."},
+                        {"id": "endpoint:scmos", "inventory_class": "endpoint",
+                         "display_label": "sCMOS camera", "publication_label": "sCMOS camera",
+                         "publication_template": "Images were recorded using {label}."},
+                    ],
                     "authoritative_route_contract": {"routes": [
                         {"id": "confocal_spinning_disk", "display_label": "Spinning-disk confocal"}
                     ]},
@@ -645,6 +663,14 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "optical_path": {
                     "filters": [],
                     "splitters": [],
+                    "hardware_inventory_renderables": [
+                        {"id": "source:dto_laser", "inventory_class": "light_source",
+                         "display_label": "DTO Laser", "publication_label": "DTO Laser",
+                         "publication_template": "Excitation was provided by {label}."},
+                        {"id": "optical_path_element:dto_wheel", "inventory_class": "optical_element",
+                         "display_label": "DTO Wheel", "publication_label": "DTO Wheel",
+                         "publication_template": "The light path included {label}."},
+                    ],
                     "authoritative_route_contract": {"routes": [
                         {"id": "dto_route", "display_label": "DTO route"}
                     ]},
@@ -843,7 +869,9 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                             "method_sentence": "Excitation was provided by Laser 488.",
                         }
                     ],
-                    "authoritative_route_contract": {"routes": [{"id": "route_1"}]},
+                    "authoritative_route_contract": {"routes": [
+                        {"id": "route_1", "display_label": "Route 1"}
+                    ]},
                 },
             },
             "modalities": [],
@@ -896,7 +924,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                             "method_sentence": "The optical path included Filter wheel.",
                         }
                     ],
-                    "authoritative_route_contract": {"routes": [{"id": "route_2"}]},
+                    "authoritative_route_contract": {"routes": [{"id": "route_2", "display_label": "Route 2"}]},
                 },
             },
             "modalities": [],
@@ -1081,10 +1109,16 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "optical_modulators": [],
                 "illumination_logic": [],
                 "optical_path": {
+                    "hardware_inventory_renderables": [
+                        {"id": "optical_path_element:filter_wheel", "inventory_class": "optical_element",
+                         "display_label": "Filter wheel", "publication_label": "Filter wheel",
+                         "publication_template": "The light path included {label}."},
+                    ],
                     "authoritative_route_contract": {
                         "routes": [
                             {
                                 "id": "route_main",
+                                "display_label": "Main route",
                                 "route_optical_facts": {
                                     "selected_or_selectable_emission_filters": [
                                         {"display_label": "Filter wheel", "position_key": "Pos_1"}

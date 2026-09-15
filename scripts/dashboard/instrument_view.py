@@ -352,17 +352,23 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
     sensor_clause = f" ({', '.join(sensor_detail_parts)})" if sensor_detail_parts else ""
     kind_clause = f" {kind_label}" if kind_label else ""
     base_detection = f"Detection was performed using a {display_label}{kind_clause}{sensor_clause}"
+    # `supports_time_gating` records what the detector can do and the gating values
+    # are its recorded defaults, not a record of how it was set for an acquisition.
+    # Selecting a detector states its identity; how it was configured is asked.
+    method_sentence = f"{base_detection}."
+    gating_prompts: list[str] = []
     if supports_time_gating is True:
-        gating_phrase = ""
-        if gating_delay_ns and gate_width_ns:
-            gating_phrase = f" using default gating delay {gating_delay_ns} ns and gate width {gate_width_ns} ns"
-        elif gating_delay_ns:
-            gating_phrase = f" using default gating delay {gating_delay_ns} ns"
-        elif gate_width_ns:
-            gating_phrase = f" using default gate width {gate_width_ns} ns"
-        method_sentence = f"{base_detection}, configured for time-gated acquisition{gating_phrase}."
-    else:
-        method_sentence = f"{base_detection}."
+        recorded_defaults = ", ".join(
+            part for part in (
+                f"default gating delay {gating_delay_ns} ns" if gating_delay_ns else "",
+                f"default gate width {gate_width_ns} ns" if gate_width_ns else "",
+            ) if part
+        )
+        defaults_clause = f" ({recorded_defaults} are recorded for this detector)" if recorded_defaults else ""
+        gating_prompts.append(
+            f"[PLEASE SPECIFY: whether time-gated detection was used on the {display_label} and, "
+            f"if so, the gating delay and gate width applied{defaults_clause}]"
+        )
     method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     spec_lines = _spec_lines(
         ("Type", kind_label),
@@ -387,7 +393,10 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
         "route_label": route_label,
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
-        "review_prompts": _quarep_review_prompts(display_label, manufacturer, model, product_code),
+        "review_prompts": [
+            *_quarep_review_prompts(display_label, manufacturer, model, product_code),
+            *gating_prompts,
+        ],
     }
 
 
@@ -494,15 +503,15 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
     # `supported_phase_masks` records what the modulator can do, not what was applied.
     # A STED acquisition uses one mask, so the recorded options are requested rather
     # than asserted; the phase mask determines the PSF and therefore the resolution.
-    mask_request = (
-        f" [PLEASE SPECIFY: which phase mask profile was applied ({_human_list(supported_masks)} are recorded for this modulator)]."
+    mask_prompts = (
+        [f"[PLEASE SPECIFY: which phase mask profile was applied ({_human_list(supported_masks)} are recorded for this modulator)]"]
         if supported_masks
-        else ""
+        else []
     )
     method_sentence = f"Beam shaping used {component_reference} optics."
     if modulator_type in {"slm", "phase_plate", "vortex_plate"}:
         method_sentence = f"STED beam shaping used {component_reference}."
-    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code) + mask_request
+    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     return {
         **copy.deepcopy(modulator),
         "display_label": display_label,
@@ -513,6 +522,10 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
             ("Notes", clean_text(modulator.get("notes"))),
         ),
         "method_sentence": method_sentence,
+        "review_prompts": [
+            *_quarep_review_prompts(display_label, manufacturer, model, product_code),
+            *mask_prompts,
+        ],
     }
 
 

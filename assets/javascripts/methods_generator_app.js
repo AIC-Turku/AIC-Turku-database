@@ -218,6 +218,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /**
+     * Keep only the positions recorded on a route the user selected.
+     *
+     * A holder shared by two routes may carry different positions on each, so
+     * offering all of them would let a user report a route together with a
+     * position that route cannot reach.
+     */
+    function positionsOnSelectedRoutes(positions) {
+        const checkedRouteIds = new Set(getCheckedIds("route"));
+        if (!checkedRouteIds.size) return positions;
+        return positions.filter((position) => {
+            const routeIds = Array.isArray(position?.route_ids) ? position.route_ids.map(cleanText) : [];
+            return !routeIds.length || routeIds.some(id => checkedRouteIds.has(id));
+        });
+    }
+
+    /**
      * Offer the positions a filter turret or wheel can be set to.
      *
      * Ticking the holder only says light passed through it, which tells a reader
@@ -226,7 +242,8 @@ document.addEventListener("DOMContentLoaded", async () => {
      * as nested choices and the holder is ticked automatically when one is picked.
      */
     function bindSelectablePositions(container, item, prefix, itemIndex) {
-        const positions = Array.isArray(item?.selectable_positions) ? item.selectable_positions : [];
+        const allPositions = Array.isArray(item?.selectable_positions) ? item.selectable_positions : [];
+        const positions = positionsOnSelectedRoutes(allPositions);
         if (!positions.length) return;
         const componentId = cleanText(item.id);
         const componentLabel = cleanText(item.publication_label || item.display_label);
@@ -249,6 +266,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.componentLabel = componentLabel;
             checkbox.dataset.displayLabel = positionLabel;
             checkbox.dataset.incomplete = position?.incomplete ? "1" : "";
+            checkbox.dataset.routeIds = JSON.stringify(Array.isArray(position?.route_ids) ? position.route_ids : []);
             const productCode = cleanText(position?.product_code);
             const identity = productCode ? `${positionLabel} (catalogue no. ${productCode})` : positionLabel;
             checkbox.dataset.publicationTemplate = "The light path included {label}.";
@@ -461,6 +479,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             methodSentence: cleanText(cb.dataset.methodSentence),
             role: cleanText(cb.dataset.role),
             routeType: cleanText(cb.dataset.routeType),
+            routeIds: parseJsonArray(cb.dataset.routeIds),
             publicationTemplate: cleanText(cb.dataset.publicationTemplate),
             publicationLabel: cleanText(cb.dataset.publicationLabel),
             reviewPrompts: parseJsonArray(cb.dataset.reviewPrompts),
@@ -654,10 +673,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         const routeViews = routeViewsForInstrument(dto);
         const target = cleanText(routeNameOrId);
         if (!target) return null;
-        return routeViews.find(route => cleanText(route?.id) === target)
-            || routeViews.find(route => cleanText(route?.illumination_mode) === target)
-            || routeViews.find(route => cleanText(route?.display_label) === target)
-            || null;
+        const byId = routeViews.find(route => cleanText(route?.id) === target);
+        if (byId) return byId;
+        // A display label or a broad illumination mode may be shared by two routes
+        // that use different filters, branches or endpoints. Either identifies a
+        // route only when exactly one route answers to it.
+        const uniqueMatch = (accessor) => {
+            const matches = routeViews.filter(route => cleanText(route?.[accessor]) === target);
+            return matches.length === 1 ? matches[0] : null;
+        };
+        return uniqueMatch("display_label") || uniqueMatch("illumination_mode") || null;
     }
 
     /**
@@ -670,32 +695,63 @@ document.addEventListener("DOMContentLoaded", async () => {
      * report hardware that is no longer part of the instrument.
      */
     function inventoryIndex(dto) {
-        const index = new Map();
+        // Canonical ids identify exactly one component. Labels do not: an instrument
+        // with two identical cameras records the same label twice, so a label that
+        // resolves to more than one component identifies neither and must not be
+        // allowed to bind a plan to whichever happened to be indexed first.
+        const byId = new Map();
+        const byLabel = new Map();
         opticalPathInventory(dto).forEach((item) => {
-            [
-                item?.id,
-                item?.hardware_id,
-                item?.display_label,
-                item?.canonical_display_label,
-                item?.publication_label,
-            ].map(cleanText).filter(Boolean).forEach((key) => {
-                const normalized = key.toLowerCase();
-                if (!index.has(normalized)) index.set(normalized, item);
+            [item?.id, item?.hardware_id].map(cleanText).filter(Boolean).forEach((key) => {
+                byId.set(key.toLowerCase(), item);
             });
+            [item?.display_label, item?.canonical_display_label, item?.publication_label]
+                .map(cleanText).filter(Boolean).forEach((key) => {
+                    const normalized = key.toLowerCase();
+                    const known = byLabel.get(normalized);
+                    if (!known) {
+                        byLabel.set(normalized, item);
+                    } else if (known !== item) {
+                        byLabel.set(normalized, "ambiguous");
+                    }
+                });
         });
-        return index;
+        return { byId, byLabel };
     }
 
-    function matchRecordedComponent(index, ...candidates) {
-        for (const candidate of candidates) {
+    /**
+     * Resolve a plan component against the instrument record.
+     *
+     * Returns the recorded component, or a reason it could not be resolved.
+     * "Ambiguous" is not a weaker match than "unmatched": binding a plan to the
+     * wrong one of two identical detectors produces a confident sentence about
+     * the wrong physical component, so both refuse to produce a claim.
+     */
+    // Both fields come from the instrument record, so either is canonical; only
+    // the plan's own label is not.
+    function recordedLabel(item) {
+        return cleanText(item?.publication_label) || cleanText(item?.display_label);
+    }
+
+    function matchRecordedComponent(index, ids, labels) {
+        for (const candidate of ids) {
             const key = cleanText(candidate).toLowerCase();
-            if (key && index.has(key)) return index.get(key);
+            if (key && index.byId.has(key)) return { item: index.byId.get(key), reason: "" };
         }
-        return null;
+        for (const candidate of labels) {
+            const key = cleanText(candidate).toLowerCase();
+            if (!key || !index.byLabel.has(key)) continue;
+            const hit = index.byLabel.get(key);
+            if (hit === "ambiguous") return { item: null, reason: "ambiguous" };
+            return { item: hit, reason: "" };
+        }
+        return { item: null, reason: "unmatched" };
     }
 
-    function unrecordedComponentPrompt(label) {
-        return `[PLEASE VERIFY: the reviewed plan names “${label}”, which is not in the current instrument record; confirm the component that was actually used]`;
+    function unresolvedComponentPrompt(label, reason) {
+        return reason === "ambiguous"
+            ? `[PLEASE SPECIFY: more than one recorded component is called “${label}”, so the reviewed plan does not identify which one was used; state the exact component]`
+            : `[PLEASE VERIFY: the reviewed plan names “${label}”, which is not in the current instrument record; confirm the component that was actually used]`;
     }
 
     function withWavelength(label, wavelength) {
@@ -753,39 +809,66 @@ document.addEventListener("DOMContentLoaded", async () => {
         (Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).forEach((source) => {
             const planLabel = cleanText(source?.display_label || source?.name || source?.id);
             if (!planLabel) return;
-            const recorded = matchRecordedComponent(index, source?.id, source?.mechanismId, planLabel);
-            if (!recorded) prompts.push(unrecordedComponentPrompt(planLabel));
-            const label = cleanText(recorded?.publication_label) || planLabel;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [source?.id, source?.mechanismId], [planLabel]);
+            // A component the record cannot confirm is a question, not a fact. It
+            // must not also appear as finished prose: a reader takes the sentence
+            // and not the caveat.
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
             const wavelength = optionalNumber(source?.selected_wavelength_nm ?? source?.wavelength_nm);
             // The role comes from the instrument record, never from the plan: a plan
             // knows which source was switched on, not what it was used for.
-            const template = cleanText(recorded?.publication_template) || "Illumination was provided by {label}.";
-            (recorded?.review_prompts || []).forEach(prompt => prompts.push(cleanText(prompt)));
-            addFact(template, withWavelength(label, wavelength), recorded, planLabel);
+            (recorded.review_prompts || []).forEach(prompt => prompts.push(cleanText(prompt)));
+            addFact(
+                cleanText(recorded.publication_template) || "Illumination was provided by {label}.",
+                withWavelength(recordedLabel(recorded), wavelength),
+                recorded,
+                planLabel,
+            );
         });
 
         (Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).forEach((detector) => {
             const planLabel = cleanText(detector?.display_label || detector?.id);
             if (!planLabel) return;
-            const recorded = matchRecordedComponent(index, detector?.id, detector?.mechanismId, planLabel);
-            if (!recorded) prompts.push(unrecordedComponentPrompt(planLabel));
-            const label = cleanText(recorded?.publication_label) || planLabel;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [detector?.id, detector?.mechanismId], [planLabel]);
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
+            const label = recordedLabel(recorded);
             const minimum = optionalNumber(detector?.collection_min_nm);
             const maximum = optionalNumber(detector?.collection_max_nm);
             const hasWindow = minimum !== null && maximum !== null && minimum > 0 && maximum > minimum;
-            const template = cleanText(recorded?.publication_template) || "Images were recorded using {label}.";
-            addFact(template, hasWindow ? `${label} (detection ${minimum}–${maximum} nm)` : label, recorded, planLabel);
+            addFact(
+                cleanText(recorded.publication_template) || "Images were recorded using {label}.",
+                hasWindow ? `${label} (detection ${minimum}–${maximum} nm)` : label,
+                recorded,
+                planLabel,
+            );
         });
 
         const routeSteps = Array.isArray(runtimeConfig.selected_route_steps) ? runtimeConfig.selected_route_steps : [];
         routeSteps.filter(step => step?.kind === "optical_component").forEach((step) => {
             const planLabel = cleanText(step?.display_label || step?.position_label || step?.component_type);
             if (!planLabel) return;
-            const recorded = matchRecordedComponent(index, step?.component_id, planLabel);
-            const label = cleanText(recorded?.publication_label) || planLabel;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [step?.hardware_inventory_id, step?.component_id], [planLabel]);
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
+            const label = recordedLabel(recorded);
             const position = cleanText(step?.position_label) || cleanText(step?.position_key) || cleanText(step?.position_id);
-            const template = cleanText(recorded?.publication_template) || "The light path included {label}.";
-            addFact(template, position ? `${label} (position ${position})` : label, recorded, planLabel);
+            addFact(
+                cleanText(recorded.publication_template) || "The light path included {label}.",
+                position ? `${label} (position ${position})` : label,
+                recorded,
+                planLabel,
+            );
             if (step?._cube_incomplete) {
                 prompts.push(`[PLEASE VERIFY: the recorded optical configuration is incomplete for ${label}; confirm the exact excitation filter, dichroic and emission filter used]`);
             }
@@ -798,16 +881,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         (Array.isArray(runtimeConfig.splitters) ? runtimeConfig.splitters : []).forEach((splitter) => {
             const planLabel = cleanText(splitter?.display_label || splitter?.id);
             if (!planLabel) return;
-            const recorded = matchRecordedComponent(index, splitter?.id, splitter?.mechanismId, planLabel);
-            if (!recorded) prompts.push(unrecordedComponentPrompt(planLabel));
-            const label = cleanText(recorded?.publication_label) || planLabel;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [splitter?.id, splitter?.mechanismId], [planLabel]);
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
+            const label = recordedLabel(recorded);
             const rawBranches = Array.isArray(splitter?.selected_branch_ids) ? splitter.selected_branch_ids.filter(Boolean) : [];
             const named = rawBranches.map(id => branchLabels.get(cleanText(id)) || "").filter(Boolean);
             if (rawBranches.length && named.length !== rawBranches.length) {
                 prompts.push(`[PLEASE SPECIFY: which output of ${label} was recorded; the reviewed plan identifies its branches only by internal reference]`);
             }
-            const template = cleanText(recorded?.publication_template) || "The emission light was divided by {label}.";
-            addFact(template, named.length ? `${label} (${humanJoin(named)} outputs)` : label, recorded, planLabel);
+            addFact(
+                cleanText(recorded.publication_template) || "The emission light was divided by {label}.",
+                named.length ? `${label} (${humanJoin(named)} outputs)` : label,
+                recorded,
+                planLabel,
+            );
         });
 
         const sentences = [];
@@ -971,17 +1062,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     // The generic settings list is the same for a brightfield snapshot and a FLIM
     // measurement. These are the parameters a reader needs for the specific
     // technique, which no reviewer can reconstruct from the instrument record.
+    // These name the parameters a reader needs for the technique, without assuming
+    // a particular implementation of it: spectral imaging does not necessarily
+    // involve unmixing, FRET is not necessarily intensity-based, and a disk's
+    // pinhole geometry is usually a fixed specification rather than a choice.
     const MODALITY_SETTINGS_PROMPTS = {
         confocal_point: "[PLEASE SPECIFY: confocal pinhole diameter (in Airy units), scan zoom, pixel dwell time, and line/frame averaging]",
-        confocal_spinning_disk: "[PLEASE SPECIFY: spinning-disk pinhole size and spacing, disk rotation speed, and camera exposure per channel]",
+        confocal_spinning_disk: "[PLEASE SPECIFY: camera exposure per channel, and any disk setting that was varied (for example rotation speed or the pinhole pattern, if the system offers a choice)]",
         multiphoton: "[PLEASE SPECIFY: excitation wavelength, mean power at the sample, and pulse width]",
-        light_sheet: "[PLEASE SPECIFY: light-sheet thickness, sheet numerical aperture, and detection/illumination objective pairing]",
+        light_sheet: "[PLEASE SPECIFY: light-sheet thickness, sheet numerical aperture, and the detection/illumination objective pairing]",
     };
     const READOUT_SETTINGS_PROMPTS = {
-        "flim": "[PLEASE SPECIFY: FLIM acquisition and analysis settings: laser repetition rate, photons collected per pixel, instrument response function, and the lifetime fitting model]",
-        "spectral imaging": "[PLEASE SPECIFY: spectral detection windows (start, end and step) and the reference spectra used for linear unmixing]",
-        "fcs": "[PLEASE SPECIFY: FCS measurement duration, number of repeats, confocal volume calibration, and the fitting model]",
-        "fret": "[PLEASE SPECIFY: FRET channel definitions and the bleed-through/cross-excitation correction factors]",
+        "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including laser repetition rate, photons collected per pixel, how the instrument response was determined, and the fitting or phasor analysis used]",
+        "spectral imaging": "[PLEASE SPECIFY: the spectral detection windows (start, end and step) and, if the spectra were unmixed, the method and reference spectra used]",
+        "fcs": "[PLEASE SPECIFY: FCS measurement duration, number of repeats, how the confocal volume was calibrated, and the fitting model]",
+        "fret": "[PLEASE SPECIFY: how FRET was measured (for example sensitised emission, acceptor photobleaching or lifetime) and, for intensity-based measurements, the bleed-through and cross-excitation correction factors]",
     };
 
     function modalitySettingsPrompts(routeSelections, readoutSelections) {
@@ -1056,7 +1151,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         // wavelength, filter position or detection window the checkbox cannot.
         // A named position supersedes its holder: "the CYR71010 cube in the Filter
         // Turret" is the fact, "the Filter Turret" only the container.
-        const positionSelections = getCheckedSelections("filterposition");
+        const checkedRouteIds = new Set(getCheckedIds("route"));
+        const allPositionSelections = getCheckedSelections("filterposition");
+        const positionSelections = allPositionSelections.filter(item =>
+            !checkedRouteIds.size
+            || !item.routeIds.length
+            || item.routeIds.some(id => checkedRouteIds.has(id)));
+        allPositionSelections
+            .filter(item => !positionSelections.includes(item))
+            .forEach((item) => {
+                prompts.push(`[PLEASE VERIFY: ${item.displayLabel} is not recorded on the selected optical route, so it is not reported; confirm the route and the position that were used]`);
+            });
         const resolvedComponentIds = new Set(positionSelections.map(item => cleanText(item.id).split("::")[0]));
         const lightPathSelections = [
             ...getCheckedSelections("light"),

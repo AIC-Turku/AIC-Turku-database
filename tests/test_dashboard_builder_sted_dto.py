@@ -104,13 +104,18 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertEqual(light["timing_mode_label"], "pulsed")
 
         detector = hardware["detectors"][0]
-        self.assertIn("time-gated acquisition", detector["method_sentence"])
+        # `supports_time_gating` is a capability and the gating values are recorded
+        # defaults, so selecting the detector states its identity and asks how it
+        # was configured rather than asserting time-gated acquisition.
+        self.assertNotIn("time-gated acquisition", detector["method_sentence"])
+        self.assertTrue(any("whether time-gated detection was used" in prompt
+                            for prompt in detector["review_prompts"]))
         self.assertIn("Supports time gating", "\n".join(detector["spec_lines"]))
         self.assertEqual(detector["kind_label"], "hybrid")
 
         modulator = hardware["optical_modulators"][0]
         self.assertEqual(modulator["display_label"], "slm")
-        self.assertIn("phase mask", modulator["method_sentence"])
+        self.assertTrue(any("phase mask" in prompt for prompt in modulator["review_prompts"]))
         self.assertIn("Supported phase masks", "\n".join(modulator["spec_lines"]))
 
         logic = hardware["illumination_logic"][0]

@@ -104,10 +104,22 @@ class AuditBrowserRegressions(unittest.TestCase):
 
     def test_simulator_requires_confirmation_and_preserves_unknown_numbers(self):
         plan = {"scope_id": "scope-test", "route": "epi", "validSelection": True,
-                "sources": [{"display_label": "Plan laser", "selected_wavelength_nm": 561},
-                            {"display_label": "Unknown laser", "wavelength_nm": None}],
-                "detectors": [{"display_label": "Plan camera", "collection_min_nm": None, "collection_max_nm": None}]}
-        self.open_methods(storage=plan)
+                "sources": [{"id": "laser", "display_label": "Plan laser", "selected_wavelength_nm": 561},
+                            {"id": "laser2", "display_label": "Unknown laser", "wavelength_nm": None}],
+                "detectors": [{"id": "camera", "display_label": "Plan camera",
+                               "collection_min_nm": None, "collection_max_nm": None}]}
+        # Only components the record holds may be reported, so the plan names them
+        # by their canonical ids.
+        instrument = scope()
+        inventory = instrument["hardware"]["optical_path"]["hardware_inventory_renderables"]
+        inventory[0].update({"publication_label": "Plan laser",
+                             "publication_template": "Excitation used {label}."})
+        inventory[1].update({"publication_label": "Plan camera",
+                             "publication_template": "Images were recorded using {label}."})
+        inventory.append({"id": "laser2", "display_label": "Unknown laser", "inventory_class": "light_source",
+                          "publication_label": "Unknown laser",
+                          "publication_template": "Excitation used {label}."})
+        self.open_methods(instruments=[instrument], storage=plan)
         self.page.click("#add-btn")
         self.assertNotIn("Plan laser", self.output())
         self.page.check("#runtime-confirm")

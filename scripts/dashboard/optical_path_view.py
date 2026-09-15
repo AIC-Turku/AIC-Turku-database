@@ -361,6 +361,8 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
     """
     positions_by_component: dict[str, list[dict[str, Any]]] = {}
     for route in light_paths:
+        route_id = clean_text(route.get("id"))
+        route_label = clean_text(route.get("name") or route.get("display_label") or route_id)
         selected_execution = route.get("selected_execution") if isinstance(route.get("selected_execution"), dict) else {}
         steps = selected_execution.get("selected_route_steps")
         for step in steps if isinstance(steps, list) else []:
@@ -371,23 +373,34 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
             if not inventory_id or not isinstance(available, list):
                 continue
             known = positions_by_component.setdefault(inventory_id, [])
-            known_keys = {row["id"] for row in known}
+            by_key = {row["id"]: row for row in known}
             for position in available:
                 if not isinstance(position, dict):
                     continue
                 key = clean_text(position.get("position_key") or position.get("position_id"))
                 label = clean_text(position.get("position_label") or position.get("label") or position.get("name"))
-                if not key or not label or key in known_keys:
+                if not key or not label:
                     continue
-                known_keys.add(key)
-                product_code = clean_text(position.get("product_code"))
-                known.append({
+                # A holder shared by two routes may offer different positions on
+                # each. Keeping the route each position came from is what lets the
+                # page refuse "route A plus a position that only exists on route B".
+                existing = by_key.get(key)
+                if existing is not None:
+                    if route_id and route_id not in existing["route_ids"]:
+                        existing["route_ids"].append(route_id)
+                        existing["route_labels"].append(route_label)
+                    continue
+                row = {
                     "id": key,
                     "display_label": label,
-                    "product_code": product_code,
+                    "product_code": clean_text(position.get("product_code")),
                     "component_type": clean_text(position.get("component_type")),
                     "incomplete": bool(position.get("_cube_incomplete") or position.get("_unsupported_spectral_model")),
-                })
+                    "route_ids": [route_id] if route_id else [],
+                    "route_labels": [route_label] if route_label else [],
+                }
+                by_key[key] = row
+                known.append(row)
     return positions_by_component
 
 
