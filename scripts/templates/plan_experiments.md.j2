@@ -72,11 +72,11 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
     const outputArea = document.getElementById("generated-prompt");
     const copyBtn = document.getElementById("copy-prompt-btn");
 
-    const basePromptTop = `You are an experienced microscopy facility scientist helping me plan an experiment using the attached ${facilityShortName} inventory.
+    const basePromptTop = `Help me plan an experiment using the attached ${facilityShortName} inventory.
 
-Use the JSON as the only source for facility-specific facts. Use general microscopy knowledge to interpret the biology, infer imaging requirements, explain trade-offs and make evidence-weighted recommendations.
+Use the JSON as the only source for facility-specific facts. Use microscopy knowledge to interpret the biology and imaging trade-offs.
 
-Principles: reason aggressively about the experiment but conservatively about undocumented facility facts. Prefer the simplest imaging strategy that answers the biological question; add complexity only when it provides a relevant advantage.
+Reason about the experiment, but be conservative about undocumented facility facts. Prefer the simplest imaging strategy that answers the biological question.
 
 Rules:
 - Read planning_contract first. Treat llm_context.authoritative_route_contract as route truth. Never combine components from different routes.
