@@ -180,8 +180,9 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.open_methods(instruments=[instrument])
         self.page.click("#add-btn")
         output = self.output()
-        self.assertIn("Review before publication:\n- [PLEASE VERIFY: emission filter used]", output)
-        self.assertIn("Review before publication:\n- [PLEASE SPECIFY: exposure time and pixel size]", output)
+        self.assertEqual(output.count("Review before publication:"), 1)
+        self.assertIn("- [PLEASE VERIFY: emission filter used]", output)
+        self.assertIn("- [PLEASE SPECIFY: exposure time and pixel size]", output)
         self.assertNotIn("microscope. [PLEASE", output)
 
     def test_clipboard_rejection_reports_failure_instead_of_success(self):
