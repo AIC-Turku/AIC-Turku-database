@@ -103,18 +103,6 @@ def _identity_value(value: Any) -> str:
     return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
 
 
-def _quarep_value(value: Any, label: str) -> str:
-    """Render a QUAREP identifier, or a bracketed request when it is not recorded.
-
-    An unrecorded value must use the same ``[PLEASE SPECIFY: ...]`` marker as every
-    other gap, so an author who checks the draft for brackets before submission
-    finds it. A bare phrase such as "missing (ask staff)" reads like a statement
-    about the component and survives that check.
-    """
-    cleaned = _identity_value(value)
-    return cleaned or f"[PLEASE SPECIFY: {label}]"
-
-
 def _quarep_specs_clause(
     manufacturer: Any,
     model: Any,
@@ -123,12 +111,14 @@ def _quarep_specs_clause(
     extras: Iterable[str] | None = None,
     sentence: str = "",
 ) -> str:
-    """Build the QUAREP identifier clause, omitting what the sentence already says.
+    """Build the QUAREP identifier clause from what the record actually holds.
 
     ``sentence`` is the prose the clause will be appended to. Repeating a
     manufacturer and model that the sentence already names produces the doubled
     parenthetical this clause is meant to avoid, so recorded values already
-    present are skipped; unrecorded ones are still requested.
+    present are skipped. Unrecorded ones are left out of the sentence entirely
+    and requested through `_quarep_review_prompts` instead: three bracketed
+    placeholders inside a parenthetical read as noise, not as a component.
     """
     parts: list[str] = []
     for label, value in (
@@ -137,14 +127,36 @@ def _quarep_specs_clause(
         ("Product code", product_code),
     ):
         cleaned = _identity_value(value)
-        if cleaned and cleaned in sentence:
+        if not cleaned or cleaned in sentence:
             continue
-        parts.append(f"{label}: {_quarep_value(value, label.lower())}")
+        parts.append(f"{label}: {cleaned}")
     for part in extras or []:
         cleaned = clean_text(part)
         if cleaned:
             parts.append(cleaned)
     return "; ".join(parts)
+
+
+def _quarep_review_prompts(
+    component_label: Any,
+    manufacturer: Any,
+    model: Any,
+    product_code: Any,
+) -> list[str]:
+    """Request the QUAREP identifiers a component does not have recorded."""
+    missing = [
+        label
+        for label, value in (
+            ("manufacturer", manufacturer),
+            ("model", model),
+            ("product code", product_code),
+        )
+        if not _identity_value(value)
+    ]
+    if not missing:
+        return []
+    subject = clean_text(component_label) or "this component"
+    return [f"[PLEASE SPECIFY: {_human_list(missing)} of the {subject}]"]
 
 
 def _append_quarep_specs(
@@ -308,6 +320,7 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
         "display_subtitle": manufacturer,
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "review_prompts": _quarep_review_prompts(display_label, manufacturer, model, product_code),
         "publication_phrase": publication_phrase,
         # A frame distinct from the microscope sentence, so a draft does not open
         # two consecutive sentences with "Images were acquired using".
@@ -374,6 +387,7 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
         "route_label": route_label,
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "review_prompts": _quarep_review_prompts(display_label, manufacturer, model, product_code),
     }
 
 
@@ -564,6 +578,11 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
         "display_subtitle": " ".join(part for part in [manufacturer, model] if part).strip(),
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "review_prompts": (
+            _quarep_review_prompts(scanner_type or "scanner", manufacturer, model, product_code)
+            if method_sentence
+            else []
+        ),
         "present": bool(scanner_type and scanner_type != "No Scanner"),
     }
 
@@ -844,6 +863,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 "display_subtitle": provenance,
                 "display_notes": notes,
                 "method_sentence": _append_quarep_specs(f"The {module_name} module was used." if module_name else "", manufacturer, model, product_code),
+                "review_prompts": _quarep_review_prompts(f"{module_name} module", manufacturer, model, product_code),
             }
         )
 

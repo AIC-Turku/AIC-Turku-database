@@ -1091,8 +1091,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         prompts.push(cleanText(methods.retired_review_prompt));
         // Ask about the selectors whose position is still unknown, not about the
         // ones the user has just named.
+        // Only the routes in use are worth asking about: a spinning-disk acquisition
+        // should not be asked which position of the widefield turret it used.
+        const selectedRouteLabels = new Set(routeLabels);
         const unresolvedOptics = (Array.isArray(methods.unresolved_optics) ? methods.unresolved_optics : [])
-            .filter(entry => entry && !resolvedComponentIds.has(cleanText(entry.inventory_id)));
+            .filter(entry => entry && !resolvedComponentIds.has(cleanText(entry.inventory_id)))
+            .filter(entry => !selectedRouteLabels.size
+                || !cleanText(entry.route_label)
+                || selectedRouteLabels.has(cleanText(entry.route_label)));
         if (Array.isArray(methods.unresolved_optics) && methods.unresolved_optics.length) {
             if (unresolvedOptics.length) {
                 prompts.push(`[PLEASE SPECIFY: which position of ${humanJoin(unresolvedOptics.map(entry => cleanText(entry.scoped_label)))} was used for acquisition, including the filter/dichroic identity (manufacturer + model/catalog number)]`);

@@ -378,6 +378,24 @@ class BrowserGroundingRegressions(unittest.TestCase):
         # for markers and no recorded name can be mistaken for one.
         self.assertIn("[PLEASE SPECIFY: fake] route", self.output())
 
+    def test_selectors_on_routes_that_were_not_used_are_not_asked_about(self):
+        instrument = _instrument()
+        instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"].append(
+            {"id": "confocal", "display_label": "Point-scanning confocal", "relevant_hardware": {}})
+        instrument["methods"]["unresolved_optics"] = [
+            {"inventory_id": "turret", "display_label": "Filter Turret",
+             "route_label": "Epifluorescence", "scoped_label": "Filter Turret (Epifluorescence route)"},
+            {"inventory_id": "sp", "display_label": "Spectral module",
+             "route_label": "Point-scanning confocal",
+             "scoped_label": "Spectral module (Point-scanning confocal route)"},
+        ]
+        self.open_methods(instrument)
+        self.page.check("#route-0")
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn("Filter Turret (Epifluorescence route)", output)
+        self.assertNotIn("Spectral module", output)
+
     def test_technique_specific_settings_are_requested(self):
         instrument = _instrument()
         routes = instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"]
