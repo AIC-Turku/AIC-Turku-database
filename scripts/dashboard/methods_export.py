@@ -34,6 +34,9 @@ class AcknowledgementConfigError(ValueError):
 
 LEGACY_ACK_KEYS = ("xcelligence_addition",)
 
+# A recorded value that only restates that the value is unknown is not an identity.
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+
 
 def _build_ack_data(
     ack: dict[str, Any],
@@ -178,27 +181,137 @@ def build_plan_experiments_page_config(facility: dict[str, Any]) -> dict[str, An
     }
 
 
-def _has_explicit_route_fact_selection(row: dict[str, Any]) -> bool:
-    """Return True only when a route fact records an actual selected/fixed item.
+# Route facts about a source, detector or endpoint say only that the component sits
+# on the route. `selected_execution._derive_selection_state` returns "fixed" for every
+# one of them unconditionally, so "fixed" on these collections is route membership,
+# not evidence that the component was used for a particular acquisition.
+_ROUTE_MEMBERSHIP_FACT_KEYS = frozenset(
+    {
+        "selected_or_selectable_sources",
+        "selected_or_selectable_endpoints",
+    }
+)
+
+# For an optical element, "fixed" means the element has no selectable position, so
+# light on this route must traverse exactly this component. That is a genuine
+# route-implied fact and may be reported.
+_ROUTE_FIXED_SELECTION_STATES = frozenset({"selected", "resolved"})
+
+
+def _has_explicit_route_fact_selection(row: dict[str, Any], fact_key: str = "") -> bool:
+    """Return True only when a route fact records an item used for this acquisition.
 
     The route view intentionally contains `selected_or_selectable_*` collections.
     Those are useful for planning, but a Methods draft must not turn availability
     into an acquisition claim.  Keep only facts with explicit selection evidence;
     acquisition-specific simulator selections are reported separately from the
     reviewed runtime snapshot.
+
+    A row that still offers alternatives is never evidence, whatever its
+    ``selection_state`` says: if the record knows the element has other positions,
+    the one that was used has not been established.
     """
+    if row.get("available_positions"):
+        return False
+
     selection_state = clean_text(row.get("selection_state")).lower()
-    if selection_state in {"selected", "fixed", "resolved", "required"}:
+    has_selected_position = bool(
+        clean_text(row.get("selected_position_key") or row.get("selected_position_id"))
+    )
+
+    if fact_key in _ROUTE_MEMBERSHIP_FACT_KEYS:
+        # Only an explicit per-acquisition selection promotes one of these.
+        return selection_state == "selected" or has_selected_position
+
+    if selection_state in _ROUTE_FIXED_SELECTION_STATES:
         return True
-    if clean_text(row.get("selected_position_key") or row.get("selected_position_id")):
+    if has_selected_position:
         return True
-    # A concrete position on a flattened fixed route is evidence; an array of
-    # available positions without a selected position is not.
-    if clean_text(row.get("position_key") or row.get("position_id")) and not row.get(
-        "available_positions"
+    # A single-position element on a flattened fixed route is unavoidable, so the
+    # route itself is the evidence. An element that merely lacks a recorded
+    # position is not.
+    if selection_state == "fixed" and clean_text(
+        row.get("position_key") or row.get("position_id")
     ):
         return True
     return False
+
+
+def _strip_route_fact_alternatives(row: dict[str, Any]) -> dict[str, Any]:
+    """Remove availability collections from a fact that survived grounding.
+
+    Publication prose must never enumerate positions that were not used, even
+    alongside one that was.
+    """
+    row.pop("available_positions", None)
+    row.pop("selectable_positions", None)
+    return row
+
+
+def _acquisition_software_sentence(dto: dict[str, Any]) -> str:
+    """Offer the recorded acquisition software as a confirmable statement."""
+    software = dto.get("software") if isinstance(dto.get("software"), list) else []
+    for row in software:
+        if not isinstance(row, dict):
+            continue
+        if clean_text(row.get("role")).lower() != "acquisition":
+            continue
+        name = clean_text(row.get("name"))
+        if not name or name.lower() in _PLACEHOLDER_IDENTITY_VALUES:
+            continue
+        version = clean_text(row.get("version"))
+        label = f"{name} (v{version})" if version else name
+        suffix = "" if version else " [PLEASE SPECIFY: acquisition software version]"
+        return f"Instrument control and image acquisition were performed using {label}.{suffix}"
+    return ""
+
+
+def _microscope_sentence(dto: dict[str, Any]) -> str:
+    """Name the microscope from every identity field the record holds.
+
+    Manufacturer, model and stand orientation are canonical instrument facts, not
+    acquisition settings, so a draft that drops them makes the instrument harder to
+    identify than the record allows. Acquisition software is deliberately excluded:
+    the record describes the software installed now, which is an acquisition-time
+    claim the user must confirm, not an instrument identity.
+    """
+    display_name = clean_text(dto.get("display_name"))
+    if not display_name:
+        return "[PLEASE VERIFY: microscope identity is missing from the facility record]."
+
+    identity = dto.get("identity") if isinstance(dto.get("identity"), dict) else {}
+    manufacturer = clean_text(identity.get("manufacturer"))
+    model = clean_text(identity.get("model"))
+    stand = identity.get("stand_orientation") if isinstance(identity.get("stand_orientation"), dict) else {}
+    stand_label = clean_text(stand.get("display_label")).lower()
+
+    reference = " ".join(part for part in (manufacturer, model) if part).strip()
+    normalized_name = display_name.lower()
+    reference_clause = (
+        f" ({reference})"
+        if reference and reference.lower() not in normalized_name
+        else ""
+    )
+
+    # "other"/"unknown" is a vocabulary placeholder, not a description of the stand.
+    if stand_label in {"other", "unknown", "not applicable"}:
+        stand_label = ""
+
+    if stand_label and stand_label not in normalized_name:
+        article = "an" if stand_label[:1] in {"a", "e", "i", "o", "u"} else "a"
+        sentence = (
+            f"Images were acquired using the {display_name}, "
+            f"{article} {stand_label} microscope{reference_clause}."
+        )
+    else:
+        sentence = f"Images were acquired using the {display_name}{reference_clause}."
+
+    if dto.get("retired"):
+        sentence += (
+            " [PLEASE VERIFY: this instrument is recorded as retired; confirm the configuration "
+            "that was in use at the time of acquisition]."
+        )
+    return sentence
 
 
 def _ground_methods_projection(dto: dict[str, Any]) -> None:
@@ -211,12 +324,11 @@ def _ground_methods_projection(dto: dict[str, Any]) -> None:
     methods = dto.get("methods") if isinstance(dto.get("methods"), dict) else {}
     dto["methods"] = methods
 
-    display_name = clean_text(dto.get("display_name"))
-    methods["base_sentence"] = (
-        f"Images were acquired using the {display_name}."
-        if display_name
-        else "[PLEASE VERIFY: microscope identity is missing from the facility record]."
-    )
+    methods["base_sentence"] = _microscope_sentence(dto)
+    # The record documents the software installed now, which is an acquisition-time
+    # claim rather than an instrument identity. Offer it as something the user can
+    # confirm instead of asserting it or pretending it is unrecorded.
+    methods["acquisition_software_sentence"] = _acquisition_software_sentence(dto)
     methods["acquisition_settings_recommendation"] = (
         "[PLEASE SPECIFY: acquisition software/version (if applicable), exposure "
         "time(s), excitation power(s), detector gain/offset, binning, zoom/averaging, "
@@ -251,9 +363,9 @@ def _ground_methods_projection(dto: dict[str, Any]) -> None:
             if not key.startswith("selected_or_selectable_") or not isinstance(rows, list):
                 continue
             selected_rows = [
-                copy.deepcopy(row)
+                _strip_route_fact_alternatives(copy.deepcopy(row))
                 for row in rows
-                if isinstance(row, dict) and _has_explicit_route_fact_selection(row)
+                if isinstance(row, dict) and _has_explicit_route_fact_selection(row, key)
             ]
             if len(selected_rows) != len(rows):
                 removed_nonselected_fact = True

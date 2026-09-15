@@ -92,9 +92,27 @@ def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
     return fallback
 
 
-def _quarep_value(value: Any) -> str:
+# A recorded manufacturer/model that only restates that the value is unknown is not
+# an identity. Publication prose must not present it as one.
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+
+
+def _identity_value(value: Any) -> str:
+    """Return an identity string, or "" when it only marks the value unknown."""
     cleaned = clean_text(value)
-    return cleaned or "missing (ask staff)"
+    return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
+
+
+def _quarep_value(value: Any, label: str) -> str:
+    """Render a QUAREP identifier, or a bracketed request when it is not recorded.
+
+    An unrecorded value must use the same ``[PLEASE SPECIFY: ...]`` marker as every
+    other gap, so an author who checks the draft for brackets before submission
+    finds it. A bare phrase such as "missing (ask staff)" reads like a statement
+    about the component and survives that check.
+    """
+    cleaned = _identity_value(value)
+    return cleaned or f"[PLEASE SPECIFY: {label}]"
 
 
 def _quarep_specs_clause(
@@ -103,12 +121,25 @@ def _quarep_specs_clause(
     product_code: Any,
     *,
     extras: Iterable[str] | None = None,
+    sentence: str = "",
 ) -> str:
-    parts = [
-        f"Manufacturer: {_quarep_value(manufacturer)}",
-        f"Model: {_quarep_value(model)}",
-        f"Product code: {_quarep_value(product_code)}",
-    ]
+    """Build the QUAREP identifier clause, omitting what the sentence already says.
+
+    ``sentence`` is the prose the clause will be appended to. Repeating a
+    manufacturer and model that the sentence already names produces the doubled
+    parenthetical this clause is meant to avoid, so recorded values already
+    present are skipped; unrecorded ones are still requested.
+    """
+    parts: list[str] = []
+    for label, value in (
+        ("Manufacturer", manufacturer),
+        ("Model", model),
+        ("Product code", product_code),
+    ):
+        cleaned = _identity_value(value)
+        if cleaned and cleaned in sentence:
+            continue
+        parts.append(f"{label}: {_quarep_value(value, label.lower())}")
     for part in extras or []:
         cleaned = clean_text(part)
         if cleaned:
@@ -127,8 +158,16 @@ def _append_quarep_specs(
     base = clean_text(sentence).rstrip()
     if base.endswith('.'):
         base = base[:-1]
-    specs = _quarep_specs_clause(manufacturer, model, product_code, extras=extras)
+    specs = _quarep_specs_clause(manufacturer, model, product_code, extras=extras, sentence=base)
+    if not specs:
+        return f"{base}." if base else ""
     return f"{base} ({specs})." if base else f"{specs}."
+
+
+def _indefinite_article(following: str) -> str:
+    """Pick "a"/"an" for the word that follows, so prose reads naturally."""
+    word = clean_text(following).lstrip("([").lower()
+    return "an" if word[:1] in {"a", "e", "i", "o", "u"} else "a"
 
 
 def _inventory_method_extras(item: dict[str, Any]) -> list[str]:
@@ -423,10 +462,18 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
     component_reference = _component_reference(manufacturer, model, type_label or "optical modulator")
     display_label = type_label or instance_name or model or "Optical Modulator"
     product_code = clean_text(modulator.get("product_code"))
-    method_sentence = f"Beam shaping used {component_reference} optics{f' with {_human_list(supported_masks)} phase mask support' if supported_masks else ''}."
+    # `supported_phase_masks` records what the modulator can do, not what was applied.
+    # A STED acquisition uses one mask, so the recorded options are requested rather
+    # than asserted; the phase mask determines the PSF and therefore the resolution.
+    mask_request = (
+        f" [PLEASE SPECIFY: which phase mask profile was applied ({_human_list(supported_masks)} are recorded for this modulator)]."
+        if supported_masks
+        else ""
+    )
+    method_sentence = f"Beam shaping used {component_reference} optics."
     if modulator_type in {"slm", "phase_plate", "vortex_plate"}:
-        method_sentence = f"STED beam shaping was configured with {component_reference}{f' using {_human_list(supported_masks)} phase mask profiles' if supported_masks else ''}."
-    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
+        method_sentence = f"STED beam shaping used {component_reference}."
+    method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code) + mask_request
     return {
         **copy.deepcopy(modulator),
         "display_label": display_label,
@@ -486,7 +533,8 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
     )
     detail_bits = [f"line rate {line_rate} Hz" if line_rate else "", f"pinhole {pinhole} µm" if pinhole else ""]
     detail_text = ", ".join(bit for bit in detail_bits if bit)
-    component_reference = _component_reference(manufacturer, model, f"{scanner_type} scanner" if scanner_type else "scanner")
+    scanner_fallback = scanner_type if scanner_type.lower().endswith("scanner") else f"{scanner_type} scanner"
+    component_reference = _component_reference(manufacturer, model, scanner_fallback if scanner_type else "scanner")
     method_sentence = (
         f"The microscope used {component_reference} ({detail_text})."
         if scanner_type and scanner_type != "No Scanner" and detail_text
@@ -632,7 +680,11 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
 
     autofocus_sentence = ""
     if hardware_autofocus.get("is_installed") is True:
-        autofocus_sentence = f"Focal drift was minimized using a {autofocus_label or 'hardware autofocus'} system."
+        autofocus_descriptor = autofocus_label or "hardware autofocus"
+        autofocus_sentence = (
+            f"Focal drift was minimized using {_indefinite_article(autofocus_descriptor)} "
+            f"{autofocus_descriptor} system."
+        )
 
     triggering_sentence = ""
     if triggering_label and clean_text(triggering.get("notes")):
@@ -797,61 +849,129 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     route_rows = route_contract.get("routes") if isinstance(route_contract.get("routes"), list) else []
 
     def _route_optics_quarep_recommendation(routes: list[dict[str, Any]]) -> tuple[bool, str]:
+        """Ask about the light path from what the record actually contains.
+
+        The earlier version read only ``route_optical_facts``. Those collections are
+        assembled from ``selected_or_selectable_*`` keys that no producer writes, so
+        they are empty for every instrument and the prompt fired unconditionally --
+        identically for a fully documented light path and an undocumented one, which
+        trains readers to ignore it. The authoritative per-route evidence that does
+        exist is ``selected_execution.selected_route_steps``, so the prompt is derived
+        from there and names the components it is actually asking about.
+        """
         if not routes:
             return (
                 True,
-                "[PLEASE VERIFY: Route-specific optical selections are missing; report each filter, dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
+                "[PLEASE VERIFY: no optical route is recorded for this instrument; report each filter, "
+                "dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
             )
 
-        saw_any_route_facts = False
-        saw_incomplete_or_unsupported = False
-        saw_unresolved_selectors = False
+        unresolved: list[str] = []
+        incomplete: list[str] = []
+        saw_optical_component = False
+
+        def _record(label: str, route_label: str, *, broken: bool, resolved: bool) -> None:
+            nonlocal saw_optical_component
+            saw_optical_component = True
+            scoped = f"{label} ({route_label} route)" if route_label else label
+            if broken:
+                if scoped not in incomplete:
+                    incomplete.append(scoped)
+            elif not resolved and scoped not in unresolved:
+                unresolved.append(scoped)
+
+        fact_keys = (
+            "selected_or_selectable_excitation_filters",
+            "selected_or_selectable_dichroics",
+            "selected_or_selectable_emission_filters",
+            "selected_or_selectable_splitters",
+            "selected_or_selectable_modulators",
+            "selected_or_selectable_branch_selectors",
+        )
+
         for route in routes:
             if not isinstance(route, dict):
                 continue
+            route_label = clean_text(route.get("display_label") or route.get("id"))
+
+            # Declared route optics, when the route view carries them.
             route_facts = route.get("route_optical_facts") if isinstance(route.get("route_optical_facts"), dict) else {}
-            fact_rows = []
-            for key in (
-                "selected_or_selectable_sources",
-                "selected_or_selectable_excitation_filters",
-                "selected_or_selectable_dichroics",
-                "selected_or_selectable_emission_filters",
-                "selected_or_selectable_splitters",
-                "selected_or_selectable_endpoints",
-                "selected_or_selectable_modulators",
-                "selected_or_selectable_branch_selectors",
-            ):
-                value = route_facts.get(key)
-                if isinstance(value, list):
-                    fact_rows.extend(item for item in value if isinstance(item, dict))
+            for key in fact_keys:
+                rows = route_facts.get(key)
+                if not isinstance(rows, list):
+                    continue
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    label = clean_text(row.get("display_label") or row.get("id")) or "an optical element"
+                    selection_state = clean_text(row.get("selection_state")).lower()
+                    has_position = bool(
+                        clean_text(row.get("selected_position_key") or row.get("selected_position_id"))
+                        or clean_text(row.get("position_key") or row.get("position_id"))
+                    )
+                    offers_alternatives = bool(row.get("available_positions"))
+                    _record(
+                        label,
+                        route_label,
+                        broken=bool(row.get("_cube_incomplete") or row.get("_unsupported_spectral_model")),
+                        resolved=(
+                            not offers_alternatives
+                            and selection_state not in {"unresolved", "selectable"}
+                            and (has_position or selection_state in {"selected", "resolved", "fixed"})
+                        ),
+                    )
 
-            if fact_rows:
-                saw_any_route_facts = True
+            # Executed route steps: the evidence that production actually produces.
+            selected_execution = (
+                route.get("selected_execution")
+                if isinstance(route.get("selected_execution"), dict)
+                else {}
+            )
+            steps = (
+                selected_execution.get("selected_route_steps")
+                if isinstance(selected_execution.get("selected_route_steps"), list)
+                else []
+            )
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                if clean_text(step.get("kind")) not in {"optical_component", "routing_component"}:
+                    continue
+                label = clean_text(step.get("display_label") or step.get("component_id")) or "an optical element"
+                selection_state = clean_text(step.get("selection_state")).lower()
+                has_position = bool(
+                    clean_text(step.get("selected_position_key") or step.get("position_key"))
+                    or clean_text(step.get("selected_position_id") or step.get("position_id"))
+                )
+                _record(
+                    label,
+                    route_label,
+                    broken=bool(step.get("_cube_incomplete") or step.get("_unsupported_spectral_model")),
+                    resolved=(selection_state == "fixed" or has_position),
+                )
 
-            for row in fact_rows:
-                if row.get("_cube_incomplete") or row.get("_unsupported_spectral_model"):
-                    saw_incomplete_or_unsupported = True
-                selection_state = clean_text(row.get("selection_state")).lower()
-                if selection_state in {"unresolved", "selectable"}:
-                    saw_unresolved_selectors = True
-                if isinstance(row.get("available_positions"), list) and len(row.get("available_positions")) > 1 and not clean_text(row.get("selected_position_key") or row.get("position_key")):
-                    saw_unresolved_selectors = True
-
-        if saw_incomplete_or_unsupported:
+        if incomplete:
             return (
                 True,
-                "[CAVEAT: Some route-specific optics are incomplete or use an unsupported spectral model (for example flattened cubes); report known channel labels/positions and confirm uncertain cube internals].",
+                "[CAVEAT: the recorded optical configuration is incomplete or uses an unsupported "
+                "spectral model for "
+                + _human_list(incomplete)
+                + "; confirm the exact filter, dichroic and emission bands used for acquisition].",
             )
-        if saw_unresolved_selectors:
+        if unresolved:
             return (
                 True,
-                "[PLEASE VERIFY: Some route selectors remain unresolved; report the exact selected wheel/turret/splitter positions used for acquisition].",
+                "[PLEASE SPECIFY: which position of "
+                + _human_list(unresolved)
+                + " was used for acquisition, including the filter/dichroic identity "
+                "(manufacturer + model/catalog number)].",
             )
-        if saw_any_route_facts:
+        if saw_optical_component:
             return (False, "")
         return (
             True,
-            "[PLEASE VERIFY: Route-specific optical selections are missing; report each filter, dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
+            "[PLEASE VERIFY: no filters, dichroics or splitters are recorded on the selected route; "
+            "report each optical element (manufacturer + model/catalog number) used for acquisition].",
         )
 
     quarep_recommendation_needed, quarep_recommendation_text = _route_optics_quarep_recommendation(route_rows)

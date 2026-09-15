@@ -388,10 +388,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
             "id": "epi",
             "label": "Epi",
             "display_label": "Epi",
-            "method_sentence": "Excitation was provided by 488 Laser. The optical path included EX 488. Detected or observed light terminated at Main Camera.",
+            "method_sentence": "Illumination was provided by 488 Laser. The light path included EX 488. Images were recorded using Main Camera.",
         }])
-        self.assertEqual(optical_path["light_paths"][0]["route_method_paragraph"], "Excitation was provided by 488 Laser. The optical path included EX 488. Detected or observed light terminated at Main Camera.")
-        self.assertEqual(optical_path["methods_route_views"][0]["route_method_paragraph"], "Excitation was provided by 488 Laser. The optical path included EX 488. Detected or observed light terminated at Main Camera.")
+        self.assertEqual(optical_path["light_paths"][0]["route_method_paragraph"], "Illumination was provided by 488 Laser. The light path included EX 488. Images were recorded using Main Camera.")
+        self.assertEqual(optical_path["methods_route_views"][0]["route_method_paragraph"], "Illumination was provided by 488 Laser. The light path included EX 488. Images were recorded using Main Camera.")
         self.assertEqual(optical_path["methods_route_views"][0]["light_sources"][0]["display_label"], "488 Laser")
         self.assertEqual(optical_path["methods_route_views"][0]["filters"][0]["display_label"], "EX 488")
         self.assertEqual(optical_path["authoritative_route_contract"]["available_routes"][0]["id"], "epi")
