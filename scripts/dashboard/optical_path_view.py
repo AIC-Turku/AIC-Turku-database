@@ -221,6 +221,11 @@ _SOURCE_ROLE_SENTENCES = {
     "alignment": "Alignment illumination was provided by {label}.",
 }
 _SOURCE_ROLE_UNRECORDED_SENTENCE = "Illumination was provided by {label}."
+
+_ENDPOINT_SENTENCE = "Images were recorded using {label}."
+_EYEPIECE_SENTENCE = "Samples were observed through {label}."
+_SPLITTER_SENTENCE = "The emission light was divided by {label}."
+_OPTICAL_ELEMENT_SENTENCE = "The light path included {label}."
 _SOURCE_ROLE_UNRECORDED_PROMPT = (
     "[PLEASE SPECIFY: the role of {label} in this acquisition, for example excitation, "
     "transmitted illumination, or depletion; it is not recorded for this source]"
@@ -299,7 +304,7 @@ def _publication_inventory_label(item: dict[str, Any], vocabulary: Vocabulary | 
 def _inventory_method_facts(
     item: dict[str, Any],
     label: str,
-) -> tuple[str, list[str]]:
+) -> tuple[str, str, list[str]]:
     """Publication sentence and review requests for a selected inventory card.
 
     Every sentence describes only what selecting the card asserts: that this
@@ -309,36 +314,40 @@ def _inventory_method_facts(
     Review requests are returned separately from the sentence so the instrument
     page can render the prose alone while the Methods draft collects the requests
     into its review block.
+
+    Returns ``(sentence_template, sentence, review_prompts)``. The template keeps
+    ``{label}`` unfilled so the Methods draft can merge several components that
+    share it into one sentence instead of repeating the frame per checkbox.
     """
     inventory_class = clean_text(item.get("inventory_class"))
     if not label:
-        return "", []
+        return "", "", []
 
+    template = ""
+    prompts: list[str] = []
     if inventory_class == "light_source":
         source_meta = item.get("source_metadata") if isinstance(item.get("source_metadata"), dict) else {}
         role = clean_text(source_meta.get("role") or item.get("role")).lower()
-        template = _SOURCE_ROLE_SENTENCES.get(role)
-        if template:
-            return template.format(label=label), []
-        return (
-            _SOURCE_ROLE_UNRECORDED_SENTENCE.format(label=label),
-            [_SOURCE_ROLE_UNRECORDED_PROMPT.format(label=label)],
-        )
-
-    if inventory_class in {"endpoint", "camera_port", "eyepiece"}:
+        template = _SOURCE_ROLE_SENTENCES.get(role, "")
+        if not template:
+            template = _SOURCE_ROLE_UNRECORDED_SENTENCE
+            prompts = [_SOURCE_ROLE_UNRECORDED_PROMPT.format(label=label)]
+    elif inventory_class in {"endpoint", "camera_port", "eyepiece"}:
         endpoint_meta = item.get("endpoint_metadata") if isinstance(item.get("endpoint_metadata"), dict) else {}
         endpoint_type = clean_text(endpoint_meta.get("endpoint_type") or endpoint_meta.get("kind"))
-        if inventory_class == "eyepiece" or endpoint_type == "eyepiece":
-            return f"Samples were observed through {label}.", []
-        return f"Images were recorded using {label}.", []
+        template = (
+            _EYEPIECE_SENTENCE
+            if inventory_class == "eyepiece" or endpoint_type == "eyepiece"
+            else _ENDPOINT_SENTENCE
+        )
+    elif inventory_class == "splitter":
+        template = _SPLITTER_SENTENCE
+    elif inventory_class == "optical_element":
+        template = _OPTICAL_ELEMENT_SENTENCE
 
-    if inventory_class == "splitter":
-        return f"The emission light was divided by {label}.", []
-
-    if inventory_class == "optical_element":
-        return f"The light path included {label}.", []
-
-    return "", []
+    if not template:
+        return "", "", []
+    return template, template.format(label=label), prompts
 
 
 def hardware_renderables_from_inventory(
@@ -609,7 +618,7 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
         inventory_class = clean_text(item.get("inventory_class"))
         role = clean_text(((item.get("source_metadata") or {}) if isinstance(item.get("source_metadata"), dict) else {}).get("role"))
         publication_label = _publication_inventory_label(item, vocabulary)
-        method_sentence, review_prompts = _inventory_method_facts(item, publication_label)
+        sentence_template, method_sentence, review_prompts = _inventory_method_facts(item, publication_label)
         derived_inventory_cards.append({
             **copy.deepcopy(item),
             "id": clean_text(item.get("id")),
@@ -629,6 +638,7 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             ),
             "role": role,
             "method_sentence": method_sentence,
+            "publication_template": sentence_template,
             "review_prompts": review_prompts,
         })
     if derived_inventory_cards:

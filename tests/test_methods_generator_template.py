@@ -443,8 +443,11 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         )
 
         self.assertIn("Base method block.", result["output"])
-        self.assertIn("Some instrument metadata is missing", result["output"])
-        self.assertIn("ask staff", result["output"])
+        # The request is bracketed so an author checking the draft for "[" finds it,
+        # and it sits in the review block rather than inside finished prose.
+        self.assertIn("Review before publication:", result["output"])
+        self.assertIn("[PLEASE VERIFY:", result["output"])
+        self.assertIn("confirm the exact values with facility staff", result["output"])
         self.assertIn("Objective NA", result["output"])
 
     def test_modality_selector_filters_optical_hardware_from_dto_route_usage(self) -> None:
@@ -553,7 +556,13 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "magnification_changers": [],
                 "optical_modulators": [],
                 "illumination_logic": [],
-                "optical_path": {"filters": [], "splitters": []},
+                "optical_path": {
+                    "filters": [],
+                    "splitters": [],
+                    "authoritative_route_contract": {"routes": [
+                        {"id": "confocal_spinning_disk", "display_label": "Spinning-disk confocal"}
+                    ]},
+                },
             },
             "modalities": [],
             "modules": [],
@@ -594,16 +603,23 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertIn("Exact runtime-selected configuration (browser fallback) used route confocal_spinning_disk.", result["output"])
-        self.assertIn("Selected wheel/turret positions:", result["output"])
-        self.assertIn("Filter wheel @ Pos_1", result["output"])
-        self.assertIn("Selected splitter branches:", result["output"])
-        self.assertIn("Dual-view splitter [green, red]", result["output"])
-        self.assertIn("Selected endpoints/detectors:", result["output"])
-        self.assertIn("sCMOS camera (600–700 nm)", result["output"])
-        self.assertIn("Flattened/incomplete optics were present", result["output"])
-        self.assertIn("Unsupported spectral model flags were present", result["output"])
-        self.assertIn("Sequential acquisition is planned", result["output"])
+        # The confirmed plan is rendered as publication prose, not as the internal
+        # wording the renderer used to emit for a later pass to rewrite.
+        self.assertIn("with the Spinning-disk confocal route.", result["output"])
+        self.assertIn("The light path included Filter wheel (position Pos_1)", result["output"])
+        self.assertIn("The emission light was divided by Dual-view splitter", result["output"])
+        self.assertIn("Images were recorded using sCMOS camera (detection 600–700 nm).", result["output"])
+        self.assertIn("DAPI and mCherry require sequential acquisition", result["output"])
+        self.assertNotIn("were acquired sequentially.", result["output"])
+        for internal_wording in [
+            "runtime-selected", "browser fallback", "exported DTO",
+            "wheel/turret", "Route-specific optical", "caveats:", "is planned as",
+        ]:
+            self.assertNotIn(internal_wording, result["output"])
+        # Incomplete and uninterpretable optics become explicit review requests.
+        self.assertIn("Review before publication:", result["output"])
+        self.assertIn("the recorded optical configuration is incomplete for Filter wheel", result["output"])
+        self.assertIn("could not be interpreted", result["output"])
 
     def test_runtime_selected_configuration_prefers_exported_dto_over_local_storage(self) -> None:
         instrument = {
@@ -611,6 +627,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             "display_name": "Scope Runtime Exported",
             "retired": False,
             "runtime_selected_configuration": {
+                "scope_id": "scope-runtime-exported",
                 "route": "dto_route",
                 "sources": [{"display_label": "DTO Laser", "wavelength_nm": 488}],
                 "selected_route_steps": [{"kind": "optical_component", "display_label": "DTO Wheel", "position_key": "Pos_1"}],
@@ -625,7 +642,13 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
                 "magnification_changers": [],
                 "optical_modulators": [],
                 "illumination_logic": [],
-                "optical_path": {"filters": [], "splitters": []},
+                "optical_path": {
+                    "filters": [],
+                    "splitters": [],
+                    "authoritative_route_contract": {"routes": [
+                        {"id": "dto_route", "display_label": "DTO route"}
+                    ]},
+                },
             },
             "modalities": [],
             "modules": [],
@@ -653,17 +676,18 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertIn("Exact runtime-selected configuration (exported DTO) used route dto_route.", result["output"])
+        self.assertIn("with the DTO route route.", result["output"])
+        self.assertIn("The light path included DTO Wheel (position Pos_1).", result["output"])
         self.assertIn("DTO Laser (488 nm)", result["output"])
         self.assertNotIn("local_storage_route", result["output"])
         self.assertNotIn("LS Laser", result["output"])
 
-    def test_structured_cube_route_facts_are_rendered_in_methods_text(self) -> None:
+    def test_structured_cube_route_facts_are_not_promoted_into_methods_prose(self) -> None:
         instrument = {
             "id": "scope-cube-structured",
             "display_name": "Scope Cube Structured",
             "retired": False,
-            "runtime_selected_configuration": {"route": "widefield"},
+            "runtime_selected_configuration": {"scope_id": "scope-cube-structured", "route": "widefield"},
             "methods_generation": {"is_blocked": False, "blockers": []},
             "methods": {"base_sentence": "Base method block."},
             "hardware": {
@@ -713,17 +737,22 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertIn("Route-specific optical selections/facts:", result["output"])
-        self.assertIn("GFP Cube @ Pos_1", result["output"])
-        self.assertIn("cube internals (EX 470/40; DI 495LP; EM 525/50)", result["output"])
-        self.assertIn("product code 49002", result["output"])
+        # `route_optical_facts` describes what the route can be configured with.
+        # It is not evidence about this acquisition, and it is not what the user
+        # confirmed, so publication prose is built only from the confirmed plan's
+        # own steps. The facts stay in the DTO for other consumers.
+        self.assertNotIn("GFP Cube", result["output"])
+        self.assertNotIn("Route-specific optical selections/facts", result["output"])
+        self.assertNotIn("49002", result["output"])
+        self.assertIn("Base method block.", result["output"])
 
-    def test_flattened_cube_route_facts_render_without_local_storage(self) -> None:
+    def test_flattened_cube_route_facts_are_not_promoted_without_acquisition_evidence(self) -> None:
         instrument = {
             "id": "scope-cube-flattened",
             "display_name": "Scope Cube Flattened",
             "retired": False,
             "runtime_selected_configuration": {
+                "scope_id": "scope-cube-flattened",
                 "route": "xcelligence_route",
                 "selected_route_steps": [],
             },
@@ -779,10 +808,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertIn("Exact runtime-selected configuration (exported DTO) used route xcelligence_route.", result["output"])
-        self.assertIn("channel DAPI", result["output"])
-        self.assertIn("selectable positions: DAPI and FITC", result["output"])
-        self.assertIn("caveats: incomplete cube and unsupported spectral model", result["output"])
+        # Selectable positions are alternatives, never an acquisition claim.
+        self.assertNotIn("selectable positions", result["output"])
+        self.assertNotIn("DAPI and FITC", result["output"])
+        self.assertNotIn("caveats", result["output"])
 
     def test_semantic_dedupe_prefers_runtime_selected_source_over_generic_source_sentence(self) -> None:
         instrument = {
@@ -790,6 +819,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             "display_name": "Scope Source Dedupe",
             "retired": False,
             "runtime_selected_configuration": {
+                "scope_id": "scope-source-dedupe",
                 "route": "route_1",
                 "sources": [{"display_label": "Laser 488", "wavelength_nm": 488}],
                 "selected_route_steps": [],
@@ -831,8 +861,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertIn("Selected sources: Laser 488 (488 nm).", result["output"])
-        self.assertNotIn("Excitation was provided by Laser 488.", result["output"])
+        # The confirmed plan's reading carries the wavelength the checkbox cannot,
+        # so the component is stated once, using the plan's label.
+        self.assertIn("Laser 488 (488 nm)", result["output"])
+        self.assertEqual(result["output"].count("Laser 488"), 1)
 
     def test_semantic_dedupe_suppresses_generic_optical_sentence_when_runtime_selection_is_more_specific(self) -> None:
         instrument = {
@@ -840,6 +872,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             "display_name": "Scope Filter Dedupe",
             "retired": False,
             "runtime_selected_configuration": {
+                "scope_id": "scope-filter-dedupe",
                 "route": "route_2",
                 "sources": [],
                 "selected_route_steps": [{"kind": "optical_component", "display_label": "Filter wheel", "position_key": "Pos_2"}],
@@ -881,8 +914,9 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertIn("Selected wheel/turret positions: Filter wheel @ Pos_2.", result["output"])
-        self.assertNotIn("The optical path included Filter wheel.", result["output"])
+        # Same component, stated once, using the plan's more specific reading.
+        self.assertIn("Filter wheel (position Pos_2)", result["output"])
+        self.assertEqual(result["output"].count("Filter wheel"), 1)
 
     def test_duplicate_endpoint_prose_with_same_label_is_non_duplicative(self) -> None:
         instrument = {
@@ -972,13 +1006,13 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("Base method block.", result["output"])
         self.assertNotIn("this should not be shown", result["output"])
 
-    def test_methods_text_keeps_route_fact_field_when_present_upstream(self) -> None:
+    def test_route_fact_fields_survive_in_the_dto_without_reaching_prose(self) -> None:
         """Regression guard: upstream route fact fields (e.g. product_code) must survive to final methods text."""
         instrument = {
             "id": "scope-field-survival",
             "display_name": "Scope Field Survival",
             "retired": False,
-            "runtime_selected_configuration": {"route": "widefield"},
+            "runtime_selected_configuration": {"scope_id": "scope-field-survival", "route": "widefield"},
             "methods_generation": {"is_blocked": False, "blockers": []},
             "methods": {"base_sentence": "Base method block."},
             "hardware": {
@@ -1022,8 +1056,9 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertIn("FITC cube @ Pos_2", result["output"])
-        self.assertIn("product code A1-49002", result["output"])
+        # The export keeps the upstream field; the draft does not turn it into a claim.
+        self.assertNotIn("FITC cube", result["output"])
+        self.assertNotIn("A1-49002", result["output"])
 
     def test_route_specific_and_runtime_selected_configuration_sentences_are_not_duplicated(self) -> None:
         instrument = {
@@ -1031,6 +1066,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             "display_name": "Scope No Dup",
             "retired": False,
             "runtime_selected_configuration": {
+                "scope_id": "scope-no-dup-route-runtime",
                 "route": "route_main",
                 "selected_route_steps": [{"kind": "optical_component", "display_label": "Filter wheel", "position_key": "Pos_1"}],
             },
@@ -1073,15 +1109,16 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const output = document.getElementById('output-text').value;
             return {
               output,
-              routeCount: (output.match(/Exact runtime-selected configuration/g) || []).length,
-              wheelCount: (output.match(/Selected wheel\\/turret positions:/g) || []).length
+              wheelCount: (output.match(/Filter wheel/g) || []).length
             };
             """,
         )
-        self.assertEqual(result["routeCount"], 1)
+        # The confirmed plan and the route's declared facts both mention the same
+        # wheel. Only the plan speaks, and it speaks once.
         self.assertEqual(result["wheelCount"], 1)
+        self.assertIn("The light path included Filter wheel (position Pos_1).", result["output"])
 
-    def test_xcelligence_style_flattened_channel_facts_render_without_cube_internals(self) -> None:
+    def test_xcelligence_style_flattened_channel_facts_are_not_promoted_into_prose(self) -> None:
         """Regression guard for xCELLigence-style flattened cubes: known channel/positions must still render."""
         instrument = {
             "id": "scope-agilent-rtca-esight",
@@ -1136,9 +1173,9 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertIn("channel DAPI", result["output"])
-        self.assertIn("selectable positions: DAPI and FITC", result["output"])
-        self.assertIn("caveats: incomplete cube and unsupported spectral model", result["output"])
+        self.assertNotIn("channel DAPI", result["output"])
+        self.assertNotIn("selectable positions", result["output"])
+        self.assertNotIn("caveats", result["output"])
 
     # ── Route/readout UI tests (migration from flat modalities) ──────────────────
 
@@ -1268,7 +1305,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             )
 
     def test_route_selection_generates_route_aware_method_sentence(self) -> None:
-        """Selecting a route must generate 'Images were acquired using the X route.' sentence."""
+        """Selecting a route must name that route in the microscope sentence."""
         instrument = self._stellaris_like_instrument()
         result = self.run_template(
             instruments=[instrument],
@@ -1285,7 +1322,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertIn("Images were acquired using the Confocal point scanning route.", result["output"])
+        self.assertIn("with the Confocal point scanning route.", result["output"])
+        # The route is composed onto the microscope sentence, so the draft does not
+        # open two consecutive sentences with the same frame.
+        self.assertNotIn("Images were acquired using the Confocal point scanning route.", result["output"])
 
     def test_readout_selection_generates_readout_aware_sentence(self) -> None:
         """Selecting a readout must generate '{Readout} readout was acquired using ... route.' sentence."""
@@ -1802,8 +1842,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        # Route sentence must be present
-        self.assertIn("Images were acquired using the Confocal point scanning route.", result["output"])
+        # The route must be named in the microscope sentence
+        self.assertIn("with the Confocal point scanning route.", result["output"])
         # Primary paragraph must NOT contain the modality sentence as primary content
         self.assertNotIn("Confocal point imaging was performed", result["output"])
 

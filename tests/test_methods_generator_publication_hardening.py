@@ -38,7 +38,6 @@ class PublicationHardeningTests(unittest.TestCase):
         cls.browser = cls.playwright.chromium.launch(**({"executable_path": executable} if executable else {}))
         cls.template = Environment(loader=FileSystemLoader(ROOT / "scripts/templates")).get_template("methods_generator.md.j2")
         cls.app = (ROOT / "assets/javascripts/methods_generator_app.js").read_text()
-        cls.prose = (ROOT / "assets/javascripts/methods_generator_prose.js").read_text()
 
     @classmethod
     def tearDownClass(cls):
@@ -73,10 +72,6 @@ class PublicationHardeningTests(unittest.TestCase):
         html = html.replace(
             '<script src="../assets/javascripts/methods_generator_app.js"></script>',
             "<script>" + self.app + "</script>",
-        )
-        html = html.replace(
-            '<script src="../assets/javascripts/methods_generator_prose.js"></script>',
-            "<script>" + self.prose + "</script>",
         )
         self.page.set_content("<script>" + bootstrap + "</script>" + html)
         expect(self.page.locator("#system-select")).to_be_enabled()

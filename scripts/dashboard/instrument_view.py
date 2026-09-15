@@ -272,13 +272,24 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
     method_core = " ".join(part for part in [f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion, "objective"] if part).strip()
     objective_reference = _component_reference(manufacturer, model, "objective")
     method_meta = ", ".join(part for part in [objective_reference, product_code] if part)
-    method_sentence = (
-        f"Images were acquired using a {method_core} ({method_meta})."
+    # The noun phrase without its sentence frame, so a draft that reports several
+    # objectives can join them into one sentence instead of repeating the frame.
+    publication_phrase = (
+        f"{_indefinite_article(method_core)} {method_core} ({method_meta})"
         if method_core and method_meta
-        else f"Images were acquired using a {method_core}." if method_core
+        else f"{_indefinite_article(method_core)} {method_core}" if method_core
         else ""
     )
+    method_sentence = (
+        f"Images were acquired using {publication_phrase}." if publication_phrase else ""
+    )
     method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
+    if publication_phrase:
+        missing_identifiers = _quarep_specs_clause(
+            manufacturer, model, product_code, sentence=publication_phrase
+        )
+        if missing_identifiers:
+            publication_phrase = f"{publication_phrase} ({missing_identifiers})"
     spec_lines = _spec_lines(
         ("Model", model),
         ("Magnification / NA", f"`{mag}x/{na}`" if mag and na else None),
@@ -297,6 +308,10 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
         "display_subtitle": manufacturer,
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "publication_phrase": publication_phrase,
+        # A frame distinct from the microscope sentence, so a draft does not open
+        # two consecutive sentences with "Images were acquired using".
+        "publication_template": "Imaging was performed with {label}.",
     }
 
 

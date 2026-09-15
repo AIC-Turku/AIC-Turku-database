@@ -299,19 +299,11 @@ def _microscope_sentence(dto: dict[str, Any]) -> str:
 
     if stand_label and stand_label not in normalized_name:
         article = "an" if stand_label[:1] in {"a", "e", "i", "o", "u"} else "a"
-        sentence = (
-            f"Images were acquired using the {display_name}, "
-            f"{article} {stand_label} microscope{reference_clause}."
+        return (
+            f"Images were acquired using the {display_name}{reference_clause}, "
+            f"{article} {stand_label} microscope."
         )
-    else:
-        sentence = f"Images were acquired using the {display_name}{reference_clause}."
-
-    if dto.get("retired"):
-        sentence += (
-            " [PLEASE VERIFY: this instrument is recorded as retired; confirm the configuration "
-            "that was in use at the time of acquisition]."
-        )
-    return sentence
+    return f"Images were acquired using the {display_name}{reference_clause}."
 
 
 def _ground_methods_projection(dto: dict[str, Any]) -> None:
@@ -329,6 +321,15 @@ def _ground_methods_projection(dto: dict[str, Any]) -> None:
     # claim rather than an instrument identity. Offer it as something the user can
     # confirm instead of asserting it or pretending it is unrecorded.
     methods["acquisition_software_sentence"] = _acquisition_software_sentence(dto)
+    # A retired record describes the instrument as it was last configured, which is
+    # a caveat on the whole draft. It belongs in the review block, not spliced into
+    # the sentence other facts are composed onto.
+    methods["retired_review_prompt"] = (
+        "[PLEASE VERIFY: this instrument is recorded as retired; confirm the configuration "
+        "that was in use at the time of acquisition]"
+        if dto.get("retired")
+        else ""
+    )
     methods["acquisition_settings_recommendation"] = (
         "[PLEASE SPECIFY: acquisition software/version (if applicable), exposure "
         "time(s), excitation power(s), detector gain/offset, binning, zoom/averaging, "
