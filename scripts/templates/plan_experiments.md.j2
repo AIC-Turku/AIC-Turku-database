@@ -74,7 +74,7 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
 
     const basePromptTop = `Help me plan an experiment using the attached ${facilityShortName} inventory.
 
-Use the JSON as the only source for facility-specific facts. Use microscopy knowledge to interpret the biology and imaging trade-offs.
+Use the JSON as the only source for facility-specific facts. Use general microscopy knowledge to interpret the biology and imaging trade-offs.
 
 Reason about the experiment, but be conservative about undocumented facility facts. Prefer the simplest imaging strategy that answers the biological question.
 
@@ -92,7 +92,7 @@ Rules:
 
 Procedure:
 1. Translate the request into the few imaging constraints that determine the choice.
-2. Identify the simplest plausible imaging strategy and relevant trade-offs.
+2. Identify the simplest plausible imaging strategy and explain trade-offs.
 3. Map them onto recorded routes and verify route membership, relevant detectors/endpoints and branch architecture.
 4. Unless evidence is genuinely insufficient, recommend one system to start with and at most one useful alternative.
 5. Mention only one or two unknowns that could change the choice and what to confirm with ${facilityShortName} staff.
