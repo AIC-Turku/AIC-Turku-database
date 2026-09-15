@@ -57,19 +57,70 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function confirmedActionOptions(dto) {
         const methods = dto.methods || {};
-        return dedupeSentences([
-            // The record documents the software installed now. That is an
-            // acquisition-time claim, so it is offered for confirmation rather than
-            // asserted automatically.
-            methods.acquisition_software_sentence,
+        const options = [];
+
+        // Acquisition software is a canonical structured record. Build its
+        // confirmable sentence from that record instead of reusing a Methods string
+        // that may contain a placeholder such as "vunknown" or an embedded
+        // [PLEASE SPECIFY] request. The request stays structured and therefore lands
+        // in the review block only when the user confirms that software was used.
+        const placeholderValues = new Set([
+            "unknown", "n/a", "na", "none", "not applicable", "tbd", "-", "--", "?",
+        ]);
+        const acquisitionSoftware = (Array.isArray(dto?.software) ? dto.software : []).find((row) => {
+            if (!row || typeof row !== "object") return false;
+            const name = cleanText(row.name);
+            return cleanText(row.role).toLowerCase() === "acquisition"
+                && name
+                && !placeholderValues.has(name.toLowerCase());
+        });
+        if (acquisitionSoftware) {
+            const name = cleanText(acquisitionSoftware.name);
+            const rawVersion = cleanText(acquisitionSoftware.version);
+            const version = rawVersion && !placeholderValues.has(rawVersion.toLowerCase())
+                ? rawVersion
+                : "";
+            const softwareLabel = version ? `${name} (v${version})` : name;
+            const sentence = `Instrument control and image acquisition were performed using ${softwareLabel}.`;
+            options.push({
+                id: "action-acquisition-software",
+                display_label: sentence,
+                method_sentence: sentence,
+                review_prompts: version
+                    ? []
+                    : [`[PLEASE SPECIFY: acquisition software version for ${name}]`],
+            });
+        } else if (!Array.isArray(dto?.software)) {
+            // Compatibility for older/synthetic DTOs that predate the canonical
+            // software list. Production exports always carry `software`, so this
+            // path cannot reintroduce placeholder software prose there.
+            const fallback = cleanText(methods.acquisition_software_sentence);
+            if (fallback) {
+                options.push({
+                    id: "action-acquisition-software-legacy",
+                    display_label: fallback,
+                    method_sentence: fallback,
+                    review_prompts: uniqueTexts([methods.acquisition_software_review_prompt]),
+                });
+            }
+        }
+
+        const otherSentences = dedupeSentences([
             methods.environment_sentence,
             ...(methods.stage_sentences || []),
             methods.autofocus_sentence,
             methods.triggering_sentence,
             ...(methods.processing_sentences || []),
-        ]).map((text, index) => ({
-            id: `action-${index}`, display_label: text, method_sentence: text,
-        }));
+        ]);
+        otherSentences.forEach((text, index) => {
+            options.push({
+                id: `action-${index}`,
+                display_label: text,
+                method_sentence: text,
+                review_prompts: [],
+            });
+        });
+        return options;
     }
 
     function cleanText(value) {
@@ -552,6 +603,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /**
+     * Keep sentences and unresolved publication questions coupled for hardware
+     * categories that do not use publication templates. Previously these categories
+     * copied only `methodSentence`, silently dropping component `review_prompts`.
+     */
+    function selectedSentenceBundle(prefixes) {
+        const selections = (Array.isArray(prefixes) ? prefixes : [])
+            .flatMap(prefix => getCheckedSelections(prefix));
+        return {
+            sentences: dedupeSentences(selections.map(item => item.methodSentence)),
+            prompts: uniqueTexts(selections.flatMap(item => item.reviewPrompts || [])),
+        };
+    }
+
+    /**
      * Sentence for the legacy modality compatibility list.
      *
      * Every other category now renders through `mergeByPublicationTemplate`, which
@@ -873,16 +938,40 @@ document.addEventListener("DOMContentLoaded", async () => {
                 prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${raw}”, but the instrument record does not list the positions of this element; confirm the filter that was used]`,
             };
         }
-        const resolve = (value) => positions.find(position =>
-            [position?.id, position?.display_label].map(cleanText)
-                .some(recordedValue => recordedValue && recordedValue.toLowerCase() === value.toLowerCase())) || null;
+        // A stable position key must resolve only against canonical position ids.
+        // Display labels are a legacy/user-facing fallback and are accepted only
+        // when they identify exactly one recorded position. This prevents a label
+        // collision from shadowing a real id and prevents duplicate labels from
+        // silently selecting the first position in the record.
+        const resolveById = (value) => {
+            const normalized = cleanText(value).toLowerCase();
+            if (!normalized) return null;
+            return positions.find(position => cleanText(position?.id).toLowerCase() === normalized) || null;
+        };
+        const resolveUniqueByLabel = (value) => {
+            const normalized = cleanText(value).toLowerCase();
+            if (!normalized) return { match: null, ambiguous: false };
+            const matches = positions.filter(position =>
+                cleanText(position?.display_label).toLowerCase() === normalized);
+            return {
+                match: matches.length === 1 ? matches[0] : null,
+                ambiguous: matches.length > 1,
+            };
+        };
 
-        const keyMatch = key ? resolve(key) : null;
-        const labelMatch = labelText ? resolve(labelText) : null;
+        const keyMatch = key ? resolveById(key) : null;
+        const labelResolution = labelText ? resolveUniqueByLabel(labelText) : { match: null, ambiguous: false };
+        const labelMatch = labelResolution.match;
         if (key && !keyMatch) {
             return {
                 position: "",
                 prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${key}”, which is not one of its recorded positions; confirm the filter that was used]`,
+            };
+        }
+        if (labelResolution.ambiguous) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${labelText}”, but more than one recorded position has that label; confirm the exact filter position that was used]`,
             };
         }
         if (keyMatch && labelText && labelMatch !== keyMatch) {
@@ -1236,7 +1325,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         light_sheet: "[PLEASE SPECIFY: light-sheet thickness, sheet numerical aperture, and the detection/illumination objective pairing]",
     };
     const READOUT_SETTINGS_PROMPTS = {
-        "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including laser repetition rate, photons collected per pixel, how the instrument response was determined, and the fitting or phasor analysis used]",
+        "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including whether acquisition was time-domain or frequency-domain; report the relevant timing or modulation settings, calibration and how the instrument response was determined, signal or photon statistics where applicable, and the fitting or phasor analysis used]",
         "spectral imaging": "[PLEASE SPECIFY: the spectral detection windows (start, end and step) and, if the spectra were unmixed, the method and reference spectra used]",
         "fcs": "[PLEASE SPECIFY: FCS measurement duration, number of repeats, how the confocal volume was calibrated, and the fitting model]",
         "fret": "[PLEASE SPECIFY: how FRET was measured (for example sensitised emission, acceptor photobleaching or lifetime) and, for intensity-based measurements, the bleed-through and cross-excitation correction factors]",
@@ -1290,22 +1379,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const readoutSelections = getCheckedSelections("readout");
         const readoutSentences = dedupeSentences(readoutSelections.map(item => item.methodSentence));
-        prompts.push(...modalitySettingsPrompts(routeSelections, readoutSelections));
+        const techniquePrompts = modalitySettingsPrompts(routeSelections, readoutSelections);
+        prompts.push(...techniquePrompts);
         const objectives = mergeByPublicationTemplate(getCheckedSelections("obj"));
         prompts.push(...objectives.prompts);
 
-        const otherHardware = dedupeSentences([
-            ...getCheckedSelections("module").map(item => item.methodSentence),
-            ...getCheckedSelections("scanner").map(item => item.methodSentence),
-            ...getCheckedSelections("magnification-changer").map(item => item.methodSentence),
-            ...getCheckedSelections("confirmed").map(item => item.methodSentence),
+        const otherHardware = selectedSentenceBundle([
+            "module",
+            "scanner",
+            "magnification-changer",
+            "confirmed",
         ]);
+        prompts.push(...otherHardware.prompts);
 
         const paragraphHardware = dedupeSentences([
             openingSentence,
             ...readoutSentences,
             ...objectives.sentences,
-            ...otherHardware,
+            ...otherHardware.sentences,
         ]).join(" ");
 
         // Manual selections and confirmed plan components are merged in one pass,
@@ -1336,15 +1427,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         const lightPath = mergeByPublicationTemplate([...runtime.components, ...lightPathSelections]);
         prompts.push(...lightPath.prompts, ...runtime.prompts);
 
-        const specialistSentences = dedupeSentences([
-            ...getCheckedSelections("optical-modulator").map(item => item.methodSentence),
-            ...getCheckedSelections("illumination-logic").map(item => item.methodSentence),
+        const specialistHardware = selectedSentenceBundle([
+            "optical-modulator",
+            "illumination-logic",
         ]);
+        prompts.push(...specialistHardware.prompts);
 
         const paragraphLightPath = dedupeSentences([
             ...lightPath.sentences,
             ...runtime.sentences,
-            ...specialistSentences,
+            ...specialistHardware.sentences,
         ]).join(" ");
 
         // More than one illumination line or detector leaves the reader unable to
@@ -1375,7 +1467,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             prompts.push(cleanText(methods.quarep_light_path_recommendation));
         }
         prompts.push(cleanText(methods.specimen_preparation_recommendation));
-        prompts.push(cleanText(methods.acquisition_settings_recommendation));
+        const acquisitionSettingsRecommendation = cleanText(methods.acquisition_settings_recommendation);
+        if (techniquePrompts.length && acquisitionSettingsRecommendation) {
+            // Technique/readout-specific prompts above already own settings such as
+            // pinhole, dwell time, exposure, power or FLIM timing. Keep only a small
+            // reproducibility catch-all here so the same parameter is not requested
+            // twice under conflicting generic terminology.
+            prompts.push("[PLEASE SPECIFY: any remaining acquisition settings needed to reproduce the experiment that are not already reported above, including pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable]");
+        } else {
+            prompts.push(acquisitionSettingsRecommendation);
+        }
 
         const methodsMetadataStatus = getMethodsMetadataStatus(dto);
         if (methodsMetadataStatus.isBlocked) {
