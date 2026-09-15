@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         out = combineRepeatedSentences(
             out,
-            /A ([^.]+?) objective was used\./g,
+            /A (.+?) objective was used\./g,
             values => `The ${humanJoin(values)} objectives were used.`
         );
         out = combineRepeatedSentences(
