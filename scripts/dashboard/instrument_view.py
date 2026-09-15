@@ -92,9 +92,15 @@ def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
     return fallback
 
 
-def _quarep_value(value: Any) -> str:
+# A recorded manufacturer/model that only restates that the value is unknown is not
+# an identity. Publication prose must not present it as one.
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+
+
+def _identity_value(value: Any) -> str:
+    """Return an identity string, or "" when it only marks the value unknown."""
     cleaned = clean_text(value)
-    return cleaned or "missing (ask staff)"
+    return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
 
 
 def _quarep_specs_clause(
@@ -103,17 +109,54 @@ def _quarep_specs_clause(
     product_code: Any,
     *,
     extras: Iterable[str] | None = None,
+    sentence: str = "",
 ) -> str:
-    parts = [
-        f"Manufacturer: {_quarep_value(manufacturer)}",
-        f"Model: {_quarep_value(model)}",
-        f"Product code: {_quarep_value(product_code)}",
-    ]
+    """Build the QUAREP identifier clause from what the record actually holds.
+
+    ``sentence`` is the prose the clause will be appended to. Repeating a
+    manufacturer and model that the sentence already names produces the doubled
+    parenthetical this clause is meant to avoid, so recorded values already
+    present are skipped. Unrecorded ones are left out of the sentence entirely
+    and requested through `_quarep_review_prompts` instead: three bracketed
+    placeholders inside a parenthetical read as noise, not as a component.
+    """
+    parts: list[str] = []
+    for label, value in (
+        ("Manufacturer", manufacturer),
+        ("Model", model),
+        ("Product code", product_code),
+    ):
+        cleaned = _identity_value(value)
+        if not cleaned or cleaned in sentence:
+            continue
+        parts.append(f"{label}: {cleaned}")
     for part in extras or []:
         cleaned = clean_text(part)
         if cleaned:
             parts.append(cleaned)
     return "; ".join(parts)
+
+
+def _quarep_review_prompts(
+    component_label: Any,
+    manufacturer: Any,
+    model: Any,
+    product_code: Any,
+) -> list[str]:
+    """Request the QUAREP identifiers a component does not have recorded."""
+    missing = [
+        label
+        for label, value in (
+            ("manufacturer", manufacturer),
+            ("model", model),
+            ("product code", product_code),
+        )
+        if not _identity_value(value)
+    ]
+    if not missing:
+        return []
+    subject = clean_text(component_label) or "this component"
+    return [f"[PLEASE SPECIFY: {_human_list(missing)} of the {subject}]"]
 
 
 def _append_quarep_specs(
@@ -127,8 +170,16 @@ def _append_quarep_specs(
     base = clean_text(sentence).rstrip()
     if base.endswith('.'):
         base = base[:-1]
-    specs = _quarep_specs_clause(manufacturer, model, product_code, extras=extras)
+    specs = _quarep_specs_clause(manufacturer, model, product_code, extras=extras, sentence=base)
+    if not specs:
+        return f"{base}." if base else ""
     return f"{base} ({specs})." if base else f"{specs}."
+
+
+def _indefinite_article(following: str) -> str:
+    """Pick "a"/"an" for the word that follows, so prose reads naturally."""
+    word = clean_text(following).lstrip("([").lower()
+    return "an" if word[:1] in {"a", "e", "i", "o", "u"} else "a"
 
 
 def _inventory_method_extras(item: dict[str, Any]) -> list[str]:
@@ -233,13 +284,24 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
     method_core = " ".join(part for part in [f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion, "objective"] if part).strip()
     objective_reference = _component_reference(manufacturer, model, "objective")
     method_meta = ", ".join(part for part in [objective_reference, product_code] if part)
-    method_sentence = (
-        f"Images were acquired using a {method_core} ({method_meta})."
+    # The noun phrase without its sentence frame, so a draft that reports several
+    # objectives can join them into one sentence instead of repeating the frame.
+    publication_phrase = (
+        f"{_indefinite_article(method_core)} {method_core} ({method_meta})"
         if method_core and method_meta
-        else f"Images were acquired using a {method_core}." if method_core
+        else f"{_indefinite_article(method_core)} {method_core}" if method_core
         else ""
     )
+    method_sentence = (
+        f"Images were acquired using {publication_phrase}." if publication_phrase else ""
+    )
     method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
+    if publication_phrase:
+        missing_identifiers = _quarep_specs_clause(
+            manufacturer, model, product_code, sentence=publication_phrase
+        )
+        if missing_identifiers:
+            publication_phrase = f"{publication_phrase} ({missing_identifiers})"
     spec_lines = _spec_lines(
         ("Model", model),
         ("Magnification / NA", f"`{mag}x/{na}`" if mag and na else None),
@@ -258,6 +320,11 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
         "display_subtitle": manufacturer,
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "review_prompts": _quarep_review_prompts(display_label, manufacturer, model, product_code),
+        "publication_phrase": publication_phrase,
+        # A frame distinct from the microscope sentence, so a draft does not open
+        # two consecutive sentences with "Images were acquired using".
+        "publication_template": "Imaging was performed with {label}.",
     }
 
 
@@ -285,17 +352,23 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
     sensor_clause = f" ({', '.join(sensor_detail_parts)})" if sensor_detail_parts else ""
     kind_clause = f" {kind_label}" if kind_label else ""
     base_detection = f"Detection was performed using a {display_label}{kind_clause}{sensor_clause}"
+    # `supports_time_gating` records what the detector can do and the gating values
+    # are its recorded defaults, not a record of how it was set for an acquisition.
+    # Selecting a detector states its identity; how it was configured is asked.
+    method_sentence = f"{base_detection}."
+    gating_prompts: list[str] = []
     if supports_time_gating is True:
-        gating_phrase = ""
-        if gating_delay_ns and gate_width_ns:
-            gating_phrase = f" using default gating delay {gating_delay_ns} ns and gate width {gate_width_ns} ns"
-        elif gating_delay_ns:
-            gating_phrase = f" using default gating delay {gating_delay_ns} ns"
-        elif gate_width_ns:
-            gating_phrase = f" using default gate width {gate_width_ns} ns"
-        method_sentence = f"{base_detection}, configured for time-gated acquisition{gating_phrase}."
-    else:
-        method_sentence = f"{base_detection}."
+        recorded_defaults = ", ".join(
+            part for part in (
+                f"default gating delay {gating_delay_ns} ns" if gating_delay_ns else "",
+                f"default gate width {gate_width_ns} ns" if gate_width_ns else "",
+            ) if part
+        )
+        defaults_clause = f" ({recorded_defaults} are recorded for this detector)" if recorded_defaults else ""
+        gating_prompts.append(
+            f"[PLEASE SPECIFY: whether time-gated detection was used on the {display_label} and, "
+            f"if so, the gating delay and gate width applied{defaults_clause}]"
+        )
     method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     spec_lines = _spec_lines(
         ("Type", kind_label),
@@ -320,6 +393,10 @@ def build_detector_dto(vocabulary: Vocabulary, det: dict[str, Any]) -> dict[str,
         "route_label": route_label,
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "review_prompts": [
+            *_quarep_review_prompts(display_label, manufacturer, model, product_code),
+            *gating_prompts,
+        ],
     }
 
 
@@ -363,7 +440,11 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
         ]
         if part
     ).strip() or model or kind_label or "Light source"
-    tech_power_parts = [part for part in [technology, power] if part]
+    # `hardware.sources[].power` is the source's nominal rating, which the schema
+    # marks as "not experiment-level truth". A reader would take a bare figure in a
+    # Methods sentence as the power delivered to the sample, so it is labelled as
+    # nominal wherever it appears.
+    tech_power_parts = [part for part in [technology, f"nominal {power}" if power else ""] if part]
     tech_power_clause = f" ({', '.join(tech_power_parts)})" if tech_power_parts else ""
     if normalized_role == "depletion":
         pulse_details = []
@@ -423,9 +504,17 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
     component_reference = _component_reference(manufacturer, model, type_label or "optical modulator")
     display_label = type_label or instance_name or model or "Optical Modulator"
     product_code = clean_text(modulator.get("product_code"))
-    method_sentence = f"Beam shaping used {component_reference} optics{f' with {_human_list(supported_masks)} phase mask support' if supported_masks else ''}."
+    # `supported_phase_masks` records what the modulator can do, not what was applied.
+    # A STED acquisition uses one mask, so the recorded options are requested rather
+    # than asserted; the phase mask determines the PSF and therefore the resolution.
+    mask_prompts = (
+        [f"[PLEASE SPECIFY: which phase mask profile was applied ({_human_list(supported_masks)} are recorded for this modulator)]"]
+        if supported_masks
+        else []
+    )
+    method_sentence = f"Beam shaping used {component_reference} optics."
     if modulator_type in {"slm", "phase_plate", "vortex_plate"}:
-        method_sentence = f"STED beam shaping was configured with {component_reference}{f' using {_human_list(supported_masks)} phase mask profiles' if supported_masks else ''}."
+        method_sentence = f"STED beam shaping used {component_reference}."
     method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
     return {
         **copy.deepcopy(modulator),
@@ -437,6 +526,10 @@ def build_optical_modulator_dto(vocabulary: Vocabulary, modulator: dict[str, Any
             ("Notes", clean_text(modulator.get("notes"))),
         ),
         "method_sentence": method_sentence,
+        "review_prompts": [
+            *_quarep_review_prompts(display_label, manufacturer, model, product_code),
+            *mask_prompts,
+        ],
     }
 
 
@@ -486,7 +579,8 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
     )
     detail_bits = [f"line rate {line_rate} Hz" if line_rate else "", f"pinhole {pinhole} µm" if pinhole else ""]
     detail_text = ", ".join(bit for bit in detail_bits if bit)
-    component_reference = _component_reference(manufacturer, model, f"{scanner_type} scanner" if scanner_type else "scanner")
+    scanner_fallback = scanner_type if scanner_type.lower().endswith("scanner") else f"{scanner_type} scanner"
+    component_reference = _component_reference(manufacturer, model, scanner_fallback if scanner_type else "scanner")
     method_sentence = (
         f"The microscope used {component_reference} ({detail_text})."
         if scanner_type and scanner_type != "No Scanner" and detail_text
@@ -501,6 +595,11 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
         "display_subtitle": " ".join(part for part in [manufacturer, model] if part).strip(),
         "spec_lines": spec_lines,
         "method_sentence": method_sentence,
+        "review_prompts": (
+            _quarep_review_prompts(scanner_type or "scanner", manufacturer, model, product_code)
+            if method_sentence
+            else []
+        ),
         "present": bool(scanner_type and scanner_type != "No Scanner"),
     }
 
@@ -632,7 +731,11 @@ def build_hardware_dto(vocabulary: Vocabulary, inst: dict[str, Any], lightpath_d
 
     autofocus_sentence = ""
     if hardware_autofocus.get("is_installed") is True:
-        autofocus_sentence = f"Focal drift was minimized using a {autofocus_label or 'hardware autofocus'} system."
+        autofocus_descriptor = autofocus_label or "hardware autofocus"
+        autofocus_sentence = (
+            f"Focal drift was minimized using {_indefinite_article(autofocus_descriptor)} "
+            f"{autofocus_descriptor} system."
+        )
 
     triggering_sentence = ""
     if triggering_label and clean_text(triggering.get("notes")):
@@ -777,6 +880,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 "display_subtitle": provenance,
                 "display_notes": notes,
                 "method_sentence": _append_quarep_specs(f"The {module_name} module was used." if module_name else "", manufacturer, model, product_code),
+                "review_prompts": _quarep_review_prompts(f"{module_name} module", manufacturer, model, product_code),
             }
         )
 
@@ -796,62 +900,146 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     )
     route_rows = route_contract.get("routes") if isinstance(route_contract.get("routes"), list) else []
 
+    unresolved_optics: list[dict[str, str]] = []
+
     def _route_optics_quarep_recommendation(routes: list[dict[str, Any]]) -> tuple[bool, str]:
+        """Ask about the light path from what the record actually contains.
+
+        The earlier version read only ``route_optical_facts``. Those collections are
+        assembled from ``selected_or_selectable_*`` keys that no producer writes, so
+        they are empty for every instrument and the prompt fired unconditionally --
+        identically for a fully documented light path and an undocumented one, which
+        trains readers to ignore it. The authoritative per-route evidence that does
+        exist is ``selected_execution.selected_route_steps``, so the prompt is derived
+        from there and names the components it is actually asking about.
+        """
         if not routes:
             return (
                 True,
-                "[PLEASE VERIFY: Route-specific optical selections are missing; report each filter, dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
+                "[PLEASE VERIFY: no optical route is recorded for this instrument; report each filter, "
+                "dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
             )
 
-        saw_any_route_facts = False
-        saw_incomplete_or_unsupported = False
-        saw_unresolved_selectors = False
+        unresolved: list[str] = []
+        incomplete: list[str] = []
+        saw_optical_component = False
+
+        def _record(
+            label: str,
+            route_label: str,
+            *,
+            broken: bool,
+            resolved: bool,
+            inventory_id: str = "",
+        ) -> None:
+            nonlocal saw_optical_component
+            saw_optical_component = True
+            scoped = f"{label} ({route_label} route)" if route_label else label
+            if broken:
+                if scoped not in incomplete:
+                    incomplete.append(scoped)
+            elif not resolved and scoped not in unresolved:
+                unresolved.append(scoped)
+                unresolved_optics.append({
+                    "inventory_id": inventory_id,
+                    "display_label": label,
+                    "route_label": route_label,
+                    "scoped_label": scoped,
+                })
+
+        fact_keys = (
+            "selected_or_selectable_excitation_filters",
+            "selected_or_selectable_dichroics",
+            "selected_or_selectable_emission_filters",
+            "selected_or_selectable_splitters",
+            "selected_or_selectable_modulators",
+            "selected_or_selectable_branch_selectors",
+        )
+
         for route in routes:
             if not isinstance(route, dict):
                 continue
+            route_label = clean_text(route.get("display_label") or route.get("id"))
+
+            # Declared route optics, when the route view carries them.
             route_facts = route.get("route_optical_facts") if isinstance(route.get("route_optical_facts"), dict) else {}
-            fact_rows = []
-            for key in (
-                "selected_or_selectable_sources",
-                "selected_or_selectable_excitation_filters",
-                "selected_or_selectable_dichroics",
-                "selected_or_selectable_emission_filters",
-                "selected_or_selectable_splitters",
-                "selected_or_selectable_endpoints",
-                "selected_or_selectable_modulators",
-                "selected_or_selectable_branch_selectors",
-            ):
-                value = route_facts.get(key)
-                if isinstance(value, list):
-                    fact_rows.extend(item for item in value if isinstance(item, dict))
+            for key in fact_keys:
+                rows = route_facts.get(key)
+                if not isinstance(rows, list):
+                    continue
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    label = clean_text(row.get("display_label") or row.get("id")) or "an optical element"
+                    selection_state = clean_text(row.get("selection_state")).lower()
+                    has_position = bool(
+                        clean_text(row.get("selected_position_key") or row.get("selected_position_id"))
+                        or clean_text(row.get("position_key") or row.get("position_id"))
+                    )
+                    offers_alternatives = bool(row.get("available_positions"))
+                    _record(
+                        label,
+                        route_label,
+                        broken=bool(row.get("_cube_incomplete") or row.get("_unsupported_spectral_model")),
+                        resolved=(
+                            not offers_alternatives
+                            and selection_state not in {"unresolved", "selectable"}
+                            and (has_position or selection_state in {"selected", "resolved", "fixed"})
+                        ),
+                    )
 
-            if fact_rows:
-                saw_any_route_facts = True
+            # Executed route steps: the evidence that production actually produces.
+            selected_execution = (
+                route.get("selected_execution")
+                if isinstance(route.get("selected_execution"), dict)
+                else {}
+            )
+            steps = (
+                selected_execution.get("selected_route_steps")
+                if isinstance(selected_execution.get("selected_route_steps"), list)
+                else []
+            )
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                if clean_text(step.get("kind")) not in {"optical_component", "routing_component"}:
+                    continue
+                label = clean_text(step.get("display_label") or step.get("component_id")) or "an optical element"
+                selection_state = clean_text(step.get("selection_state")).lower()
+                has_position = bool(
+                    clean_text(step.get("selected_position_key") or step.get("position_key"))
+                    or clean_text(step.get("selected_position_id") or step.get("position_id"))
+                )
+                _record(
+                    label,
+                    route_label,
+                    broken=bool(step.get("_cube_incomplete") or step.get("_unsupported_spectral_model")),
+                    resolved=(selection_state == "fixed" or has_position),
+                    inventory_id=clean_text(step.get("hardware_inventory_id")),
+                )
 
-            for row in fact_rows:
-                if row.get("_cube_incomplete") or row.get("_unsupported_spectral_model"):
-                    saw_incomplete_or_unsupported = True
-                selection_state = clean_text(row.get("selection_state")).lower()
-                if selection_state in {"unresolved", "selectable"}:
-                    saw_unresolved_selectors = True
-                if isinstance(row.get("available_positions"), list) and len(row.get("available_positions")) > 1 and not clean_text(row.get("selected_position_key") or row.get("position_key")):
-                    saw_unresolved_selectors = True
-
-        if saw_incomplete_or_unsupported:
+        if incomplete:
             return (
                 True,
-                "[CAVEAT: Some route-specific optics are incomplete or use an unsupported spectral model (for example flattened cubes); report known channel labels/positions and confirm uncertain cube internals].",
+                "[CAVEAT: the recorded optical configuration is incomplete or uses an unsupported "
+                "spectral model for "
+                + _human_list(incomplete)
+                + "; confirm the exact filter, dichroic and emission bands used for acquisition].",
             )
-        if saw_unresolved_selectors:
+        if unresolved:
             return (
                 True,
-                "[PLEASE VERIFY: Some route selectors remain unresolved; report the exact selected wheel/turret/splitter positions used for acquisition].",
+                "[PLEASE SPECIFY: which position of "
+                + _human_list(unresolved)
+                + " was used for acquisition, including the filter/dichroic identity "
+                "(manufacturer + model/catalog number)].",
             )
-        if saw_any_route_facts:
+        if saw_optical_component:
             return (False, "")
         return (
             True,
-            "[PLEASE VERIFY: Route-specific optical selections are missing; report each filter, dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
+            "[PLEASE VERIFY: no filters, dichroics or splitters are recorded on the selected route; "
+            "report each optical element (manufacturer + model/catalog number) used for acquisition].",
         )
 
     quarep_recommendation_needed, quarep_recommendation_text = _route_optics_quarep_recommendation(route_rows)
@@ -931,6 +1119,9 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
             "quarep_light_path_recommendation_needed": quarep_recommendation_needed,
             "quarep_light_path_recommendation": quarep_recommendation_text,
+            # The same selectors, structured, so a draft can stop asking about the
+            # ones whose position the user named.
+            "unresolved_optics": copy.deepcopy(unresolved_optics),
             "specimen_preparation_recommendation": "[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)].",
             "acquisition_settings_recommendation": "[PLEASE SPECIFY: Exposure time(s), excitation power(s), detector gain/offset, camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable].",
             "nyquist_recommendation": "Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile.",

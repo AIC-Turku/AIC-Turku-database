@@ -58,6 +58,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     function confirmedActionOptions(dto) {
         const methods = dto.methods || {};
         return dedupeSentences([
+            // The record documents the software installed now. That is an
+            // acquisition-time claim, so it is offered for confirmation rather than
+            // asserted automatically.
+            methods.acquisition_software_sentence,
             methods.environment_sentence,
             ...(methods.stage_sentences || []),
             methods.autofocus_sentence,
@@ -87,45 +91,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             acc.push(cleaned);
             return acc;
         }, []);
-    }
-
-    function normalizeSentenceKey(value) {
-        return cleanText(value)
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, " ")
-            .trim();
-    }
-
-    function buildSentenceFact({ text, channel, key, specificity = 1 }) {
-        const cleanedText = cleanText(text);
-        const cleanedChannel = cleanText(channel) || "generic";
-        const cleanedKey = normalizeSentenceKey(key || cleanedText);
-        if (!cleanedText || !cleanedKey) return null;
-        return {
-            text: cleanedText,
-            channel: cleanedChannel,
-            key: cleanedKey,
-            specificity: Number.isFinite(Number(specificity)) ? Number(specificity) : 1,
-        };
-    }
-
-    function dedupeSentenceFacts(facts) {
-        const byIdentity = new Map();
-        (Array.isArray(facts) ? facts : []).forEach((fact) => {
-            if (!fact || typeof fact !== "object") return;
-            const normalizedFact = buildSentenceFact(fact);
-            if (!normalizedFact) return;
-            const identity = `${normalizedFact.channel}::${normalizedFact.key}`;
-            const existing = byIdentity.get(identity);
-            if (!existing || normalizedFact.specificity > existing.specificity) {
-                byIdentity.set(identity, normalizedFact);
-                return;
-            }
-            if (normalizedFact.specificity === existing.specificity && normalizedFact.text.length > existing.text.length) {
-                byIdentity.set(identity, normalizedFact);
-            }
-        });
-        return dedupeSentences(Array.from(byIdentity.values()).map((fact) => fact.text));
     }
 
     function humanJoin(values) {
@@ -158,14 +123,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function formatBlockerLabel(blocker) {
         return (blocker?.title || blocker?.path || "Missing field").toString().trim();
-    }
-
-    function missingMetadataNote(blockers) {
-        const labels = uniqueTexts((Array.isArray(blockers) ? blockers : []).map(formatBlockerLabel));
-        if (!labels.length) {
-            return "Some instrument metadata is missing; ask staff to confirm the exact settings.";
-        }
-        return `Some instrument metadata is missing (${humanJoin(labels)}); ask staff to confirm the exact settings.`;
     }
 
     function getMethodsMetadataStatus(inst) {
@@ -229,6 +186,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.methodSentence = item.method_sentence || "";
             checkbox.dataset.category = prefix;
             checkbox.dataset.role = item.role || "";
+            // Publication prose is assembled from these structured fields rather
+            // than by rewriting the finished sentence, so components that share a
+            // sentence frame can be merged without parsing prose.
+            checkbox.dataset.publicationTemplate = item.publication_template || "";
+            checkbox.dataset.publicationLabel = item.publication_phrase || item.publication_label || item.display_label || "";
+            checkbox.dataset.reviewPrompts = JSON.stringify(Array.isArray(item.review_prompts) ? item.review_prompts : []);
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
@@ -249,8 +212,81 @@ document.addEventListener("DOMContentLoaded", async () => {
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
             container.appendChild(wrapper);
+            bindSelectablePositions(container, item, prefix, index);
         });
         return normalizedItems.length;
+    }
+
+    /**
+     * Keep only the positions recorded on a route the user selected.
+     *
+     * A holder shared by two routes may carry different positions on each, so
+     * offering all of them would let a user report a route together with a
+     * position that route cannot reach.
+     */
+    function positionsOnSelectedRoutes(positions) {
+        const checkedRouteIds = new Set(getCheckedIds("route"));
+        if (!checkedRouteIds.size) return positions;
+        return positions.filter((position) => {
+            const routeIds = Array.isArray(position?.route_ids) ? position.route_ids.map(cleanText) : [];
+            return !routeIds.length || routeIds.some(id => checkedRouteIds.has(id));
+        });
+    }
+
+    /**
+     * Offer the positions a filter turret or wheel can be set to.
+     *
+     * Ticking the holder only says light passed through it, which tells a reader
+     * nothing about the filter that was used - the fact a fluorescence Methods
+     * section turns on. The positions are recorded per route, so they are offered
+     * as nested choices and the holder is ticked automatically when one is picked.
+     */
+    function bindSelectablePositions(container, item, prefix, itemIndex) {
+        const allPositions = Array.isArray(item?.selectable_positions) ? item.selectable_positions : [];
+        const positions = positionsOnSelectedRoutes(allPositions);
+        if (!positions.length) return;
+        const componentId = cleanText(item.id);
+        const componentLabel = cleanText(item.publication_label || item.display_label);
+
+        positions.forEach((position, positionIndex) => {
+            const positionId = cleanText(position?.id);
+            const positionLabel = cleanText(position?.display_label);
+            if (!positionId || !positionLabel) return;
+
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "2px";
+            wrapper.style.marginLeft = "20px";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.id = `${prefix}position-${itemIndex}-${positionIndex}`;
+            checkbox.value = `${componentId}::${positionId}`;
+            checkbox.dataset.category = `${prefix}-position`;
+            checkbox.dataset.componentId = componentId;
+            checkbox.dataset.componentLabel = componentLabel;
+            checkbox.dataset.displayLabel = positionLabel;
+            checkbox.dataset.incomplete = position?.incomplete ? "1" : "";
+            checkbox.dataset.routeIds = JSON.stringify(Array.isArray(position?.route_ids) ? position.route_ids : []);
+            const productCode = cleanText(position?.product_code);
+            const identity = productCode ? `${positionLabel} (catalogue no. ${productCode})` : positionLabel;
+            checkbox.dataset.publicationTemplate = "The light path included {label}.";
+            checkbox.dataset.publicationLabel = componentLabel
+                ? `${identity} in the ${componentLabel}`
+                : identity;
+            checkbox.dataset.reviewPrompts = JSON.stringify(position?.incomplete ? [
+                `[PLEASE VERIFY: the recorded transmission bands for ${positionLabel} are incomplete; confirm its excitation filter, dichroic and emission filter]`,
+            ] : []);
+
+            const label = document.createElement("label");
+            label.htmlFor = checkbox.id;
+            const labelText = document.createElement("span");
+            labelText.textContent = ` ${identity}`;
+            label.appendChild(labelText);
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            container.appendChild(wrapper);
+        });
     }
 
     function toggleSectionVisibility(sectionId, hasItems) {
@@ -281,8 +317,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         routeViews.forEach((route, routeIdx) => {
             const routeId = cleanText(route.id);
-            const routeLabel = cleanText(route.display_label || route.id);
-            if (!routeId) return;
+            const routeLabel = cleanText(route.display_label);
+            // A route with no display label would be named by its internal id in
+            // publication prose, so it is not offered as a choice at all.
+            if (!routeId || !routeLabel) return;
 
             // Route checkbox
             const routeWrapper = document.createElement("div");
@@ -295,6 +333,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             routeCheckbox.dataset.displayLabel = routeLabel;
             routeCheckbox.dataset.methodSentence = `Images were acquired using the ${routeLabel} route.`;
             routeCheckbox.dataset.category = "route";
+            routeCheckbox.dataset.routeType = cleanText(route.route_type);
 
             const routeLabelEl = document.createElement("label");
             routeLabelEl.htmlFor = routeCheckbox.id;
@@ -439,26 +478,88 @@ document.addEventListener("DOMContentLoaded", async () => {
             displayLabel: cleanText(cb.dataset.displayLabel),
             methodSentence: cleanText(cb.dataset.methodSentence),
             role: cleanText(cb.dataset.role),
+            routeType: cleanText(cb.dataset.routeType),
+            routeIds: parseJsonArray(cb.dataset.routeIds),
+            publicationTemplate: cleanText(cb.dataset.publicationTemplate),
+            publicationLabel: cleanText(cb.dataset.publicationLabel),
+            reviewPrompts: parseJsonArray(cb.dataset.reviewPrompts),
         }));
+    }
+
+    function parseJsonArray(value) {
+        try {
+            const parsed = JSON.parse(value || "[]");
+            return Array.isArray(parsed) ? parsed.map(cleanText).filter(Boolean) : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    /**
+     * Merge selections that share a sentence frame into one sentence.
+     *
+     * Each selection carries its own frame ("Excitation was provided by {label}.")
+     * and its own label, so three lasers become one sentence instead of three
+     * near-identical ones, without any sentence being parsed or rewritten.
+     *
+     * Selections are keyed by id, so two distinct components that happen to share a
+     * display label stay two facts; when the draft cannot tell them apart it says so
+     * rather than silently reporting one.
+     */
+    function mergeByPublicationTemplate(selections) {
+        const groups = new Map();
+        const seenIds = new Set();
+        const prompts = [];
+
+        (Array.isArray(selections) ? selections : []).forEach((item) => {
+            const id = cleanText(item?.id);
+            if (id && seenIds.has(id)) return;
+            if (id) seenIds.add(id);
+            prompts.push(...(item?.reviewPrompts || []));
+
+            const template = cleanText(item?.publicationTemplate);
+            const label = cleanText(item?.publicationLabel) || cleanText(item?.displayLabel);
+            if (!template || !template.includes("{label}") || !label) {
+                const fallback = cleanText(item?.methodSentence);
+                if (fallback) groups.set(`literal::${fallback}`, { literal: fallback });
+                return;
+            }
+            if (!groups.has(template)) groups.set(template, { template, labels: [] });
+            groups.get(template).labels.push(label);
+        });
+
+        const sentences = [];
+        groups.forEach((group) => {
+            if (group.literal) {
+                sentences.push(group.literal);
+                return;
+            }
+            const counts = new Map();
+            group.labels.forEach(label => counts.set(label, (counts.get(label) || 0) + 1));
+            counts.forEach((count, label) => {
+                if (count > 1) {
+                    prompts.push(`[PLEASE SPECIFY: ${count} separate components recorded as “${label}” were selected and this draft cannot tell them apart; state which one was used for each channel]`);
+                }
+            });
+            sentences.push(group.template.replace("{label}", humanJoin(Array.from(counts.keys()))));
+        });
+
+        return { sentences: dedupeSentences(sentences), prompts: uniqueTexts(prompts) };
     }
 
     function getCheckedIds(prefix) {
         return getCheckedSelections(prefix).map(item => item.id).sort();
     }
 
+    /**
+     * Sentence for the legacy modality compatibility list.
+     *
+     * Every other category now renders through `mergeByPublicationTemplate`, which
+     * merges by sentence frame instead of restating the frame per checkbox.
+     */
     function groupedLabelSentence(prefix, selections) {
         const labels = uniqueTexts(selections.map(item => item.displayLabel));
         if (!labels.length) {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-
-        if (prefix === "route") {
-            return labels.length === 1
-                ? `Images were acquired using the ${labels[0]} route.`
-                : `Images were acquired using the ${humanJoin(labels)} routes.`;
-        }
-        if (prefix === "readout") {
-            // Each readout has its own route-aware method_sentence; use it directly.
             return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
         }
         if (prefix === "modality") {
@@ -466,55 +567,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ? `Imaging modality used was ${labels[0]}.`
                 : `Imaging modalities used included ${humanJoin(labels)}.`;
         }
-        if (prefix === "module") {
-            const moduleSentences = dedupeSentences(selections.map(item => item.methodSentence));
-            return moduleSentences.length
-                ? moduleSentences.join(" ")
-                : labels.length === 1
-                    ? `Installed module used was ${labels[0]}.`
-                    : `Installed modules used included ${humanJoin(labels)}.`;
-        }
-        if (prefix === "scanner") {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-        if (prefix === "obj") {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-        if (prefix === "det") {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-        if (prefix === "light") {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-        if (prefix === "magnification-changer") {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-        if (prefix === "filter") {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
         return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-    }
-
-    function selectionChannel(prefix) {
-        if (prefix === "light") return "source";
-        if (prefix === "filter") return "optical_element";
-        if (prefix === "det") return "endpoint";
-        if (prefix === "splitter") return "splitter";
-        if (prefix === "optical-modulator") return "modulator";
-        if (prefix === "illumination-logic") return "illumination_logic";
-        return "generic";
-    }
-
-    function sentenceFactsFromSelections(prefix, selections, specificity = 1) {
-        const channel = selectionChannel(prefix);
-        return (Array.isArray(selections) ? selections : [])
-            .map((item) => buildSentenceFact({
-                text: item?.methodSentence,
-                channel,
-                key: item?.displayLabel || item?.id,
-                specificity,
-            }))
-            .filter(Boolean);
     }
 
     function getExportedRuntimeSelectedConfiguration(dto) {
@@ -545,10 +598,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function availableRuntimeSelectedConfiguration(dto) {
         const exported = getExportedRuntimeSelectedConfiguration(dto);
-        // Prefer the DTO as a proposal, never as evidence of an acquisition.
+        // Prefer the DTO as a proposal, never as evidence of an acquisition. A
+        // configuration that carries no instrument identity cannot be attributed to
+        // this microscope, so it is refused here exactly as it is on the
+        // localStorage path below; absence of identity is not permission.
         if (exported) {
-            const hasIdentity = cleanText(exported.scope_id) || cleanText(exported.instrument_id);
-            if (hasIdentity && !runtimeConfigurationMatchesInstrument(dto, exported)) {
+            if (!runtimeConfigurationMatchesInstrument(dto, exported)) {
                 return { source: "", config: null };
             }
             return { source: "exported_dto", config: exported };
@@ -564,13 +619,39 @@ document.addEventListener("DOMContentLoaded", async () => {
         runtimeCandidate = availableRuntimeSelectedConfiguration(dto);
         const candidate = runtimeCandidate.config;
         const invalid = candidate && (candidate.validSelection === false || candidate.simulationError === true);
+        // A plan naming a route this instrument no longer records cannot be checked
+        // against anything, so it must not become a Methods claim. Stale plans and
+        // renamed routes both land here.
+        const routeName = cleanText(candidate?.route);
+        const unknownRoute = Boolean(candidate) && !invalid && !findRouteFactsForRuntimeRoute(dto, routeName);
+
         runtimeConfirm.checked = false;
-        runtimeConfirm.disabled = !candidate || invalid;
+        runtimeConfirm.disabled = !candidate || invalid || unknownRoute;
         document.getElementById("runtime-review").style.display = candidate ? "" : "none";
         document.getElementById("runtime-preview").textContent = candidate ? JSON.stringify(candidate, null, 2) : "";
         document.getElementById("runtime-review-status").textContent = invalid
             ? "This simulator plan is invalid and cannot be imported."
-            : "This is a planning record, not an acquisition record. Review it and confirm that these settings were actually used. Missing validation or historical information remains unverified.";
+            : unknownRoute
+                ? `This simulator plan refers to ${routeName || "an unnamed route"}, which is not present in the instrument's recorded routes. It cannot be imported into publication Methods; verify the configuration in the simulator or with facility staff.`
+                : "This is a planning record, not an acquisition record. Review it and confirm that these settings were actually used. Missing validation or historical information remains unverified.";
+    }
+
+    /**
+     * Report whether a DTO carries enough structure to build a draft from.
+     *
+     * The export is read with optional chaining throughout, so a record that lost
+     * its `methods` block to a schema change used to produce an empty but
+     * apparently successful entry - and still credited that instrument in the
+     * acknowledgements. Missing structure is now refused, not rendered.
+     */
+    function instrumentDtoIsRenderable(dto) {
+        return Boolean(dto) && Boolean(cleanText(dto?.methods?.base_sentence));
+    }
+
+    function exportDiagnosticNotes(dto) {
+        return uniqueTexts((Array.isArray(dto?.diagnostics) ? dto.diagnostics : [])
+            .filter(entry => entry && typeof entry === "object")
+            .map(entry => cleanText(entry.message) || cleanText(entry.code)));
     }
 
     function resolveRuntimeSelectedConfiguration(dto) {
@@ -581,174 +662,433 @@ document.addEventListener("DOMContentLoaded", async () => {
         return runtimeCandidate;
     }
 
-    function routeFactsSummarySentence(routeFacts) {
-        if (!routeFacts || typeof routeFacts !== "object") return "";
-        const factsByKey = [
-            "selected_or_selectable_sources",
-            "selected_or_selectable_excitation_filters",
-            "selected_or_selectable_dichroics",
-            "selected_or_selectable_emission_filters",
-            "selected_or_selectable_splitters",
-            "selected_or_selectable_endpoints",
-            "selected_or_selectable_modulators",
-            "selected_or_selectable_branch_selectors",
-        ];
-        const allRows = factsByKey.flatMap((key) => Array.isArray(routeFacts[key]) ? routeFacts[key] : []);
-        if (!allRows.length) return "";
-
-        const lineForRow = (row) => {
-            if (!row || typeof row !== "object") return "";
-            const label = cleanText(row.display_label || row.label || row.name || row.id || row.component_type);
-            const position = cleanText(row.selected_position_key || row.position_key || row.selected_position_id || row.position_id);
-
-            const channel = cleanText(row.channel_label || row.channel_name);
-            const caveats = [];
-            if (row._cube_incomplete) caveats.push("incomplete cube");
-            if (row._unsupported_spectral_model) caveats.push("unsupported spectral model");
-
-            const availablePositions = Array.isArray(row.available_positions)
-                ? row.available_positions
-                    .map((pos) => cleanText(pos?.display_label || pos?.label || pos?.position_key || pos?.position_id))
-                    .filter(Boolean)
-                : [];
-            const selectableText = availablePositions.length ? `selectable positions: ${humanJoin(availablePositions)}` : "";
-
-            const cubeBits = [
-                row.excitation_filter ? `EX ${cleanText(row.excitation_filter.display_label || row.excitation_filter.label || row.excitation_filter.component_type || "filter")}` : "",
-                row.dichroic ? `DI ${cleanText(row.dichroic.display_label || row.dichroic.label || row.dichroic.component_type || "dichroic")}` : "",
-                row.emission_filter ? `EM ${cleanText(row.emission_filter.display_label || row.emission_filter.label || row.emission_filter.component_type || "filter")}` : "",
-            ].filter(Boolean);
-            const productCode = cleanText(row.product_code);
-
-            const details = [
-                channel ? `channel ${channel}` : "",
-                cubeBits.length ? `cube internals (${cubeBits.join("; ")})` : "",
-                productCode ? `product code ${productCode}` : "",
-                selectableText,
-                caveats.length ? `caveats: ${humanJoin(caveats)}` : "",
-            ].filter(Boolean);
-
-            const base = label ? `${label}${position ? ` @ ${position}` : ""}` : "";
-            return [base, ...details].filter(Boolean).join(" — ");
-        };
-
-        const lines = dedupeSentences(allRows.map(lineForRow));
-        return lines.length ? `Route-specific optical selections/facts: ${humanJoin(lines)}.` : "";
-    }
-
+    /**
+     * Resolve the route a runtime plan names against this instrument's contract.
+     *
+     * Plans store the route id, but older plans and hand-written records may carry
+     * the display label instead, so the id is tried first and the label only as a
+     * fallback: a label must never shadow a different route's id.
+     */
     function findRouteFactsForRuntimeRoute(dto, routeNameOrId) {
         const routeViews = routeViewsForInstrument(dto);
         const target = cleanText(routeNameOrId);
         if (!target) return null;
-        return routeViews.find((route) =>
-            cleanText(route?.id) === target ||
-            cleanText(route?.illumination_mode) === target ||
-            cleanText(route?.display_label) === target
-        ) || null;
+        const byId = routeViews.find(route => cleanText(route?.id) === target);
+        if (byId) return byId;
+        // A display label or a broad illumination mode may be shared by two routes
+        // that use different filters, branches or endpoints. Either identifies a
+        // route only when exactly one route answers to it.
+        const uniqueMatch = (accessor) => {
+            const matches = routeViews.filter(route => cleanText(route?.[accessor]) === target);
+            return matches.length === 1 ? matches[0] : null;
+        };
+        return uniqueMatch("display_label") || uniqueMatch("illumination_mode") || null;
     }
 
-    function runtimeConfigurationSentence(dto) {
+    /**
+     * Index every recorded component of this instrument by each identifier a
+     * runtime plan might name it with.
+     *
+     * A confirmed simulator plan is a planning record, not an inventory. Matching
+     * its components against the canonical record is what lets the draft (a) use
+     * the instrument's own publication label and recorded role, and (b) refuse to
+     * report hardware that is no longer part of the instrument.
+     */
+    function inventoryIndex(dto) {
+        // Canonical ids identify exactly one component. Labels do not: an instrument
+        // with two identical cameras records the same label twice, so a label that
+        // resolves to more than one component identifies neither and must not be
+        // allowed to bind a plan to whichever happened to be indexed first.
+        const byId = new Map();
+        const byLabel = new Map();
+        opticalPathInventory(dto).forEach((item) => {
+            [item?.id, item?.hardware_id].map(cleanText).filter(Boolean).forEach((key) => {
+                byId.set(key.toLowerCase(), item);
+            });
+            [item?.display_label, item?.canonical_display_label, item?.publication_label]
+                .map(cleanText).filter(Boolean).forEach((key) => {
+                    const normalized = key.toLowerCase();
+                    const known = byLabel.get(normalized);
+                    if (!known) {
+                        byLabel.set(normalized, item);
+                    } else if (known !== item) {
+                        byLabel.set(normalized, "ambiguous");
+                    }
+                });
+        });
+        return { byId, byLabel };
+    }
+
+    /**
+     * Resolve a plan component against the instrument record.
+     *
+     * Returns the recorded component, or a reason it could not be resolved.
+     * "Ambiguous" is not a weaker match than "unmatched": binding a plan to the
+     * wrong one of two identical detectors produces a confident sentence about
+     * the wrong physical component, so both refuse to produce a claim.
+     */
+    // Both fields come from the instrument record, so either is canonical; only
+    // the plan's own label is not.
+    function recordedLabel(item) {
+        return cleanText(item?.publication_label) || cleanText(item?.display_label);
+    }
+
+    function matchRecordedComponent(index, ids, labels) {
+        for (const candidate of ids) {
+            const key = cleanText(candidate).toLowerCase();
+            if (key && index.byId.has(key)) return { item: index.byId.get(key), reason: "" };
+        }
+        for (const candidate of labels) {
+            const key = cleanText(candidate).toLowerCase();
+            if (!key || !index.byLabel.has(key)) continue;
+            const hit = index.byLabel.get(key);
+            if (hit === "ambiguous") return { item: null, reason: "ambiguous" };
+            return { item: hit, reason: "" };
+        }
+        return { item: null, reason: "unmatched" };
+    }
+
+    function unresolvedComponentPrompt(label, reason) {
+        return reason === "ambiguous"
+            ? `[PLEASE SPECIFY: more than one recorded component is called “${label}”, so the reviewed plan does not identify which one was used; state the exact component]`
+            : `[PLEASE VERIFY: the reviewed plan names “${label}”, which is not in the current instrument record; confirm the component that was actually used]`;
+    }
+
+    function withWavelength(label, wavelength) {
+        if (wavelength === null || !(wavelength > 0)) return label;
+        return label.includes(`${wavelength} nm`) ? label : `${label} (${wavelength} nm)`;
+    }
+
+    /**
+     * Check a plan's excitation wavelength against what the source can produce.
+     *
+     * Matching a component by its canonical id says the right laser was named; it
+     * says nothing about the line. A fixed 488 nm laser matched by id while the
+     * plan carries 594 would otherwise be published as "488 nm laser (594 nm)".
+     */
+    // Earlier work stopped the draft calling a STED depletion beam an excitation
+    // source. The request about its wavelength must not reintroduce that.
+    const WAVELENGTH_NOUN_BY_ROLE = {
+        excitation: "excitation wavelength",
+        depletion: "depletion wavelength",
+        activation: "photoactivation wavelength",
+    };
+
+    function wavelengthNoun(recorded) {
+        const metadata = recorded?.source_metadata && typeof recorded.source_metadata === "object"
+            ? recorded.source_metadata
+            : {};
+        const role = cleanText(metadata.role || recorded?.role).toLowerCase();
+        return WAVELENGTH_NOUN_BY_ROLE[role] || "wavelength";
+    }
+
+    function resolveRuntimeWavelength(recorded, wavelength, label) {
+        if (wavelength === null || !(wavelength > 0)) return { wavelength: null, prompt: "" };
+        const noun = wavelengthNoun(recorded);
+        const metadata = recorded?.source_metadata && typeof recorded.source_metadata === "object"
+            ? recorded.source_metadata
+            : {};
+        const tunableMin = optionalNumber(metadata.tunable_min_nm);
+        const tunableMax = optionalNumber(metadata.tunable_max_nm);
+        const fixed = optionalNumber(metadata.wavelength_nm);
+
+        if (tunableMin !== null && tunableMax !== null) {
+            if (wavelength < tunableMin || wavelength > tunableMax) {
+                return {
+                    wavelength: null,
+                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which is outside its recorded tunable range of ${tunableMin}–${tunableMax} nm; confirm the ${noun} used]`,
+                };
+            }
+            return { wavelength, prompt: "" };
+        }
+        if (fixed !== null) {
+            if (fixed !== wavelength) {
+                return {
+                    wavelength: null,
+                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which the instrument record gives as a fixed ${fixed} nm source; confirm the ${noun} used]`,
+                };
+            }
+            return { wavelength, prompt: "" };
+        }
+        return {
+            wavelength: null,
+            prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, but no wavelength is recorded for this source; confirm the ${noun} used]`,
+        };
+    }
+
+    /**
+     * Check a plan's detection window against the detector's recorded range.
+     *
+     * Where the record states no range there is nothing to contradict, so the
+     * confirmed setting stands; where it does, a window outside it is a question.
+     */
+    function resolveRuntimeDetectionWindow(recorded, minimum, maximum, label) {
+        const hasWindow = minimum !== null && maximum !== null && minimum > 0 && maximum > minimum;
+        if (!hasWindow) return { window: "", prompt: "" };
+        const metadata = recorded?.endpoint_metadata && typeof recorded.endpoint_metadata === "object"
+            ? recorded.endpoint_metadata
+            : {};
+        // The schema makes each bound independently optional, so a detector may
+        // record only a lower or only an upper limit. Each known bound is enforced
+        // on its own: requiring both would let a window contradict the one bound
+        // that is actually recorded.
+        const recordedMin = optionalNumber(metadata.collection_min_nm ?? metadata.min_nm);
+        const recordedMax = optionalNumber(metadata.collection_max_nm ?? metadata.max_nm);
+        const breaches = [];
+        if (recordedMin !== null && minimum < recordedMin) {
+            breaches.push(`below its recorded collection minimum of ${recordedMin} nm`);
+        }
+        if (recordedMax !== null && maximum > recordedMax) {
+            breaches.push(`above its recorded collection maximum of ${recordedMax} nm`);
+        }
+        if (breaches.length) {
+            return {
+                window: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports a ${minimum}–${maximum} nm detection window on ${label}, which is ${humanJoin(breaches)}; confirm the window used]`,
+            };
+        }
+        return { window: `${minimum}–${maximum} nm`, prompt: "" };
+    }
+
+    /**
+     * Resolve a plan's position against the positions recorded for the element.
+     *
+     * A plan can name the right turret and the wrong position. The reported
+     * position is taken from the record, never from the plan, and must be one the
+     * element offers on the route being reported.
+     */
+    function resolveRuntimePosition(recorded, step, routeId, label) {
+        // The stable key identifies the position; the display label is a rendering
+        // of it. A stale plan can carry a key and a label that name different
+        // positions, so the key decides and a label that disagrees with it - or
+        // that names nothing recorded - makes the position review-only.
+        const key = cleanText(step?.position_key) || cleanText(step?.position_id);
+        const labelText = cleanText(step?.position_label);
+        const raw = key || labelText;
+        if (!raw) return { position: "", prompt: "" };
+        const positions = Array.isArray(recorded?.selectable_positions) ? recorded.selectable_positions : [];
+        if (!positions.length) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${raw}”, but the instrument record does not list the positions of this element; confirm the filter that was used]`,
+            };
+        }
+        const resolve = (value) => positions.find(position =>
+            [position?.id, position?.display_label].map(cleanText)
+                .some(recordedValue => recordedValue && recordedValue.toLowerCase() === value.toLowerCase())) || null;
+
+        const keyMatch = key ? resolve(key) : null;
+        const labelMatch = labelText ? resolve(labelText) : null;
+        if (key && !keyMatch) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${key}”, which is not one of its recorded positions; confirm the filter that was used]`,
+            };
+        }
+        if (keyMatch && labelText && labelMatch !== keyMatch) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan gives ${label} position “${key}” and “${labelText}”, which do not describe the same recorded position; confirm the filter that was used]`,
+            };
+        }
+        const match = keyMatch || labelMatch;
+        if (!match) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${raw}”, which is not one of its recorded positions; confirm the filter that was used]`,
+            };
+        }
+        const positionRoutes = Array.isArray(match.route_ids) ? match.route_ids.map(cleanText) : [];
+        if (routeId && positionRoutes.length && !positionRoutes.includes(routeId)) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${cleanText(match.display_label)}”, which is not recorded on the route being reported; confirm the route and filter that were used]`,
+            };
+        }
+        const productCode = cleanText(match.product_code);
+        const identity = cleanText(match.display_label);
+        return {
+            position: productCode ? `${identity} (catalogue no. ${productCode})` : identity,
+            prompt: "",
+        };
+    }
+
+    function branchLabelLookup(route) {
+        const lookup = new Map();
+        const branches = Array.isArray(route?.branch_summary?.branches) ? route.branch_summary.branches : [];
+        branches.forEach((branch) => {
+            const id = cleanText(branch?.branch_id);
+            const label = cleanText(branch?.label);
+            if (id && label) lookup.set(id, label);
+        });
+        return lookup;
+    }
+
+    /**
+     * Build publication prose and review requests from a confirmed runtime plan.
+     *
+     * Everything here is rendered from the plan's structured fields. Nothing is
+     * emitted as an intermediate diagnostic sentence for a later pass to rewrite,
+     * so no transformation can merge two facts or leave a clause unterminated.
+     */
+    function runtimeAcquisitionFacts(dto) {
+        const empty = { components: [], sentences: [], prompts: [], routeLabels: [], hasRuntimeSelection: false };
         const resolved = resolveRuntimeSelectedConfiguration(dto);
         const runtimeConfig = resolved.config;
-        if (!runtimeConfig) return { text: "", sentenceFacts: [], hasRuntimeSelection: false };
+        if (!runtimeConfig) return empty;
 
-        const route = cleanText(runtimeConfig.route) || "unspecified route";
-        const matchedRoute = findRouteFactsForRuntimeRoute(dto, route);
-        const routeFacts = matchedRoute?.route_optical_facts || null;
-        const sourceLabels = uniqueTexts((Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).map((source) => {
-            const label = cleanText(source?.display_label || source?.name || source?.id);
-            const wavelength = optionalNumber(source?.selected_wavelength_nm ?? source?.wavelength_nm);
-            return label ? `${label}${wavelength !== null && wavelength > 0 ? ` (${wavelength} nm)` : ""}` : "";
-        }));
-        const runtimeSourceKeys = uniqueTexts((Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).map((source) =>
-            cleanText(source?.display_label || source?.name || source?.id)
-        ));
+        const matchedRoute = findRouteFactsForRuntimeRoute(dto, cleanText(runtimeConfig.route));
+        // renderRuntimeReview refuses to enable confirmation for a plan whose route
+        // is not in this instrument's route contract, so an unresolved route here
+        // means the plan must not contribute at all.
+        if (!matchedRoute) return empty;
+
+        const index = inventoryIndex(dto);
+        const prompts = [];
+        const components = [];
+        // Only a recorded display label may name a route in prose; an internal id
+        // is not a route name, so an unlabelled route is reported as a gap instead.
+        const routeLabel = cleanText(matchedRoute.display_label);
+        const routeId = cleanText(matchedRoute.id);
+
+        function addFact(template, label, recorded, planLabel) {
+            if (!template || !label) return;
+            components.push({
+                id: cleanText(recorded?.id) || `plan::${planLabel}`,
+                publicationTemplate: template,
+                publicationLabel: label,
+                reviewPrompts: [],
+            });
+        }
+
+        (Array.isArray(runtimeConfig.sources) ? runtimeConfig.sources : []).forEach((source) => {
+            const planLabel = cleanText(source?.display_label || source?.name || source?.id);
+            if (!planLabel) return;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [source?.id, source?.mechanismId], [planLabel]);
+            // A component the record cannot confirm is a question, not a fact. It
+            // must not also appear as finished prose: a reader takes the sentence
+            // and not the caveat.
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
+            // The role comes from the instrument record, never from the plan: a plan
+            // knows which source was switched on, not what it was used for.
+            (recorded.review_prompts || []).forEach(prompt => prompts.push(cleanText(prompt)));
+            const label = recordedLabel(recorded);
+            const { wavelength, prompt: wavelengthPrompt } = resolveRuntimeWavelength(
+                recorded, optionalNumber(source?.selected_wavelength_nm ?? source?.wavelength_nm), label);
+            if (wavelengthPrompt) prompts.push(wavelengthPrompt);
+            addFact(
+                cleanText(recorded.publication_template) || "Illumination was provided by {label}.",
+                withWavelength(label, wavelength),
+                recorded,
+                planLabel,
+            );
+        });
+
+        (Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).forEach((detector) => {
+            const planLabel = cleanText(detector?.display_label || detector?.id);
+            if (!planLabel) return;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [detector?.id, detector?.mechanismId], [planLabel]);
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
+            const label = recordedLabel(recorded);
+            const { window, prompt: windowPrompt } = resolveRuntimeDetectionWindow(
+                recorded,
+                optionalNumber(detector?.collection_min_nm),
+                optionalNumber(detector?.collection_max_nm),
+                label,
+            );
+            if (windowPrompt) prompts.push(windowPrompt);
+            addFact(
+                cleanText(recorded.publication_template) || "Images were recorded using {label}.",
+                window ? `${label} (detection ${window})` : label,
+                recorded,
+                planLabel,
+            );
+        });
+
         const routeSteps = Array.isArray(runtimeConfig.selected_route_steps) ? runtimeConfig.selected_route_steps : [];
-        const opticalSteps = routeSteps.filter((step) => step?.kind === "optical_component");
-        const runtimeOpticalKeys = uniqueTexts(opticalSteps.map((step) =>
-            cleanText(step?.display_label || step?.position_label || step?.component_type)
-        ));
-        const stageSelections = uniqueTexts(opticalSteps.map((step) => {
-            const label = cleanText(step?.display_label || step?.position_label || step?.component_type);
-            const position = cleanText(step?.position_key) || cleanText(step?.position_id) || "";
-            return label ? `${label}${position ? ` @ ${position}` : ""}` : "";
-        }));
-        const splitterSelections = uniqueTexts((Array.isArray(runtimeConfig.splitters) ? runtimeConfig.splitters : []).map((splitter) => {
-            const label = cleanText(splitter?.display_label || splitter?.id);
-            const branches = Array.isArray(splitter?.selected_branch_ids) ? splitter.selected_branch_ids.filter(Boolean) : [];
-            return label ? `${label}${branches.length ? ` [${branches.join(", ")}]` : ""}` : "";
-        }));
-        const runtimeSplitterKeys = uniqueTexts((Array.isArray(runtimeConfig.splitters) ? runtimeConfig.splitters : []).map((splitter) =>
-            cleanText(splitter?.display_label || splitter?.id)
-        ));
-        const detectorSelections = uniqueTexts((Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).map((detector) => {
-            const label = cleanText(detector?.display_label || detector?.id);
-            const minimum = optionalNumber(detector?.collection_min_nm);
-            const maximum = optionalNumber(detector?.collection_max_nm);
-            const hasWindow = minimum !== null && maximum !== null && minimum > 0 && maximum > minimum;
-            return label ? `${label}${hasWindow ? ` (${minimum}–${maximum} nm)` : ""}` : "";
-        }));
-        const runtimeEndpointKeys = uniqueTexts((Array.isArray(runtimeConfig.detectors) ? runtimeConfig.detectors : []).map((detector) =>
-            cleanText(detector?.display_label || detector?.id)
-        ));
-        const flattenedIncomplete = routeSteps.filter((step) => step?._cube_incomplete).map((step) => cleanText(step?.display_label || step?.position_label || step?.component_type)).filter(Boolean);
-        const unsupportedComponents = routeSteps.filter((step) => step?._unsupported_spectral_model).map((step) => cleanText(step?.display_label || step?.position_label || step?.component_type)).filter(Boolean);
-        const unsupportedReasons = routeSteps
-            .map((step) => cleanText(step?.unsupported_reason || ""))
-            .filter(Boolean);
+        routeSteps.filter(step => step?.kind === "optical_component").forEach((step) => {
+            const planLabel = cleanText(step?.display_label || step?.position_label || step?.component_type);
+            if (!planLabel) return;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [step?.hardware_inventory_id, step?.component_id], [planLabel]);
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
+            const label = recordedLabel(recorded);
+            const { position, prompt: positionPrompt } = resolveRuntimePosition(recorded, step, routeId, label);
+            if (positionPrompt) prompts.push(positionPrompt);
+            addFact(
+                cleanText(recorded.publication_template) || "The light path included {label}.",
+                position ? `${position} in the ${label}` : label,
+                recorded,
+                planLabel,
+            );
+            if (step?._cube_incomplete) {
+                prompts.push(`[PLEASE VERIFY: the recorded optical configuration is incomplete for ${label}; confirm the exact excitation filter, dichroic and emission filter used]`);
+            }
+            if (step?._unsupported_spectral_model || cleanText(step?.unsupported_reason)) {
+                prompts.push(`[PLEASE VERIFY: the recorded spectral information for ${label} could not be interpreted; confirm its transmission bands]`);
+            }
+        });
 
+        const branchLabels = branchLabelLookup(matchedRoute);
+        (Array.isArray(runtimeConfig.splitters) ? runtimeConfig.splitters : []).forEach((splitter) => {
+            const planLabel = cleanText(splitter?.display_label || splitter?.id);
+            if (!planLabel) return;
+            const { item: recorded, reason } = matchRecordedComponent(
+                index, [splitter?.id, splitter?.mechanismId], [planLabel]);
+            if (!recorded) {
+                prompts.push(unresolvedComponentPrompt(planLabel, reason));
+                return;
+            }
+            const label = recordedLabel(recorded);
+            const rawBranches = Array.isArray(splitter?.selected_branch_ids) ? splitter.selected_branch_ids.filter(Boolean) : [];
+            const named = rawBranches.map(id => branchLabels.get(cleanText(id)) || "").filter(Boolean);
+            if (rawBranches.length && named.length !== rawBranches.length) {
+                prompts.push(`[PLEASE SPECIFY: which output of ${label} was recorded; the reviewed plan identifies its branches only by internal reference]`);
+            }
+            addFact(
+                cleanText(recorded.publication_template) || "The emission light was divided by {label}.",
+                named.length ? `${label} (${humanJoin(named)} outputs)` : label,
+                recorded,
+                planLabel,
+            );
+        });
+
+        const sentences = [];
         const acquisitionPlan = runtimeConfig.acquisition_plan && typeof runtimeConfig.acquisition_plan === "object"
             ? runtimeConfig.acquisition_plan
             : null;
-        let acquisitionSentence = "";
+        // `requiresSequentialAcquisition` is the simulator's conclusion about what
+        // the chosen fluorophores and optics would need, not a record of what was
+        // done: an operator may have accepted crosstalk and imaged simultaneously.
+        // It is therefore a question for the author, never a claim about execution.
         if (acquisitionPlan?.requiresSequentialAcquisition) {
             const steps = Array.isArray(acquisitionPlan.steps) ? acquisitionPlan.steps : [];
-            const stepSummary = steps
-                .map((step) => {
-                    const stepNo = step?.step != null ? step.step : "?";
-                    const fluor = cleanText(step?.fluorophoreName) || "fluorophore";
-                    const stepRoute = cleanText(step?.route) || "current route";
-                    return `step ${stepNo} (${fluor}, route ${stepRoute})`;
-                })
-                .filter(Boolean);
-            acquisitionSentence = `Sequential acquisition is planned as ${humanJoin(stepSummary)}.`;
+            const labels = uniqueTexts(steps.map(step => cleanText(step?.fluorophoreName)));
+            prompts.push(labels.length > 1
+                ? `[PLEASE SPECIFY: the reviewed plan indicates that ${humanJoin(labels)} require sequential acquisition; state whether the channels were acquired sequentially or simultaneously, and in what order]`
+                : "[PLEASE SPECIFY: the reviewed plan indicates that the channels require sequential acquisition; state whether they were acquired sequentially or simultaneously, and in what order]");
         }
 
-        const notes = [];
-        if (flattenedIncomplete.length) notes.push(`Flattened/incomplete optics were present for ${humanJoin(flattenedIncomplete)}.`);
-        if (unsupportedComponents.length || unsupportedReasons.length) {
-            notes.push(`Unsupported spectral model flags were present (${humanJoin([...unsupportedComponents, ...unsupportedReasons])}).`);
+        if (!routeLabel) {
+            prompts.push("[PLEASE SPECIFY: the optical route used; the reviewed plan names a route that has no recorded name]");
         }
-
-        const summarySentence = `Exact runtime-selected configuration (${resolved.source === "exported_dto" ? "exported DTO" : "browser fallback"}) used route ${route}.`;
-        const routeFactsSentence = routeFactsSummarySentence(routeFacts);
-        const sourceSentence = sourceLabels.length ? `Selected sources: ${humanJoin(sourceLabels)}.` : "";
-        const opticalSentence = stageSelections.length ? `Selected wheel/turret positions: ${humanJoin(stageSelections)}.` : "";
-        const splitterSentence = splitterSelections.length ? `Selected splitter branches: ${humanJoin(splitterSelections)}.` : "";
-        const endpointSentence = detectorSelections.length ? `Selected endpoints/detectors: ${humanJoin(detectorSelections)}.` : "";
-        const noteSentences = dedupeSentences([acquisitionSentence, ...notes]);
-
-        const sentenceFacts = dedupeSentenceFacts([
-            buildSentenceFact({ text: sourceSentence, channel: "source", key: sourceLabels.join("|"), specificity: 3 }),
-            buildSentenceFact({ text: opticalSentence, channel: "optical_element", key: stageSelections.join("|"), specificity: 3 }),
-            buildSentenceFact({ text: splitterSentence, channel: "splitter", key: splitterSelections.join("|"), specificity: 3 }),
-            buildSentenceFact({ text: endpointSentence, channel: "endpoint", key: detectorSelections.join("|"), specificity: 3 }),
-            buildSentenceFact({ text: summarySentence, channel: "runtime_selection", key: route, specificity: 3 }),
-            buildSentenceFact({ text: routeFactsSentence, channel: "route_summary", key: route, specificity: 3 }),
-            ...noteSentences.map((text, idx) => buildSentenceFact({ text, channel: "runtime_note", key: `${route}-${idx}`, specificity: 3 })),
-        ].filter(Boolean));
 
         return {
-            text: sentenceFacts.join(" "),
-            sentenceFacts: [
-                ...runtimeSourceKeys.map((label) => buildSentenceFact({ text: sourceSentence, channel: "source", key: label, specificity: 3 })),
-                ...runtimeOpticalKeys.map((label) => buildSentenceFact({ text: opticalSentence, channel: "optical_element", key: label, specificity: 3 })),
-                ...runtimeSplitterKeys.map((label) => buildSentenceFact({ text: splitterSentence, channel: "splitter", key: label, specificity: 3 })),
-                ...runtimeEndpointKeys.map((label) => buildSentenceFact({ text: endpointSentence, channel: "endpoint", key: label, specificity: 3 })),
-                buildSentenceFact({ text: summarySentence, channel: "runtime_selection", key: route, specificity: 3 }),
-                buildSentenceFact({ text: routeFactsSentence, channel: "route_summary", key: route, specificity: 3 }),
-                ...noteSentences.map((text, idx) => buildSentenceFact({ text, channel: "runtime_note", key: `${route}-${idx}`, specificity: 3 })),
-            ].filter(Boolean),
+            components,
+            sentences: dedupeSentences(sentences),
+            prompts: uniqueTexts(prompts),
+            routeLabels: routeLabel ? [routeLabel] : [],
             hasRuntimeSelection: true,
         };
     }
@@ -857,108 +1197,238 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (currentInst) updateHardwareVisibility(currentInst);
     });
 
-    hwOptions.addEventListener("change", event => {
-        if (event.target !== runtimeConfirm) runtimeConfirm.checked = false;
+    // Picking a position means the holder was in the path; clearing the holder
+    // clears the positions under it, mirroring the route/readout pairing.
+    document.getElementById("filter-list").addEventListener("change", (event) => {
+        const target = event?.target;
+        if (target?.dataset.category === "filter-position" && target.checked) {
+            document.querySelectorAll('input[id^="filter-"]').forEach((filter) => {
+                if (filter.value === target.dataset.componentId) filter.checked = true;
+            });
+        } else if (target?.dataset.category === "filter" && !target.checked) {
+            document.querySelectorAll('input[id^="filterposition-"]').forEach((position) => {
+                if (position.dataset.componentId === target.value) position.checked = false;
+            });
+        }
     });
+
+    hwOptions.addEventListener("change", event => {
+        if (event.target === runtimeConfirm || !runtimeConfirm.checked) return;
+        // Changing the selection invalidates the reviewed plan, which is the safe
+        // behaviour, but it used to happen silently: a user who confirmed first and
+        // picked hardware afterwards lost the import without being told.
+        runtimeConfirm.checked = false;
+        document.getElementById("runtime-review-status").textContent =
+            "Your selection changed, so the Virtual Microscope plan is no longer included. Review it again and re-confirm it if those were the settings used.";
+    });
+
+    // The generic settings list is the same for a brightfield snapshot and a FLIM
+    // measurement. These are the parameters a reader needs for the specific
+    // technique, which no reviewer can reconstruct from the instrument record.
+    // These name the parameters a reader needs for the technique, without assuming
+    // a particular implementation of it: spectral imaging does not necessarily
+    // involve unmixing, FRET is not necessarily intensity-based, and a disk's
+    // pinhole geometry is usually a fixed specification rather than a choice.
+    const MODALITY_SETTINGS_PROMPTS = {
+        confocal_point: "[PLEASE SPECIFY: confocal pinhole diameter (in Airy units), scan zoom, pixel dwell time, and line/frame averaging]",
+        confocal_spinning_disk: "[PLEASE SPECIFY: camera exposure per channel, and any disk setting that was varied (for example rotation speed or the pinhole pattern, if the system offers a choice)]",
+        multiphoton: "[PLEASE SPECIFY: excitation wavelength, mean power at the sample, and pulse width]",
+        light_sheet: "[PLEASE SPECIFY: light-sheet thickness, sheet numerical aperture, and the detection/illumination objective pairing]",
+    };
+    const READOUT_SETTINGS_PROMPTS = {
+        "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including laser repetition rate, photons collected per pixel, how the instrument response was determined, and the fitting or phasor analysis used]",
+        "spectral imaging": "[PLEASE SPECIFY: the spectral detection windows (start, end and step) and, if the spectra were unmixed, the method and reference spectra used]",
+        "fcs": "[PLEASE SPECIFY: FCS measurement duration, number of repeats, how the confocal volume was calibrated, and the fitting model]",
+        "fret": "[PLEASE SPECIFY: how FRET was measured (for example sensitised emission, acceptor photobleaching or lifetime) and, for intensity-based measurements, the bleed-through and cross-excitation correction factors]",
+    };
+
+    function modalitySettingsPrompts(routeSelections, readoutSelections) {
+        const prompts = uniqueTexts(routeSelections.map(item => MODALITY_SETTINGS_PROMPTS[item.routeType] || ""));
+        readoutSelections.forEach((item) => {
+            const prompt = READOUT_SETTINGS_PROMPTS[cleanText(item.displayLabel).toLowerCase()];
+            if (prompt) prompts.push(prompt);
+        });
+        return uniqueTexts(prompts);
+    }
+
+    /**
+     * Assemble one acquisition entry: finished prose, then the review block.
+     *
+     * Publication prose is built from the structured selections and, when the user
+     * has confirmed one, the runtime plan. Review requests are collected from the
+     * places that produce them, not recovered from the finished text, so a
+     * component whose own name contains brackets is never mistaken for a request
+     * and no request can be corrupted by a later rewrite.
+     */
+    function buildAcquisitionEntry(dto) {
+        const prompts = [];
+        const methods = dto.methods || {};
+
+        const routeSelections = getCheckedSelections("route");
+        const runtime = runtimeAcquisitionFacts(dto);
+        const routeLabels = uniqueTexts([
+            ...routeSelections.map(item => item.displayLabel),
+            ...runtime.routeLabels,
+        ]);
+
+        // A single acquisition travels one optical route. Claiming several without
+        // comment would read as though they were used together.
+        if (routeLabels.length > 1) {
+            prompts.push(`[PLEASE VERIFY: ${routeLabels.length} optical routes are reported for a single acquisition (${humanJoin(routeLabels)}); confirm that each was used, or add a separate entry per route]`);
+        }
+
+        const identitySentence = cleanText(methods.base_sentence);
+        // The route joins the microscope sentence rather than restating "Images were
+        // acquired using ..." a second time. A sentence that already carries an
+        // appositive ("..., an inverted microscope") needs the comma to keep reading.
+        const routeClause = routeLabels.length
+            ? `${identitySentence.includes(",") ? ", " : " "}with the ${humanJoin(routeLabels)} ${routeLabels.length === 1 ? "route" : "routes"}`
+            : "";
+        const openingSentence = routeClause && identitySentence.endsWith(".")
+            ? `${identitySentence.slice(0, -1)}${routeClause}.`
+            : identitySentence;
+
+        const readoutSelections = getCheckedSelections("readout");
+        const readoutSentences = dedupeSentences(readoutSelections.map(item => item.methodSentence));
+        prompts.push(...modalitySettingsPrompts(routeSelections, readoutSelections));
+        const objectives = mergeByPublicationTemplate(getCheckedSelections("obj"));
+        prompts.push(...objectives.prompts);
+
+        const otherHardware = dedupeSentences([
+            ...getCheckedSelections("module").map(item => item.methodSentence),
+            ...getCheckedSelections("scanner").map(item => item.methodSentence),
+            ...getCheckedSelections("magnification-changer").map(item => item.methodSentence),
+            ...getCheckedSelections("confirmed").map(item => item.methodSentence),
+        ]);
+
+        const paragraphHardware = dedupeSentences([
+            openingSentence,
+            ...readoutSentences,
+            ...objectives.sentences,
+            ...otherHardware,
+        ]).join(" ");
+
+        // Manual selections and confirmed plan components are merged in one pass,
+        // keyed by component id, so a component the user ticked and the plan also
+        // names is stated once - using the plan's reading, which carries the
+        // wavelength, filter position or detection window the checkbox cannot.
+        // A named position supersedes its holder: "the CYR71010 cube in the Filter
+        // Turret" is the fact, "the Filter Turret" only the container.
+        const checkedRouteIds = new Set(getCheckedIds("route"));
+        const allPositionSelections = getCheckedSelections("filterposition");
+        const positionSelections = allPositionSelections.filter(item =>
+            !checkedRouteIds.size
+            || !item.routeIds.length
+            || item.routeIds.some(id => checkedRouteIds.has(id)));
+        allPositionSelections
+            .filter(item => !positionSelections.includes(item))
+            .forEach((item) => {
+                prompts.push(`[PLEASE VERIFY: ${item.displayLabel} is not recorded on the selected optical route, so it is not reported; confirm the route and the position that were used]`);
+            });
+        const resolvedComponentIds = new Set(positionSelections.map(item => cleanText(item.id).split("::")[0]));
+        const lightPathSelections = [
+            ...getCheckedSelections("light"),
+            ...positionSelections,
+            ...getCheckedSelections("filter").filter(item => !resolvedComponentIds.has(cleanText(item.id))),
+            ...getCheckedSelections("splitter"),
+            ...getCheckedSelections("det"),
+        ];
+        const lightPath = mergeByPublicationTemplate([...runtime.components, ...lightPathSelections]);
+        prompts.push(...lightPath.prompts, ...runtime.prompts);
+
+        const specialistSentences = dedupeSentences([
+            ...getCheckedSelections("optical-modulator").map(item => item.methodSentence),
+            ...getCheckedSelections("illumination-logic").map(item => item.methodSentence),
+        ]);
+
+        const paragraphLightPath = dedupeSentences([
+            ...lightPath.sentences,
+            ...runtime.sentences,
+            ...specialistSentences,
+        ]).join(" ");
+
+        // More than one illumination line or detector leaves the reader unable to
+        // tell simultaneous from sequential acquisition, which changes how
+        // bleed-through and phototoxicity are judged.
+        const channelCount = getCheckedSelections("light").length;
+        const detectorCount = getCheckedSelections("det").length;
+        if (channelCount > 1 || detectorCount > 1) {
+            prompts.push("[PLEASE SPECIFY: whether the channels were acquired sequentially or simultaneously, and in what order]");
+        }
+
+        prompts.push(cleanText(methods.retired_review_prompt));
+        // Ask about the selectors whose position is still unknown, not about the
+        // ones the user has just named.
+        // Only the routes in use are worth asking about: a spinning-disk acquisition
+        // should not be asked which position of the widefield turret it used.
+        const selectedRouteLabels = new Set(routeLabels);
+        const unresolvedOptics = (Array.isArray(methods.unresolved_optics) ? methods.unresolved_optics : [])
+            .filter(entry => entry && !resolvedComponentIds.has(cleanText(entry.inventory_id)))
+            .filter(entry => !selectedRouteLabels.size
+                || !cleanText(entry.route_label)
+                || selectedRouteLabels.has(cleanText(entry.route_label)));
+        if (Array.isArray(methods.unresolved_optics) && methods.unresolved_optics.length) {
+            if (unresolvedOptics.length) {
+                prompts.push(`[PLEASE SPECIFY: which position of ${humanJoin(unresolvedOptics.map(entry => cleanText(entry.scoped_label)))} was used for acquisition, including the filter/dichroic identity (manufacturer + model/catalog number)]`);
+            }
+        } else if (methods.quarep_light_path_recommendation_needed) {
+            prompts.push(cleanText(methods.quarep_light_path_recommendation));
+        }
+        prompts.push(cleanText(methods.specimen_preparation_recommendation));
+        prompts.push(cleanText(methods.acquisition_settings_recommendation));
+
+        const methodsMetadataStatus = getMethodsMetadataStatus(dto);
+        if (methodsMetadataStatus.isBlocked) {
+            const labels = uniqueTexts(methodsMetadataStatus.blockers.map(formatBlockerLabel));
+            prompts.push(labels.length
+                ? `[PLEASE VERIFY: ${humanJoin(labels)} ${labels.length === 1 ? "is" : "are"} not recorded for this instrument; confirm the exact values with facility staff]`
+                : "[PLEASE VERIFY: some instrument metadata is not recorded; confirm the exact values with facility staff]");
+        }
+        exportDiagnosticNotes(dto).forEach((note) => {
+            prompts.push(`[PLEASE VERIFY: the instrument export reported "${note}"; confirm the affected details with facility staff]`);
+        });
+
+        const compatModalityText = shouldUseLegacyModalities(dto)
+            ? cleanText(groupedLabelSentence("modality", getCheckedSelections("modality")))
+            : "";
+        const paragraphCompatModality = compatModalityText ? `(Compatibility) ${compatModalityText}` : "";
+
+        const reviewPrompts = uniqueTexts(prompts.map(prompt => cleanText(prompt).replace(/\.$/, "")));
+        const reviewBlock = reviewPrompts.length
+            ? `Review before publication:\n${reviewPrompts.map(prompt => `- ${prompt}`).join("\n")}`
+            : "";
+
+        return [
+            paragraphHardware,
+            paragraphLightPath,
+            paragraphCompatModality,
+            reviewBlock,
+        ].map(cleanText).filter(Boolean);
+    }
 
     addBtn.addEventListener("click", () => {
         if (!currentInst) return;
 
         const dto = currentInst;
-        const methodsMetadataStatus = getMethodsMetadataStatus(currentInst);
-        if (methodsMetadataStatus.isBlocked) {
-            renderMethodsMetadataWarning(currentInst);
+        if (!instrumentDtoIsRenderable(dto)) {
+            outputText.value = `The record for ${cleanText(dto.display_name) || cleanText(dto.id) || "this instrument"} is incomplete, so a Methods draft cannot be generated from it. Ask facility staff to complete the instrument record.`;
+            return;
         }
+        renderMethodsMetadataWarning(dto);
 
-        const groupedSelections = {
-            route: groupedLabelSentence("route", getCheckedSelections("route")),
-            readout: groupedLabelSentence("readout", getCheckedSelections("readout")),
-            modality: shouldUseLegacyModalities(dto) ? groupedLabelSentence("modality", getCheckedSelections("modality")) : "",
-            module: groupedLabelSentence("module", getCheckedSelections("module")),
-            scanner: groupedLabelSentence("scanner", getCheckedSelections("scanner")),
-            objective: groupedLabelSentence("obj", getCheckedSelections("obj")),
-            magnificationChanger: groupedLabelSentence("magnification-changer", getCheckedSelections("magnification-changer")),
-        };
-
-        const specialistSelections = dedupeSentences([
-            ...getCheckedSelections("optical-modulator").map(item => item.methodSentence),
-            ...getCheckedSelections("illumination-logic").map(item => item.methodSentence),
-        ]);
-
-        const paragraphHardware = dedupeSentences([
-            dto.methods?.base_sentence,
-            groupedSelections.route,
-            groupedSelections.readout,
-            groupedSelections.module,
-            groupedSelections.scanner,
-            groupedSelections.objective,
-            groupedSelections.magnificationChanger,
-            ...getCheckedSelections("confirmed").map(item => item.methodSentence),
-        ]).join(" ");
-
-        // Compatibility note: legacy modality selections are appended after the
-        // primary hardware paragraph and are clearly labeled as compatibility-only.
-        // They must not override or substitute for route/readout selections.
-        const compatModalityText = cleanText(groupedSelections.modality);
-        const paragraphCompatModality = compatModalityText
-            ? `(Compatibility) ${compatModalityText}`
-            : "";
-
-        const runtimeDetails = runtimeConfigurationSentence(dto);
-
-        const genericOpticalFacts = [
-            ...sentenceFactsFromSelections("light", getCheckedSelections("light"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
-            ...sentenceFactsFromSelections("det", getCheckedSelections("det"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
-            ...sentenceFactsFromSelections("filter", getCheckedSelections("filter"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
-            ...sentenceFactsFromSelections("splitter", getCheckedSelections("splitter"), runtimeDetails.hasRuntimeSelection ? 1 : 2),
-        ];
-        const combinedOpticalSentences = dedupeSentenceFacts([
-            ...genericOpticalFacts,
-            ...(runtimeDetails.sentenceFacts || []),
-            ...specialistSelections.map((text, idx) => buildSentenceFact({ text, channel: "specialist", key: `specialist-${idx}`, specificity: 2 })),
-            buildSentenceFact({
-                text: dto.methods?.quarep_light_path_recommendation_needed ? dto.methods?.quarep_light_path_recommendation : "",
-                channel: "route_summary",
-                key: "quarep-recommendation",
-                specificity: 0,
-            }),
-        ]);
-
-        const paragraphLightPath = combinedOpticalSentences.join(" ");
-
-        const paragraphAcquisition = dedupeSentences([
-            dto.methods?.specimen_preparation_recommendation,
-            dto.methods?.acquisition_settings_recommendation,
-            dto.methods?.nyquist_recommendation,
-        ]).join(" ");
-
-        const paragraphDeposition = cleanText(dto.methods?.data_deposition_recommendation);
-        const paragraphMissingMetadata = methodsMetadataStatus.isBlocked
-            ? missingMetadataNote(methodsMetadataStatus.blockers)
-            : "";
-
-        const textParts = [
-            paragraphHardware,
-            paragraphLightPath,
-            paragraphAcquisition,
-            paragraphDeposition,
-            paragraphCompatModality,
-            paragraphMissingMetadata,
-        ].map(cleanText).filter(Boolean);
-
-        const acquisitionDate = cleanText(document.getElementById("acquisition-date").value);
+        const textParts = buildAcquisitionEntry(dto);
         const sessionLabel = cleanText(document.getElementById("session-label").value);
-        const sessionHeading = [sessionLabel, acquisitionDate].filter(Boolean).join(" / ");
-        const text = [sessionHeading, ...textParts].filter(Boolean).join("\n\n");
+        const text = [sessionLabel, ...textParts].filter(Boolean).join("\n\n");
         // An unchanged second click is idempotent; a different acquisition is not
         // allowed to replace an earlier entry just because it used the same scope.
-        const selections = ["route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
-        const signature = JSON.stringify([dto.id, acquisitionDate, sessionLabel,
-            selections.map(prefix => getCheckedIds(prefix)), text]);
+        const selections = ["route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "filterposition", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
+        const signature = JSON.stringify([dto.id, sessionLabel,
+            selections.map(prefix => getCheckedIds(prefix)), runtimeConfirm.checked, text]);
         accumulatedEntries.set(signature, { instrumentId: dto.id, text });
         usedInstruments.set(dto.id, dto.display_name || dto.id);
         updateOutputText();
     });
+
 
     clearBtn.addEventListener("click", () => {
         accumulatedEntries = new Map();

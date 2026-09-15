@@ -26,8 +26,12 @@ def scope(identifier="scope-test"):
                     "triggering_sentence": "Hardware triggering was used.",
                     "processing_sentences": ["Images were deconvolved."]},
         "hardware": {"objectives": [
-            {"id": "obj20", "display_label": "20x", "method_sentence": "A 20x objective was used."},
-            {"id": "obj40", "display_label": "40x", "method_sentence": "A 40x objective was used."}],
+            # Shaped like the real export: prose is assembled from the template and
+            # phrase, so the test exercises what production actually renders.
+            {"id": "obj20", "display_label": "20x", "method_sentence": "Imaging was performed with a 20x objective.",
+             "publication_template": "Imaging was performed with {label}.", "publication_phrase": "a 20x objective"},
+            {"id": "obj40", "display_label": "40x", "method_sentence": "Imaging was performed with a 40x objective.",
+             "publication_template": "Imaging was performed with {label}.", "publication_phrase": "a 40x objective"}],
             "optical_path": {"hardware_inventory_renderables": [source, detector],
                 "authoritative_route_contract": {"routes": [
                     {"id": "epi", "display_label": "Epi", "relevant_hardware": {"sources": [source], "endpoints": [detector]},
@@ -52,7 +56,6 @@ class AuditBrowserRegressions(unittest.TestCase):
             **({"executable_path": executable} if executable else {}))
         cls.template = Environment(loader=FileSystemLoader(ROOT / "scripts/templates")).get_template("methods_generator.md.j2")
         cls.script = (ROOT / "assets/javascripts/methods_generator_app.js").read_text()
-        cls.prose_script = (ROOT / "assets/javascripts/methods_generator_prose.js").read_text()
 
     @classmethod
     def tearDownClass(cls):
@@ -82,8 +85,6 @@ class AuditBrowserRegressions(unittest.TestCase):
             bootstrap += init_script
         html = html.replace('<script src="../assets/javascripts/methods_generator_app.js"></script>',
                             "<script>" + self.script + "</script>")
-        html = html.replace('<script src="../assets/javascripts/methods_generator_prose.js"></script>',
-                            "<script>" + self.prose_script + "</script>")
         self.page.set_content("<script>" + bootstrap + "</script>" + html)
         expect(self.page.locator("#system-select")).to_be_enabled()
         self.page.select_option("#system-select", instruments[0]["id"])
@@ -103,10 +104,23 @@ class AuditBrowserRegressions(unittest.TestCase):
 
     def test_simulator_requires_confirmation_and_preserves_unknown_numbers(self):
         plan = {"scope_id": "scope-test", "route": "epi", "validSelection": True,
-                "sources": [{"display_label": "Plan laser", "selected_wavelength_nm": 561},
-                            {"display_label": "Unknown laser", "wavelength_nm": None}],
-                "detectors": [{"display_label": "Plan camera", "collection_min_nm": None, "collection_max_nm": None}]}
-        self.open_methods(storage=plan)
+                "sources": [{"id": "laser", "display_label": "Plan laser", "selected_wavelength_nm": 561},
+                            {"id": "laser2", "display_label": "Unknown laser", "wavelength_nm": None}],
+                "detectors": [{"id": "camera", "display_label": "Plan camera",
+                               "collection_min_nm": None, "collection_max_nm": None}]}
+        # Only components the record holds may be reported, so the plan names them
+        # by their canonical ids.
+        instrument = scope()
+        inventory = instrument["hardware"]["optical_path"]["hardware_inventory_renderables"]
+        inventory[0].update({"publication_label": "Plan laser",
+                             "source_metadata": {"wavelength_nm": 561},
+                             "publication_template": "Excitation used {label}."})
+        inventory[1].update({"publication_label": "Plan camera",
+                             "publication_template": "Images were recorded using {label}."})
+        inventory.append({"id": "laser2", "display_label": "Unknown laser", "inventory_class": "light_source",
+                          "publication_label": "Unknown laser",
+                          "publication_template": "Excitation used {label}."})
+        self.open_methods(instruments=[instrument], storage=plan)
         self.page.click("#add-btn")
         self.assertNotIn("Plan laser", self.output())
         self.page.check("#runtime-confirm")
@@ -155,7 +169,7 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.page.check("#obj-0")
         self.page.click("#add-btn")
         self.page.click("#add-btn")
-        self.assertEqual(self.output().count("20x"), 1)
+        self.assertEqual(self.output().count("a 20x objective"), 1)
         self.page.fill("#session-label", "Second acquisition")
         self.page.uncheck("#obj-0")
         self.page.check("#obj-1")
@@ -169,8 +183,8 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.page.check("#obj-0")
         self.page.check("#obj-1")
         self.page.click("#add-btn")
-        self.assertIn("The 20x and 40x objectives were used.", self.output())
-        self.assertNotIn("A 20x objective was used. A 40x objective was used.", self.output())
+        self.assertIn("Imaging was performed with a 20x objective and a 40x objective.", self.output())
+        self.assertNotIn("Imaging was performed with a 20x objective. Imaging was performed with", self.output())
 
     def test_review_prompts_are_separate_from_finished_prose(self):
         instrument = scope()

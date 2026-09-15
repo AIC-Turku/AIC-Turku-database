@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from typing import Any, Iterable
 
 from scripts.build_context import clean_text
@@ -20,6 +21,7 @@ from scripts.display_labels import (
     resolve_element_type_label,
     resolve_endpoint_type_label,
     resolve_inventory_class_label,
+    resolve_light_source_kind_label,
     resolve_stage_role_label,
 )
 from scripts.validate import Vocabulary
@@ -200,6 +202,206 @@ def _terminal_summary(terminal: dict[str, Any], vocabulary: Vocabulary | None = 
     endpoint_type = resolve_endpoint_type_label(raw_endpoint_type, vocabulary) if vocabulary else raw_endpoint_type.replace("_", " ").title()
     route_text = ", ".join(terminal.get("routes") or []) if isinstance(terminal.get("routes"), list) else clean_text(terminal.get("path"))
     return _compact_join([endpoint_type, route_text])
+
+
+# A recorded manufacturer/model that only restates that the value is unknown is not
+# an identity. Publication prose must not present it as one; the QUAREP clause
+# reports it as missing instead.
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+
+# Publication sentence per recorded light-source role. A source whose role is not
+# recorded must not be described as an excitation source: the neutral sentence is
+# paired with an explicit review request instead of an inferred role.
+_SOURCE_ROLE_SENTENCES = {
+    "excitation": "Excitation was provided by {label}.",
+    "depletion": "Stimulated-emission depletion was provided by {label}.",
+    "transmitted_illumination": "Transmitted-light illumination was provided by {label}.",
+    "reflected_illumination": "Reflected-light illumination was provided by {label}.",
+    "activation": "Photoactivation was performed using {label}.",
+    "alignment": "Alignment illumination was provided by {label}.",
+}
+_SOURCE_ROLE_UNRECORDED_SENTENCE = "Illumination was provided by {label}."
+
+_ENDPOINT_SENTENCE = "Images were recorded using {label}."
+_EYEPIECE_SENTENCE = "Samples were observed through {label}."
+_SPLITTER_SENTENCE = "The emission light was divided by {label}."
+_OPTICAL_ELEMENT_SENTENCE = "The light path included {label}."
+_SOURCE_ROLE_UNRECORDED_PROMPT = (
+    "[PLEASE SPECIFY: the role of {label} in this acquisition, for example excitation, "
+    "transmitted illumination, or depletion; it is not recorded for this source]"
+)
+
+
+def _identity_value(value: Any) -> str:
+    """Return a manufacturer/model string, or "" when it only marks the value unknown."""
+    cleaned = clean_text(value)
+    return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
+
+
+def _number_text(value: Any) -> str:
+    """Render a recorded number without a trailing ``.0``; "" when not numeric."""
+    if isinstance(value, bool) or value in (None, ""):
+        return ""
+    if isinstance(value, (int, float)):
+        return str(int(value)) if float(value).is_integer() else str(value)
+    return clean_text(value)
+
+
+def _kind_phrase(kind_label: str) -> str:
+    """Lower-case a vocabulary kind label for mid-sentence use, keeping acronyms."""
+    if not kind_label:
+        return ""
+    return " ".join(
+        word if word.isupper() else word.lower()
+        for word in kind_label.split()
+    )
+
+
+def _strip_leading_wavelength(model: str, wavelength: str) -> str:
+    """Drop a wavelength the label already states, keeping the rest of the model.
+
+    ``405 nm (Diode)`` becomes ``Diode`` so the rendered label reads
+    ``405 nm laser (Diode)`` instead of repeating the line twice.
+    """
+    if not model or not wavelength:
+        return model
+    trimmed = re.sub(rf"^\s*{re.escape(wavelength)}\s*nm\b", "", model, flags=re.IGNORECASE).strip()
+    trimmed = trimmed.strip(" -–—")
+    if trimmed.startswith("(") and trimmed.endswith(")"):
+        trimmed = trimmed[1:-1].strip()
+    return trimmed or model
+
+
+def _publication_inventory_label(item: dict[str, Any], vocabulary: Vocabulary | None) -> str:
+    """Build a manuscript-safe label for an inventory card.
+
+    The canonical ``display_label`` concatenates the raw vocabulary ``kind`` id
+    (``halogen_lamp``, ``white_light_laser``) because the light-path layer has no
+    vocabulary. This view resolves the term and drops placeholder identities, so
+    publication prose never carries an internal id or the word "Unknown".
+    """
+    inventory_class = clean_text(item.get("inventory_class"))
+    manufacturer = _identity_value(item.get("manufacturer"))
+    model = _identity_value(item.get("model"))
+    authored = clean_text(item.get("display_label"))
+
+    if inventory_class == "light_source":
+        source_meta = item.get("source_metadata") if isinstance(item.get("source_metadata"), dict) else {}
+        wavelength = _number_text(source_meta.get("wavelength_nm"))
+        kind_phrase = _kind_phrase(resolve_light_source_kind_label(clean_text(source_meta.get("kind")), vocabulary))
+        core = " ".join(part for part in (f"{wavelength} nm" if wavelength else "", kind_phrase) if part).strip()
+        identity = " ".join(
+            part for part in (manufacturer, _strip_leading_wavelength(model, wavelength)) if part
+        ).strip()
+        if core and identity:
+            return f"{core} ({identity})"
+        return core or identity or authored or clean_text(item.get("id"))
+
+    identity = " ".join(part for part in (manufacturer, model) if part).strip()
+    return identity or authored or clean_text(item.get("id"))
+
+
+def _inventory_method_facts(
+    item: dict[str, Any],
+    label: str,
+) -> tuple[str, str, list[str]]:
+    """Publication sentence and review requests for a selected inventory card.
+
+    Every sentence describes only what selecting the card asserts: that this
+    component was in the path the user used. Nothing about its function is
+    inferred - a light source is described by its recorded ``role`` or not at all.
+
+    Review requests are returned separately from the sentence so the instrument
+    page can render the prose alone while the Methods draft collects the requests
+    into its review block.
+
+    Returns ``(sentence_template, sentence, review_prompts)``. The template keeps
+    ``{label}`` unfilled so the Methods draft can merge several components that
+    share it into one sentence instead of repeating the frame per checkbox.
+    """
+    inventory_class = clean_text(item.get("inventory_class"))
+    if not label:
+        return "", "", []
+
+    template = ""
+    prompts: list[str] = []
+    if inventory_class == "light_source":
+        source_meta = item.get("source_metadata") if isinstance(item.get("source_metadata"), dict) else {}
+        role = clean_text(source_meta.get("role") or item.get("role")).lower()
+        template = _SOURCE_ROLE_SENTENCES.get(role, "")
+        if not template:
+            template = _SOURCE_ROLE_UNRECORDED_SENTENCE
+            prompts = [_SOURCE_ROLE_UNRECORDED_PROMPT.format(label=label)]
+    elif inventory_class in {"endpoint", "camera_port", "eyepiece"}:
+        endpoint_meta = item.get("endpoint_metadata") if isinstance(item.get("endpoint_metadata"), dict) else {}
+        endpoint_type = clean_text(endpoint_meta.get("endpoint_type") or endpoint_meta.get("kind"))
+        template = (
+            _EYEPIECE_SENTENCE
+            if inventory_class == "eyepiece" or endpoint_type == "eyepiece"
+            else _ENDPOINT_SENTENCE
+        )
+    elif inventory_class == "splitter":
+        template = _SPLITTER_SENTENCE
+    elif inventory_class == "optical_element":
+        template = _OPTICAL_ELEMENT_SENTENCE
+
+    if not template:
+        return "", "", []
+    return template, template.format(label=label), prompts
+
+
+def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Collect the positions each multi-position optical element can be set to.
+
+    Without these the Methods page can only offer the holder - "the light path
+    included Filter Turret" - which tells a reader nothing about the filter that
+    was used, the most important light-path fact in a fluorescence Methods
+    section. The positions are recorded per route in `selected_execution`; this
+    indexes them by component so the page can offer them as choices.
+    """
+    positions_by_component: dict[str, list[dict[str, Any]]] = {}
+    for route in light_paths:
+        route_id = clean_text(route.get("id"))
+        route_label = clean_text(route.get("name") or route.get("display_label") or route_id)
+        selected_execution = route.get("selected_execution") if isinstance(route.get("selected_execution"), dict) else {}
+        steps = selected_execution.get("selected_route_steps")
+        for step in steps if isinstance(steps, list) else []:
+            if not isinstance(step, dict):
+                continue
+            inventory_id = clean_text(step.get("hardware_inventory_id"))
+            available = step.get("available_positions")
+            if not inventory_id or not isinstance(available, list):
+                continue
+            known = positions_by_component.setdefault(inventory_id, [])
+            by_key = {row["id"]: row for row in known}
+            for position in available:
+                if not isinstance(position, dict):
+                    continue
+                key = clean_text(position.get("position_key") or position.get("position_id"))
+                label = clean_text(position.get("position_label") or position.get("label") or position.get("name"))
+                if not key or not label:
+                    continue
+                # A holder shared by two routes may offer different positions on
+                # each. Keeping the route each position came from is what lets the
+                # page refuse "route A plus a position that only exists on route B".
+                existing = by_key.get(key)
+                if existing is not None:
+                    if route_id and route_id not in existing["route_ids"]:
+                        existing["route_ids"].append(route_id)
+                        existing["route_labels"].append(route_label)
+                    continue
+                row = {
+                    "id": key,
+                    "display_label": label,
+                    "product_code": clean_text(position.get("product_code")),
+                    "component_type": clean_text(position.get("component_type")),
+                    "incomplete": bool(position.get("_cube_incomplete") or position.get("_unsupported_spectral_model")),
+                    "route_ids": [route_id] if route_id else [],
+                    "route_labels": [route_label] if route_label else [],
+                }
+                by_key[key] = row
+                known.append(row)
+    return positions_by_component
 
 
 def hardware_renderables_from_inventory(
@@ -466,23 +668,21 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
 
     derived_inventory_cards: list[dict[str, Any]] = []
     inventory_lookup = {item.get("id"): item for item in hardware_inventory if item.get("id")}
+    selectable_positions = _selectable_positions_by_component(light_paths)
     for item in hardware_inventory:
         inventory_class = clean_text(item.get("inventory_class"))
         role = clean_text(((item.get("source_metadata") or {}) if isinstance(item.get("source_metadata"), dict) else {}).get("role"))
-        method_sentence = ""
-        if inventory_class == "light_source":
-            method_sentence = f"Excitation was provided by {clean_text(item.get('display_label'))}."
-        elif inventory_class in {"endpoint", "camera_port", "eyepiece"}:
-            method_sentence = f"Detected or observed light terminated at {clean_text(item.get('display_label'))}."
-        elif inventory_class == "splitter":
-            method_sentence = f"The active route traversed {clean_text(item.get('display_label'))} as an explicit selector."
-        elif inventory_class == "optical_element":
-            method_sentence = f"The optical path included {clean_text(item.get('display_label'))}."
+        publication_label = _publication_inventory_label(item, vocabulary)
+        sentence_template, method_sentence, review_prompts = _inventory_method_facts(item, publication_label)
         derived_inventory_cards.append({
             **copy.deepcopy(item),
             "id": clean_text(item.get("id")),
             "display_number": item.get("display_number"),
-            "display_label": clean_text(item.get("display_label") or item.get("id")),
+            "display_label": publication_label or clean_text(item.get("display_label") or item.get("id")),
+            "publication_label": publication_label,
+            # Runtime plans and the virtual microscope carry the canonical label.
+            # Keep it so cross-checks match on what those records actually contain.
+            "canonical_display_label": clean_text(item.get("display_label") or item.get("id")),
             "display_subtitle": resolve_inventory_class_label(inventory_class, vocabulary) if vocabulary else inventory_class.replace("_", " ").title(),
             "spec_lines": _spec_lines(
                 ("Number", f"`{item.get('display_number')}`" if item.get("display_number") else None),
@@ -493,6 +693,9 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             ),
             "role": role,
             "method_sentence": method_sentence,
+            "publication_template": sentence_template,
+            "review_prompts": review_prompts,
+            "selectable_positions": copy.deepcopy(selectable_positions.get(clean_text(item.get("id")), [])),
         })
     if derived_inventory_cards:
         derived_sections.insert(0, {"id": "hardware_inventory", "display_label": "Hardware Inventory", "items": derived_inventory_cards})

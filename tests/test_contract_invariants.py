@@ -545,11 +545,15 @@ class ContractInvariantTests(unittest.TestCase):
         """Sequential acquisition must be described as planned, not as executed."""
         methods_source = METHODS_APP_PATH.read_text(encoding="utf-8")
 
-        # Must not claim sequential acquisition "was executed"
+        # Must not claim sequential acquisition happened. The simulator concludes
+        # what the chosen fluorophores would need; only the author knows what was
+        # done, so the plan's conclusion is raised as a question, never as prose.
         self.assertNotIn("was required and executed", methods_source)
         self.assertNotIn("was executed as", methods_source)
-        # Should use "planned" language
-        self.assertIn("is planned", methods_source)
+        self.assertNotIn("were acquired sequentially.", methods_source)
+        self.assertNotIn("Sequential acquisition is planned", methods_source)
+        self.assertIn("require sequential acquisition", methods_source)
+        self.assertIn("state whether the channels were acquired sequentially or simultaneously", methods_source)
 
     def test_reporting_export_uses_selected_execution_contract(self) -> None:
         """The exported configuration must carry selected_route_steps from the resolved execution."""
