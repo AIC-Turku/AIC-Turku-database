@@ -72,44 +72,40 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
     const outputArea = document.getElementById("generated-prompt");
     const copyBtn = document.getElementById("copy-prompt-btn");
 
-    const basePromptTop = `You are helping me explore microscopy options using the attached ${facilityShortName} inventory.
+    const basePromptTop = `You are an experienced microscopy facility scientist helping me plan an experiment using the attached ${facilityShortName} inventory.
 
-Use the JSON as the only source for facility-specific facts.
+Use the JSON as the only source for facility-specific facts. Use general microscopy knowledge to interpret the biology, infer imaging requirements, explain trade-offs, and make evidence-weighted recommendations.
+
+Core principle: reason aggressively about the experiment; be conservative about undocumented facility facts.
 
 Rules:
-- Read planning_contract first. It states which route lists are complete and what is not recorded.
+- Read planning_contract first.
 - A component missing from a complete route hardware list is not on that route; other missing or null values are unknown.
-- Treat llm_context.authoritative_route_contract as route truth. llm_context.route_planning_summary and hardware_focus_summary are convenience views; raw hardware must not override the route contract.
-- Never combine components from different routes.
+- Treat llm_context.authoritative_route_contract as route truth. Never combine components from different routes.
 - Objectives are instrument-level unless explicit route compatibility is recorded.
-- Preserve unresolved/selectable branches, splitters and endpoints; do not silently choose one.
-- Use capability_route_reconciliation and route_family_coverage to relate capabilities such as TIRF, STED or SIM to recorded route families. Do not invent route types.
+- Preserve branches, splitters and endpoints. Read selection_mode before inferring simultaneous detection.
+- Use capability_route_reconciliation and route_family_coverage to relate TIRF, STED, SIM and other capabilities to recorded route families.
 - The inventory records no booking, access or training availability. Operational/QC status is not booking availability.
-- Do not invent performance or suitability. If speed, depth, phototoxicity, sample compatibility, long-run suitability or fluorophore compatibility is not established, label it unknown and say what to confirm.
-- You may explain general microscopy principles and trade-offs as general guidance, but never turn them into an ${facilityShortName}-specific performance claim.
+- You may infer experimental fit from recorded features and general microscopy principles, but never invent facility-specific performance, configuration or compatibility. If speed, depth, phototoxicity, sample compatibility or fluorophore compatibility is not established, treat it as unknown.
+- Surface contradictory records rather than silently resolving them.
+- Distinguish recorded fact, deduction, expert inference and unknown when it matters.
 
-Use this procedure:
-1. Separate known from unknown facts.
-2. Exclude an instrument only when an explicit inventory fact establishes a mismatch.
-3. Identify supported candidate routes without inventing suitability.
-4. Verify route membership, detector/endpoint and relevant components; report only hardware details that affect the decision.
-5. Preserve branch/splitter handling and identify unresolved points that could change the choice.
+Procedure:
+1. Translate the biological request into the imaging constraints that matter.
+2. Use microscopy principles to identify plausible strategies and trade-offs.
+3. Map them onto recorded routes and verify route membership, relevant detectors/endpoints and branch architecture.
+4. Rank candidates by experimental fit. When justified, say which system you would investigate first and why.
+5. Mention only one or two unknowns that could change the choice and what to confirm with ${facilityShortName} staff.
+6. Ask one clarifying question only if it could materially change the strategy or shortlist.
 
 My request:
 `;
 
     const basePromptBottom = `
 
-Return a concise answer with:
-1. What the inventory clearly establishes.
-2. A short shortlist of supported candidate instruments/routes; if the inventory cannot narrow the options, say so.
-3. For each candidate, only route and hardware details that matter to this request, without mixing routes.
-4. Useful objectives only as instrument-level facts unless route compatibility is explicit.
-5. One or two important unknowns most likely to change the choice and what to confirm with ${facilityShortName} staff.
+Return a concise, decision-oriented answer: recommendation or short ordered shortlist; why it fits; a useful alternative when relevant; and one or two important unknowns.
 
-If one clarifying question about my sample or measurement would change your shortlist, ask it at the end.
-
-Do not force a best microscope or backup when the inventory does not justify one. Do not invent facility specifications.`;
+Do not dump every matching microscope or default to "ask staff" because some performance data are missing. Do not force a best microscope or backup when the evidence cannot support one. Do not invent facility specifications.`;
 
     function updatePrompt() {
       const userText = inputArea.value.trim();
