@@ -228,15 +228,23 @@ def _instrument(**overrides):
                 "publication_label": "Acme Cam", "publication_template": "Images were recorded using {label}.",
                 "method_sentence": "Images were recorded using Acme Cam."}
     camera_b = {**camera_a, "id": "cam_b"}
+    turret = {"id": "turret", "display_label": "Filter Turret", "inventory_class": "optical_element",
+              "publication_label": "Filter Turret", "publication_template": "The light path included {label}.",
+              "method_sentence": "The light path included Filter Turret.",
+              "selectable_positions": [
+                  {"id": "Pos_1", "display_label": "GFP cube", "product_code": "49002", "incomplete": False},
+                  {"id": "Pos_2", "display_label": "DAPI cube", "product_code": "49000", "incomplete": True},
+              ]}
     instrument = {
         "id": "scope-reg", "display_name": "Regression Scope",
         "methods_generation": {"is_blocked": False, "blockers": []},
         "methods": {"base_sentence": "Images were acquired using the Regression Scope."},
         "hardware": {"objectives": [], "optical_path": {
-            "hardware_inventory_renderables": [source, camera_a, camera_b],
+            "hardware_inventory_renderables": [source, camera_a, camera_b, turret],
             "authoritative_route_contract": {"routes": [
                 {"id": "epi", "display_label": "Epifluorescence",
-                 "relevant_hardware": {"sources": [source], "endpoints": [camera_a, camera_b]}},
+                 "relevant_hardware": {"sources": [source], "endpoints": [camera_a, camera_b],
+                                       "filters": [turret]}},
             ]}}},
     }
     instrument.update(overrides)
@@ -369,6 +377,53 @@ class BrowserGroundingRegressions(unittest.TestCase):
         # Prose is built from structured facts, so nothing scans the finished text
         # for markers and no recorded name can be mistaken for one.
         self.assertIn("[PLEASE SPECIFY: fake] route", self.output())
+
+    def test_the_filter_actually_used_can_be_stated_not_just_its_holder(self):
+        # Ticking the holder only says light passed through it. The position is the
+        # filter, and the filter is the fact a fluorescence Methods section needs.
+        instrument = _instrument()
+        instrument["methods"]["unresolved_optics"] = [{
+            "inventory_id": "turret", "display_label": "Filter Turret",
+            "route_label": "Epifluorescence",
+            "scoped_label": "Filter Turret (Epifluorescence route)"}]
+        self.open_methods(instrument)
+        self.page.check("#filterposition-0-0")
+        expect(self.page.locator("#filter-0")).to_be_checked()
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn("The light path included GFP cube (catalogue no. 49002) in the Filter Turret.", output)
+        # The holder alone is no longer claimed, and the question it prompted is answered.
+        self.assertNotIn("The light path included Filter Turret.", output)
+        self.assertNotIn("which position of Filter Turret", output)
+
+    def test_an_unresolved_selector_is_still_asked_about(self):
+        instrument = _instrument()
+        instrument["methods"]["unresolved_optics"] = [
+            {"inventory_id": "turret", "display_label": "Filter Turret",
+             "route_label": "Epifluorescence", "scoped_label": "Filter Turret (Epifluorescence route)"},
+            {"inventory_id": "wheel", "display_label": "Emission Wheel",
+             "route_label": "Epifluorescence", "scoped_label": "Emission Wheel (Epifluorescence route)"},
+        ]
+        self.open_methods(instrument)
+        self.page.check("#filterposition-0-0")
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn("which position of Emission Wheel (Epifluorescence route)", output)
+        self.assertNotIn("Filter Turret (Epifluorescence route)", output)
+
+    def test_a_position_with_incomplete_bands_is_flagged(self):
+        self.open_methods()
+        self.page.check("#filterposition-0-1")
+        self.page.click("#add-btn")
+        self.assertIn("recorded transmission bands for DAPI cube are incomplete", self.output())
+
+    def test_clearing_the_holder_clears_the_position_under_it(self):
+        self.open_methods()
+        self.page.check("#filterposition-0-0")
+        expect(self.page.locator("#filter-0")).to_be_checked()
+        self.page.uncheck("#filter-0")
+        expect(self.page.locator("#filterposition-0-0")).not_to_be_checked()
+
 
     def test_publication_prose_is_not_produced_by_rewriting_finished_text(self):
         """The page loads one script; prose is rendered, never re-parsed."""

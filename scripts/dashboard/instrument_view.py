@@ -863,6 +863,8 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     )
     route_rows = route_contract.get("routes") if isinstance(route_contract.get("routes"), list) else []
 
+    unresolved_optics: list[dict[str, str]] = []
+
     def _route_optics_quarep_recommendation(routes: list[dict[str, Any]]) -> tuple[bool, str]:
         """Ask about the light path from what the record actually contains.
 
@@ -885,7 +887,14 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         incomplete: list[str] = []
         saw_optical_component = False
 
-        def _record(label: str, route_label: str, *, broken: bool, resolved: bool) -> None:
+        def _record(
+            label: str,
+            route_label: str,
+            *,
+            broken: bool,
+            resolved: bool,
+            inventory_id: str = "",
+        ) -> None:
             nonlocal saw_optical_component
             saw_optical_component = True
             scoped = f"{label} ({route_label} route)" if route_label else label
@@ -894,6 +903,12 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                     incomplete.append(scoped)
             elif not resolved and scoped not in unresolved:
                 unresolved.append(scoped)
+                unresolved_optics.append({
+                    "inventory_id": inventory_id,
+                    "display_label": label,
+                    "route_label": route_label,
+                    "scoped_label": scoped,
+                })
 
         fact_keys = (
             "selected_or_selectable_excitation_filters",
@@ -963,6 +978,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                     route_label,
                     broken=bool(step.get("_cube_incomplete") or step.get("_unsupported_spectral_model")),
                     resolved=(selection_state == "fixed" or has_position),
+                    inventory_id=clean_text(step.get("hardware_inventory_id")),
                 )
 
         if incomplete:
@@ -1066,6 +1082,9 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
             "quarep_light_path_recommendation_needed": quarep_recommendation_needed,
             "quarep_light_path_recommendation": quarep_recommendation_text,
+            # The same selectors, structured, so a draft can stop asking about the
+            # ones whose position the user named.
+            "unresolved_optics": copy.deepcopy(unresolved_optics),
             "specimen_preparation_recommendation": "[PLEASE SPECIFY: Specimen preparation metadata (sample type, labeling strategy, cover glass, and mounting medium)].",
             "acquisition_settings_recommendation": "[PLEASE SPECIFY: Exposure time(s), excitation power(s), detector gain/offset, camera binning, zoom, line/frame averaging, pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable].",
             "nyquist_recommendation": "Acquisition parameters should satisfy Nyquist sampling for the selected objective(s) and fluorophore emission profile.",

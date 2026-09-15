@@ -212,8 +212,63 @@ document.addEventListener("DOMContentLoaded", async () => {
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
             container.appendChild(wrapper);
+            bindSelectablePositions(container, item, prefix, index);
         });
         return normalizedItems.length;
+    }
+
+    /**
+     * Offer the positions a filter turret or wheel can be set to.
+     *
+     * Ticking the holder only says light passed through it, which tells a reader
+     * nothing about the filter that was used - the fact a fluorescence Methods
+     * section turns on. The positions are recorded per route, so they are offered
+     * as nested choices and the holder is ticked automatically when one is picked.
+     */
+    function bindSelectablePositions(container, item, prefix, itemIndex) {
+        const positions = Array.isArray(item?.selectable_positions) ? item.selectable_positions : [];
+        if (!positions.length) return;
+        const componentId = cleanText(item.id);
+        const componentLabel = cleanText(item.publication_label || item.display_label);
+
+        positions.forEach((position, positionIndex) => {
+            const positionId = cleanText(position?.id);
+            const positionLabel = cleanText(position?.display_label);
+            if (!positionId || !positionLabel) return;
+
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "2px";
+            wrapper.style.marginLeft = "20px";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.id = `${prefix}position-${itemIndex}-${positionIndex}`;
+            checkbox.value = `${componentId}::${positionId}`;
+            checkbox.dataset.category = `${prefix}-position`;
+            checkbox.dataset.componentId = componentId;
+            checkbox.dataset.componentLabel = componentLabel;
+            checkbox.dataset.displayLabel = positionLabel;
+            checkbox.dataset.incomplete = position?.incomplete ? "1" : "";
+            const productCode = cleanText(position?.product_code);
+            const identity = productCode ? `${positionLabel} (catalogue no. ${productCode})` : positionLabel;
+            checkbox.dataset.publicationTemplate = "The light path included {label}.";
+            checkbox.dataset.publicationLabel = componentLabel
+                ? `${identity} in the ${componentLabel}`
+                : identity;
+            checkbox.dataset.reviewPrompts = JSON.stringify(position?.incomplete ? [
+                `[PLEASE VERIFY: the recorded transmission bands for ${positionLabel} are incomplete; confirm its excitation filter, dichroic and emission filter]`,
+            ] : []);
+
+            const label = document.createElement("label");
+            label.htmlFor = checkbox.id;
+            const labelText = document.createElement("span");
+            labelText.textContent = ` ${identity}`;
+            label.appendChild(labelText);
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            container.appendChild(wrapper);
+        });
     }
 
     function toggleSectionVisibility(sectionId, hasItems) {
@@ -886,6 +941,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (currentInst) updateHardwareVisibility(currentInst);
     });
 
+    // Picking a position means the holder was in the path; clearing the holder
+    // clears the positions under it, mirroring the route/readout pairing.
+    document.getElementById("filter-list").addEventListener("change", (event) => {
+        const target = event?.target;
+        if (target?.dataset.category === "filter-position" && target.checked) {
+            document.querySelectorAll('input[id^="filter-"]').forEach((filter) => {
+                if (filter.value === target.dataset.componentId) filter.checked = true;
+            });
+        } else if (target?.dataset.category === "filter" && !target.checked) {
+            document.querySelectorAll('input[id^="filterposition-"]').forEach((position) => {
+                if (position.dataset.componentId === target.value) position.checked = false;
+            });
+        }
+    });
+
     hwOptions.addEventListener("change", event => {
         if (event.target === runtimeConfirm || !runtimeConfirm.checked) return;
         // Changing the selection invalidates the reviewed plan, which is the safe
@@ -955,9 +1025,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         // keyed by component id, so a component the user ticked and the plan also
         // names is stated once - using the plan's reading, which carries the
         // wavelength, filter position or detection window the checkbox cannot.
+        // A named position supersedes its holder: "the CYR71010 cube in the Filter
+        // Turret" is the fact, "the Filter Turret" only the container.
+        const positionSelections = getCheckedSelections("filterposition");
+        const resolvedComponentIds = new Set(positionSelections.map(item => cleanText(item.id).split("::")[0]));
         const lightPathSelections = [
             ...getCheckedSelections("light"),
-            ...getCheckedSelections("filter"),
+            ...positionSelections,
+            ...getCheckedSelections("filter").filter(item => !resolvedComponentIds.has(cleanText(item.id))),
             ...getCheckedSelections("splitter"),
             ...getCheckedSelections("det"),
         ];
@@ -985,7 +1060,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         prompts.push(cleanText(methods.retired_review_prompt));
-        if (methods.quarep_light_path_recommendation_needed) {
+        // Ask about the selectors whose position is still unknown, not about the
+        // ones the user has just named.
+        const unresolvedOptics = (Array.isArray(methods.unresolved_optics) ? methods.unresolved_optics : [])
+            .filter(entry => entry && !resolvedComponentIds.has(cleanText(entry.inventory_id)));
+        if (Array.isArray(methods.unresolved_optics) && methods.unresolved_optics.length) {
+            if (unresolvedOptics.length) {
+                prompts.push(`[PLEASE SPECIFY: which position of ${humanJoin(unresolvedOptics.map(entry => cleanText(entry.scoped_label)))} was used for acquisition, including the filter/dichroic identity (manufacturer + model/catalog number)]`);
+            }
+        } else if (methods.quarep_light_path_recommendation_needed) {
             prompts.push(cleanText(methods.quarep_light_path_recommendation));
         }
         prompts.push(cleanText(methods.specimen_preparation_recommendation));
@@ -1035,7 +1118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const text = [sessionLabel, ...textParts].filter(Boolean).join("\n\n");
         // An unchanged second click is idempotent; a different acquisition is not
         // allowed to replace an earlier entry just because it used the same scope.
-        const selections = ["route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
+        const selections = ["route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "filterposition", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
         const signature = JSON.stringify([dto.id, sessionLabel,
             selections.map(prefix => getCheckedIds(prefix)), runtimeConfirm.checked, text]);
         accumulatedEntries.set(signature, { instrumentId: dto.id, text });

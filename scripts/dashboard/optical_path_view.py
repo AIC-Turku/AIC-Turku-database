@@ -350,6 +350,47 @@ def _inventory_method_facts(
     return template, template.format(label=label), prompts
 
 
+def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Collect the positions each multi-position optical element can be set to.
+
+    Without these the Methods page can only offer the holder - "the light path
+    included Filter Turret" - which tells a reader nothing about the filter that
+    was used, the most important light-path fact in a fluorescence Methods
+    section. The positions are recorded per route in `selected_execution`; this
+    indexes them by component so the page can offer them as choices.
+    """
+    positions_by_component: dict[str, list[dict[str, Any]]] = {}
+    for route in light_paths:
+        selected_execution = route.get("selected_execution") if isinstance(route.get("selected_execution"), dict) else {}
+        steps = selected_execution.get("selected_route_steps")
+        for step in steps if isinstance(steps, list) else []:
+            if not isinstance(step, dict):
+                continue
+            inventory_id = clean_text(step.get("hardware_inventory_id"))
+            available = step.get("available_positions")
+            if not inventory_id or not isinstance(available, list):
+                continue
+            known = positions_by_component.setdefault(inventory_id, [])
+            known_keys = {row["id"] for row in known}
+            for position in available:
+                if not isinstance(position, dict):
+                    continue
+                key = clean_text(position.get("position_key") or position.get("position_id"))
+                label = clean_text(position.get("position_label") or position.get("label") or position.get("name"))
+                if not key or not label or key in known_keys:
+                    continue
+                known_keys.add(key)
+                product_code = clean_text(position.get("product_code"))
+                known.append({
+                    "id": key,
+                    "display_label": label,
+                    "product_code": product_code,
+                    "component_type": clean_text(position.get("component_type")),
+                    "incomplete": bool(position.get("_cube_incomplete") or position.get("_unsupported_spectral_model")),
+                })
+    return positions_by_component
+
+
 def hardware_renderables_from_inventory(
     inventory_renderables: list[dict[str, Any]],
     hardware_ids: set[str],
@@ -614,6 +655,7 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
 
     derived_inventory_cards: list[dict[str, Any]] = []
     inventory_lookup = {item.get("id"): item for item in hardware_inventory if item.get("id")}
+    selectable_positions = _selectable_positions_by_component(light_paths)
     for item in hardware_inventory:
         inventory_class = clean_text(item.get("inventory_class"))
         role = clean_text(((item.get("source_metadata") or {}) if isinstance(item.get("source_metadata"), dict) else {}).get("role"))
@@ -640,6 +682,7 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             "method_sentence": method_sentence,
             "publication_template": sentence_template,
             "review_prompts": review_prompts,
+            "selectable_positions": copy.deepcopy(selectable_positions.get(clean_text(item.get("id")), [])),
         })
     if derived_inventory_cards:
         derived_sections.insert(0, {"id": "hardware_inventory", "display_label": "Hardware Inventory", "items": derived_inventory_cards})
