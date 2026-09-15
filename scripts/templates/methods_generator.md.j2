@@ -9,8 +9,8 @@ hide:
 
 Choose the microscope and hardware you used to build a draft microscopy methods paragraph, then add your acquisition settings and review the text before publication. The draft follows the **QUAREP-LiMi minimal reporting recommendations** for light microscopy ([Better reporting is better science](https://rupress.org/jcb/article/225/3/e202601032/281525/Better-reporting-is-better-science-Community)).
 
-!!! note "For older acquisitions"
-    The draft uses the current facility record. Instrument configurations may have changed, so check older acquisitions against the original image metadata or facility records.
+!!! tip "Generate the draft when you acquire the images"
+    The generator reflects the facility record available now; it does not reconstruct earlier microscope configurations. We therefore recommend generating and saving the Methods draft at the time of image acquisition, together with the raw image metadata. Historical configuration support can be added later when the repository has an explicit time-versioned configuration model.
 
 <div class="aic-card" style="padding: 20px; margin-bottom: 20px; background-color: var(--md-default-bg-color);">
   <label for="system-select"><strong>Microscope</strong></label>
@@ -27,9 +27,10 @@ Choose the microscope and hardware you used to build a draft microscopy methods 
   <div id="hardware-options" style="display: none;">
     <p><label for="session-label">Acquisition or figure reference (optional)</label><br>
     <input id="session-label" type="text" maxlength="200" style="width: 100%;" placeholder="For example: Figure 2, fixed samples"></p>
-    <p><label for="acquisition-date">Acquisition date (optional)</label><br>
-    <input id="acquisition-date" type="date"></p>
-    <p><strong>Historical configuration:</strong> the date labels your experiment, but the form still uses the current facility record. For older acquisitions, check the hardware and software against your image metadata or with {{ facility_short_name }} staff.</p>
+    <!-- Compatibility-only empty field for the current runtime. It is not user-facing
+         and cannot supply historical configuration evidence. Remove it when the
+         runtime session model is revised. -->
+    <input id="acquisition-date" type="text" value="" aria-hidden="true" tabindex="-1" style="position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden;">
     <div id="runtime-review" style="display: none;">
       <details><summary>Review available Virtual Microscope plan</summary><pre id="runtime-preview" style="max-height: 18rem; overflow: auto;"></pre></details>
       <p id="runtime-review-status" role="status"></p>
@@ -110,7 +111,7 @@ Exact exposure times, pixel size, z-step, laser settings, and other acquisition 
 
 ### Generated methods draft
 
-Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear all** to start again. Review all placeholders and acquisition-specific settings before publication.
+Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear all** to start again. Save the draft with the acquisition records while the selected configuration is current, and review all placeholders and acquisition-specific settings before publication.
 <div style="position: relative;">
   <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Select an instrument, then choose “Add to methods”.</textarea>
   <div style="margin-top: 10px; display: flex; gap: 10px;">
