@@ -1325,7 +1325,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         light_sheet: "[PLEASE SPECIFY: light-sheet thickness, sheet numerical aperture, and the detection/illumination objective pairing]",
     };
     const READOUT_SETTINGS_PROMPTS = {
-        "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including whether acquisition was time-domain or frequency-domain; report the relevant timing or modulation settings, calibration or instrument-response measurement, signal or photon statistics where applicable, and the fitting or phasor analysis used]",
+        "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including whether acquisition was time-domain or frequency-domain; report the relevant timing or modulation settings, calibration and how the instrument response was determined, signal or photon statistics where applicable, and the fitting or phasor analysis used]",
         "spectral imaging": "[PLEASE SPECIFY: the spectral detection windows (start, end and step) and, if the spectra were unmixed, the method and reference spectra used]",
         "fcs": "[PLEASE SPECIFY: FCS measurement duration, number of repeats, how the confocal volume was calibrated, and the fitting model]",
         "fret": "[PLEASE SPECIFY: how FRET was measured (for example sensitised emission, acceptor photobleaching or lifetime) and, for intensity-based measurements, the bleed-through and cross-excitation correction factors]",
