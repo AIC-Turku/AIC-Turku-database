@@ -766,8 +766,25 @@ document.addEventListener("DOMContentLoaded", async () => {
      * says nothing about the line. A fixed 488 nm laser matched by id while the
      * plan carries 594 would otherwise be published as "488 nm laser (594 nm)".
      */
+    // Earlier work stopped the draft calling a STED depletion beam an excitation
+    // source. The request about its wavelength must not reintroduce that.
+    const WAVELENGTH_NOUN_BY_ROLE = {
+        excitation: "excitation wavelength",
+        depletion: "depletion wavelength",
+        activation: "photoactivation wavelength",
+    };
+
+    function wavelengthNoun(recorded) {
+        const metadata = recorded?.source_metadata && typeof recorded.source_metadata === "object"
+            ? recorded.source_metadata
+            : {};
+        const role = cleanText(metadata.role || recorded?.role).toLowerCase();
+        return WAVELENGTH_NOUN_BY_ROLE[role] || "wavelength";
+    }
+
     function resolveRuntimeWavelength(recorded, wavelength, label) {
         if (wavelength === null || !(wavelength > 0)) return { wavelength: null, prompt: "" };
+        const noun = wavelengthNoun(recorded);
         const metadata = recorded?.source_metadata && typeof recorded.source_metadata === "object"
             ? recorded.source_metadata
             : {};
@@ -779,7 +796,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (wavelength < tunableMin || wavelength > tunableMax) {
                 return {
                     wavelength: null,
-                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which is outside its recorded tunable range of ${tunableMin}–${tunableMax} nm; confirm the excitation wavelength used]`,
+                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which is outside its recorded tunable range of ${tunableMin}–${tunableMax} nm; confirm the ${noun} used]`,
                 };
             }
             return { wavelength, prompt: "" };
@@ -788,14 +805,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (fixed !== wavelength) {
                 return {
                     wavelength: null,
-                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which the instrument record gives as a fixed ${fixed} nm source; confirm the excitation wavelength used]`,
+                    prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, which the instrument record gives as a fixed ${fixed} nm source; confirm the ${noun} used]`,
                 };
             }
             return { wavelength, prompt: "" };
         }
         return {
             wavelength: null,
-            prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, but no wavelength is recorded for this source; confirm the excitation wavelength used]`,
+            prompt: `[PLEASE VERIFY: the reviewed plan reports ${wavelength} nm from ${label}, but no wavelength is recorded for this source; confirm the ${noun} used]`,
         };
     }
 
@@ -811,12 +828,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         const metadata = recorded?.endpoint_metadata && typeof recorded.endpoint_metadata === "object"
             ? recorded.endpoint_metadata
             : {};
+        // The schema makes each bound independently optional, so a detector may
+        // record only a lower or only an upper limit. Each known bound is enforced
+        // on its own: requiring both would let a window contradict the one bound
+        // that is actually recorded.
         const recordedMin = optionalNumber(metadata.collection_min_nm ?? metadata.min_nm);
         const recordedMax = optionalNumber(metadata.collection_max_nm ?? metadata.max_nm);
-        if (recordedMin !== null && recordedMax !== null && (minimum < recordedMin || maximum > recordedMax)) {
+        const breaches = [];
+        if (recordedMin !== null && minimum < recordedMin) {
+            breaches.push(`below its recorded collection minimum of ${recordedMin} nm`);
+        }
+        if (recordedMax !== null && maximum > recordedMax) {
+            breaches.push(`above its recorded collection maximum of ${recordedMax} nm`);
+        }
+        if (breaches.length) {
             return {
                 window: "",
-                prompt: `[PLEASE VERIFY: the reviewed plan reports a ${minimum}–${maximum} nm detection window on ${label}, which lies outside its recorded collection range of ${recordedMin}–${recordedMax} nm; confirm the window used]`,
+                prompt: `[PLEASE VERIFY: the reviewed plan reports a ${minimum}–${maximum} nm detection window on ${label}, which is ${humanJoin(breaches)}; confirm the window used]`,
             };
         }
         return { window: `${minimum}–${maximum} nm`, prompt: "" };
@@ -830,7 +858,13 @@ document.addEventListener("DOMContentLoaded", async () => {
      * element offers on the route being reported.
      */
     function resolveRuntimePosition(recorded, step, routeId, label) {
-        const raw = cleanText(step?.position_label) || cleanText(step?.position_key) || cleanText(step?.position_id);
+        // The stable key identifies the position; the display label is a rendering
+        // of it. A stale plan can carry a key and a label that name different
+        // positions, so the key decides and a label that disagrees with it - or
+        // that names nothing recorded - makes the position review-only.
+        const key = cleanText(step?.position_key) || cleanText(step?.position_id);
+        const labelText = cleanText(step?.position_label);
+        const raw = key || labelText;
         if (!raw) return { position: "", prompt: "" };
         const positions = Array.isArray(recorded?.selectable_positions) ? recorded.selectable_positions : [];
         if (!positions.length) {
@@ -839,10 +873,25 @@ document.addEventListener("DOMContentLoaded", async () => {
                 prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${raw}”, but the instrument record does not list the positions of this element; confirm the filter that was used]`,
             };
         }
-        const wanted = raw.toLowerCase();
-        const match = positions.find(position =>
+        const resolve = (value) => positions.find(position =>
             [position?.id, position?.display_label].map(cleanText)
-                .some(value => value && value.toLowerCase() === wanted));
+                .some(recordedValue => recordedValue && recordedValue.toLowerCase() === value.toLowerCase())) || null;
+
+        const keyMatch = key ? resolve(key) : null;
+        const labelMatch = labelText ? resolve(labelText) : null;
+        if (key && !keyMatch) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${key}”, which is not one of its recorded positions; confirm the filter that was used]`,
+            };
+        }
+        if (keyMatch && labelText && labelMatch !== keyMatch) {
+            return {
+                position: "",
+                prompt: `[PLEASE VERIFY: the reviewed plan gives ${label} position “${key}” and “${labelText}”, which do not describe the same recorded position; confirm the filter that was used]`,
+            };
+        }
+        const match = keyMatch || labelMatch;
         if (!match) {
             return {
                 position: "",

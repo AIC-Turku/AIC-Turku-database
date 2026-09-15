@@ -233,6 +233,16 @@ def _instrument(**overrides):
                "publication_label": "white light laser", "publication_template": "Excitation was provided by {label}.",
                "source_metadata": {"kind": "white_light_laser", "tunable_min_nm": 440, "tunable_max_nm": 790},
                "method_sentence": "Excitation was provided by white light laser."}
+    lower_only = {"id": "lower_only_det", "display_label": "Lower-bound detector", "inventory_class": "endpoint",
+                  "publication_label": "Lower-bound detector",
+                  "publication_template": "Images were recorded using {label}.",
+                  "endpoint_metadata": {"endpoint_type": "detector", "collection_min_nm": 400},
+                  "method_sentence": "Images were recorded using Lower-bound detector."}
+    upper_only = {"id": "upper_only_det", "display_label": "Upper-bound detector", "inventory_class": "endpoint",
+                  "publication_label": "Upper-bound detector",
+                  "publication_template": "Images were recorded using {label}.",
+                  "endpoint_metadata": {"endpoint_type": "detector", "collection_max_nm": 700},
+                  "method_sentence": "Images were recorded using Upper-bound detector."}
     spectral = {"id": "spectral_det", "display_label": "Spectral detector", "inventory_class": "endpoint",
                 "publication_label": "Spectral detector",
                 "publication_template": "Images were recorded using {label}.",
@@ -255,11 +265,12 @@ def _instrument(**overrides):
         "methods_generation": {"is_blocked": False, "blockers": []},
         "methods": {"base_sentence": "Images were acquired using the Regression Scope."},
         "hardware": {"objectives": [], "optical_path": {
-            "hardware_inventory_renderables": [source, camera_a, camera_b, turret, tunable, spectral],
+            "hardware_inventory_renderables": [source, camera_a, camera_b, turret, tunable, spectral,
+                                               lower_only, upper_only],
             "authoritative_route_contract": {"routes": [
                 {"id": "epi", "display_label": "Epifluorescence",
                  "relevant_hardware": {"sources": [source, tunable],
-                                       "endpoints": [camera_a, camera_b, spectral],
+                                       "endpoints": [camera_a, camera_b, spectral, lower_only, upper_only],
                                        "filters": [turret]}},
             ]}}},
     }
@@ -353,6 +364,88 @@ class BrowserGroundingRegressions(unittest.TestCase):
             self.assertIn(absent, self.output(), msg=f"unsupported component not flagged: {absent}")
         self.assertEqual(self.output().count("which is not in the current instrument record"), 4)
 
+    def test_a_window_below_a_recorded_minimum_is_not_reported(self):
+        # The schema makes each bound independently optional, so a detector may
+        # record only a minimum. That bound still constrains the window.
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "detectors": [{"id": "lower_only_det", "display_label": "Lower-bound detector",
+                           "collection_min_nm": 300, "collection_max_nm": 550}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        prose = self._prose()
+        self.assertIn("Images were recorded using Lower-bound detector.", prose)
+        self.assertNotIn("300", prose)
+        self.assertIn("below its recorded collection minimum of 400 nm", self.output())
+
+    def test_a_window_above_a_recorded_maximum_is_not_reported(self):
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "detectors": [{"id": "upper_only_det", "display_label": "Upper-bound detector",
+                           "collection_min_nm": 500, "collection_max_nm": 900}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        prose = self._prose()
+        self.assertIn("Images were recorded using Upper-bound detector.", prose)
+        self.assertNotIn("900", prose)
+        self.assertIn("above its recorded collection maximum of 700 nm", self.output())
+
+    def test_a_window_respecting_a_single_recorded_bound_is_reported(self):
+        # The guard must not refuse a window the one recorded bound allows.
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "detectors": [{"id": "lower_only_det", "display_label": "Lower-bound detector",
+                           "collection_min_nm": 500, "collection_max_nm": 900}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        self.assertIn("Lower-bound detector (detection 500–900 nm)", self._prose())
+        self.assertNotIn("recorded collection", self.output())
+
+    def test_a_position_key_and_label_naming_different_positions_is_review_only(self):
+        # A stale plan can carry a key and a label that disagree. The key decides,
+        # and a label that contradicts it means the position is not established.
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "selected_route_steps": [{"kind": "optical_component", "component_id": "turret",
+                                      "display_label": "Filter Turret",
+                                      "position_key": "Pos_2", "position_label": "GFP cube"}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        prose = self._prose()
+        self.assertIn("The light path included Filter Turret.", prose)
+        self.assertNotIn("GFP cube", prose)
+        self.assertNotIn("DAPI cube", prose)
+        self.assertIn("do not describe the same recorded position", self.output())
+
+    def test_a_position_key_and_agreeing_label_resolve_normally(self):
+        self.open_methods(storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "selected_route_steps": [{"kind": "optical_component", "component_id": "turret",
+                                      "display_label": "Filter Turret",
+                                      "position_key": "Pos_1", "position_label": "GFP cube"}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        self.assertIn("GFP cube (catalogue no. 49002) in the Filter Turret", self._prose())
+        self.assertNotIn("do not describe the same recorded position", self.output())
+
+    def test_a_depletion_source_is_not_asked_for_its_excitation_wavelength(self):
+        instrument = _instrument()
+        instrument["hardware"]["optical_path"]["hardware_inventory_renderables"].append(
+            {"id": "sted", "display_label": "775 nm depletion laser", "inventory_class": "light_source",
+             "publication_label": "775 nm laser",
+             "publication_template": "Stimulated-emission depletion was provided by {label}.",
+             "source_metadata": {"kind": "laser", "role": "depletion", "wavelength_nm": 775},
+             "method_sentence": "Stimulated-emission depletion was provided by 775 nm laser."})
+        self.open_methods(instrument, storage={
+            "scope_id": "scope-reg", "route": "epi", "validSelection": True,
+            "sources": [{"id": "sted", "display_label": "775 nm depletion laser",
+                         "selected_wavelength_nm": 660}]})
+        self.page.check("#runtime-confirm")
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn("confirm the depletion wavelength used", output)
+        self.assertNotIn("excitation wavelength", output)
+
     def test_a_wavelength_a_fixed_source_cannot_emit_is_not_reported(self):
         # Matching the laser by id says the right laser was named; it says nothing
         # about the line. "488 nm laser (594 nm)" would be a fabricated setting.
@@ -394,7 +487,8 @@ class BrowserGroundingRegressions(unittest.TestCase):
         prose = self._prose()
         self.assertIn("Images were recorded using Spectral detector.", prose)
         self.assertNotIn("300", prose)
-        self.assertIn("outside its recorded collection range of 400–700 nm", self.output())
+        self.assertIn("below its recorded collection minimum of 400 nm", self.output())
+        self.assertIn("above its recorded collection maximum of 700 nm", self.output())
 
     def test_a_detection_window_within_the_recorded_range_is_reported(self):
         self.open_methods(storage={
