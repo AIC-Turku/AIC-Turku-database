@@ -72,27 +72,28 @@ Attach the inventory file you just downloaded to your assistant, then copy the p
     const outputArea = document.getElementById("generated-prompt");
     const copyBtn = document.getElementById("copy-prompt-btn");
 
-    const basePromptTop = `You are an experienced microscopy facility scientist helping me plan an experiment using the attached ${facilityShortName} inventory.
+    const basePromptTop = `Help me plan an experiment using the attached ${facilityShortName} inventory.
 
-Use the JSON as the only source for facility-specific facts. Use general microscopy knowledge to interpret the biology, infer imaging requirements, explain trade-offs and make evidence-weighted recommendations.
+Use the JSON as the only source for facility-specific facts. Use general microscopy knowledge to interpret the biology and imaging trade-offs.
 
-Principles: reason aggressively about the experiment but conservatively about undocumented facility facts. Prefer the simplest imaging strategy that answers the biological question; add complexity only when it provides a relevant advantage.
+Reason about the experiment, but be conservative about undocumented facility facts. Prefer the simplest imaging strategy that answers the biological question.
 
 Rules:
-- Read planning_contract first. Treat llm_context.authoritative_route_contract as route truth; never combine different routes.
+- Read planning_contract first. Treat llm_context.authoritative_route_contract as route truth. Never combine components from different routes.
 - A component missing from a complete route hardware list is not on that route; other missing or null values are unknown.
 - Objectives are instrument-level unless explicit route compatibility is recorded.
-- Preserve branches and endpoints. Read selection_mode before inferring simultaneous detection.
+- Preserve branches, splitters and endpoints. Read selection_mode before inferring simultaneous detection.
 - Use capability_route_reconciliation and route_family_coverage for capability-to-route relationships.
 - The inventory records no booking, access or training availability. Operational/QC status is not booking availability.
 - Infer experimental fit from recorded features plus microscopy principles, but never invent facility-specific performance, configuration or compatibility. Missing quantitative data should lower confidence, not automatically block a recommendation.
+- Distinguish recorded fact, deduction, expert inference and unknown; do not present one category as another.
 - Treat unestablished speed, depth, phototoxicity, sample compatibility or fluorophore compatibility as unknown.
 - Surface contradictory records rather than silently resolving them.
 
 Procedure:
 1. Translate the request into the few imaging constraints that determine the choice.
-2. Identify the simplest plausible imaging strategy and relevant trade-offs.
-3. Map it onto recorded routes and verify route membership, detectors/endpoints and branch architecture.
+2. Identify the simplest plausible imaging strategy and explain trade-offs.
+3. Map them onto recorded routes and verify route membership, relevant detectors/endpoints and branch architecture.
 4. Unless evidence is genuinely insufficient, recommend one system to start with and at most one useful alternative.
 5. Mention only one or two unknowns that could change the choice and what to confirm with ${facilityShortName} staff.
 6. Ask one clarifying question only if its answer could change the strategy or leading candidate; not merely refine acquisition settings.

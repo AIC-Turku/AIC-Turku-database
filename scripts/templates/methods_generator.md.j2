@@ -28,8 +28,7 @@ Choose the microscope and hardware you used to build a draft microscopy methods 
     <p><label for="session-label">Acquisition or figure reference (optional)</label><br>
     <input id="session-label" type="text" maxlength="200" style="width: 100%;" placeholder="For example: Figure 2, fixed samples"></p>
     <!-- Compatibility-only empty field for the current runtime. It is not user-facing
-         and cannot supply historical configuration evidence. Remove it when the
-         runtime session model is revised. -->
+         and cannot supply historical configuration evidence. -->
     <input id="acquisition-date" type="text" value="" aria-hidden="true" tabindex="-1" style="position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden;">
     <div id="runtime-review" style="display: none;">
       <details><summary>Review available Virtual Microscope plan</summary><pre id="runtime-preview" style="max-height: 18rem; overflow: auto;"></pre></details>
@@ -111,7 +110,7 @@ Exact exposure times, pixel size, z-step, laser settings, and other acquisition 
 
 ### Generated methods draft
 
-Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear all** to start again. Save the draft with the acquisition records while the selected configuration is current, and review all placeholders and acquisition-specific settings before publication.
+Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear all** to start again. Save the draft with the acquisition records while the selected configuration is current. Finished Methods prose is kept separate from a **Review before publication** block containing only acquisition details that still need to be specified or verified.
 <div style="position: relative;">
   <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Select an instrument, then choose “Add to methods”.</textarea>
   <div style="margin-top: 10px; display: flex; gap: 10px;">
@@ -126,3 +125,4 @@ Each different selection or acquisition reference adds a separate entry, includi
 </script>
 
 <script src="../assets/javascripts/methods_generator_app.js"></script>
+<script src="../assets/javascripts/methods_generator_prose.js"></script>
