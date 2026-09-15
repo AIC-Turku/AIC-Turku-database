@@ -42,24 +42,42 @@ class PublicationHardeningTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.browser.close(); cls.playwright.stop()
+        cls.browser.close()
+        cls.playwright.stop()
 
     def setUp(self):
-        self.context = self.browser.new_context(); self.page = self.context.new_page(); self.errors = []
+        self.context = self.browser.new_context()
+        self.page = self.context.new_page()
+        self.errors = []
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
 
     def tearDown(self):
-        self.context.close(); self.assertEqual(self.errors, [])
+        self.context.close()
+        self.assertEqual(self.errors, [])
 
     def open_methods(self, instrument=None, storage=None):
         instrument = instrument or scope()
         html = self.template.render(methods_generator_config_json=json.dumps({
             "instrument_data_url": "/instruments.json", "acknowledgements": {"standard": ""}}))
-        bootstrap = "window.fetch = async () => ({ok:true,json:async()=>" + json.dumps({"instruments": [instrument]}) + "});"
+        bootstrap = (
+            "window.fetch = async () => ({ok: true, json: async () => ("
+            + json.dumps({"instruments": [instrument]})
+            + ")});"
+        )
         if storage is not None:
-            bootstrap += "Object.defineProperty(window,'localStorage',{configurable:true,value:{getItem(){return " + json.dumps(json.dumps(storage)) + ";}}});"
-        html = html.replace('<script src="../assets/javascripts/methods_generator_app.js"></script>', "<script>" + self.app + "</script>")
-        html = html.replace('<script src="../assets/javascripts/methods_generator_prose.js"></script>', "<script>" + self.prose + "</script>")
+            bootstrap += (
+                "Object.defineProperty(window, 'localStorage', {configurable: true, value: {getItem() {return "
+                + json.dumps(json.dumps(storage))
+                + ";}}});"
+            )
+        html = html.replace(
+            '<script src="../assets/javascripts/methods_generator_app.js"></script>',
+            "<script>" + self.app + "</script>",
+        )
+        html = html.replace(
+            '<script src="../assets/javascripts/methods_generator_prose.js"></script>',
+            "<script>" + self.prose + "</script>",
+        )
         self.page.set_content("<script>" + bootstrap + "</script>" + html)
         expect(self.page.locator("#system-select")).to_be_enabled()
         self.page.select_option("#system-select", instrument["id"])
@@ -77,16 +95,25 @@ class PublicationHardeningTests(unittest.TestCase):
         self.assertNotIn("488 nm laser (488 nm)", self.output())
 
     def test_dotted_hardware_names_are_not_truncated(self):
-        self.open_methods(); self.page.check("#route-0"); self.page.check("#light-0"); self.page.check("#det-0"); self.page.click("#add-btn")
-        self.assertIn("Laser v1.2", self.output()); self.assertIn("pco.edge 4.2", self.output())
+        self.open_methods()
+        self.page.check("#route-0")
+        self.page.check("#light-0")
+        self.page.check("#det-0")
+        self.page.click("#add-btn")
+        self.assertIn("Laser v1.2", self.output())
+        self.assertIn("pco.edge 4.2", self.output())
 
     def test_review_prompts_are_consolidated_and_idempotent(self):
         instrument = scope()
         instrument["methods"]["acquisition_settings_recommendation"] = "[PLEASE SPECIFY: exposure time and pixel size]."
         instrument["methods"]["quarep_light_path_recommendation_needed"] = True
         instrument["methods"]["quarep_light_path_recommendation"] = "[PLEASE VERIFY: exact emission filter and detector path]."
-        self.open_methods(instrument=instrument); self.page.click("#add-btn")
-        self.assertEqual(self.output().count("Review before publication:"), 1)
+        self.open_methods(instrument=instrument)
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertEqual(output.count("Review before publication:"), 1)
+        self.assertIn("- [PLEASE VERIFY: exact emission filter and detector path]", output)
+        self.assertIn("- [PLEASE SPECIFY: exposure time and pixel size]", output)
         self.page.click("#add-btn")
         self.assertEqual(self.output().count("Review before publication:"), 1)
 
