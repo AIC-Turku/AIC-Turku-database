@@ -27,6 +27,9 @@ Choose the microscope and hardware you used to build a draft microscopy methods 
   <div id="hardware-options" style="display: none;">
     <p><label for="session-label">Acquisition or figure reference (optional)</label><br>
     <input id="session-label" type="text" maxlength="200" style="width: 100%;" placeholder="For example: Figure 2, fixed samples"></p>
+    <!-- Compatibility-only empty field for the current runtime. It is not user-facing
+         and cannot supply historical configuration evidence. -->
+    <input id="acquisition-date" type="text" value="" aria-hidden="true" tabindex="-1" style="position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden;">
     <div id="runtime-review" style="display: none;">
       <details><summary>Review available Virtual Microscope plan</summary><pre id="runtime-preview" style="max-height: 18rem; overflow: auto;"></pre></details>
       <p id="runtime-review-status" role="status"></p>
@@ -122,3 +125,4 @@ Each different selection or acquisition reference adds a separate entry, includi
 </script>
 
 <script src="../assets/javascripts/methods_generator_app.js"></script>
+<script src="../assets/javascripts/methods_generator_prose.js"></script>
