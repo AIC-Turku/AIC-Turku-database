@@ -23,6 +23,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return cleanText(value).replace(/\s+@\s+([^—,.]+)(?=\s*(?:—|,|\.|$))/g, " (position $1)");
     }
 
+    function normalizeOpticalIdentity(value) {
+        return cleanText(value)
+            .replace(/\s*\(position [^)]+\)/gi, "")
+            .replace(/\s*\[[^\]]+\]/g, "")
+            .toLowerCase();
+    }
+
     function combineRepeatedSentences(text, pattern, formatter) {
         const matches = [];
         let match;
@@ -59,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const cleaned = normalizePositionNotation(value)
                 .replace(/\s+—\s+product code\s+([^—,.]+)/g, " (product code $1)")
                 .replace(/\s+—\s+/g, "; ");
-            return `Optical components used included ${cleaned}.`;
+            return `The optical path included ${cleaned}.`;
         });
         out = out.replace(/Sequential acquisition is planned as\s+([^.]+)\./g, "Images were acquired sequentially as $1.");
         out = out.replace(/Flattened\/incomplete optics were present for\s+([^.]+)\./g,
@@ -72,8 +79,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return out;
     }
 
+    function preferSpecificOpticalFacts(text) {
+        const specific = text.match(/The optical path included ([^.]+)\./);
+        if (!specific) return text;
+        const specificBody = specific[1].toLowerCase();
+        return text.replace(/The optical path used ([^.]+)\./g, (full, value) => {
+            const identity = normalizeOpticalIdentity(value);
+            return identity && specificBody.includes(identity) ? "" : full;
+        });
+    }
+
     function combinePublicationSentences(text) {
-        let out = text;
+        let out = preferSpecificOpticalFacts(text);
 
         out = combineRepeatedSentences(
             out,
