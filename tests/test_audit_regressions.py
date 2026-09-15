@@ -52,6 +52,7 @@ class AuditBrowserRegressions(unittest.TestCase):
             **({"executable_path": executable} if executable else {}))
         cls.template = Environment(loader=FileSystemLoader(ROOT / "scripts/templates")).get_template("methods_generator.md.j2")
         cls.script = (ROOT / "assets/javascripts/methods_generator_app.js").read_text()
+        cls.prose_script = (ROOT / "assets/javascripts/methods_generator_prose.js").read_text()
 
     @classmethod
     def tearDownClass(cls):
@@ -81,6 +82,8 @@ class AuditBrowserRegressions(unittest.TestCase):
             bootstrap += init_script
         html = html.replace('<script src="../assets/javascripts/methods_generator_app.js"></script>',
                             "<script>" + self.script + "</script>")
+        html = html.replace('<script src="../assets/javascripts/methods_generator_prose.js"></script>',
+                            "<script>" + self.prose_script + "</script>")
         self.page.set_content("<script>" + bootstrap + "</script>" + html)
         expect(self.page.locator("#system-select")).to_be_enabled()
         self.page.select_option("#system-select", instruments[0]["id"])
@@ -111,6 +114,8 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.assertIn("Plan laser (561 nm)", self.output())
         self.assertNotIn("Unknown laser (0", self.output())
         self.assertNotIn("Plan camera (0", self.output())
+        for internal_wording in ["runtime-selected", "exported DTO", "browser fallback", "wheel/turret", "Route-specific optical"]:
+            self.assertNotIn(internal_wording, self.output())
 
     def test_invalid_simulator_plan_cannot_be_confirmed(self):
         self.open_methods(storage={"scope_id": "scope-test", "route": "epi", "validSelection": False})
@@ -147,19 +152,37 @@ class AuditBrowserRegressions(unittest.TestCase):
     def test_repeated_acquisitions_do_not_overwrite_and_double_click_is_idempotent(self):
         self.open_methods()
         self.page.fill("#session-label", "Fixed cells")
-        self.page.fill("#acquisition-date", "2024-09-12")
         self.page.check("#obj-0")
         self.page.click("#add-btn")
         self.page.click("#add-btn")
-        self.assertEqual(self.output().count("A 20x objective was used."), 1)
+        self.assertEqual(self.output().count("20x"), 1)
         self.page.fill("#session-label", "Second acquisition")
-        self.page.fill("#acquisition-date", "2025-09-12")
         self.page.uncheck("#obj-0")
         self.page.check("#obj-1")
         self.page.click("#add-btn")
-        for expected in ["2024-09-12", "2025-09-12", "20x", "40x"]:
+        for expected in ["Fixed cells", "Second acquisition", "20x", "40x"]:
             self.assertIn(expected, self.output())
-        expect(self.page.get_by_text("Historical configuration:", exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('label[for="acquisition-date"]').count(), 0)
+
+    def test_compatible_objective_facts_are_combined_into_normal_prose(self):
+        self.open_methods()
+        self.page.check("#obj-0")
+        self.page.check("#obj-1")
+        self.page.click("#add-btn")
+        self.assertIn("The 20x and 40x objectives were used.", self.output())
+        self.assertNotIn("A 20x objective was used. A 40x objective was used.", self.output())
+
+    def test_review_prompts_are_separate_from_finished_prose(self):
+        instrument = scope()
+        instrument["methods"]["acquisition_settings_recommendation"] = "[PLEASE SPECIFY: exposure time and pixel size]."
+        instrument["methods"]["quarep_light_path_recommendation_needed"] = True
+        instrument["methods"]["quarep_light_path_recommendation"] = "[PLEASE VERIFY: emission filter used]."
+        self.open_methods(instruments=[instrument])
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn("Review before publication:\n- [PLEASE VERIFY: emission filter used]", output)
+        self.assertIn("Review before publication:\n- [PLEASE SPECIFY: exposure time and pixel size]", output)
+        self.assertNotIn("microscope. [PLEASE", output)
 
     def test_clipboard_rejection_reports_failure_instead_of_success(self):
         self.open_methods()
