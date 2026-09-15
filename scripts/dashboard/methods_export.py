@@ -178,6 +178,98 @@ def build_plan_experiments_page_config(facility: dict[str, Any]) -> dict[str, An
     }
 
 
+def _has_explicit_route_fact_selection(row: dict[str, Any]) -> bool:
+    """Return True only when a route fact records an actual selected/fixed item.
+
+    The route view intentionally contains `selected_or_selectable_*` collections.
+    Those are useful for planning, but a Methods draft must not turn availability
+    into an acquisition claim.  Keep only facts with explicit selection evidence;
+    acquisition-specific simulator selections are reported separately from the
+    reviewed runtime snapshot.
+    """
+    selection_state = clean_text(row.get("selection_state")).lower()
+    if selection_state in {"selected", "fixed", "resolved", "required"}:
+        return True
+    if clean_text(row.get("selected_position_key") or row.get("selected_position_id")):
+        return True
+    # A concrete position on a flattened fixed route is evidence; an array of
+    # available positions without a selected position is not.
+    if clean_text(row.get("position_key") or row.get("position_id")) and not row.get(
+        "available_positions"
+    ):
+        return True
+    return False
+
+
+def _ground_methods_projection(dto: dict[str, Any]) -> None:
+    """Constrain the methods projection to acquisition-safe deterministic facts.
+
+    This is a boundary between a planning-capability DTO and publication prose.
+    It deliberately removes route alternatives and generic advice that are useful
+    elsewhere but should not read as facts about a particular acquisition.
+    """
+    methods = dto.get("methods") if isinstance(dto.get("methods"), dict) else {}
+    dto["methods"] = methods
+
+    display_name = clean_text(dto.get("display_name"))
+    methods["base_sentence"] = (
+        f"Images were acquired using the {display_name}."
+        if display_name
+        else "[PLEASE VERIFY: microscope identity is missing from the facility record]."
+    )
+    methods["acquisition_settings_recommendation"] = (
+        "[PLEASE SPECIFY: acquisition software/version (if applicable), exposure "
+        "time(s), excitation power(s), detector gain/offset, binning, zoom/averaging, "
+        "pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable]."
+    )
+    # These are useful guidance, not acquisition facts. Keeping them in the page
+    # documentation is preferable to appending them to every publication draft.
+    methods["nyquist_recommendation"] = ""
+    methods["data_deposition_recommendation"] = ""
+
+    optical_path = (
+        dto.get("hardware", {}).get("optical_path", {})
+        if isinstance(dto.get("hardware"), dict)
+        and isinstance(dto.get("hardware", {}).get("optical_path"), dict)
+        else {}
+    )
+    route_contract = (
+        optical_path.get("authoritative_route_contract", {})
+        if isinstance(optical_path.get("authoritative_route_contract"), dict)
+        else {}
+    )
+    routes = route_contract.get("routes") if isinstance(route_contract.get("routes"), list) else []
+
+    removed_nonselected_fact = False
+    for route in routes:
+        if not isinstance(route, dict):
+            continue
+        route_facts = route.get("route_optical_facts")
+        if not isinstance(route_facts, dict):
+            continue
+        for key, rows in list(route_facts.items()):
+            if not key.startswith("selected_or_selectable_") or not isinstance(rows, list):
+                continue
+            selected_rows = [
+                copy.deepcopy(row)
+                for row in rows
+                if isinstance(row, dict) and _has_explicit_route_fact_selection(row)
+            ]
+            if len(selected_rows) != len(rows):
+                removed_nonselected_fact = True
+            route_facts[key] = selected_rows
+
+    if removed_nonselected_fact and not methods.get(
+        "quarep_light_path_recommendation_needed"
+    ):
+        methods["quarep_light_path_recommendation_needed"] = True
+        methods["quarep_light_path_recommendation"] = (
+            "[PLEASE VERIFY: the instrument record contains route options that were not "
+            "selected for this acquisition; confirm the exact filters, dichroics, "
+            "splitters, and detector path actually used]."
+        )
+
+
 def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str, Any]:
     """Build methods export DTO from canonical instrument + canonical light-path DTOs.
 
@@ -329,6 +421,7 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
         else copy.deepcopy(inst.get("runtime_selected_configuration"))
     )
 
+    _ground_methods_projection(dto)
     return dto
 
 
