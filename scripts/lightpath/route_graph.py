@@ -1256,6 +1256,8 @@ def _build_route_sequences_and_graph(
             "route_type": route_type,
             "route_type_label": _resolve_route_label(route_type) if route_type else "",
             "readouts": list(route.get("readouts") or []),
+            "imaging_modes": list(route.get("imaging_modes") or []),
+            "contrast_methods": list(route.get("contrast_methods") or []),
         },
         "illumination_mode": route_type or _clean_identifier(route.get("id")) or "",
         "illumination_traversal": illumination_sequence,

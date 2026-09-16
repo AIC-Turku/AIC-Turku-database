@@ -106,7 +106,11 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: confocal_point
+  imaging_modes:
+  - confocal_point
 - id: transmitted_light
   route_type: transmitted_light
   illumination_sequence: []
   detection_sequence: []
+  contrast_methods:
+  - transmitted_brightfield

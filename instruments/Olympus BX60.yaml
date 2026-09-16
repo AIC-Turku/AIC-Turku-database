@@ -8,8 +8,7 @@ instrument:
   stand_orientation: upright
   ocular_availability: trinocular
   location: ''
-  notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence
-    (epifluorescence), Phase contrast.'
+  notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast.'
   url: ''
 capabilities:
   imaging_modes:
@@ -214,8 +213,7 @@ hardware:
         bands:
         - center_nm: 530
           width_nm: 40
-        notes: 'Optional filter cube. Excitation: 480/20 nm. Dichroic Cutoff: 505
-          nm.'
+        notes: 'Optional filter cube. Excitation: 480/20 nm. Dichroic Cutoff: 505 nm.'
         excitation_filter:
           component_type: bandpass
           center_nm: 480
@@ -256,6 +254,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
 - id: transmitted_light
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
@@ -273,6 +273,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_light
-  notes: Shares the same documented physical path as transmitted_brightfield; phase
-    contrast is supported by the halogen lamp source, which explicitly lists phase_contrast
-    in its modalities.
+  notes: Shares the same documented physical path as transmitted_brightfield; phase contrast is supported by the halogen lamp source, which explicitly lists phase_contrast in its modalities.
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast

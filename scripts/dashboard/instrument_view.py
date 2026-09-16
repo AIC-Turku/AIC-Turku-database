@@ -8,6 +8,7 @@ scripts.dashboard_builder.
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any, Iterable
 
 from scripts.build_context import clean_text
@@ -81,8 +82,8 @@ def _human_list(items: list[str]) -> str:
 
 
 def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
-    manufacturer_text = clean_text(manufacturer)
-    model_text = clean_text(model)
+    manufacturer_text = _identity_value(manufacturer)
+    model_text = _identity_value(model)
     if manufacturer_text and model_text:
         return f"{manufacturer_text} {model_text}"
     if model_text:
@@ -94,13 +95,18 @@ def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
 
 # A recorded manufacturer/model that only restates that the value is unknown is not
 # an identity. Publication prose must not present it as one.
-_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "placeholder", "n/a", "na", "none", "-", "--", "?"}
 
 
 def _identity_value(value: Any) -> str:
-    """Return an identity string, or "" when it only marks the value unknown."""
+    """Return an identity string, or "" when it only marks the value unresolved."""
     cleaned = clean_text(value)
-    return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
+    lowered = cleaned.lower()
+    if lowered in _PLACEHOLDER_IDENTITY_VALUES:
+        return ""
+    if lowered.startswith("unknown ") or lowered.startswith("placeholder"):
+        return ""
+    return cleaned
 
 
 def _quarep_specs_clause(
@@ -121,20 +127,20 @@ def _quarep_specs_clause(
     placeholders inside a parenthetical read as noise, not as a component.
     """
     parts: list[str] = []
-    for label, value in (
-        ("Manufacturer", manufacturer),
-        ("Model", model),
-        ("Product code", product_code),
-    ):
-        cleaned = _identity_value(value)
-        if not cleaned or cleaned in sentence:
-            continue
-        parts.append(f"{label}: {cleaned}")
+    identity = " ".join(
+        value for value in (_identity_value(manufacturer), _identity_value(model))
+        if value and value not in sentence
+    ).strip()
+    if identity:
+        parts.append(identity)
+    product = _identity_value(product_code)
+    if product and product not in sentence:
+        parts.append(product)
     for part in extras or []:
         cleaned = clean_text(part)
         if cleaned:
             parts.append(cleaned)
-    return "; ".join(parts)
+    return ", ".join(parts)
 
 
 def _quarep_review_prompts(
@@ -149,7 +155,6 @@ def _quarep_review_prompts(
         for label, value in (
             ("manufacturer", manufacturer),
             ("model", model),
-            ("product code", product_code),
         )
         if not _identity_value(value)
     ]
@@ -267,7 +272,11 @@ def _objective_display_label(vocabulary: Vocabulary, obj: dict[str, Any]) -> str
     na = _fmt_num(obj.get("numerical_aperture") or obj.get("na"))
     immersion = _vocab_display(vocabulary, "objective_immersion", obj.get("immersion"))
     identity_label = instance_name or model
-    parts = [identity_label, f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion.upper() if immersion else ""]
+    mag_na = f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else ""
+    if mag_na and mag_na.lower() in identity_label.lower():
+        mag_na = ""
+    immersion_label = immersion.upper() if immersion else ""
+    parts = [identity_label, mag_na, immersion_label]
     return " ".join(part for part in parts if part).strip() or identity_label or "Objective"
 
 
@@ -282,7 +291,12 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
     wd = clean_text(obj.get("working_distance") or obj.get("wd"))
     display_label = _objective_display_label(vocabulary, obj)
     method_core = " ".join(part for part in [f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion, "objective"] if part).strip()
-    objective_reference = _component_reference(manufacturer, model, "objective")
+    # A generic fallback noun is not an identity: "a 10x/0.3 Air objective
+    # (objective)" is noise. When nothing identifying is recorded the
+    # parenthetical is omitted and `_quarep_review_prompts` asks for it instead.
+    objective_reference = " ".join(
+        part for part in (_identity_value(manufacturer), _identity_value(model)) if part
+    ).strip()
     method_meta = ", ".join(part for part in [objective_reference, product_code] if part)
     # The noun phrase without its sentence frame, so a draft that reports several
     # objectives can join them into one sentence instead of repeating the frame.
@@ -577,18 +591,45 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
         ("Pinhole", f"`{pinhole} µm`" if pinhole else None),
         ("Notes", clean_text(scanner.get("notes"))),
     )
-    detail_bits = [f"line rate {line_rate} Hz" if line_rate else "", f"pinhole {pinhole} µm" if pinhole else ""]
+    detail_bits = [
+        f"light-sheet type {light_sheet_type.replace('_', ' ')}" if light_sheet_type else "",
+        f"line rate {line_rate} Hz" if line_rate else "",
+        f"pinhole {pinhole} µm" if pinhole else "",
+    ]
     detail_text = ", ".join(bit for bit in detail_bits if bit)
-    scanner_fallback = scanner_type if scanner_type.lower().endswith("scanner") else f"{scanner_type} scanner"
-    component_reference = _component_reference(manufacturer, model, scanner_fallback if scanner_type else "scanner")
+    scanner_fallback = scanner_type if "scanner" in scanner_type.lower() else f"{scanner_type} scanner"
+    # Without a recorded manufacturer or model the reference is the vocabulary
+    # type, which is a common noun in this sentence position: "a resonant
+    # scanner" reads as prose, "Resonant Scanner" reads as a database field.
+    identified = bool(_identity_value(manufacturer) or _identity_value(model))
+    component_reference = _component_reference(
+        manufacturer, model, (scanner_fallback if scanner_type else "scanner").lower()
+    )
+    # A vocabulary type may carry its own parenthetical ("tandem scanner
+    # (galvo/resonant)"). Left in place it collides with the specs clause. It is
+    # folded into that one clause instead - but only for the type fallback, so a
+    # model name that genuinely contains brackets is never rewritten.
+    type_qualifier = ""
+    if not identified:
+        match = re.search(r"\s*\(([^()]*)\)\s*$", component_reference)
+        if match:
+            type_qualifier = match.group(1).strip()
+            component_reference = component_reference[: match.start()].strip()
     method_sentence = (
-        f"The microscope used {component_reference} ({detail_text})."
-        if scanner_type and scanner_type != "No Scanner" and detail_text
-        else f"The microscope used {component_reference}." if scanner_type and scanner_type != "No Scanner"
+        f"The microscope used {_indefinite_article(component_reference)} {component_reference}."
+        if scanner_type and scanner_type != "No Scanner"
         else ""
     )
     if method_sentence:
-        method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
+        # Specs and running settings share one parenthetical. Appending a second
+        # produced "... (Galvo/Resonant) (line rate 8000 Hz)".
+        method_sentence = _append_quarep_specs(
+            method_sentence,
+            manufacturer,
+            model,
+            product_code,
+            extras=[bit for bit in ([type_qualifier] + detail_bits) if bit],
+        )
     return {
         **copy.deepcopy(scanner),
         "display_label": scanner_type or instance_name or model or "No Scanner",
@@ -644,7 +685,11 @@ def build_stage_dto(vocabulary: Vocabulary, stage: dict[str, Any]) -> dict[str, 
     method_sentence = ""
     if clean_text(stage.get("type")).lower() == "z_piezo":
         stage_name = " ".join(part for part in [manufacturer, model] if part).strip()
-        method_sentence = f"Z-stacks were acquired using a {stage_name} piezo stage." if stage_name else "Z-stacks were acquired using a piezo stage."
+        if stage_name:
+            descriptor = stage_name if "piezo" in stage_name.lower() else f"{stage_name} piezo stage"
+            method_sentence = f"Z-stacks were acquired using {_indefinite_article(descriptor)} {descriptor}."
+        else:
+            method_sentence = "Z-stacks were acquired using a piezo stage."
     spec_lines = _spec_lines(
         ("Type", stage_type),
         ("Step size", f"`{step} µm`" if step else None),
@@ -879,8 +924,15 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 "display_label": module_name,
                 "display_subtitle": provenance,
                 "display_notes": notes,
-                "method_sentence": _append_quarep_specs(f"The {module_name} module was used." if module_name else "", manufacturer, model, product_code),
-                "review_prompts": _quarep_review_prompts(f"{module_name} module", manufacturer, model, product_code),
+                "method_sentence": _append_quarep_specs(
+                    f"The {module_name if module_name.lower().endswith('module') else module_name + ' module'} was used."
+                    if module_name else "",
+                    manufacturer, model, product_code,
+                ),
+                "review_prompts": _quarep_review_prompts(
+                    module_name if module_name.lower().endswith("module") else f"{module_name} module",
+                    manufacturer, model, product_code,
+                ),
             }
         )
 
@@ -892,6 +944,15 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     microscope_identity = " ".join(part for part in [clean_text(canonical_instrument.get("manufacturer")), clean_text(canonical_instrument.get("model"))] if part).strip()
     stand = clean_text(canonical_instrument.get("stand_orientation"))
     stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
+    display_name = clean_text(inst.get("display_name"))
+    if microscope_identity and stand_label:
+        instrument_reference = f"the {microscope_identity} {stand_label.lower()} microscope"
+    elif microscope_identity:
+        instrument_reference = f"the {microscope_identity} microscope"
+    elif display_name:
+        instrument_reference = f"the {display_name}"
+    else:
+        instrument_reference = "the microscope"
     base_sentence = f"Images were acquired using the {microscope_identity} {stand_label.lower()} microscope, controlled by {acquisition_software}." if microscope_identity and stand_label else f"Images were acquired using the {microscope_identity} microscope, controlled by {acquisition_software}."
     route_contract = (
         hardware_dto["optical_path"].get("authoritative_route_contract")
@@ -1002,7 +1063,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             for step in steps:
                 if not isinstance(step, dict):
                     continue
-                if clean_text(step.get("kind")) not in {"optical_component", "routing_component"}:
+                if clean_text(step.get("kind")) != "optical_component":
                     continue
                 label = clean_text(step.get("display_label") or step.get("component_id")) or "an optical element"
                 selection_state = clean_text(step.get("selection_state")).lower()
@@ -1097,6 +1158,9 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         },
         "methods": {
             "base_sentence": base_sentence,
+            # Identity only. Acquisition software is intentionally excluded so the
+            # Methods Generator reports it only after the user confirms it was used.
+            "instrument_reference": instrument_reference,
             "environment_sentence": hardware_dto["environment"].get("method_sentence", ""),
             "autofocus_sentence": hardware_dto["hardware_autofocus"].get("method_sentence", ""),
             "triggering_sentence": hardware_dto["triggering"].get("method_sentence", ""),

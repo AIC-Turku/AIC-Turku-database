@@ -70,6 +70,25 @@ def _route_type_vocab_label(route_type_id: str, vocabulary: Vocabulary | None) -
     return route_type_id.replace("_", " ").title()
 
 
+def _method_publication_phrase(method_id: str, vocabulary: Vocabulary | None) -> str:
+    """Return the noun phrase a Methods sentence uses for a method.
+
+    A vocabulary `label` is a picker label: "Confocal point scanning" reads as a
+    column heading, and the generic "<label> imaging" frame turns it into
+    "Confocal point scanning imaging". `publication_phrase` is the authored
+    sentence form, and is also where an acronym gets expanded on first use.
+    """
+    if not method_id or not vocabulary:
+        return ""
+    for vocab_name in ("imaging_modes", "contrast_methods"):
+        term = vocabulary.terms_by_vocab.get(vocab_name, {}).get(method_id)
+        if term is not None and isinstance(getattr(term, "metadata", None), dict):
+            phrase = term.metadata.get("publication_phrase")
+            if isinstance(phrase, str) and phrase.strip():
+                return phrase.strip()
+    return ""
+
+
 def _compact_join(parts: Iterable[str]) -> str:
     return ", ".join(part for part in parts if isinstance(part, str) and part.strip())
 
@@ -207,7 +226,7 @@ def _terminal_summary(terminal: dict[str, Any], vocabulary: Vocabulary | None = 
 # A recorded manufacturer/model that only restates that the value is unknown is not
 # an identity. Publication prose must not present it as one; the QUAREP clause
 # reports it as missing instead.
-_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "placeholder", "n/a", "na", "none", "-", "--", "?"}
 
 # Publication sentence per recorded light-source role. A source whose role is not
 # recorded must not be described as an excitation source: the neutral sentence is
@@ -224,7 +243,7 @@ _SOURCE_ROLE_UNRECORDED_SENTENCE = "Illumination was provided by {label}."
 
 _ENDPOINT_SENTENCE = "Images were recorded using {label}."
 _EYEPIECE_SENTENCE = "Samples were observed through {label}."
-_SPLITTER_SENTENCE = "The emission light was divided by {label}."
+_SPLITTER_SENTENCE = "Light was directed through {label}."
 _OPTICAL_ELEMENT_SENTENCE = "The light path included {label}."
 _SOURCE_ROLE_UNRECORDED_PROMPT = (
     "[PLEASE SPECIFY: the role of {label} in this acquisition, for example excitation, "
@@ -233,9 +252,14 @@ _SOURCE_ROLE_UNRECORDED_PROMPT = (
 
 
 def _identity_value(value: Any) -> str:
-    """Return a manufacturer/model string, or "" when it only marks the value unknown."""
+    """Return an identity string, or "" when the value only marks it unresolved."""
     cleaned = clean_text(value)
-    return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
+    lowered = cleaned.lower()
+    if lowered in _PLACEHOLDER_IDENTITY_VALUES:
+        return ""
+    if lowered.startswith("unknown ") or lowered.startswith("placeholder"):
+        return ""
+    return cleaned
 
 
 def _number_text(value: Any) -> str:
@@ -244,7 +268,12 @@ def _number_text(value: Any) -> str:
         return ""
     if isinstance(value, (int, float)):
         return str(int(value)) if float(value).is_integer() else str(value)
-    return clean_text(value)
+    cleaned = clean_text(value)
+    try:
+        numeric = float(cleaned)
+    except (TypeError, ValueError):
+        return ""
+    return str(int(numeric)) if numeric.is_integer() else str(numeric)
 
 
 def _kind_phrase(kind_label: str) -> str:
@@ -269,7 +298,7 @@ def _strip_leading_wavelength(model: str, wavelength: str) -> str:
     trimmed = trimmed.strip(" -–—")
     if trimmed.startswith("(") and trimmed.endswith(")"):
         trimmed = trimmed[1:-1].strip()
-    return trimmed or model
+    return trimmed
 
 
 def _publication_inventory_label(item: dict[str, Any], vocabulary: Vocabulary | None) -> str:
@@ -332,6 +361,12 @@ def _inventory_method_facts(
         if not template:
             template = _SOURCE_ROLE_UNRECORDED_SENTENCE
             prompts = [_SOURCE_ROLE_UNRECORDED_PROMPT.format(label=label)]
+        tunable_min = _number_text(source_meta.get("tunable_min_nm"))
+        tunable_max = _number_text(source_meta.get("tunable_max_nm"))
+        if tunable_min and tunable_max:
+            prompts.append(
+                f"[PLEASE SPECIFY: wavelength used from the recorded {tunable_min}-{tunable_max} nm tunable range of {label}]"
+            )
     elif inventory_class in {"endpoint", "camera_port", "eyepiece"}:
         endpoint_meta = item.get("endpoint_metadata") if isinstance(item.get("endpoint_metadata"), dict) else {}
         endpoint_type = clean_text(endpoint_meta.get("endpoint_type") or endpoint_meta.get("kind"))
@@ -348,6 +383,9 @@ def _inventory_method_facts(
     if not template:
         return "", "", []
     return template, template.format(label=label), prompts
+
+
+_EMPTY_POSITION_WORDS = {"empty", "none", "blank", "open", "free"}
 
 
 def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -372,13 +410,33 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
             available = step.get("available_positions")
             if not inventory_id or not isinstance(available, list):
                 continue
+            holder_label = clean_text(step.get("display_label"))
             known = positions_by_component.setdefault(inventory_id, [])
             by_key = {row["id"]: row for row in known}
+            by_identity = {
+                (row["display_label"], row["product_code"], row["component_type"].lower()): row
+                for row in known
+            }
             for position in available:
                 if not isinstance(position, dict):
                     continue
                 key = clean_text(position.get("position_key") or position.get("position_id"))
-                label = clean_text(position.get("position_label") or position.get("label") or position.get("name"))
+                # The holder's own name identifies the container, never the filter
+                # inside it. A candidate equal to it is refused outright so no
+                # upstream default can produce "the Filter Turret in the Filter
+                # Turret"; the position key is a last-resort distinguishable label.
+                identity_label = next(
+                    (
+                        candidate
+                        for candidate in (
+                            clean_text(position.get(field))
+                            for field in ("name", "model", "position_label", "label", "product_code")
+                        )
+                        if candidate and candidate != holder_label
+                    ),
+                    "",
+                )
+                label = identity_label or key
                 if not key or not label:
                     continue
                 # A holder shared by two routes may offer different positions on
@@ -390,16 +448,39 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                         existing["route_ids"].append(route_id)
                         existing["route_labels"].append(route_label)
                     continue
+                # Two slots of one holder that record the same identity are the
+                # same choice to a user and publish the same sentence, so offering
+                # both only asks a question with no answer. Naming them apart would
+                # mean inventing a distinction the record does not make.
+                twin = (label, clean_text(position.get("product_code")), clean_text(position.get("component_type")).lower())
+                duplicate = by_identity.get(twin)
+                if duplicate is not None:
+                    if route_id and route_id not in duplicate["route_ids"]:
+                        duplicate["route_ids"].append(route_id)
+                    if route_label and route_label not in duplicate["route_labels"]:
+                        duplicate["route_labels"].append(route_label)
+                    continue
                 row = {
                     "id": key,
                     "display_label": label,
+                    # False when `display_label` is only the position key or a
+                    # generic emptiness word, so the browser never presents an
+                    # internal slot id - or "(position Empty)" - as an identity.
+                    "has_identity": bool(identity_label)
+                    and identity_label.lower() not in _EMPTY_POSITION_WORDS,
                     "product_code": clean_text(position.get("product_code")),
                     "component_type": clean_text(position.get("component_type")),
+                    "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",
+                    "is_empty": (
+                        clean_text(position.get("component_type")).lower() == "empty"
+                        or clean_text(label).lower() in _EMPTY_POSITION_WORDS
+                    ),
                     "incomplete": bool(position.get("_cube_incomplete") or position.get("_unsupported_spectral_model")),
                     "route_ids": [route_id] if route_id else [],
                     "route_labels": [route_label] if route_label else [],
                 }
                 by_key[key] = row
+                by_identity[twin] = row
                 known.append(row)
     return positions_by_component
 
@@ -936,6 +1017,24 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             for r in (route_identity.get("readouts") or [])
             if isinstance(r, str) and r.strip()
         ]
+        enriched_route_identity["imaging_modes"] = [
+            {
+                "id": value,
+                "display_label": _route_type_vocab_label(value, vocabulary),
+                "publication_phrase": _method_publication_phrase(value, vocabulary),
+            }
+            for value in (route_identity.get("imaging_modes") or [])
+            if isinstance(value, str) and value.strip()
+        ]
+        enriched_route_identity["contrast_methods"] = [
+            {
+                "id": value,
+                "display_label": _route_type_vocab_label(value, vocabulary),
+                "publication_phrase": _method_publication_phrase(value, vocabulary),
+            }
+            for value in (route_identity.get("contrast_methods") or [])
+            if isinstance(value, str) and value.strip()
+        ]
         if not enriched_route_identity.get("route_type_label"):
             route_type_for_label = (
                 enriched_route_identity.get("route_type")
@@ -953,6 +1052,8 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             "route_identity": enriched_route_identity,
             "route_type": route_type,
             "route_type_label": clean_text(enriched_route_identity.get("route_type_label")),
+            "imaging_modes": enriched_route_identity["imaging_modes"],
+            "contrast_methods": enriched_route_identity["contrast_methods"],
             "readouts": enriched_route_identity["readouts"],
             "route_hardware_usage": {
                 "hardware_inventory_ids": route_inventory_ids,

@@ -353,7 +353,7 @@ sections:
         item_type: string
         vocab: imaging_modes
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Canonical imaging-mode capability axis (not a route identifier).
+        rationale: Canonical imaging-mode capability axis (not a route identifier). For active instruments, every declared method must be explicitly associated with at least one compatible light_paths[].imaging_modes entry.
 
       - path: capabilities.contrast_methods
         title: Capability contrast methods
@@ -362,7 +362,7 @@ sections:
         item_type: string
         vocab: contrast_methods
         used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Canonical contrast-method capability axis.
+        rationale: Canonical contrast-method capability axis. For active instruments, every declared method must be explicitly associated with at least one compatible light_paths[].contrast_methods entry.
 
       - path: capabilities.readouts
         title: Capability measurement readouts
@@ -1825,6 +1825,24 @@ sections:
         vocab: optical_routes
         used_by: [dashboard, method_generator]
         rationale: Controlled optical route family and canonical display-label key. Active dataflow expects light_paths[].id to match light_paths[].route_type.
+
+      - path: light_paths[].imaging_modes
+        title: Light path imaging modes
+        status: optional
+        type: list
+        item_type: string
+        vocab: imaging_modes
+        used_by: [dashboard, method_generator]
+        rationale: Explicitly associates imaging methods with the physical light path that implements them. On active instruments, mapped methods must also be declared in capabilities.imaging_modes, must be compatible with route_type, and every declared imaging mode must be mapped to at least one path.
+
+      - path: light_paths[].contrast_methods
+        title: Light path contrast methods
+        status: optional
+        type: list
+        item_type: string
+        vocab: contrast_methods
+        used_by: [dashboard, method_generator]
+        rationale: Explicitly associates contrast methods with the physical light path that implements them. On active instruments, mapped methods must also be declared in capabilities.contrast_methods, must be compatible with route_type, and every declared contrast method must be mapped to at least one path.
 
       - path: light_paths[].readouts
         title: Light path readouts

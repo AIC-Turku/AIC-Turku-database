@@ -142,9 +142,13 @@ light_paths:
   - optical_path_element_id: example_cube_turret
   - endpoint_id: example_scmos
   route_type: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
 - id: transmitted_light
   illumination_sequence:
   - source_id: example_transmitted_led
   detection_sequence:
   - endpoint_id: example_scmos
   route_type: transmitted_light
+  contrast_methods:
+  - transmitted_brightfield

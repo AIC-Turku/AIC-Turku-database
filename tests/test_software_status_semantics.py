@@ -7,6 +7,10 @@ from scripts.validation.instrument import ValidationIssue
 
 
 class _Vocab:
+    """Minimal vocabulary surface required by dashboard DTO builders in these tests."""
+
+    terms_by_vocab = {}
+
     def resolve_canonical(self, *_args, **_kwargs):
         return None
 
@@ -26,6 +30,27 @@ class SoftwareStatusSemanticsTests(unittest.TestCase):
             {"id": "s1", "display_name": "S1", "canonical": {"instrument": {"instrument_id": "s1", "display_name": "S1"}, "hardware": {}, "software": [], "software_status": "unknown"}, "lightpath_dto": {"light_paths": []}},
         )
         self.assertEqual("unknown", dto["methods_view_dto"]["software_status"])
+
+    def test_methods_instrument_reference_excludes_acquisition_software(self):
+        dto = build_instrument_mega_dto(
+            _Vocab(),
+            {
+                "id": "s1",
+                "display_name": "Scope One",
+                "canonical": {
+                    "instrument": {"manufacturer": "Acme", "model": "M1"},
+                    "software": [{"name": "Acme Acquire", "version": "1.0", "role": "acquisition"}],
+                    "software_status": "recorded",
+                    "modalities": [],
+                    "modules": [],
+                    "hardware": {},
+                },
+            },
+            {"light_paths": []},
+        )
+        self.assertEqual("the Acme M1 microscope", dto["methods"]["instrument_reference"])
+        self.assertNotIn("Acme Acquire", dto["methods"]["instrument_reference"])
+        self.assertIn("Acme Acquire", dto["methods"]["base_sentence"])
 
     def test_dashboard_message_for_not_applicable(self):
         dto = build_instrument_mega_dto(

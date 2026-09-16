@@ -85,6 +85,49 @@ The ordered route declarations.
 Each route must represent one explicit traversable path through the hardware inventory.
 `light_paths[]` are the primary source of truth for route topology.
 
+### `imaging_modes` / `contrast_methods` (per light path)
+
+Which methods this physical path implements.
+
+`capabilities.imaging_modes` and `capabilities.contrast_methods` say what the
+instrument *can do*. `light_paths[].imaging_modes` and
+`light_paths[].contrast_methods` say *which physical path implements each one*.
+They are different statements and both are authored.
+
+`route_type` stays the physical route family and must never be read as a method.
+A route family is coarse: STED, RESOLFT and ISM all run on a `confocal_point`
+path, and TIRF, SIM and SMLM all run on a `widefield_fluorescence` path. Reading
+the family as the technique is how a draft ends up calling a TIRF acquisition
+widefield.
+
+For an active instrument the validator enforces three rules:
+
+- every method declared in `capabilities` is mapped to at least one light path
+  (`capability_method_unmapped`);
+- every method mapped to a light path is also declared in `capabilities`
+  (`light_path_method_not_declared`);
+- a mapped method is compatible with that path's route family according to
+  `vocab/optical_routes.yaml` `covers` (`light_path_method_route_incompatible`).
+
+`covers` is a **compatibility gate, not an implementation claim**. It says a
+family *can* carry the method; it does not say this particular path does. What
+distinguishes STED from confocal, or SIM from widefield, is hardware the family
+does not capture, so an authored mapping is required rather than inferred.
+
+Two further checks guard the mapping:
+
+- a mapped path that records no illumination or no detection sequence is
+  reported as incomplete (`method_path_topology_empty`), and the Methods
+  Generator asks the user to confirm the hardware used;
+- a path that maps methods must name a route family the vocabulary knows
+  (`method_path_route_type_unresolved`), because compatibility cannot otherwise
+  be checked.
+
+A term in `vocab/optical_routes.yaml` that omits `covers` entirely, or omits one
+axis of it, leaves that axis unchecked. This is deliberate: a facility reusing
+this repository is not required to author AIC's coverage metadata. An axis
+written as an explicit empty list *is* an authored statement and is enforced.
+
 ### `illumination_sequence`
 
 Ordered path traversal before the sample plane.

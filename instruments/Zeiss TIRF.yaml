@@ -8,10 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2209
-  notes: TIRF/widefield microscope (inverted). TIRF imaging enables approximately
-    70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm
-    in common confocal microscopy). Designed for membrane studies such as endocytosis
-    and integrin trafficking, and also suitable for sensitive widefield imaging.
+  notes: TIRF/widefield microscope (inverted). TIRF imaging enables approximately 70-150 nm axial (Z-axis) resolution near the basal cell membrane (vs. ~600 nm in common confocal microscopy). Designed for membrane studies such as endocytosis and integrin trafficking, and also suitable for sensitive widefield imaging.
   url: ''
 capabilities:
   imaging_modes:
@@ -267,6 +264,9 @@ hardware:
     supported_branch_count: 3
 light_paths:
 - id: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
+  - tirf
   illumination_sequence:
   - source_id: 488_nm
   - source_id: 561_nm
@@ -312,3 +312,5 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_light
+  contrast_methods:
+  - transmitted_brightfield

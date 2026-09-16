@@ -492,6 +492,8 @@ light_paths:
   - fcs
   - fret
   route_type: confocal_point
+  imaging_modes:
+  - confocal_point
 - id: widefield_fluorescence
   illumination_sequence:
   - source_id: leica_led_3
@@ -511,8 +513,9 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
-  readouts:
-  - spectral_imaging
+  readouts: []
+  imaging_modes:
+  - widefield_fluorescence
 - id: transmitted_light
   illumination_sequence:
   - source_id: leica_led_3
@@ -536,4 +539,6 @@ light_paths:
         - endpoint_id: eyepieces
   route_type: transmitted_light
   readouts:
+  contrast_methods:
+  - transmitted_brightfield
 

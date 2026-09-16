@@ -252,6 +252,11 @@ hardware:
   endpoints: []
 light_paths:
 - id: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
+  - tirf
+  - sim
+  - smlm
   illumination_sequence:
   - source_id: 405_nm
   - source_id: 445_nm

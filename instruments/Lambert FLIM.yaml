@@ -149,3 +149,5 @@ light_paths:
   - flim
   - fret
   route_type: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence

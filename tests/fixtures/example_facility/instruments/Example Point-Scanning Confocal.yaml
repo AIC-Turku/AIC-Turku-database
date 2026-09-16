@@ -114,3 +114,5 @@ light_paths:
   - optical_path_element_id: example_emission_wheel
   - endpoint_id: example_pmt
   route_type: confocal_point
+  imaging_modes:
+  - confocal_point

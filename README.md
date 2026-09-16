@@ -31,7 +31,7 @@ It is a planning and visualization tool, not a calibrated photon-budget model. I
 
 ### Methods generator
 
-The methods generator builds a reviewable draft from the microscope inventory. Users select the hardware and acquisition actions they actually used, then add acquisition-specific settings before publication.
+The methods generator builds a reviewable draft from the microscope inventory. Users state the imaging method they used, confirm the physical light path the record associates with it, then select the hardware and acquisition actions on that path before adding acquisition-specific settings for publication.
 
 The generated text is intended as a reporting aid and is structured around QUAREP-LiMi reporting recommendations. It does not reconstruct historical configurations or replace acquisition metadata.
 
@@ -113,13 +113,30 @@ Fluorophore spectra can come from FPbase, bundled records, or synthetic spectra 
 
 The methods generator consumes `dashboard_docs/assets/instruments_data.json` and builds deterministic draft text from the exported instrument DTOs.
 
+It follows the order an acquisition actually has:
+
+`method used -> the physical light path that implements it -> hardware recorded on that path -> Methods prose`
+
+The imaging method is asked first, because it is the thing a user reliably knows.
+The instrument record states which light path implements each method, so choosing
+a method reveals only the compatible path (or, where several are recorded, asks
+which one was used). Route-specific sources, filters, splitters and detectors stay
+hidden until that decision is made, and changing the method or the path clears
+route-specific selections so stale hardware cannot follow into the next entry.
+One acquisition travels one path.
+
 It can:
 
 - flag missing policy-critical metadata;
-- show only hardware recorded for the selected instrument;
+- show only hardware recorded for the selected instrument and the chosen light path;
 - include confirmed acquisition actions and reviewed simulator configurations;
 - preserve separate acquisition references for repeated use of the same microscope;
 - add configured facility acknowledgements.
+
+A method is never inferred from a route family: `confocal_point` does not imply
+STED, and `widefield_fluorescence` does not imply TIRF. See
+`docs/light_path_v2_migration.md` for the authoring rules and the validation
+codes that enforce them.
 
 The user remains responsible for checking acquisition-specific settings and placeholders before publication.
 
@@ -129,7 +146,7 @@ The user remains responsible for checking acquisition-specific settings and plac
 
 The planning workflow is designed so that missing fields remain unknown. The prompt asks downstream assistants to recommend only recorded instruments and routes and to separate known facts from assumptions and caveats.
 
-The export opens with a `planning_contract` block stating which lists are complete enumerations (so a component absent from a route is not on that route), that no booking or training availability is recorded at all, what an instrument status is derived from, and that objectives are recorded per instrument rather than per route. `route_family_coverage` and each instrument's `capability_route_reconciliation` relate capability terms such as `tirf` or `sted` to the route families that record them, so a planner does not have to invent a route type that the vocabulary does not contain.
+The export opens with a `planning_contract` block stating which lists are complete enumerations (so a component absent from a route is not on that route), that no booking or training availability is recorded at all, what an instrument status is derived from, and that objectives are recorded per instrument rather than per route. `route_family_coverage` and each instrument's `capability_route_reconciliation` relate capability terms such as `tirf` or `sted` to the route families that record them, so a planner does not have to invent a route type that the vocabulary does not contain. Within that block, `methods_by_recorded_light_path` gives the stronger, authored statement: the specific light path the facility records as implementing each method. Prefer it over family coverage, which says only that a method is compatible with a family.
 
 A saved assistant answer can be checked offline against the inventory:
 
