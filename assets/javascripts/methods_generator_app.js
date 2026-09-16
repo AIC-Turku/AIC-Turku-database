@@ -1565,7 +1565,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     const PATH_SETTINGS_PROMPTS = {
         confocal_point: reportingRecommendation(
-            "scan zoom, pixel dwell time, line/frame averaging, and, when a confocal pinhole was used, its diameter (in Airy units)"),
+            "confocal pinhole diameter (in Airy units), when a confocal pinhole was used, plus scan zoom, pixel dwell time, and line/frame averaging"),
         confocal_spinning_disk: reportingRecommendation(
             "camera exposure per channel, and any disk setting that was varied (for example rotation speed or the pinhole pattern, if the system offers a choice)"),
     };

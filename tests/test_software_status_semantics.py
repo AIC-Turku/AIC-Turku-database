@@ -7,6 +7,8 @@ from scripts.validation.instrument import ValidationIssue
 
 
 class _Vocab:
+    terms_by_vocab = {}
+
     def resolve_canonical(self, *_args, **_kwargs):
         return None
 
