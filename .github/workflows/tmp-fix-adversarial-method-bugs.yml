@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-test.txt
       - name: Apply fixes
-        run: python scripts/_tmp_fix_adversarial_method_bugs.py
+        run: python scripts/_tmp_fix_adversarial_method_bugs_v2.py
       - name: Regenerate template
         run: python -m scripts.generate_templates
       - name: Targeted validation
