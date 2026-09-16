@@ -1387,7 +1387,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleSectionVisibility("section-illumination-logic", bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic") > 0);
         updateHardwareVisibility(dto, false);
         if (methodCount > 0) {
-            ["section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
+            // Offering every light path before a method is chosen invites the user
+            // to build a whole selection that the first method click then clears,
+            // because a method starts a fresh physical-path decision. The path
+            // question is asked only once the method has narrowed it.
+            ["section-route", "section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
                 const section = document.getElementById(id);
                 if (section) section.style.display = "none";
             });
@@ -1543,10 +1547,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     function modalitySettingsPrompts(methodSelections, routeSelections, readoutSelections) {
-        const prompts = uniqueTexts([
-            ...methodSelections.map(item => MODALITY_SETTINGS_PROMPTS[cleanText(item.id).toLowerCase()] || ""),
-            ...routeSelections.map(item => MODALITY_SETTINGS_PROMPTS[item.routeType] || ""),
-        ]);
+        // The technique the user confirmed decides which settings a reader needs.
+        // A route family is not a technique: asking a STED acquisition for confocal
+        // pinhole and dwell time - because STED runs on the confocal path - is the
+        // route-implies-method inference this page is built to avoid. The route
+        // family is used only for records that carry no method mapping at all,
+        // which is the retired/legacy case.
+        const prompts = uniqueTexts(
+            methodSelections.length
+                ? methodSelections.map(item => MODALITY_SETTINGS_PROMPTS[cleanText(item.id).toLowerCase()] || "")
+                : routeSelections.map(item => MODALITY_SETTINGS_PROMPTS[item.routeType] || "")
+        );
         readoutSelections.forEach((item) => {
             const prompt = READOUT_SETTINGS_PROMPTS[cleanText(item.displayLabel).toLowerCase()];
             if (prompt) prompts.push(prompt);

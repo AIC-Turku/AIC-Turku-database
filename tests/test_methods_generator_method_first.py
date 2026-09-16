@@ -195,6 +195,23 @@ def instrument():
             },
             "branch_summary": {"branches": []},
         },
+        {
+            "id": "confocal",
+            "display_label": "Point-scanning confocal",
+            "route_type": "confocal_point",
+            "route_type_label": "Point-scanning confocal",
+            "route_identity": {
+                "imaging_modes": [{"id": "sted", "display_label": "STED"}],
+                "contrast_methods": [],
+                "readouts": [],
+            },
+            "relevant_hardware": {
+                "sources": [laser],
+                "filters": [],
+                "splitters": [],
+                "endpoints": [camera_a],
+            },
+        },
     ]
     return {
         "id": "scope-method-first",
@@ -284,9 +301,33 @@ class MethodFirstMethodsTests(unittest.TestCase):
         # The display name alone is not the recorded identity.
         self.assertNotIn("performed using the Method First Scope.", output)
 
+    def test_light_path_is_not_offered_before_the_method_decision(self):
+        """Choosing a method starts a fresh physical-path decision.
+
+        Offering every path up front invites a whole selection that the first
+        method click then clears, because route-specific state cannot survive a
+        method change.
+        """
+        expect(self.page.locator("#section-method")).to_be_visible()
+        expect(self.page.locator("#section-route")).to_be_hidden()
+        self.page.check("#method-0")
+        expect(self.page.locator("#section-route")).to_be_visible()
+
+    def test_technique_prompts_come_from_the_method_not_the_route_family(self):
+        """A route family is not a technique.
+
+        STED runs on the confocal path, so reading the family as the technique
+        asks a STED acquisition for confocal pinhole and dwell-time settings.
+        """
+        self.page.check('#method-list input[value="sted"]')
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn("STED depletion wavelength", output)
+        self.assertNotIn("confocal pinhole diameter", output)
+
     def test_unmapped_route_does_not_become_an_inferred_method(self):
         methods = self.page.locator('#method-list input[data-category="method"]')
-        self.assertEqual(methods.count(), 3)
+        self.assertEqual(methods.count(), 4)
         expect(self.page.locator("#method-list")).not_to_contain_text("Unmapped service path")
 
     def test_add_requires_method_then_physical_path(self):
@@ -319,9 +360,12 @@ class MethodFirstMethodsTests(unittest.TestCase):
 
     def test_method_first_selection_reveals_only_compatible_route_hardware(self):
         expect(self.page.locator("#section-method")).to_be_visible()
-        expect(self.page.locator("#section-route")).to_be_visible()
+        # The path question follows the method question; see
+        # test_light_path_is_not_offered_before_the_method_decision.
+        expect(self.page.locator("#section-route")).to_be_hidden()
         expect(self.page.locator("#section-light")).to_be_hidden()
         self.page.check("#method-0")
+        expect(self.page.locator("#section-route")).to_be_visible()
         expect(self.page.locator("#route-0")).to_be_checked()
         expect(self.page.locator("#section-light")).to_be_visible()
         expect(self.page.locator("#light-list")).to_contain_text("488 nm laser")
