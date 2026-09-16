@@ -70,6 +70,25 @@ def _route_type_vocab_label(route_type_id: str, vocabulary: Vocabulary | None) -
     return route_type_id.replace("_", " ").title()
 
 
+def _method_publication_phrase(method_id: str, vocabulary: Vocabulary | None) -> str:
+    """Return the noun phrase a Methods sentence uses for a method.
+
+    A vocabulary `label` is a picker label: "Confocal point scanning" reads as a
+    column heading, and the generic "<label> imaging" frame turns it into
+    "Confocal point scanning imaging". `publication_phrase` is the authored
+    sentence form, and is also where an acronym gets expanded on first use.
+    """
+    if not method_id or not vocabulary:
+        return ""
+    for vocab_name in ("imaging_modes", "contrast_methods"):
+        term = vocabulary.terms_by_vocab.get(vocab_name, {}).get(method_id)
+        if term is not None and isinstance(getattr(term, "metadata", None), dict):
+            phrase = term.metadata.get("publication_phrase")
+            if isinstance(phrase, str) and phrase.strip():
+                return phrase.strip()
+    return ""
+
+
 def _compact_join(parts: Iterable[str]) -> str:
     return ", ".join(part for part in parts if isinstance(part, str) and part.strip())
 
@@ -994,12 +1013,20 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             if isinstance(r, str) and r.strip()
         ]
         enriched_route_identity["imaging_modes"] = [
-            {"id": value, "display_label": _route_type_vocab_label(value, vocabulary)}
+            {
+                "id": value,
+                "display_label": _route_type_vocab_label(value, vocabulary),
+                "publication_phrase": _method_publication_phrase(value, vocabulary),
+            }
             for value in (route_identity.get("imaging_modes") or [])
             if isinstance(value, str) and value.strip()
         ]
         enriched_route_identity["contrast_methods"] = [
-            {"id": value, "display_label": _route_type_vocab_label(value, vocabulary)}
+            {
+                "id": value,
+                "display_label": _route_type_vocab_label(value, vocabulary),
+                "publication_phrase": _method_publication_phrase(value, vocabulary),
+            }
             for value in (route_identity.get("contrast_methods") or [])
             if isinstance(value, str) and value.strip()
         ]

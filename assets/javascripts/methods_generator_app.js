@@ -488,10 +488,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const methodId = cleanText(entry?.id || entry);
                 const displayLabel = cleanText(entry?.display_label || entry?.id || entry);
                 if (!methodId || !displayLabel || !routeId) return;
+                // The picker label and the sentence form are different strings:
+                // "Confocal point scanning" names a column, and the generic
+                // "<label> imaging" frame turns it into "Confocal point scanning
+                // imaging". The vocabulary authors the sentence form, which is
+                // also where an acronym is expanded on first use.
+                const publicationPhrase = cleanText(entry?.publication_phrase)
+                    || `${displayLabel} imaging`;
                 if (!byMethod.has(methodId)) {
                     byMethod.set(methodId, {
                         id: methodId, display_label: displayLabel, route_ids: [],
-                        method_sentence: `${displayLabel} imaging was performed.`,
+                        publication_phrase: publicationPhrase,
+                        method_sentence: `${publicationPhrase} was performed.`,
                     });
                 }
                 const option = byMethod.get(methodId);
@@ -514,6 +522,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             input.value = option.id;
             input.dataset.category = "method";
             input.dataset.displayLabel = option.display_label;
+            input.dataset.publicationPhrase = option.publication_phrase;
             input.dataset.methodSentence = option.method_sentence;
             input.dataset.routeIds = JSON.stringify(option.route_ids);
             const label = document.createElement("label");
@@ -635,10 +644,28 @@ document.addEventListener("DOMContentLoaded", async () => {
             Array.from(document.querySelectorAll('input[id^="filterposition-"]')).map(input => input.value)
         );
         const droppedPositions = Array.from(retainedPositions).filter(id => !renderedPositionIds.has(id));
+
+        // Ticking a position ticks its holder, so a dropped position leaves the
+        // holder behind on its own. "The light path included CSU-W1 Dichroic
+        // Slider." names the container and no filter, which is exactly the
+        // uninformative claim offering positions is meant to replace. The holder
+        // is released unless another of its positions is still selected.
+        const holdersWithSelection = new Set(
+            getCheckedSelections("filterposition").map(item => cleanText(item.id).split("::")[0])
+        );
+        droppedPositions
+            .map(id => cleanText(id).split("::")[0])
+            .filter(componentId => componentId && !holdersWithSelection.has(componentId))
+            .forEach((componentId) => {
+                document.querySelectorAll('input[id^="filter-"]').forEach((holder) => {
+                    if (holder.value === componentId) holder.checked = false;
+                });
+            });
+
         const selectionStatus = document.getElementById("methods-selection-status");
         if (selectionStatus) {
             selectionStatus.textContent = droppedPositions.length
-                ? `${droppedPositions.length} previously selected filter position${droppedPositions.length === 1 ? " was" : "s were"} cleared because it is not available on this light path.`
+                ? `${droppedPositions.length} previously selected filter position${droppedPositions.length === 1 ? " was" : "s were"} cleared because it is not available on this light path. Choose the position used on this path.`
                 : "";
             selectionStatus.style.display = droppedPositions.length ? "" : "none";
         }
@@ -652,6 +679,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             role: cleanText(cb.dataset.role),
             routeType: cleanText(cb.dataset.routeType),
             routeIds: parseJsonArray(cb.dataset.routeIds),
+            publicationPhrase: cleanText(cb.dataset.publicationPhrase),
             topologyIncomplete: cb.dataset.topologyIncomplete === "1",
             publicationTemplate: cleanText(cb.dataset.publicationTemplate),
             publicationLabel: cleanText(cb.dataset.publicationLabel),
@@ -1579,7 +1607,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const methods = dto.methods || {};
 
         const methodSelections = getCheckedSelections("method");
-        const methodLabels = uniqueTexts(methodSelections.map(item => item.displayLabel));
+        const methodLabels = uniqueTexts(methodSelections.map(
+            item => item.publicationPhrase || `${item.displayLabel} imaging`));
         const routeSelections = getCheckedSelections("route");
         routeSelections
             .filter(item => item.topologyIncomplete)
@@ -1615,7 +1644,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const instrumentName = instrumentClause
             || cleanText(dto.display_name) || cleanText(dto.id) || "the microscope";
         const openingSentence = methodLabels.length === 1
-            ? `${methodLabels[0]} imaging was performed using ${instrumentName}.`
+            ? `${methodLabels[0]} was performed using ${instrumentName}.`
             : fallbackOpening;
 
         const readoutSelections = getCheckedSelections("readout");
