@@ -1318,11 +1318,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     // a particular implementation of it: spectral imaging does not necessarily
     // involve unmixing, FRET is not necessarily intensity-based, and a disk's
     // pinhole geometry is usually a fixed specification rather than a choice.
+    const REPORTING_METADATA_HINT =
+        "These values are often stored in the original image metadata; see “Recover acquisition settings from image metadata” above.";
+
+    function reportingRecommendation(details) {
+        const cleaned = cleanText(details)
+            .replace(/^\[PLEASE SPECIFY:\s*/i, "")
+            .replace(/\]\.?$/, "")
+            .replace(/\.$/, "");
+        if (!cleaned) return "";
+        return `[RECOMMENDED FOR REPORTING: the light-microscopy community recommends also reporting ${cleaned}. ${REPORTING_METADATA_HINT}]`;
+    }
+
     const MODALITY_SETTINGS_PROMPTS = {
-        confocal_point: "[PLEASE SPECIFY: confocal pinhole diameter (in Airy units), scan zoom, pixel dwell time, and line/frame averaging]",
-        confocal_spinning_disk: "[PLEASE SPECIFY: camera exposure per channel, and any disk setting that was varied (for example rotation speed or the pinhole pattern, if the system offers a choice)]",
-        multiphoton: "[PLEASE SPECIFY: excitation wavelength, mean power at the sample, and pulse width]",
-        light_sheet: "[PLEASE SPECIFY: light-sheet thickness, sheet numerical aperture, and the detection/illumination objective pairing]",
+        confocal_point: reportingRecommendation(
+            "confocal pinhole diameter (in Airy units), scan zoom, pixel dwell time, and line/frame averaging"),
+        confocal_spinning_disk: reportingRecommendation(
+            "camera exposure per channel, and any disk setting that was varied (for example rotation speed or the pinhole pattern, if the system offers a choice)"),
+        multiphoton: reportingRecommendation(
+            "excitation wavelength, mean power at the sample, and pulse width"),
+        light_sheet: reportingRecommendation(
+            "light-sheet thickness, sheet numerical aperture, and the detection/illumination objective pairing"),
     };
     const READOUT_SETTINGS_PROMPTS = {
         "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including whether acquisition was time-domain or frequency-domain; report the relevant timing or modulation settings, calibration and how the instrument response was determined, signal or photon statistics where applicable, and the fitting or phasor analysis used]",
@@ -1473,9 +1489,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             // pinhole, dwell time, exposure, power or FLIM timing. Keep only a small
             // reproducibility catch-all here so the same parameter is not requested
             // twice under conflicting generic terminology.
-            prompts.push("[PLEASE SPECIFY: any remaining acquisition settings needed to reproduce the experiment that are not already reported above, including pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable]");
+            prompts.push(reportingRecommendation(
+                "any remaining acquisition settings needed to reproduce the experiment that are not already reported above, including pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable"));
         } else {
-            prompts.push(acquisitionSettingsRecommendation);
+            prompts.push(reportingRecommendation(acquisitionSettingsRecommendation));
         }
 
         const methodsMetadataStatus = getMethodsMetadataStatus(dto);
