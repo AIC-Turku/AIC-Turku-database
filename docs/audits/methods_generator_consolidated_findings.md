@@ -735,16 +735,31 @@ a method with several leaves the choice open.
 
 ## Regression tests
 
+* `tests/test_methods_generator_real_catalogue.py` — 9 browser tests driving the
+  page against **the catalogue the site actually ships**, built from the authored
+  YAML by the shared `generated_dashboard` fixture. Four of the Critical findings
+  were invisible to synthetic fixtures by construction, because they depended on
+  what the real records happen to contain: two instruments sharing a manufacturer
+  and model, a recorded placeholder camera, detectors that no light path reaches,
+  and vocabulary that leaks only for particular authored labels. The last test in
+  the file sweeps every instrument and every method the catalogue offers and fails
+  if repository vocabulary or a placeholder reaches publication prose, naming the
+  instrument, the method and the offending sentence.
 * `tests/test_methods_generator_acquisition_scope.py` — 16 browser tests, one per
-  Critical/High finding plus the multi-method and section-level behaviour, driving
-  the real page through the same controls a user clicks.
+  Critical/High finding plus the multi-method and section-level behaviour, on a
+  synthetic record shaped like the real ones. Fast and precise about the rule
+  being tested; the real-catalogue suite is what proves the rule holds on the data.
 * `tests/test_publication_identity.py` — 13 tests for what may be printed as a
   component's or a microscope's name, and for the filter-specification phrases.
 * Existing suites were updated where they asserted behaviour this work changed
   (route-clause prose, `base_sentence` fallback, radio semantics), keeping the
   invariant each was protecting and stating the new contract.
 
-Full suite: 924 passed, 1 skipped. `python -m scripts.dashboard_builder --strict`
+The catalogue-wide sweep was verified to fail as intended by reintroducing the
+`other microscope` defect and confirming it reported the MSquared and ONI records
+by name before being reverted.
+
+Full suite: 933 passed, 1 skipped. `python -m scripts.dashboard_builder --strict`
 and `mkdocs build --strict` are clean.
 
 ## Still outstanding
