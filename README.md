@@ -56,7 +56,7 @@ The experiment-planning page provides a structured inventory export that can be 
 - `scripts/templates/*` — public page templates and browser runtime.
 - `docs/dataflow_contract.md` — production data-flow and module contract.
 - `docs/ledger_gaps.md` — generated list of the facts the instrument records do not yet hold, and the questions they raise for facility staff.
-- `docs/light_path_model.md` — canonical light-path authoring model.
+- `docs/light_path_model.md` — canonical light-path model: generated field, validation, and DTO reference plus the authored semantics.
 - `docs/objective_pool.md` — objective catalogue source boundaries and maintenance notes.
 - `docs/portability.md` — what another facility must edit to reuse this project.
 - `docs/planning_grounding.md` — what the planning export establishes, and how to check an assistant's answer.
@@ -80,16 +80,11 @@ Key rules:
 
 ## Canonical light-path model
 
-The current authoring structure is documented in `docs/light_path_model.md` and uses:
-
-- `hardware.sources`
-- `hardware.optical_path_elements`
-- `hardware.endpoints`
-- `light_paths[]`
-  - `id`
-  - `name`
-  - `illumination_sequence[]`
-  - `detection_sequence[]`
+Light paths are authored as a hardware inventory — `hardware.sources`,
+`hardware.optical_path_elements`, `hardware.endpoints` — plus ordered routes over
+it in `light_paths[]`. The full field reference is generated from the schema into
+`docs/light_path_model.md`; it is not repeated here, because a second copy is a
+copy that goes stale.
 
 Ordered route sequences are the primary topology source. Branches, splitters, and selectors remain explicit through the YAML, validation, DTO, and browser layers.
 

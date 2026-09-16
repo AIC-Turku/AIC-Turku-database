@@ -58,6 +58,30 @@ the tools can then stop asking, and the entry leaves this list.
 Never fill a gap by assumption to make the list shorter. An unrecorded fact is a
 question for staff, not a value to invent.
 
+## Light-Path Reference
+
+`docs/light_path_model.md` is the light-path contract: the field reference, the
+validator diagnostics, and the DTO shapes. Everything mechanical in it is derived
+from `schema/instrument_policy.yaml`, `scripts/validation/`, and the DTO builders,
+so the document cannot disagree with the code.
+
+- after changing the canonical schema section, a light-path validator diagnostic,
+  a DTO builder, or an instrument ledger, run `python -m scripts.light_path_model`
+  and commit the regenerated `docs/light_path_model.md` in the same change;
+- `python -m scripts.light_path_model --check` exits non-zero when the committed
+  file is stale. Treat a failure as "regenerate", never as "edit the Markdown";
+- the prose sections — why a route family is not a technique, why method mappings
+  are authored rather than inferred, what is deliberately not canonical — are
+  authored in `scripts/light_path_model.py`. Edit them there.
+
+A new validator diagnostic appears in the table with a placeholder description
+until one is written into `DIAGNOSTIC_NOTES`. That placeholder is the reminder,
+not an acceptable committed state.
+
+The document ends with a drift report: fields the ledgers author that no schema
+rule covers, and rules no record uses. Neither is automatically a defect, but a
+change that adds to either list should say why.
+
 ## Testing Guidance
 
 - Run targeted pytest tests for parser, validator, dashboard builder, LLM export, methods page export, and VM contract.
