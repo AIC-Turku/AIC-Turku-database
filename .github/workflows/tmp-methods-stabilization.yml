@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Repair temporary patch anchors
+        run: python scripts/_tmp_methods_stabilization_followup.py
       - name: Apply patch
         run: python scripts/_tmp_apply_methods_stabilization.py
       - name: Fast syntax and whitespace checks
