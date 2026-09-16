@@ -150,5 +150,40 @@ class RouteVocabularyPortabilityRegressions(unittest.TestCase):
         self.assertIn("light_path_method_route_incompatible", self._validate_with_route_vocab(mutate))
 
 
+class MethodPathMappingIsReviewableRegressions(unittest.TestCase):
+    """The authored mapping must be visible outside the YAML file.
+
+    A curator checking whether `ism` really belongs on the confocal path should
+    not have to read `instruments/*.yaml`; family coverage alone answers a weaker
+    question ("is it compatible?") than the mapping does ("which path records it?").
+    """
+
+    def test_llm_export_states_the_method_to_path_mapping(self) -> None:
+        from scripts.dashboard.llm_export import _build_capability_route_reconciliation
+
+        reconciliation = _build_capability_route_reconciliation(
+            {"imaging_modes": ["tirf", "smlm"]},
+            ["widefield_fluorescence"],
+            {"widefield_fluorescence": {"covers_imaging_modes": ["tirf", "smlm"]}},
+            [
+                {
+                    "id": "widefield_fluorescence",
+                    "imaging_modes": ["tirf", "smlm"],
+                    "contrast_methods": [],
+                }
+            ],
+        )
+        self.assertEqual(
+            reconciliation["methods_by_recorded_light_path"],
+            {"widefield_fluorescence": ["tirf", "smlm"]},
+        )
+
+    def test_instrument_page_template_renders_the_mapping(self) -> None:
+        template = (REPO_ROOT / "scripts" / "templates" / "instrument_spec.md.j2").read_text(encoding="utf-8")
+        self.assertIn("Methods and the light path that records them", template)
+        self.assertIn("route.imaging_modes", template)
+        self.assertIn("route.contrast_methods", template)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -94,9 +94,12 @@ def _build_planning_contract() -> dict[str, Any]:
                 "capabilities.imaging_modes and light_paths[].route_type are "
                 "different authored axes. Route types are a coarse family "
                 "vocabulary: a TIRF or STED acquisition is recorded as a "
-                "widefield_fluorescence or confocal_point route. Use "
-                "route_family_coverage to relate them instead of inferring a "
-                "route that is not recorded."
+                "widefield_fluorescence or confocal_point route. Prefer "
+                "methods_by_recorded_light_path, which states the light path the "
+                "facility records as implementing each method; fall back to "
+                "route_family_coverage, which says only that a method is "
+                "compatible with a family. Never infer a route that is not "
+                "recorded."
             ),
         },
     }
@@ -106,6 +109,7 @@ def _build_capability_route_reconciliation(
     capabilities: dict[str, Any],
     route_types: list[str],
     route_family_coverage: dict[str, Any],
+    light_paths: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Reconcile declared imaging modes against recorded route families.
 
@@ -131,9 +135,29 @@ def _build_capability_route_reconciliation(
     covered = [mode for mode in declared if mode in covered_modes]
     uncovered = [mode for mode in declared if mode not in covered_modes]
 
+    # Family coverage says a method is *compatible* with a route family. The
+    # authored mapping says which physical path the facility records as
+    # implementing it, which is the stronger statement and the one a planner
+    # should quote. Exporting only the family lookup left the authored mapping
+    # reviewable in YAML alone.
+    methods_by_recorded_path: dict[str, list[str]] = {}
+    for route in (light_paths or []):
+        if not isinstance(route, dict):
+            continue
+        route_id = clean_text(route.get("id"))
+        methods = [
+            clean_text(value)
+            for axis in ("imaging_modes", "contrast_methods")
+            for value in (route.get(axis) or [])
+            if isinstance(value, str) and clean_text(value)
+        ]
+        if route_id and methods:
+            methods_by_recorded_path[route_id] = methods
+
     return {
         "declared_imaging_modes": declared,
         "recorded_route_types": sorted(dict.fromkeys(route_types)),
+        "methods_by_recorded_light_path": methods_by_recorded_path,
         "modes_covered_by_a_recorded_route": covered,
         "modes_without_a_covering_recorded_route": uncovered,
         "note": (
@@ -839,6 +863,7 @@ def build_llm_inventory_payload(
             llm_record.get("capabilities") or {},
             [route_type for route_type in recorded_route_types if route_type],
             coverage,
+            canonical_lightpath_dto.get("light_paths") or [],
         )
 
         authoritative_route_contract = copy.deepcopy(

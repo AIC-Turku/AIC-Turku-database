@@ -93,6 +93,23 @@ hide:
   <div class="aic-chiprow">{% for mod in dto.capabilities_flat %}<span class="aic-chip">{{ mod.display_label }}</span>{% else %}<span class="aic-muted">—</span>{% endfor %}</div>
 </div>
 
+{%- set method_routes = [] -%}
+{%- for route in (optical_path.authoritative_route_contract.routes if optical_path.authoritative_route_contract else []) -%}
+  {%- set methods = (route.imaging_modes or []) + (route.contrast_methods or []) -%}
+  {%- if methods -%}{%- set _ = method_routes.append({'route': route, 'methods': methods}) -%}{%- endif -%}
+{%- endfor -%}
+{% if method_routes %}
+<div class="aic-section" style="margin-top: 20px;">
+  <div class="aic-section__title">Methods and the light path that records them</div>
+  <div class="aic-muted" style="margin-bottom: 6px;">Each method below is explicitly associated in the instrument record with the physical light path that implements it. A capability that appears above but not here has no recorded path yet.</div>
+  <ul>
+    {% for entry in method_routes %}
+    <li><strong>{{ entry.route.display_label or entry.route.route_type_label or entry.route.id }}</strong>: {% for method in entry.methods %}{{ method.display_label }}{% if not loop.last %}, {% endif %}{% endfor %}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 {% if dto.modules %}
 <div class="aic-section">
   <div class="aic-section__title">Modules</div>
