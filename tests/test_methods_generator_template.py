@@ -450,6 +450,49 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertIn("confirm the exact values with facility staff", result["output"])
         self.assertIn("Objective NA", result["output"])
 
+    def test_legacy_modality_record_still_produces_prose_without_an_internal_marker(self) -> None:
+        """A record with modalities but no capabilities keeps its compatibility path.
+
+        Every shipped record now declares capabilities, so this branch is
+        unreachable from the ledger and would otherwise be untested code. It
+        remains the fallback for a record that predates the capability axes; what
+        it must not do is leak the internal "(Compatibility)" marker into prose.
+        """
+        instrument = {
+            "id": "scope-legacy",
+            "display_name": "Legacy Scope",
+            "retired": False,
+            "methods_generation": {"is_blocked": False, "blockers": []},
+            "methods": {"base_sentence": "Images were acquired using the Legacy Scope."},
+            "capabilities": {},
+            "modalities": [{"id": "confocal", "display_label": "Point-Scanning Confocal"}],
+            "modules": [],
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [],
+                "light_sources": [],
+                "detectors": [],
+                "magnification_changers": [],
+                "optical_modulators": [],
+                "illumination_logic": [],
+                "optical_path": {"filters": [], "splitters": []},
+            },
+        }
+        result = self.run_template(
+            instruments=[instrument],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-legacy';
+            systemSelect.listeners.change({ target: systemSelect });
+            const modality = state.inputs.find(cb => cb.id && cb.id.startsWith('modality-'));
+            if (modality) modality.checked = true;
+            document.getElementById('add-btn').listeners.click();
+            return { output: document.getElementById('output-text').value };
+            """,
+        )
+        self.assertIn("Imaging modality used was Point-Scanning Confocal.", result["output"])
+        self.assertNotIn("(Compatibility)", result["output"])
+
     def test_modality_selector_filters_optical_hardware_from_dto_route_usage(self) -> None:
         instrument = {
             "id": "scope-modality-filter",

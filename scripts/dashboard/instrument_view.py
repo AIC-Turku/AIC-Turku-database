@@ -8,6 +8,7 @@ scripts.dashboard_builder.
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any, Iterable
 
 from scripts.build_context import clean_text
@@ -597,15 +598,38 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
     ]
     detail_text = ", ".join(bit for bit in detail_bits if bit)
     scanner_fallback = scanner_type if "scanner" in scanner_type.lower() else f"{scanner_type} scanner"
-    component_reference = _component_reference(manufacturer, model, scanner_fallback if scanner_type else "scanner")
+    # Without a recorded manufacturer or model the reference is the vocabulary
+    # type, which is a common noun in this sentence position: "a resonant
+    # scanner" reads as prose, "Resonant Scanner" reads as a database field.
+    identified = bool(_identity_value(manufacturer) or _identity_value(model))
+    component_reference = _component_reference(
+        manufacturer, model, (scanner_fallback if scanner_type else "scanner").lower()
+    )
+    # A vocabulary type may carry its own parenthetical ("tandem scanner
+    # (galvo/resonant)"). Left in place it collides with the specs clause. It is
+    # folded into that one clause instead - but only for the type fallback, so a
+    # model name that genuinely contains brackets is never rewritten.
+    type_qualifier = ""
+    if not identified:
+        match = re.search(r"\s*\(([^()]*)\)\s*$", component_reference)
+        if match:
+            type_qualifier = match.group(1).strip()
+            component_reference = component_reference[: match.start()].strip()
     method_sentence = (
-        f"The microscope used {component_reference} ({detail_text})."
-        if scanner_type and scanner_type != "No Scanner" and detail_text
-        else f"The microscope used {component_reference}." if scanner_type and scanner_type != "No Scanner"
+        f"The microscope used {_indefinite_article(component_reference)} {component_reference}."
+        if scanner_type and scanner_type != "No Scanner"
         else ""
     )
     if method_sentence:
-        method_sentence = _append_quarep_specs(method_sentence, manufacturer, model, product_code)
+        # Specs and running settings share one parenthetical. Appending a second
+        # produced "... (Galvo/Resonant) (line rate 8000 Hz)".
+        method_sentence = _append_quarep_specs(
+            method_sentence,
+            manufacturer,
+            model,
+            product_code,
+            extras=[bit for bit in ([type_qualifier] + detail_bits) if bit],
+        )
     return {
         **copy.deepcopy(scanner),
         "display_label": scanner_type or instance_name or model or "No Scanner",
