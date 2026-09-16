@@ -126,20 +126,20 @@ def _quarep_specs_clause(
     placeholders inside a parenthetical read as noise, not as a component.
     """
     parts: list[str] = []
-    for label, value in (
-        ("Manufacturer", manufacturer),
-        ("Model", model),
-        ("Product code", product_code),
-    ):
-        cleaned = _identity_value(value)
-        if not cleaned or cleaned in sentence:
-            continue
-        parts.append(f"{label}: {cleaned}")
+    identity = " ".join(
+        value for value in (_identity_value(manufacturer), _identity_value(model))
+        if value and value not in sentence
+    ).strip()
+    if identity:
+        parts.append(identity)
+    product = _identity_value(product_code)
+    if product and product not in sentence:
+        parts.append(product)
     for part in extras or []:
         cleaned = clean_text(part)
         if cleaned:
             parts.append(cleaned)
-    return "; ".join(parts)
+    return ", ".join(parts)
 
 
 def _quarep_review_prompts(
@@ -658,7 +658,11 @@ def build_stage_dto(vocabulary: Vocabulary, stage: dict[str, Any]) -> dict[str, 
     method_sentence = ""
     if clean_text(stage.get("type")).lower() == "z_piezo":
         stage_name = " ".join(part for part in [manufacturer, model] if part).strip()
-        method_sentence = f"Z-stacks were acquired using a {stage_name} piezo stage." if stage_name else "Z-stacks were acquired using a piezo stage."
+        if stage_name:
+            descriptor = stage_name if "piezo" in stage_name.lower() else f"{stage_name} piezo stage"
+            method_sentence = f"Z-stacks were acquired using {_indefinite_article(descriptor)} {descriptor}."
+        else:
+            method_sentence = "Z-stacks were acquired using a piezo stage."
     spec_lines = _spec_lines(
         ("Type", stage_type),
         ("Step size", f"`{step} µm`" if step else None),

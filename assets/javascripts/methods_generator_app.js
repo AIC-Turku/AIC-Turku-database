@@ -67,30 +67,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         const placeholderValues = new Set([
             "unknown", "n/a", "na", "none", "not applicable", "tbd", "-", "--", "?",
         ]);
-        const acquisitionSoftware = (Array.isArray(dto?.software) ? dto.software : []).find((row) => {
+        const acquisitionSoftware = (Array.isArray(dto?.software) ? dto.software : []).filter((row) => {
             if (!row || typeof row !== "object") return false;
             const name = cleanText(row.name);
             return cleanText(row.role).toLowerCase() === "acquisition"
                 && name
                 && !placeholderValues.has(name.toLowerCase());
         });
-        if (acquisitionSoftware) {
-            const name = cleanText(acquisitionSoftware.name);
-            const rawVersion = cleanText(acquisitionSoftware.version);
+        acquisitionSoftware.forEach((software, softwareIndex) => {
+            const name = cleanText(software.name);
+            const rawVersion = cleanText(software.version);
             const version = rawVersion && !placeholderValues.has(rawVersion.toLowerCase())
                 ? rawVersion
                 : "";
-            const softwareLabel = version ? `${name} (v${version})` : name;
+            const numericVersion = /^\d+(?:[.\-]\d+)*(?:\s|$)/.test(version);
+            const softwareLabel = version
+                ? `${name} (${numericVersion ? `v${version}` : `version ${version}`})`
+                : name;
             const sentence = `Instrument control and image acquisition were performed using ${softwareLabel}.`;
             options.push({
-                id: "action-acquisition-software",
+                id: `action-acquisition-software-${softwareIndex}`,
                 display_label: sentence,
                 method_sentence: sentence,
                 review_prompts: version
                     ? []
                     : [`[PLEASE SPECIFY: acquisition software version for ${name}]`],
             });
-        } else if (!Array.isArray(dto?.software)) {
+        });
+        if (!acquisitionSoftware.length && !Array.isArray(dto?.software)) {
             // Compatibility for older/synthetic DTOs that predate the canonical
             // software list. Production exports always carry `software`, so this
             // path cannot reintroduce placeholder software prose there.
@@ -604,9 +608,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterBySelection(allFilterItems), "filter", retained.filter, retainedPositions) > 0);
         toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterBySelection(allSplitterItems), "splitter", retained.splitter) > 0);
 
-        const visiblePositionIds = new Set(getCheckedSelections("filterposition").map(item => item.id));
-        const droppedPositions = Array.from(retainedPositions).filter(id => !document.querySelector(
-            `input[id^="filterposition-"][value="${typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id}"]`));
+        const renderedPositionIds = new Set(
+            Array.from(document.querySelectorAll('input[id^="filterposition-"]')).map(input => input.value)
+        );
+        const droppedPositions = Array.from(retainedPositions).filter(id => !renderedPositionIds.has(id));
         const selectionStatus = document.getElementById("methods-selection-status");
         if (selectionStatus) {
             selectionStatus.textContent = droppedPositions.length
@@ -1377,6 +1382,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             route.disabled = !compatible;
             if (!compatible) route.checked = false;
         });
+        document.querySelectorAll('input[id^="readout-"]').forEach((readout) => {
+            const compatible = allowed.has(readout.dataset.routeId);
+            if (readout.parentElement) readout.parentElement.style.display = compatible ? "" : "none";
+            readout.disabled = !compatible;
+            if (!compatible) readout.checked = false;
+        });
         toggleSectionVisibility("section-route", routeIds.length > 0);
         if (routeIds.length === 1) {
             const route = routeInputs.find(item => item.value === routeIds[0]);
@@ -1400,7 +1411,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     // is authoritative; modality filter only activates when no route is checked.
     document.getElementById("route-list").addEventListener("change", (event) => {
         const target = event?.target;
-        if (target?.dataset.category === "readout" && target.checked) {
+        if (target?.dataset.category === "route" && target.checked) {
+            document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
+                if (readout.dataset.routeId !== target.value) readout.checked = false;
+            });
+        } else if (target?.dataset.category === "readout" && target.checked) {
             document.querySelectorAll('input[id^="route-"]').forEach(route => {
                 if (route.value === target.dataset.routeId) route.checked = true;
             });
