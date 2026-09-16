@@ -511,8 +511,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
-  readouts:
-  - spectral_imaging
+  readouts: []
 - id: transmitted_light
   illumination_sequence:
   - source_id: leica_led_3

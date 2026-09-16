@@ -213,7 +213,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return manufacturer ? [manufacturer] : [];
     }
 
-    function bindCheckboxes(containerId, items, prefix, selectedIds = new Set()) {
+    function bindCheckboxes(containerId, items, prefix, selectedIds = new Set(), selectedPositionIds = new Set()) {
         const container = document.getElementById(containerId);
         container.innerHTML = "";
         if (Array.isArray(container.children)) container.children = [];
@@ -229,7 +229,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             wrapper.style.marginBottom = "4px";
 
             const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
+            checkbox.type = item.selection_group ? "radio" : "checkbox";
+            if (item.selection_group) checkbox.name = `${prefix}-${item.selection_group}`;
             checkbox.id = `${prefix}-${index}`;
             checkbox.value = item.id || `${prefix}-${index}`;
             checkbox.checked = selectedIds.has(checkbox.value);
@@ -263,7 +264,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
             container.appendChild(wrapper);
-            bindSelectablePositions(container, item, prefix, index);
+            bindSelectablePositions(container, item, prefix, index, selectedPositionIds);
         });
         return normalizedItems.length;
     }
@@ -292,7 +293,7 @@ document.addEventListener("DOMContentLoaded", async () => {
      * section turns on. The positions are recorded per route, so they are offered
      * as nested choices and the holder is ticked automatically when one is picked.
      */
-    function bindSelectablePositions(container, item, prefix, itemIndex) {
+    function bindSelectablePositions(container, item, prefix, itemIndex, selectedPositionIds = new Set()) {
         const allPositions = Array.isArray(item?.selectable_positions) ? item.selectable_positions : [];
         const positions = positionsOnSelectedRoutes(allPositions);
         if (!positions.length) return;
@@ -309,9 +310,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             wrapper.style.marginLeft = "20px";
 
             const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
+            const selectionMode = cleanText(position?.selection_mode).toLowerCase() || "exclusive";
+            checkbox.type = selectionMode === "multiple" ? "checkbox" : "radio";
+            if (checkbox.type === "radio") checkbox.name = `${prefix}position-${componentId}`;
             checkbox.id = `${prefix}position-${itemIndex}-${positionIndex}`;
             checkbox.value = `${componentId}::${positionId}`;
+            checkbox.checked = selectedPositionIds.has(checkbox.value);
             checkbox.dataset.category = `${prefix}-position`;
             checkbox.dataset.componentId = componentId;
             checkbox.dataset.componentLabel = componentLabel;
@@ -319,14 +323,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.incomplete = position?.incomplete ? "1" : "";
             checkbox.dataset.routeIds = JSON.stringify(Array.isArray(position?.route_ids) ? position.route_ids : []);
             const productCode = cleanText(position?.product_code);
-            const identity = productCode ? `${positionLabel} (catalogue no. ${productCode})` : positionLabel;
-            checkbox.dataset.publicationTemplate = "The light path included {label}.";
-            checkbox.dataset.publicationLabel = componentLabel
-                ? `${identity} in the ${componentLabel}`
-                : identity;
-            checkbox.dataset.reviewPrompts = JSON.stringify(position?.incomplete ? [
-                `[PLEASE VERIFY: the recorded transmission bands for ${positionLabel} are incomplete; confirm its excitation filter, dichroic and emission filter]`,
-            ] : []);
+            const isEmpty = Boolean(position?.is_empty);
+            const identity = isEmpty
+                ? "Empty (no filter)"
+                : productCode ? `${positionLabel} (catalogue no. ${productCode})` : positionLabel;
+            checkbox.dataset.publicationTemplate = isEmpty
+                ? "No filter was installed in {label}."
+                : "The light path included {label}.";
+            checkbox.dataset.publicationLabel = isEmpty
+                ? componentLabel
+                : componentLabel ? `${identity} in the ${componentLabel}` : identity;
+            const componentType = cleanText(position?.component_type).toLowerCase();
+            const incompletePrompt = componentType === "filter_cube"
+                ? `[PLEASE VERIFY: the recorded transmission bands for ${positionLabel} are incomplete; confirm its excitation filter, dichroic and emission filter]`
+                : `[PLEASE VERIFY: the recorded optical details for ${positionLabel} are incomplete; confirm the exact setting used]`;
+            checkbox.dataset.reviewPrompts = JSON.stringify(position?.incomplete ? [incompletePrompt] : []);
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
@@ -378,7 +389,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             routeWrapper.style.marginBottom = "4px";
 
             const routeCheckbox = document.createElement("input");
-            routeCheckbox.type = "checkbox";
+            routeCheckbox.type = "radio";
+            routeCheckbox.name = "methods-optical-route";
             routeCheckbox.id = `route-${routeIdx}`;
             routeCheckbox.value = routeId;
             routeCheckbox.dataset.displayLabel = routeLabel;
@@ -443,6 +455,62 @@ document.addEventListener("DOMContentLoaded", async () => {
         return routeCheckboxCount;
     }
 
+    function methodOptionsForInstrument(dto) {
+        const byMethod = new Map();
+        routeViewsForInstrument(dto).forEach((route) => {
+            const routeId = cleanText(route?.id);
+            const identity = route?.route_identity && typeof route.route_identity === "object"
+                ? route.route_identity : {};
+            const explicit = [
+                ...(Array.isArray(identity.imaging_modes) ? identity.imaging_modes : []),
+                ...(Array.isArray(identity.contrast_methods) ? identity.contrast_methods : []),
+            ];
+            const candidates = explicit.length ? explicit : [{
+                id: cleanText(route?.route_type),
+                display_label: cleanText(route?.route_type_label || route?.display_label),
+            }];
+            candidates.forEach((entry) => {
+                const methodId = cleanText(entry?.id || entry);
+                const displayLabel = cleanText(entry?.display_label || entry?.id || entry);
+                if (!methodId || !displayLabel || !routeId) return;
+                if (!byMethod.has(methodId)) {
+                    byMethod.set(methodId, {
+                        id: methodId, display_label: displayLabel, route_ids: [],
+                        method_sentence: `${displayLabel} imaging was performed.`,
+                    });
+                }
+                const option = byMethod.get(methodId);
+                if (!option.route_ids.includes(routeId)) option.route_ids.push(routeId);
+            });
+        });
+        return Array.from(byMethod.values());
+    }
+
+    function bindMethods(dto) {
+        const container = document.getElementById("method-list");
+        container.innerHTML = "";
+        const options = methodOptionsForInstrument(dto);
+        options.forEach((option, index) => {
+            const wrapper = document.createElement("div");
+            const input = document.createElement("input");
+            input.type = "radio";
+            input.name = "methods-imaging-method";
+            input.id = `method-${index}`;
+            input.value = option.id;
+            input.dataset.category = "method";
+            input.dataset.displayLabel = option.display_label;
+            input.dataset.methodSentence = option.method_sentence;
+            input.dataset.routeIds = JSON.stringify(option.route_ids);
+            const label = document.createElement("label");
+            label.htmlFor = input.id;
+            label.textContent = ` ${option.display_label}`;
+            wrapper.appendChild(input);
+            wrapper.appendChild(label);
+            container.appendChild(wrapper);
+        });
+        return options.length;
+    }
+
     function routeViewsForInstrument(dto) {
         return Array.isArray(dto?.hardware?.optical_path?.authoritative_route_contract?.routes)
             ? dto.hardware.optical_path.authoritative_route_contract.routes
@@ -463,15 +531,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function shouldUseLegacyModalities(dto) {
         const modalities = Array.isArray(dto?.modalities) ? dto.modalities : [];
-        const caps = dto?.capabilities && typeof dto.capabilities === "object" ? dto.capabilities : {};
-        const hasCapabilities = Object.values(caps).some(v => Array.isArray(v) && v.length > 0);
-        return modalities.length > 0 && (!!dto?.retired || !hasCapabilities);
+        return modalities.length > 0 && routeViewsForInstrument(dto).length === 0;
     }
 
     function updateHardwareVisibility(dto, preserveSelections = true) {
         const retained = Object.fromEntries(["light", "det", "filter", "splitter"].map(prefix =>
             [prefix, new Set(preserveSelections ? getCheckedIds(prefix) : [])]
         ));
+        const retainedPositions = new Set(preserveSelections ? getCheckedIds("filterposition") : []);
         // Route selection is authoritative; fall back to legacy modality filter only
         // when no route checkboxes are checked.
         const checkedRouteIds = new Set(getCheckedIds("route"));
@@ -513,14 +580,40 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
 
+        function decorateExclusiveEndpoints(items) {
+            if (checkedRouteIds.size !== 1) return items;
+            const routeId = Array.from(checkedRouteIds)[0];
+            const route = routeViews.find(item => cleanText(item?.id) === routeId);
+            const groups = new Map();
+            (Array.isArray(route?.branch_summary?.branches) ? route.branch_summary.branches : []).forEach((branch) => {
+                if (cleanText(branch?.selection_mode).toLowerCase() !== "exclusive") return;
+                const group = cleanText(branch?.block_id) || "exclusive-branch";
+                (branch?.endpoint_inventory_ids || []).forEach(id => groups.set(cleanText(id), group));
+            });
+            return items.map(item => groups.has(cleanText(item?.id))
+                ? {...item, selection_group: groups.get(cleanText(item?.id))}
+                : item);
+        }
+
         const allLightItems = inventoryItemsForClasses(dto, ["light_source"]);
         const allDetItems = inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
         const allFilterItems = inventoryItemsForClasses(dto, ["optical_element"]);
         const allSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
         toggleSectionVisibility("section-light", bindCheckboxes("light-list", filterBySelection(allLightItems), "light", retained.light) > 0);
-        toggleSectionVisibility("section-det", bindCheckboxes("det-list", filterBySelection(allDetItems), "det", retained.det) > 0);
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterBySelection(allFilterItems), "filter", retained.filter) > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", decorateExclusiveEndpoints(filterBySelection(allDetItems)), "det", retained.det) > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterBySelection(allFilterItems), "filter", retained.filter, retainedPositions) > 0);
         toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterBySelection(allSplitterItems), "splitter", retained.splitter) > 0);
+
+        const visiblePositionIds = new Set(getCheckedSelections("filterposition").map(item => item.id));
+        const droppedPositions = Array.from(retainedPositions).filter(id => !document.querySelector(
+            `input[id^="filterposition-"][value="${typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id}"]`));
+        const selectionStatus = document.getElementById("methods-selection-status");
+        if (selectionStatus) {
+            selectionStatus.textContent = droppedPositions.length
+                ? `${droppedPositions.length} previously selected filter position${droppedPositions.length === 1 ? " was" : "s were"} cleared because it is not available on this light path.`
+                : "";
+            selectionStatus.style.display = droppedPositions.length ? "" : "none";
+        }
     }
 
     function getCheckedSelections(prefix) {
@@ -1251,7 +1344,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const dto = currentInst;
 
         const routeCount = bindRoutes(dto);
-        toggleSectionVisibility("section-route", routeCount > 0);
+        const methodCount = bindMethods(dto);
+        toggleSectionVisibility("section-method", methodCount > 0);
+        toggleSectionVisibility("section-route", methodCount === 0 && routeCount > 0);
         const showLegacyModalities = shouldUseLegacyModalities(dto);
         const modalityCount = bindCheckboxes("modality-list", showLegacyModalities ? (dto.modalities || []) : [], "modality");
         toggleSectionVisibility("section-modality", modalityCount > 0);
@@ -1262,6 +1357,37 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleSectionVisibility("section-optical-modulator", bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator") > 0);
         toggleSectionVisibility("section-illumination-logic", bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic") > 0);
         updateHardwareVisibility(dto, false);
+        if (methodCount > 0) {
+            ["section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
+                const section = document.getElementById(id);
+                if (section) section.style.display = "none";
+            });
+        }
+    });
+
+    document.getElementById("method-list").addEventListener("change", (event) => {
+        if (!currentInst || event?.target?.dataset.category !== "method") return;
+        const routeIds = parseJsonArray(event.target.dataset.routeIds);
+        const allowed = new Set(routeIds);
+        const routeInputs = Array.from(document.querySelectorAll('input[id^="route-"]'));
+        routeInputs.forEach((route) => {
+            const wrapper = route.parentElement;
+            const compatible = allowed.has(route.value);
+            if (wrapper) wrapper.style.display = compatible ? "" : "none";
+            route.disabled = !compatible;
+            if (!compatible) route.checked = false;
+        });
+        toggleSectionVisibility("section-route", routeIds.length > 0);
+        if (routeIds.length === 1) {
+            const route = routeInputs.find(item => item.value === routeIds[0]);
+            if (route) route.checked = true;
+            updateHardwareVisibility(currentInst);
+        } else {
+            ["section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
+                const section = document.getElementById(id);
+                if (section) section.style.display = "none";
+            });
+        }
     });
 
     // Container-level change listener for modality checkboxes. Registered once at
@@ -1339,6 +1465,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             "excitation wavelength, mean power at the sample, and pulse width"),
         light_sheet: reportingRecommendation(
             "light-sheet thickness, sheet numerical aperture, and the detection/illumination objective pairing"),
+        tirf: reportingRecommendation(
+            "TIRF excitation wavelength and the incidence angle or estimated evanescent-field penetration depth, where available"),
+        sted: reportingRecommendation(
+            "STED depletion wavelength and power at the sample, time-gating settings where used, and the phase-mask/beam-shaping configuration"),
+        sim: reportingRecommendation(
+            "SIM pattern/orientation settings and the reconstruction software/version and parameters used"),
+        smlm: reportingRecommendation(
+            "number of frames, exposure time, activation/excitation settings, localization software/version, and drift-correction method"),
+        ism: reportingRecommendation(
+            "detector/reconstruction mode and the reconstruction software/version and settings used"),
     };
     const READOUT_SETTINGS_PROMPTS = {
         "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including whether acquisition was time-domain or frequency-domain; report the relevant timing or modulation settings, calibration and how the instrument response was determined, signal or photon statistics where applicable, and the fitting or phasor analysis used]",
@@ -1347,8 +1483,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         "fret": "[PLEASE SPECIFY: how FRET was measured (for example sensitised emission, acceptor photobleaching or lifetime) and, for intensity-based measurements, the bleed-through and cross-excitation correction factors]",
     };
 
-    function modalitySettingsPrompts(routeSelections, readoutSelections) {
-        const prompts = uniqueTexts(routeSelections.map(item => MODALITY_SETTINGS_PROMPTS[item.routeType] || ""));
+    function modalitySettingsPrompts(methodSelections, routeSelections, readoutSelections) {
+        const prompts = uniqueTexts([
+            ...methodSelections.map(item => MODALITY_SETTINGS_PROMPTS[cleanText(item.id).toLowerCase()] || ""),
+            ...routeSelections.map(item => MODALITY_SETTINGS_PROMPTS[item.routeType] || ""),
+        ]);
         readoutSelections.forEach((item) => {
             const prompt = READOUT_SETTINGS_PROMPTS[cleanText(item.displayLabel).toLowerCase()];
             if (prompt) prompts.push(prompt);
@@ -1369,6 +1508,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const prompts = [];
         const methods = dto.methods || {};
 
+        const methodSelections = getCheckedSelections("method");
+        const methodLabels = uniqueTexts(methodSelections.map(item => item.displayLabel));
         const routeSelections = getCheckedSelections("route");
         const runtime = runtimeAcquisitionFacts(dto);
         const routeLabels = uniqueTexts([
@@ -1383,19 +1524,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const identitySentence = cleanText(methods.base_sentence);
-        // The route joins the microscope sentence rather than restating "Images were
-        // acquired using ..." a second time. A sentence that already carries an
-        // appositive ("..., an inverted microscope") needs the comma to keep reading.
         const routeClause = routeLabels.length
             ? `${identitySentence.includes(",") ? ", " : " "}with the ${humanJoin(routeLabels)} ${routeLabels.length === 1 ? "route" : "routes"}`
             : "";
-        const openingSentence = routeClause && identitySentence.endsWith(".")
+        const fallbackOpening = routeClause && identitySentence.endsWith(".")
             ? `${identitySentence.slice(0, -1)}${routeClause}.`
             : identitySentence;
+        const instrumentName = cleanText(dto.display_name) || cleanText(dto.id) || "microscope";
+        const openingSentence = methodLabels.length === 1
+            ? `${methodLabels[0]} imaging was performed using the ${instrumentName}.`
+            : fallbackOpening;
 
         const readoutSelections = getCheckedSelections("readout");
         const readoutSentences = dedupeSentences(readoutSelections.map(item => item.methodSentence));
-        const techniquePrompts = modalitySettingsPrompts(routeSelections, readoutSelections);
+        const techniquePrompts = modalitySettingsPrompts(methodSelections, routeSelections, readoutSelections);
         prompts.push(...techniquePrompts);
         const objectives = mergeByPublicationTemplate(getCheckedSelections("obj"));
         prompts.push(...objectives.prompts);
@@ -1509,7 +1651,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const compatModalityText = shouldUseLegacyModalities(dto)
             ? cleanText(groupedLabelSentence("modality", getCheckedSelections("modality")))
             : "";
-        const paragraphCompatModality = compatModalityText ? `(Compatibility) ${compatModalityText}` : "";
+        const paragraphCompatModality = compatModalityText;
 
         const reviewPrompts = uniqueTexts(prompts.map(prompt => cleanText(prompt).replace(/\.$/, "")));
         const reviewBlock = reviewPrompts.length
@@ -1539,7 +1681,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const text = [sessionLabel, ...textParts].filter(Boolean).join("\n\n");
         // An unchanged second click is idempotent; a different acquisition is not
         // allowed to replace an earlier entry just because it used the same scope.
-        const selections = ["route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "filterposition", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
+        const selections = ["method", "route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "filterposition", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
         const signature = JSON.stringify([dto.id, sessionLabel,
             selections.map(prefix => getCheckedIds(prefix)), runtimeConfirm.checked, text]);
         accumulatedEntries.set(signature, { instrumentId: dto.id, text });

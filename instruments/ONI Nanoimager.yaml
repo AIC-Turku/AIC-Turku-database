@@ -166,6 +166,9 @@ hardware:
           665-705 nm).
 light_paths:
 - id: widefield_fluorescence
+  imaging_modes:
+  - tirf
+  - smlm
   illumination_sequence:
   - source_id: 405_nm_violet
   - source_id: 488_nm_blue

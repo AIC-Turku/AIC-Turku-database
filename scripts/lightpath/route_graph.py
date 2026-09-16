@@ -217,6 +217,9 @@ def _resolve_position_candidate_payload(
         _clean_string(position.get("display_label"))
         or _clean_string(position.get("label"))
         or _clean_string(position.get("name"))
+        or _clean_string(position.get("model"))
+        or _clean_string(component_payload.get("model"))
+        or _clean_string(position.get("product_code"))
         or _clean_string(component_payload.get("display_label"))
         or _clean_string(component_payload.get("label"))
         or position_key
@@ -1256,6 +1259,8 @@ def _build_route_sequences_and_graph(
             "route_type": route_type,
             "route_type_label": _resolve_route_label(route_type) if route_type else "",
             "readouts": list(route.get("readouts") or []),
+            "imaging_modes": list(route.get("imaging_modes") or []),
+            "contrast_methods": list(route.get("contrast_methods") or []),
         },
         "illumination_mode": route_type or _clean_identifier(route.get("id")) or "",
         "illumination_traversal": illumination_sequence,

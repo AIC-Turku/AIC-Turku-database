@@ -214,6 +214,10 @@ hardware:
   endpoints: []
 light_paths:
 - id: confocal_point
+  imaging_modes:
+  - confocal_point
+  - sted
+  - resolft
   illumination_sequence:
   - source_id: ldh_d_c_485
   - source_id: pdl_t_561

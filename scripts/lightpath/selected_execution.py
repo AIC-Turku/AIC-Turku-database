@@ -84,6 +84,10 @@ def _build_selected_route_steps(
                     _clean_string(component.get("component_type")).lower()
                     or None
                 ),
+                "selection_mode": (
+                    _clean_string(element.get("selection_mode")).lower()
+                    or "exclusive"
+                ),
                 "spectral_ops": component.get("spectral_ops"),
             }
 

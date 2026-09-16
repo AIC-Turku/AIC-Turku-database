@@ -639,6 +639,16 @@ def _parse_canonical_light_paths(
                 for r in (route.get("readouts") or [])
                 if isinstance(r, str) and r.strip()
             ],
+            "imaging_modes": [
+                value.strip()
+                for value in (route.get("imaging_modes") or [])
+                if isinstance(value, str) and value.strip()
+            ],
+            "contrast_methods": [
+                value.strip()
+                for value in (route.get("contrast_methods") or [])
+                if isinstance(value, str) and value.strip()
+            ],
             "illumination_sequence": illumination_sequence,
             "detection_sequence": detection_sequence,
         }

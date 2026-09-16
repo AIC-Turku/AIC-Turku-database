@@ -81,8 +81,8 @@ def _human_list(items: list[str]) -> str:
 
 
 def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
-    manufacturer_text = clean_text(manufacturer)
-    model_text = clean_text(model)
+    manufacturer_text = _identity_value(manufacturer)
+    model_text = _identity_value(model)
     if manufacturer_text and model_text:
         return f"{manufacturer_text} {model_text}"
     if model_text:
@@ -94,13 +94,18 @@ def _component_reference(manufacturer: Any, model: Any, fallback: str) -> str:
 
 # A recorded manufacturer/model that only restates that the value is unknown is not
 # an identity. Publication prose must not present it as one.
-_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "placeholder", "n/a", "na", "none", "-", "--", "?"}
 
 
 def _identity_value(value: Any) -> str:
-    """Return an identity string, or "" when it only marks the value unknown."""
+    """Return an identity string, or "" when it only marks the value unresolved."""
     cleaned = clean_text(value)
-    return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
+    lowered = cleaned.lower()
+    if lowered in _PLACEHOLDER_IDENTITY_VALUES:
+        return ""
+    if lowered.startswith("unknown ") or lowered.startswith("placeholder"):
+        return ""
+    return cleaned
 
 
 def _quarep_specs_clause(
@@ -149,7 +154,6 @@ def _quarep_review_prompts(
         for label, value in (
             ("manufacturer", manufacturer),
             ("model", model),
-            ("product code", product_code),
         )
         if not _identity_value(value)
     ]
@@ -267,7 +271,13 @@ def _objective_display_label(vocabulary: Vocabulary, obj: dict[str, Any]) -> str
     na = _fmt_num(obj.get("numerical_aperture") or obj.get("na"))
     immersion = _vocab_display(vocabulary, "objective_immersion", obj.get("immersion"))
     identity_label = instance_name or model
-    parts = [identity_label, f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion.upper() if immersion else ""]
+    mag_na = f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else ""
+    if mag_na and mag_na.lower() in identity_label.lower():
+        mag_na = ""
+    immersion_label = immersion.upper() if immersion else ""
+    if immersion_label and immersion_label.lower() in identity_label.lower():
+        immersion_label = ""
+    parts = [identity_label, mag_na, immersion_label]
     return " ".join(part for part in parts if part).strip() or identity_label or "Objective"
 
 
@@ -577,9 +587,13 @@ def build_scanner_dto(vocabulary: Vocabulary, scanner: dict[str, Any]) -> dict[s
         ("Pinhole", f"`{pinhole} µm`" if pinhole else None),
         ("Notes", clean_text(scanner.get("notes"))),
     )
-    detail_bits = [f"line rate {line_rate} Hz" if line_rate else "", f"pinhole {pinhole} µm" if pinhole else ""]
+    detail_bits = [
+        f"light-sheet type {light_sheet_type.replace('_', ' ')}" if light_sheet_type else "",
+        f"line rate {line_rate} Hz" if line_rate else "",
+        f"pinhole {pinhole} µm" if pinhole else "",
+    ]
     detail_text = ", ".join(bit for bit in detail_bits if bit)
-    scanner_fallback = scanner_type if scanner_type.lower().endswith("scanner") else f"{scanner_type} scanner"
+    scanner_fallback = scanner_type if "scanner" in scanner_type.lower() else f"{scanner_type} scanner"
     component_reference = _component_reference(manufacturer, model, scanner_fallback if scanner_type else "scanner")
     method_sentence = (
         f"The microscope used {component_reference} ({detail_text})."
@@ -879,8 +893,15 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 "display_label": module_name,
                 "display_subtitle": provenance,
                 "display_notes": notes,
-                "method_sentence": _append_quarep_specs(f"The {module_name} module was used." if module_name else "", manufacturer, model, product_code),
-                "review_prompts": _quarep_review_prompts(f"{module_name} module", manufacturer, model, product_code),
+                "method_sentence": _append_quarep_specs(
+                    f"The {module_name if module_name.lower().endswith('module') else module_name + ' module'} was used."
+                    if module_name else "",
+                    manufacturer, model, product_code,
+                ),
+                "review_prompts": _quarep_review_prompts(
+                    module_name if module_name.lower().endswith("module") else f"{module_name} module",
+                    manufacturer, model, product_code,
+                ),
             }
         )
 
@@ -1002,7 +1023,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             for step in steps:
                 if not isinstance(step, dict):
                     continue
-                if clean_text(step.get("kind")) not in {"optical_component", "routing_component"}:
+                if clean_text(step.get("kind")) != "optical_component":
                     continue
                 label = clean_text(step.get("display_label") or step.get("component_id")) or "an optical element"
                 selection_state = clean_text(step.get("selection_state")).lower()

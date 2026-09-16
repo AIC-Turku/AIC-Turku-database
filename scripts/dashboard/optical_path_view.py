@@ -207,7 +207,7 @@ def _terminal_summary(terminal: dict[str, Any], vocabulary: Vocabulary | None = 
 # A recorded manufacturer/model that only restates that the value is unknown is not
 # an identity. Publication prose must not present it as one; the QUAREP clause
 # reports it as missing instead.
-_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "n/a", "na", "none", "-", "--", "?"}
+_PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "placeholder", "n/a", "na", "none", "-", "--", "?"}
 
 # Publication sentence per recorded light-source role. A source whose role is not
 # recorded must not be described as an excitation source: the neutral sentence is
@@ -224,7 +224,7 @@ _SOURCE_ROLE_UNRECORDED_SENTENCE = "Illumination was provided by {label}."
 
 _ENDPOINT_SENTENCE = "Images were recorded using {label}."
 _EYEPIECE_SENTENCE = "Samples were observed through {label}."
-_SPLITTER_SENTENCE = "The emission light was divided by {label}."
+_SPLITTER_SENTENCE = "Light was directed through {label}."
 _OPTICAL_ELEMENT_SENTENCE = "The light path included {label}."
 _SOURCE_ROLE_UNRECORDED_PROMPT = (
     "[PLEASE SPECIFY: the role of {label} in this acquisition, for example excitation, "
@@ -233,9 +233,14 @@ _SOURCE_ROLE_UNRECORDED_PROMPT = (
 
 
 def _identity_value(value: Any) -> str:
-    """Return a manufacturer/model string, or "" when it only marks the value unknown."""
+    """Return an identity string, or "" when the value only marks it unresolved."""
     cleaned = clean_text(value)
-    return "" if cleaned.lower() in _PLACEHOLDER_IDENTITY_VALUES else cleaned
+    lowered = cleaned.lower()
+    if lowered in _PLACEHOLDER_IDENTITY_VALUES:
+        return ""
+    if lowered.startswith("unknown ") or lowered.startswith("placeholder"):
+        return ""
+    return cleaned
 
 
 def _number_text(value: Any) -> str:
@@ -244,7 +249,12 @@ def _number_text(value: Any) -> str:
         return ""
     if isinstance(value, (int, float)):
         return str(int(value)) if float(value).is_integer() else str(value)
-    return clean_text(value)
+    cleaned = clean_text(value)
+    try:
+        numeric = float(cleaned)
+    except (TypeError, ValueError):
+        return ""
+    return str(int(numeric)) if numeric.is_integer() else str(numeric)
 
 
 def _kind_phrase(kind_label: str) -> str:
@@ -269,7 +279,7 @@ def _strip_leading_wavelength(model: str, wavelength: str) -> str:
     trimmed = trimmed.strip(" -–—")
     if trimmed.startswith("(") and trimmed.endswith(")"):
         trimmed = trimmed[1:-1].strip()
-    return trimmed or model
+    return trimmed
 
 
 def _publication_inventory_label(item: dict[str, Any], vocabulary: Vocabulary | None) -> str:
@@ -332,6 +342,12 @@ def _inventory_method_facts(
         if not template:
             template = _SOURCE_ROLE_UNRECORDED_SENTENCE
             prompts = [_SOURCE_ROLE_UNRECORDED_PROMPT.format(label=label)]
+        tunable_min = _number_text(source_meta.get("tunable_min_nm"))
+        tunable_max = _number_text(source_meta.get("tunable_max_nm"))
+        if tunable_min and tunable_max:
+            prompts.append(
+                f"[PLEASE SPECIFY: wavelength used from the recorded {tunable_min}-{tunable_max} nm tunable range of {label}]"
+            )
     elif inventory_class in {"endpoint", "camera_port", "eyepiece"}:
         endpoint_meta = item.get("endpoint_metadata") if isinstance(item.get("endpoint_metadata"), dict) else {}
         endpoint_type = clean_text(endpoint_meta.get("endpoint_type") or endpoint_meta.get("kind"))
@@ -395,6 +411,8 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     "display_label": label,
                     "product_code": clean_text(position.get("product_code")),
                     "component_type": clean_text(position.get("component_type")),
+                    "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",
+                    "is_empty": clean_text(label).lower() in {"empty", "none", "blank"},
                     "incomplete": bool(position.get("_cube_incomplete") or position.get("_unsupported_spectral_model")),
                     "route_ids": [route_id] if route_id else [],
                     "route_labels": [route_label] if route_label else [],
@@ -936,6 +954,16 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             for r in (route_identity.get("readouts") or [])
             if isinstance(r, str) and r.strip()
         ]
+        enriched_route_identity["imaging_modes"] = [
+            {"id": value, "display_label": _route_type_vocab_label(value, vocabulary)}
+            for value in (route_identity.get("imaging_modes") or [])
+            if isinstance(value, str) and value.strip()
+        ]
+        enriched_route_identity["contrast_methods"] = [
+            {"id": value, "display_label": _route_type_vocab_label(value, vocabulary)}
+            for value in (route_identity.get("contrast_methods") or [])
+            if isinstance(value, str) and value.strip()
+        ]
         if not enriched_route_identity.get("route_type_label"):
             route_type_for_label = (
                 enriched_route_identity.get("route_type")
@@ -953,6 +981,8 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
             "route_identity": enriched_route_identity,
             "route_type": route_type,
             "route_type_label": clean_text(enriched_route_identity.get("route_type_label")),
+            "imaging_modes": enriched_route_identity["imaging_modes"],
+            "contrast_methods": enriched_route_identity["contrast_methods"],
             "readouts": enriched_route_identity["readouts"],
             "route_hardware_usage": {
                 "hardware_inventory_ids": route_inventory_ids,
