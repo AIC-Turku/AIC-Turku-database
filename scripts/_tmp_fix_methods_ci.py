@@ -55,12 +55,12 @@ replace(
     '''                label = clean_text(\n                    position.get("name")\n                    or position.get("model")\n                    or position.get("position_label")\n                    or position.get("label")\n                    or position.get("product_code")\n                )\n''',
 )
 
-# 5) The old test explicitly required an internal "(Compatibility)" marker. The
-# product requirement is now the opposite: route-less legacy records may still
-# render their known modality, but internal migration vocabulary must not leak.
+# 5) The old regression explicitly required an internal "(Compatibility)" marker.
+# The product requirement is now the opposite: route-less legacy records may still
+# report their selected modality, but migration vocabulary must not leak into prose.
 path = ROOT / "tests/test_methods_generator_template.py"
 text = path.read_text(encoding="utf-8")
-old = '''        # Modality text must appear with compatibility label, not as primary sentence\n        self.assertIn("(Compatibility)", result["output"])\n        self.assertIn("Imaging modality used was Confocal.", result["output"])\n'''
+old = '''        # Modality text must appear with compatibility label, not as primary sentence\n        self.assertIn("(Compatibility)", result["output"])\n        # The raw modality sentence style "imaging modalities used included X" may appear\n        # but ONLY under the (Compatibility) marker — the primary paragraph must not\n        # start with a modality sentence.\n        lines = result["output"].split("\\n\\n")\n        primary = lines[0] if lines else ""\n        self.assertNotIn("Imaging modality", primary,\n                         "Primary paragraph must not contain modality sentence; it belongs in (Compatibility) section")\n'''
 new = '''        # Route-less legacy records may still report the selected modality, but\n        # implementation/migration vocabulary must never enter manuscript prose.\n        self.assertNotIn("(Compatibility)", result["output"])\n        self.assertIn("Imaging modality used was Confocal.", result["output"])\n'''
 if old not in text:
     raise RuntimeError("legacy compatibility test assertion anchor not found")
