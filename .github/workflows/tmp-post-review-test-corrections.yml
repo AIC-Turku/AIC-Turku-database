@@ -1,0 +1,31 @@
+name: Apply post-review test corrections
+
+on:
+  push:
+    branches:
+      - fix/methods-generator-pragmatic-stabilization
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/methods-generator-pragmatic-stabilization
+          fetch-depth: 0
+      - name: Apply corrections
+        run: python scripts/_tmp_fix_post_review_tests.py
+      - name: Commit corrections and remove one-shot helpers
+        run: |
+          rm scripts/_tmp_fix_post_review_tests.py
+          rm .github/workflows/tmp-post-review-test-corrections.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix post-review regression tests"
+          git push origin HEAD:fix/methods-generator-pragmatic-stabilization
