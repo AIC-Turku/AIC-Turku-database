@@ -208,7 +208,7 @@ class MethodFirstMethodsTests(unittest.TestCase):
 
     def test_method_first_selection_reveals_only_compatible_route_hardware(self):
         expect(self.page.locator("#section-method")).to_be_visible()
-        expect(self.page.locator("#section-route")).to_be_hidden()
+        expect(self.page.locator("#section-route")).to_be_visible()
         expect(self.page.locator("#section-light")).to_be_hidden()
         self.page.check("#method-0")
         expect(self.page.locator("#route-0")).to_be_checked()

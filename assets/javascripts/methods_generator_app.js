@@ -393,8 +393,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             routeWrapper.style.marginBottom = "4px";
 
             const routeCheckbox = document.createElement("input");
-            routeCheckbox.type = "radio";
-            routeCheckbox.name = "methods-optical-route";
+            routeCheckbox.type = "checkbox";
             routeCheckbox.id = `route-${routeIdx}`;
             routeCheckbox.value = routeId;
             routeCheckbox.dataset.displayLabel = routeLabel;
@@ -1351,7 +1350,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const routeCount = bindRoutes(dto);
         const methodCount = bindMethods(dto);
         toggleSectionVisibility("section-method", methodCount > 0);
-        toggleSectionVisibility("section-route", methodCount === 0 && routeCount > 0);
+        toggleSectionVisibility("section-route", routeCount > 0);
         const showLegacyModalities = shouldUseLegacyModalities(dto);
         const modalityCount = bindCheckboxes("modality-list", showLegacyModalities ? (dto.modalities || []) : [], "modality");
         toggleSectionVisibility("section-modality", modalityCount > 0);
