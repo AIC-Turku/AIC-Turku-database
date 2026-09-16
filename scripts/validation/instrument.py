@@ -475,13 +475,25 @@ def _append_light_path_route_warnings(
         ]
         illumination_sequence = light_path.get('illumination_sequence')
         detection_sequence = light_path.get('detection_sequence')
-        if mapped_methods and not illumination_sequence and not detection_sequence:
+        # A path that can illuminate but never detect (or the reverse) cannot
+        # implement the method it claims, so each half is reported on its own.
+        # Requiring both to be empty let a half-recorded path pass silently.
+        missing_halves = [
+            name
+            for name, sequence in (
+                ('illumination', illumination_sequence),
+                ('detection', detection_sequence),
+            )
+            if not sequence
+        ]
+        if mapped_methods and missing_halves:
             warnings.append(ValidationIssue(
                 code='method_path_topology_empty',
                 path=route_path,
                 message=(
                     f"Instrument '{instrument_file.stem}' light path '{route_label}' maps method(s) "
-                    f"{', '.join(mapped_methods)} but has no recorded illumination or detection sequence. "
+                    f"{', '.join(mapped_methods)} but records no "
+                    f"{' or '.join(missing_halves)} sequence. "
                     "The method mapping is explicit, but downstream Methods text must treat the hardware topology as incomplete."
                 ),
             ))
@@ -529,7 +541,12 @@ def _append_explicit_method_path_issues(
             route_covers: set[str] | None = None
             if route_term is not None and isinstance(route_term.metadata, dict):
                 cover_map = route_term.metadata.get('covers')
-                if isinstance(cover_map, dict):
+                # An axis a term does not mention is unknown, not "covers nothing".
+                # Treating an absent key as an empty set made every method on that
+                # axis incompatible, so a facility that authored `covers` for one
+                # axis only got a wall of failures instead of an unchecked axis.
+                # An axis authored as an explicit empty list still means "none".
+                if isinstance(cover_map, dict) and axis in cover_map:
                     route_covers = {
                         str(value).strip()
                         for value in (cover_map.get(axis) or [])
@@ -542,6 +559,20 @@ def _append_explicit_method_path_issues(
                 if isinstance(value, str) and value.strip()
             }
             mapped.update(authored)
+
+            # Compatibility can only be checked against a known route family. A
+            # path that maps methods must therefore name one: otherwise omitting
+            # `route_type` silently disables the check for that path.
+            if authored and route_term is None:
+                issues.append(ValidationIssue(
+                    code='method_path_route_type_unresolved',
+                    path=f"{instrument_file.as_posix()}:light_paths[{index}].route_type",
+                    message=(
+                        f"Light path maps method(s) {', '.join(sorted(authored))} but its route family "
+                        f"'{route_type or '(missing)'}' is not a known optical_routes term, so route "
+                        "compatibility cannot be checked. Set a controlled light_paths[].route_type."
+                    ),
+                ))
 
             for method in sorted(authored - declared):
                 issues.append(ValidationIssue(
