@@ -126,6 +126,17 @@ Rules:
 - VM branch auto-defaults are derived runtime initial state and must be marked
   non-authoritative.
 - Canonical `light_paths` remain topology truth.
+- Method-to-path association is authored, never inferred. `capabilities.*`
+  declares what an instrument can do; `light_paths[].imaging_modes` and
+  `light_paths[].contrast_methods` declare which physical path implements each
+  method. `route_type` is the route family and must not be read as a method by
+  any consumer, including settings/reporting prompts.
+- `vocab/optical_routes.yaml` `covers` is a compatibility gate consumed by
+  validation only. It never supplies a missing mapping, and an axis a term does
+  not mention is unknown rather than empty.
+- One acquisition travels one physical light path. The Methods Generator
+  enforces this with single-choice controls and clears route-specific selections
+  when the method or path changes.
 - Compatibility entrypoints are retained for CI/API compatibility, not implementation
   ownership.
 
