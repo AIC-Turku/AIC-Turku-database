@@ -152,7 +152,10 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
 
         light = hardware["light_sources"][0]
         self.assertEqual(light["role"], "depletion")
-        self.assertIn("STED depletion was delivered", light["method_sentence"])
+        self.assertIn("Depletion was delivered", light["method_sentence"])
+        # The role records that the beam depletes, not how. RESOLFT uses the same
+        # beam without stimulated emission, so the sentence must not name STED.
+        self.assertNotIn("STED", light["method_sentence"])
 
 
     def test_transmitted_light_role_uses_transmitted_methods_sentence(self) -> None:

@@ -38,6 +38,39 @@ def clean(value: Any) -> str:
     return str(value or "").strip()
 
 
+# A position that does not shape a passband has no bands to record. Asking a DIC
+# analyser for its excitation band is not a gap, it is a category error, and it
+# made the reported total larger than the number of real questions.
+SPECTRAL_COMPONENT_TYPES = {
+    "filter_cube", "cube", "excitation_filter", "emission_filter", "dichroic",
+    "multiband_dichroic", "polychroic", "bandpass", "longpass", "shortpass",
+    "notch", "beamsplitter",
+}
+
+# The shapes an authored passband takes. A dichroic records an edge, not a band; a
+# filter cube records its spectra on the sub-components. Reading only a top-level
+# `bands` list reported nine fully specified cubes and two longpass filters with a
+# recorded cut-on as unanswered.
+SPECTRAL_KEYS = ("bands", "cut_on_nm", "cutoffs_nm", "center_nm", "width_nm")
+NESTED_COMPONENT_KEYS = ("excitation_filter", "dichroic", "emission_filter")
+
+
+def has_spectral_detail(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    return any(payload.get(key) for key in SPECTRAL_KEYS)
+
+
+def position_spectrum_is_missing(position: dict[str, Any]) -> bool:
+    """True when a position that should carry a passband records none."""
+    component_type = clean(position.get("component_type")).lower()
+    if component_type not in SPECTRAL_COMPONENT_TYPES:
+        return False
+    if has_spectral_detail(position):
+        return False
+    return not any(has_spectral_detail(position.get(key)) for key in NESTED_COMPONENT_KEYS)
+
+
 def instrument_files() -> list[Path]:
     active = sorted((REPO_ROOT / "instruments").glob("*.yaml"))
     retired = sorted((REPO_ROOT / "instruments" / "retired").glob("*.yaml"))
@@ -106,7 +139,11 @@ def collect_gaps() -> dict[str, dict[str, list[str]]]:
 
         software = record.get("software") or []
         acquisition = [row for row in software if clean(row.get("role")).lower() == "acquisition"]
-        if not acquisition:
+        # `software_status: not_applicable` is the recorded answer to this question:
+        # a manual stand with no acquisition software. Asking anyway turned three
+        # answered records into open questions for staff.
+        software_status = clean(record.get("software_status")).lower()
+        if not acquisition and software_status != "not_applicable":
             gaps["no_acquisition_software"][name].append("no row with role: acquisition")
         for row in acquisition:
             if is_placeholder(row.get("name")):
@@ -119,9 +156,9 @@ def collect_gaps() -> dict[str, dict[str, list[str]]]:
 
         for element in hardware.get("optical_path_elements") or []:
             for key, position in (element.get("positions") or {}).items():
-                if not isinstance(position, dict) or position.get("bands"):
+                if not isinstance(position, dict):
                     continue
-                if clean(position.get("component_type")).lower() in {"empty", "none", ""}:
+                if not position_spectrum_is_missing(position):
                     continue
                 gaps["filter_bands"][name].append(
                     f"{clean(element.get('name')) or clean(element.get('id'))} / "

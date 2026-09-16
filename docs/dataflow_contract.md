@@ -134,9 +134,16 @@ Rules:
 - `vocab/optical_routes.yaml` `covers` is a compatibility gate consumed by
   validation only. It never supplies a missing mapping, and an axis a term does
   not mention is unknown rather than empty.
-- One acquisition travels one physical light path. The Methods Generator
-  enforces this with single-choice controls and clears route-specific selections
-  when the method or path changes.
+- An acquisition is one image set, and it may travel more than one physical light
+  path: a brightfield overview and a fluorescence channel of the same field are one
+  acquisition with two paths. The Methods Generator therefore offers methods, paths
+  and filter positions as multi-select controls, describes each path in its own
+  sentence rather than merging them, and asks the author to confirm a second path
+  that no selected method explains.
+- Acquisition state is scoped to the acquisition. Starting another acquisition,
+  naming a different acquisition reference, or changing the imaging method clears
+  the hardware selections, the confirmed actions and any reviewed runtime plan, so
+  nothing carries into the next entry unstated.
 - Compatibility entrypoints are retained for CI/API compatibility, not implementation
   ownership.
 

@@ -55,7 +55,7 @@ def instrument():
     acquisition's module used to end up in the next acquisition's prose.
     """
     excitation = _source("source:exc", "488 nm laser", "Excitation was provided by {label}.", "excitation")
-    depletion = _source("source:dep", "775 nm laser", "Stimulated-emission depletion was provided by {label}.", "depletion")
+    depletion = _source("source:dep", "775 nm laser", "Depletion was provided by {label}.", "depletion")
     lamp = _source("source:bf", "Halogen lamp", "Transmitted-light illumination was provided by {label}.",
                    "transmitted_illumination")
     detector = _endpoint("endpoint:apd", "Avalanche photodiode")
@@ -113,6 +113,9 @@ def instrument():
         "modules": [{
             "type": "easy3d_sted",
             "display_label": "Easy3D STED",
+            # As the real export carries it, from vocab/modules.yaml
+            # `tags.provides_capability`. The page must not know this by itself.
+            "provides_capability": {"imaging_modes": [{"id": "sted", "display_label": "STED"}]},
             "publication_template": "The {label} {be} used.",
             "publication_label": "Easy3D STED module",
             "method_sentence": "The Easy3D STED module was used.",
@@ -335,42 +338,78 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertEqual(self.output().count("Point-scanning confocal imaging was performed"), 1)
         self.assertIn("Scope Acquire", self.output())
 
-    def test_a_new_acquisition_reference_adds_a_separate_entry(self):
-        """A second figure on the same setup is a second acquisition."""
-        self.method("Confocal point scanning").check()
+    def test_a_new_acquisition_reference_starts_from_a_clean_acquisition(self):
+        """Naming a different figure is naming a different acquisition.
+
+        The page says a new reference starts a separate entry, so the second entry
+        must state what the author selects for it and nothing else. This test used
+        to add the same selections twice and call that two acquisitions, which is
+        the inheritance the audit found rather than a defence against it.
+        """
+        self.method("STED").check()
         self.page.check("#obj-0")
+        self.page.check("#module-0")
         self.page.check("#light-0")
+        self.page.check("#light-1")
         self.page.check("#det-0")
+        self.page.check("#confirmed-0")
         self.page.fill("#session-label", "Figure 1")
         self.page.click("#add-btn")
+
         self.page.fill("#session-label", "Figure 2")
+        # Everything describing the finished acquisition is released. The reference
+        # the author is typing stays, and so does the imaging method - with it, the
+        # one path that method is recorded on, which was never a question.
+        for selector in ("#obj-list", "#module-list", "#light-list", "#det-list", "#confirmed-list"):
+            self.assertEqual(self.page.locator(f"{selector} input:checked").count(), 0,
+                             f"{selector} still describes the acquisition that was added")
+        self.assertEqual(self.page.locator("#session-label").input_value(), "Figure 2")
+        self.assertTrue(self.method("STED").is_checked())
+
+        self.page.check("#obj-1")
+        self.page.check("#light-0")
+        self.page.check("#light-1")
+        self.page.check("#det-0")
         self.page.click("#add-btn")
+
         output = self.output()
         self.assertIn("Figure 1", output)
         self.assertIn("Figure 2", output)
-        self.assertEqual(output.count("Point-scanning confocal imaging was performed"), 2)
+        second = output.split("Figure 2")[-1]
+        self.assertIn("10x/0.3 Air", second)
+        self.assertNotIn("63x/1.4 Oil", second)
+        self.assertNotIn("Easy3D STED", second)
 
-    def test_clear_all_resets_the_selections_as_well_as_the_draft(self):
-        """"Start again" has to mean the controls too."""
+    def test_clear_all_resets_every_selection_as_well_as_the_draft(self):
+        """"Start again" has to mean every control, confirmed actions included.
+
+        Confirmed actions cover the acquisition software, the environmental control
+        and the post-acquisition processing. A cleared draft that keeps them ticked
+        republishes a processing step the next author never claimed.
+        """
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
         self.page.check("#det-0")
+        self.page.check("#confirmed-0")
         self.page.click("#add-btn")
         self.page.click("#clear-btn")
-        self.assertEqual(self.page.locator('#hardware-options input:checked').count(), 0)
+        self.assertEqual(self.page.locator("#hardware-options input:checked").count(), 0)
+        self.assertEqual(self.page.locator("#confirmed-list input:checked").count(), 0)
         self.assertIn("Select an instrument", self.output())
 
     def test_start_another_acquisition_clears_the_previous_selections(self):
-        """The explicit way to begin a different image set."""
+        """The explicit way to begin a different image set clears all of it."""
         self.method("STED").check()
         self.page.check("#obj-0")
         self.page.check("#module-0")
         self.page.check("#light-0")
         self.page.check("#det-0")
+        self.page.check("#confirmed-0")
         self.page.click("#add-btn")
         self.page.click("#new-acquisition-btn")
-        self.assertEqual(self.page.locator('#hardware-options input:checked').count(), 0)
+        self.assertEqual(self.page.locator("#hardware-options input:checked").count(), 0)
+        self.assertEqual(self.page.locator("#confirmed-list input:checked").count(), 0)
         self.assertEqual(self.page.locator("#session-label").input_value(), "")
 
     # --- Medium/Low: what may appear in publication prose ---------------------

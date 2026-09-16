@@ -339,6 +339,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             // The recorded component type, used to check a specialist module against
             // the techniques the user says the acquisition used.
             checkbox.dataset.componentType = item.type || "";
+            // What technique this component implements, as vocab/modules.yaml
+            // records it. Exported rather than restated here: a table in this file
+            // duplicated the vocabulary and drifted from it.
+            checkbox.dataset.providesCapability = JSON.stringify(
+                item.provides_capability && typeof item.provides_capability === "object"
+                    ? item.provides_capability
+                    : {});
             // Two cameras recorded under one model name are told apart by the port
             // the record routes each of them to, never by inventing a difference.
             checkbox.dataset.portLabel = item.port_label || "";
@@ -860,6 +867,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             reviewPrompts: parseJsonArray(cb.dataset.reviewPrompts),
             inventoryClass: cleanText(cb.dataset.inventoryClass),
             componentType: cleanText(cb.dataset.componentType),
+            providesCapability: parseJsonObject(cb.dataset.providesCapability),
             portLabel: cleanText(cb.dataset.portLabel),
             componentId: cleanText(cb.dataset.componentId),
             componentDisplayLabel: cleanText(cb.dataset.componentDisplayLabel),
@@ -867,6 +875,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             isEmptyPosition: cb.dataset.isEmptyPosition === "1",
             selectionMode: cleanText(cb.dataset.selectionMode),
         }));
+    }
+
+    function parseJsonObject(value) {
+        try {
+            const parsed = JSON.parse(value || "{}");
+            return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+        } catch (error) {
+            return {};
+        }
     }
 
     function parseJsonArray(value) {
@@ -1426,8 +1443,20 @@ document.addEventListener("DOMContentLoaded", async () => {
      * emitted as an intermediate diagnostic sentence for a later pass to rewrite,
      * so no transformation can merge two facts or leave a clause unterminated.
      */
+    // A runtime plan contributes the same kinds of fact a tick box does, so the
+    // completeness check has to read it the same way: a plan that names a camera
+    // reports a detector, and a plan that names only a filter reports no
+    // illumination. Counting its components as one undifferentiated list is how an
+    // entry asked for a detector it had just named, and stopped asking for the
+    // illumination it had not.
+    const RUNTIME_SOURCE_CLASSES = new Set(["light_source"]);
+    const RUNTIME_ENDPOINT_CLASSES = new Set(["endpoint", "camera_port", "eyepiece"]);
+
     function runtimeAcquisitionFacts(dto) {
-        const empty = { components: [], sentences: [], prompts: [], routeLabels: [], hasRuntimeSelection: false };
+        const empty = {
+            components: [], sentences: [], prompts: [], routeLabels: [],
+            hasRuntimeSelection: false, sources: [], endpoints: [],
+        };
         const resolved = resolveRuntimeSelectedConfiguration(dto);
         const runtimeConfig = resolved.config;
         if (!runtimeConfig) return empty;
@@ -1453,6 +1482,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 publicationTemplate: template,
                 publicationLabel: label,
                 reviewPrompts: [],
+                inventoryClass: cleanText(recorded?.inventory_class),
+                role: cleanText(recorded?.role),
             });
         }
 
@@ -1585,6 +1616,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             prompts: uniqueTexts(prompts),
             routeLabels: routeLabel ? [routeLabel] : [],
             hasRuntimeSelection: true,
+            sources: components.filter(item => RUNTIME_SOURCE_CLASSES.has(item.inventoryClass)),
+            endpoints: components.filter(item => RUNTIME_ENDPOINT_CLASSES.has(item.inventoryClass)),
         };
     }
 
@@ -1711,21 +1744,39 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (section) section.style.display = "none";
             });
         } else if (routeCount === 1) {
-            // A record with no imaging-method control still has to state a path
-            // before it can state anything else. Confirming the only recorded one
-            // here is what stops an empty acquisition being added from this page.
-            const soleRoute = Array.from(document.querySelectorAll('input[id^="route-"]'))[0];
-            if (soleRoute) soleRoute.checked = true;
-            updateHardwareVisibility(dto, false);
+            confirmSoleRouteWithoutMethodControl(dto);
         }
     });
+
+    /**
+     * Confirm the only recorded path on a record that offers no method control.
+     *
+     * A record with no imaging-method control still has to state a path before it
+     * can state anything else, and there is nothing to ask when only one is
+     * recorded. This runs on selecting the microscope and again whenever the
+     * acquisition is cleared, because clearing used to leave such a record with no
+     * path at all and no control to restore one, so the next Add was refused.
+     */
+    function confirmSoleRouteWithoutMethodControl(dto) {
+        const methodSection = document.getElementById("section-method");
+        if (methodSection && methodSection.style.display !== "none") return;
+        const routeInputs = Array.from(document.querySelectorAll('input[id^="route-"]'));
+        if (routeInputs.length !== 1) return;
+        routeInputs[0].checked = true;
+        updateHardwareVisibility(dto, false);
+    }
 
     // A new acquisition reference names a different acquisition, so the next Add
     // starts an entry rather than rewriting the one just added.
     document.getElementById("session-label").addEventListener("input", () => {
         if (!activeEntryKey) return;
-        activeEntryKey = "";
-        setSelectionStatus("This reference names a new acquisition, so “Add to methods” will add it as a separate entry.");
+        // Naming a different figure names a different acquisition, and the page
+        // says so. It used to say so while leaving every box ticked, so the second
+        // entry silently republished the first one's objective, laser and filters
+        // under a new reference. The methods stay: the user has said which figure
+        // this is, not that the technique changed.
+        startNewAcquisition({ keepMethods: true, keepLabel: true });
+        setSelectionStatus("This reference names a new acquisition, so the selections have been cleared. The imaging method is kept; change it if this acquisition used another.");
     });
 
     /**
@@ -1970,21 +2021,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         },
     };
     const DEPLETION_METHOD_IDS = new Set(["sted", "resolft"]);
-    // Which technique a specialist module belongs to. This is reporting logic about
-    // the module's purpose, in the same place as the per-technique reporting
-    // prompts; it never hides a module, because a record may legitimately describe a
-    // use this list does not anticipate. It only asks the author to confirm that the
-    // module and the technique they selected go together.
-    const MODULE_TECHNIQUE_REQUIREMENTS = {
-        easy3d_sted: { id: "sted", label: "STED" },
-        sted_3d: { id: "sted", label: "STED" },
-        rescue_sted: { id: "sted", label: "STED" },
-        airyscan: { id: "ism", label: "ISM (Airyscan)" },
-        sim_module: { id: "sim", label: "SIM" },
-        tirf_module: { id: "tirf", label: "TIRF" },
-        flim_module: { id: "flim", label: "FLIM" },
-        fcs_module: { id: "fcs", label: "FCS" },
-    };
 
     /**
      * Name a light path without repeating the word it already ends with.
@@ -2278,10 +2314,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!objectives.sentences.length) {
             prompts.push("[PLEASE SPECIFY: the objective used for this acquisition, including magnification, numerical aperture and immersion medium]");
         }
-        if (!lightSelections.length && !runtime.components.length) {
+        if (!lightSelections.length && !runtime.sources.length) {
             prompts.push("[PLEASE SPECIFY: the illumination used for this acquisition, including the source and the wavelength or spectral range]");
         }
-        if (!detectorSelections.length) {
+        if (!detectorSelections.length && !runtime.endpoints.length) {
             prompts.push("[PLEASE SPECIFY: the detector, camera or eyepieces used to record this acquisition]");
         }
 
@@ -2307,12 +2343,24 @@ document.addEventListener("DOMContentLoaded", async () => {
                 cleanText(input.dataset.displayLabel).toLowerCase(),
             ]));
         moduleSelections.forEach((module) => {
-            const requirement = MODULE_TECHNIQUE_REQUIREMENTS[cleanText(module.componentType).toLowerCase()];
-            if (!requirement) return;
-            if (selectedTechniqueIds.has(requirement.id)) return;
+            // The module's own record says which technique it implements, from
+            // vocab/modules.yaml `tags.provides_capability`. Nothing here decides
+            // that, and nothing here hides a module: a record may legitimately
+            // describe a use the vocabulary does not anticipate. This only asks the
+            // author to confirm when the acquisition claims none of the techniques
+            // the module is for.
+            const provided = Object.values(module.providesCapability || {})
+                .filter(Array.isArray)
+                .flat()
+                .filter(entry => entry && cleanText(entry.id));
+            if (!provided.length) return;
+            const unclaimed = provided.filter(entry => !selectedTechniqueIds.has(cleanText(entry.id).toLowerCase()));
+            if (unclaimed.length < provided.length) return;
             // Never ask about a technique this microscope does not record.
-            if (!offeredTechniqueIds.has(requirement.id)) return;
-            prompts.push(`[PLEASE VERIFY: the ${module.displayLabel} module is reported but ${requirement.label} is not among the methods selected for this acquisition; confirm the methods and the modules that were used]`);
+            const askable = unclaimed.filter(entry => offeredTechniqueIds.has(cleanText(entry.id).toLowerCase()));
+            if (!askable.length) return;
+            const names = humanJoin(askable.map(entry => cleanText(entry.display_label) || cleanText(entry.id)));
+            prompts.push(`[PLEASE VERIFY: the ${module.displayLabel} module is reported but ${names} ${askable.length > 1 ? "are" : "is"} not among the methods selected for this acquisition; confirm the methods and the modules that were used]`);
         });
 
         if (selectedSourceRoles.has("depletion")
@@ -2409,10 +2457,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Everything a single acquisition asserts. The acquisition reference and the
     // confirmed session actions (software, incubation, autofocus) describe the
     // session rather than one image set, so they are not cleared between them.
+    // Everything a user ticks to describe one acquisition. "confirmed" belongs here
+    // with the rest: the confirmable actions include the acquisition software, the
+    // environmental control and the post-acquisition processing, and a processing
+    // step that survives into the next acquisition is a claim nobody made.
     const ACQUISITION_SCOPED_PREFIXES = [
         "route", "readout", "light", "det", "filter", "filterposition", "splitter",
         "modality", "module", "scanner", "obj", "magnification-changer",
-        "optical-modulator", "illumination-logic",
+        "optical-modulator", "illumination-logic", "confirmed",
     ];
 
     function clearInputsByPrefixes(prefixes) {
@@ -2428,15 +2480,22 @@ document.addEventListener("DOMContentLoaded", async () => {
      * is what let an objective, a module or a scanner from the first entry be stated
      * as a fact about the second.
      */
-    function startNewAcquisition({ keepMethods = false } = {}) {
+    function startNewAcquisition({ keepMethods = false, keepLabel = false } = {}) {
         clearInputsByPrefixes(ACQUISITION_SCOPED_PREFIXES);
-        if (!keepMethods) {
-            clearInputsByPrefixes(["method"]);
+        // A reviewed runtime plan describes one acquisition too. Leaving it
+        // confirmed would republish its sources, detector and filters under the
+        // next entry without the user confirming them again.
+        if (runtimeConfirm) runtimeConfirm.checked = false;
+        if (!keepMethods) clearInputsByPrefixes(["method"]);
+        if (!keepLabel) {
             const sessionLabel = document.getElementById("session-label");
             if (sessionLabel) sessionLabel.value = "";
         }
         activeEntryKey = "";
-        if (currentInst) applyMethodAvailability(currentInst);
+        if (currentInst) {
+            applyMethodAvailability(currentInst);
+            confirmSoleRouteWithoutMethodControl(currentInst);
+        }
     }
 
     addBtn.addEventListener("click", () => {

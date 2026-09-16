@@ -179,7 +179,9 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.page.click("#add-btn")
         self.assertEqual(self.output().count("a 20x objective"), 1)
         self.page.fill("#session-label", "Second acquisition")
-        self.page.uncheck("#obj-0")
+        # A new reference starts a clean acquisition, so the second one states its
+        # own path and objective rather than inheriting the first one's.
+        self.page.check("#route-0")
         self.page.check("#obj-1")
         self.page.click("#add-btn")
         for expected in ["Fixed cells", "Second acquisition", "20x", "40x"]:

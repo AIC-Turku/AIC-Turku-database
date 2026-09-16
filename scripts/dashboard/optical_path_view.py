@@ -233,7 +233,13 @@ _PLACEHOLDER_IDENTITY_VALUES = {"unknown", "unknown manufacturer", "placeholder"
 # paired with an explicit review request instead of an inferred role.
 _SOURCE_ROLE_SENTENCES = {
     "excitation": "Excitation was provided by {label}.",
-    "depletion": "Stimulated-emission depletion was provided by {label}.",
+    # The recorded role says the beam depletes; it does not say by which mechanism,
+    # and the mechanism belongs to the method rather than to the hardware. The same
+    # 775 nm beam depletes by stimulated emission under STED and drives reversible
+    # photoswitching under RESOLFT, and the Abberior record declares both. Naming
+    # stimulated emission here made every RESOLFT draft from that record wrong, so
+    # the sentence states the role and the opening sentence names the technique.
+    "depletion": "Depletion was provided by {label}.",
     "transmitted_illumination": "Transmitted-light illumination was provided by {label}.",
     "reflected_illumination": "Reflected-light illumination was provided by {label}.",
     "activation": "Photoactivation was performed using {label}.",

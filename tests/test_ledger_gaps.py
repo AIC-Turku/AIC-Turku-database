@@ -55,3 +55,46 @@ def test_a_gap_that_is_filled_in_leaves_the_list():
     )
     # Deltavision records roles on every source, so it must not appear at all.
     assert "Deltavision OMX" not in reported
+
+
+def test_a_record_that_says_it_has_no_software_is_not_asked_about_software():
+    """`software_status: not_applicable` is an answer, not a blank.
+
+    The three Leica visual stands record it explicitly, and the generated list
+    asked all three for the acquisition software they had already said they do
+    not have. The whole section was false questions for staff.
+    """
+    gaps = collect_gaps()
+    asked = gaps.get("no_acquisition_software") or {}
+    for name in ("Leica DM IRBE", "Leica DM RB", "Leica DM RE"):
+        assert name not in asked, (
+            f"{name} records software_status: not_applicable and must not be asked "
+            "for acquisition software"
+        )
+
+
+def test_recorded_spectra_are_not_reported_as_missing_bands():
+    """Spectral detail is authored in several shapes, and all of them count.
+
+    A filter cube records its spectra on the excitation, dichroic and emission
+    sub-components; a longpass records a cut-on edge; a multiband dichroic records
+    cutoffs. Reading only a top-level `bands` list reported every one of those as
+    unanswered, which inflated the list staff are asked to work through.
+    """
+    from scripts.ledger_gaps import position_spectrum_is_missing
+
+    cube = {
+        "component_type": "filter_cube",
+        "excitation_filter": {"center_nm": 470, "width_nm": 40},
+        "dichroic": {"cut_on_nm": 495},
+        "emission_filter": {"center_nm": 525, "width_nm": 50},
+    }
+    assert not position_spectrum_is_missing(cube)
+    assert not position_spectrum_is_missing({"component_type": "longpass", "cut_on_nm": 500})
+    assert not position_spectrum_is_missing(
+        {"component_type": "multiband_dichroic", "cutoffs_nm": [485, 560, 645]})
+    # A component with no passband has no bands to record.
+    assert not position_spectrum_is_missing({"component_type": "analyzer"})
+    assert not position_spectrum_is_missing({"component_type": "neutral_density"})
+    # A cube with nothing recorded is still a real question.
+    assert position_spectrum_is_missing({"component_type": "filter_cube", "name": "Standard Cubes"})

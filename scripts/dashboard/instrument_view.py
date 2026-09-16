@@ -265,6 +265,48 @@ def _vocab_display(vocabulary: Vocabulary, vocab_name: str, value: Any) -> str:
     return vocab_label(vocabulary, vocab_name, raw)
 
 
+# The axes of vocab/modules.yaml `tags.provides_capability` the Methods generator
+# has controls for, and the vocabulary each one's terms are named by.
+_MODULE_CAPABILITY_VOCABS = {
+    "imaging_modes": "imaging_modes",
+    "contrast_methods": "contrast_methods",
+    "readouts": "measurement_readouts",
+}
+
+
+def _module_provides_capability(vocabulary: Vocabulary, module_id: str) -> dict[str, list[dict[str, str]]]:
+    """What technique a module implements, as the vocabulary already records it.
+
+    `vocab/modules.yaml` states that an Airyscan module provides `ism` and an
+    easy3D STED module provides `sted`. The Methods generator needs exactly that
+    relationship to ask why a STED module is reported on an acquisition that
+    claims no STED, and reproducing it as a table in browser JavaScript both
+    duplicated the vocabulary and got it wrong: it carried keys no record uses and
+    missed `3d_sim`, which one record does. So it is exported instead of restated.
+    """
+    term = (vocabulary.terms_by_vocab.get("modules") or {}).get(clean_text(module_id))
+    raw = term.tag_value("provides_capability") if term else None
+    if not isinstance(raw, dict):
+        return {}
+    provided: dict[str, list[dict[str, str]]] = {}
+    for axis, vocab_name in _MODULE_CAPABILITY_VOCABS.items():
+        entries = raw.get(axis)
+        if not isinstance(entries, list):
+            continue
+        rows = []
+        for entry in entries:
+            capability_id = clean_text(entry)
+            if not capability_id:
+                continue
+            rows.append({
+                "id": capability_id,
+                "display_label": _vocab_display(vocabulary, vocab_name, capability_id) or capability_id,
+            })
+        if rows:
+            provided[axis] = rows
+    return provided
+
+
 def _objective_display_label(vocabulary: Vocabulary, obj: dict[str, Any]) -> str:
     model = clean_text(obj.get("model"))
     instance_name = clean_text(obj.get("name"))
@@ -468,7 +510,11 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
             pulse_details.append(f"{repetition_rate_mhz} MHz repetition rate")
         targets_clause = f" targeting {_human_list([f'{item} nm' for item in depletion_targets_nm])}" if depletion_targets_nm else ""
         depletion_descriptor = "pulsed depletion laser" if normalized_timing_mode == "pulsed" else "depletion laser"
-        method_sentence = f"STED depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a {depletion_descriptor}{targets_clause}."
+        # "STED depletion" names a mechanism the role does not record. The same
+        # beam depletes by stimulated emission under STED and drives reversible
+        # photoswitching under RESOLFT, so the technique is named by the method
+        # sentence and this one states only what the record says.
+        method_sentence = f"Depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"Depletion was delivered by a {depletion_descriptor}{targets_clause}."
     elif normalized_role == "transmitted_illumination":
         method_sentence = f"Transmitted illumination was provided by {display_label}{tech_power_clause}."
     elif normalized_role == "excitation":
@@ -922,6 +968,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             {
                 **copy.deepcopy(module),
                 "display_label": module_name,
+                "provides_capability": _module_provides_capability(vocabulary, module_id),
                 "display_subtitle": provenance,
                 "display_notes": notes,
                 "method_sentence": _append_quarep_specs(

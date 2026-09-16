@@ -71,7 +71,11 @@ class LightSourceRoleGrounding(unittest.TestCase):
 
     def test_depletion_source_is_never_described_as_excitation(self):
         card = self._sentence_for({"kind": "laser", "wavelength_nm": 775, "role": "depletion"})
-        self.assertIn("Stimulated-emission depletion", card["method_sentence"])
+        self.assertIn("Depletion was provided", card["method_sentence"])
+        # The role says the beam depletes. Which mechanism does the depleting is
+        # decided by the method - stimulated emission under STED, reversible
+        # photoswitching under RESOLFT - so this sentence must not name one.
+        self.assertNotIn("Stimulated-emission", card["method_sentence"])
         self.assertNotIn("Excitation", card["method_sentence"])
 
     def test_transmitted_illumination_is_never_described_as_excitation(self):
@@ -433,9 +437,9 @@ class BrowserGroundingRegressions(unittest.TestCase):
         instrument["hardware"]["optical_path"]["hardware_inventory_renderables"].append(
             {"id": "sted", "display_label": "775 nm depletion laser", "inventory_class": "light_source",
              "publication_label": "775 nm laser",
-             "publication_template": "Stimulated-emission depletion was provided by {label}.",
+             "publication_template": "Depletion was provided by {label}.",
              "source_metadata": {"kind": "laser", "role": "depletion", "wavelength_nm": 775},
-             "method_sentence": "Stimulated-emission depletion was provided by 775 nm laser."})
+             "method_sentence": "Depletion was provided by 775 nm laser."})
         self.open_methods(instrument, storage={
             "scope_id": "scope-reg", "route": "epi", "validSelection": True,
             "sources": [{"id": "sted", "display_label": "775 nm depletion laser",
@@ -455,7 +459,10 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.check("#runtime-confirm")
         self.page.click("#add-btn")
         prose = self._prose()
-        self.assertIn("Excitation was provided by 488 nm laser.", prose)
+        # "a 488 nm laser": a runtime-confirmed source is a light source like any
+        # other, so it takes the same article a ticked one does. It used to lose the
+        # article because the runtime fact dropped the component's inventory class.
+        self.assertIn("Excitation was provided by a 488 nm laser.", prose)
         self.assertNotIn("594", prose)
         self.assertIn("which the instrument record gives as a fixed 488 nm source", self.output())
 
