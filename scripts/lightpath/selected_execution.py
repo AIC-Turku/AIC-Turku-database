@@ -91,15 +91,27 @@ def _build_selected_route_steps(
                 "spectral_ops": component.get("spectral_ops"),
             }
 
+            # Identity is authored on the position itself. The resolved component
+            # payload is only a fallback, and its ``name`` defaults to the parent
+            # element's name (see ``_component_payload``), so a position that
+            # records no name of its own would otherwise inherit the holder's name
+            # and be published as "the Filter Turret in the Filter Turret".
+            parent_name = _clean_string(element.get("name"))
             for identity_field in (
                 "manufacturer",
                 "model",
                 "product_code",
                 "name",
             ):
-                val = _clean_string(component.get(identity_field))
-                if val:
-                    entry[identity_field] = val
+                val = (
+                    _clean_string(position.get(identity_field))
+                    or _clean_string(component.get(identity_field))
+                )
+                if not val:
+                    continue
+                if identity_field == "name" and val == parent_name:
+                    continue
+                entry[identity_field] = val
 
             if component.get("_unsupported_spectral_model"):
                 entry["_unsupported_spectral_model"] = True

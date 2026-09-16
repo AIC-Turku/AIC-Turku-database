@@ -366,6 +366,9 @@ def _inventory_method_facts(
     return template, template.format(label=label), prompts
 
 
+_EMPTY_POSITION_WORDS = {"empty", "none", "blank", "open", "free"}
+
+
 def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """Collect the positions each multi-position optical element can be set to.
 
@@ -388,19 +391,33 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
             available = step.get("available_positions")
             if not inventory_id or not isinstance(available, list):
                 continue
+            holder_label = clean_text(step.get("display_label"))
             known = positions_by_component.setdefault(inventory_id, [])
             by_key = {row["id"]: row for row in known}
+            seen_identities = {
+                (row["display_label"], row["product_code"], row["component_type"].lower())
+                for row in known
+            }
             for position in available:
                 if not isinstance(position, dict):
                     continue
                 key = clean_text(position.get("position_key") or position.get("position_id"))
-                label = clean_text(
-                    position.get("name")
-                    or position.get("model")
-                    or position.get("position_label")
-                    or position.get("label")
-                    or position.get("product_code")
+                # The holder's own name identifies the container, never the filter
+                # inside it. A candidate equal to it is refused outright so no
+                # upstream default can produce "the Filter Turret in the Filter
+                # Turret"; the position key is a last-resort distinguishable label.
+                identity_label = next(
+                    (
+                        candidate
+                        for candidate in (
+                            clean_text(position.get(field))
+                            for field in ("name", "model", "position_label", "label", "product_code")
+                        )
+                        if candidate and candidate != holder_label
+                    ),
+                    "",
                 )
+                label = identity_label or key
                 if not key or not label:
                     continue
                 # A holder shared by two routes may offer different positions on
@@ -412,15 +429,28 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                         existing["route_ids"].append(route_id)
                         existing["route_labels"].append(route_label)
                     continue
+                # Two slots of one holder that record the same identity are the
+                # same choice to a user and publish the same sentence, so offering
+                # both only asks a question with no answer. Naming them apart would
+                # mean inventing a distinction the record does not make.
+                twin = (label, clean_text(position.get("product_code")), clean_text(position.get("component_type")).lower())
+                if twin in seen_identities:
+                    continue
+                seen_identities.add(twin)
                 row = {
                     "id": key,
                     "display_label": label,
+                    # False when `display_label` is only the position key or a
+                    # generic emptiness word, so the browser never presents an
+                    # internal slot id - or "(position Empty)" - as an identity.
+                    "has_identity": bool(identity_label)
+                    and identity_label.lower() not in _EMPTY_POSITION_WORDS,
                     "product_code": clean_text(position.get("product_code")),
                     "component_type": clean_text(position.get("component_type")),
                     "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",
                     "is_empty": (
                         clean_text(position.get("component_type")).lower() == "empty"
-                        or clean_text(label).lower() in {"empty", "none", "blank"}
+                        or clean_text(label).lower() in _EMPTY_POSITION_WORDS
                     ),
                     "incomplete": bool(position.get("_cube_incomplete") or position.get("_unsupported_spectral_model")),
                     "route_ids": [route_id] if route_id else [],
