@@ -293,8 +293,9 @@ class ActiveYamlContractTests(unittest.TestCase):
                         for lp in paths
                         if method in covers.get(str(lp.get("route_type") or lp.get("id") or ""), {}).get(axis, set())
                     ]
-                    if len(candidates) == 1:
-                        violations.append((yaml_path.name, candidates[0], axis, "unambiguous mapping not authored", method))
+                    violations.append((
+                        yaml_path.name, axis, "declared capability not explicitly mapped", method, candidates
+                    ))
 
         self.assertEqual(
             violations,

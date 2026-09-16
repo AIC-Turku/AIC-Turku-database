@@ -128,8 +128,8 @@ def instrument():
             "route_type": "transmitted_light",
             "route_type_label": "Transmitted Light",
             "route_identity": {
-                "imaging_modes": [{"id": "transmitted_light", "display_label": "Transmitted Light"}],
-                "contrast_methods": [],
+                "imaging_modes": [],
+                "contrast_methods": [{"id": "transmitted_brightfield", "display_label": "Transmitted Brightfield"}],
                 "readouts": [],
             },
             "relevant_hardware": {
@@ -137,6 +137,21 @@ def instrument():
                 "filters": [],
                 "splitters": [],
                 "endpoints": [brightfield_camera],
+            },
+            "branch_summary": {"branches": []},
+        },
+        {
+            "id": "unmapped-service-path",
+            "display_label": "Unmapped service path",
+            "route_type": "widefield_fluorescence",
+            "route_type_label": "Widefield Fluorescence",
+            "route_identity": {
+                "imaging_modes": [],
+                "contrast_methods": [],
+                "readouts": [],
+            },
+            "relevant_hardware": {
+                "sources": [], "filters": [], "splitters": [], "endpoints": [],
             },
             "branch_summary": {"branches": []},
         },
@@ -205,6 +220,11 @@ class MethodFirstMethodsTests(unittest.TestCase):
 
     def output(self):
         return self.page.locator("#output-text").input_value()
+
+    def test_unmapped_route_does_not_become_an_inferred_method(self):
+        methods = self.page.locator('#method-list input[data-category="method"]')
+        self.assertEqual(methods.count(), 2)
+        expect(self.page.locator("#method-list")).not_to_contain_text("Unmapped service path")
 
     def test_method_first_selection_reveals_only_compatible_route_hardware(self):
         expect(self.page.locator("#section-method")).to_be_visible()

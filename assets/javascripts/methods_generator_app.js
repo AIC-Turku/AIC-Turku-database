@@ -469,10 +469,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ...(Array.isArray(identity.imaging_modes) ? identity.imaging_modes : []),
                 ...(Array.isArray(identity.contrast_methods) ? identity.contrast_methods : []),
             ];
-            const candidates = explicit.length ? explicit : [{
-                id: cleanText(route?.route_type),
-                display_label: cleanText(route?.route_type_label || route?.display_label),
-            }];
+            const candidates = explicit;
             candidates.forEach((entry) => {
                 const methodId = cleanText(entry?.id || entry);
                 const displayLabel = cleanText(entry?.display_label || entry?.id || entry);

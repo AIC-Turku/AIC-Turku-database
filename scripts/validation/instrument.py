@@ -474,6 +474,86 @@ def _append_light_path_route_warnings(
         warnings.append(ValidationIssue(code='instrument_readout_uncovered_by_route_readouts', path=f"{instrument_file.as_posix()}:capabilities.readouts", message=(f"Instrument '{instrument_file.stem}' capability readout '{readout}' is not covered by any light_paths[].readouts entry.")))
 
 
+
+def _append_explicit_method_path_issues(
+    issues: list[ValidationIssue],
+    payload: dict[str, Any],
+    instrument_file: Path,
+    vocabulary: Vocabulary,
+    capabilities: dict[str, set[str]],
+) -> None:
+    """Enforce explicit capability-to-light-path mappings for active instruments.
+
+    `capabilities` declares what the instrument can do. `light_paths[].imaging_modes`
+    and `light_paths[].contrast_methods` declare which physical path implements each
+    method. Route-family coverage verifies compatibility only and never supplies a
+    missing mapping.
+    """
+    light_paths = payload.get('light_paths')
+    if not isinstance(light_paths, list):
+        light_paths = []
+
+    for axis in ('imaging_modes', 'contrast_methods'):
+        declared = set(capabilities.get(axis, set()))
+        mapped: set[str] = set()
+
+        for index, light_path in enumerate(light_paths):
+            if not isinstance(light_path, dict):
+                continue
+            route_type_raw = light_path.get('route_type') or light_path.get('id')
+            route_type = (
+                vocabulary.resolve_canonical('optical_routes', route_type_raw) or str(route_type_raw or '').strip()
+                if isinstance(route_type_raw, str)
+                else ''
+            )
+            route_term = vocabulary.get_term('optical_routes', route_type) if route_type else None
+            route_covers: set[str] = set()
+            if route_term is not None and isinstance(route_term.metadata, dict):
+                cover_map = route_term.metadata.get('covers')
+                if isinstance(cover_map, dict):
+                    route_covers = {
+                        str(value).strip()
+                        for value in (cover_map.get(axis) or [])
+                        if isinstance(value, str) and value.strip()
+                    }
+
+            authored = {
+                (vocabulary.resolve_canonical(axis, value) or value)
+                for value in (light_path.get(axis) or [])
+                if isinstance(value, str) and value.strip()
+            }
+            mapped.update(authored)
+
+            for method in sorted(authored - declared):
+                issues.append(ValidationIssue(
+                    code='light_path_method_not_declared',
+                    path=f"{instrument_file.as_posix()}:light_paths[{index}].{axis}",
+                    message=(
+                        f"Light path maps method '{method}' but capabilities.{axis} does not declare it. "
+                        "Declare the capability or remove the path mapping."
+                    ),
+                ))
+
+            for method in sorted(authored - route_covers):
+                issues.append(ValidationIssue(
+                    code='light_path_method_route_incompatible',
+                    path=f"{instrument_file.as_posix()}:light_paths[{index}].{axis}",
+                    message=(
+                        f"Method '{method}' is explicitly mapped to route_type '{route_type}', but that "
+                        "route family does not cover the method according to vocab/optical_routes.yaml."
+                    ),
+                ))
+
+        for method in sorted(declared - mapped):
+            issues.append(ValidationIssue(
+                code='capability_method_unmapped',
+                path=f"{instrument_file.as_posix()}:capabilities.{axis}",
+                message=(
+                    f"Declared method '{method}' has no explicit light_paths[].{axis} mapping. "
+                    "Author the physical method-to-path relationship in YAML; consumers must not infer it from route_type."
+                ),
+            ))
+
 def validate_instrument_ledgers(
     *,
     instruments_dir: Path = Path('instruments'),
@@ -842,6 +922,15 @@ def validate_instrument_ledgers(
             is_retired_instrument=is_retired_instrument,
             allow_legacy_modalities=allow_legacy_modalities,
         )
+
+        if not is_retired_instrument:
+            _append_explicit_method_path_issues(
+                issues=issues,
+                payload=payload,
+                instrument_file=instrument_file,
+                vocabulary=vocabulary,
+                capabilities=capability_axes,
+            )
 
         if 'sted' in capability_axes.get('imaging_modes', set()) and not is_retired_instrument:
             source_nodes = _resolve_path_nodes(canonical_payload, 'hardware.sources[]')

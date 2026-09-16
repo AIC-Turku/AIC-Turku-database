@@ -21,9 +21,9 @@ instrument:
 # CAPABILITIES
 # -----------------------------------------------------------------------------
 capabilities:  # Capability axes: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.
-  imaging_modes:  # Capability imaging modes: Canonical imaging-mode capability axis (not a route identifier). | Allowed values (canonical IDs): confocal_point, confocal_spinning_disk, widefield_fluorescence, tirf, multiphoton, light_sheet, sim, sted, resolft, smlm, ism
+  imaging_modes:  # Capability imaging modes: Canonical imaging-mode capability axis (not a route identifier). For active instruments, every declared method must be explicitly associated with at least one compatible light_paths[].imaging_modes entry. | Allowed values (canonical IDs): confocal_point, confocal_spinning_disk, widefield_fluorescence, tirf, multiphoton, light_sheet, sim, sted, resolft, smlm, ism
     - ""
-  contrast_methods:  # Capability contrast methods: Canonical contrast-method capability axis. | Allowed values (canonical IDs): transmitted_brightfield, reflected_brightfield, phase_contrast, dic, darkfield, polarized_light, optical_sectioning
+  contrast_methods:  # Capability contrast methods: Canonical contrast-method capability axis. For active instruments, every declared method must be explicitly associated with at least one compatible light_paths[].contrast_methods entry. | Allowed values (canonical IDs): transmitted_brightfield, reflected_brightfield, phase_contrast, dic, darkfield, polarized_light, optical_sectioning
     - ""
   readouts:  # Capability measurement readouts: Canonical measurement-readout capability axis. | Allowed values (canonical IDs): spectral_imaging, flim, fcs, fret
     - ""
@@ -242,9 +242,9 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
     id: ""  # Light path ID: Stable route identifier used by simulator, UI, and graph rendering.
     name: ""  # Light path name: Deprecated authored label. Canonical route display labels are resolved from vocab/optical_routes.yaml via light_paths[].route_type.
     route_type: ""  # Light path route type: Controlled optical route family and canonical display-label key. Active dataflow expects light_paths[].id to match light_paths[].route_type. | Allowed values (canonical IDs): confocal_point, confocal_spinning_disk, widefield_fluorescence, transmitted_light, light_sheet, multiphoton
-    imaging_modes:  # Light path imaging modes: Explicitly associates imaging methods with the physical light path that implements them, avoiding downstream method-to-route inference. | Allowed values (canonical IDs): confocal_point, confocal_spinning_disk, widefield_fluorescence, tirf, multiphoton, light_sheet, sim, sted, resolft, smlm, ism
+    imaging_modes:  # Light path imaging modes: Explicitly associates imaging methods with the physical light path that implements them. On active instruments, mapped methods must also be declared in capabilities.imaging_modes, must be compatible with route_type, and every declared imaging mode must be mapped to at least one path. | Allowed values (canonical IDs): confocal_point, confocal_spinning_disk, widefield_fluorescence, tirf, multiphoton, light_sheet, sim, sted, resolft, smlm, ism
       - ""
-    contrast_methods:  # Light path contrast methods: Explicitly associates contrast methods with the physical light path that implements them, avoiding downstream method-to-route inference. | Allowed values (canonical IDs): transmitted_brightfield, reflected_brightfield, phase_contrast, dic, darkfield, polarized_light, optical_sectioning
+    contrast_methods:  # Light path contrast methods: Explicitly associates contrast methods with the physical light path that implements them. On active instruments, mapped methods must also be declared in capabilities.contrast_methods, must be compatible with route_type, and every declared contrast method must be mapped to at least one path. | Allowed values (canonical IDs): transmitted_brightfield, reflected_brightfield, phase_contrast, dic, darkfield, polarized_light, optical_sectioning
       - ""
     readouts:  # Light path readouts: Optional per-route measurement/readout tags associated with a route traversal. | Allowed values (canonical IDs): spectral_imaging, flim, fcs, fret
       - ""
