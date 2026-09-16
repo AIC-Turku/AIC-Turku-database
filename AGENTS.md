@@ -33,6 +33,31 @@ YAML instrument specs
 15. Avoid hardcoded vocabularies, hidden aliases, compatibility fallbacks, and UI-side inference in production dataflow.
 16. If a display needs a fallback label such as "Unknown", it must be visibly diagnostic and must not be used as authoritative data.
 
+## Ledger Updates
+
+`docs/ledger_gaps.md` lists what the instrument records do not yet say — the light
+sources with no recorded role, the detectors no light path reaches, the filter
+positions with no transmission bands, and so on. It is what the public tools
+cannot work around, so it is the working list of questions for facility staff.
+
+It is generated from the records, not maintained by hand:
+
+- after changing any file under `instruments/` (including `instruments/retired/`),
+  run `python -m scripts.ledger_gaps` and commit the regenerated
+  `docs/ledger_gaps.md` in the same change;
+- `python -m scripts.ledger_gaps --check` exits non-zero when the committed file no
+  longer matches the records. Run it before proposing a ledger change, and treat a
+  failure as "regenerate", never as "edit the Markdown".
+
+Filling a gap should make the list shorter. If a ledger edit leaves the count
+unchanged, the field that was edited is not one the tools depend on, which is worth
+saying explicitly in the change description. Where a field is genuinely not
+applicable to an instrument, record that explicitly rather than leaving it blank:
+the tools can then stop asking, and the entry leaves this list.
+
+Never fill a gap by assumption to make the list shorter. An unrecorded fact is a
+question for staff, not a value to invent.
+
 ## Testing Guidance
 
 - Run targeted pytest tests for parser, validator, dashboard builder, LLM export, methods page export, and VM contract.

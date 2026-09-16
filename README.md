@@ -55,7 +55,8 @@ The experiment-planning page provides a structured inventory export that can be 
 - `scripts/planning_eval.py` — offline grounding check for saved planning answers.
 - `scripts/templates/*` — public page templates and browser runtime.
 - `docs/dataflow_contract.md` — production data-flow and module contract.
-- `docs/light_path_v2_migration.md` — canonical light-path authoring model.
+- `docs/ledger_gaps.md` — generated list of the facts the instrument records do not yet hold, and the questions they raise for facility staff.
+- `docs/light_path_model.md` — canonical light-path authoring model.
 - `docs/objective_pool.md` — objective catalogue source boundaries and maintenance notes.
 - `docs/portability.md` — what another facility must edit to reuse this project.
 - `docs/planning_grounding.md` — what the planning export establishes, and how to check an assistant's answer.
@@ -79,7 +80,7 @@ Key rules:
 
 ## Canonical light-path model
 
-The current authoring structure is documented in `docs/light_path_v2_migration.md` and uses:
+The current authoring structure is documented in `docs/light_path_model.md` and uses:
 
 - `hardware.sources`
 - `hardware.optical_path_elements`
@@ -137,7 +138,7 @@ It can:
 
 A method is never inferred from a route family: `confocal_point` does not imply
 STED, and `widefield_fluorescence` does not imply TIRF. See
-`docs/light_path_v2_migration.md` for the authoring rules and the validation
+`docs/light_path_model.md` for the authoring rules and the validation
 codes that enforce them.
 
 The user remains responsible for checking acquisition-specific settings and placeholders before publication.

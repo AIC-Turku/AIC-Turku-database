@@ -122,8 +122,7 @@ These are deliberate and do not block reuse:
    replaces the inventory must update or drop these. The portability boundaries
    themselves are covered separately by `tests/test_facility_portability.py`,
    which is inventory-independent.
-4. **`docs/light_path_v2_migration.md`.** Despite the file name this is the
-   current light-path authoring contract, not a record of a past migration. A
+4. **`docs/light_path_model.md`.** The current light-path authoring contract. A
    fork needs it to author `hardware.sources`, `optical_path_elements` and
    `light_paths` correctly.
 5. **`scripts/import_spectrascope.py`** defaults its `--source` to a
