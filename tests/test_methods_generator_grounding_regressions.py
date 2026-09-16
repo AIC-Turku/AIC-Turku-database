@@ -617,15 +617,19 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.click("#add-btn")
         self.assertIn("sequentially or simultaneously", self.output())
 
-    def test_several_routes_in_one_acquisition_are_questioned(self):
+    def test_one_acquisition_cannot_select_several_routes(self):
         instrument = _instrument()
         instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"].append(
             {"id": "confocal", "display_label": "Point-scanning confocal", "relevant_hardware": {}})
         self.open_methods(instrument)
         self.page.check("#route-0")
+        expect(self.page.locator("#route-0")).to_be_checked()
         self.page.check("#route-1")
+        expect(self.page.locator("#route-0")).not_to_be_checked()
+        expect(self.page.locator("#route-1")).to_be_checked()
         self.page.click("#add-btn")
-        self.assertIn("optical routes are reported for a single acquisition", self.output())
+        self.assertNotIn("optical routes are reported for a single acquisition", self.output())
+        self.assertIn("Point-scanning confocal route", self.output())
 
     def test_changing_the_selection_after_confirming_says_the_plan_was_dropped(self):
         self.open_methods(storage={

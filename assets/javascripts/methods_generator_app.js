@@ -1442,16 +1442,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     // is authoritative; modality filter only activates when no route is checked.
     document.getElementById("route-list").addEventListener("change", (event) => {
         const target = event?.target;
-        const selectedRouteBefore = getCheckedIds("route")[0] || "";
-        let preserveHardware = true;
+        const preserveHardware = true;
         if (target?.dataset.category === "route" && target.checked) {
-            preserveHardware = false;
             document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
                 if (readout.dataset.routeId !== target.value) readout.checked = false;
             });
         } else if (target?.dataset.category === "readout" && target.checked) {
             const targetRouteId = cleanText(target.dataset.routeId);
-            preserveHardware = selectedRouteBefore === targetRouteId;
             document.querySelectorAll('input[id^="route-"]').forEach(route => {
                 if (route.value === targetRouteId) route.checked = true;
             });
