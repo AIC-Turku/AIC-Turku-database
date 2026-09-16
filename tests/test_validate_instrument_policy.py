@@ -438,7 +438,7 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                     'workflow_tags': {'source': 'inline', 'allowed_values': ['live_cell_imaging']},
                     'assay_operations': {'source': 'inline', 'allowed_values': ['frap']},
                     'non_optical_capabilities': {'source': 'inline', 'allowed_values': ['afm']},
-                    'optical_routes': {'source': 'inline', 'allowed_values': ['confocal_point']},
+                    'optical_routes': {'source': 'inline', 'allowed_values': ['confocal_point', 'transmitted_light']},
                 },
                 'sections': [{
                     'id': 'instrument',
@@ -454,6 +454,8 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
                         {'path': 'light_paths', 'status': 'required', 'type': 'list', 'item_type': 'object', 'min_items': 1},
                         {'path': 'light_paths[].id', 'status': 'required', 'type': 'slug'},
                         {'path': 'light_paths[].route_type', 'status': 'optional', 'type': 'string', 'vocab': 'optical_routes'},
+                        {'path': 'light_paths[].imaging_modes', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'imaging_modes'},
+                        {'path': 'light_paths[].contrast_methods', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'contrast_methods'},
                         {'path': 'light_paths[].readouts', 'status': 'optional', 'type': 'list', 'item_type': 'string', 'vocab': 'measurement_readouts'},
                         {'path': 'light_paths[].illumination_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
                         {'path': 'light_paths[].detection_sequence', 'status': 'required', 'type': 'list', 'item_type': 'object'},
@@ -474,7 +476,14 @@ class InstrumentPolicyValidationTests(unittest.TestCase):
             'light_paths': [{
                 'id': 'confocal_spectral_flim_fcs',
                 'route_type': 'confocal_point',
+                'imaging_modes': ['confocal_point'],
                 'readouts': ['spectral_imaging', 'flim'],
+                'illumination_sequence': [],
+                'detection_sequence': [],
+            }, {
+                'id': 'transmitted_light',
+                'route_type': 'transmitted_light',
+                'contrast_methods': ['transmitted_brightfield'],
                 'illumination_sequence': [],
                 'detection_sequence': [],
             }],

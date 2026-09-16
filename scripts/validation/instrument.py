@@ -507,7 +507,7 @@ def _append_explicit_method_path_issues(
                 else ''
             )
             route_term = vocabulary.get_term('optical_routes', route_type) if route_type else None
-            route_covers: set[str] = set()
+            route_covers: set[str] | None = None
             if route_term is not None and isinstance(route_term.metadata, dict):
                 cover_map = route_term.metadata.get('covers')
                 if isinstance(cover_map, dict):
@@ -534,15 +534,16 @@ def _append_explicit_method_path_issues(
                     ),
                 ))
 
-            for method in sorted(authored - route_covers):
-                issues.append(ValidationIssue(
-                    code='light_path_method_route_incompatible',
-                    path=f"{instrument_file.as_posix()}:light_paths[{index}].{axis}",
-                    message=(
-                        f"Method '{method}' is explicitly mapped to route_type '{route_type}', but that "
-                        "route family does not cover the method according to vocab/optical_routes.yaml."
-                    ),
-                ))
+            if route_covers is not None:
+                for method in sorted(authored - route_covers):
+                    issues.append(ValidationIssue(
+                        code='light_path_method_route_incompatible',
+                        path=f"{instrument_file.as_posix()}:light_paths[{index}].{axis}",
+                        message=(
+                            f"Method '{method}' is explicitly mapped to route_type '{route_type}', but that "
+                            "route family does not cover the method according to the optical-route vocabulary."
+                        ),
+                    ))
 
         for method in sorted(declared - mapped):
             issues.append(ValidationIssue(
