@@ -196,7 +196,8 @@ class AuditBrowserRegressions(unittest.TestCase):
         output = self.output()
         self.assertEqual(output.count("Review before publication:"), 1)
         self.assertIn("- [PLEASE VERIFY: emission filter used]", output)
-        self.assertIn("- [PLEASE SPECIFY: exposure time and pixel size]", output)
+        self.assertIn("- [RECOMMENDED FOR REPORTING: the light-microscopy community recommends also reporting exposure time and pixel size.", output)
+        self.assertIn("original image metadata", output)
         self.assertNotIn("microscope. [PLEASE", output)
 
     def test_clipboard_rejection_reports_failure_instead_of_success(self):
