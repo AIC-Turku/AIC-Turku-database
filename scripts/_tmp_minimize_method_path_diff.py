@@ -1,3 +1,4 @@
+# Temporary one-shot helper: rebuild mapping changes without YAML formatting churn.
 from pathlib import Path
 import subprocess
 import yaml
@@ -54,7 +55,6 @@ def final_mappings(data):
     result = {}
     for lp in paths:
         pid = str(lp.get("id") or "")
-        route = str(lp.get("route_type") or pid)
         axes = {}
         for axis in ("imaging_modes", "contrast_methods"):
             values = list(lp.get(axis) or [])
@@ -76,7 +76,6 @@ def final_mappings(data):
 def minimally_insert(text: str, mapping: dict) -> str:
     lines = text.splitlines()
     starts = [i for i, line in enumerate(lines) if line.startswith("- id: ") and i > 0 and lines[i-1].startswith("light_paths:")]
-    # Also collect subsequent route entries at top level after the first light-path entry.
     if starts:
         first = starts[0]
         starts = [i for i in range(first, len(lines)) if lines[i].startswith("- id: ")]
@@ -115,7 +114,6 @@ for name in TARGETS:
     updated = minimally_insert(original, final_mappings(data))
     (ROOT / rel).write_text(updated, encoding="utf-8")
 
-# Restore schema/test/template from pre-mapping state, then add only the intended contract.
 policy_path = ROOT / "schema" / "instrument_policy.yaml"
 policy = git_show("schema/instrument_policy.yaml")
 marker = "  - path: light_paths[].readouts\n"
@@ -124,7 +122,6 @@ if marker not in policy:
     raise RuntimeError("schema insertion marker not found")
 policy_path.write_text(policy.replace(marker, addition + marker, 1), encoding="utf-8")
 
-# Restore test and append the mapping contract without reformatting surrounding code.
 tests_path = ROOT / "tests" / "test_active_yaml_contracts.py"
 tests = git_show("tests/test_active_yaml_contracts.py")
 method = r'''
