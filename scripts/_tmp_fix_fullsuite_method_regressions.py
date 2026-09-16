@@ -75,6 +75,28 @@ replace_once(
 ''',
 )
 
+# Route controls are radios now: switch directly to the second route rather than
+# unchecking the first. The test still checks the important contract: a compatible
+# light choice survives route activation through a readout, then incompatible state
+# disappears when the user moves to a different physical path.
+replace_once(
+    "tests/test_audit_regressions.py",
+    '''        expect(self.page.locator("#route-0")).to_be_checked()
+        expect(self.page.locator("#light-0")).to_be_checked()
+        self.page.uncheck("#route-0")
+        expect(self.page.locator("#readout-0-0")).not_to_be_checked()
+        self.page.check("#route-1")
+        expect(self.page.locator("#light-list input")).to_have_count(0)
+''',
+    '''        expect(self.page.locator("#route-0")).to_be_checked()
+        expect(self.page.locator("#light-0")).to_be_checked()
+        self.page.check("#route-1")
+        expect(self.page.locator("#route-0")).not_to_be_checked()
+        expect(self.page.locator("#readout-0-0")).not_to_be_checked()
+        expect(self.page.locator("#light-list input")).to_have_count(0)
+''',
+)
+
 for rel in (
     "scripts/_tmp_fix_fullsuite_method_regressions.py",
     ".github/workflows/tmp-fix-fullsuite-method-regressions.yml",
