@@ -275,8 +275,6 @@ def _objective_display_label(vocabulary: Vocabulary, obj: dict[str, Any]) -> str
     if mag_na and mag_na.lower() in identity_label.lower():
         mag_na = ""
     immersion_label = immersion.upper() if immersion else ""
-    if immersion_label and immersion_label.lower() in identity_label.lower():
-        immersion_label = ""
     parts = [identity_label, mag_na, immersion_label]
     return " ".join(part for part in parts if part).strip() or identity_label or "Objective"
 

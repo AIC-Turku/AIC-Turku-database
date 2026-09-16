@@ -338,7 +338,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ? componentLabel
                 : componentLabel ? `${identity} in the ${componentLabel}` : identity;
             const componentType = cleanText(position?.component_type).toLowerCase();
-            const incompletePrompt = componentType === "filter_cube"
+            const cubeLike = !componentType || componentType === "filter_cube";
+            const incompletePrompt = cubeLike
                 ? `[PLEASE VERIFY: the recorded transmission bands for ${positionLabel} are incomplete; confirm its excitation filter, dichroic and emission filter]`
                 : `[PLEASE VERIFY: the recorded optical details for ${positionLabel} are incomplete; confirm the exact setting used]`;
             checkbox.dataset.reviewPrompts = JSON.stringify(position?.incomplete ? [incompletePrompt] : []);
@@ -534,7 +535,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function shouldUseLegacyModalities(dto) {
         const modalities = Array.isArray(dto?.modalities) ? dto.modalities : [];
-        return modalities.length > 0 && routeViewsForInstrument(dto).length === 0;
+        if (!modalities.length) return false;
+        const routeViews = routeViewsForInstrument(dto);
+        const hasRoutes = routeViews.length > 0;
+        if (dto?.retired) return !hasRoutes;
+        const caps = dto?.capabilities && typeof dto.capabilities === "object" ? dto.capabilities : {};
+        const hasCapabilities = Object.values(caps).some(value => Array.isArray(value) && value.length > 0);
+        const hasExplicitRouteMethods = routeViews.some(route => {
+            const identity = route?.route_identity && typeof route.route_identity === "object"
+                ? route.route_identity : {};
+            return (Array.isArray(identity.imaging_modes) && identity.imaging_modes.length > 0)
+                || (Array.isArray(identity.contrast_methods) && identity.contrast_methods.length > 0);
+        });
+        return !hasCapabilities && !hasExplicitRouteMethods;
     }
 
     function updateHardwareVisibility(dto, preserveSelections = true) {

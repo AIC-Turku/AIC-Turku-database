@@ -1854,15 +1854,10 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        # Modality text must appear with compatibility label, not as primary sentence
-        self.assertIn("(Compatibility)", result["output"])
-        # The raw modality sentence style "imaging modalities used included X" may appear
-        # but ONLY under the (Compatibility) marker — the primary paragraph must not
-        # start with a modality sentence.
-        lines = result["output"].split("\n\n")
-        primary = lines[0] if lines else ""
-        self.assertNotIn("Imaging modality", primary,
-                         "Primary paragraph must not contain modality sentence; it belongs in (Compatibility) section")
+        # Route-less legacy records may still report the selected modality, but
+        # implementation/migration vocabulary must never enter manuscript prose.
+        self.assertNotIn("(Compatibility)", result["output"])
+        self.assertIn("Imaging modality used was Confocal.", result["output"])
 
     def test_modality_text_not_in_primary_output_when_route_also_selected(self) -> None:
         """When a route is selected alongside modality, only route text appears in the primary paragraph."""

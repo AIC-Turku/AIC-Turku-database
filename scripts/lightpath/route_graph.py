@@ -217,9 +217,6 @@ def _resolve_position_candidate_payload(
         _clean_string(position.get("display_label"))
         or _clean_string(position.get("label"))
         or _clean_string(position.get("name"))
-        or _clean_string(position.get("model"))
-        or _clean_string(component_payload.get("model"))
-        or _clean_string(position.get("product_code"))
         or _clean_string(component_payload.get("display_label"))
         or _clean_string(component_payload.get("label"))
         or position_key

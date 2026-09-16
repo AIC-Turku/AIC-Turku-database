@@ -394,7 +394,13 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                 if not isinstance(position, dict):
                     continue
                 key = clean_text(position.get("position_key") or position.get("position_id"))
-                label = clean_text(position.get("position_label") or position.get("label") or position.get("name"))
+                label = clean_text(
+                    position.get("name")
+                    or position.get("model")
+                    or position.get("position_label")
+                    or position.get("label")
+                    or position.get("product_code")
+                )
                 if not key or not label:
                     continue
                 # A holder shared by two routes may offer different positions on
