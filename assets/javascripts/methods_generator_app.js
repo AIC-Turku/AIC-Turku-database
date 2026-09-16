@@ -1547,11 +1547,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return `[RECOMMENDED FOR REPORTING: the light-microscopy community recommends also reporting ${cleaned}. ${REPORTING_METADATA_HINT}]`;
     }
 
-    const MODALITY_SETTINGS_PROMPTS = {
-        confocal_point: reportingRecommendation(
-            "confocal pinhole diameter (in Airy units), scan zoom, pixel dwell time, and line/frame averaging"),
-        confocal_spinning_disk: reportingRecommendation(
-            "camera exposure per channel, and any disk setting that was varied (for example rotation speed or the pinhole pattern, if the system offers a choice)"),
+    const METHOD_SETTINGS_PROMPTS = {
         multiphoton: reportingRecommendation(
             "excitation wavelength, mean power at the sample, and pulse width"),
         light_sheet: reportingRecommendation(
@@ -1567,6 +1563,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         ism: reportingRecommendation(
             "detector/reconstruction mode and the reconstruction software/version and settings used"),
     };
+    const PATH_SETTINGS_PROMPTS = {
+        confocal_point: reportingRecommendation(
+            "scan zoom, pixel dwell time, line/frame averaging, and, when a confocal pinhole was used, its diameter (in Airy units)"),
+        confocal_spinning_disk: reportingRecommendation(
+            "camera exposure per channel, and any disk setting that was varied (for example rotation speed or the pinhole pattern, if the system offers a choice)"),
+    };
     const READOUT_SETTINGS_PROMPTS = {
         "flim": "[PLEASE SPECIFY: how fluorescence lifetimes were acquired and analysed, including whether acquisition was time-domain or frequency-domain; report the relevant timing or modulation settings, calibration and how the instrument response was determined, signal or photon statistics where applicable, and the fitting or phasor analysis used]",
         "spectral imaging": "[PLEASE SPECIFY: the spectral detection windows (start, end and step) and, if the spectra were unmixed, the method and reference spectra used]",
@@ -1575,17 +1577,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     function modalitySettingsPrompts(methodSelections, routeSelections, readoutSelections) {
-        // The technique the user confirmed decides which settings a reader needs.
-        // A route family is not a technique: asking a STED acquisition for confocal
-        // pinhole and dwell time - because STED runs on the confocal path - is the
-        // route-implies-method inference this page is built to avoid. The route
-        // family is used only for records that carry no method mapping at all,
-        // which is the retired/legacy case.
-        const prompts = uniqueTexts(
-            methodSelections.length
-                ? methodSelections.map(item => MODALITY_SETTINGS_PROMPTS[cleanText(item.id).toLowerCase()] || "")
-                : routeSelections.map(item => MODALITY_SETTINGS_PROMPTS[item.routeType] || "")
-        );
+        // Method and path answer different questions. The selected method supplies
+        // technique-specific settings (for example STED depletion power); the
+        // physical route can add implementation settings (for example scan dwell
+        // time) without claiming that the route family is itself the method. For
+        // legacy records with no method mapping, retain the old route-as-fallback
+        // recommendation so retired instruments do not lose useful guidance.
+        const methodPrompts = methodSelections.map(
+            item => METHOD_SETTINGS_PROMPTS[cleanText(item.id).toLowerCase()] || "");
+        const pathPrompts = routeSelections.map(
+            item => PATH_SETTINGS_PROMPTS[cleanText(item.routeType).toLowerCase()] || "");
+        const legacyMethodPrompts = methodSelections.length
+            ? []
+            : routeSelections.map(
+                item => METHOD_SETTINGS_PROMPTS[cleanText(item.routeType).toLowerCase()] || "");
+        const prompts = uniqueTexts([...methodPrompts, ...pathPrompts, ...legacyMethodPrompts]);
         readoutSelections.forEach((item) => {
             const prompt = READOUT_SETTINGS_PROMPTS[cleanText(item.displayLabel).toLowerCase()];
             if (prompt) prompts.push(prompt);
@@ -1634,14 +1640,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const fallbackOpening = routeClause && identitySentence.endsWith(".")
             ? `${identitySentence.slice(0, -1)}${routeClause}.`
             : identitySentence;
-        // `base_sentence` is composed from the recorded manufacturer, model and
-        // stand orientation. The method leads the sentence, but that identity is
-        // canonical instrument fact and must survive: dropping it leaves a reader
-        // unable to tell which microscope was used.
-        const instrumentClause = identitySentence
-            .replace(/^Images were acquired using\s+/i, "")
-            .replace(/\.$/, "");
-        const instrumentName = instrumentClause
+        // Use the structured identity-only phrase. `base_sentence` also carries
+        // acquisition software for legacy consumers, and parsing it here would
+        // publish software even when the user did not confirm that action.
+        const instrumentName = cleanText(methods.instrument_reference)
             || cleanText(dto.display_name) || cleanText(dto.id) || "the microscope";
         const openingSentence = methodLabels.length === 1
             ? `${methodLabels[0]} was performed using ${instrumentName}.`

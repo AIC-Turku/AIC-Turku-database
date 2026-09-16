@@ -413,8 +413,8 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
             holder_label = clean_text(step.get("display_label"))
             known = positions_by_component.setdefault(inventory_id, [])
             by_key = {row["id"]: row for row in known}
-            seen_identities = {
-                (row["display_label"], row["product_code"], row["component_type"].lower())
+            by_identity = {
+                (row["display_label"], row["product_code"], row["component_type"].lower()): row
                 for row in known
             }
             for position in available:
@@ -453,9 +453,13 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                 # both only asks a question with no answer. Naming them apart would
                 # mean inventing a distinction the record does not make.
                 twin = (label, clean_text(position.get("product_code")), clean_text(position.get("component_type")).lower())
-                if twin in seen_identities:
+                duplicate = by_identity.get(twin)
+                if duplicate is not None:
+                    if route_id and route_id not in duplicate["route_ids"]:
+                        duplicate["route_ids"].append(route_id)
+                    if route_label and route_label not in duplicate["route_labels"]:
+                        duplicate["route_labels"].append(route_label)
                     continue
-                seen_identities.add(twin)
                 row = {
                     "id": key,
                     "display_label": label,
@@ -476,6 +480,7 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     "route_labels": [route_label] if route_label else [],
                 }
                 by_key[key] = row
+                by_identity[twin] = row
                 known.append(row)
     return positions_by_component
 

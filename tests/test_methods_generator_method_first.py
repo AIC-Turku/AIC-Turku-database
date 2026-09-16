@@ -220,10 +220,13 @@ def instrument():
         "methods": {
             "base_sentence": (
                 "Images were acquired using the Method First Scope "
-                "(Acme MF-1), an inverted microscope."
-            )
+                "(Acme MF-1), an inverted microscope, controlled by Acme Acquire (v1.0)."
+            ),
+            "instrument_reference": "the Method First Scope (Acme MF-1), an inverted microscope",
         },
-        "software": [],
+        "software": [
+            {"name": "Acme Acquire", "version": "1.0", "role": "acquisition"},
+        ],
         "modalities": [],
         "modules": [],
         "hardware": {
@@ -301,6 +304,19 @@ class MethodFirstMethodsTests(unittest.TestCase):
         # The display name alone is not the recorded identity.
         self.assertNotIn("performed using the Method First Scope.", output)
 
+    def test_acquisition_software_is_only_reported_when_confirmed(self):
+        self.page.check("#method-0")
+        self.page.click("#add-btn")
+        self.assertNotIn("Acme Acquire", self.output())
+
+        self.page.check("#confirmed-0")
+        self.page.click("#add-btn")
+        self.assertIn(
+            "Instrument control and image acquisition were performed using Acme Acquire (v1.0).",
+            self.output(),
+        )
+        self.assertEqual(self.output().count("Acme Acquire"), 1)
+
     def test_light_path_is_not_offered_before_the_method_decision(self):
         """Choosing a method starts a fresh physical-path decision.
 
@@ -313,17 +329,19 @@ class MethodFirstMethodsTests(unittest.TestCase):
         self.page.check("#method-0")
         expect(self.page.locator("#section-route")).to_be_visible()
 
-    def test_technique_prompts_come_from_the_method_not_the_route_family(self):
-        """A route family is not a technique.
+    def test_method_and_path_reporting_prompts_are_both_preserved(self):
+        """Technique and physical-path settings are complementary, not aliases.
 
-        STED runs on the confocal path, so reading the family as the technique
-        asks a STED acquisition for confocal pinhole and dwell-time settings.
+        STED on a point-scanning path needs STED-specific reporting as well as
+        relevant scan mechanics, without declaring the acquisition to be
+        confocal imaging or assuming that a confocal pinhole was used.
         """
         self.page.check('#method-list input[value="sted"]')
         self.page.click("#add-btn")
         output = self.output()
         self.assertIn("STED depletion wavelength", output)
-        self.assertNotIn("confocal pinhole diameter", output)
+        self.assertIn("pixel dwell time", output)
+        self.assertIn("when a confocal pinhole was used", output)
 
     def test_unmapped_route_does_not_become_an_inferred_method(self):
         methods = self.page.locator('#method-list input[data-category="method"]')

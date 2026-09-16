@@ -944,6 +944,15 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     microscope_identity = " ".join(part for part in [clean_text(canonical_instrument.get("manufacturer")), clean_text(canonical_instrument.get("model"))] if part).strip()
     stand = clean_text(canonical_instrument.get("stand_orientation"))
     stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
+    display_name = clean_text(inst.get("display_name"))
+    if microscope_identity and stand_label:
+        instrument_reference = f"the {microscope_identity} {stand_label.lower()} microscope"
+    elif microscope_identity:
+        instrument_reference = f"the {microscope_identity} microscope"
+    elif display_name:
+        instrument_reference = f"the {display_name}"
+    else:
+        instrument_reference = "the microscope"
     base_sentence = f"Images were acquired using the {microscope_identity} {stand_label.lower()} microscope, controlled by {acquisition_software}." if microscope_identity and stand_label else f"Images were acquired using the {microscope_identity} microscope, controlled by {acquisition_software}."
     route_contract = (
         hardware_dto["optical_path"].get("authoritative_route_contract")
@@ -1149,6 +1158,9 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         },
         "methods": {
             "base_sentence": base_sentence,
+            # Identity only. Acquisition software is intentionally excluded so the
+            # Methods Generator reports it only after the user confirms it was used.
+            "instrument_reference": instrument_reference,
             "environment_sentence": hardware_dto["environment"].get("method_sentence", ""),
             "autofocus_sentence": hardware_dto["hardware_autofocus"].get("method_sentence", ""),
             "triggering_sentence": hardware_dto["triggering"].get("method_sentence", ""),

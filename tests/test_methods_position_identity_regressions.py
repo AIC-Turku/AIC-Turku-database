@@ -123,6 +123,39 @@ class PositionIdentityRegressions(unittest.TestCase):
                         )
 
 
+    def test_equivalent_position_on_two_routes_unions_route_membership(self) -> None:
+        """A deduplicated filter must remain selectable on every route that records it."""
+        holder_id = "optical_path_element:test_wheel"
+
+        def route(route_id: str, position_key: str) -> dict:
+            return {
+                "id": route_id,
+                "display_label": route_id,
+                "selected_execution": {
+                    "selected_route_steps": [
+                        {
+                            "hardware_inventory_id": holder_id,
+                            "display_label": "Test emission wheel",
+                            "available_positions": [
+                                {
+                                    "position_key": position_key,
+                                    "name": "525/25",
+                                    "product_code": "ET525/25",
+                                    "component_type": "filter",
+                                    "selection_mode": "exclusive",
+                                }
+                            ],
+                        }
+                    ]
+                },
+            }
+
+        rows = _selectable_positions_by_component([route("route-a", "slot-a"), route("route-b", "slot-b")])[holder_id]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(set(rows[0]["route_ids"]), {"route-a", "route-b"})
+        self.assertEqual(set(rows[0]["route_labels"]), {"route-a", "route-b"})
+
+
 class PublicationProseRegressions(unittest.TestCase):
     """Prose built from the real ledger must not contain generic filler."""
 

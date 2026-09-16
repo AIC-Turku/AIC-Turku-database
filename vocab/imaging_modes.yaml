@@ -52,5 +52,5 @@ terms:
 - id: ism
   display_label: ISM (AiryScan)
   label: ISM (AiryScan)
-  publication_phrase: "Airyscan (image scanning) imaging"
+  publication_phrase: "Image scanning microscopy (ISM; Airyscan)"
   description: "Image Scanning Microscopy. Uses detector array information in scanning microscopy to improve resolution and signal usage. Airyscan is a common commercial implementation."
