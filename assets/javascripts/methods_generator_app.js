@@ -394,13 +394,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             routeWrapper.style.marginBottom = "4px";
 
             const routeCheckbox = document.createElement("input");
-            routeCheckbox.type = "checkbox";
+            routeCheckbox.type = "radio";
+            routeCheckbox.name = "methods-light-path";
             routeCheckbox.id = `route-${routeIdx}`;
             routeCheckbox.value = routeId;
             routeCheckbox.dataset.displayLabel = routeLabel;
             routeCheckbox.dataset.methodSentence = `Images were acquired using the ${routeLabel} route.`;
             routeCheckbox.dataset.category = "route";
             routeCheckbox.dataset.routeType = cleanText(route.route_type);
+            const relevantHardware = route?.relevant_hardware && typeof route.relevant_hardware === "object"
+                ? route.relevant_hardware : {};
+            const hasRecordedRouteHardware = ["sources", "filters", "splitters", "endpoints"]
+                .some(key => Array.isArray(relevantHardware[key]) && relevantHardware[key].length > 0);
+            routeCheckbox.dataset.topologyIncomplete = hasRecordedRouteHardware ? "" : "1";
 
             const routeLabelEl = document.createElement("label");
             routeLabelEl.htmlFor = routeCheckbox.id;
@@ -638,6 +644,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             role: cleanText(cb.dataset.role),
             routeType: cleanText(cb.dataset.routeType),
             routeIds: parseJsonArray(cb.dataset.routeIds),
+            topologyIncomplete: cb.dataset.topologyIncomplete === "1",
             publicationTemplate: cleanText(cb.dataset.publicationTemplate),
             publicationLabel: cleanText(cb.dataset.publicationLabel),
             reviewPrompts: parseJsonArray(cb.dataset.reviewPrompts),
@@ -1384,25 +1391,40 @@ document.addEventListener("DOMContentLoaded", async () => {
         const routeIds = parseJsonArray(event.target.dataset.routeIds);
         const allowed = new Set(routeIds);
         const routeInputs = Array.from(document.querySelectorAll('input[id^="route-"]'));
+
+        // Changing method starts a new physical-path decision. Route-specific state
+        // from the previous method must never survive invisibly into the new draft.
+        ["route", "readout", "light", "det", "filter", "filterposition", "splitter"].forEach(prefix => {
+            document.querySelectorAll(`input[id^="${prefix}-"]`).forEach(input => { input.checked = false; });
+        });
+
         routeInputs.forEach((route) => {
             const wrapper = route.parentElement;
             const compatible = allowed.has(route.value);
             if (wrapper) wrapper.style.display = compatible ? "" : "none";
             route.disabled = !compatible;
-            if (!compatible) route.checked = false;
         });
         document.querySelectorAll('input[id^="readout-"]').forEach((readout) => {
             const compatible = allowed.has(readout.dataset.routeId);
             if (readout.parentElement) readout.parentElement.style.display = compatible ? "" : "none";
             readout.disabled = !compatible;
-            if (!compatible) readout.checked = false;
         });
         toggleSectionVisibility("section-route", routeIds.length > 0);
+
+        const selectionStatus = document.getElementById("methods-selection-status");
+        if (selectionStatus) {
+            selectionStatus.textContent = "";
+            selectionStatus.style.display = "none";
+        }
+
         if (routeIds.length === 1) {
             const route = routeInputs.find(item => item.value === routeIds[0]);
             if (route) route.checked = true;
-            updateHardwareVisibility(currentInst);
+            updateHardwareVisibility(currentInst, false);
         } else {
+            // Re-render with no retained state so hidden controls cannot remain
+            // checked, then keep route-specific hardware hidden until one path is chosen.
+            updateHardwareVisibility(currentInst, false);
             ["section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
                 const section = document.getElementById(id);
                 if (section) section.style.display = "none";
@@ -1420,20 +1442,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     // is authoritative; modality filter only activates when no route is checked.
     document.getElementById("route-list").addEventListener("change", (event) => {
         const target = event?.target;
+        const selectedRouteBefore = getCheckedIds("route")[0] || "";
+        let preserveHardware = true;
         if (target?.dataset.category === "route" && target.checked) {
+            preserveHardware = false;
             document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
                 if (readout.dataset.routeId !== target.value) readout.checked = false;
             });
         } else if (target?.dataset.category === "readout" && target.checked) {
+            const targetRouteId = cleanText(target.dataset.routeId);
+            preserveHardware = selectedRouteBefore === targetRouteId;
             document.querySelectorAll('input[id^="route-"]').forEach(route => {
-                if (route.value === target.dataset.routeId) route.checked = true;
+                if (route.value === targetRouteId) route.checked = true;
+            });
+            document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
+                if (readout !== target && readout.dataset.routeId !== targetRouteId) readout.checked = false;
             });
         } else if (target?.dataset.category === "route" && !target.checked) {
             document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
                 if (readout.dataset.routeId === target.value) readout.checked = false;
             });
         }
-        if (currentInst) updateHardwareVisibility(currentInst);
+        if (currentInst) updateHardwareVisibility(currentInst, preserveHardware);
     });
 
     // Picking a position means the holder was in the path; clearing the holder
@@ -1535,6 +1565,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const methodSelections = getCheckedSelections("method");
         const methodLabels = uniqueTexts(methodSelections.map(item => item.displayLabel));
         const routeSelections = getCheckedSelections("route");
+        routeSelections
+            .filter(item => item.topologyIncomplete)
+            .forEach(item => prompts.push(
+                `[PLEASE VERIFY: the recorded hardware topology for the ${item.displayLabel} light path is incomplete; confirm the illumination and detection components used]`
+            ));
         const runtime = runtimeAcquisitionFacts(dto);
         const routeLabels = uniqueTexts([
             ...routeSelections.map(item => item.displayLabel),
@@ -1692,6 +1727,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     addBtn.addEventListener("click", () => {
         if (!currentInst) return;
+
+        const methodSection = document.getElementById("section-method");
+        const methodFirst = Boolean(methodSection && methodSection.style.display !== "none");
+        const selectionStatus = document.getElementById("methods-selection-status");
+        if (methodFirst && getCheckedIds("method").length === 0) {
+            if (selectionStatus) {
+                selectionStatus.textContent = "Choose the imaging method used for this acquisition.";
+                selectionStatus.style.display = "";
+            }
+            return;
+        }
+        if (methodFirst && getCheckedIds("route").length === 0) {
+            if (selectionStatus) {
+                selectionStatus.textContent = "Choose the light path used for this acquisition.";
+                selectionStatus.style.display = "";
+            }
+            return;
+        }
+        if (selectionStatus) {
+            selectionStatus.textContent = "";
+            selectionStatus.style.display = "none";
+        }
 
         const dto = currentInst;
         if (!instrumentDtoIsRenderable(dto)) {

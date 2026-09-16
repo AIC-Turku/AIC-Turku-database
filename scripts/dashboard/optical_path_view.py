@@ -418,7 +418,10 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     "product_code": clean_text(position.get("product_code")),
                     "component_type": clean_text(position.get("component_type")),
                     "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",
-                    "is_empty": clean_text(label).lower() in {"empty", "none", "blank"},
+                    "is_empty": (
+                        clean_text(position.get("component_type")).lower() == "empty"
+                        or clean_text(label).lower() in {"empty", "none", "blank"}
+                    ),
                     "incomplete": bool(position.get("_cube_incomplete") or position.get("_unsupported_spectral_model")),
                     "route_ids": [route_id] if route_id else [],
                     "route_labels": [route_label] if route_label else [],

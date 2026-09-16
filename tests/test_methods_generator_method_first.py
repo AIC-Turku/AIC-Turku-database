@@ -57,6 +57,16 @@ def instrument():
                 "route_ids": ["widefield"],
                 "route_labels": ["Widefield fluorescence"],
             },
+            {
+                "id": "emp_bf",
+                "display_label": "EMP_BF",
+                "product_code": "EMPTY",
+                "component_type": "empty",
+                "selection_mode": "exclusive",
+                "is_empty": True,
+                "route_ids": ["widefield"],
+                "route_labels": ["Widefield fluorescence"],
+            },
         ],
     }
     camera_a = {
@@ -155,6 +165,36 @@ def instrument():
             },
             "branch_summary": {"branches": []},
         },
+        {
+            "id": "smlm-path-a",
+            "display_label": "SMLM path A",
+            "route_type": "widefield_fluorescence",
+            "route_type_label": "Widefield Fluorescence",
+            "route_identity": {
+                "imaging_modes": [{"id": "smlm", "display_label": "SMLM"}],
+                "contrast_methods": [],
+                "readouts": [],
+            },
+            "relevant_hardware": {
+                "sources": [laser], "filters": [], "splitters": [], "endpoints": [camera_a],
+            },
+            "branch_summary": {"branches": []},
+        },
+        {
+            "id": "smlm-path-b",
+            "display_label": "SMLM path B",
+            "route_type": "widefield_fluorescence",
+            "route_type_label": "Widefield Fluorescence",
+            "route_identity": {
+                "imaging_modes": [{"id": "smlm", "display_label": "SMLM"}],
+                "contrast_methods": [],
+                "readouts": [],
+            },
+            "relevant_hardware": {
+                "sources": [lamp], "filters": [], "splitters": [], "endpoints": [brightfield_camera],
+            },
+            "branch_summary": {"branches": []},
+        },
     ]
     return {
         "id": "scope-method-first",
@@ -223,8 +263,36 @@ class MethodFirstMethodsTests(unittest.TestCase):
 
     def test_unmapped_route_does_not_become_an_inferred_method(self):
         methods = self.page.locator('#method-list input[data-category="method"]')
-        self.assertEqual(methods.count(), 2)
+        self.assertEqual(methods.count(), 3)
         expect(self.page.locator("#method-list")).not_to_contain_text("Unmapped service path")
+
+    def test_add_requires_method_then_physical_path(self):
+        self.page.click("#add-btn")
+        expect(self.page.locator("#methods-selection-status")).to_contain_text("Choose the imaging method")
+        self.page.check("#method-2")
+        self.page.click("#add-btn")
+        expect(self.page.locator("#methods-selection-status")).to_contain_text("Choose the light path")
+        self.assertNotIn("SMLM imaging was performed", self.output())
+
+    def test_multi_route_method_uses_single_route_radio_and_clears_old_hardware(self):
+        self.page.check("#method-0")
+        self.page.check("#light-0")
+        self.page.check("#method-2")
+        routes = self.page.locator('#route-list input[data-category="route"]:visible')
+        self.assertEqual(routes.count(), 2)
+        self.assertEqual(routes.nth(0).get_attribute("type"), "radio")
+        self.assertEqual(routes.nth(1).get_attribute("type"), "radio")
+        expect(routes.nth(0)).not_to_be_checked()
+        expect(routes.nth(1)).not_to_be_checked()
+        expect(self.page.locator("#section-light")).to_be_hidden()
+        self.assertEqual(self.page.locator('#light-list input:checked').count(), 0)
+        routes.nth(0).check()
+        expect(routes.nth(0)).to_be_checked()
+        expect(self.page.locator("#section-light")).to_be_visible()
+        routes.nth(1).check()
+        expect(routes.nth(0)).not_to_be_checked()
+        expect(routes.nth(1)).to_be_checked()
+        self.assertEqual(self.page.locator('#light-list input:checked').count(), 0)
 
     def test_method_first_selection_reveals_only_compatible_route_hardware(self):
         expect(self.page.locator("#section-method")).to_be_visible()
@@ -252,7 +320,7 @@ class MethodFirstMethodsTests(unittest.TestCase):
         expect(detectors.nth(1)).to_be_checked()
 
         positions = self.page.locator('#filter-list input[id^="filterposition-"]')
-        self.assertEqual(positions.count(), 2)
+        self.assertEqual(positions.count(), 3)
         self.assertEqual(positions.nth(0).get_attribute("type"), "radio")
         positions.nth(0).check()
         positions.nth(1).check()
@@ -266,7 +334,17 @@ class MethodFirstMethodsTests(unittest.TestCase):
         expect(self.page.locator("#route-1")).to_be_checked()
         expect(self.page.locator("#light-list")).to_contain_text("Transmitted lamp")
         expect(self.page.locator("#light-list")).not_to_contain_text("488 nm laser")
-        expect(self.page.locator("#methods-selection-status")).to_contain_text("cleared because it is not available")
+        self.assertEqual(self.page.locator('#filter-list input:checked').count(), 0)
+        self.assertEqual(self.page.locator('#light-list input:checked').count(), 0)
+
+    def test_structured_empty_position_emits_no_filter_sentence(self):
+        self.page.check("#method-0")
+        positions = self.page.locator('#filter-list input[id^="filterposition-"]')
+        self.assertEqual(positions.count(), 3)
+        positions.nth(2).check()
+        self.page.click("#add-btn")
+        self.assertIn("No filter was installed in Filter turret.", self.output())
+        self.assertNotIn("EMP_BF in the Filter turret", self.output())
 
     def test_internal_compatibility_marker_is_not_emitted(self):
         self.page.check("#method-0")

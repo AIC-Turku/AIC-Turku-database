@@ -249,6 +249,26 @@ class ActiveYamlContractTests(unittest.TestCase):
         )
 
 
+    def test_axiozoom_reflected_brightfield_uses_recorded_reflected_source(self) -> None:
+        data = yaml.safe_load((INSTRUMENTS_DIR / "Zeiss AxioZoom V16.yaml").read_text(encoding="utf-8")) or {}
+        paths = [row for row in (data.get("light_paths") or []) if isinstance(row, dict)]
+        matches = [row for row in paths if "reflected_brightfield" in (row.get("contrast_methods") or [])]
+        self.assertEqual(len(matches), 1)
+        route = matches[0]
+        self.assertEqual(route.get("route_type"), "reflected_light")
+        source_ids = [
+            step.get("source_id")
+            for step in (route.get("illumination_sequence") or [])
+            if isinstance(step, dict) and step.get("source_id")
+        ]
+        self.assertEqual(source_ids, ["cl_9000_led_can_ring_light"])
+        sources = {
+            row.get("id"): row
+            for row in ((data.get("hardware") or {}).get("sources") or [])
+            if isinstance(row, dict) and row.get("id")
+        }
+        self.assertEqual(sources[source_ids[0]].get("role"), "reflected_illumination")
+
     def test_all_active_repo_methods_have_explicit_light_path_mapping(self) -> None:
         """Methods must be explicitly associated with compatible physical light paths."""
         route_vocab = yaml.safe_load((REPO_ROOT / "vocab" / "optical_routes.yaml").read_text(encoding="utf-8")) or {}

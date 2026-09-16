@@ -32,8 +32,16 @@ terms:
         - sim
         - smlm
       contrast_methods:
-        - reflected_brightfield
         - optical_sectioning
+  - id: reflected_light
+    label: Reflected light
+    display_label: Reflected light
+    description: Reflected or incident-light route family used to illuminate opaque or thick specimens from above the sample.
+    synonyms: [incident light, epi brightfield, reflected illumination]
+    covers:
+      imaging_modes: []
+      contrast_methods:
+        - reflected_brightfield
   - id: transmitted_light
     label: Transmitted light
     display_label: Transmitted light

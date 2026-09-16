@@ -467,6 +467,25 @@ def _append_light_path_route_warnings(
                     canonical_readout = vocabulary.resolve_canonical('measurement_readouts', readout) or readout.strip()
                     covered_readouts.add(canonical_readout)
 
+        mapped_methods = [
+            value
+            for axis in ('imaging_modes', 'contrast_methods')
+            for value in (light_path.get(axis) or [])
+            if isinstance(value, str) and value.strip()
+        ]
+        illumination_sequence = light_path.get('illumination_sequence')
+        detection_sequence = light_path.get('detection_sequence')
+        if mapped_methods and not illumination_sequence and not detection_sequence:
+            warnings.append(ValidationIssue(
+                code='method_path_topology_empty',
+                path=route_path,
+                message=(
+                    f"Instrument '{instrument_file.stem}' light path '{route_label}' maps method(s) "
+                    f"{', '.join(mapped_methods)} but has no recorded illumination or detection sequence. "
+                    "The method mapping is explicit, but downstream Methods text must treat the hardware topology as incomplete."
+                ),
+            ))
+
     for modality in sorted(required_route_coverage - covered_route_terms):
         warnings.append(ValidationIssue(code='capability_route_uncovered', path=f"{instrument_file.as_posix()}:capabilities", message=(f"Instrument '{instrument_file.stem}' capability '{modality}' is not covered by any light_paths[].route_type.")))
 

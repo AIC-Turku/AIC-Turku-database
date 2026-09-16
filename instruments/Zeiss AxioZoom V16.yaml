@@ -185,6 +185,28 @@ light_paths:
   - widefield_fluorescence
   contrast_methods:
   - optical_sectioning
+- id: reflected_light
+  illumination_sequence:
+  - source_id: cl_9000_led_can_ring_light
+  detection_sequence:
+  - optical_path_element_id: trinocular_port
+  - branches:
+      selection_mode: exclusive
+      items:
+      - branch_id: to_mono_camera
+        label: To ORCA-Flash4.0 LT+
+        sequence:
+        - endpoint_id: detector_1
+      - branch_id: to_color_camera
+        label: To AxioCam 105
+        sequence:
+        - endpoint_id: detector_2
+      - branch_id: to_eyepieces
+        label: To Eyepieces
+        sequence:
+        - endpoint_id: eyepieces
+  route_type: reflected_light
+  contrast_methods:
   - reflected_brightfield
 - id: transmitted_light
   illumination_sequence:
