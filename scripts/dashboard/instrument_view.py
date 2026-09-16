@@ -290,7 +290,12 @@ def build_objective_dto(vocabulary: Vocabulary, obj: dict[str, Any]) -> dict[str
     wd = clean_text(obj.get("working_distance") or obj.get("wd"))
     display_label = _objective_display_label(vocabulary, obj)
     method_core = " ".join(part for part in [f"{mag}x/{na}" if mag and na else f"{mag}x" if mag else "", immersion, "objective"] if part).strip()
-    objective_reference = _component_reference(manufacturer, model, "objective")
+    # A generic fallback noun is not an identity: "a 10x/0.3 Air objective
+    # (objective)" is noise. When nothing identifying is recorded the
+    # parenthetical is omitted and `_quarep_review_prompts` asks for it instead.
+    objective_reference = " ".join(
+        part for part in (_identity_value(manufacturer), _identity_value(model)) if part
+    ).strip()
     method_meta = ", ".join(part for part in [objective_reference, product_code] if part)
     # The noun phrase without its sentence frame, so a draft that reports several
     # objectives can join them into one sentence instead of repeating the frame.

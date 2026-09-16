@@ -200,7 +200,12 @@ def instrument():
         "id": "scope-method-first",
         "display_name": "Method First Scope",
         "methods_generation": {"is_blocked": False, "blockers": []},
-        "methods": {"base_sentence": "Images were acquired using the Method First Scope."},
+        "methods": {
+            "base_sentence": (
+                "Images were acquired using the Method First Scope "
+                "(Acme MF-1), an inverted microscope."
+            )
+        },
         "software": [],
         "modalities": [],
         "modules": [],
@@ -261,6 +266,24 @@ class MethodFirstMethodsTests(unittest.TestCase):
     def output(self):
         return self.page.locator("#output-text").input_value()
 
+    def test_method_opening_keeps_the_recorded_instrument_identity(self):
+        """The method leads the sentence; the recorded identity must still survive.
+
+        Manufacturer, model and stand orientation are canonical instrument facts
+        composed into `methods.base_sentence`. Replacing that sentence with the
+        display name alone leaves a reader unable to identify the microscope.
+        """
+        self.page.check("#method-0")
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn(
+            "TIRF imaging was performed using the Method First Scope "
+            "(Acme MF-1), an inverted microscope.",
+            output,
+        )
+        # The display name alone is not the recorded identity.
+        self.assertNotIn("performed using the Method First Scope.", output)
+
     def test_unmapped_route_does_not_become_an_inferred_method(self):
         methods = self.page.locator('#method-list input[data-category="method"]')
         self.assertEqual(methods.count(), 3)
@@ -305,7 +328,10 @@ class MethodFirstMethodsTests(unittest.TestCase):
         expect(self.page.locator("#light-list")).not_to_contain_text("Transmitted lamp")
         self.page.check("#light-0")
         self.page.click("#add-btn")
-        self.assertIn("TIRF imaging was performed using the Method First Scope.", self.output())
+        self.assertIn(
+            "TIRF imaging was performed using the Method First Scope (Acme MF-1), an inverted microscope.",
+            self.output(),
+        )
         self.assertIn("488 nm laser", self.output())
 
     def test_exclusive_detector_branches_and_filter_positions_use_radio_controls(self):

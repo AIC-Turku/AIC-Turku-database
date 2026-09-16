@@ -1377,7 +1377,13 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertNotIn("Images were acquired using the Confocal point scanning route.", result["output"])
 
     def test_readout_selection_generates_readout_aware_sentence(self) -> None:
-        """Selecting a readout must generate '{Readout} readout was acquired using ... route.' sentence."""
+        """A readout is reported as a measurement, never as an imaging modality.
+
+        The sentence deliberately does not name the light path. The route label is
+        the broader family ("Widefield fluorescence") and can contradict the method
+        the user selected ("TIRF"), and "route" is routing vocabulary rather than
+        something a Methods section says.
+        """
         instrument = self._stellaris_like_instrument()
         result = self.run_template(
             instruments=[instrument],
@@ -1397,10 +1403,12 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        # Must say "FLIM readout ... route", not "flim imaging was performed"
-        self.assertIn("FLIM readout", result["output"])
-        self.assertIn("Confocal point scanning route", result["output"])
+        # Reported as an acquired measurement, not as an imaging modality.
+        self.assertIn("FLIM data were acquired.", result["output"])
         self.assertNotIn("flim imaging was performed", result["output"].lower())
+        # The readout sentence must not carry the light-path name.
+        self.assertNotIn("FLIM readout was acquired using", result["output"])
+        self.assertNotIn("Confocal point scanning route", result["output"])
 
     def test_route_selection_drives_hardware_visibility(self) -> None:
         """Selecting a route must filter hardware list to that route's hardware only."""

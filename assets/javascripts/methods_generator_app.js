@@ -328,14 +328,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.routeIds = JSON.stringify(Array.isArray(position?.route_ids) ? position.route_ids : []);
             const productCode = cleanText(position?.product_code);
             const isEmpty = Boolean(position?.is_empty);
+            // Two empty slots of one turret are different configurations: a bare
+            // brightfield position and one that carries a polariser both record
+            // no filter. Keeping the recorded slot identity is what lets a user
+            // tell them apart here and state which one was used.
+            const emptyIdentity = position?.has_identity ? ` (position ${positionLabel})` : "";
             const identity = isEmpty
-                ? "Empty (no filter)"
+                ? `Empty (no filter)${emptyIdentity}`
                 : productCode ? `${positionLabel} (catalogue no. ${productCode})` : positionLabel;
             checkbox.dataset.publicationTemplate = isEmpty
                 ? "No filter was installed in {label}."
                 : "The light path included {label}.";
             checkbox.dataset.publicationLabel = isEmpty
-                ? componentLabel
+                ? `${componentLabel}${emptyIdentity}`
                 : componentLabel ? `${identity} in the ${componentLabel}` : identity;
             const componentType = cleanText(position?.component_type).toLowerCase();
             const cubeLike = !componentType || componentType === "filter_cube";
@@ -446,8 +451,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 readoutCheckbox.dataset.displayLabel = readoutLabel;
                 readoutCheckbox.dataset.routeId = routeId;
                 readoutCheckbox.dataset.routeDisplayLabel = routeLabel;
-                readoutCheckbox.dataset.methodSentence =
-                    `${readoutLabel} readout was acquired using the ${routeLabel} route.`;
+                // The method sentence already states what was done, and the route
+                // label is the broader family ("Widefield fluorescence") which can
+                // contradict the selected method ("TIRF"). Naming the light path
+                // here also puts internal routing vocabulary into publication prose.
+                readoutCheckbox.dataset.methodSentence = `${readoutLabel} data were acquired.`;
                 readoutCheckbox.dataset.category = "readout";
 
                 const readoutLabelEl = document.createElement("label");
@@ -1586,9 +1594,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         const fallbackOpening = routeClause && identitySentence.endsWith(".")
             ? `${identitySentence.slice(0, -1)}${routeClause}.`
             : identitySentence;
-        const instrumentName = cleanText(dto.display_name) || cleanText(dto.id) || "microscope";
+        // `base_sentence` is composed from the recorded manufacturer, model and
+        // stand orientation. The method leads the sentence, but that identity is
+        // canonical instrument fact and must survive: dropping it leaves a reader
+        // unable to tell which microscope was used.
+        const instrumentClause = identitySentence
+            .replace(/^Images were acquired using\s+/i, "")
+            .replace(/\.$/, "");
+        const instrumentName = instrumentClause
+            || cleanText(dto.display_name) || cleanText(dto.id) || "the microscope";
         const openingSentence = methodLabels.length === 1
-            ? `${methodLabels[0]} imaging was performed using the ${instrumentName}.`
+            ? `${methodLabels[0]} imaging was performed using ${instrumentName}.`
             : fallbackOpening;
 
         const readoutSelections = getCheckedSelections("readout");
