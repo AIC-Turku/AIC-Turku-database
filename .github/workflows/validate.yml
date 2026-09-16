@@ -65,6 +65,9 @@ jobs:
       - name: Validate YAML/schema/cross-references/naming
         run: python -m scripts.validate
 
+      - name: Run temporary Methods Generator adversarial probe
+        run: PYTHONPATH=. python -m pytest -q -s tests/test_methods_generator_final_adversarial_probe.py
+
       - name: Run complete test suite (including browser regressions)
         run: PYTHONPATH=. python -m pytest -q
 
