@@ -20,7 +20,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
-      - run: pip install ruamel.yaml
+      - name: Install dependencies
+        run: pip install -r requirements-test.txt
       - name: Apply mappings and contract
         run: python scripts/_tmp_apply_method_path_mappings.py
       - name: Regenerate template
