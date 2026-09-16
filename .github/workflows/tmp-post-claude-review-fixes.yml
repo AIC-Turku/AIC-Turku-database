@@ -1,13 +1,16 @@
 name: Apply post-Claude review fixes
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - fix/methods-generator-pragmatic-stabilization
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
