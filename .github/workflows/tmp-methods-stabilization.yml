@@ -1,0 +1,39 @@
+name: Temporary Methods Generator Stabilization
+
+on:
+  push:
+    branches:
+      - fix/methods-generator-pragmatic-stabilization
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/methods-generator-pragmatic-stabilization
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply patch
+        run: python scripts/_tmp_apply_methods_stabilization.py
+      - name: Fast syntax and whitespace checks
+        run: |
+          python -m py_compile scripts/lightpath/parse_canonical.py scripts/lightpath/route_graph.py scripts/lightpath/selected_execution.py scripts/dashboard/optical_path_view.py scripts/dashboard/instrument_view.py
+          node --check assets/javascripts/methods_generator_app.js
+          git diff --check
+      - name: Commit patched files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets scripts instruments
+          git commit -m 'Stabilize Methods Generator around method-first workflow'
+          git push origin HEAD:fix/methods-generator-pragmatic-stabilization
