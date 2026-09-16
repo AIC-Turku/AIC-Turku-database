@@ -48,7 +48,9 @@ class SoftwareStatusSemanticsTests(unittest.TestCase):
             },
             {"light_paths": []},
         )
-        self.assertEqual("the Acme M1 microscope", dto["methods"]["instrument_reference"])
+        # The record's own name leads, because manufacturer and model do not
+        # distinguish two instruments a facility runs under the same model.
+        self.assertEqual("the Scope One (Acme M1)", dto["methods"]["instrument_reference"])
         self.assertNotIn("Acme Acquire", dto["methods"]["instrument_reference"])
         self.assertIn("Acme Acquire", dto["methods"]["base_sentence"])
 

@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const copyBtn = document.getElementById("copy-btn");
     const clearBtn = document.getElementById("clear-btn");
     const addBtn = document.getElementById("add-btn");
+    const newAcquisitionBtn = document.getElementById("new-acquisition-btn");
 
     const methodsMetadataWarning = document.getElementById("methods-metadata-warning");
     const methodsMetadataBlockers = document.getElementById("methods-metadata-blockers");
@@ -45,6 +46,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     let currentInst = null;
     let accumulatedEntries = new Map();
     let usedInstruments = new Map();
+    // The entry the form is currently describing. While it is set, adding again
+    // updates that entry instead of appending a near-identical second copy of the
+    // same acquisition; it is released whenever the user signals a new acquisition.
+    let activeEntryKey = "";
+    let entrySequence = 0;
     let runtimeCandidate = { source: "", config: null };
     const runtimeConfirm = document.getElementById("runtime-confirm");
 
@@ -89,6 +95,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 id: `action-acquisition-software-${softwareIndex}`,
                 display_label: sentence,
                 method_sentence: sentence,
+                // Confirming five LAS X modules used to produce five sentences each
+                // claiming to have performed the acquisition. Sharing one frame lets
+                // them merge into the single sentence an author would write.
+                publication_template: "Instrument control and image acquisition were performed using {label}.",
+                publication_label: softwareLabel,
                 review_prompts: version
                     ? []
                     : [`[PLEASE SPECIFY: acquisition software version for ${name}]`],
@@ -114,13 +125,30 @@ document.addEventListener("DOMContentLoaded", async () => {
             ...(methods.stage_sentences || []),
             methods.autofocus_sentence,
             methods.triggering_sentence,
-            ...(methods.processing_sentences || []),
         ]);
         otherSentences.forEach((text, index) => {
             options.push({
                 id: `action-${index}`,
                 display_label: text,
                 method_sentence: text,
+                review_prompts: [],
+            });
+        });
+
+        // Processing tools share a frame for the same reason acquisition software
+        // does: three analysis packages are one sentence, not three.
+        const processingSentences = dedupeSentences(methods.processing_sentences || []);
+        const PROCESSING_FRAME = "Post-acquisition processing and analysis were performed using ";
+        processingSentences.forEach((text, index) => {
+            const label = text.startsWith(PROCESSING_FRAME)
+                ? text.slice(PROCESSING_FRAME.length).replace(/\.$/, "")
+                : "";
+            options.push({
+                id: `action-processing-${index}`,
+                display_label: text,
+                method_sentence: text,
+                publication_template: label ? `${PROCESSING_FRAME}{label}.` : "",
+                publication_label: label,
                 review_prompts: [],
             });
         });
@@ -146,6 +174,61 @@ document.addEventListener("DOMContentLoaded", async () => {
             acc.push(cleaned);
             return acc;
         }, []);
+    }
+
+    // Acronyms are read letter by letter, so the article follows the letter name.
+    const ACRONYM_VOWEL_LETTERS = new Set("AEFHILMNORSX".split(""));
+
+    /**
+     * Prefix a generated label with the article a reader would say.
+     *
+     * Labels are assembled from recorded fields, so "Excitation was provided by
+     * 640 nm laser" is a sentence no author would write. The article depends on
+     * how the label is read aloud, not on its first letter alone: "an LED",
+     * "a UV lamp", "an 800 nm laser".
+     */
+    function withArticle(label) {
+        const cleaned = cleanText(label);
+        if (!cleaned) return "";
+        const firstWord = cleaned.split(/\s+/)[0];
+        const first = firstWord[0];
+        let article = "a";
+        if (/[0-9]/.test(first)) {
+            article = (/^(8|11|18)/.test(firstWord)) ? "an" : "a";
+        } else if (firstWord.length > 1 && firstWord === firstWord.toUpperCase() && /[A-Z]/.test(first)) {
+            article = ACRONYM_VOWEL_LETTERS.has(first) ? "an" : "a";
+        } else if ("aeiou".includes(first.toLowerCase())) {
+            article = "an";
+        }
+        return `${article} ${cleaned}`;
+    }
+
+    /**
+     * Lower-case a picker label for mid-sentence use, keeping acronyms intact.
+     *
+     * Control labels are written for a column heading ("Spectral Imaging", "TIRF").
+     * Dropping them into prose unchanged is how catalogue capitalisation reaches a
+     * manuscript.
+     */
+    function lowerLabel(label) {
+        return cleanText(label).split(/\s+/).map((word) => {
+            const bare = word.replace(/[^A-Za-z]/g, "");
+            if (bare.length > 1 && bare === bare.toUpperCase()) return word;
+            if (/\d/.test(word)) return word;
+            return word.toLowerCase();
+        }).join(" ");
+    }
+
+    /**
+     * Lower-case the first word of a sentence-form phrase so it can follow another.
+     */
+    function decapitalizePhrase(phrase) {
+        const cleaned = cleanText(phrase);
+        if (!cleaned) return "";
+        const firstWord = cleaned.split(/\s+/)[0];
+        const bare = firstWord.replace(/[^A-Za-z]/g, "");
+        if (bare.length > 1 && bare === bare.toUpperCase()) return cleaned;
+        return cleaned.charAt(0).toLowerCase() + cleaned.slice(1);
     }
 
     function humanJoin(values) {
@@ -248,6 +331,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.publicationTemplate = item.publication_template || "";
             checkbox.dataset.publicationLabel = item.publication_phrase || item.publication_label || item.display_label || "";
             checkbox.dataset.reviewPrompts = JSON.stringify(Array.isArray(item.review_prompts) ? item.review_prompts : []);
+            // Which recorded light paths this component sits on. An acquisition may
+            // travel more than one path, and the draft describes each separately
+            // rather than merging a transmitted lamp into a fluorescence clause.
+            checkbox.dataset.routeIds = JSON.stringify(Array.isArray(item.route_ids) ? item.route_ids : []);
+            checkbox.dataset.inventoryClass = item.inventory_class || "";
+            // The recorded component type, used to check a specialist module against
+            // the techniques the user says the acquisition used.
+            checkbox.dataset.componentType = item.type || "";
+            // Two cameras recorded under one model name are told apart by the port
+            // the record routes each of them to, never by inventing a difference.
+            checkbox.dataset.portLabel = item.port_label || "";
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
@@ -314,9 +408,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             wrapper.style.marginLeft = "20px";
 
             const checkbox = document.createElement("input");
+            // A holder is set to one position at a time, but an acquisition is not:
+            // a two-colour experiment uses two emission filters on the same wheel.
+            // The recorded exclusivity is kept as information - it becomes a
+            // question about channel order - rather than as a limit on what the
+            // user can report.
             const selectionMode = cleanText(position?.selection_mode).toLowerCase() || "exclusive";
-            checkbox.type = selectionMode === "multiple" ? "checkbox" : "radio";
-            if (checkbox.type === "radio") checkbox.name = `${prefix}position-${componentId}`;
+            checkbox.type = "checkbox";
+            checkbox.dataset.selectionMode = selectionMode;
             checkbox.id = `${prefix}position-${itemIndex}-${positionIndex}`;
             checkbox.value = `${componentId}::${positionId}`;
             checkbox.checked = selectedPositionIds.has(checkbox.value);
@@ -336,12 +435,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             const identity = isEmpty
                 ? `Empty (no filter)${emptyIdentity}`
                 : productCode ? `${positionLabel} (catalogue no. ${productCode})` : positionLabel;
+            // The recorded transmission is what a reader checks; the catalogue name
+            // alone is a facility shorthand. The phrase is built where the spectral
+            // model lives, so prose and the simulator cannot disagree about it.
+            const publicationPhrase = cleanText(position?.publication_phrase) || identity;
             checkbox.dataset.publicationTemplate = isEmpty
                 ? "No filter was installed in {label}."
                 : "The light path included {label}.";
             checkbox.dataset.publicationLabel = isEmpty
                 ? `${componentLabel}${emptyIdentity}`
-                : componentLabel ? `${identity} in the ${componentLabel}` : identity;
+                : componentLabel ? `${publicationPhrase} in the ${componentLabel}` : publicationPhrase;
+            // The filter alone, so positions sharing a holder can be named together
+            // instead of repeating "in the CSU-W1 Emission Wheel" once per filter.
+            checkbox.dataset.positionPhrase = publicationPhrase;
+            checkbox.dataset.isEmptyPosition = isEmpty ? "1" : "";
+            checkbox.dataset.componentDisplayLabel = componentLabel;
             const componentType = cleanText(position?.component_type).toLowerCase();
             const cubeLike = !componentType || componentType === "filter_cube";
             const incompletePrompt = cubeLike
@@ -399,12 +507,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             routeWrapper.style.marginBottom = "4px";
 
             const routeCheckbox = document.createElement("input");
-            routeCheckbox.type = "radio";
-            routeCheckbox.name = "methods-light-path";
+            // One acquisition can travel two recorded paths when two methods were
+            // used, so the path is a checkbox and the draft describes each path's
+            // hardware in its own sentence group.
+            routeCheckbox.type = "checkbox";
             routeCheckbox.id = `route-${routeIdx}`;
             routeCheckbox.value = routeId;
             routeCheckbox.dataset.displayLabel = routeLabel;
-            routeCheckbox.dataset.methodSentence = `Images were acquired using the ${routeLabel} route.`;
+            // The opening sentence states the method. Naming the light path here put
+            // routing vocabulary - "with the Multiphoton route" - into finished prose.
+            routeCheckbox.dataset.methodSentence = "";
+            routeCheckbox.dataset.publicationPhrase = cleanText(route.publication_phrase)
+                || `${routeLabel} imaging`;
             routeCheckbox.dataset.category = "route";
             routeCheckbox.dataset.routeType = cleanText(route.route_type);
             const relevantHardware = route?.relevant_hardware && typeof route.relevant_hardware === "object"
@@ -516,8 +630,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         options.forEach((option, index) => {
             const wrapper = document.createElement("div");
             const input = document.createElement("input");
-            input.type = "radio";
-            input.name = "methods-imaging-method";
+            // Several methods can describe one acquisition - brightfield alongside
+            // fluorescence, a confocal reference beside its readout - and the method
+            // choice only decides which components are offered.
+            input.type = "checkbox";
             input.id = `method-${index}`;
             input.value = option.id;
             input.dataset.category = "method";
@@ -616,6 +732,50 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
 
+        // Which recorded paths each component sits on, over every route rather than
+        // only the selected ones, so a selection keeps its provenance when the
+        // selected set changes.
+        const routeIdsByHardwareId = new Map();
+        routeViews.forEach((rv) => {
+            const routeId = cleanText(rv?.id);
+            if (!routeId) return;
+            ["sources", "filters", "splitters", "endpoints"].forEach((key) => {
+                (rv.relevant_hardware?.[key] || []).forEach((item) => {
+                    const id = cleanText(item?.id);
+                    if (!id) return;
+                    if (!routeIdsByHardwareId.has(id)) routeIdsByHardwareId.set(id, []);
+                    const routes = routeIdsByHardwareId.get(id);
+                    if (!routes.includes(routeId)) routes.push(routeId);
+                });
+            });
+        });
+
+        // The port a branch routes an endpoint to. Two cameras recorded under the
+        // same model name are indistinguishable in prose without it; the record
+        // already names the branches ("To Kinetix Master"), so nothing is invented.
+        const portLabelByHardwareId = new Map();
+        routeViews.forEach((rv) => {
+            (Array.isArray(rv?.branch_summary?.branches) ? rv.branch_summary.branches : []).forEach((branch) => {
+                const label = cleanText(branch?.label).replace(/^to\s+/i, "");
+                if (!label) return;
+                (branch?.endpoint_inventory_ids || []).forEach((id) => {
+                    const key = cleanText(id);
+                    if (key && !portLabelByHardwareId.has(key)) portLabelByHardwareId.set(key, label);
+                });
+            });
+        });
+
+        function annotate(items) {
+            return items.map((item) => {
+                const id = cleanText(item?.id);
+                return {
+                    ...item,
+                    route_ids: routeIdsByHardwareId.get(id) || [],
+                    port_label: portLabelByHardwareId.get(id) || "",
+                };
+            });
+        }
+
         function decorateExclusiveEndpoints(items) {
             if (checkedRouteIds.size !== 1) return items;
             const routeId = Array.from(checkedRouteIds)[0];
@@ -635,10 +795,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const allDetItems = inventoryItemsForClasses(dto, ["endpoint", "camera_port", "eyepiece"]);
         const allFilterItems = inventoryItemsForClasses(dto, ["optical_element"]);
         const allSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
-        toggleSectionVisibility("section-light", bindCheckboxes("light-list", filterBySelection(allLightItems), "light", retained.light) > 0);
-        toggleSectionVisibility("section-det", bindCheckboxes("det-list", decorateExclusiveEndpoints(filterBySelection(allDetItems)), "det", retained.det) > 0);
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", filterBySelection(allFilterItems), "filter", retained.filter, retainedPositions) > 0);
-        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", filterBySelection(allSplitterItems), "splitter", retained.splitter) > 0);
+        toggleSectionVisibility("section-light", bindCheckboxes("light-list", annotate(filterBySelection(allLightItems)), "light", retained.light) > 0);
+        toggleSectionVisibility("section-det", bindCheckboxes("det-list", annotate(decorateExclusiveEndpoints(filterBySelection(allDetItems))), "det", retained.det) > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", annotate(filterBySelection(allFilterItems)), "filter", retained.filter, retainedPositions) > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", annotate(filterBySelection(allSplitterItems)), "splitter", retained.splitter) > 0);
 
         const renderedPositionIds = new Set(
             Array.from(document.querySelectorAll('input[id^="filterposition-"]')).map(input => input.value)
@@ -662,13 +822,27 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
             });
 
+        // A selection that silently disappears is worse than one that is kept: the
+        // user cannot tell that the draft no longer reports the camera they chose.
+        const droppedHardware = ["light", "det", "filter", "splitter"].reduce((total, prefix) => {
+            const rendered = new Set(
+                Array.from(document.querySelectorAll(`input[id^="${prefix}-"]`)).map(input => input.value)
+            );
+            return total + Array.from(retained[prefix]).filter(id => !rendered.has(id)).length;
+        }, 0);
+        const droppedTotal = droppedPositions.length + droppedHardware;
+
+        setSelectionStatus(droppedTotal
+            ? `${droppedTotal} previously selected item${droppedTotal === 1 ? " was" : "s were"} cleared because ${droppedTotal === 1 ? "it is" : "they are"} not recorded on the light path now selected. Choose what was used on this path.`
+            : "");
+    }
+
+    function setSelectionStatus(message) {
         const selectionStatus = document.getElementById("methods-selection-status");
-        if (selectionStatus) {
-            selectionStatus.textContent = droppedPositions.length
-                ? `${droppedPositions.length} previously selected filter position${droppedPositions.length === 1 ? " was" : "s were"} cleared because it is not available on this light path. Choose the position used on this path.`
-                : "";
-            selectionStatus.style.display = droppedPositions.length ? "" : "none";
-        }
+        if (!selectionStatus) return;
+        const text = cleanText(message);
+        selectionStatus.textContent = text;
+        selectionStatus.style.display = text ? "" : "none";
     }
 
     function getCheckedSelections(prefix) {
@@ -684,6 +858,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             publicationTemplate: cleanText(cb.dataset.publicationTemplate),
             publicationLabel: cleanText(cb.dataset.publicationLabel),
             reviewPrompts: parseJsonArray(cb.dataset.reviewPrompts),
+            inventoryClass: cleanText(cb.dataset.inventoryClass),
+            componentType: cleanText(cb.dataset.componentType),
+            portLabel: cleanText(cb.dataset.portLabel),
+            componentId: cleanText(cb.dataset.componentId),
+            componentDisplayLabel: cleanText(cb.dataset.componentDisplayLabel),
+            positionPhrase: cleanText(cb.dataset.positionPhrase),
+            isEmptyPosition: cb.dataset.isEmptyPosition === "1",
+            selectionMode: cleanText(cb.dataset.selectionMode),
         }));
     }
 
@@ -707,24 +889,62 @@ document.addEventListener("DOMContentLoaded", async () => {
      * display label stay two facts; when the draft cannot tell them apart it says so
      * rather than silently reporting one.
      */
-    function mergeByPublicationTemplate(selections) {
+    /**
+     * Keep only the part of a port label the component name does not already carry.
+     *
+     * "Photometrics Kinetix (Kinetix Master)" says Kinetix twice; the port only has
+     * to supply what tells the two cameras apart.
+     */
+    function distinguishingPortLabel(portLabel, componentLabel) {
+        const port = cleanText(portLabel);
+        if (!port) return "";
+        const known = new Set(cleanText(componentLabel).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+        const remainder = port.split(/\s+/).filter(word => !known.has(word.toLowerCase().replace(/[^a-z0-9]+/g, "")));
+        return remainder.length ? remainder.join(" ").toLowerCase() : port;
+    }
+
+    function mergeByPublicationTemplate(selections, options = {}) {
+        const articleFor = typeof options.articleFor === "function" ? options.articleFor : () => false;
         const groups = new Map();
         const seenIds = new Set();
         const prompts = [];
 
-        (Array.isArray(selections) ? selections : []).forEach((item) => {
+        const normalized = (Array.isArray(selections) ? selections : []).filter((item) => {
             const id = cleanText(item?.id);
-            if (id && seenIds.has(id)) return;
+            if (id && seenIds.has(id)) return false;
             if (id) seenIds.add(id);
+            return true;
+        });
+
+        // Two components recorded under one name are told apart by the port the
+        // record routes them to, so a dual-camera acquisition can say so instead of
+        // reporting one camera and asking which.
+        const labelCounts = new Map();
+        normalized.forEach((item) => {
+            const label = cleanText(item?.publicationLabel) || cleanText(item?.displayLabel);
+            if (label) labelCounts.set(label, (labelCounts.get(label) || 0) + 1);
+        });
+
+        normalized.forEach((item) => {
             prompts.push(...(item?.reviewPrompts || []));
 
             const template = cleanText(item?.publicationTemplate);
-            const label = cleanText(item?.publicationLabel) || cleanText(item?.displayLabel);
-            if (!template || !template.includes("{label}") || !label) {
+            const baseLabel = cleanText(item?.publicationLabel) || cleanText(item?.displayLabel);
+            if (!template || !template.includes("{label}") || !baseLabel) {
                 const fallback = cleanText(item?.methodSentence);
                 if (fallback) groups.set(`literal::${fallback}`, { literal: fallback });
                 return;
             }
+            let label = baseLabel;
+            if ((labelCounts.get(baseLabel) || 0) > 1) {
+                const port = distinguishingPortLabel(cleanText(item?.portLabel), baseLabel);
+                if (port) {
+                    label = `${baseLabel} (${port})`;
+                } else {
+                    prompts.push(`[PLEASE SPECIFY: ${labelCounts.get(baseLabel)} separate components recorded as “${baseLabel}” were selected and this draft cannot tell them apart; state which one was used for each channel]`);
+                }
+            }
+            if (articleFor(item)) label = withArticle(label);
             if (!groups.has(template)) groups.set(template, { template, labels: [] });
             groups.get(template).labels.push(label);
         });
@@ -735,17 +955,53 @@ document.addEventListener("DOMContentLoaded", async () => {
                 sentences.push(group.literal);
                 return;
             }
-            const counts = new Map();
-            group.labels.forEach(label => counts.set(label, (counts.get(label) || 0) + 1));
-            counts.forEach((count, label) => {
-                if (count > 1) {
-                    prompts.push(`[PLEASE SPECIFY: ${count} separate components recorded as “${label}” were selected and this draft cannot tell them apart; state which one was used for each channel]`);
-                }
-            });
-            sentences.push(group.template.replace("{label}", humanJoin(Array.from(counts.keys()))));
+            const labels = uniqueTexts(group.labels);
+            // A frame that names several components has to agree with them.
+            const sentence = group.template
+                .replace("{label}", humanJoin(labels))
+                .replace(/\{be\}/g, labels.length === 1 ? "was" : "were")
+                .replace(/\{plural\}/g, labels.length === 1 ? "" : "s");
+            sentences.push(sentence);
         });
 
         return { sentences: dedupeSentences(sentences), prompts: uniqueTexts(prompts) };
+    }
+
+    /**
+     * One sentence for every filter position the acquisition used.
+     *
+     * Positions are grouped by the holder they sit in, so a two-colour experiment
+     * reads "a GFP filter and a Cy3 filter in the emission wheel" rather than
+     * restating the wheel once per filter.
+     */
+    function filterPositionSentences(positionSelections) {
+        const holders = new Map();
+        const emptyClauses = [];
+        (positionSelections || []).forEach((item) => {
+            const holderLabel = cleanText(item.componentDisplayLabel);
+            if (item.isEmptyPosition) {
+                emptyClauses.push(cleanText(item.publicationLabel));
+                return;
+            }
+            const phrase = cleanText(item.positionPhrase) || cleanText(item.publicationLabel);
+            if (!phrase) return;
+            const key = holderLabel || "";
+            if (!holders.has(key)) holders.set(key, []);
+            holders.get(key).push(phrase);
+        });
+
+        const clauses = [];
+        holders.forEach((phrases, holderLabel) => {
+            const named = humanJoin(phrases);
+            clauses.push(holderLabel ? `${named} in the ${holderLabel}` : named);
+        });
+
+        const sentences = [];
+        if (clauses.length) sentences.push(`The light path included ${humanJoin(clauses)}.`);
+        uniqueTexts(emptyClauses).forEach((clause) => {
+            sentences.push(`No filter was installed in ${clause}.`);
+        });
+        return sentences;
     }
 
     function getCheckedIds(prefix) {
@@ -1141,7 +1397,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (routeId && positionRoutes.length && !positionRoutes.includes(routeId)) {
             return {
                 position: "",
-                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${cleanText(match.display_label)}”, which is not recorded on the route being reported; confirm the route and filter that were used]`,
+                prompt: `[PLEASE VERIFY: the reviewed plan reports ${label} at “${cleanText(match.display_label)}”, which is not recorded on the light path being reported; confirm the light path and filter that were used]`,
             };
         }
         const productCode = cleanText(match.product_code);
@@ -1320,7 +1576,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (!routeLabel) {
-            prompts.push("[PLEASE SPECIFY: the optical route used; the reviewed plan names a route that has no recorded name]");
+            prompts.push("[PLEASE SPECIFY: the light path used; the reviewed plan names a light path that has no recorded name]");
         }
 
         return {
@@ -1332,13 +1588,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     }
 
+    function reviewBlock(prompts, heading) {
+        const items = uniqueTexts(prompts);
+        if (!items.length) return "";
+        return `${heading}\n${items.map(prompt => `- ${prompt}`).join("\n")}`;
+    }
+
     function updateOutputText() {
         if (accumulatedEntries.size === 0) {
             outputText.value = 'Select an instrument, then choose “Add to methods”.';
             return;
         }
 
-        const blocks = Array.from(accumulatedEntries.values()).map(entry => entry.text).filter(Boolean);
+        const entries = Array.from(accumulatedEntries.values());
+        // Specimen preparation and the generic settings checklist are the same
+        // request for every acquisition. Repeating them per entry is what made a
+        // three-acquisition section read as concatenated form output.
+        const sharedPrompts = uniqueTexts(entries.flatMap(entry => entry.sectionPrompts || []));
+        const single = entries.length === 1;
+
+        const blocks = entries.map((entry) => {
+            const parts = [
+                cleanText(entry.reference),
+                ...(entry.paragraphs || []),
+                reviewBlock(
+                    single ? [...(entry.entryPrompts || []), ...sharedPrompts] : (entry.entryPrompts || []),
+                    "Review before publication:",
+                ),
+            ];
+            return parts.map(cleanText).filter(Boolean).join("\n\n");
+        }).filter(Boolean);
+
+        if (!single) {
+            const shared = reviewBlock(sharedPrompts, "Review before publication — applies to every acquisition above:");
+            if (shared) blocks.push(shared);
+        }
+
         let finalOutput = `${outputTitle}:\n\n${blocks.join("\n\n")}`;
 
         const usedInstrumentIds = new Set(Array.from(usedInstruments.keys()).map(value => String(value)));
@@ -1414,62 +1699,113 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleSectionVisibility("section-optical-modulator", bindCheckboxes("optical-modulator-list", dto.hardware?.optical_modulators || [], "optical-modulator") > 0);
         toggleSectionVisibility("section-illumination-logic", bindCheckboxes("illumination-logic-list", dto.hardware?.illumination_logic || [], "illumination-logic") > 0);
         updateHardwareVisibility(dto, false);
+        // A different microscope is always a different acquisition.
+        activeEntryKey = "";
+        setSelectionStatus("");
         if (methodCount > 0) {
             // Offering every light path before a method is chosen invites the user
-            // to build a whole selection that the first method click then clears,
-            // because a method starts a fresh physical-path decision. The path
-            // question is asked only once the method has narrowed it.
+            // to build a whole selection the first method click would then withdraw.
+            // The path question is asked once the method has narrowed it.
             ["section-route", "section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
                 const section = document.getElementById(id);
                 if (section) section.style.display = "none";
             });
+        } else if (routeCount === 1) {
+            // A record with no imaging-method control still has to state a path
+            // before it can state anything else. Confirming the only recorded one
+            // here is what stops an empty acquisition being added from this page.
+            const soleRoute = Array.from(document.querySelectorAll('input[id^="route-"]'))[0];
+            if (soleRoute) soleRoute.checked = true;
+            updateHardwareVisibility(dto, false);
         }
     });
 
-    document.getElementById("method-list").addEventListener("change", (event) => {
-        if (!currentInst || event?.target?.dataset.category !== "method") return;
-        const routeIds = parseJsonArray(event.target.dataset.routeIds);
-        const allowed = new Set(routeIds);
+    // A new acquisition reference names a different acquisition, so the next Add
+    // starts an entry rather than rewriting the one just added.
+    document.getElementById("session-label").addEventListener("input", () => {
+        if (!activeEntryKey) return;
+        activeEntryKey = "";
+        setSelectionStatus("This reference names a new acquisition, so “Add to methods” will add it as a separate entry.");
+    });
+
+    /**
+     * Re-derive what the instrument offers from the methods the user has ticked.
+     *
+     * Methods are additive and only gate availability: ticking one more offers more
+     * hardware, unticking one withdraws whatever only that method reached. A
+     * selection therefore survives exactly as long as it is still offered, which is
+     * the rule that keeps a previous method's depletion laser or filter from
+     * surviving invisibly - and keeps a still-valid laser from being wiped when two
+     * methods share one recorded path.
+     */
+    function applyMethodAvailability(dto) {
+        const methodSelections = getCheckedSelections("method");
+        const allowed = new Set();
+        methodSelections.forEach(method => (method.routeIds || []).forEach(id => allowed.add(id)));
+        const constrained = methodSelections.length > 0;
+
         const routeInputs = Array.from(document.querySelectorAll('input[id^="route-"]'));
-
-        // Changing method starts a new physical-path decision. Route-specific state
-        // from the previous method must never survive invisibly into the new draft.
-        ["route", "readout", "light", "det", "filter", "filterposition", "splitter"].forEach(prefix => {
-            document.querySelectorAll(`input[id^="${prefix}-"]`).forEach(input => { input.checked = false; });
-        });
-
         routeInputs.forEach((route) => {
-            const wrapper = route.parentElement;
-            const compatible = allowed.has(route.value);
-            if (wrapper) wrapper.style.display = compatible ? "" : "none";
+            const compatible = !constrained || allowed.has(route.value);
+            if (route.parentElement) route.parentElement.style.display = compatible ? "" : "none";
             route.disabled = !compatible;
+            if (!compatible) route.checked = false;
         });
+
+        // A method recorded on exactly one path leaves nothing to choose, so the
+        // path is confirmed for the user rather than asked as a second question.
+        methodSelections.forEach((method) => {
+            if ((method.routeIds || []).length !== 1) return;
+            const route = routeInputs.find(input => input.value === method.routeIds[0]);
+            if (route && !route.disabled) route.checked = true;
+        });
+
+        const checkedRoutes = new Set(getCheckedIds("route"));
         document.querySelectorAll('input[id^="readout-"]').forEach((readout) => {
-            const compatible = allowed.has(readout.dataset.routeId);
+            const routeId = cleanText(readout.dataset.routeId);
+            const compatible = (!constrained || allowed.has(routeId));
             if (readout.parentElement) readout.parentElement.style.display = compatible ? "" : "none";
             readout.disabled = !compatible;
+            if (!compatible || !checkedRoutes.has(routeId)) readout.checked = false;
         });
-        toggleSectionVisibility("section-route", routeIds.length > 0);
 
-        const selectionStatus = document.getElementById("methods-selection-status");
-        if (selectionStatus) {
-            selectionStatus.textContent = "";
-            selectionStatus.style.display = "none";
+        toggleSectionVisibility("section-route", routeInputs.some(route => !route.disabled));
+        // Hardware cannot belong to a path the acquisition does not name, and a
+        // hidden control that stays ticked is reported without being visible.
+        if (!checkedRoutes.size && routeInputs.some(route => !route.disabled)) {
+            clearInputsByPrefixes(["light", "det", "filter", "filterposition", "splitter"]);
         }
-
-        if (routeIds.length === 1) {
-            const route = routeInputs.find(item => item.value === routeIds[0]);
-            if (route) route.checked = true;
-            updateHardwareVisibility(currentInst, false);
-        } else {
-            // Re-render with no retained state so hidden controls cannot remain
-            // checked, then keep route-specific hardware hidden until one path is chosen.
-            updateHardwareVisibility(currentInst, false);
-            ["section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
+        updateHardwareVisibility(dto, true);
+        if (!checkedRoutes.size) {
+            ["section-light", "section-filter", "section-splitter", "section-det"].forEach((id) => {
                 const section = document.getElementById(id);
                 if (section) section.style.display = "none";
             });
         }
+    }
+
+    document.getElementById("method-list").addEventListener("change", (event) => {
+        if (!currentInst || event?.target?.dataset.category !== "method") return;
+        // Changing what was imaged after an acquisition has been added describes a
+        // different acquisition. Carrying the previous one's objective and modules
+        // into it is how a confocal reference ends up claiming a STED module.
+        if (activeEntryKey) {
+            const target = event.target;
+            const startedWith = target.checked ? target.value : "";
+            startNewAcquisition({ keepMethods: true });
+            if (startedWith) {
+                // Ticking a method after adding means "this next acquisition was
+                // that", not "the one I just added was also that". The methods of
+                // the finished entry are released and only the new one is kept;
+                // further methods can still be added to this entry.
+                clearInputsByPrefixes(["method"]);
+                target.checked = true;
+            }
+            setSelectionStatus("Started a new acquisition. The selections confirmed for the previous entry were cleared, so this one describes only what you tick now.");
+        } else {
+            setSelectionStatus("");
+        }
+        applyMethodAvailability(currentInst);
     });
 
     // Container-level change listener for modality checkboxes. Registered once at
@@ -1482,25 +1818,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     // is authoritative; modality filter only activates when no route is checked.
     document.getElementById("route-list").addEventListener("change", (event) => {
         const target = event?.target;
-        const preserveHardware = true;
-        if (target?.dataset.category === "route" && target.checked) {
-            document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
-                if (readout.dataset.routeId !== target.value) readout.checked = false;
-            });
-        } else if (target?.dataset.category === "readout" && target.checked) {
+        // A readout is recorded on a path, so confirming one confirms that path.
+        // Withdrawing a path withdraws the readouts recorded on it. Paths are no
+        // longer mutually exclusive, so nothing else is cleared here.
+        if (target?.dataset.category === "readout" && target.checked) {
             const targetRouteId = cleanText(target.dataset.routeId);
             document.querySelectorAll('input[id^="route-"]').forEach(route => {
                 if (route.value === targetRouteId) route.checked = true;
-            });
-            document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
-                if (readout !== target && readout.dataset.routeId !== targetRouteId) readout.checked = false;
             });
         } else if (target?.dataset.category === "route" && !target.checked) {
             document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
                 if (readout.dataset.routeId === target.value) readout.checked = false;
             });
         }
-        if (currentInst) updateHardwareVisibility(currentInst, preserveHardware);
+        if (currentInst) updateHardwareVisibility(currentInst, true);
     });
 
     // Picking a position means the holder was in the path; clearing the holder
@@ -1562,6 +1893,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             "number of frames, exposure time, activation/excitation settings, localization software/version, and drift-correction method"),
         ism: reportingRecommendation(
             "detector/reconstruction mode and the reconstruction software/version and settings used"),
+        resolft: reportingRecommendation(
+            "the on/off switching wavelengths and illumination doses, the switching cycle timing, and the number of switching cycles per pixel"),
+        // Contrast optics are the part of a transmitted-light acquisition a reader
+        // cannot reconstruct from the objective alone.
+        phase_contrast: reportingRecommendation(
+            "the condenser and phase annulus used (for example Ph1, Ph2 or Ph3) and the matching phase objective"),
+        dic: reportingRecommendation(
+            "the DIC prism/Wollaston set, the polariser and analyser, and the condenser setting used"),
+        darkfield: reportingRecommendation(
+            "the darkfield condenser used and its numerical-aperture range"),
     };
     const PATH_SETTINGS_PROMPTS = {
         confocal_point: reportingRecommendation(
@@ -1608,76 +1949,222 @@ document.addEventListener("DOMContentLoaded", async () => {
      * component whose own name contains brackets is never mistaken for a request
      * and no request can be corrupted by a later rewrite.
      */
+    // The role a source can plausibly have follows from the path it sits on. The
+    // record is still the only thing that can state it, but the question put to the
+    // author should not offer alternatives the selected path rules out.
+    const ROUTE_TYPE_ROLE_EXAMPLES = {
+        transmitted_light: "transmitted illumination",
+        reflected_light: "reflected illumination",
+    };
+    const DEFAULT_ROLE_EXAMPLES = "excitation or, on a depletion-based system, depletion";
+    const SOURCE_ROLE_PROMPT_PREFIX = "[PLEASE SPECIFY: the role of ";
+    // Roles that do not create an imaging channel. Counting them as channels asked
+    // a STED author in what order their depletion beam was acquired.
+    const NON_CHANNEL_SOURCE_ROLES = new Set(["depletion", "activation", "alignment", "switching"]);
+    // Methods whose defining hardware is selectable, so its absence is a fact about
+    // the draft rather than about the instrument.
+    const METHOD_REQUIRED_SOURCE_ROLES = {
+        sted: {
+            role: "depletion",
+            missing: "[PLEASE VERIFY: STED imaging is reported but no depletion source was selected; confirm the depletion laser and the power used at the sample]",
+        },
+    };
+    const DEPLETION_METHOD_IDS = new Set(["sted", "resolft"]);
+    // Which technique a specialist module belongs to. This is reporting logic about
+    // the module's purpose, in the same place as the per-technique reporting
+    // prompts; it never hides a module, because a record may legitimately describe a
+    // use this list does not anticipate. It only asks the author to confirm that the
+    // module and the technique they selected go together.
+    const MODULE_TECHNIQUE_REQUIREMENTS = {
+        easy3d_sted: { id: "sted", label: "STED" },
+        sted_3d: { id: "sted", label: "STED" },
+        rescue_sted: { id: "sted", label: "STED" },
+        airyscan: { id: "ism", label: "ISM (Airyscan)" },
+        sim_module: { id: "sim", label: "SIM" },
+        tirf_module: { id: "tirf", label: "TIRF" },
+        flim_module: { id: "flim", label: "FLIM" },
+        fcs_module: { id: "fcs", label: "FCS" },
+    };
+
+    /**
+     * Name a light path without repeating the word it already ends with.
+     *
+     * The recorded label for the transmitted path is "Transmitted light", so
+     * appending "light path" produced "the transmitted light light path".
+     */
+    function lightPathPhrase(displayLabel) {
+        const label = lowerLabel(displayLabel);
+        return /\blight$/.test(label) ? `${label} path` : `${label} light path`;
+    }
+
+    function roleExamplesForRoutes(routeSelections) {
+        const examples = uniqueTexts(routeSelections
+            .map(item => ROUTE_TYPE_ROLE_EXAMPLES[cleanText(item.routeType).toLowerCase()])
+            .filter(Boolean));
+        // A source on a transmitted path is not plausibly a depletion beam, and a
+        // fluorescence line is not plausibly the condenser lamp. The alternatives
+        // offered follow the path the source itself sits on, not the whole entry.
+        return examples.length ? humanJoin(examples) : DEFAULT_ROLE_EXAMPLES;
+    }
+
+    function roleExamplesForSource(source, routeSelections) {
+        const owning = routeSelections.filter(route => (source.routeIds || []).includes(route.id));
+        return roleExamplesForRoutes(owning.length ? owning : routeSelections);
+    }
+
+    /**
+     * The phrases that name what was done, method first and path only as a fallback.
+     *
+     * A record with no imaging-method control (the retired multiphoton system) used
+     * to fall through to an instrument-only sentence and a "with the Multiphoton
+     * route" clause, so the finished text never said what the technique was.
+     */
+    function methodPhrasesForEntry(methodSelections, routeSelections) {
+        const fromMethods = uniqueTexts(methodSelections.map(
+            item => item.publicationPhrase || `${item.displayLabel} imaging`));
+        if (fromMethods.length) return fromMethods;
+        return uniqueTexts(routeSelections.map(
+            item => item.publicationPhrase || `${item.displayLabel} imaging`));
+    }
+
+    function buildOpeningSentence(phrases, instrumentName, readoutLabels) {
+        const ordered = phrases.length
+            ? [phrases[0], ...phrases.slice(1).map(decapitalizePhrase)]
+            : [];
+        const subject = humanJoin(ordered);
+        const verb = ordered.length > 1 ? "were" : "was";
+        let sentence = subject
+            ? `${subject} ${verb} performed using ${instrumentName}.`
+            : `Images were acquired using ${instrumentName}.`;
+        if (readoutLabels.length) {
+            // A readout is something the same acquisition also recorded, not a
+            // separate one-clause statement bolted onto the paragraph.
+            sentence = `${sentence.replace(/\.$/, "")}, with ${humanJoin(readoutLabels.map(lowerLabel))} data acquired on the same light path.`;
+        }
+        return sentence;
+    }
+
+    /**
+     * Group light-path selections by the recorded path each one sits on.
+     *
+     * With several methods in one acquisition the entry can travel two paths, and
+     * merging them would put a transmitted lamp and a fluorescence laser into one
+     * illumination clause. A component recorded on none of the selected paths, or on
+     * all of them, belongs to the first group rather than to a group of its own.
+     */
+    const SHARED_ROUTE_GROUP = "";
+
+    function groupSelectionsByRoute(selections, routeIds) {
+        const groups = new Map(routeIds.map(id => [id, []]));
+        const single = routeIds.length < 2;
+        // A camera on both paths belongs to neither clause on its own. With one path
+        // everything is that path's; with two, shared components are stated once,
+        // after the per-path clauses.
+        if (!single) groups.set(SHARED_ROUTE_GROUP, []);
+        const fallback = single ? (routeIds[0] || SHARED_ROUTE_GROUP) : SHARED_ROUTE_GROUP;
+        (selections || []).forEach((item) => {
+            const owned = (item.routeIds || []).filter(id => groups.has(id) && id !== SHARED_ROUTE_GROUP);
+            const target = owned.length === 1 ? owned[0] : fallback;
+            if (!groups.has(target)) groups.set(target, []);
+            groups.get(target).push(item);
+        });
+        return groups;
+    }
+
+    function routeGroupLead(routeId, methodSelections, routeSelections) {
+        const labels = uniqueTexts(methodSelections
+            .filter(method => (method.routeIds || []).includes(routeId))
+            .map(method => method.displayLabel));
+        if (labels.length) return humanJoin(labels.map(lowerLabel));
+        const route = routeSelections.find(item => item.id === routeId);
+        return route ? lowerLabel(route.displayLabel) : "";
+    }
+
+    /**
+     * Assemble one acquisition entry: finished prose, then the review requests.
+     *
+     * Publication prose is built from the structured selections and, when the user
+     * has confirmed one, the runtime plan. Review requests are collected from the
+     * places that produce them, not recovered from the finished text, and are split
+     * into requests about this acquisition and requests that apply to the whole
+     * Methods section, so a three-acquisition draft does not repeat the same generic
+     * advice three times.
+     */
     function buildAcquisitionEntry(dto) {
         const prompts = [];
+        const sectionPrompts = [];
         const methods = dto.methods || {};
 
         const methodSelections = getCheckedSelections("method");
-        const methodLabels = uniqueTexts(methodSelections.map(
-            item => item.publicationPhrase || `${item.displayLabel} imaging`));
         const routeSelections = getCheckedSelections("route");
         routeSelections
             .filter(item => item.topologyIncomplete)
             .forEach(item => prompts.push(
-                `[PLEASE VERIFY: the recorded hardware topology for the ${item.displayLabel} light path is incomplete; confirm the illumination and detection components used]`
+                `[PLEASE VERIFY: the recorded hardware for the ${lightPathPhrase(item.displayLabel)} is incomplete; confirm the illumination and detection components used]`
             ));
         const runtime = runtimeAcquisitionFacts(dto);
-        const routeLabels = uniqueTexts([
-            ...routeSelections.map(item => item.displayLabel),
-            ...runtime.routeLabels,
-        ]);
+        const routeIds = routeSelections.map(item => item.id);
 
-        // A single acquisition travels one optical route. Claiming several without
-        // comment would read as though they were used together.
-        if (routeLabels.length > 1) {
-            prompts.push(`[PLEASE VERIFY: ${routeLabels.length} optical routes are reported for a single acquisition (${humanJoin(routeLabels)}); confirm that each was used, or add a separate entry per route]`);
+        // Two paths in one entry is now something the user can state deliberately by
+        // ticking two methods. It is still worth confirming when only one method
+        // explains it, because an extra path is easy to tick by accident.
+        if (routeIds.length > 1 && methodSelections.length < 2) {
+            prompts.push(`[PLEASE VERIFY: ${routeIds.length} light paths are reported for a single acquisition (${humanJoin(routeSelections.map(item => lowerLabel(item.displayLabel)))}); confirm that each was used, or add a separate entry per acquisition]`);
         }
 
-        const identitySentence = cleanText(methods.base_sentence);
-        const routeClause = routeLabels.length
-            ? `${identitySentence.includes(",") ? ", " : " "}with the ${humanJoin(routeLabels)} ${routeLabels.length === 1 ? "route" : "routes"}`
-            : "";
-        const fallbackOpening = routeClause && identitySentence.endsWith(".")
-            ? `${identitySentence.slice(0, -1)}${routeClause}.`
-            : identitySentence;
-        // Use the structured identity-only phrase. `base_sentence` also carries
-        // acquisition software for legacy consumers, and parsing it here would
-        // publish software even when the user did not confirm that action.
+        const displayName = cleanText(dto.display_name) || cleanText(dto.id);
         const instrumentName = cleanText(methods.instrument_reference)
-            || cleanText(dto.display_name) || cleanText(dto.id) || "the microscope";
-        const openingSentence = methodLabels.length === 1
-            ? `${methodLabels[0]} was performed using ${instrumentName}.`
-            : fallbackOpening;
-
+            || (displayName ? `the ${displayName}` : "the microscope");
+        const methodPhrases = methodPhrasesForEntry(methodSelections, routeSelections);
         const readoutSelections = getCheckedSelections("readout");
-        const readoutSentences = dedupeSentences(readoutSelections.map(item => item.methodSentence));
+        const openingSentence = buildOpeningSentence(
+            methodPhrases, instrumentName, readoutSelections.map(item => item.displayLabel));
+
         const techniquePrompts = modalitySettingsPrompts(methodSelections, routeSelections, readoutSelections);
         prompts.push(...techniquePrompts);
         const objectives = mergeByPublicationTemplate(getCheckedSelections("obj"));
         prompts.push(...objectives.prompts);
 
-        const otherHardware = selectedSentenceBundle([
-            "module",
-            "scanner",
-            "magnification-changer",
-            "confirmed",
+        // A component recorded in two categories - the RESCue STED module and the
+        // adaptive-illumination entry naming the same unit - is one fact.
+        const moduleSelections = getCheckedSelections("module");
+        const moduleLabels = moduleSelections.map(item => cleanText(item.displayLabel).toLowerCase());
+        const specialistSelections = ["optical-modulator", "illumination-logic"]
+            .flatMap(prefix => getCheckedSelections(prefix))
+            .filter(item => {
+                const label = cleanText(item.displayLabel).toLowerCase();
+                return !label || !moduleLabels.some(moduleLabel => moduleLabel.includes(label) || label.includes(moduleLabel));
+            });
+
+        const equipment = mergeByPublicationTemplate([
+            ...moduleSelections,
+            ...getCheckedSelections("scanner"),
+            ...getCheckedSelections("magnification-changer"),
         ]);
-        prompts.push(...otherHardware.prompts);
+        prompts.push(...equipment.prompts);
+        const confirmedActions = mergeByPublicationTemplate(getCheckedSelections("confirmed"));
+        // One request for the versions of the products confirmed, rather than one
+        // per LAS X workflow module.
+        const versionPattern = /^\[PLEASE SPECIFY: acquisition software version for (.+)\]$/;
+        const missingVersions = uniqueTexts(confirmedActions.prompts
+            .map(prompt => (versionPattern.exec(cleanText(prompt)) || [])[1]));
+        prompts.push(...confirmedActions.prompts.filter(prompt => !versionPattern.test(cleanText(prompt))));
+        if (missingVersions.length) {
+            prompts.push(`[PLEASE SPECIFY: the version of ${humanJoin(missingVersions)}]`);
+        }
 
         const paragraphHardware = dedupeSentences([
             openingSentence,
-            ...readoutSentences,
             ...objectives.sentences,
-            ...otherHardware.sentences,
+            ...equipment.sentences,
+            ...confirmedActions.sentences,
         ]).join(" ");
 
         // Manual selections and confirmed plan components are merged in one pass,
         // keyed by component id, so a component the user ticked and the plan also
         // names is stated once - using the plan's reading, which carries the
         // wavelength, filter position or detection window the checkbox cannot.
-        // A named position supersedes its holder: "the CYR71010 cube in the Filter
-        // Turret" is the fact, "the Filter Turret" only the container.
-        const checkedRouteIds = new Set(getCheckedIds("route"));
+        const checkedRouteIds = new Set(routeIds);
         const allPositionSelections = getCheckedSelections("filterposition");
         const positionSelections = allPositionSelections.filter(item =>
             !checkedRouteIds.size
@@ -1686,46 +2173,159 @@ document.addEventListener("DOMContentLoaded", async () => {
         allPositionSelections
             .filter(item => !positionSelections.includes(item))
             .forEach((item) => {
-                prompts.push(`[PLEASE VERIFY: ${item.displayLabel} is not recorded on the selected optical route, so it is not reported; confirm the route and the position that were used]`);
+                prompts.push(`[PLEASE VERIFY: ${item.displayLabel} is not recorded on the light path being reported, so it is not described; confirm the path and the filter that were used]`);
             });
-        const resolvedComponentIds = new Set(positionSelections.map(item => cleanText(item.id).split("::")[0]));
+
+        // Several positions of one holder is a legitimate multi-channel report, but
+        // the holder can only be at one of them at a time, so the order matters.
+        const positionsByHolder = new Map();
+        positionSelections.forEach((item) => {
+            const holder = cleanText(item.componentId) || cleanText(item.id).split("::")[0];
+            if (!positionsByHolder.has(holder)) positionsByHolder.set(holder, []);
+            positionsByHolder.get(holder).push(item);
+        });
+        positionsByHolder.forEach((items, holder) => {
+            if (items.length < 2) return;
+            if (items.every(item => cleanText(item.selectionMode) === "multiple")) return;
+            const holderLabel = cleanText(items[0].componentDisplayLabel) || holder;
+            prompts.push(`[PLEASE SPECIFY: ${items.length} positions of the ${holderLabel} are reported, and it holds one at a time; state which filter was used for which channel]`);
+        });
+
+        // Ticking a holder says light passed through the container, which is the
+        // uninformative claim that offering positions exists to replace. Where
+        // positions are on offer the holder itself is never a sentence.
+        const holdersWithPositions = new Set(
+            Array.from(document.querySelectorAll('input[id^="filterposition-"]'))
+                .map(input => cleanText(input.dataset.componentId))
+                .filter(Boolean)
+        );
+        const lightSelections = getCheckedSelections("light");
+        const detectorSelections = getCheckedSelections("det");
         const lightPathSelections = [
-            ...getCheckedSelections("light"),
-            ...positionSelections,
-            ...getCheckedSelections("filter").filter(item => !resolvedComponentIds.has(cleanText(item.id))),
+            ...lightSelections,
+            ...getCheckedSelections("filter").filter(item => !holdersWithPositions.has(cleanText(item.id))),
             ...getCheckedSelections("splitter"),
-            ...getCheckedSelections("det"),
+            ...detectorSelections,
+            ...specialistSelections,
         ];
-        const lightPath = mergeByPublicationTemplate([...runtime.components, ...lightPathSelections]);
-        prompts.push(...lightPath.prompts, ...runtime.prompts);
+        prompts.push(...positionSelections.flatMap(item => item.reviewPrompts || []));
 
-        const specialistHardware = selectedSentenceBundle([
-            "optical-modulator",
-            "illumination-logic",
-        ]);
-        prompts.push(...specialistHardware.prompts);
+        const positionGroups = groupSelectionsByRoute(positionSelections, routeIds);
+        const routeGroups = groupSelectionsByRoute(
+            [...runtime.components, ...lightPathSelections], routeIds);
+        const lightPathParagraphs = [];
+        let lightPathPrompts = [];
+        routeGroups.forEach((items, routeId) => {
+            const positions = positionGroups.get(routeId) || [];
+            if (!items.length && !positions.length) return;
+            const merged = mergeByPublicationTemplate(items, {
+                articleFor: item => cleanText(item.inventoryClass) === "light_source",
+            });
+            lightPathPrompts = lightPathPrompts.concat(merged.prompts);
+            // Illumination, then the optics it passed through, then detection.
+            const illumination = merged.sentences.filter(sentence => /provided by|performed using/i.test(sentence));
+            const detection = merged.sentences.filter(sentence => /recorded using|observed through/i.test(sentence));
+            const other = merged.sentences.filter(
+                sentence => !illumination.includes(sentence) && !detection.includes(sentence));
+            let sentences = [
+                ...illumination,
+                ...filterPositionSentences(positions),
+                ...other,
+                ...detection,
+            ];
+            if (!sentences.length) return;
+            if (routeGroups.size > 1 && routeId !== SHARED_ROUTE_GROUP) {
+                const lead = routeGroupLead(routeId, methodSelections, routeSelections);
+                if (lead) {
+                    sentences = [`For the ${lead} images, ${decapitalizePhrase(sentences[0])}`, ...sentences.slice(1)];
+                }
+            }
+            lightPathParagraphs.push(dedupeSentences(sentences).join(" "));
+        });
+        if (runtime.sentences.length) {
+            lightPathParagraphs.push(dedupeSentences(runtime.sentences).join(" "));
+        }
 
-        const paragraphLightPath = dedupeSentences([
-            ...lightPath.sentences,
-            ...runtime.sentences,
-            ...specialistHardware.sentences,
-        ]).join(" ");
+        // One grouped question instead of one per source, with the alternatives the
+        // selected light path actually allows.
+        const roleFreeLightPathPrompts = lightPathPrompts.filter(
+            prompt => !cleanText(prompt).startsWith(SOURCE_ROLE_PROMPT_PREFIX));
+        prompts.push(...roleFreeLightPathPrompts, ...runtime.prompts);
+        const unroledSources = lightSelections.filter(item => !cleanText(item.role));
+        const unroledByExamples = new Map();
+        unroledSources.forEach((item) => {
+            const examples = roleExamplesForSource(item, routeSelections);
+            if (!unroledByExamples.has(examples)) unroledByExamples.set(examples, []);
+            unroledByExamples.get(examples).push(item.publicationLabel || item.displayLabel);
+        });
+        unroledByExamples.forEach((rawLabels, examples) => {
+            const labels = uniqueTexts(rawLabels);
+            if (!labels.length) return;
+            prompts.push(`[PLEASE SPECIFY: the role of ${humanJoin(labels)} in this acquisition (for example ${examples}); it is not recorded ${labels.length === 1 ? "for this source" : "for these sources"}]`);
+        });
 
-        // More than one illumination line or detector leaves the reader unable to
-        // tell simultaneous from sequential acquisition, which changes how
-        // bleed-through and phototoxicity are judged.
-        const channelCount = getCheckedSelections("light").length;
-        const detectorCount = getCheckedSelections("det").length;
-        if (channelCount > 1 || detectorCount > 1) {
+        // More than one imaging channel leaves the reader unable to tell simultaneous
+        // from sequential acquisition. A depletion or activation beam is not a channel.
+        const channelCount = lightSelections.filter(
+            item => !NON_CHANNEL_SOURCE_ROLES.has(cleanText(item.role).toLowerCase())).length;
+        if (channelCount > 1 || detectorSelections.length > 1) {
             prompts.push("[PLEASE SPECIFY: whether the channels were acquired sequentially or simultaneously, and in what order]");
+        }
+
+        // What the entry states about itself, checked against what a Methods section
+        // has to contain. These are not database gaps: the record has the answer and
+        // the draft is silent because nothing was ticked.
+        if (!objectives.sentences.length) {
+            prompts.push("[PLEASE SPECIFY: the objective used for this acquisition, including magnification, numerical aperture and immersion medium]");
+        }
+        if (!lightSelections.length && !runtime.components.length) {
+            prompts.push("[PLEASE SPECIFY: the illumination used for this acquisition, including the source and the wavelength or spectral range]");
+        }
+        if (!detectorSelections.length) {
+            prompts.push("[PLEASE SPECIFY: the detector, camera or eyepieces used to record this acquisition]");
+        }
+
+        const selectedMethodIds = new Set(methodSelections.map(item => cleanText(item.id).toLowerCase()));
+        const selectedSourceRoles = new Set(lightSelections.map(item => cleanText(item.role).toLowerCase()).filter(Boolean));
+        selectedMethodIds.forEach((methodId) => {
+            const requirement = METHOD_REQUIRED_SOURCE_ROLES[methodId];
+            if (requirement && !selectedSourceRoles.has(requirement.role)) {
+                prompts.push(requirement.missing);
+            }
+        });
+        // A module that belongs to a technique the acquisition does not claim is the
+        // most common way a previous acquisition's hardware survives into this one.
+        const selectedTechniqueIds = new Set([
+            ...selectedMethodIds,
+            ...readoutSelections.map(item => cleanText(item.id).split(":").pop().toLowerCase()),
+            ...readoutSelections.map(item => cleanText(item.displayLabel).toLowerCase()),
+        ]);
+        const offeredTechniqueIds = new Set(Array.from(
+            document.querySelectorAll('input[id^="method-"], input[id^="readout-"]'))
+            .flatMap(input => [
+                cleanText(input.value).split(":").pop().toLowerCase(),
+                cleanText(input.dataset.displayLabel).toLowerCase(),
+            ]));
+        moduleSelections.forEach((module) => {
+            const requirement = MODULE_TECHNIQUE_REQUIREMENTS[cleanText(module.componentType).toLowerCase()];
+            if (!requirement) return;
+            if (selectedTechniqueIds.has(requirement.id)) return;
+            // Never ask about a technique this microscope does not record.
+            if (!offeredTechniqueIds.has(requirement.id)) return;
+            prompts.push(`[PLEASE VERIFY: the ${module.displayLabel} module is reported but ${requirement.label} is not among the methods selected for this acquisition; confirm the methods and the modules that were used]`);
+        });
+
+        if (selectedSourceRoles.has("depletion")
+            && methodPhrases.length
+            && !Array.from(selectedMethodIds).some(id => DEPLETION_METHOD_IDS.has(id))) {
+            prompts.push(`[PLEASE VERIFY: a depletion source is reported for an acquisition described as ${humanJoin(methodPhrases.map(decapitalizePhrase))}; confirm the method and the sources that were used]`);
         }
 
         prompts.push(cleanText(methods.retired_review_prompt));
         // Ask about the selectors whose position is still unknown, not about the
-        // ones the user has just named.
-        // Only the routes in use are worth asking about: a spinning-disk acquisition
-        // should not be asked which position of the widefield turret it used.
-        const selectedRouteLabels = new Set(routeLabels);
+        // ones the user has just named, and only on the paths in use.
+        const resolvedComponentIds = new Set(positionSelections.map(item => cleanText(item.id).split("::")[0]));
+        const selectedRouteLabels = new Set(routeSelections.map(item => item.displayLabel));
         const unresolvedOptics = (Array.isArray(methods.unresolved_optics) ? methods.unresolved_optics : [])
             .filter(entry => entry && !resolvedComponentIds.has(cleanText(entry.inventory_id)))
             .filter(entry => !selectedRouteLabels.size
@@ -1733,77 +2333,136 @@ document.addEventListener("DOMContentLoaded", async () => {
                 || selectedRouteLabels.has(cleanText(entry.route_label)));
         if (Array.isArray(methods.unresolved_optics) && methods.unresolved_optics.length) {
             if (unresolvedOptics.length) {
-                prompts.push(`[PLEASE SPECIFY: which position of ${humanJoin(unresolvedOptics.map(entry => cleanText(entry.scoped_label)))} was used for acquisition, including the filter/dichroic identity (manufacturer + model/catalog number)]`);
+                // The scoped label carries the route name, which is a routing term.
+                // The question is about the holder, so only the holder is named.
+                const holders = uniqueTexts(unresolvedOptics.map(entry => cleanText(entry.display_label) || cleanText(entry.scoped_label)));
+                prompts.push(`[PLEASE SPECIFY: which position of the ${humanJoin(holders)} was used for acquisition, including the filter/dichroic identity (manufacturer + model/catalogue number)]`);
             }
         } else if (methods.quarep_light_path_recommendation_needed) {
             prompts.push(cleanText(methods.quarep_light_path_recommendation));
         }
-        prompts.push(cleanText(methods.specimen_preparation_recommendation));
+
+        // Specimen preparation and the catch-all settings list are the same request
+        // whatever the acquisition, so they are stated once for the whole section.
+        sectionPrompts.push(cleanText(methods.specimen_preparation_recommendation));
         const acquisitionSettingsRecommendation = cleanText(methods.acquisition_settings_recommendation);
         if (techniquePrompts.length && acquisitionSettingsRecommendation) {
-            // Technique/readout-specific prompts above already own settings such as
-            // pinhole, dwell time, exposure, power or FLIM timing. Keep only a small
-            // reproducibility catch-all here so the same parameter is not requested
-            // twice under conflicting generic terminology.
-            prompts.push(reportingRecommendation(
+            sectionPrompts.push(reportingRecommendation(
                 "any remaining acquisition settings needed to reproduce the experiment that are not already reported above, including pixel size (µm/px), z-step (µm), time interval, and tiling overlap where applicable"));
         } else {
-            prompts.push(reportingRecommendation(acquisitionSettingsRecommendation));
+            sectionPrompts.push(reportingRecommendation(acquisitionSettingsRecommendation));
         }
 
+        // A record-quality gap belongs in this draft only when the draft reports the
+        // thing it is about. The page banner lists every gap for the instrument.
+        const reportedCategories = new Set();
+        if (confirmedActions.sentences.length) reportedCategories.add("software");
+        if (moduleSelections.length) reportedCategories.add("module");
+        if (detectorSelections.length) reportedCategories.add("detector");
+        if (objectives.sentences.length) reportedCategories.add("objective");
+        if (getCheckedSelections("scanner").length) reportedCategories.add("scanner");
+        if (lightSelections.length) reportedCategories.add("source");
+        // The draft has already asked for the version of the software the user
+        // confirmed; repeating it as a record-quality note asks twice.
+        if (missingVersions.length) reportedCategories.delete("software");
         const methodsMetadataStatus = getMethodsMetadataStatus(dto);
         if (methodsMetadataStatus.isBlocked) {
-            const labels = uniqueTexts(methodsMetadataStatus.blockers.map(formatBlockerLabel));
-            prompts.push(labels.length
-                ? `[PLEASE VERIFY: ${humanJoin(labels)} ${labels.length === 1 ? "is" : "are"} not recorded for this instrument; confirm the exact values with facility staff]`
-                : "[PLEASE VERIFY: some instrument metadata is not recorded; confirm the exact values with facility staff]");
+            const labels = uniqueTexts(methodsMetadataStatus.blockers
+                .filter(blocker => blockerAppliesToEntry(blocker, reportedCategories))
+                .map(formatBlockerLabel));
+            if (labels.length) {
+                prompts.push(`[PLEASE VERIFY: ${humanJoin(labels)} ${labels.length === 1 ? "is" : "are"} not recorded for this instrument; confirm the exact values with facility staff]`);
+            }
         }
-        exportDiagnosticNotes(dto).forEach((note) => {
-            prompts.push(`[PLEASE VERIFY: the instrument export reported "${note}"; confirm the affected details with facility staff]`);
-        });
 
         const compatModalityText = shouldUseLegacyModalities(dto)
             ? cleanText(groupedLabelSentence("modality", getCheckedSelections("modality")))
             : "";
-        const paragraphCompatModality = compatModalityText;
 
-        const reviewPrompts = uniqueTexts(prompts.map(prompt => cleanText(prompt).replace(/\.$/, "")));
-        const reviewBlock = reviewPrompts.length
-            ? `Review before publication:\n${reviewPrompts.map(prompt => `- ${prompt}`).join("\n")}`
-            : "";
+        return {
+            paragraphs: [paragraphHardware, ...lightPathParagraphs, compatModalityText]
+                .map(cleanText).filter(Boolean),
+            entryPrompts: uniqueTexts(prompts.map(prompt => cleanText(prompt).replace(/\.$/, ""))),
+            sectionPrompts: uniqueTexts(sectionPrompts.map(prompt => cleanText(prompt).replace(/\.$/, ""))),
+        };
+    }
 
-        return [
-            paragraphHardware,
-            paragraphLightPath,
-            paragraphCompatModality,
-            reviewBlock,
-        ].map(cleanText).filter(Boolean);
+    // Which part of a draft a recorded metadata gap is about. Schema-shaped gaps
+    // (route types, element ids, capability axes) describe the record itself and
+    // belong in the page banner, never in a manuscript checklist.
+    const BLOCKER_CATEGORY_PATTERNS = [
+        [/software/i, "software"],
+        [/module/i, "module"],
+        [/detector|camera/i, "detector"],
+        [/objective/i, "objective"],
+        [/scanner/i, "scanner"],
+        [/light source|laser|lamp|illumination/i, "source"],
+    ];
+
+    function blockerAppliesToEntry(blocker, reportedCategories) {
+        const text = `${blocker?.title || ""} ${blocker?.path || ""}`;
+        const match = BLOCKER_CATEGORY_PATTERNS.find(([pattern]) => pattern.test(text));
+        if (!match) return false;
+        return reportedCategories.has(match[1]);
+    }
+
+    // Everything a single acquisition asserts. The acquisition reference and the
+    // confirmed session actions (software, incubation, autofocus) describe the
+    // session rather than one image set, so they are not cleared between them.
+    const ACQUISITION_SCOPED_PREFIXES = [
+        "route", "readout", "light", "det", "filter", "filterposition", "splitter",
+        "modality", "module", "scanner", "obj", "magnification-changer",
+        "optical-modulator", "illumination-logic",
+    ];
+
+    function clearInputsByPrefixes(prefixes) {
+        prefixes.forEach((prefix) => {
+            document.querySelectorAll(`input[id^="${prefix}-"]`).forEach((input) => { input.checked = false; });
+        });
+    }
+
+    /**
+     * Begin describing a different acquisition on the same microscope.
+     *
+     * Selections are per acquisition. Keeping them ticked after one has been added
+     * is what let an objective, a module or a scanner from the first entry be stated
+     * as a fact about the second.
+     */
+    function startNewAcquisition({ keepMethods = false } = {}) {
+        clearInputsByPrefixes(ACQUISITION_SCOPED_PREFIXES);
+        if (!keepMethods) {
+            clearInputsByPrefixes(["method"]);
+            const sessionLabel = document.getElementById("session-label");
+            if (sessionLabel) sessionLabel.value = "";
+        }
+        activeEntryKey = "";
+        if (currentInst) applyMethodAvailability(currentInst);
     }
 
     addBtn.addEventListener("click", () => {
-        if (!currentInst) return;
+        if (!currentInst) {
+            setSelectionStatus("Choose a microscope first.");
+            return;
+        }
 
         const methodSection = document.getElementById("section-method");
         const methodFirst = Boolean(methodSection && methodSection.style.display !== "none");
-        const selectionStatus = document.getElementById("methods-selection-status");
         if (methodFirst && getCheckedIds("method").length === 0) {
-            if (selectionStatus) {
-                selectionStatus.textContent = "Choose the imaging method used for this acquisition.";
-                selectionStatus.style.display = "";
-            }
+            setSelectionStatus("Choose the imaging method used for this acquisition.");
             return;
         }
-        if (methodFirst && getCheckedIds("route").length === 0) {
-            if (selectionStatus) {
-                selectionStatus.textContent = "Choose the light path used for this acquisition.";
-                selectionStatus.style.display = "";
-            }
+        // A record with no imaging-method control still records a light path, and an
+        // acquisition that names none of them describes nothing.
+        const routeSection = document.getElementById("section-route");
+        const routeAvailable = Boolean(routeSection && routeSection.style.display !== "none");
+        // A legacy record states its modality instead of a path, and answering that
+        // question is the same answer.
+        const legacyModalityChosen = getCheckedIds("modality").length > 0;
+        if (routeAvailable && !legacyModalityChosen && getCheckedIds("route").length === 0) {
+            setSelectionStatus("Choose the light path used for this acquisition.");
             return;
         }
-        if (selectionStatus) {
-            selectionStatus.textContent = "";
-            selectionStatus.style.display = "none";
-        }
+        setSelectionStatus("");
 
         const dto = currentInst;
         if (!instrumentDtoIsRenderable(dto)) {
@@ -1812,23 +2471,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         renderMethodsMetadataWarning(dto);
 
-        const textParts = buildAcquisitionEntry(dto);
+        const entry = buildAcquisitionEntry(dto);
         const sessionLabel = cleanText(document.getElementById("session-label").value);
-        const text = [sessionLabel, ...textParts].filter(Boolean).join("\n\n");
-        // An unchanged second click is idempotent; a different acquisition is not
-        // allowed to replace an earlier entry just because it used the same scope.
-        const selections = ["method", "route", "readout", "modality", "module", "scanner", "obj", "light", "det", "filter", "filterposition", "splitter", "magnification-changer", "optical-modulator", "illumination-logic", "confirmed"];
-        const signature = JSON.stringify([dto.id, sessionLabel,
-            selections.map(prefix => getCheckedIds(prefix)), runtimeConfirm.checked, text]);
-        accumulatedEntries.set(signature, { instrumentId: dto.id, text });
+        const updating = Boolean(activeEntryKey) && accumulatedEntries.has(activeEntryKey);
+        if (!updating) {
+            entrySequence += 1;
+            activeEntryKey = `entry-${entrySequence}`;
+        }
+        accumulatedEntries.set(activeEntryKey, {
+            instrumentId: dto.id,
+            reference: sessionLabel,
+            paragraphs: entry.paragraphs,
+            entryPrompts: entry.entryPrompts,
+            sectionPrompts: entry.sectionPrompts,
+        });
         usedInstruments.set(dto.id, dto.display_name || dto.id);
         updateOutputText();
+        setSelectionStatus(updating
+            ? `Updated the acquisition you last added${sessionLabel ? ` (${sessionLabel})` : ""}. Choose “Start another acquisition” to describe a different one.`
+            : `Added acquisition ${accumulatedEntries.size}. Change a selection to correct it, or choose “Start another acquisition” to describe a different one.`);
     });
 
+    if (newAcquisitionBtn) {
+        newAcquisitionBtn.addEventListener("click", () => {
+            startNewAcquisition();
+            setSelectionStatus("Cleared the selections. Choose what you used for the next acquisition.");
+        });
+    }
 
     clearBtn.addEventListener("click", () => {
         accumulatedEntries = new Map();
         usedInstruments = new Map();
+        entrySequence = 0;
+        // "Start again" has to mean the controls too: leaving every box ticked is
+        // how a cleared draft still produced the previous acquisition's hardware.
+        startNewAcquisition();
+        setSelectionStatus("");
         updateOutputText();
     });
 

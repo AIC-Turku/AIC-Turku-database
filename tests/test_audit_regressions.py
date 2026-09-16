@@ -72,7 +72,7 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.context.close()
         self.assertEqual(self.errors, [])
 
-    def open_methods(self, instruments=None, storage=None, init_script=None):
+    def open_methods(self, instruments=None, storage=None, init_script=None, select_route=True):
         instruments = instruments or [scope()]
         html = self.template.render(methods_generator_config_json=json.dumps({
             "instrument_data_url": "/instruments.json", "acknowledgements": {"standard": "Facility acknowledgement."}}))
@@ -88,6 +88,10 @@ class AuditBrowserRegressions(unittest.TestCase):
         self.page.set_content("<script>" + bootstrap + "</script>" + html)
         expect(self.page.locator("#system-select")).to_be_enabled()
         self.page.select_option("#system-select", instruments[0]["id"])
+        # An acquisition has to name the light path it travelled before it can state
+        # anything else, so tests that are not about path selection confirm it here.
+        if select_route and self.page.locator("#route-0").count():
+            self.page.check("#route-0")
 
     def output(self):
         return self.page.locator("#output-text").input_value()
@@ -140,16 +144,20 @@ class AuditBrowserRegressions(unittest.TestCase):
     def test_storage_access_failure_does_not_break_the_form(self):
         self.open_methods(init_script="Object.defineProperty(window, 'localStorage', {get() {throw new Error('Storage denied');}});")
         self.page.click("#add-btn")
-        self.assertIn("Images were acquired on the test microscope.", self.output())
+        # The point is that a draft is still produced; the opening names the
+        # technique from the confirmed light path.
+        self.assertIn("Epi imaging was performed using", self.output())
 
     def test_route_changes_preserve_compatible_choices_and_clear_incompatible_ones(self):
-        self.open_methods()
-        self.page.check("#light-0")
+        # Light paths are multi-select, because one acquisition can travel two of
+        # them, so leaving a path is unchecking it rather than checking another.
+        self.open_methods(select_route=False)
         self.page.check("#readout-0-0")
         expect(self.page.locator("#route-0")).to_be_checked()
+        self.page.check("#light-0")
         expect(self.page.locator("#light-0")).to_be_checked()
         self.page.check("#route-1")
-        expect(self.page.locator("#route-0")).not_to_be_checked()
+        self.page.uncheck("#route-0")
         expect(self.page.locator("#readout-0-0")).not_to_be_checked()
         expect(self.page.locator("#light-list input")).to_have_count(0)
         self.page.click("#add-btn")

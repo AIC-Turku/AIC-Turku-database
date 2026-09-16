@@ -39,11 +39,12 @@ Choose the microscope and hardware you used to build a draft microscopy methods 
     </div>
     <div id="section-method" class="methods-option-section">
       <strong>Imaging method</strong>
-      <p>Choose what you actually did. The generator will then show the compatible recorded light path and only the route-specific optical components.</p>
+      <p>Tick everything you actually did for this acquisition — several methods can describe one image set, for example brightfield alongside fluorescence. Your choice decides which light paths and optical components are offered below; it does not restrict you to one of them.</p>
       <div id="method-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
     <div id="section-route" class="methods-option-section">
       <strong>Light path and readouts</strong>
+      <p>The recorded path each method used. A path with only one option is confirmed for you; tick a second only if the acquisition really travelled both.</p>
       <div id="route-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
     <p id="methods-selection-status" role="status" style="display:none;"></p>
@@ -75,6 +76,7 @@ Choose the microscope and hardware you used to build a draft microscopy methods 
 
     <div id="section-filter" class="md-typeset methods-option-section">
       <h4>Filters and dichroics</h4>
+      <p>Tick each filter, dichroic or cube the acquisition used — several per wheel or turret where the experiment used several channels. The recorded transmission bands are written into the draft alongside the catalogue number.</p>
       <div id="filter-list" class="checkbox-group"></div>
     </div>
 
@@ -103,7 +105,11 @@ Choose the microscope and hardware you used to build a draft microscopy methods 
       <div id="illumination-logic-list" style="margin-bottom: 15px; margin-top: 5px; margin-left: 10px;"></div>
     </div>
 
-    <button id="add-btn" class="md-button md-button--primary" style="margin-top: 10px;">Add to methods</button>
+    <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+      <button id="add-btn" class="md-button md-button--primary">Add to methods</button>
+      <button id="new-acquisition-btn" class="md-button">Start another acquisition</button>
+    </div>
+    <p style="margin-top: 8px; font-size: 0.85em; color: var(--md-default-fg-color--light);">Changing a selection after adding corrects that acquisition. Use <strong>Start another acquisition</strong> — or give a new acquisition reference — when the next entry describes a different image set.</p>
   </div>
 </div>
 
@@ -113,7 +119,7 @@ Exact exposure times, pixel size, z-step, laser settings, and other acquisition 
 
 ### Generated methods draft
 
-Each different selection or acquisition reference adds a separate entry, including repeated use of the same microscope. An unchanged second click does not duplicate it. Use **Clear all** to start again. Save the draft with the acquisition records while the selected configuration is current. Finished Methods prose is kept separate from a **Review before publication** block listing every acquisition detail that still needs to be specified or verified.
+**Add to methods** commits the acquisition you have described. Correcting a selection and adding again updates that same entry rather than duplicating it; **Start another acquisition**, a new acquisition reference, or changing the imaging method starts a separate entry with a clean set of selections. **Clear all** empties the draft and the selections. Save the draft with the acquisition records while the selected configuration is current. Finished Methods prose is kept separate from a **Review before publication** block listing every acquisition detail that still needs to be specified or verified; requests that apply to the whole section are stated once at the end rather than repeated under every acquisition.
 <div style="position: relative;">
   <textarea id="output-text" rows="16" style="width: 100%; padding: 15px; border-radius: 4px; border: 1px solid var(--md-default-fg-color--light); background-color: var(--md-code-bg-color); font-family: monospace; line-height: 1.5;" readonly>Select an instrument, then choose “Add to methods”.</textarea>
   <div style="margin-top: 10px; display: flex; gap: 10px;">

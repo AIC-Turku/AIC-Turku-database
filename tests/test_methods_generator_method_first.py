@@ -356,14 +356,18 @@ class MethodFirstMethodsTests(unittest.TestCase):
         expect(self.page.locator("#methods-selection-status")).to_contain_text("Choose the light path")
         self.assertNotIn("SMLM imaging was performed", self.output())
 
-    def test_multi_route_method_uses_single_route_radio_and_clears_old_hardware(self):
+    def test_a_method_on_several_paths_asks_which_and_clears_hardware_left_behind(self):
+        """A method recorded on two paths leaves a real choice, so neither is
+        confirmed for the user. Leaving a path withdraws the hardware only that path
+        offered."""
         self.page.check("#method-0")
         self.page.check("#light-0")
+        self.page.uncheck("#method-0")
         self.page.check("#method-2")
         routes = self.page.locator('#route-list input[data-category="route"]:visible')
         self.assertEqual(routes.count(), 2)
-        self.assertEqual(routes.nth(0).get_attribute("type"), "radio")
-        self.assertEqual(routes.nth(1).get_attribute("type"), "radio")
+        self.assertEqual(routes.nth(0).get_attribute("type"), "checkbox")
+        self.assertEqual(routes.nth(1).get_attribute("type"), "checkbox")
         expect(routes.nth(0)).not_to_be_checked()
         expect(routes.nth(1)).not_to_be_checked()
         expect(self.page.locator("#section-light")).to_be_hidden()
@@ -371,9 +375,9 @@ class MethodFirstMethodsTests(unittest.TestCase):
         routes.nth(0).check()
         expect(routes.nth(0)).to_be_checked()
         expect(self.page.locator("#section-light")).to_be_visible()
+        self.page.check("#light-0")
         routes.nth(1).check()
-        expect(routes.nth(0)).not_to_be_checked()
-        expect(routes.nth(1)).to_be_checked()
+        routes.nth(0).uncheck()
         self.assertEqual(self.page.locator('#light-list input:checked').count(), 0)
 
     def test_method_first_selection_reveals_only_compatible_route_hardware(self):
@@ -396,7 +400,10 @@ class MethodFirstMethodsTests(unittest.TestCase):
         )
         self.assertIn("488 nm laser", self.output())
 
-    def test_exclusive_detector_branches_and_filter_positions_use_radio_controls(self):
+    def test_exclusive_detector_branches_stay_exclusive_and_filter_positions_do_not(self):
+        """A recorded exclusive branch is a physical either/or, so the controls stay
+        exclusive. A filter wheel is different: it holds one position at a time, but
+        a two-colour acquisition uses two of them, so the user may report both."""
         self.page.check("#method-0")
         detectors = self.page.locator('#det-list input[id^="det-"]')
         self.assertEqual(detectors.count(), 2)
@@ -409,16 +416,22 @@ class MethodFirstMethodsTests(unittest.TestCase):
 
         positions = self.page.locator('#filter-list input[id^="filterposition-"]')
         self.assertEqual(positions.count(), 3)
-        self.assertEqual(positions.nth(0).get_attribute("type"), "radio")
+        self.assertEqual(positions.nth(0).get_attribute("type"), "checkbox")
         positions.nth(0).check()
         positions.nth(1).check()
-        expect(positions.nth(0)).not_to_be_checked()
+        expect(positions.nth(0)).to_be_checked()
         expect(positions.nth(1)).to_be_checked()
+        self.page.click("#add-btn")
+        # Both are reported, and the draft asks which channel each one served.
+        self.assertIn("positions of the Filter turret are reported", self.output())
 
     def test_switching_method_clears_off_route_position_and_hides_old_hardware(self):
         self.page.check("#method-0")
         self.page.locator('#filter-list input[id^="filterposition-"]').nth(0).check()
+        # Methods are additive, so switching is unticking the old one as well as
+        # ticking the new one.
         self.page.check("#method-1")
+        self.page.uncheck("#method-0")
         expect(self.page.locator("#route-1")).to_be_checked()
         expect(self.page.locator("#light-list")).to_contain_text("Transmitted lamp")
         expect(self.page.locator("#light-list")).not_to_contain_text("488 nm laser")

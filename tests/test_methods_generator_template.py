@@ -1,7 +1,9 @@
 import json
 import re
 import shutil
+import os
 import subprocess
+import tempfile
 import textwrap
 import unittest
 from pathlib import Path
@@ -193,13 +195,21 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             }});
             """
         )
-        proc = subprocess.run(
-            ["node", "-e", script],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        # The harness script embeds the whole generator source, which is larger than
+        # a single command-line argument may be, so it is run from a file.
+        with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as handle:
+            handle.write(script)
+            script_path = handle.name
+        try:
+            proc = subprocess.run(
+                ["node", script_path],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        finally:
+            os.unlink(script_path)
         if proc.returncode != 0:
             raise AssertionError(f"Node template run failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}")
         return json.loads(proc.stdout)
@@ -262,7 +272,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         # A conditional acknowledgement belongs to the instruments its config
         # names, not to every draft.
         self.assertNotIn("Unrelated acknowledgement.", result["output"])
-        self.assertIn("Base method block.", result["output"])
+        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
 
     def test_duplicate_add_clicks_do_not_duplicate_same_method_block(self) -> None:
         instrument = {
@@ -294,7 +304,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             addButton.listeners.click();
             addButton.listeners.click();
             const output = document.getElementById('output-text').value;
-            const count = (output.match(/Base method block\\./g) || []).length;
+            const count = (output.match(/(was performed using|Images were acquired using)/g) || []).length;
             return { output, count };
             """,
         )
@@ -420,7 +430,11 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             "methods": {"base_sentence": "Base method block."},
             "hardware": {
                 "scanner": {"present": False},
-                "objectives": [],
+                "objectives": [{
+                    "id": "obj-1",
+                    "display_label": "Objective 1",
+                    "method_sentence": "Objective sentence.",
+                }],
                 "light_sources": [],
                 "detectors": [],
                 "magnification_changers": [],
@@ -437,18 +451,23 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             const systemSelect = document.getElementById('system-select');
             systemSelect.value = 'scope-1';
             systemSelect.listeners.change({ target: systemSelect });
+            state.inputs.filter(cb => cb.id && cb.id.startsWith('obj-')).forEach(cb => { cb.checked = true; });
             document.getElementById('add-btn').listeners.click();
             return { output: document.getElementById('output-text').value };
             """,
         )
 
-        self.assertIn("Base method block.", result["output"])
+        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
         # The request is bracketed so an author checking the draft for "[" finds it,
         # and it sits in the review block rather than inside finished prose.
         self.assertIn("Review before publication:", result["output"])
         self.assertIn("[PLEASE VERIFY:", result["output"])
         self.assertIn("confirm the exact values with facility staff", result["output"])
+        # A recorded gap is reported when the draft reports the thing it is about.
         self.assertIn("Objective NA", result["output"])
+        # ...and withheld when it is not: this acquisition confirmed no software, so
+        # the software-version gap belongs in the page banner, not in the draft.
+        self.assertNotIn("software[0].version", result["output"])
 
     def test_legacy_modality_record_still_produces_prose_without_an_internal_marker(self) -> None:
         """A record with modalities but no capabilities keeps its compatibility path.
@@ -671,7 +690,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
 
         # The confirmed plan is rendered as publication prose, not as the internal
         # wording the renderer used to emit for a later pass to rewrite.
-        self.assertIn("with the Spinning-disk confocal route.", result["output"])
+        self.assertIn("Spinning-disk confocal imaging was performed using the Scope Runtime VM.", result["output"])
+        self.assertNotIn(" route", result["output"])
         self.assertIn("The light path included GFP cube in the Filter wheel", result["output"])
         self.assertIn("The emission light was divided by Dual-view splitter", result["output"])
         self.assertIn("Images were recorded using sCMOS camera (detection 600–700 nm).", result["output"])
@@ -753,7 +773,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertIn("with the DTO route route.", result["output"])
+        self.assertIn("DTO route imaging was performed using the Scope Runtime Exported.", result["output"])
         self.assertIn("The light path included DTO cube in the DTO Wheel.", result["output"])
         self.assertIn("DTO Laser (488 nm)", result["output"])
         self.assertNotIn("local_storage_route", result["output"])
@@ -821,7 +841,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertNotIn("GFP Cube", result["output"])
         self.assertNotIn("Route-specific optical selections/facts", result["output"])
         self.assertNotIn("49002", result["output"])
-        self.assertIn("Base method block.", result["output"])
+        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
 
     def test_flattened_cube_route_facts_are_not_promoted_without_acquisition_evidence(self) -> None:
         instrument = {
@@ -1087,7 +1107,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertIn("Base method block.", result["output"])
+        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
         self.assertNotIn("this should not be shown", result["output"])
 
     def test_route_fact_fields_survive_in_the_dto_without_reaching_prose(self) -> None:
@@ -1414,7 +1434,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertIn("with the Confocal point scanning route.", result["output"])
+        self.assertIn("Confocal point scanning imaging was performed using the STELLARIS Confocal.", result["output"])
+        self.assertNotIn(" route.", result["output"])
         # The route is composed onto the microscope sentence, so the draft does not
         # open two consecutive sentences with the same frame.
         self.assertNotIn("Images were acquired using the Confocal point scanning route.", result["output"])
@@ -1447,7 +1468,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
         # Reported as an acquired measurement, not as an imaging modality.
-        self.assertIn("FLIM data were acquired.", result["output"])
+        self.assertIn("with FLIM data acquired on the same light path.", result["output"])
+        self.assertNotIn("FLIM data were acquired.", result["output"])
         self.assertNotIn("flim imaging was performed", result["output"].lower())
         # The readout sentence must not carry the light-path name.
         self.assertNotIn("FLIM readout was acquired using", result["output"])
@@ -1938,7 +1960,8 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
         # The route must be named in the microscope sentence
-        self.assertIn("with the Confocal point scanning route.", result["output"])
+        self.assertIn("Confocal point scanning imaging was performed using the STELLARIS Confocal.", result["output"])
+        self.assertNotIn(" route.", result["output"])
         # Primary paragraph must NOT contain the modality sentence as primary content
         self.assertNotIn("Confocal point imaging was performed", result["output"])
 

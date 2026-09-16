@@ -76,6 +76,10 @@ class PublicationHardeningTests(unittest.TestCase):
         self.page.set_content("<script>" + bootstrap + "</script>" + html)
         expect(self.page.locator("#system-select")).to_be_enabled()
         self.page.select_option("#system-select", instrument["id"])
+        # An acquisition names the light path it travelled before it states anything
+        # else, so tests that are not about path selection confirm it here.
+        if self.page.locator("#route-0").count():
+            self.page.check("#route-0")
 
     def output(self):
         return self.page.locator("#output-text").input_value()

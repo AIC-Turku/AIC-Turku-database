@@ -929,6 +929,14 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                     if module_name else "",
                     manufacturer, model, product_code,
                 ),
+                # Every selected module used to get its own sentence, so confirming
+                # eight of them produced eight parallel clauses. Sharing one frame
+                # lets the Methods draft name them in a single sentence.
+                "publication_template": "The {label} {be} used." if module_name else "",
+                "publication_label": _append_quarep_specs(
+                    module_name if module_name.lower().endswith("module") else f"{module_name} module",
+                    manufacturer, model, product_code,
+                ).rstrip(".") if module_name else "",
                 "review_prompts": _quarep_review_prompts(
                     module_name if module_name.lower().endswith("module") else f"{module_name} module",
                     manufacturer, model, product_code,
@@ -945,12 +953,47 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     stand = clean_text(canonical_instrument.get("stand_orientation"))
     stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
     display_name = clean_text(inst.get("display_name"))
-    if microscope_identity and stand_label:
-        instrument_reference = f"the {microscope_identity} {stand_label.lower()} microscope"
+    # The record's display name is what distinguishes two instruments the facility
+    # runs; manufacturer and model do not. Two spinning-disk systems share
+    # "3i / Zeiss Marianas CSU-W1 Spinning Disk Confocal", so naming an acquisition
+    # by that string attributes it to whichever of them a reader assumes. The
+    # display name leads and the catalogue identity follows in parentheses, unless
+    # the name already contains it.
+    stand_clause = stand_label.lower() if stand_label else ""
+    if stand_clause in {"other", "unknown", "not applicable", "n/a"}:
+        # A vocabulary placeholder is not a description of the stand. Rendering it
+        # produces "the ONI Nanoimager other microscope".
+        stand_clause = ""
+    if display_name:
+        normalized_name = display_name.lower()
+        # Compared without spacing or punctuation so "MSquared Aurora Airy Beam"
+        # and "M Squared Aurora Airy Beam" are recognised as the same name.
+        def _compact(value: str) -> str:
+            return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+        normalized_identity = microscope_identity.lower()
+        compact_name = _compact(display_name)
+        compact_identity = _compact(microscope_identity)
+        # "the Leica DM IRBE (Leica Microsystems Leica DM IRBE)" repeats the name
+        # to add a vendor. The parenthetical earns its place only when it names a
+        # model the display name does not already carry, in either direction.
+        identity_is_redundant = (
+            not microscope_identity
+            or compact_identity in compact_name
+            or compact_name in compact_identity
+        )
+        identity_clause = "" if identity_is_redundant else f" ({microscope_identity})"
+        if stand_clause and stand_clause not in normalized_name:
+            article = "an" if stand_clause[:1] in {"a", "e", "i", "o", "u"} else "a"
+            instrument_reference = (
+                f"the {display_name}{identity_clause}, {article} {stand_clause} microscope"
+            )
+        else:
+            instrument_reference = f"the {display_name}{identity_clause}"
+    elif microscope_identity and stand_clause:
+        instrument_reference = f"the {microscope_identity} {stand_clause} microscope"
     elif microscope_identity:
         instrument_reference = f"the {microscope_identity} microscope"
-    elif display_name:
-        instrument_reference = f"the {display_name}"
     else:
         instrument_reference = "the microscope"
     base_sentence = f"Images were acquired using the {microscope_identity} {stand_label.lower()} microscope, controlled by {acquisition_software}." if microscope_identity and stand_label else f"Images were acquired using the {microscope_identity} microscope, controlled by {acquisition_software}."
@@ -977,7 +1020,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         if not routes:
             return (
                 True,
-                "[PLEASE VERIFY: no optical route is recorded for this instrument; report each filter, "
+                "[PLEASE VERIFY: no light path is recorded for this instrument; report each filter, "
                 "dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
             )
 
@@ -1099,7 +1142,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             return (False, "")
         return (
             True,
-            "[PLEASE VERIFY: no filters, dichroics or splitters are recorded on the selected route; "
+            "[PLEASE VERIFY: no filters, dichroics or splitters are recorded on the light path being reported; "
             "report each optical element (manufacturer + model/catalog number) used for acquisition].",
         )
 

@@ -617,19 +617,23 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.click("#add-btn")
         self.assertIn("sequentially or simultaneously", self.output())
 
-    def test_one_acquisition_cannot_select_several_routes(self):
+    def test_several_light_paths_in_one_acquisition_are_reported_separately(self):
+        """Two paths in one entry is a real experiment - brightfield beside
+        fluorescence - so it is allowed, described per path, and confirmed when only
+        one method explains it."""
         instrument = _instrument()
         instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"].append(
             {"id": "confocal", "display_label": "Point-scanning confocal", "relevant_hardware": {}})
         self.open_methods(instrument)
         self.page.check("#route-0")
-        expect(self.page.locator("#route-0")).to_be_checked()
         self.page.check("#route-1")
-        expect(self.page.locator("#route-0")).not_to_be_checked()
+        expect(self.page.locator("#route-0")).to_be_checked()
         expect(self.page.locator("#route-1")).to_be_checked()
         self.page.click("#add-btn")
-        self.assertNotIn("optical routes are reported for a single acquisition", self.output())
-        self.assertIn("Point-scanning confocal route", self.output())
+        output = self.output()
+        self.assertIn("light paths are reported for a single acquisition", output)
+        # Routing vocabulary never reaches the finished prose.
+        self.assertNotIn(" route", output.split("Review before publication")[0])
 
     def test_changing_the_selection_after_confirming_says_the_plan_was_dropped(self):
         self.open_methods(storage={
@@ -666,8 +670,9 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.check("#route-0")
         self.page.click("#add-btn")
         output = self.output()
-        self.assertIn("Filter Turret (Epifluorescence route)", output)
+        self.assertIn("which position of the Filter Turret was used", output)
         self.assertNotIn("Spectral module", output)
+        self.assertNotIn("Epifluorescence route", output)
 
     def test_technique_specific_settings_are_requested(self):
         instrument = _instrument()
@@ -719,7 +724,8 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.check("#filterposition-0-0")
         self.page.click("#add-btn")
         output = self.output()
-        self.assertIn("which position of Emission Wheel (Epifluorescence route)", output)
+        self.assertIn("which position of the Emission Wheel was used", output)
+        self.assertNotIn("Epifluorescence route", output)
         self.assertNotIn("Filter Turret (Epifluorescence route)", output)
 
     def test_a_position_with_incomplete_bands_is_flagged(self):

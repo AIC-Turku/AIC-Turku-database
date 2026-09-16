@@ -642,3 +642,116 @@ completeness contract expressible per method.
 **Watch:** 1.13 — do not let the per-path grouping surface the word "route" in
 prose; and 1.11 — per-path grouping is also what lets a two-camera acquisition be
 described correctly.
+
+---
+
+# Part 5 — Resolution
+
+Every defect in Part 1 and every change in Part 4 has been implemented, except
+where the fix needs data the ledger does not yet hold. All 116 audit scenarios
+were replayed against the result; the output is in
+[`methods_generator_post_fix_transcripts.md`](methods_generator_post_fix_transcripts.md).
+
+## What changed, by defect
+
+| # | Severity | Status | How |
+|---|---|---|---|
+| 1.1 | Critical | **Fixed** | Changing the imaging method after an acquisition has been added starts a new acquisition: every acquisition-scoped selection is cleared and the status line says so. A specialist module reported outside its technique is also flagged. |
+| 1.2 | Critical | **Fixed** | Same mechanism; objectives are acquisition-scoped. |
+| 1.3 | Critical | **Fixed** | `instrument_reference` now leads with the record's `display_name` and adds manufacturer/model parenthetically only when it is not already implied. The two 3i systems read apart. |
+| 1.4 | Critical | **Fixed** | A component whose identity is a placeholder is no longer named in prose; the draft asks who it is instead. A bare manufacturer is not an identity for a detector. |
+| 1.5 | High | **Fixed** | Selections survive exactly as long as they are still offered, so two methods sharing a path keep the path's hardware. |
+| 1.6 | High | **Fixed** | Each entry is checked for an objective, an illumination source and a detector, and asks for whichever it does not state. |
+| 1.6b | High | **Fixed** | A path must be confirmed whenever one is offered, not only in the method-first flow; a record with a single path confirms it at selection time. |
+| 1.7 | High | **Fixed** | With no method control the opening is derived from the confirmed path, so the multiphoton entry says "Multiphoton imaging was performed using…". The route clause is gone from prose. |
+| 1.8 | High | **Fixed** | Record-quality gaps appear only when the entry reports the thing they are about; the rest stay in the page banner. |
+| 1.9 | High | **Fixed** | Correcting a selection updates the entry just added. A new acquisition reference, a method change or **Start another acquisition** begins a separate one. |
+| 1.10 | High | **Fixed** | **Clear all** now resets the selections and the acquisition reference as well as the draft. |
+| 1.11 | High | **Fixed** | Identically-named endpoints are told apart by the port the record routes them to ("Photometrics Kinetix (master)"). |
+| 1.12 | Medium | **Fixed in code; data outstanding** | One grouped request instead of one per source, with alternatives constrained by the path each source sits on. The verb still follows the recorded role — see §3.1. |
+| 1.13 | Medium | **Fixed** | A lexical guard over all 116 scenarios finds no `route`, `runtime`, `DTO`, `inventory`, `selected execution`, `wheel/turret position`, `Unknown` or `Placeholder` in publication prose. |
+| 1.14 | Medium | **Fixed** | Depletion, activation, switching and alignment beams are not counted as channels. |
+| 1.15 | Medium | **Fixed** | STED without a depletion source, a depletion source outside STED/RESOLFT, and a specialist module outside its technique are each flagged. |
+| 1.16 | Medium | **Partly fixed; data outstanding** | Phase contrast, DIC and darkfield now request the condenser annulus, prism/analyser set and condenser. The optics themselves are not tickable because they are not recorded — see §3.6. |
+| 1.17 | Medium | **Fixed** | Readouts are a clause of the opening sentence: "…, with FLIM and FCS data acquired on the same light path." |
+| 1.18 | Medium | **Fixed** | Modules, acquisition software and processing tools each merge into one sentence, and version requests into one line. |
+| 1.19 | Medium | **Fixed** | See §4.1 below. |
+| 1.20 | Medium | **Data-blocked** | The FLIM domain is not recorded; see §3.8. |
+| 1.21 | Medium | **Fixed** | A holder offering positions is never a sentence on its own. |
+| 1.22 | Medium | **Data-blocked** | The BC43 emission wheel is recorded on the transmitted path; see §3.5. |
+| 1.23 | Medium | **Data-blocked** | `sim_module` is the recorded vocabulary term for the ApoTome; see §3.8. |
+| 1.24 | Medium | **Fixed** | RESOLFT has its own reporting recommendation. |
+| 1.25 | Medium | **Fixed** | Blocked adds explain what is missing in the status line. |
+| 1.26 | Medium | **Fixed** | A component recorded in two categories is stated once. |
+| 1.27 | Low | **Fixed** | Source labels take the article a reader would say ("a 640 nm laser", "an LED", "an arc lamp"). |
+| 1.28 | Low | **Fixed** | "the transmitted light path", not "the transmitted light light path". |
+| 1.29 | Low | **Fixed** | The `other` stand placeholder is suppressed. |
+| 1.30 | Low | **Partly fixed** | Splitters keep their recorded product name, which for the Crest DualCam is a catalogue code; see §3.7. |
+| 1.31 | Low | **Fixed** | A trailing "position"/"slot" is dropped from a component's publication name. |
+| 1.32 | Low | **Not changed** | An FCS entry also reports imaging, so "Images were recorded using…" is accurate. |
+
+## What the UX changes look like now
+
+**§4.1 — reporting recommendations once per section.** `buildAcquisitionEntry`
+returns structured prompts split into per-acquisition and section-level sets.
+With one acquisition the draft reads as before. With several, each entry keeps
+its own technique-specific requests and the generic ones are stated once under
+*Review before publication — applies to every acquisition above*.
+
+**§4.2 — component-focused, multi-select light path.** Filter positions are
+checkboxes, so a two-colour experiment reports both emission filters; positions
+sharing a holder are named in one clause, and the draft asks which filter served
+which channel because the holder takes one at a time. Each filter is described
+by what it passes, derived from the spectral model the repository already holds:
+
+> The light path included a Quad-band Dichroic (440/25, 521/25, 607/25, 700/25 nm;
+> cat. no. Di01-T405/488/568/647) in the CSU-W1 Dichroic Slider and a GFP emission
+> bandpass filter (525/50 nm) and a Cy3 / Alexa 568 emission bandpass filter
+> (617/73 nm; cat. no. FF01-617/73-25) in the CSU-W1 Emission Wheel.
+
+Nothing is inferred: a position whose bands are not recorded produces no band
+phrase and keeps its existing incompleteness request. §3.7 lists the 19 positions
+that still print only a catalogue number.
+
+**§4.3 — multi-select imaging methods.** Methods are checkboxes and only gate
+availability. Ticking several describes one acquisition that used all of them;
+light paths are multi-select too, and the light-path paragraph is grouped by path
+so a transmitted lamp is never merged into a fluorescence clause:
+
+> Widefield fluorescence imaging and transmitted-light brightfield imaging were
+> performed using the Nikon Eclipse Ti2-E, an inverted microscope. …
+>
+> For the widefield fluorescence images, illumination was provided by a 475 nm LED
+> (Lumencor Spectra X LED system). …
+>
+> For the transmitted brightfield images, transmitted-light illumination was
+> provided by an LED (Nikon Ti2 Transmitted Illuminator).
+>
+> Images were recorded using Hamamatsu Orca Flash4.0 V3.
+
+A component recorded on every selected path is stated once, after the per-path
+clauses. A method recorded on exactly one path confirms that path for the user;
+a method with several leaves the choice open.
+
+## Regression tests
+
+* `tests/test_methods_generator_acquisition_scope.py` — 16 browser tests, one per
+  Critical/High finding plus the multi-method and section-level behaviour, driving
+  the real page through the same controls a user clicks.
+* `tests/test_publication_identity.py` — 13 tests for what may be printed as a
+  component's or a microscope's name, and for the filter-specification phrases.
+* Existing suites were updated where they asserted behaviour this work changed
+  (route-clause prose, `base_sentence` fallback, radio semantics), keeping the
+  invariant each was protecting and stating the new contract.
+
+Full suite: 924 passed, 1 skipped. `python -m scripts.dashboard_builder --strict`
+and `mkdocs build --strict` are clean.
+
+## Still outstanding
+
+Only the data questions in Part 3. The highest-value ones for the generated text
+are §3.1 (65 light sources with no recorded role — the last prompt that fires on
+a complete acquisition), §3.3 (the LSM 880 Airyscan and spectral detectors are
+recorded but not reachable from any light path, so an Airyscan draft cannot name
+its detector) and §3.7 (filter positions with no recorded bands, which now print
+a catalogue number where they could print a transmission).

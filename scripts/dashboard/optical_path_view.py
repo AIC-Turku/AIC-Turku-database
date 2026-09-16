@@ -251,6 +251,42 @@ _SOURCE_ROLE_UNRECORDED_PROMPT = (
 )
 
 
+# A component whose identity is unresolved must not be named in publication prose.
+# The Methods draft asks for the identity instead, per class, so the request names
+# the thing the author has to look up rather than the field the record is missing.
+_UNRESOLVED_IDENTITY_PROMPTS = {
+    "endpoint": (
+        "[PLEASE SPECIFY: the detector or camera used for this acquisition "
+        "(manufacturer and model); the facility record does not identify it]"
+    ),
+    "camera_port": (
+        "[PLEASE SPECIFY: the camera used for this acquisition (manufacturer and "
+        "model); the facility record does not identify it]"
+    ),
+    "light_source": (
+        "[PLEASE SPECIFY: the illumination source used for this acquisition "
+        "(manufacturer and model); the facility record does not identify it]"
+    ),
+    "optical_element": (
+        "[PLEASE SPECIFY: the optical element used for this acquisition "
+        "(manufacturer and model/catalogue number); the facility record does not "
+        "identify it]"
+    ),
+    "splitter": (
+        "[PLEASE SPECIFY: the beam splitter used for this acquisition "
+        "(manufacturer and model); the facility record does not identify it]"
+    ),
+}
+_UNRESOLVED_IDENTITY_FALLBACK_PROMPT = (
+    "[PLEASE SPECIFY: the identity of one selected component (manufacturer and "
+    "model); the facility record does not identify it]"
+)
+# Classes where the manufacturer alone is not an identity. "Zeiss" names a vendor,
+# not the photomultiplier a reader would have to look up, so it is refused here
+# rather than printed as though it were the detector.
+_MODEL_REQUIRED_CLASSES = {"endpoint", "camera_port"}
+
+
 def _identity_value(value: Any) -> str:
     """Return an identity string, or "" when the value only marks it unresolved."""
     cleaned = clean_text(value)
@@ -260,6 +296,22 @@ def _identity_value(value: Any) -> str:
     if lowered.startswith("unknown ") or lowered.startswith("placeholder"):
         return ""
     return cleaned
+
+
+def _authored_label_value(value: Any) -> str:
+    """Return an authored display label, or "" when it only restates "unknown".
+
+    ``display_label`` is the last fallback for a publication label. When the record
+    authored it as ``Unknown Camera`` that fallback publishes the placeholder the
+    identity check just removed, so the same test is applied to it.
+    """
+    return _identity_value(value)
+
+
+def _unresolved_identity_prompt(inventory_class: str) -> str:
+    return _UNRESOLVED_IDENTITY_PROMPTS.get(
+        clean_text(inventory_class), _UNRESOLVED_IDENTITY_FALLBACK_PROMPT
+    )
 
 
 def _number_text(value: Any) -> str:
@@ -324,10 +376,20 @@ def _publication_inventory_label(item: dict[str, Any], vocabulary: Vocabulary | 
         ).strip()
         if core and identity:
             return f"{core} ({identity})"
-        return core or identity or authored or clean_text(item.get("id"))
+        # A wavelength and kind ("488 nm laser") identify a line well enough to
+        # publish even with no vendor recorded. Only when neither is recorded does
+        # the label fall back, and then never onto a placeholder.
+        return core or identity or _authored_label_value(authored)
 
     identity = " ".join(part for part in (manufacturer, model) if part).strip()
-    return identity or authored or clean_text(item.get("id"))
+    fallback = _authored_label_value(authored)
+    if clean_text(inventory_class) in _MODEL_REQUIRED_CLASSES and not model:
+        identity = ""
+        # An authored label that only restates the vendor is the same non-identity
+        # the model check just rejected.
+        if fallback.lower() == manufacturer.lower():
+            fallback = ""
+    return identity or fallback
 
 
 def _inventory_method_facts(
@@ -350,7 +412,10 @@ def _inventory_method_facts(
     """
     inventory_class = clean_text(item.get("inventory_class"))
     if not label:
-        return "", "", []
+        # The component stays selectable - the user did use it - but it cannot be
+        # named, so the draft asks who it is instead of publishing a placeholder or
+        # dropping the fact silently.
+        return "", "", [_unresolved_identity_prompt(inventory_class)]
 
     template = ""
     prompts: list[str] = []
@@ -387,6 +452,233 @@ def _inventory_method_facts(
 
 _EMPTY_POSITION_WORDS = {"empty", "none", "blank", "open", "free"}
 
+# How a filter position is described in prose. The recorded ``component_type`` is a
+# schema term; these are the words a Methods section uses for the same thing.
+_POSITION_TYPE_NOUNS = {
+    "bandpass": "bandpass filter",
+    "multiband_bandpass": "multi-bandpass filter",
+    "longpass": "longpass filter",
+    "shortpass": "shortpass filter",
+    "dichroic": "dichroic mirror",
+    "multiband_dichroic": "multi-band dichroic mirror",
+    "filter_cube": "filter cube",
+    "neutral_density": "neutral-density filter",
+    "analyzer": "analyser",
+    "polarizer": "polariser",
+    "beamsplitter": "beam splitter",
+}
+# Where the position sits in the path, when the recorded stage role says so. Used
+# to write "excitation filter" rather than the bare type noun.
+_POSITION_STAGE_ADJECTIVES = {
+    "excitation": "excitation",
+    "emission": "emission",
+    "dichroic": "",
+    "cube": "",
+}
+
+
+def _looks_like_internal_id(value: str) -> str:
+    """True when a label is a slot identifier rather than a name a reader knows.
+
+    ``EMP_BF`` and ``Pos_1`` identify a position in the record; printing them in a
+    Methods section tells a reader nothing and exposes the repository's own keys.
+    """
+    cleaned = clean_text(value)
+    if not cleaned or " " in cleaned:
+        return False
+    return bool(re.fullmatch(r"[A-Za-z0-9]+(?:[_\-][A-Za-z0-9]+)+", cleaned))
+
+
+# Words that already say what kind of optic a component is. When the recorded name
+# carries one, restating the type noun produces "Quad-band Dichroic multi-band
+# dichroic mirror".
+# A name carrying one of these already says what kind of optic it is, so the whole
+# type noun is dropped: "Quad-band Dichroic", not "Quad-band Dichroic multi-band
+# dichroic mirror".
+_OPTIC_HEAD_WORDS = {
+    "filter", "filters", "cube", "cubes", "dichroic", "dichroics", "mirror",
+    "emitter", "splitter", "beamsplitter", "analyser", "analyzer", "polariser",
+    "polarizer",
+}
+# These only qualify the optic, so a name carrying one drops that word from the type
+# noun and keeps the head: "GFP Emission bandpass filter", not "GFP Emission
+# emission bandpass filter".
+_OPTIC_QUALIFIER_WORDS = {
+    "emission", "excitation", "bandpass", "longpass", "shortpass", "multiband",
+    "multi-band", "neutral-density", "nd",
+}
+# First letters whose spoken acronym starts with a vowel sound, so "an LED" but
+# "a UV lamp".
+_ACRONYM_VOWEL_LETTERS = set("AEFHILMNORSX")
+_DIGIT_ARTICLES = {"8": "an"}
+
+
+def _indefinite_article(text: str) -> str:
+    """Return "a" or "an" for a generated label, by how the label is read aloud."""
+    cleaned = clean_text(text)
+    if not cleaned:
+        return "a"
+    first_word = cleaned.split()[0]
+    first = first_word[0]
+    if first.isdigit():
+        if first_word[:2] in {"11", "18"}:
+            return "an"
+        return _DIGIT_ARTICLES.get(first, "a")
+    # An acronym is spelled out, so the article follows the letter name, not the word.
+    if first_word.isupper() and len(first_word) > 1:
+        return "an" if first in _ACRONYM_VOWEL_LETTERS else "a"
+    return "an" if first.lower() in set("aeiou") else "a"
+
+
+def _publication_position_phrase(row: dict[str, Any]) -> str:
+    """Name a filter position the way a Methods section names it.
+
+    A catalogue number identifies the part but not what it does, and the position
+    name alone ("387/11", "GFP") is a facility shorthand. This states the optic,
+    what it passes when that is recorded, and the catalogue number - nothing that
+    is not in the record.
+    """
+    name = clean_text(row.get("display_label")) if row.get("has_identity") else ""
+    # "NIR dichroic position" names a slot; the trailing word is an authoring
+    # artefact, not part of the component's name.
+    name = re.sub(r"\s+(position|slot)$", "", name, flags=re.IGNORECASE).strip()
+    spec = clean_text(row.get("spec_phrase"))
+    noun = clean_text(row.get("type_noun"))
+    code = clean_text(row.get("product_code"))
+    manufacturer = clean_text(row.get("manufacturer"))
+
+    # "Quad-band Dichroic multi-band dichroic mirror" repeats itself. The type noun
+    # is dropped when the recorded name already carries its head word.
+    if noun and name:
+        name_words = {word.strip("()/,").lower() for word in name.split()}
+        if name_words & _OPTIC_HEAD_WORDS:
+            noun = ""
+        elif name_words & _OPTIC_QUALIFIER_WORDS:
+            noun = " ".join(word for word in noun.split() if word.lower() not in name_words)
+
+    if name and spec and name.lower() in spec.lower():
+        core = " ".join(part for part in (spec, noun) if part)
+        parenthetical = ""
+    else:
+        core = " ".join(part for part in (name, noun) if part) or spec
+        parenthetical = spec if spec and spec != core else ""
+
+    if not core:
+        return ""
+    details = [detail for detail in (parenthetical, manufacturer, f"cat. no. {code}" if code else "") if detail]
+    phrase = f"{core} ({'; '.join(details)})" if details else core
+    return f"{_indefinite_article(phrase)} {phrase}"
+
+
+def _band_text(band: Any) -> str:
+    """Render one recorded transmission band as ``525/25`` or ``525``."""
+    if not isinstance(band, dict):
+        return ""
+    center = _number_text(band.get("center_nm"))
+    width = _number_text(band.get("width_nm"))
+    if not center:
+        return ""
+    return f"{center}/{width}" if width else center
+
+
+def _bands_text(bands: Any) -> str:
+    rendered = [text for text in (_band_text(band) for band in (bands or [])) if text]
+    return ", ".join(rendered)
+
+
+def _position_spec_phrase(position: dict[str, Any]) -> str:
+    """Summarise a filter position's recorded transmission in publication wording.
+
+    A catalogue number identifies a part; it does not tell a reader what the filter
+    passes. The spectral model the repository already derives for the virtual
+    microscope carries that, so it is summarised here rather than left out of the
+    Methods draft. Nothing is inferred: a position whose bands are not recorded
+    produces no phrase, and the existing incompleteness prompt asks for them.
+    """
+    spectral_ops = position.get("spectral_ops") if isinstance(position.get("spectral_ops"), dict) else {}
+    operations: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for phase in ("illumination", "detection"):
+        for operation in spectral_ops.get(phase) or []:
+            if not isinstance(operation, dict):
+                continue
+            key = json.dumps(operation, sort_keys=True, default=str)
+            if key in seen:
+                continue
+            seen.add(key)
+            operations.append(operation)
+
+    component_type = clean_text(position.get("component_type")).lower()
+
+    if component_type == "filter_cube":
+        # A cube is three parts; naming them separately is what makes the draft
+        # usable, because a reader checks excitation against emission.
+        parts: list[str] = []
+        for sub_role, prefix, suffix in (
+            ("excitation_filter", "excitation", ""),
+            ("dichroic", "", "dichroic"),
+            ("emission_filter", "emission", ""),
+        ):
+            for operation in operations:
+                if clean_text(operation.get("sub_role")) != sub_role:
+                    continue
+                text = _operation_band_text(operation)
+                if not text:
+                    continue
+                parts.append(" ".join(part for part in (prefix, text, suffix) if part))
+                break
+        return ", ".join(parts)
+
+    for operation in operations:
+        text = _operation_band_text(operation)
+        if text:
+            return text
+    return ""
+
+
+def _operation_band_text(operation: dict[str, Any]) -> str:
+    """Render one spectral operation as a transmission phrase, or "" when unrecorded."""
+    op = clean_text(operation.get("op")).lower()
+    if op in {"bandpass", "multiband_bandpass"}:
+        bands = operation.get("bands")
+        if bands:
+            rendered = _bands_text(bands)
+            return f"{rendered} nm" if rendered else ""
+        center = _number_text(operation.get("center_nm"))
+        width = _number_text(operation.get("width_nm"))
+        if center and width:
+            return f"{center}/{width} nm"
+        return f"{center} nm" if center else ""
+    if op in {"longpass"}:
+        cut_on = _number_text(operation.get("cut_on_nm"))
+        return f"{cut_on} nm longpass" if cut_on else ""
+    if op in {"shortpass"}:
+        cut_off = _number_text(operation.get("cut_off_nm") or operation.get("cut_on_nm"))
+        return f"{cut_off} nm shortpass" if cut_off else ""
+    if op in {"dichroic_reflect", "dichroic_transmit"}:
+        bands = operation.get("bands")
+        if bands:
+            rendered = _bands_text(bands)
+            return f"{rendered} nm" if rendered else ""
+        cut_on = _number_text(operation.get("cut_on_nm"))
+        return f"{cut_on} nm" if cut_on else ""
+    return ""
+
+
+def _position_type_noun(position: dict[str, Any], stage_role: str) -> str:
+    """Name the kind of optic a position is, in Methods wording."""
+    component_type = clean_text(position.get("component_type")).lower()
+    noun = _POSITION_TYPE_NOUNS.get(component_type, "")
+    if not noun:
+        return ""
+    adjective = _POSITION_STAGE_ADJECTIVES.get(clean_text(stage_role).lower(), "")
+    # "excitation dichroic mirror" would be wrong; the stage role only qualifies
+    # filters, never the dichroic or the cube that carries all three parts.
+    if adjective and component_type in {"bandpass", "multiband_bandpass", "longpass", "shortpass"}:
+        return f"{adjective} {noun}"
+    return noun
+
+
 
 def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """Collect the positions each multi-position optical element can be set to.
@@ -411,6 +703,7 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
             if not inventory_id or not isinstance(available, list):
                 continue
             holder_label = clean_text(step.get("display_label"))
+            holder_stage_role = clean_text(step.get("stage_role"))
             known = positions_by_component.setdefault(inventory_id, [])
             by_key = {row["id"]: row for row in known}
             by_identity = {
@@ -467,9 +760,17 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     # generic emptiness word, so the browser never presents an
                     # internal slot id - or "(position Empty)" - as an identity.
                     "has_identity": bool(identity_label)
-                    and identity_label.lower() not in _EMPTY_POSITION_WORDS,
+                    and identity_label.lower() not in _EMPTY_POSITION_WORDS
+                    and not _looks_like_internal_id(identity_label),
                     "product_code": clean_text(position.get("product_code")),
+                    "manufacturer": _identity_value(position.get("manufacturer")),
                     "component_type": clean_text(position.get("component_type")),
+                    # What the filter passes, in publication wording, and what kind
+                    # of optic it is. Both come from the recorded spectral model;
+                    # neither is inferred when the record does not carry it.
+                    "spec_phrase": _position_spec_phrase(position),
+                    "type_noun": _position_type_noun(position, holder_stage_role),
+                    "stage_role": holder_stage_role,
                     "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",
                     "is_empty": (
                         clean_text(position.get("component_type")).lower() == "empty"
@@ -479,6 +780,7 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     "route_ids": [route_id] if route_id else [],
                     "route_labels": [route_label] if route_label else [],
                 }
+                row["publication_phrase"] = _publication_position_phrase(row)
                 by_key[key] = row
                 by_identity[twin] = row
                 known.append(row)

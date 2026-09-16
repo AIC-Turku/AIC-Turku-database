@@ -377,7 +377,7 @@ def _ground_methods_projection(dto: dict[str, Any]) -> None:
     ):
         methods["quarep_light_path_recommendation_needed"] = True
         methods["quarep_light_path_recommendation"] = (
-            "[PLEASE VERIFY: the instrument record contains route options that were not "
+            "[PLEASE VERIFY: the instrument record contains light-path options that were not "
             "selected for this acquisition; confirm the exact filters, dichroics, "
             "splitters, and detector path actually used]."
         )

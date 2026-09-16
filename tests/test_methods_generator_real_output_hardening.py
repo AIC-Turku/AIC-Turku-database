@@ -173,7 +173,9 @@ def test_selected_hardware_keeps_review_prompts_and_software_placeholders_out_of
         "magnification changer setting",
         "which phase mask profile was applied",
         "adaptive illumination setting",
-        "acquisition software version for ControlSuite",
+        # Version requests are grouped into one line, so several confirmed products
+        # do not each add a near-identical request.
+        "the version of ControlSuite",
     ):
         assert prompt in output
 
