@@ -108,7 +108,8 @@ class PublicationHardeningTests(unittest.TestCase):
         output = self.output()
         self.assertEqual(output.count("Review before publication:"), 1)
         self.assertIn("- [PLEASE VERIFY: exact emission filter and detector path]", output)
-        self.assertIn("- [PLEASE SPECIFY: exposure time and pixel size]", output)
+        self.assertIn("- [RECOMMENDED FOR REPORTING: the light-microscopy community recommends also reporting exposure time and pixel size.", output)
+        self.assertIn("original image metadata", output)
         self.page.click("#add-btn")
         self.assertEqual(self.output().count("Review before publication:"), 1)
 
