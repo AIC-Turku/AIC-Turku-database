@@ -249,5 +249,59 @@ class ActiveYamlContractTests(unittest.TestCase):
         )
 
 
+    def test_all_active_repo_methods_have_explicit_light_path_mapping(self) -> None:
+        """Methods must be explicitly associated with compatible physical light paths."""
+        route_vocab = yaml.safe_load((REPO_ROOT / "vocab" / "optical_routes.yaml").read_text(encoding="utf-8")) or {}
+        covers = {}
+        for term in route_vocab.get("terms") or []:
+            if not isinstance(term, dict) or not term.get("id"):
+                continue
+            term_covers = term.get("covers") if isinstance(term.get("covers"), dict) else {}
+            covers[str(term["id"])] = {
+                "imaging_modes": set(term_covers.get("imaging_modes") or []),
+                "contrast_methods": set(term_covers.get("contrast_methods") or []),
+            }
+
+        violations = []
+        for yaml_path in sorted(INSTRUMENTS_DIR.glob("*.yaml")):
+            data = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
+            if not isinstance(data, dict):
+                continue
+            caps = data.get("capabilities") if isinstance(data.get("capabilities"), dict) else {}
+            paths = [lp for lp in (data.get("light_paths") or []) if isinstance(lp, dict)]
+            if not paths:
+                continue
+
+            for axis in ("imaging_modes", "contrast_methods"):
+                declared = set(caps.get(axis) or [])
+                mapped = set()
+                for lp in paths:
+                    route_type = str(lp.get("route_type") or lp.get("id") or "")
+                    allowed = covers.get(route_type, {}).get(axis, set())
+                    authored = set(lp.get(axis) or [])
+                    invalid = authored - declared
+                    incompatible = authored - allowed
+                    if invalid:
+                        violations.append((yaml_path.name, lp.get("id"), axis, "not declared capability", sorted(invalid)))
+                    if incompatible:
+                        violations.append((yaml_path.name, lp.get("id"), axis, "not covered by route", sorted(incompatible)))
+                    mapped.update(authored)
+
+                for method in sorted(declared - mapped):
+                    candidates = [
+                        lp.get("id")
+                        for lp in paths
+                        if method in covers.get(str(lp.get("route_type") or lp.get("id") or ""), {}).get(axis, set())
+                    ]
+                    if len(candidates) == 1:
+                        violations.append((yaml_path.name, candidates[0], axis, "unambiguous mapping not authored", method))
+
+        self.assertEqual(
+            violations,
+            [],
+            f"Active YAML method-to-path mappings must be explicit and route-compatible: {violations}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

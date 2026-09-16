@@ -8,12 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'Confocal spinning-disk microscope (inverted) based on a Zeiss stand with
-    a Yokogawa CSU-W1. Optimized for fast, gentle imaging of live samples and large
-    fields of view. Imaging modes: confocal spinning disk, live-cell time-lapse, FRAP,
-    photoactivation. Uses a 50 µm pinhole disk; this is well suited to standard spinning-disk
-    imaging but is not ideal for low-magnification confocal sectioning compared with
-    a 25 µm disk.'
+  notes: 'Confocal spinning-disk microscope (inverted) based on a Zeiss stand with a Yokogawa CSU-W1. Optimized for fast, gentle imaging of live samples and large fields of view. Imaging modes: confocal spinning disk, live-cell time-lapse, FRAP, photoactivation. Uses a 50 µm pinhole disk; this is well suited to standard spinning-disk imaging but is not ideal for low-magnification confocal sectioning compared with a 25 µm disk.'
   url: ''
 capabilities:
   imaging_modes:
@@ -73,9 +68,7 @@ hardware:
   scanner:
     type: spinning_disk
     pinhole_um: 50
-    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell
-      spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification
-      confocal sectioning.
+    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification confocal sectioning.
     url: ''
   detectors:
   - kind: scmos
@@ -251,16 +244,13 @@ hardware:
     wavelength_nm: 730
     power: 30 mW
     role: excitation
-    notes: Near-IR excitation line delivered via the CSU-W1 near-IR illumination port.
-      Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter
-      to be documented explicitly in the light path.
+    notes: Near-IR excitation line delivered via the CSU-W1 near-IR illumination port. Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter to be documented explicitly in the light path.
     url: ''
     id: singleline_730nm_laser_launch
   - kind: led
     manufacturer: Excelitas
     model: X-Cite XLED1
-    notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class
-      widefield fluorescence
+    notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class widefield fluorescence
     url: ''
     id: x_cite_xled1
   optical_path_elements:
@@ -311,14 +301,11 @@ hardware:
           width_nm: 25
         - center_nm: 700
           width_nm: 25
-        notes: Standard multiband spinning-disk dichroic for 405/488/561/640-class
-          excitation.
+        notes: Standard multiband spinning-disk dichroic for 405/488/561/640-class excitation.
       Pos_2:
         component_type: dichroic
         name: NIR dichroic position
-        notes: Installed NIR dichroic used with the 730 nm excitation / 809 nm emission
-          route. Product code and spectral data are unverified; this is not an empty
-          or spectrally transparent position.
+        notes: Installed NIR dichroic used with the 730 nm excitation / 809 nm emission route. Product code and spectral data are unverified; this is not an empty or spectrally transparent position.
   - name: Widefield Dichroic
     stage_role: dichroic
     id: widefield_dichroic
@@ -440,6 +427,8 @@ light_paths:
         sequence:
         - endpoint_id: detector_2
   route_type: confocal_spinning_disk
+  imaging_modes:
+  - confocal_spinning_disk
 - id: widefield_fluorescence
   illumination_sequence:
   - source_id: x_cite_xled1
@@ -465,6 +454,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
 - id: transmitted_light
   illumination_sequence: []
   detection_sequence:
@@ -485,3 +476,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_light
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  - dic

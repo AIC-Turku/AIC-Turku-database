@@ -8,9 +8,7 @@ instrument:
   stand_orientation: benchtop
   ocular_availability: camera_only
   location: BioCity, 5th floor
-  notes: 'Real-time cell analysis system combining label-free impedance monitoring
-    with live-cell imaging. Dimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg. Placed inside
-    a standard CO2 incubator for operation (Operating range: 20-40°C, 5-98% RH).'
+  notes: 'Real-time cell analysis system combining label-free impedance monitoring with live-cell imaging. Dimensions: 43.1 x 44.5 x 41.4 cm, 27.2 kg. Placed inside a standard CO2 incubator for operation (Operating range: 20-40°C, 5-98% RH).'
   url: https://www.agilent.com/lifesciences/eSight
 capabilities:
   imaging_modes:
@@ -167,9 +165,13 @@ light_paths:
   - optical_path_element_id: internal_filter_turret
   - endpoint_id: detector_1
   route_type: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
 - id: transmitted_light
   illumination_sequence:
   - source_id: transmitted_led
   detection_sequence:
   - endpoint_id: detector_1
   route_type: transmitted_light
+  contrast_methods:
+  - transmitted_brightfield

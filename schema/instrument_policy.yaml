@@ -4,10 +4,10 @@ applies_to:
   template: templates/microscope_template.yaml
   instruments_glob: instruments/*.yaml
 purpose:
-  - drive instrument metadata completeness audits
-  - define required vs conditional vs optional fields
-  - provide one source of truth for validation and method-generator inclusion
-  - reference controlled vocabularies without duplicating their contents
+- drive instrument metadata completeness audits
+- define required vs conditional vs optional fields
+- provide one source of truth for validation and method-generator inclusion
+- reference controlled vocabularies without duplicating their contents
 
 status_definitions:
   required: must be present for all instruments
@@ -253,1295 +253,1295 @@ vocab_registry:
     allow_synonyms_on_input: false
 
 sections:
-  - id: general_identity
-    title: General instrument identity
-    rules:
-      - path: instrument.display_name
-        title: Display name
-        status: required
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Primary human-readable instrument name shown in reports and methods output.
+- id: general_identity
+  title: General instrument identity
+  rules:
+  - path: instrument.display_name
+    title: Display name
+    status: required
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Primary human-readable instrument name shown in reports and methods output.
 
-      - path: instrument.instrument_id
-        title: Instrument ID
-        status: required
-        type: slug
-        validation:
-          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
-        used_by: [audit_pdf, method_generator, dashboard, qc_mapping, maintenance]
-        rationale: Stable machine-readable key used across QC, maintenance, and dashboard routing.
+  - path: instrument.instrument_id
+    title: Instrument ID
+    status: required
+    type: slug
+    validation:
+      pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+    used_by: [audit_pdf, method_generator, dashboard, qc_mapping, maintenance]
+    rationale: Stable machine-readable key used across QC, maintenance, and dashboard routing.
 
-      - path: instrument.manufacturer
-        title: Manufacturer
-        status: required
-        type: string
-        vocab: null
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Company/vendor/brand that makes the instrument.
+  - path: instrument.manufacturer
+    title: Manufacturer
+    status: required
+    type: string
+    vocab:
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Company/vendor/brand that makes the instrument.
 
-      - path: instrument.model
-        title: Model
-        status: required
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Vendor-facing model designation used as the primary structured identity field for the instrument; do not substitute display names or catalog codes.
+  - path: instrument.model
+    title: Model
+    status: required
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Vendor-facing model designation used as the primary structured identity field for the instrument; do not substitute display names or catalog codes.
 
-      - path: instrument.year_of_purchase
-        title: Year of purchase
-        status: optional
-        type: year_or_empty
-        used_by: [audit_pdf, dashboard]
-        rationale: Operational context and lifecycle planning; not essential for methods completeness.
+  - path: instrument.year_of_purchase
+    title: Year of purchase
+    status: optional
+    type: year_or_empty
+    used_by: [audit_pdf, dashboard]
+    rationale: Operational context and lifecycle planning; not essential for methods completeness.
 
-      - path: instrument.funding
-        title: Funding
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Operational and acknowledgement context; not required for methods reporting.
+  - path: instrument.funding
+    title: Funding
+    status: optional
+    type: string
+    used_by: [audit_pdf, dashboard]
+    rationale: Operational and acknowledgement context; not required for methods reporting.
 
-      - path: instrument.stand_orientation
-        title: Stand orientation
-        status: required
-        type: string
-        vocab: stand_orientations
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Used directly by methods generator and helps classify the platform.
+  - path: instrument.stand_orientation
+    title: Stand orientation
+    status: required
+    type: string
+    vocab: stand_orientations
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Used directly by methods generator and helps classify the platform.
 
-      - path: instrument.ocular_availability
-        title: Ocular availability
-        status: required
-        type: string
-        vocab: ocular_availability
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Critical user-experience metadata. Distinguishes traditional stands from box microscopes.
+  - path: instrument.ocular_availability
+    title: Ocular availability
+    status: required
+    type: string
+    vocab: ocular_availability
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Critical user-experience metadata. Distinguishes traditional stands from box microscopes.
 
-      - path: instrument.location
-        title: Location
-        status: required
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: required for operational metadata; not necessary for methods text.
+  - path: instrument.location
+    title: Location
+    status: required
+    type: string
+    used_by: [audit_pdf, dashboard]
+    rationale: required for operational metadata; not necessary for methods text.
 
-      - path: instrument.notes
-        title: Notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Free text is useful for staff but should not replace structured fields.
+  - path: instrument.notes
+    title: Notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Free text is useful for staff but should not replace structured fields.
 
-      - path: instrument.url
-        title: Instrument URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Helpful for staff lookup and manuals, not essential for methods completeness.
+  - path: instrument.url
+    title: Instrument URL
+    status: optional
+    type: url
+    used_by: [audit_pdf, dashboard]
+    rationale: Helpful for staff lookup and manuals, not essential for methods completeness.
 
 
-      - path: capabilities
-        title: Capability axes
-        status: required
-        type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.
+  - path: capabilities
+    title: Capability axes
+    status: required
+    type: object
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.
 
-      - path: capabilities.imaging_modes
-        title: Capability imaging modes
-        status: optional
-        type: list
-        item_type: string
-        vocab: imaging_modes
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Canonical imaging-mode capability axis (not a route identifier).
+  - path: capabilities.imaging_modes
+    title: Capability imaging modes
+    status: optional
+    type: list
+    item_type: string
+    vocab: imaging_modes
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Canonical imaging-mode capability axis (not a route identifier).
 
-      - path: capabilities.contrast_methods
-        title: Capability contrast methods
-        status: optional
-        type: list
-        item_type: string
-        vocab: contrast_methods
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Canonical contrast-method capability axis.
+  - path: capabilities.contrast_methods
+    title: Capability contrast methods
+    status: optional
+    type: list
+    item_type: string
+    vocab: contrast_methods
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Canonical contrast-method capability axis.
 
-      - path: capabilities.readouts
-        title: Capability measurement readouts
-        status: optional
-        type: list
-        item_type: string
-        vocab: measurement_readouts
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Canonical measurement-readout capability axis.
+  - path: capabilities.readouts
+    title: Capability measurement readouts
+    status: optional
+    type: list
+    item_type: string
+    vocab: measurement_readouts
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Canonical measurement-readout capability axis.
 
-      - path: capabilities.workflows
-        title: Capability workflow tags
-        status: optional
-        type: list
-        item_type: string
-        vocab: workflow_tags
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Workflow/application tags; not optical route types.
+  - path: capabilities.workflows
+    title: Capability workflow tags
+    status: optional
+    type: list
+    item_type: string
+    vocab: workflow_tags
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Workflow/application tags; not optical route types.
 
-      - path: capabilities.assay_operations
-        title: Capability assay operations
-        status: optional
-        type: list
-        item_type: string
-        vocab: assay_operations
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Assay-operation capabilities such as FRAP/photoactivation; distinct from readout-only axes.
+  - path: capabilities.assay_operations
+    title: Capability assay operations
+    status: optional
+    type: list
+    item_type: string
+    vocab: assay_operations
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Assay-operation capabilities such as FRAP/photoactivation; distinct from readout-only axes.
 
-      - path: capabilities.non_optical
-        title: Capability non-optical
-        status: optional
-        type: list
-        item_type: string
-        vocab: non_optical_capabilities
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Non-optical capability tags; not optical light-path route types.
+  - path: capabilities.non_optical
+    title: Capability non-optical
+    status: optional
+    type: list
+    item_type: string
+    vocab: non_optical_capabilities
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Non-optical capability tags; not optical light-path route types.
 
-      - path: modules
-        title: Installed modules
-        status: optional
-        type: list
-        item_type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Only present when installed modules materially change imaging capabilities.
+  - path: modules
+    title: Installed modules
+    status: optional
+    type: list
+    item_type: object
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Only present when installed modules materially change imaging capabilities.
 
-      - path: modules[].type
-        title: Module type
-        status: conditional
-        type: string
-        vocab: modules
-        aliases: ["modules[].name"]
-        required_if:
-          parent_present: "modules[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Canonical module classifier used for structured capability reporting.
+  - path: modules[].type
+    title: Module type
+    status: conditional
+    type: string
+    vocab: modules
+    aliases: ["modules[].name"]
+    required_if:
+      parent_present: "modules[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Canonical module classifier used for structured capability reporting.
 
-      - path: modules[].name
-        title: Module display name (legacy)
-        status: optional
-        type: string
-        superseded_by: modules[].type
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Legacy/local display label. Prefer modules[].type for canonical module identity.
+  - path: modules[].name
+    title: Module display name (legacy)
+    status: optional
+    type: string
+    superseded_by: modules[].type
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Legacy/local display label. Prefer modules[].type for canonical module identity.
 
-      - path: modules[].notes
-        title: Module notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful for operational nuances and limitations.
+  - path: modules[].notes
+    title: Module notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful for operational nuances and limitations.
 
-      - path: modules[].url
-        title: Module URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Helpful vendor or manual reference.
+  - path: modules[].url
+    title: Module URL
+    status: optional
+    type: url
+    used_by: [audit_pdf, dashboard]
+    rationale: Helpful vendor or manual reference.
 
-      - path: modules[].manufacturer
-        title: Module manufacturer
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "modules[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Vendor-facing module model/designation used as primary structured identity for the installed module.
+  - path: modules[].manufacturer
+    title: Module manufacturer
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "modules[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Vendor-facing module model/designation used as primary structured identity for the installed module.
 
-      - path: modules[].model
-        title: Module model
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "modules[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Vendor-facing module model/designation used as primary structured identity for the installed module.
+  - path: modules[].model
+    title: Module model
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "modules[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Vendor-facing module model/designation used as primary structured identity for the installed module.
 
-  - id: software
-    title: Software
-    rules:
-      - path: software_status
-        title: Software status
-        status: optional
-        type: string
-        allowed_values:
-          - documented
-          - not_applicable
-          - unknown
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Declares whether software metadata is documented, unknown, or not applicable for manual/standalone instruments.
+- id: software
+  title: Software
+  rules:
+  - path: software_status
+    title: Software status
+    status: optional
+    type: string
+    allowed_values:
+    - documented
+    - not_applicable
+    - unknown
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Declares whether software metadata is documented, unknown, or not applicable for manual/standalone instruments.
 
-      - path: software[]
-        title: Software entries
-        status: optional
-        type: list
-        item_type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Software is represented as extensible role-tagged entries.
+  - path: software[]
+    title: Software entries
+    status: optional
+    type: list
+    item_type: object
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Software is represented as extensible role-tagged entries.
 
-      - path: software[].role
-        title: Software role
-        status: conditional
-        type: string
-        vocab: software_roles
-        required_if:
-          parent_present: "software[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Role tags define how software entries are interpreted in methods text and audits.
+  - path: software[].role
+    title: Software role
+    status: conditional
+    type: string
+    vocab: software_roles
+    required_if:
+      parent_present: "software[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Role tags define how software entries are interpreted in methods text and audits.
 
-      - path: software[].name
-        title: Software name
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "software[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required for each declared software entry.
+  - path: software[].name
+    title: Software name
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "software[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Required for each declared software entry.
 
-      - path: software[].version
-        title: Software version
-        status: conditional
-        type: string_or_empty
-        required_if:
-          parent_present: "software[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Version is required (empty allowed) for reproducibility-aware software metadata.
+  - path: software[].version
+    title: Software version
+    status: conditional
+    type: string_or_empty
+    required_if:
+      parent_present: "software[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Version is required (empty allowed) for reproducibility-aware software metadata.
 
-      - path: software[].developer
-        title: Software developer
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Helpful provenance metadata for software vendors/developers.
+  - path: software[].developer
+    title: Software developer
+    status: optional
+    type: string
+    used_by: [audit_pdf, dashboard]
+    rationale: Helpful provenance metadata for software vendors/developers.
 
-      - path: software[].notes
-        title: Software notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful for workflow caveats and role-specific implementation notes.
+  - path: software[].notes
+    title: Software notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful for workflow caveats and role-specific implementation notes.
 
-      - path: software[].url
-        title: Software URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference link to vendor pages or manuals.
+  - path: software[].url
+    title: Software URL
+    status: optional
+    type: url
+    used_by: [audit_pdf, dashboard]
+    rationale: Reference link to vendor pages or manuals.
 
-  - id: scanner
-    title: Scanner
-    rules:
-      - path: hardware.scanner.type
-        title: Scanner type
-        status: required
-        type: string
-        vocab: scanner_types
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Core hardware discriminator for methods completeness.
+- id: scanner
+  title: Scanner
+  rules:
+  - path: hardware.scanner.type
+    title: Scanner type
+    status: required
+    type: string
+    vocab: scanner_types
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Core hardware discriminator for methods completeness.
 
-      - path: hardware.scanner.line_rate_hz
-        title: Scanner line rate (Hz)
-        status: conditional
-        type: positive_number
-        required_if:
-          scanner_type_in: [resonant, polygon, acousto_optic, tandem]
-        used_by: [audit_pdf, method_generator]
-        rationale: Required where speed mode is intrinsic and relevant to the scan engine.
+  - path: hardware.scanner.line_rate_hz
+    title: Scanner line rate (Hz)
+    status: conditional
+    type: positive_number
+    required_if:
+      scanner_type_in: [resonant, polygon, acousto_optic, tandem]
+    used_by: [audit_pdf, method_generator]
+    rationale: Required where speed mode is intrinsic and relevant to the scan engine.
 
-      - path: hardware.scanner.pinhole_um
-        title: Pinhole diameter (um)
-        status: conditional
-        type: positive_number
-        required_if:
-          scanner_type_in: [spinning_disk]
-        used_by: [audit_pdf, method_generator]
-        rationale: Required for spinning disk systems where pinhole size is fixed in hardware. Point scanners use tunable pinholes defined per-experiment.
+  - path: hardware.scanner.pinhole_um
+    title: Pinhole diameter (um)
+    status: conditional
+    type: positive_number
+    required_if:
+      scanner_type_in: [spinning_disk]
+    used_by: [audit_pdf, method_generator]
+    rationale: Required for spinning disk systems where pinhole size is fixed in hardware. Point scanners use tunable pinholes defined per-experiment.
 
-      - path: hardware.scanner.light_sheet_type
-        title: Light Sheet Architecture
-        status: conditional
-        type: string
-        vocab: light_sheet_types
-        required_if:
-          imaging_modes_any_of: [light_sheet]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Clarifies the specific illumination geometry for light sheet systems.
+  - path: hardware.scanner.light_sheet_type
+    title: Light Sheet Architecture
+    status: conditional
+    type: string
+    vocab: light_sheet_types
+    required_if:
+      imaging_modes_any_of: [light_sheet]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Clarifies the specific illumination geometry for light sheet systems.
 
-      - path: hardware.scanner.notes
-        title: Scanner notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful for mode-specific caveats.
+  - path: hardware.scanner.notes
+    title: Scanner notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful for mode-specific caveats.
 
-      - path: hardware.scanner.url
-        title: Scanner URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference only.
+  - path: hardware.scanner.url
+    title: Scanner URL
+    status: optional
+    type: url
+    used_by: [audit_pdf, dashboard]
+    rationale: Reference only.
 
-  - id: detectors
+- id: detectors
+  title: Detectors
+  rules:
+  - path: hardware.detectors
     title: Detectors
-    rules:
-      - path: hardware.detectors
-        title: Detectors
-        status: optional
-        type: list
-        item_type: object
-        min_items: 1
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
+    status: optional
+    type: list
+    item_type: object
+    min_items: 1
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Optional to support purely manual microscopes; include at least one detector chain when digital detection is present.
 
-      - path: hardware.detectors[].id
-        title: Detector ID
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.detectors[]"
-        used_by: [dashboard]
-        rationale: Stable graph target ID for light path routing, virtual microscope traversal, and splitter branch targets.
+  - path: hardware.detectors[].id
+    title: Detector ID
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.detectors[]"
+    used_by: [dashboard]
+    rationale: Stable graph target ID for light path routing, virtual microscope traversal, and splitter branch targets.
 
-      - path: hardware.detectors[].kind
-        title: Detector kind
-        status: conditional
-        type: string
-        vocab: detector_kinds
-        required_if:
-          parent_present: "hardware.detectors[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Core detector class.
+  - path: hardware.detectors[].kind
+    title: Detector kind
+    status: conditional
+    type: string
+    vocab: detector_kinds
+    required_if:
+      parent_present: "hardware.detectors[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Core detector class.
 
-      - path: hardware.detectors[].manufacturer
-        title: Detector manufacturer
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.detectors[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for hardware identification.
+  - path: hardware.detectors[].manufacturer
+    title: Detector manufacturer
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.detectors[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Needed for hardware identification.
 
-      - path: hardware.detectors[].model
-        title: Detector model
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.detectors[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for hardware identification.
+  - path: hardware.detectors[].model
+    title: Detector model
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.detectors[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Needed for hardware identification.
 
-      - path: hardware.detectors[].pixel_pitch_um
-        title: Detector pixel pitch (um)
-        status: conditional
-        type: positive_number
-        aliases: ["hardware.detectors[].pixel_size_um"]
-        required_if:
-          item_kind_in: [scmos, cmos, emccd, ccd]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required for camera-based detectors because reporting completeness depends on it.
+  - path: hardware.detectors[].pixel_pitch_um
+    title: Detector pixel pitch (um)
+    status: conditional
+    type: positive_number
+    aliases: ["hardware.detectors[].pixel_size_um"]
+    required_if:
+      item_kind_in: [scmos, cmos, emccd, ccd]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Required for camera-based detectors because reporting completeness depends on it.
 
-      - path: hardware.detectors[].pixel_size_um
-        title: Detector pixel size (legacy alias)
-        status: optional
-        type: positive_number
-        superseded_by: hardware.detectors[].pixel_pitch_um
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Backward-compatible alias retained for existing files; normalize to pixel_pitch_um when possible.
+  - path: hardware.detectors[].pixel_size_um
+    title: Detector pixel size (legacy alias)
+    status: optional
+    type: positive_number
+    superseded_by: hardware.detectors[].pixel_pitch_um
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Backward-compatible alias retained for existing files; normalize to pixel_pitch_um when possible.
 
-      - path: hardware.detectors[].sensor_format_px
-        title: Detector sensor format (px)
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful capability metadata, not minimal.
+  - path: hardware.detectors[].sensor_format_px
+    title: Detector sensor format (px)
+    status: optional
+    type: string
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful capability metadata, not minimal.
 
-      - path: hardware.detectors[].binning
-        title: Detector binning
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Usually acquisition-specific rather than fixed hardware metadata.
+  - path: hardware.detectors[].binning
+    title: Detector binning
+    status: optional
+    type: string
+    used_by: [audit_pdf, dashboard]
+    rationale: Usually acquisition-specific rather than fixed hardware metadata.
 
-      - path: hardware.detectors[].bit_depth
-        title: Detector bit depth
-        status: optional
-        type: positive_number
-        used_by: [audit_pdf, dashboard]
-        rationale: Capability metadata; useful but not minimal.
+  - path: hardware.detectors[].bit_depth
+    title: Detector bit depth
+    status: optional
+    type: positive_number
+    used_by: [audit_pdf, dashboard]
+    rationale: Capability metadata; useful but not minimal.
 
-      - path: hardware.detectors[].qe_peak_pct
-        title: Detector peak quantum efficiency (%)
-        status: conditional
-        type: positive_number
-        required_if:
-          imaging_modes_any_of: [confocal_point, confocal_spinning_disk, ism]
-        used_by: [audit_pdf, dashboard]
-        rationale: Capability metadata.
+  - path: hardware.detectors[].qe_peak_pct
+    title: Detector peak quantum efficiency (%)
+    status: conditional
+    type: positive_number
+    required_if:
+      imaging_modes_any_of: [confocal_point, confocal_spinning_disk, ism]
+    used_by: [audit_pdf, dashboard]
+    rationale: Capability metadata.
 
-      - path: hardware.detectors[].read_noise_e
-        title: Detector read noise (e-)
-        status: optional
-        type: positive_number
-        used_by: [audit_pdf, dashboard]
-        rationale: Capability metadata.
+  - path: hardware.detectors[].read_noise_e
+    title: Detector read noise (e-)
+    status: optional
+    type: positive_number
+    used_by: [audit_pdf, dashboard]
+    rationale: Capability metadata.
 
-      - path: hardware.detectors[].notes
-        title: Detector notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful for channel assignments or operating modes.
+  - path: hardware.detectors[].notes
+    title: Detector notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful for channel assignments or operating modes.
 
-      - path: hardware.detectors[].supports_time_gating
-        title: Detector supports time gating
-        status: optional
-        type: boolean
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Instrument-level capability flag indicating whether detector time-gating is available.
+  - path: hardware.detectors[].supports_time_gating
+    title: Detector supports time gating
+    status: optional
+    type: boolean
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Instrument-level capability flag indicating whether detector time-gating is available.
 
-      - path: hardware.detectors[].time_gating_defaults_known
-        title: Detector time-gating defaults known
-        status: optional
-        type: boolean
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Indicates whether facility-authored default gating delay/width values are documented for this detector.
+  - path: hardware.detectors[].time_gating_defaults_known
+    title: Detector time-gating defaults known
+    status: optional
+    type: boolean
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Indicates whether facility-authored default gating delay/width values are documented for this detector.
 
-      - path: hardware.detectors[].default_gating_delay_ns
-        title: Detector default gating delay (ns)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            supports_time_gating: [true]
-            time_gating_defaults_known: [true]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Facility default detector gating delay setting used for instrument characterization, not experiment truth.
+  - path: hardware.detectors[].default_gating_delay_ns
+    title: Detector default gating delay (ns)
+    status: conditional
+    type: positive_number
+    required_if:
+      item_field_in:
+        supports_time_gating: [true]
+        time_gating_defaults_known: [true]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Facility default detector gating delay setting used for instrument characterization, not experiment truth.
 
-      - path: hardware.detectors[].default_gate_width_ns
-        title: Detector default gate width (ns)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            supports_time_gating: [true]
-            time_gating_defaults_known: [true]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Facility default detector gate width setting used for instrument characterization, not experiment truth.
+  - path: hardware.detectors[].default_gate_width_ns
+    title: Detector default gate width (ns)
+    status: conditional
+    type: positive_number
+    required_if:
+      item_field_in:
+        supports_time_gating: [true]
+        time_gating_defaults_known: [true]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Facility default detector gate width setting used for instrument characterization, not experiment truth.
 
-      - path: hardware.detectors[].collection_min_nm
-        title: Detector collection window minimum wavelength (nm)
-        status: optional
-        type: positive_number
-        aliases: ["hardware.detectors[].min_nm"]
-        used_by: [dashboard]
-        rationale: Explicit lower bound of detector collection window for virtual microscope response modeling.
+  - path: hardware.detectors[].collection_min_nm
+    title: Detector collection window minimum wavelength (nm)
+    status: optional
+    type: positive_number
+    aliases: ["hardware.detectors[].min_nm"]
+    used_by: [dashboard]
+    rationale: Explicit lower bound of detector collection window for virtual microscope response modeling.
 
-      - path: hardware.detectors[].collection_max_nm
-        title: Detector collection window maximum wavelength (nm)
-        status: optional
-        type: positive_number
-        aliases: ["hardware.detectors[].max_nm"]
-        used_by: [dashboard]
-        rationale: Explicit upper bound of detector collection window for virtual microscope response modeling.
+  - path: hardware.detectors[].collection_max_nm
+    title: Detector collection window maximum wavelength (nm)
+    status: optional
+    type: positive_number
+    aliases: ["hardware.detectors[].max_nm"]
+    used_by: [dashboard]
+    rationale: Explicit upper bound of detector collection window for virtual microscope response modeling.
 
-      - path: hardware.detectors[].collection_center_nm
-        title: Detector collection window center wavelength (nm)
-        status: optional
-        type: positive_number
-        aliases: ["hardware.detectors[].channel_center_nm"]
-        used_by: [dashboard]
-        rationale: Collection center wavelength used to derive detector passband when min/max are not supplied.
+  - path: hardware.detectors[].collection_center_nm
+    title: Detector collection window center wavelength (nm)
+    status: optional
+    type: positive_number
+    aliases: ["hardware.detectors[].channel_center_nm"]
+    used_by: [dashboard]
+    rationale: Collection center wavelength used to derive detector passband when min/max are not supplied.
 
-      - path: hardware.detectors[].collection_width_nm
-        title: Detector collection window width (nm)
-        status: optional
-        type: positive_number
-        aliases: ["hardware.detectors[].bandwidth_nm"]
-        used_by: [dashboard]
-        rationale: Collection bandwidth used with collection_center_nm to derive detector passband.
+  - path: hardware.detectors[].collection_width_nm
+    title: Detector collection window width (nm)
+    status: optional
+    type: positive_number
+    aliases: ["hardware.detectors[].bandwidth_nm"]
+    used_by: [dashboard]
+    rationale: Collection bandwidth used with collection_center_nm to derive detector passband.
 
-      - path: hardware.detectors[].channel_center_nm
-        title: Detector channel center wavelength (nm, legacy alias)
-        status: optional
-        type: positive_number
-        superseded_by: hardware.detectors[].collection_center_nm
-        used_by: [dashboard]
-        rationale: Deprecated alias retained for compatibility; prefer collection_center_nm.
+  - path: hardware.detectors[].channel_center_nm
+    title: Detector channel center wavelength (nm, legacy alias)
+    status: optional
+    type: positive_number
+    superseded_by: hardware.detectors[].collection_center_nm
+    used_by: [dashboard]
+    rationale: Deprecated alias retained for compatibility; prefer collection_center_nm.
 
-      - path: hardware.detectors[].bandwidth_nm
-        title: Detector bandwidth (nm, legacy alias)
-        status: optional
-        type: positive_number
-        superseded_by: hardware.detectors[].collection_width_nm
-        used_by: [dashboard]
-        rationale: Deprecated alias retained for compatibility; prefer collection_width_nm.
+  - path: hardware.detectors[].bandwidth_nm
+    title: Detector bandwidth (nm, legacy alias)
+    status: optional
+    type: positive_number
+    superseded_by: hardware.detectors[].collection_width_nm
+    used_by: [dashboard]
+    rationale: Deprecated alias retained for compatibility; prefer collection_width_nm.
 
-      - path: hardware.detectors[].min_nm
-        title: Detector minimum wavelength (nm, legacy alias)
-        status: optional
-        type: positive_number
-        superseded_by: hardware.detectors[].collection_min_nm
-        used_by: [dashboard]
-        rationale: Deprecated alias retained for compatibility; prefer collection_min_nm.
+  - path: hardware.detectors[].min_nm
+    title: Detector minimum wavelength (nm, legacy alias)
+    status: optional
+    type: positive_number
+    superseded_by: hardware.detectors[].collection_min_nm
+    used_by: [dashboard]
+    rationale: Deprecated alias retained for compatibility; prefer collection_min_nm.
 
-      - path: hardware.detectors[].max_nm
-        title: Detector maximum wavelength (nm, legacy alias)
-        status: optional
-        type: positive_number
-        superseded_by: hardware.detectors[].collection_max_nm
-        used_by: [dashboard]
-        rationale: Deprecated alias retained for compatibility; prefer collection_max_nm.
+  - path: hardware.detectors[].max_nm
+    title: Detector maximum wavelength (nm, legacy alias)
+    status: optional
+    type: positive_number
+    superseded_by: hardware.detectors[].collection_max_nm
+    used_by: [dashboard]
+    rationale: Deprecated alias retained for compatibility; prefer collection_max_nm.
 
-      - path: hardware.detectors[].url
-        title: Detector URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference only.
+  - path: hardware.detectors[].url
+    title: Detector URL
+    status: optional
+    type: url
+    used_by: [audit_pdf, dashboard]
+    rationale: Reference only.
 
-  - id: optical_modulators
+- id: optical_modulators
+  title: Optical modulators
+  rules:
+  - path: hardware.optical_modulators
     title: Optical modulators
-    rules:
-      - path: hardware.optical_modulators
-        title: Optical modulators
-        status: optional
-        type: list
-        item_type: object
-        min_items: 1
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Optional inventory of phase and beam-shaping devices used by STED or adaptive illumination workflows.
+    status: optional
+    type: list
+    item_type: object
+    min_items: 1
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Optional inventory of phase and beam-shaping devices used by STED or adaptive illumination workflows.
 
-      - path: hardware.optical_modulators[].type
-        title: Optical modulator type
-        status: conditional
-        type: string
-        vocab: optical_modulator_types
-        required_if:
-          parent_present: "hardware.optical_modulators[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Structured classification of installed optical modulator hardware.
+  - path: hardware.optical_modulators[].type
+    title: Optical modulator type
+    status: conditional
+    type: string
+    vocab: optical_modulator_types
+    required_if:
+      parent_present: "hardware.optical_modulators[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Structured classification of installed optical modulator hardware.
 
-      - path: hardware.optical_modulators[].manufacturer
-        title: Optical modulator manufacturer
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.optical_modulators[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required for reproducible hardware provenance when an optical modulator is listed.
+  - path: hardware.optical_modulators[].manufacturer
+    title: Optical modulator manufacturer
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.optical_modulators[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Required for reproducible hardware provenance when an optical modulator is listed.
 
-      - path: hardware.optical_modulators[].model
-        title: Optical modulator model
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.optical_modulators[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required for reproducible hardware provenance when an optical modulator is listed.
+  - path: hardware.optical_modulators[].model
+    title: Optical modulator model
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.optical_modulators[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Required for reproducible hardware provenance when an optical modulator is listed.
 
-      - path: hardware.optical_modulators[].supported_phase_masks
-        title: Supported phase masks
-        status: optional
-        type: list
-        vocab: phase_mask_types
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Declares supported phase mask classes for depletion beam shaping.
+  - path: hardware.optical_modulators[].supported_phase_masks
+    title: Supported phase masks
+    status: optional
+    type: list
+    vocab: phase_mask_types
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Declares supported phase mask classes for depletion beam shaping.
 
-      - path: hardware.optical_modulators[].notes
-        title: Optical modulator notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Additional implementation notes for modulator integration.
+  - path: hardware.optical_modulators[].notes
+    title: Optical modulator notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Additional implementation notes for modulator integration.
 
-  - id: illumination_logic
-    title: Illumination logic
-    rules:
-      - path: hardware.illumination_logic
-        title: Illumination logic entries
-        status: optional
-        type: list
-        item_type: object
-        min_items: 1
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Optional list of structured adaptive or conditional illumination logic supported by the instrument.
+- id: illumination_logic
+  title: Illumination logic
+  rules:
+  - path: hardware.illumination_logic
+    title: Illumination logic entries
+    status: optional
+    type: list
+    item_type: object
+    min_items: 1
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Optional list of structured adaptive or conditional illumination logic supported by the instrument.
 
-      - path: hardware.illumination_logic[].method
-        title: Illumination logic method
-        status: conditional
-        type: string
-        vocab: adaptive_illumination_methods
-        required_if:
-          parent_present: "hardware.illumination_logic[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Structured adaptive illumination method identifier.
+  - path: hardware.illumination_logic[].method
+    title: Illumination logic method
+    status: conditional
+    type: string
+    vocab: adaptive_illumination_methods
+    required_if:
+      parent_present: "hardware.illumination_logic[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Structured adaptive illumination method identifier.
 
-      - path: hardware.illumination_logic[].default_enabled
-        title: Illumination logic default enabled
-        status: conditional
-        type: boolean
-        required_if:
-          parent_present: "hardware.illumination_logic[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Facility default state for each illumination logic entry.
+  - path: hardware.illumination_logic[].default_enabled
+    title: Illumination logic default enabled
+    status: conditional
+    type: boolean
+    required_if:
+      parent_present: "hardware.illumination_logic[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Facility default state for each illumination logic entry.
 
-      - path: hardware.illumination_logic[].notes
-        title: Illumination logic notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Additional context for adaptive illumination behavior and constraints.
+  - path: hardware.illumination_logic[].notes
+    title: Illumination logic notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Additional context for adaptive illumination behavior and constraints.
 
-  - id: objectives
+- id: objectives
+  title: Objectives
+  rules:
+  - path: hardware.objectives
     title: Objectives
-    rules:
-      - path: hardware.objectives
-        title: Objectives
-        status: required
-        type: list
-        item_type: object
-        min_items: 1
-        used_by: [audit_pdf, method_generator, dashboard, qc_mapping]
-        rationale: Objective inventory is central to instrument completeness and QC mapping.
+    status: required
+    type: list
+    item_type: object
+    min_items: 1
+    used_by: [audit_pdf, method_generator, dashboard, qc_mapping]
+    rationale: Objective inventory is central to instrument completeness and QC mapping.
 
-      - path: hardware.objectives[].id
-        title: Objective ID
-        status: required
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard, qc_mapping]
-        rationale: Stable per-objective key used for QC mapping.
+  - path: hardware.objectives[].id
+    title: Objective ID
+    status: required
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard, qc_mapping]
+    rationale: Stable per-objective key used for QC mapping.
 
-      - path: hardware.objectives[].manufacturer
-        title: Objective manufacturer
-        status: required
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for objective identification.
+  - path: hardware.objectives[].manufacturer
+    title: Objective manufacturer
+    status: required
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Needed for objective identification.
 
-      - path: hardware.objectives[].model
-        title: Objective model
-        status: required
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Needed for objective identification.
+  - path: hardware.objectives[].model
+    title: Objective model
+    status: required
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Needed for objective identification.
 
-      - path: hardware.objectives[].product_code
-        title: Objective product code
-        status: optional
-        type: string
-        used_by: [audit_pdf, dashboard]
-        rationale: Explicit catalog/order/SKU/reference code only; optional and must not be inferred from model or name.
+  - path: hardware.objectives[].product_code
+    title: Objective product code
+    status: optional
+    type: string
+    used_by: [audit_pdf, dashboard]
+    rationale: Explicit catalog/order/SKU/reference code only; optional and must not be inferred from model or name.
 
-      - path: hardware.objectives[].magnification
-        title: Objective magnification
-        status: required
-        type: positive_number
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Core reporting field.
+  - path: hardware.objectives[].magnification
+    title: Objective magnification
+    status: required
+    type: positive_number
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Core reporting field.
 
-      - path: hardware.objectives[].numerical_aperture
-        title: Objective numerical aperture
-        status: required
-        type: positive_number
-        validation:
-          min: 0
-          max: 1.7
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Core reporting field.
+  - path: hardware.objectives[].numerical_aperture
+    title: Objective numerical aperture
+    status: required
+    type: positive_number
+    validation:
+      min: 0
+      max: 1.7
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Core reporting field.
 
-      - path: hardware.objectives[].working_distance
-        title: Objective working distance
-        status: conditional
-        type: string
-        required_if:
-          imaging_modes_any_of: [confocal_point, confocal_spinning_disk, ism]
-        used_by: [audit_pdf, dashboard]
-        rationale: Helpful reference metadata, not usually minimal for methods.
+  - path: hardware.objectives[].working_distance
+    title: Objective working distance
+    status: conditional
+    type: string
+    required_if:
+      imaging_modes_any_of: [confocal_point, confocal_spinning_disk, ism]
+    used_by: [audit_pdf, dashboard]
+    rationale: Helpful reference metadata, not usually minimal for methods.
 
-      - path: hardware.objectives[].immersion
-        title: Objective immersion
-        status: required
-        type: string
-        vocab: objective_immersion
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Core reporting field.
+  - path: hardware.objectives[].immersion
+    title: Objective immersion
+    status: required
+    type: string
+    vocab: objective_immersion
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Core reporting field.
 
-      - path: hardware.objectives[].correction
-        title: Objective correction class
-        status: required
-        type: string
-        vocab: objective_corrections
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Important to characterize the objective class.
+  - path: hardware.objectives[].correction
+    title: Objective correction class
+    status: required
+    type: string
+    vocab: objective_corrections
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Important to characterize the objective class.
 
-      - path: hardware.objectives[].afc_compatible
-        title: AFC compatible
-        status: optional
-        type: boolean
-        used_by: [audit_pdf, dashboard]
-        rationale: Operational capability metadata.
+  - path: hardware.objectives[].afc_compatible
+    title: AFC compatible
+    status: optional
+    type: boolean
+    used_by: [audit_pdf, dashboard]
+    rationale: Operational capability metadata.
 
-      - path: hardware.objectives[].is_installed
-        title: Is objective installed
-        status: required
-        type: boolean
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Prevents methods generator and dashboard from advertising unavailable optics.
+  - path: hardware.objectives[].is_installed
+    title: Is objective installed
+    status: required
+    type: boolean
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Prevents methods generator and dashboard from advertising unavailable optics.
 
-      - path: hardware.objectives[].specialties
-        title: Objective specialties
-        status: optional
-        type: list
-        item_type: string
-        vocab: objective_specialties
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful capability annotations.
+  - path: hardware.objectives[].specialties
+    title: Objective specialties
+    status: optional
+    type: list
+    item_type: string
+    vocab: objective_specialties
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful capability annotations.
 
-      - path: hardware.objectives[].notes
-        title: Objective notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful free-text nuance.
+  - path: hardware.objectives[].notes
+    title: Objective notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful free-text nuance.
 
-      - path: hardware.objectives[].url
-        title: Objective URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference only.
+  - path: hardware.objectives[].url
+    title: Objective URL
+    status: optional
+    type: url
+    used_by: [audit_pdf, dashboard]
+    rationale: Reference only.
 
-  - id: magnification_changers
+- id: magnification_changers
+  title: Magnification changers
+  rules:
+  - path: hardware.magnification_changers
     title: Magnification changers
-    rules:
-      - path: hardware.magnification_changers
-        title: Magnification changers
-        status: optional
-        type: list
-        item_type: object
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Present only when optovar or additional magnification changers are installed.
+    status: optional
+    type: list
+    item_type: object
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Present only when optovar or additional magnification changers are installed.
 
-      - path: hardware.magnification_changers[].manufacturer
-        title: Magnification changer manufacturer
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.magnification_changers[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required when such a device is installed.
+  - path: hardware.magnification_changers[].manufacturer
+    title: Magnification changer manufacturer
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.magnification_changers[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Required when such a device is installed.
 
-      - path: hardware.magnification_changers[].model
-        title: Magnification changer model
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.magnification_changers[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required when such a device is installed.
+  - path: hardware.magnification_changers[].model
+    title: Magnification changer model
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.magnification_changers[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Required when such a device is installed.
 
-      - path: hardware.magnification_changers[].magnification
-        title: Magnification changer factor
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: "hardware.magnification_changers[]"
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Required when such a device is installed.
+  - path: hardware.magnification_changers[].magnification
+    title: Magnification changer factor
+    status: conditional
+    type: positive_number
+    required_if:
+      parent_present: "hardware.magnification_changers[]"
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Required when such a device is installed.
 
-      - path: hardware.magnification_changers[].notes
-        title: Magnification changer notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, dashboard]
-        rationale: Useful nuance.
+  - path: hardware.magnification_changers[].notes
+    title: Magnification changer notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, dashboard]
+    rationale: Useful nuance.
 
-      - path: hardware.magnification_changers[].url
-        title: Magnification changer URL
-        status: optional
-        type: url
-        used_by: [audit_pdf, dashboard]
-        rationale: Reference only.
+  - path: hardware.magnification_changers[].url
+    title: Magnification changer URL
+    status: optional
+    type: url
+    used_by: [audit_pdf, dashboard]
+    rationale: Reference only.
 
 
-  - id: advanced_hardware
-    title: Advanced hardware features
-    rules:
-      - path: hardware.environment.temperature_control
-        title: Temperature control available
-        status: conditional
-        type: boolean
-        required_if:
-          any_of:
-            - modules_any_of: [incubation]
-            - modules_any_of: [environmental_enclosure]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Indicates whether the system supports active temperature control for environmental regulation.
+- id: advanced_hardware
+  title: Advanced hardware features
+  rules:
+  - path: hardware.environment.temperature_control
+    title: Temperature control available
+    status: conditional
+    type: boolean
+    required_if:
+      any_of:
+      - modules_any_of: [incubation]
+      - modules_any_of: [environmental_enclosure]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Indicates whether the system supports active temperature control for environmental regulation.
 
-      - path: hardware.environment.temperature_range
-        title: Temperature control range
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Documents the supported temperature range or setpoint range for live-cell or environmentally controlled imaging.
+  - path: hardware.environment.temperature_range
+    title: Temperature control range
+    status: optional
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Documents the supported temperature range or setpoint range for live-cell or environmentally controlled imaging.
 
-      - path: hardware.environment.co2_control
-        title: CO2 control available
-        status: optional
-        type: boolean
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Indicates whether the system supports active CO2 regulation for live-cell imaging.
+  - path: hardware.environment.co2_control
+    title: CO2 control available
+    status: optional
+    type: boolean
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Indicates whether the system supports active CO2 regulation for live-cell imaging.
 
-      - path: hardware.environment.co2_range
-        title: CO2 control range
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Documents the supported CO2 range or configured operating range when gas control is available.
+  - path: hardware.environment.co2_range
+    title: CO2 control range
+    status: optional
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Documents the supported CO2 range or configured operating range when gas control is available.
 
-      - path: hardware.environment.o2_control
-        title: O2 control available
-        status: optional
-        type: boolean
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Indicates whether the system supports active oxygen control for hypoxia or specialized environmental studies.
+  - path: hardware.environment.o2_control
+    title: O2 control available
+    status: optional
+    type: boolean
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Indicates whether the system supports active oxygen control for hypoxia or specialized environmental studies.
 
-      - path: hardware.environment.o2_range
-        title: O2 control range
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Documents the supported O2 range or configured operating range when oxygen control is available.
+  - path: hardware.environment.o2_range
+    title: O2 control range
+    status: optional
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Documents the supported O2 range or configured operating range when oxygen control is available.
 
-      - path: hardware.environment.humidity_control
-        title: Humidity control available
-        status: optional
-        type: boolean
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Indicates whether the system provides humidity control as part of environmental regulation.
+  - path: hardware.environment.humidity_control
+    title: Humidity control available
+    status: optional
+    type: boolean
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Indicates whether the system provides humidity control as part of environmental regulation.
 
-      - path: hardware.environment.notes
-        title: Environmental control notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Free-text notes for environmental chamber configuration, limitations, or operating guidance.
+  - path: hardware.environment.notes
+    title: Environmental control notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Free-text notes for environmental chamber configuration, limitations, or operating guidance.
 
-      - path: hardware.stages
-        title: Stages and focus drives
-        status: conditional
-        type: list
-        item_type: object
-        required_if:
-          any_of:
-            - modules_any_of: [motorized_stage]
-            - modules_any_of: [piezo_z_stage]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Present when motorized or specialized stage and focus hardware is documented.
+  - path: hardware.stages
+    title: Stages and focus drives
+    status: conditional
+    type: list
+    item_type: object
+    required_if:
+      any_of:
+      - modules_any_of: [motorized_stage]
+      - modules_any_of: [piezo_z_stage]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Present when motorized or specialized stage and focus hardware is documented.
 
-      - path: hardware.stages[].type
-        title: Stage or focus drive type
-        status: conditional
-        type: string
-        vocab: stage_types
-        required_if:
-          any_of:
-            - modules_any_of: [motorized_stage]
-            - modules_any_of: [piezo_z_stage]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Classifies the stage or focus-drive hardware that is installed.
+  - path: hardware.stages[].type
+    title: Stage or focus drive type
+    status: conditional
+    type: string
+    vocab: stage_types
+    required_if:
+      any_of:
+      - modules_any_of: [motorized_stage]
+      - modules_any_of: [piezo_z_stage]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Classifies the stage or focus-drive hardware that is installed.
 
-      - path: hardware.stages[].manufacturer
-        title: Stage manufacturer
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Helps identify the installed stage or focus-drive hardware.
+  - path: hardware.stages[].manufacturer
+    title: Stage manufacturer
+    status: optional
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Helps identify the installed stage or focus-drive hardware.
 
-      - path: hardware.stages[].model
-        title: Stage model
-        status: optional
-        type: string
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Helps identify the installed stage or focus-drive hardware.
+  - path: hardware.stages[].model
+    title: Stage model
+    status: optional
+    type: string
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Helps identify the installed stage or focus-drive hardware.
 
-      - path: hardware.stages[].step_size_um
-        title: Stage step size (um)
-        status: optional
-        type: positive_number
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Useful capability metadata for motorized stage or focus-drive hardware.
+  - path: hardware.stages[].step_size_um
+    title: Stage step size (um)
+    status: optional
+    type: positive_number
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Useful capability metadata for motorized stage or focus-drive hardware.
 
-      - path: hardware.hardware_autofocus.is_installed
-        title: Hardware autofocus installed
-        status: optional
-        type: boolean
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Indicates whether a hardware autofocus system is currently installed.
+  - path: hardware.hardware_autofocus.is_installed
+    title: Hardware autofocus installed
+    status: optional
+    type: boolean
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Indicates whether a hardware autofocus system is currently installed.
 
-      - path: hardware.hardware_autofocus.type
-        title: Hardware autofocus type
-        status: conditional
-        type: string
-        vocab: autofocus_types
-        required_if:
-          modules_any_of: [hardware_autofocus]
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Describes the installed hardware autofocus implementation when present.
+  - path: hardware.hardware_autofocus.type
+    title: Hardware autofocus type
+    status: conditional
+    type: string
+    vocab: autofocus_types
+    required_if:
+      modules_any_of: [hardware_autofocus]
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Describes the installed hardware autofocus implementation when present.
 
-      - path: hardware.triggering.primary_mode
-        title: Triggering primary mode
-        status: optional
-        type: string
-        vocab: triggering_modes
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Indicates whether synchronization is primarily hardware-triggered, software-triggered, or mixed.
+  - path: hardware.triggering.primary_mode
+    title: Triggering primary mode
+    status: optional
+    type: string
+    vocab: triggering_modes
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Indicates whether synchronization is primarily hardware-triggered, software-triggered, or mixed.
 
-      - path: hardware.triggering.notes
-        title: Triggering notes
-        status: optional
-        type: text
-        used_by: [audit_pdf, method_generator, dashboard]
-        rationale: Free-text notes for synchronization, timing, or external trigger details.
+  - path: hardware.triggering.notes
+    title: Triggering notes
+    status: optional
+    type: text
+    used_by: [audit_pdf, method_generator, dashboard]
+    rationale: Free-text notes for synchronization, timing, or external trigger details.
 
-  - id: canonical_light_paths_v2
-    title: Canonical YAML-first light path topology
-    rules:
-      - path: hardware.sources
-        title: Sources
-        status: required
-        type: list
-        item_type: object
-        min_items: 1
-        used_by: [dashboard, method_generator]
-        rationale: Canonical illumination-source inventory referenced by ordered light_paths illumination_sequence entries.
+- id: canonical_light_paths_v2
+  title: Canonical YAML-first light path topology
+  rules:
+  - path: hardware.sources
+    title: Sources
+    status: required
+    type: list
+    item_type: object
+    min_items: 1
+    used_by: [dashboard, method_generator]
+    rationale: Canonical illumination-source inventory referenced by ordered light_paths illumination_sequence entries.
 
-      - path: hardware.sources[].id
-        title: Source ID
-        status: required
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable source identifier referenced by light_paths illumination_sequence.
-        aliases: ["hardware.light_sources[].id", "hardware.light_sources[].source_id", "hardware.light_sources[].channel_name"]
+  - path: hardware.sources[].id
+    title: Source ID
+    status: required
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable source identifier referenced by light_paths illumination_sequence.
+    aliases: ["hardware.light_sources[].id", "hardware.light_sources[].source_id", "hardware.light_sources[].channel_name"]
 
-      - path: hardware.sources[].name
-        title: Source display name
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Optional display label for the installed source when it differs from the vendor model/designation.
-        aliases: ["hardware.light_sources[].name"]
+  - path: hardware.sources[].name
+    title: Source display name
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Optional display label for the installed source when it differs from the vendor model/designation.
+    aliases: ["hardware.light_sources[].name"]
 
-      - path: hardware.sources[].kind
-        title: Source kind
-        status: required
-        type: string
-        vocab: light_source_kinds
-        used_by: [dashboard, method_generator]
-        rationale: Canonical source classifier used for inventory reporting and light-path DTO generation.
-        aliases: ["hardware.light_sources[].kind", "hardware.light_sources[].type"]
+  - path: hardware.sources[].kind
+    title: Source kind
+    status: required
+    type: string
+    vocab: light_source_kinds
+    used_by: [dashboard, method_generator]
+    rationale: Canonical source classifier used for inventory reporting and light-path DTO generation.
+    aliases: ["hardware.light_sources[].kind", "hardware.light_sources[].type"]
 
-      - path: hardware.sources[].manufacturer
-        title: Source manufacturer
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Structured provenance for installed sources.
-        aliases: ["hardware.light_sources[].manufacturer"]
+  - path: hardware.sources[].manufacturer
+    title: Source manufacturer
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Structured provenance for installed sources.
+    aliases: ["hardware.light_sources[].manufacturer"]
 
-      - path: hardware.sources[].model
-        title: Source model
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Vendor-facing source model/designation.
-        aliases: ["hardware.light_sources[].model"]
+  - path: hardware.sources[].model
+    title: Source model
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Vendor-facing source model/designation.
+    aliases: ["hardware.light_sources[].model"]
 
-      - path: hardware.sources[].product_code
-        title: Source product code
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Explicit source SKU/catalog code when known.
-        aliases: ["hardware.light_sources[].product_code"]
+  - path: hardware.sources[].product_code
+    title: Source product code
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Explicit source SKU/catalog code when known.
+    aliases: ["hardware.light_sources[].product_code"]
 
-      - path: hardware.sources[].technology
-        title: Source technology subtype
-        status: optional
-        type: string
-        vocab: light_source_technologies
-        used_by: [dashboard, method_generator]
-        rationale: Helpful subtype metadata for lasers, LED engines, and tunable sources.
-        aliases: ["hardware.light_sources[].technology"]
+  - path: hardware.sources[].technology
+    title: Source technology subtype
+    status: optional
+    type: string
+    vocab: light_source_technologies
+    used_by: [dashboard, method_generator]
+    rationale: Helpful subtype metadata for lasers, LED engines, and tunable sources.
+    aliases: ["hardware.light_sources[].technology"]
 
-      - path: hardware.sources[].role
-        title: Source role
-        status: optional
-        type: string
-        vocab: light_source_roles
-        used_by: [dashboard, method_generator]
-        rationale: Declares the source role without relying on notes-based inference.
-        aliases: ["hardware.light_sources[].role"]
+  - path: hardware.sources[].role
+    title: Source role
+    status: optional
+    type: string
+    vocab: light_source_roles
+    used_by: [dashboard, method_generator]
+    rationale: Declares the source role without relying on notes-based inference.
+    aliases: ["hardware.light_sources[].role"]
 
-      - path: hardware.sources[].timing_mode
-        title: Source timing mode
-        status: optional
-        type: string
-        vocab: light_source_timing_modes
-        used_by: [dashboard, method_generator]
-        rationale: Declares whether the source is continuous-wave or pulsed.
-        aliases: ["hardware.light_sources[].timing_mode"]
+  - path: hardware.sources[].timing_mode
+    title: Source timing mode
+    status: optional
+    type: string
+    vocab: light_source_timing_modes
+    used_by: [dashboard, method_generator]
+    rationale: Declares whether the source is continuous-wave or pulsed.
+    aliases: ["hardware.light_sources[].timing_mode"]
 
-      - path: hardware.sources[].wavelength_nm
-        title: Source wavelength (nm)
-        status: optional
-        type: spectral_descriptor
-        used_by: [dashboard, method_generator]
-        rationale: Peak or representative wavelength for discrete excitation sources.
-        aliases: ["hardware.light_sources[].wavelength_nm"]
+  - path: hardware.sources[].wavelength_nm
+    title: Source wavelength (nm)
+    status: optional
+    type: spectral_descriptor
+    used_by: [dashboard, method_generator]
+    rationale: Peak or representative wavelength for discrete excitation sources.
+    aliases: ["hardware.light_sources[].wavelength_nm"]
 
-      - path: hardware.sources[].width_nm
-        title: Source bandwidth / FWHM (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Optional spectral width for broad-spectrum or band-defined sources.
-        aliases: ["hardware.light_sources[].width_nm"]
+  - path: hardware.sources[].width_nm
+    title: Source bandwidth / FWHM (nm)
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Optional spectral width for broad-spectrum or band-defined sources.
+    aliases: ["hardware.light_sources[].width_nm"]
 
-      - path: hardware.sources[].power
-        title: Source nominal power
-        status: optional
-        type: string
-        used_by: [dashboard]
-        rationale: Nominal source power metadata; not experiment-level truth.
-        aliases: ["hardware.light_sources[].power"]
+  - path: hardware.sources[].power
+    title: Source nominal power
+    status: optional
+    type: string
+    used_by: [dashboard]
+    rationale: Nominal source power metadata; not experiment-level truth.
+    aliases: ["hardware.light_sources[].power"]
 
-      - path: hardware.sources[].pulse_width_ps
-        title: Source pulse width (ps)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            timing_mode: [pulsed]
-        used_by: [dashboard, method_generator]
-        rationale: Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
-        aliases: ["hardware.light_sources[].pulse_width_ps"]
+  - path: hardware.sources[].pulse_width_ps
+    title: Source pulse width (ps)
+    status: conditional
+    type: positive_number
+    required_if:
+      item_field_in:
+        timing_mode: [pulsed]
+    used_by: [dashboard, method_generator]
+    rationale: Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
+    aliases: ["hardware.light_sources[].pulse_width_ps"]
 
-      - path: hardware.sources[].repetition_rate_mhz
-        title: Source repetition rate (MHz)
-        status: conditional
-        type: positive_number
-        required_if:
-          item_field_in:
-            timing_mode: [pulsed]
-        used_by: [dashboard, method_generator]
-        rationale: Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
-        aliases: ["hardware.light_sources[].repetition_rate_mhz"]
+  - path: hardware.sources[].repetition_rate_mhz
+    title: Source repetition rate (MHz)
+    status: conditional
+    type: positive_number
+    required_if:
+      item_field_in:
+        timing_mode: [pulsed]
+    used_by: [dashboard, method_generator]
+    rationale: Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata.
+    aliases: ["hardware.light_sources[].repetition_rate_mhz"]
 
-      - path: hardware.sources[].depletion_targets_nm
-        title: Source depletion target wavelengths (nm)
-        status: conditional
-        type: list
-        item_type: positive_number
-        required_if:
-          item_field_in:
-            role: [depletion]
-        used_by: [dashboard, method_generator]
-        rationale: Required when the source is used as a depletion source.
-        aliases: ["hardware.light_sources[].depletion_targets_nm"]
+  - path: hardware.sources[].depletion_targets_nm
+    title: Source depletion target wavelengths (nm)
+    status: conditional
+    type: list
+    item_type: positive_number
+    required_if:
+      item_field_in:
+        role: [depletion]
+    used_by: [dashboard, method_generator]
+    rationale: Required when the source is used as a depletion source.
+    aliases: ["hardware.light_sources[].depletion_targets_nm"]
 
-      - path: hardware.sources[].tunable_min_nm
-        title: Source tunable minimum wavelength
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Lower tunable wavelength bound for tunable or white-light sources.
-        aliases: ["hardware.light_sources[].tunable_min_nm"]
+  - path: hardware.sources[].tunable_min_nm
+    title: Source tunable minimum wavelength
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Lower tunable wavelength bound for tunable or white-light sources.
+    aliases: ["hardware.light_sources[].tunable_min_nm"]
 
-      - path: hardware.sources[].tunable_max_nm
-        title: Source tunable maximum wavelength
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Upper tunable wavelength bound for tunable or white-light sources.
-        aliases: ["hardware.light_sources[].tunable_max_nm"]
+  - path: hardware.sources[].tunable_max_nm
+    title: Source tunable maximum wavelength
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Upper tunable wavelength bound for tunable or white-light sources.
+    aliases: ["hardware.light_sources[].tunable_max_nm"]
 
-      - path: hardware.sources[].simultaneous_lines_max
-        title: Source simultaneous line count
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Maximum simultaneously active lines for multi-line sources.
-        aliases: ["hardware.light_sources[].simultaneous_lines_max"]
+  - path: hardware.sources[].simultaneous_lines_max
+    title: Source simultaneous line count
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Maximum simultaneously active lines for multi-line sources.
+    aliases: ["hardware.light_sources[].simultaneous_lines_max"]
 
-      - path: hardware.sources[].modalities
-        title: Source modalities
-        status: optional
-        type: list
-        item_type: string
-        vocab: modalities
-        used_by: [dashboard, method_generator]
-        rationale: Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative.
-        aliases: ["hardware.light_sources[].modalities", "hardware.light_sources[].path", "hardware.light_sources[].paths", "hardware.light_sources[].route", "hardware.light_sources[].routes"]
+  - path: hardware.sources[].modalities
+    title: Source modalities
+    status: optional
+    type: list
+    item_type: string
+    vocab: modalities
+    used_by: [dashboard, method_generator]
+    rationale: Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative.
+    aliases: ["hardware.light_sources[].modalities", "hardware.light_sources[].path", "hardware.light_sources[].paths", "hardware.light_sources[].route", "hardware.light_sources[].routes"]
 
-      - path: hardware.sources[].notes
-        title: Source notes
-        status: optional
-        type: text
-        used_by: [dashboard]
-        rationale: Free-text source notes for operational caveats.
-        aliases: ["hardware.light_sources[].notes"]
+  - path: hardware.sources[].notes
+    title: Source notes
+    status: optional
+    type: text
+    used_by: [dashboard]
+    rationale: Free-text source notes for operational caveats.
+    aliases: ["hardware.light_sources[].notes"]
 
-      - path: hardware.sources[].url
-        title: Source URL
-        status: optional
-        type: url
-        used_by: [dashboard]
-        rationale: Reference link only.
-        aliases: ["hardware.light_sources[].url"]
+  - path: hardware.sources[].url
+    title: Source URL
+    status: optional
+    type: url
+    used_by: [dashboard]
+    rationale: Reference link only.
+    aliases: ["hardware.light_sources[].url"]
 
-      - path: hardware.optical_path_elements
-        title: Optical path elements
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Canonical optical mechanisms/components referenced by ordered light_paths traversal sequences.
+  - path: hardware.optical_path_elements
+    title: Optical path elements
+    status: optional
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Canonical optical mechanisms/components referenced by ordered light_paths traversal sequences.
 
-      - path: hardware.optical_path_elements[].id
-        title: Optical path element ID
-        status: required
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable identifier referenced by light_paths sequences.
+  - path: hardware.optical_path_elements[].id
+    title: Optical path element ID
+    status: required
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable identifier referenced by light_paths sequences.
 
-      - path: hardware.optical_path_elements[].name
-        title: Optical path element name
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Human-readable element label for authoring clarity and consumer display.
+  - path: hardware.optical_path_elements[].name
+    title: Optical path element name
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Human-readable element label for authoring clarity and consumer display.
 
-      - path: hardware.optical_path_elements[].display_label
-        title: Optical path element display label
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Optional alternate display label for UI-facing consumers.
+  - path: hardware.optical_path_elements[].display_label
+    title: Optical path element display label
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Optional alternate display label for UI-facing consumers.
 
-      - path: hardware.optical_path_elements[].stage_role
-        title: Optical path element stage role
-        status: optional
-        type: string
-        vocab: optical_path_stage_roles
-        used_by: [dashboard, method_generator]
-        rationale: Descriptive grouping metadata for UI/runtime consumers. `light_paths` remain the sole canonical source of route topology, so stage_role should only be supplied when a stable stage grouping is genuinely useful.
+  - path: hardware.optical_path_elements[].stage_role
+    title: Optical path element stage role
+    status: optional
+    type: string
+    vocab: optical_path_stage_roles
+    used_by: [dashboard, method_generator]
+    rationale: Descriptive grouping metadata for UI/runtime consumers. `light_paths` remain the sole canonical source of route topology, so stage_role should only be supplied when a stable stage grouping is genuinely useful.
 
-      - path: hardware.optical_path_elements[].element_type
-        title: Optical path element type
-        status: required
-        type: string
-        vocab: optical_path_element_types
-        used_by: [dashboard, method_generator]
-        rationale: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling.
+  - path: hardware.optical_path_elements[].element_type
+    title: Optical path element type
+    status: required
+    type: string
+    vocab: optical_path_element_types
+    used_by: [dashboard, method_generator]
+    rationale: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling.
 
-      - path: hardware.optical_path_elements[].selection_mode
-        title: Optical path element selection mode
-        status: optional
-        type: string
-        vocab: selection_modes
-        used_by: [dashboard, method_generator]
-        rationale: Inventory-level selector/splitter capability metadata. Canonical route branching now lives in light_paths sequence branch blocks.
+  - path: hardware.optical_path_elements[].selection_mode
+    title: Optical path element selection mode
+    status: optional
+    type: string
+    vocab: selection_modes
+    used_by: [dashboard, method_generator]
+    rationale: Inventory-level selector/splitter capability metadata. Canonical route branching now lives in light_paths sequence branch blocks.
 
-      - path: hardware.optical_path_elements[].supported_branch_modes
-        title: Supported branch modes
-        status: optional
-        type: list
-        item_type: string
-        vocab: branch_modes
-        used_by: [dashboard, method_generator]
-        rationale: Inventory-level capability metadata describing which branch modes a selector/splitter can support.
+  - path: hardware.optical_path_elements[].supported_branch_modes
+    title: Supported branch modes
+    status: optional
+    type: list
+    item_type: string
+    vocab: branch_modes
+    used_by: [dashboard, method_generator]
+    rationale: Inventory-level capability metadata describing which branch modes a selector/splitter can support.
 
-      - path: hardware.optical_path_elements[].supported_branch_count
-        title: Supported branch count
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Inventory-level capability metadata describing how many branches a selector/splitter can support.
+  - path: hardware.optical_path_elements[].supported_branch_count
+    title: Supported branch count
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Inventory-level capability metadata describing how many branches a selector/splitter can support.
 
-      - path: hardware.optical_path_elements[].modalities
-        title: Optical path element modalities
-        status: optional
-        type: list
-        item_type: string
-        vocab: modalities
-        used_by: [dashboard, method_generator]
-        rationale: Legacy compatibility modality hints for optical path elements. Ordered light_paths and route_type remain authoritative.
+  - path: hardware.optical_path_elements[].modalities
+    title: Optical path element modalities
+    status: optional
+    type: list
+    item_type: string
+    vocab: modalities
+    used_by: [dashboard, method_generator]
+    rationale: Legacy compatibility modality hints for optical path elements. Ordered light_paths and route_type remain authoritative.
 
-      - path: hardware.optical_path_elements[].positions
-        title: Optical path element positions
-        status: optional
-        type: object
-        example_key: Pos_1
-        used_by: [dashboard, method_generator]
-        rationale: Position map for installed filter wheels, turrets, sliders, or cubes.
+  - path: hardware.optical_path_elements[].positions
+    title: Optical path element positions
+    status: optional
+    type: object
+    example_key: Pos_1
+    used_by: [dashboard, method_generator]
+    rationale: Position map for installed filter wheels, turrets, sliders, or cubes.
 
-      - path: hardware.optical_path_elements[].positions{}.component_type
-        title: Optical path position component type
-        status: optional
-        type: string
-        vocab: optical_component_types
-        used_by: [dashboard, method_generator]
-        rationale: Canonical optical component classifier for direct position payloads.
+  - path: hardware.optical_path_elements[].positions{}.component_type
+    title: Optical path position component type
+    status: optional
+    type: string
+    vocab: optical_component_types
+    used_by: [dashboard, method_generator]
+    rationale: Canonical optical component classifier for direct position payloads.
 
-      - path: hardware.optical_path_elements[].positions{}.manufacturer
-        title: Optical path position manufacturer
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Structured provenance for direct position payloads.
+  - path: hardware.optical_path_elements[].positions{}.manufacturer
+    title: Optical path position manufacturer
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Structured provenance for direct position payloads.
 
-      - path: hardware.optical_path_elements[].positions{}.model
-        title: Optical path position model
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Vendor-facing model/designation for direct position payloads.
+  - path: hardware.optical_path_elements[].positions{}.model
+    title: Optical path position model
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Vendor-facing model/designation for direct position payloads.
 
-      - path: hardware.optical_path_elements[].positions{}.product_code
-        title: Optical path position product code
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Explicit catalog/SKU/reference code for direct position payloads when known.
+  - path: hardware.optical_path_elements[].positions{}.product_code
+    title: Optical path position product code
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Explicit catalog/SKU/reference code for direct position payloads when known.
 
-      - path: hardware.optical_path_elements[].positions{}.bands
-        title: Optical path position multiband array
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit multiband pass windows for direct position payloads.
+  - path: hardware.optical_path_elements[].positions{}.bands
+    title: Optical path position multiband array
+    status: optional
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit multiband pass windows for direct position payloads.
 
-      - path: hardware.optical_path_elements[].positions{}.bands[].center_nm
-        title: Optical path position band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: hardware.optical_path_elements[].positions{}.bands[]
-        used_by: [dashboard, method_generator]
-        rationale: Band center for direct multiband position payloads.
+  - path: hardware.optical_path_elements[].positions{}.bands[].center_nm
+    title: Optical path position band center (nm)
+    status: conditional
+    type: positive_number
+    required_if:
+      parent_present: hardware.optical_path_elements[].positions{}.bands[]
+    used_by: [dashboard, method_generator]
+    rationale: Band center for direct multiband position payloads.
 
-      - path: hardware.optical_path_elements[].positions{}.bands[].width_nm
-        title: Optical path position band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: hardware.optical_path_elements[].positions{}.bands[]
-        used_by: [dashboard, method_generator]
-        rationale: Band width for direct multiband position payloads.
+  - path: hardware.optical_path_elements[].positions{}.bands[].width_nm
+    title: Optical path position band width (nm)
+    status: conditional
+    type: positive_number
+    required_if:
+      parent_present: hardware.optical_path_elements[].positions{}.bands[]
+    used_by: [dashboard, method_generator]
+    rationale: Band width for direct multiband position payloads.
 
       # ── filter_cube structured sub-components ──────────────────────────
       # When component_type is filter_cube, authors may supply explicit
@@ -1553,406 +1553,426 @@ sections:
       # remain valid but will be degraded in spectral simulation.
 
       # ── excitation_filter ──────────────────────────────────────────────
-      - path: hardware.optical_path_elements[].positions{}.excitation_filter
-        title: Filter cube excitation filter
-        status: optional
-        type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit excitation-filter sub-component of a filter_cube position.
+  - path: hardware.optical_path_elements[].positions{}.excitation_filter
+    title: Filter cube excitation filter
+    status: optional
+    type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit excitation-filter sub-component of a filter_cube position.
 
-      - path: hardware.optical_path_elements[].positions{}.excitation_filter.component_type
-        title: Excitation filter component type
-        status: optional
-        type: string
-        vocab: optical_component_types
-        used_by: [dashboard, method_generator]
-        rationale: Canonical component classifier for the excitation filter sub-component. Inferred by the parser when omitted.
+  - path: hardware.optical_path_elements[].positions{}.excitation_filter.component_type
+    title: Excitation filter component type
+    status: optional
+    type: string
+    vocab: optical_component_types
+    used_by: [dashboard, method_generator]
+    rationale: Canonical component classifier for the excitation filter sub-component. Inferred by the parser when omitted.
 
-      - path: hardware.optical_path_elements[].positions{}.excitation_filter.center_nm
-        title: Excitation filter center wavelength (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Band center for bandpass-type excitation filters.
+  - path: hardware.optical_path_elements[].positions{}.excitation_filter.center_nm
+    title: Excitation filter center wavelength (nm)
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Band center for bandpass-type excitation filters.
 
-      - path: hardware.optical_path_elements[].positions{}.excitation_filter.width_nm
-        title: Excitation filter bandwidth (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Band width for bandpass-type excitation filters.
+  - path: hardware.optical_path_elements[].positions{}.excitation_filter.width_nm
+    title: Excitation filter bandwidth (nm)
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Band width for bandpass-type excitation filters.
 
-      - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands
-        title: Excitation filter multiband array
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit multiband pass windows for multiband excitation filters.
+  - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands
+    title: Excitation filter multiband array
+    status: optional
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit multiband pass windows for multiband excitation filters.
 
-      - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands[].center_nm
-        title: Excitation filter band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: hardware.optical_path_elements[].positions{}.excitation_filter.bands[]
-        used_by: [dashboard, method_generator]
-        rationale: Band center for multiband excitation filter sub-component.
+  - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands[].center_nm
+    title: Excitation filter band center (nm)
+    status: conditional
+    type: positive_number
+    required_if:
+      parent_present: hardware.optical_path_elements[].positions{}.excitation_filter.bands[]
+    used_by: [dashboard, method_generator]
+    rationale: Band center for multiband excitation filter sub-component.
 
-      - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands[].width_nm
-        title: Excitation filter band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: hardware.optical_path_elements[].positions{}.excitation_filter.bands[]
-        used_by: [dashboard, method_generator]
-        rationale: Band width for multiband excitation filter sub-component.
+  - path: hardware.optical_path_elements[].positions{}.excitation_filter.bands[].width_nm
+    title: Excitation filter band width (nm)
+    status: conditional
+    type: positive_number
+    required_if:
+      parent_present: hardware.optical_path_elements[].positions{}.excitation_filter.bands[]
+    used_by: [dashboard, method_generator]
+    rationale: Band width for multiband excitation filter sub-component.
 
       # ── dichroic ───────────────────────────────────────────────────────
-      - path: hardware.optical_path_elements[].positions{}.dichroic
-        title: Filter cube dichroic
-        status: optional
-        type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit dichroic sub-component of a filter_cube position.
+  - path: hardware.optical_path_elements[].positions{}.dichroic
+    title: Filter cube dichroic
+    status: optional
+    type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit dichroic sub-component of a filter_cube position.
 
-      - path: hardware.optical_path_elements[].positions{}.dichroic.component_type
-        title: Dichroic component type
-        status: optional
-        type: string
-        vocab: optical_component_types
-        used_by: [dashboard, method_generator]
-        rationale: Canonical component classifier for the dichroic sub-component. Inferred by the parser when omitted.
+  - path: hardware.optical_path_elements[].positions{}.dichroic.component_type
+    title: Dichroic component type
+    status: optional
+    type: string
+    vocab: optical_component_types
+    used_by: [dashboard, method_generator]
+    rationale: Canonical component classifier for the dichroic sub-component. Inferred by the parser when omitted.
 
-      - path: hardware.optical_path_elements[].positions{}.dichroic.cut_on_nm
-        title: Dichroic cut-on wavelength (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Single-edge dichroic cut-on wavelength.
+  - path: hardware.optical_path_elements[].positions{}.dichroic.cut_on_nm
+    title: Dichroic cut-on wavelength (nm)
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Single-edge dichroic cut-on wavelength.
 
-      - path: hardware.optical_path_elements[].positions{}.dichroic.cutoffs_nm
-        title: Dichroic cutoff wavelengths (nm)
-        status: optional
-        type: list
-        item_type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Multi-edge dichroic cutoff wavelength array.
+  - path: hardware.optical_path_elements[].positions{}.dichroic.cutoffs_nm
+    title: Dichroic cutoff wavelengths (nm)
+    status: optional
+    type: list
+    item_type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Multi-edge dichroic cutoff wavelength array.
 
       # ── emission_filter ────────────────────────────────────────────────
-      - path: hardware.optical_path_elements[].positions{}.emission_filter
-        title: Filter cube emission filter
-        status: optional
-        type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit emission-filter sub-component of a filter_cube position.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter
+    title: Filter cube emission filter
+    status: optional
+    type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit emission-filter sub-component of a filter_cube position.
 
-      - path: hardware.optical_path_elements[].positions{}.emission_filter.component_type
-        title: Emission filter component type
-        status: optional
-        type: string
-        vocab: optical_component_types
-        used_by: [dashboard, method_generator]
-        rationale: Canonical component classifier for the emission filter sub-component. Inferred by the parser when omitted.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter.component_type
+    title: Emission filter component type
+    status: optional
+    type: string
+    vocab: optical_component_types
+    used_by: [dashboard, method_generator]
+    rationale: Canonical component classifier for the emission filter sub-component. Inferred by the parser when omitted.
 
-      - path: hardware.optical_path_elements[].positions{}.emission_filter.center_nm
-        title: Emission filter center wavelength (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Band center for bandpass-type emission filters.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter.center_nm
+    title: Emission filter center wavelength (nm)
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Band center for bandpass-type emission filters.
 
-      - path: hardware.optical_path_elements[].positions{}.emission_filter.width_nm
-        title: Emission filter bandwidth (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Band width for bandpass-type emission filters.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter.width_nm
+    title: Emission filter bandwidth (nm)
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Band width for bandpass-type emission filters.
 
-      - path: hardware.optical_path_elements[].positions{}.emission_filter.cut_on_nm
-        title: Emission filter cut-on wavelength (nm)
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Cut-on wavelength for longpass-type emission filters.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter.cut_on_nm
+    title: Emission filter cut-on wavelength (nm)
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Cut-on wavelength for longpass-type emission filters.
 
-      - path: hardware.optical_path_elements[].positions{}.emission_filter.bands
-        title: Emission filter multiband array
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit multiband pass windows for multiband emission filters.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter.bands
+    title: Emission filter multiband array
+    status: optional
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit multiband pass windows for multiband emission filters.
 
-      - path: hardware.optical_path_elements[].positions{}.emission_filter.bands[].center_nm
-        title: Emission filter band center (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: hardware.optical_path_elements[].positions{}.emission_filter.bands[]
-        used_by: [dashboard, method_generator]
-        rationale: Band center for multiband emission filter sub-component.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter.bands[].center_nm
+    title: Emission filter band center (nm)
+    status: conditional
+    type: positive_number
+    required_if:
+      parent_present: hardware.optical_path_elements[].positions{}.emission_filter.bands[]
+    used_by: [dashboard, method_generator]
+    rationale: Band center for multiband emission filter sub-component.
 
-      - path: hardware.optical_path_elements[].positions{}.emission_filter.bands[].width_nm
-        title: Emission filter band width (nm)
-        status: conditional
-        type: positive_number
-        required_if:
-          parent_present: hardware.optical_path_elements[].positions{}.emission_filter.bands[]
-        used_by: [dashboard, method_generator]
-        rationale: Band width for multiband emission filter sub-component.
+  - path: hardware.optical_path_elements[].positions{}.emission_filter.bands[].width_nm
+    title: Emission filter band width (nm)
+    status: conditional
+    type: positive_number
+    required_if:
+      parent_present: hardware.optical_path_elements[].positions{}.emission_filter.bands[]
+    used_by: [dashboard, method_generator]
+    rationale: Band width for multiband emission filter sub-component.
 
-      - path: hardware.eyepieces
-        title: Eyepieces
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit terminal eyepieces addressed directly by light path routing.
+  - path: hardware.eyepieces
+    title: Eyepieces
+    status: optional
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit terminal eyepieces addressed directly by light path routing.
 
-      - path: hardware.eyepieces[].id
-        title: Eyepiece ID
-        status: conditional
-        type: string
-        required_if:
-          parent_present: "hardware.eyepieces[]"
-        used_by: [dashboard, method_generator]
-        rationale: Stable identifier referenced by light_paths.
+  - path: hardware.eyepieces[].id
+    title: Eyepiece ID
+    status: conditional
+    type: string
+    required_if:
+      parent_present: "hardware.eyepieces[]"
+    used_by: [dashboard, method_generator]
+    rationale: Stable identifier referenced by light_paths.
 
-      - path: hardware.eyepieces[].magnification
-        title: Eyepiece magnification
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Optional magnification value for the eyepiece.
+  - path: hardware.eyepieces[].magnification
+    title: Eyepiece magnification
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Optional magnification value for the eyepiece.
 
-      - path: hardware.eyepieces[].field_number
-        title: Eyepiece field number
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Optional field number value for the eyepiece.
+  - path: hardware.eyepieces[].field_number
+    title: Eyepiece field number
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Optional field number value for the eyepiece.
 
-      - path: hardware.eyepieces[].notes
-        title: Eyepiece notes
-        status: optional
-        type: text
-        used_by: [dashboard, method_generator]
-        rationale: Useful for documenting eyepiece-specific caveats or labels.
+  - path: hardware.eyepieces[].notes
+    title: Eyepiece notes
+    status: optional
+    type: text
+    used_by: [dashboard, method_generator]
+    rationale: Useful for documenting eyepiece-specific caveats or labels.
 
-      - path: hardware.endpoints
-        title: Explicit detection endpoints
-        status: optional
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Optional explicit endpoint inventory; canonical normalization merges these rows with endpoint-capable inventories into the unified endpoint registry.
+  - path: hardware.endpoints
+    title: Explicit detection endpoints
+    status: optional
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Optional explicit endpoint inventory; canonical normalization merges these rows with endpoint-capable inventories into the unified endpoint registry.
 
-      - path: hardware.endpoints[].id
-        title: Explicit endpoint ID
-        status: conditional
-        type: slug
-        required_if:
-          parent_present: "hardware.endpoints[]"
-        used_by: [dashboard, method_generator]
-        rationale: Stable identifier for the explicit endpoint row.
+  - path: hardware.endpoints[].id
+    title: Explicit endpoint ID
+    status: conditional
+    type: slug
+    required_if:
+      parent_present: "hardware.endpoints[]"
+    used_by: [dashboard, method_generator]
+    rationale: Stable identifier for the explicit endpoint row.
 
-      - path: hardware.endpoints[].endpoint_type
-        title: Explicit endpoint type
-        status: conditional
-        type: string
-        vocab: endpoint_types
-        required_if:
-          parent_present: "hardware.endpoints[]"
-        used_by: [dashboard, method_generator]
-        rationale: Canonical endpoint classifier for an explicit endpoint row.
+  - path: hardware.endpoints[].endpoint_type
+    title: Explicit endpoint type
+    status: conditional
+    type: string
+    vocab: endpoint_types
+    required_if:
+      parent_present: "hardware.endpoints[]"
+    used_by: [dashboard, method_generator]
+    rationale: Canonical endpoint classifier for an explicit endpoint row.
 
-      - path: hardware.detectors[].collection_min_nm
-        title: Detector collection minimum wavelength
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Lower detector collection bound for spectral simulation.
+  - path: hardware.detectors[].collection_min_nm
+    title: Detector collection minimum wavelength
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Lower detector collection bound for spectral simulation.
 
-      - path: hardware.detectors[].collection_max_nm
-        title: Detector collection maximum wavelength
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Upper detector collection bound for spectral simulation.
+  - path: hardware.detectors[].collection_max_nm
+    title: Detector collection maximum wavelength
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Upper detector collection bound for spectral simulation.
 
-      - path: hardware.detectors[].collection_center_nm
-        title: Detector collection center wavelength
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Detector collection center for derived passband modeling.
+  - path: hardware.detectors[].collection_center_nm
+    title: Detector collection center wavelength
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Detector collection center for derived passband modeling.
 
-      - path: hardware.detectors[].collection_width_nm
-        title: Detector collection width
-        status: optional
-        type: positive_number
-        used_by: [dashboard, method_generator]
-        rationale: Detector collection bandwidth for derived passband modeling.
+  - path: hardware.detectors[].collection_width_nm
+    title: Detector collection width
+    status: optional
+    type: positive_number
+    used_by: [dashboard, method_generator]
+    rationale: Detector collection bandwidth for derived passband modeling.
 
-      - path: light_paths
-        title: Light paths
-        status: required
-        type: list
-        item_type: object
-        min_items: 1
-        used_by: [dashboard, method_generator]
-        rationale: Canonical ordered YAML-first traversal definitions. These sequences are the authoritative topology contract.
+  - path: light_paths
+    title: Light paths
+    status: required
+    type: list
+    item_type: object
+    min_items: 1
+    used_by: [dashboard, method_generator]
+    rationale: Canonical ordered YAML-first traversal definitions. These sequences are the authoritative topology contract.
 
-      - path: light_paths[].id
-        title: Light path ID
-        status: required
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable route identifier used by simulator, UI, and graph rendering.
+  - path: light_paths[].id
+    title: Light path ID
+    status: required
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable route identifier used by simulator, UI, and graph rendering.
 
-      - path: light_paths[].name
-        title: Light path name
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Deprecated authored label. Canonical route display labels are resolved from vocab/optical_routes.yaml via light_paths[].route_type.
+  - path: light_paths[].name
+    title: Light path name
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Deprecated authored label. Canonical route display labels are resolved from vocab/optical_routes.yaml via light_paths[].route_type.
 
-      - path: light_paths[].route_type
-        title: Light path route type
-        status: required
-        type: string
-        vocab: optical_routes
-        used_by: [dashboard, method_generator]
-        rationale: Controlled optical route family and canonical display-label key. Active dataflow expects light_paths[].id to match light_paths[].route_type.
+  - path: light_paths[].route_type
+    title: Light path route type
+    status: required
+    type: string
+    vocab: optical_routes
+    used_by: [dashboard, method_generator]
+    rationale: Controlled optical route family and canonical display-label key. Active dataflow expects light_paths[].id to match light_paths[].route_type.
 
-      - path: light_paths[].readouts
-        title: Light path readouts
-        status: optional
-        type: list
-        item_type: string
-        vocab: measurement_readouts
-        used_by: [dashboard, method_generator]
-        rationale: Optional per-route measurement/readout tags associated with a route traversal.
+  - path: light_paths[].imaging_modes
+    title: Light path imaging modes
+    status: optional
+    type: list
+    item_type: string
+    vocab: imaging_modes
+    used_by:
+    - dashboard
+    - method_generator
+    rationale: Explicitly associates imaging methods with the physical light path that implements them, avoiding downstream method-to-route inference.
+  - path: light_paths[].contrast_methods
+    title: Light path contrast methods
+    status: optional
+    type: list
+    item_type: string
+    vocab: contrast_methods
+    used_by:
+    - dashboard
+    - method_generator
+    rationale: Explicitly associates contrast methods with the physical light path that implements them, avoiding downstream method-to-route inference.
+  - path: light_paths[].readouts
+    title: Light path readouts
+    status: optional
+    type: list
+    item_type: string
+    vocab: measurement_readouts
+    used_by: [dashboard, method_generator]
+    rationale: Optional per-route measurement/readout tags associated with a route traversal.
 
 
-      - path: light_paths[].illumination_sequence
-        title: Illumination sequence
-        status: required
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id.
+  - path: light_paths[].illumination_sequence
+    title: Illumination sequence
+    status: required
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id.
 
-      - path: light_paths[].illumination_sequence[].source_id
-        title: Illumination source reference
-        status: optional
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable source reference for the source_id variant of an illumination sequence tagged union item.
+  - path: light_paths[].illumination_sequence[].source_id
+    title: Illumination source reference
+    status: optional
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable source reference for the source_id variant of an illumination sequence tagged union item.
 
-      - path: light_paths[].illumination_sequence[].optical_path_element_id
-        title: Illumination optical path element reference
-        status: optional
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item.
+  - path: light_paths[].illumination_sequence[].optical_path_element_id
+    title: Illumination optical path element reference
+    status: optional
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item.
 
-      - path: light_paths[].detection_sequence
-        title: Detection sequence
-        status: required
-        type: list
-        item_type: object
-        used_by: [dashboard, method_generator]
-        rationale: Ordered sequence of strict tagged-union items used after the sample plane; each item must declare exactly one of optical_path_element_id, endpoint_id, or branches.
+  - path: light_paths[].detection_sequence
+    title: Detection sequence
+    status: required
+    type: list
+    item_type: object
+    used_by: [dashboard, method_generator]
+    rationale: Ordered sequence of strict tagged-union items used after the sample plane; each item must declare exactly one of optical_path_element_id, endpoint_id, or branches.
 
-      - path: light_paths[].detection_sequence[].optical_path_element_id
-        title: Detection optical path element reference
-        status: optional
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable optical-path-element reference for the optical_path_element_id variant of a detection sequence tagged union item.
+  - path: light_paths[].detection_sequence[].optical_path_element_id
+    title: Detection optical path element reference
+    status: optional
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable optical-path-element reference for the optical_path_element_id variant of a detection sequence tagged union item.
 
-      - path: light_paths[].detection_sequence[].endpoint_id
-        title: Detection endpoint reference
-        status: optional
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable endpoint reference for the endpoint_id variant of a detection sequence tagged union item.
+  - path: light_paths[].detection_sequence[].endpoint_id
+    title: Detection endpoint reference
+    status: optional
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable endpoint reference for the endpoint_id variant of a detection sequence tagged union item.
 
-      - path: light_paths[].detection_sequence[].branches
-        title: Detection branch block
-        status: optional
-        type: object
-        used_by: [dashboard, method_generator]
-        rationale: Explicit route-owned one-level branch block for the branches variant of a detection sequence tagged union item.
+  - path: light_paths[].detection_sequence[].branches
+    title: Detection branch block
+    status: optional
+    type: object
+    used_by: [dashboard, method_generator]
+    rationale: Explicit route-owned one-level branch block for the branches variant of a detection sequence tagged union item.
 
-      - path: light_paths[].detection_sequence[].branches.selection_mode
-        title: Detection branch selection mode
-        status: conditional
-        type: string
-        vocab: selection_modes
-        required_if:
-          parent_present: light_paths[].detection_sequence[].branches
-        used_by: [dashboard, method_generator]
-        rationale: Branch selection mode for an explicit detection route fork.
+  - path: light_paths[].detection_sequence[].branches.selection_mode
+    title: Detection branch selection mode
+    status: conditional
+    type: string
+    vocab: selection_modes
+    required_if:
+      parent_present: light_paths[].detection_sequence[].branches
+    used_by: [dashboard, method_generator]
+    rationale: Branch selection mode for an explicit detection route fork.
 
-      - path: light_paths[].detection_sequence[].branches.items
-        title: Detection branch items
-        status: conditional
-        type: list
-        item_type: object
-        min_items: 1
-        required_if:
-          parent_present: light_paths[].detection_sequence[].branches
-        used_by: [dashboard, method_generator]
-        rationale: Explicit route-owned branch definitions nested under a detection sequence item.
+  - path: light_paths[].detection_sequence[].branches.items
+    title: Detection branch items
+    status: conditional
+    type: list
+    item_type: object
+    min_items: 1
+    required_if:
+      parent_present: light_paths[].detection_sequence[].branches
+    used_by: [dashboard, method_generator]
+    rationale: Explicit route-owned branch definitions nested under a detection sequence item.
 
-      - path: light_paths[].detection_sequence[].branches.items[].mode
-        title: Detection branch mode
-        status: optional
-        type: string
-        vocab: branch_modes
-        used_by: [dashboard, method_generator, virtual_microscope]
-        rationale: Canonical routing semantics for each explicit branch.
+  - path: light_paths[].detection_sequence[].branches.items[].mode
+    title: Detection branch mode
+    status: optional
+    type: string
+    vocab: branch_modes
+    used_by: [dashboard, method_generator, virtual_microscope]
+    rationale: Canonical routing semantics for each explicit branch.
 
-      - path: light_paths[].detection_sequence[].branches.items[].branch_id
-        title: Detection branch ID
-        status: conditional
-        type: slug
-        required_if:
-          parent_present: light_paths[].detection_sequence[].branches.items[]
-        used_by: [dashboard, method_generator]
-        rationale: Stable branch identifier scoped to the branch block.
+  - path: light_paths[].detection_sequence[].branches.items[].branch_id
+    title: Detection branch ID
+    status: conditional
+    type: slug
+    required_if:
+      parent_present: light_paths[].detection_sequence[].branches.items[]
+    used_by: [dashboard, method_generator]
+    rationale: Stable branch identifier scoped to the branch block.
 
-      - path: light_paths[].detection_sequence[].branches.items[].label
-        title: Detection branch label
-        status: optional
-        type: string
-        used_by: [dashboard, method_generator]
-        rationale: Human-readable label for a detection branch.
+  - path: light_paths[].detection_sequence[].branches.items[].label
+    title: Detection branch label
+    status: optional
+    type: string
+    used_by: [dashboard, method_generator]
+    rationale: Human-readable label for a detection branch.
 
-      - path: light_paths[].detection_sequence[].branches.items[].sequence
-        title: Detection branch sequence
-        status: conditional
-        type: list
-        item_type: object
-        min_items: 1
-        required_if:
-          parent_present: light_paths[].detection_sequence[].branches.items[]
-        used_by: [dashboard, method_generator]
-        rationale: Linear branch-local traversal sequence for a detection route fork; each branch-local item must declare exactly one of optical_path_element_id or endpoint_id.
+  - path: light_paths[].detection_sequence[].branches.items[].sequence
+    title: Detection branch sequence
+    status: conditional
+    type: list
+    item_type: object
+    min_items: 1
+    required_if:
+      parent_present: light_paths[].detection_sequence[].branches.items[]
+    used_by: [dashboard, method_generator]
+    rationale: Linear branch-local traversal sequence for a detection route fork; each branch-local item must declare exactly one of optical_path_element_id or endpoint_id.
 
-      - path: light_paths[].detection_sequence[].branches.items[].sequence[].optical_path_element_id
-        title: Detection branch optical path element reference
-        status: optional
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable optical-path-element reference for the optical_path_element_id variant of a detection branch-local tagged union item.
+  - path: light_paths[].detection_sequence[].branches.items[].sequence[].optical_path_element_id
+    title: Detection branch optical path element reference
+    status: optional
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable optical-path-element reference for the optical_path_element_id variant of a detection branch-local tagged union item.
 
-      - path: light_paths[].detection_sequence[].branches.items[].sequence[].endpoint_id
-        title: Detection branch endpoint reference
-        status: optional
-        type: slug
-        used_by: [dashboard, method_generator]
-        rationale: Stable endpoint reference for the endpoint_id variant of a detection branch-local tagged union item.
+  - path: light_paths[].detection_sequence[].branches.items[].sequence[].endpoint_id
+    title: Detection branch endpoint reference
+    status: optional
+    type: slug
+    used_by: [dashboard, method_generator]
+    rationale: Stable endpoint reference for the endpoint_id variant of a detection branch-local tagged union item.

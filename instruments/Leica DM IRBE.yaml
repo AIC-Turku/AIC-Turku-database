@@ -8,9 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 2nd floor, room 2076
-  notes: Inverted microscope with camera port. Current imaging modes are widefield
-    fluorescence, transmitted brightfield, darkfield, and phase contrast. Optional
-    1.6x auxiliary lens in microscope body.
+  notes: Inverted microscope with camera port. Current imaging modes are widefield fluorescence, transmitted brightfield, darkfield, and phase contrast. Optional 1.6x auxiliary lens in microscope body.
   url: ''
 capabilities:
   imaging_modes:
@@ -35,8 +33,7 @@ hardware:
   - kind: ccd
     manufacturer: Unknown
     model: Unknown Camera
-    notes: Standalone camera system attached to port (no computer required); image
-      storage via USB memory device.
+    notes: Standalone camera system attached to port (no computer required); image storage via USB memory device.
     id: camera_port_main
   eyepieces:
   - id: eyepieces
@@ -212,6 +209,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
 - id: transmitted_light
   illumination_sequence:
   - source_id: 12v_100w_halogen_bulb
@@ -229,7 +228,8 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_light
-  notes: Shares the same documented physical path as transmitted_brightfield; phase
-    contrast requires appropriate condenser annuli (PH objectives) with the halogen
-    lamp. Shares the same documented physical path as transmitted_brightfield; darkfield
-    uses a darkfield condenser with the halogen lamp to illuminate from oblique angles.
+  notes: Shares the same documented physical path as transmitted_brightfield; phase contrast requires appropriate condenser annuli (PH objectives) with the halogen lamp. Shares the same documented physical path as transmitted_brightfield; darkfield uses a darkfield condenser with the halogen lamp to illuminate from oblique angles.
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  - darkfield
