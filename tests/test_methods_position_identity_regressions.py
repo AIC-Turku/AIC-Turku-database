@@ -122,9 +122,8 @@ class PositionIdentityRegressions(unittest.TestCase):
                             f"{stem}: {row['id']} presents its slot key as an identity",
                         )
 
-
     def test_equivalent_position_on_two_routes_unions_route_membership(self) -> None:
-        """A deduplicated filter must remain selectable on every route that records it."""
+        """Deduplication must preserve every route that records the same filter identity."""
         holder_id = "optical_path_element:test_wheel"
 
         def route(route_id: str, position_key: str) -> dict:
