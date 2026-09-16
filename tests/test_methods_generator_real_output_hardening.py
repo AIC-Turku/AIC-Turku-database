@@ -2,7 +2,8 @@
 
 These tests deliberately use the production Methods Generator script through the
 existing Node DOM harness. They pin review-prompt propagation, software placeholder
-handling, FLIM-neutral review guidance, and defensive runtime position resolution.
+handling, FLIM-neutral review guidance, advisory acquisition-setting language, and
+defensive runtime position resolution.
 """
 from __future__ import annotations
 
@@ -197,6 +198,42 @@ def test_flim_prompt_is_domain_neutral_and_replaces_redundant_generic_settings()
     assert "any remaining acquisition settings needed to reproduce the experiment" in output
     assert "detector gain/offset" not in output
     assert "zoom/averaging" not in output
+    assert "[RECOMMENDED FOR REPORTING:" in output
+    assert "light-microscopy community recommends also reporting" in output
+    assert "original image metadata" in output
+    assert "Recover acquisition settings from image metadata" in output
+
+
+def test_exposure_and_generic_acquisition_settings_are_advisory_not_mandatory():
+    instrument = _instrument()
+    route = instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"][0]
+    route["route_type"] = "confocal_spinning_disk"
+
+    output = _run(
+        instrument,
+        _select_scope()
+        + """
+      const route = document.querySelectorAll('input[id^="route-"]')[0];
+      route.checked = true;
+      document.getElementById('add-btn').listeners.click();
+    """,
+    )
+
+    assert "[RECOMMENDED FOR REPORTING:" in output
+    assert "light-microscopy community recommends also reporting camera exposure per channel" in output
+    assert "original image metadata" in output
+    assert "Recover acquisition settings from image metadata" in output
+    assert "[PLEASE SPECIFY: camera exposure per channel" not in output
+    assert "any remaining acquisition settings needed to reproduce the experiment" in output
+
+    generic_output = _run(
+        _instrument(),
+        _select_scope() + "document.getElementById('add-btn').listeners.click();",
+    )
+    assert "[RECOMMENDED FOR REPORTING:" in generic_output
+    assert "exposure time(s)" in generic_output
+    assert "original image metadata" in generic_output
+    assert "[PLEASE SPECIFY: acquisition software/version" not in generic_output
 
 
 def test_runtime_position_key_wins_over_a_colliding_display_label():
