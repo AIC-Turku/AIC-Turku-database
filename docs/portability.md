@@ -122,9 +122,10 @@ These are deliberate and do not block reuse:
    replaces the inventory must update or drop these. The portability boundaries
    themselves are covered separately by `tests/test_facility_portability.py`,
    which is inventory-independent.
-4. **`docs/` migration notes.** `light_path_v2_migration.md`,
-   `dichroic_migration_note.md` and `sted_migration_note.md` describe how AIC's
-   own records were migrated. They are useful background, not requirements.
+4. **`docs/light_path_v2_migration.md`.** Despite the file name this is the
+   current light-path authoring contract, not a record of a past migration. A
+   fork needs it to author `hardware.sources`, `optical_path_elements` and
+   `light_paths` correctly.
 5. **`scripts/import_spectrascope.py`** defaults its `--source` to a
    `SpectraScope-master` directory beside the repository. It is an optional
    import utility with an explicit flag, not part of the production build path.

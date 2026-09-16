@@ -29,8 +29,7 @@ Avoid hardcoding facility names, URLs, acknowledgements, and branding in scripts
 - `maintenance/events/` — maintenance ledgers.
 - `vocab/` — controlled terminology source of truth.
 - `templates/` — record starter YAML templates.
-- `docs/dichroic_migration_note.md` — preferred dichroic encoding (`transmission_bands` / `reflection_bands`) and legacy fallback behavior.
-- `docs/light_path_v2_migration.md` — canonical v2 light-path architecture contract.
+- `docs/light_path_v2_migration.md` — canonical light-path architecture contract.
 - `docs/dataflow_contract.md` — authoritative production dataflow and module map.
 - `scripts/`
   - `scripts/dashboard_builder.py` — CLI/compatibility shim only; implementations in `scripts/dashboard/*`.

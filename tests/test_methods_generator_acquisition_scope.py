@@ -5,8 +5,8 @@ audit, through the same controls a user clicks. The failures they cover all had
 the same shape: the draft asserted hardware, a method or a microscope identity
 that the user had not selected for the acquisition being described.
 
-See docs/audits/methods_generator_consolidated_findings.md for the audit those
-defect numbers refer to.
+Each test names the behaviour it protects; the audit that found them is recorded
+in the pull request that introduced these fixes.
 """
 
 import json
@@ -185,7 +185,7 @@ class AcquisitionScopeTests(unittest.TestCase):
     # --- Critical: an entry states only what was selected for it ---------------
 
     def test_a_module_does_not_survive_into_the_next_acquisition(self):
-        """Audit 1.1. STED with its 3D module, then a confocal reference: the
+        """STED with its 3D module, then a confocal reference: the
         reference image was not taken with the depletion module."""
         self.method("STED").check()
         self.page.check("#obj-0")
@@ -209,7 +209,7 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertNotIn("Stimulated emission depletion", reference)
 
     def test_an_objective_does_not_survive_into_the_next_acquisition(self):
-        """Audit 1.2. The overview objective is not the detail objective."""
+        """The overview objective is not the detail objective."""
         self.method("Transmitted brightfield").check()
         self.page.check("#obj-1")
         self.page.check("#light-0")
@@ -230,8 +230,8 @@ class AcquisitionScopeTests(unittest.TestCase):
     # --- High: selections survive exactly as long as they are still offered ----
 
     def test_a_second_method_on_the_same_path_keeps_the_hardware_chosen(self):
-        """Audit 1.5. Confocal and STED share one recorded path, so nothing about
-        the path stops being true when the method changes."""
+        """Confocal and STED share one recorded path, so nothing about the path
+        stops being true when the method changes."""
         self.method("Confocal point scanning").check()
         self.page.check("#light-0")
         self.page.check("#det-0")
@@ -243,7 +243,7 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("Avalanche photodiode", self.output())
 
     def test_hardware_only_the_old_method_reached_is_withdrawn(self):
-        """Audit 1.1/1.5. Leaving the transmitted path withdraws its lamp."""
+        """Leaving the transmitted path withdraws its lamp."""
         self.method("Transmitted brightfield").check()
         self.page.check("#light-0")
         expect(self.page.locator("#light-0")).to_be_checked()
@@ -254,8 +254,8 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertNotIn("Halogen lamp", self.output())
 
     def test_two_methods_describe_one_acquisition_path_by_path(self):
-        """Audit 4.3. Brightfield beside fluorescence is one image set, and the
-        hardware of each path is described in its own clause."""
+        """Brightfield beside fluorescence is one image set, and the hardware of
+        each path is described in its own clause."""
         self.method("Confocal point scanning").check()
         self.method("Transmitted brightfield").check()
         self.page.check("#obj-0")
@@ -275,7 +275,7 @@ class AcquisitionScopeTests(unittest.TestCase):
     # --- High: what the entry does not say, it asks about ----------------------
 
     def test_an_entry_without_a_detector_asks_for_one(self):
-        """Audit 1.6."""
+        """"""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
@@ -283,7 +283,7 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("[PLEASE SPECIFY: the detector, camera or eyepieces used", self.output())
 
     def test_an_entry_without_an_objective_or_illumination_asks_for_them(self):
-        """Audit 1.6."""
+        """"""
         self.method("Confocal point scanning").check()
         self.page.check("#det-0")
         self.page.click("#add-btn")
@@ -291,8 +291,8 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("[PLEASE SPECIFY: the illumination used for this acquisition", self.output())
 
     def test_sted_without_a_depletion_source_is_flagged(self):
-        """Audit 1.15. The technique's defining beam is selectable, so its absence
-        is a fact about the draft rather than about the microscope."""
+        """The technique's defining beam is selectable, so its absence is a fact
+        about the draft rather than about the microscope."""
         self.method("STED").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
@@ -301,8 +301,8 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("no depletion source was selected", self.output())
 
     def test_a_depletion_source_outside_sted_is_flagged(self):
-        """Audit 1.15. The converse: a confocal acquisition reporting a depletion
-        beam is either mis-ticked or mis-described."""
+        """The converse: a confocal acquisition reporting a depletion beam is either
+        mis-ticked or mis-described."""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-1")
@@ -311,8 +311,8 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("a depletion source is reported", self.output())
 
     def test_a_module_outside_its_technique_is_flagged(self):
-        """Audit 1.15. The Easy3D module belongs to STED; a confocal entry that
-        reports it is asked to confirm the method."""
+        """The Easy3D module belongs to STED; a confocal entry that reports it is
+        asked to confirm the method."""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
@@ -324,7 +324,7 @@ class AcquisitionScopeTests(unittest.TestCase):
     # --- High: entry identity and the form's own state ------------------------
 
     def test_correcting_a_selection_updates_the_entry_instead_of_duplicating_it(self):
-        """Audit 1.9. Noticing a forgotten checkbox is the most common correction."""
+        """Noticing a forgotten checkbox is the most common correction."""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
@@ -336,7 +336,7 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("Scope Acquire", self.output())
 
     def test_a_new_acquisition_reference_adds_a_separate_entry(self):
-        """Audit 1.9. A second figure on the same setup is a second acquisition."""
+        """A second figure on the same setup is a second acquisition."""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
@@ -351,7 +351,7 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertEqual(output.count("Point-scanning confocal imaging was performed"), 2)
 
     def test_clear_all_resets_the_selections_as_well_as_the_draft(self):
-        """Audit 1.10. "Start again" has to mean the controls too."""
+        """"Start again" has to mean the controls too."""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
@@ -362,7 +362,7 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("Select an instrument", self.output())
 
     def test_start_another_acquisition_clears_the_previous_selections(self):
-        """Audit 1.1/1.2. The explicit way to begin a different image set."""
+        """The explicit way to begin a different image set."""
         self.method("STED").check()
         self.page.check("#obj-0")
         self.page.check("#module-0")
@@ -376,7 +376,7 @@ class AcquisitionScopeTests(unittest.TestCase):
     # --- Medium/Low: what may appear in publication prose ---------------------
 
     def test_generic_requests_are_stated_once_for_the_whole_section(self):
-        """Audit 1.19 / 4.1. Specimen preparation is the same request every time."""
+        """19 / 4.1. Specimen preparation is the same request every time."""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")
@@ -394,8 +394,8 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.assertIn("applies to every acquisition above", output)
 
     def test_no_implementation_vocabulary_reaches_publication_prose(self):
-        """Audit 1.13. "route", "inventory" and placeholder identities are how the
-        repository talks about itself, not how a Methods section reads."""
+        """"route", "inventory" and placeholder identities are how the repository
+        talks about itself, not how a Methods section reads."""
         self.method("Confocal point scanning").check()
         self.page.check("#obj-0")
         self.page.check("#light-0")

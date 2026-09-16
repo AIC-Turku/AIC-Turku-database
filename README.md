@@ -92,7 +92,9 @@ The current authoring structure is documented in `docs/light_path_v2_migration.m
 
 Ordered route sequences are the primary topology source. Branches, splitters, and selectors remain explicit through the YAML, validation, DTO, and browser layers.
 
-For multiband dichroics/polychroics, explicit `transmission_bands` and/or `reflection_bands` are preferred. See `docs/dichroic_migration_note.md` for the compatibility rules around legacy cutoff representations.
+For multiband dichroics and polychroics, describe the windows explicitly with `transmission_bands` and, where known, `reflection_bands`; each band is a `{center_nm, width_nm}` object. Explicit bands are authoritative wherever they are present.
+
+Legacy encodings still parse. A single-edge dichroic remains valid through `cut_on_nm` or a single-value `cutoffs_nm`. A multiband dichroic given only `cutoffs_nm` is simulated by alternating pass/stop bands at each cutoff, which is an approximation: real multiband transmission is not a square wave between edges, so cutoff-only multiband records should be replaced with explicit bands rather than relied on.
 
 ## Virtual Microscope model
 

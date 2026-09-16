@@ -1,8 +1,7 @@
 """What may be printed as a component's or a microscope's name in Methods prose.
 
-These cover the audit findings where the draft named something the record does not
-actually identify, or named two different instruments identically. See
-docs/audits/methods_generator_consolidated_findings.md.
+These cover the cases where the draft named something the record does not actually
+identify, or named two different instruments identically.
 """
 
 import unittest
@@ -24,13 +23,13 @@ class PublicationIdentityTests(unittest.TestCase):
         self.assertEqual("Kinetix", _identity_value("Kinetix"))
 
     def test_an_authored_placeholder_label_is_not_a_fallback(self):
-        """Audit 1.4. `Unknown Camera` is what the record says it does not know."""
+        """`Unknown Camera` is what the record says it does not know."""
         item = {"inventory_class": "endpoint", "manufacturer": "Unknown",
                 "model": "Unknown Camera", "display_label": "Unknown Camera", "id": "camera_port_main"}
         self.assertEqual("", _publication_inventory_label(item, None))
 
     def test_a_manufacturer_alone_does_not_identify_a_detector(self):
-        """Audit 1.4. "Zeiss" names a vendor, not the photomultiplier a reader
+        """"Zeiss" names a vendor, not the photomultiplier a reader
         would have to look up."""
         item = {"inventory_class": "endpoint", "manufacturer": "Zeiss",
                 "model": "Unknown PMT", "display_label": "Zeiss", "id": "detector_1"}
@@ -43,7 +42,7 @@ class PublicationIdentityTests(unittest.TestCase):
         self.assertEqual("eyepieces", _publication_inventory_label(item, None))
 
     def test_an_unidentifiable_component_produces_a_request_not_a_sentence(self):
-        """Audit 1.4. The component stays selectable; the draft asks who it is."""
+        """The component stays selectable; the draft asks who it is."""
         template, sentence, prompts = _inventory_method_facts({"inventory_class": "endpoint"}, "")
         self.assertEqual("", template)
         self.assertEqual("", sentence)
@@ -51,7 +50,7 @@ class PublicationIdentityTests(unittest.TestCase):
         self.assertIn("the detector or camera used for this acquisition", prompts[0])
 
     def test_internal_slot_identifiers_are_recognised(self):
-        """Audit 1.13. `EMP_BF` is a key, not a name."""
+        """`EMP_BF` is a key, not a name."""
         self.assertTrue(_looks_like_internal_id("EMP_BF"))
         self.assertTrue(_looks_like_internal_id("Pos_1"))
         self.assertFalse(_looks_like_internal_id("GFP"))
@@ -59,7 +58,7 @@ class PublicationIdentityTests(unittest.TestCase):
         self.assertFalse(_looks_like_internal_id("Filter Cube A"))
 
     def test_articles_follow_how_a_label_is_read_aloud(self):
-        """Audit 1.27."""
+        """"""
         self.assertEqual("a", _indefinite_article("640 nm laser"))
         self.assertEqual("an", _indefinite_article("arc lamp"))
         self.assertEqual("an", _indefinite_article("LED illuminator"))
@@ -68,7 +67,7 @@ class PublicationIdentityTests(unittest.TestCase):
 
 
 class PositionPhraseTests(unittest.TestCase):
-    """Audit 4.2. What a filter passes is the fact a reader checks; the catalogue
+    """What a filter passes is the fact a reader checks; the catalogue
     number alone does not carry it."""
 
     def test_a_spec_named_filter_states_its_band_and_catalogue_number(self):
@@ -107,7 +106,7 @@ class PositionPhraseTests(unittest.TestCase):
         self.assertEqual("a DAPI Emission bandpass filter (435/26 nm)", phrase)
 
     def test_a_slot_word_is_not_part_of_the_component_name(self):
-        """Audit 1.31. "NIR dichroic position" names a slot, not the optic."""
+        """"NIR dichroic position" names a slot, not the optic."""
         phrase = _publication_position_phrase({
             "display_label": "NIR dichroic position", "has_identity": True, "spec_phrase": "",
             "type_noun": "dichroic mirror", "product_code": "", "manufacturer": "",

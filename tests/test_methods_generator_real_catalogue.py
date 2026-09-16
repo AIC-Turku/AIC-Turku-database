@@ -135,7 +135,7 @@ class RealCatalogueTestCase(unittest.TestCase):
     # --- findings that only real records can show ----------------------------
 
     def test_two_records_sharing_a_model_are_named_apart(self):
-        """Audit 1.3. Both 3i systems record manufacturer "3i / Zeiss" and model
+        """Both 3i systems record manufacturer "3i / Zeiss" and model
         "Marianas CSU-W1 Spinning Disk Confocal"; only the display name tells them
         apart, so a section using both used to attribute one to the other."""
         self.select_instrument("3i CSU-W1 Spinning Disk")
@@ -158,7 +158,7 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertIn("3i Marianas CSU-W1 Spinning Disk Med C (", output)
 
     def test_a_recorded_placeholder_camera_is_not_published(self):
-        """Audit 1.4. The Leica DM IRBE records its camera as Unknown/Unknown
+        """The Leica DM IRBE records its camera as Unknown/Unknown
         Camera, which is the record saying it does not know."""
         self.select_instrument("Leica DM IRBE")
         self.tick("method-list", "Widefield fluorescence")
@@ -171,9 +171,9 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertIn("the detector or camera used for this acquisition", output)
 
     def test_an_airyscan_entry_says_it_has_no_detector_to_report(self):
-        """Audit 1.6 / ledger 3.3. The LSM 880 records an Airyscan detector, but no
-        light path reaches it, so the correct answer is not tickable. The draft has
-        to say that rather than publish an acquisition with no detection."""
+        """The LSM 880 records an Airyscan detector, but no light path reaches it,
+        so the correct answer is not tickable. The draft has to say so rather than
+        publish an acquisition with no detection at all."""
         self.select_instrument("Zeiss LSM 880 with AiryScan")
         self.tick("method-list", r"ISM \(AiryScan\)")
         self.tick("obj-list", "C-Plan-APOCHROMAT 63x")
@@ -184,7 +184,7 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertIn("[PLEASE SPECIFY: the detector, camera or eyepieces used", output)
 
     def test_a_module_does_not_survive_into_the_next_real_acquisition(self):
-        """Audit 1.1. Airyscan then DIC on the real LSM 880 record."""
+        """Airyscan then DIC on the real LSM 880 record."""
         self.select_instrument("Zeiss LSM 880 with AiryScan")
         self.tick("method-list", r"ISM \(AiryScan\)")
         self.tick("obj-list", "C-Plan-APOCHROMAT 63x")
@@ -205,8 +205,8 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn("AiryScan Detector/Module", dic_entry)
 
     def test_a_same_path_method_change_keeps_real_hardware(self):
-        """Audit 1.5. On the real Zeiss TIRF record, widefield and TIRF are the same
-        recorded path, so nothing about the path stops being true."""
+        """On the real Zeiss TIRF record, widefield and TIRF are the same recorded
+        path, so nothing about the path stops being true when the method changes."""
         self.select_instrument("Zeiss TIRF")
         self.tick("method-list", "Widefield fluorescence")
         self.tick("obj-list", r"63x/1\.46")
@@ -220,8 +220,8 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertIn("Filter set 43 HE", output)
 
     def test_the_legacy_multiphoton_record_names_its_method(self):
-        """Audit 1.7. The retired SP5 has no imaging-method control, so the method
-        has to come from the path it records."""
+        """The retired SP5 has no imaging-method control, so the method has to come
+        from the path it records."""
         self.select_instrument("Leica TCS SP5 Multiphoton (Retired)")
         self.tick("obj-list", r"25x/0\.95")
         self.tick("light-list", "Chameleon Ultra II")
@@ -231,7 +231,7 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn(" route", output.split("Review before publication")[0])
 
     def test_duplicate_cameras_are_told_apart_by_their_recorded_port(self):
-        """Audit 1.11. The Crest V3 records two cameras under one model name; the
+        """The Crest V3 records two cameras under one model name; the
         recorded branch labels are what distinguishes them."""
         self.select_instrument("Nikon Ti2-E Crest V3")
         self.tick("method-list", "Confocal spinning disk")
@@ -245,9 +245,8 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertIn("slave", output.lower())
 
     def test_real_filter_positions_publish_their_recorded_transmission(self):
-        """Audit 4.2. The bands come from the spectral model the repository already
-        derives, so the draft states what a filter passes and not only its
-        catalogue number."""
+        """The bands come from the spectral model the repository already derives, so
+        the draft states what a filter passes and not only its catalogue number."""
         self.select_instrument("3i CSU-W1 Spinning Disk")
         self.tick("method-list", "Confocal spinning disk")
         self.tick("obj-list", "63x/1.4 Oil")
@@ -266,7 +265,7 @@ class RealCatalogueTestCase(unittest.TestCase):
     # --- the sweep no fixture can replace ------------------------------------
 
     def test_no_implementation_vocabulary_in_any_entry_of_the_real_catalogue(self):
-        """Audit 1.13. Every instrument, every method it offers, one entry each.
+        """Every instrument, every method it offers, one entry each.
 
         A fixture can only prove this for the labels the fixture invented. This
         proves it for every label the facility has actually authored, which is where
