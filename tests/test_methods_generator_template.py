@@ -1374,6 +1374,100 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertEqual(result["lightCount"], 1, "Only laser:561 should be shown for confocal route")
         self.assertEqual(result["detCount"], 1, "Only hyd:1 should be shown for confocal route")
 
+    def test_route_section_help_text_names_the_actual_reason_it_is_shown(self) -> None:
+        """The light-path section's help text must match why it is visible.
+
+        It is shown for two different reasons: a method genuinely recorded on more
+        than one physical path, or a record with no imaging-method control at all.
+        Stating the ambiguous-method reason for a record that has no methods to
+        point at is what test_the_light_path_section_never_appears_for_a_real_
+        instrument_or_method's own real-catalogue sweep skips checking, and it is
+        what shipped, unnoticed, for the retired Leica TCS SP5 Multiphoton.
+        """
+        no_method_control = {
+            "id": "scope-no-methods",
+            "display_name": "No Methods Scope",
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [], "light_sources": [], "detectors": [],
+                "magnification_changers": [], "optical_modulators": [], "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {"id": "route_a", "display_label": "Route A"},
+                            {"id": "route_b", "display_label": "Route B"},
+                        ]
+                    },
+                },
+            },
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[no_method_control],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-no-methods';
+            systemSelect.listeners.change({ target: systemSelect });
+            return {
+                methodCount: state.inputs.filter(cb => cb.dataset && cb.dataset.category === 'method').length,
+                routeSectionDisplay: document.getElementById('section-route').style.display || '',
+                helpText: document.getElementById('section-route-help').textContent,
+            };
+            """,
+        )
+        self.assertEqual(result["methodCount"], 0)
+        self.assertNotEqual(result["routeSectionDisplay"], "none")
+        self.assertIn("no separate imaging-method control", result["helpText"])
+        self.assertNotIn("recorded on more than one physical path", result["helpText"])
+
+        # The ordinary case - a method genuinely recorded on two or more physical
+        # paths with different hardware - must keep the original wording naming
+        # the actual reason.
+        ambiguous_method = {
+            "id": "scope-ambiguous-method",
+            "display_name": "Ambiguous Method Scope",
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [], "light_sources": [], "detectors": [],
+                "magnification_changers": [], "optical_modulators": [], "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "smlm_a", "display_label": "SMLM path A",
+                                "route_identity": {"imaging_modes": [{"id": "smlm", "display_label": "SMLM"}]},
+                                "relevant_hardware": {"sources": [], "filters": [], "splitters": [], "endpoints": []},
+                            },
+                            {
+                                "id": "smlm_b", "display_label": "SMLM path B",
+                                "route_identity": {"imaging_modes": [{"id": "smlm", "display_label": "SMLM"}]},
+                                "relevant_hardware": {"sources": [], "filters": [], "splitters": [], "endpoints": []},
+                            },
+                        ]
+                    },
+                },
+            },
+            "modules": [],
+        }
+        result2 = self.run_template(
+            instruments=[ambiguous_method],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-ambiguous-method';
+            systemSelect.listeners.change({ target: systemSelect });
+            return {
+                methodCount: state.inputs.filter(cb => cb.dataset && cb.dataset.category === 'method').length,
+                helpText: document.getElementById('section-route-help').textContent,
+            };
+            """,
+        )
+        self.assertEqual(result2["methodCount"], 1)
+        self.assertIn("recorded on more than one physical path", result2["helpText"])
+
     def test_lambert_widefield_route_with_flim_readout(self) -> None:
         """Lambert FLIM: widefield route must show FLIM readout, not as standalone route."""
         instrument = {
