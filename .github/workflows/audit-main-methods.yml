@@ -1,0 +1,157 @@
+name: Full Methods Generator audit on main
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/audit-main-methods.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact audit branch with history
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: "requirements-test.txt"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Validate current main-derived code
+        run: |
+          python -m scripts.generate_templates --check
+          python -m scripts.validate
+          PYTHONPATH=. python -m pytest -q
+          python -m scripts.dashboard_builder --strict
+          mkdocs build --strict
+
+      - name: Recover the historical 116-scenario browser harness
+        run: |
+          git show c5250cda66c93ac121e51d4403aaacf3c3e469e0:scripts/replay_methods_116_audit.py > scripts/replay_methods_116_audit.py
+          git show c5250cda66c93ac121e51d4403aaacf3c3e469e0:scripts/replay_methods_116_audit_v4.py > scripts/replay_methods_116_audit_v4.py
+          git show c5250cda66c93ac121e51d4403aaacf3c3e469e0:scripts/replay_methods_116_audit_v5.py > scripts/replay_methods_116_audit_v5.py
+
+      - name: Serve rendered site
+        run: |
+          python -m http.server 8000 --directory site > /tmp/methods-audit-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/methods_generator/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/methods-audit-server.log
+          exit 1
+
+      - name: Replay all 116 historical scenarios through Chromium
+        run: |
+          PYTHONPATH=. python scripts/replay_methods_116_audit_v5.py \
+            --url http://127.0.0.1:8000/methods_generator/ \
+            --json methods-116-main.json \
+            --markdown methods-116-main.md
+
+      - name: Generate adversarial audit summary
+        run: |
+          python - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          rows = json.loads(Path('methods-116-main.json').read_text())
+          outputs = {r['id']: r.get('output','') for r in rows}
+          browser_errors = [r['id'] for r in rows if r.get('execution_error') or r.get('page_errors') or r.get('console_errors')]
+          low_conf = [(r['id'], t.get('score'), t.get('action'), t.get('resolved')) for r in rows for t in r.get('trace',[]) if t.get('score',1) < .90]
+
+          # This audit intentionally accepts acquisition software preselected by default.
+          # Do not flag the presence of default acquisition software as a defect.
+          checks = {
+              'implementation vocabulary': re.compile(r'\b(runtime-selected|exported DTO|route-specific facts|wheel/turret positions?|position EMP_BF|other microscope)\b', re.I),
+              'placeholder hardware in finished prose': re.compile(r'\b(Unknown Camera|Unknown PMT|Unknown Detector)\b', re.I),
+              'BC43 fluorescence filter on brightfield': re.compile(r'brightfield[\s\S]{0,900}(mCherry emission|Internal Emission Filters)', re.I),
+              'STED module asserted outside STED': re.compile(r'RESOLFT[\s\S]{0,900}Easy3D STED module[^\n]*was used', re.I),
+              'Airyscan module asserted in plain confocal': re.compile(r'Point-scanning confocal[\s\S]{0,900}AiryScan Detector/Module[^\n]*was used', re.I),
+              'EVOS 470nm with Cy5 cube': re.compile(r'470 nm LED[\s\S]{0,700}Cy5/Alexa 647 filter cube', re.I),
+              'duplicate exact review line': None,
+          }
+
+          hits = {k: [] for k in checks}
+          for sid, out in outputs.items():
+              for name, rx in checks.items():
+                  if rx and rx.search(out): hits[name].append(sid)
+              review_lines = [x.strip() for x in out.splitlines() if x.strip().startswith('[PLEASE')]
+              dup = sorted({x for x in review_lines if review_lines.count(x) > 1})
+              if dup: hits['duplicate exact review line'].append((sid, dup))
+
+          focus = ['A03','A08','A09','A10','A14','A15','A24','A27','A34','A38','A51','A53','A60',
+                   'B01','B09','B10','B11','B12','B17','B20','B21','B22','B23','B25',
+                   'C01','C02','C05','C06','C08','C11','C13',
+                   'D01','D04','D06','D08','D09','D13','D14','D15','D16']
+
+          lines = [
+              '# Full Methods Generator audit — current main', '',
+              f'Pinned product commit: `{__import__("os").environ.get("GITHUB_BASE_SHA") or "68efc3041ae8ddf314c1d1c574aed6d7a48bb598"}`',
+              '',
+              '## Execution integrity', '',
+              f'- Historical scenarios: **{len(rows)}**',
+              f'- Browser/execution-error scenarios: **{len(browser_errors)}** ({browser_errors or "none"})',
+              f'- Low-confidence control mappings (<0.90): **{len(low_conf)}**',
+              '- Acquisition software selected by default is **accepted as desired behavior** and is not classified as a defect.',
+              '', '## Automated adversarial pattern scan', ''
+          ]
+          for name, found in hits.items():
+              lines.append(f'- {name}: **{len(found)}** hit(s): `{found}`')
+
+          lines += ['', '## Focus-scenario generated text', '']
+          for sid in focus:
+              out = outputs.get(sid, '')
+              lines += [f'### {sid}', '', '```text', out, '```', '']
+
+          lines += ['', '## All 116 scenario outputs', '', 'See `methods-116-main.md` in this output branch.']
+          Path('methods-main-audit-summary.md').write_text('\n'.join(lines), encoding='utf-8')
+          print('\n'.join(lines[:30]))
+          PY
+
+      - name: Publish audit outputs to a detached results branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OUT_BRANCH="audit-output-main-methods-${GITHUB_SHA::7}"
+          mkdir -p /tmp/audit-output
+          cp methods-116-main.json methods-116-main.md methods-main-audit-summary.md /tmp/audit-output/
+          git reset --hard HEAD
+          git clean -fd
+          git checkout --orphan "$OUT_BRANCH"
+          git rm -rf . >/dev/null 2>&1 || true
+          cp /tmp/audit-output/* .
+          git add methods-116-main.json methods-116-main.md methods-main-audit-summary.md
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'audit output: Methods Generator main 116 scenarios'
+          git push origin "$OUT_BRANCH"
+          echo "RESULT_BRANCH=$OUT_BRANCH" >> "$GITHUB_ENV"
+
+      - name: Comment audit location on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = process.env.RESULT_BRANCH;
+            const body = `Full Methods Generator audit completed on the main-derived product code.\n\nResults branch: \`${branch}\`\n\nAcquisition software selected by default was treated as desired behavior, not a defect.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
