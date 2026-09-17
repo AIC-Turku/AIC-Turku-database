@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Install system dependencies for WeasyPrint
         run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0
@@ -83,3 +85,31 @@ jobs:
 
       - name: Build MkDocs (strict)
         run: mkdocs build --strict
+
+      - name: Replay original 116 Methods Generator scenarios
+        run: |
+          python -m http.server 8000 --directory site >/tmp/methods-audit-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/methods_generator/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          python scripts/replay_methods_116_audit.py \
+            --url http://127.0.0.1:8000/methods_generator/ \
+            --json methods-116-rerun.json \
+            --markdown methods-116-rerun.md
+
+      - name: Upload 116-scenario replay
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: methods-generator-116-rerun
+          path: |
+            methods-116-rerun.json
+            methods-116-rerun.md
+            /tmp/methods-audit-http.log
+          if-no-files-found: warn
+          retention-days: 7
