@@ -143,6 +143,29 @@ class RealCatalogueTestCase(unittest.TestCase):
     def prose(self) -> str:
         return self.page.locator("#output-text").input_value().split("Review before publication")[0]
 
+    def test_one_global_role_serves_both_techniques_that_share_a_beam(self):
+        """The Abberior's two depletion beams serve STED and RESOLFT alike.
+
+        `hardware.sources[].role` is instrument-global by decision: the role says
+        the beam depletes, and the method says by which mechanism. That only holds
+        while no sentence built from the role names a mechanism, so both halves are
+        pinned here - the STED paragraph and the RESOLFT paragraph are built from
+        the same recorded role, and neither may claim stimulated emission.
+        """
+        self.select_instrument("Abberior STED")
+        for method_label in ("STED", "RESOLFT"):
+            with self.subTest(method=method_label):
+                self.page.click("#clear-btn")
+                self.page.check(self.method_input(method_label))
+                self.tick("obj-list", ".")
+                self.tick("light-list", "485")
+                self.tick("light-list", "775")
+                prose = self.add().split("Review before publication")[0]
+                self.assertIn(method_label, prose)
+                self.assertIn("Depletion was provided by", prose)
+                self.assertNotIn("Stimulated-emission", prose)
+                self.assertNotIn("STED depletion", prose)
+
     # --- configurations the record says the instrument cannot produce ----------
 
     def test_a_brightfield_acquisition_is_not_offered_fluorescence_filters(self):

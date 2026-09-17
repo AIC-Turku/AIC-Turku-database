@@ -22,6 +22,8 @@ For each recorded source, what is its role on the light path: excitation, transm
 
 This is the single request that still appears on an otherwise complete Methods draft. Without it the generator cannot say whether a line excited the sample or illuminated it, so it asks the author instead, and the illumination verb differs between instruments for identical physics.
 
+One role per source is the answer, even where the same beam serves more than one technique. The Abberior's 775 nm beam depletes by stimulated emission under STED and drives reversible photoswitching under RESOLFT; both are recorded as `depletion`, because the role states what the beam does on the path and the method states the mechanism. The draft says "Depletion was provided by..." and names the technique in its opening sentence, so a single role cannot make a RESOLFT paragraph claim stimulated emission.
+
 65 across 19 records:
 
 - **3i CSU-W1 Spinning Disk** — led Excelitas X-Cite XLED1

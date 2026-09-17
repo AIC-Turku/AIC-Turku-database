@@ -238,7 +238,14 @@ SECTIONS: list[tuple[str, str, str]] = [
      "alignment?\n\nThis is the single request that still appears on an otherwise "
      "complete Methods draft. Without it the generator cannot say whether a line "
      "excited the sample or illuminated it, so it asks the author instead, and the "
-     "illumination verb differs between instruments for identical physics."),
+     "illumination verb differs between instruments for identical physics."
+     "\n\nOne role per source is the answer, even where the same beam serves more "
+     "than one technique. The Abberior's 775 nm beam depletes by stimulated "
+     "emission under STED and drives reversible photoswitching under RESOLFT; both "
+     "are recorded as `depletion`, because the role states what the beam does on "
+     "the path and the method states the mechanism. The draft says \"Depletion was "
+     "provided by...\" and names the technique in its opening sentence, so a single "
+     "role cannot make a RESOLFT paragraph claim stimulated emission."),
     ("detector_identity", "Detector identity",
      "Which detector or camera is this, by manufacturer and model?\n\nA recorded "
      "`Unknown` is the record saying it does not know, so the Methods draft omits "

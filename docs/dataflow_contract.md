@@ -134,6 +134,19 @@ Rules:
 - `vocab/optical_routes.yaml` `covers` is a compatibility gate consumed by
   validation only. It never supplies a missing mapping, and an axis a term does
   not mention is unknown rather than empty.
+- `hardware.sources[].role` is a property of the source on the light path, and it
+  is instrument-global: one role per source, not one per method or per path. The
+  role records what the beam does — excites, depletes, illuminates — and the method
+  records the mechanism by which it does it. The Abberior's 775 nm beam is
+  `depletion` under both STED and RESOLFT, because it depletes in both; that
+  stimulated emission does the depleting under one and reversible photoswitching
+  under the other is a fact about the technique, not about the laser.
+  Consequently no publication sentence built from a role may name a mechanism:
+  "Depletion was provided by ..." is correct for both, "Stimulated-emission
+  depletion was provided by ..." was correct for neither, and the technique is
+  named by the opening sentence the selected method produces. A path- or
+  method-scoped role was considered and rejected: it would invalidate every role
+  already recorded to fix prose that mechanism-neutral wording fixes on its own.
 - An acquisition is one image set, and it may travel more than one physical light
   path: a brightfield overview and a fluorescence channel of the same field are one
   acquisition with two paths. The Methods Generator therefore offers methods, paths
