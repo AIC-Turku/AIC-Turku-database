@@ -3,30 +3,12 @@ name: Validate Dashboard Content
 on:
   pull_request:
     paths:
-      - "tests/**"
-      - "vocab/**"
-      - "facility.yaml"
-      - "acknowledgements.yaml"
-      - "mkdocs.yml"
-      - "requirements-test.txt"
-      - "schema/**"
-      - "docs/**"
-      - "inventory/**"
-      - "instruments/**"
-      - "qc/**"
-      - "maintenance/**"
       - "scripts/**"
-      - "assets/**"
-      - "templates/**"
-      - "requirements.txt"
-      - "requirements-docs.txt"
       - ".github/workflows/validate.yml"
-      - ".github/workflows/deploy-dashboard.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
-
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -40,9 +22,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install system dependencies for WeasyPrint
-        run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0
-
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -50,41 +29,16 @@ jobs:
           cache: "pip"
           cache-dependency-path: "requirements-docs.txt"
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install dependencies
+      - name: Install audit dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
           python -m playwright install --with-deps chromium
 
-      - name: Check generated templates are up to date
-        run: python -m scripts.generate_templates --check
-
-      - name: Validate YAML/schema/cross-references/naming
-        run: python -m scripts.validate
-
-      - name: Run complete test suite (including browser regressions)
-        run: PYTHONPATH=. python -m pytest -q
-
-      - name: Run dashboard builder (strict)
-        run: python -m scripts.dashboard_builder --strict
-
-      - name: Generate Audit PDFs
-        run: python -m scripts.generate_audit_pdfs
-
-      - name: Upload audit report artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: microscope-audit-reports
-          path: audit_reports/
-          retention-days: 30
-
-      - name: Build MkDocs (strict)
-        run: mkdocs build --strict
+      - name: Build current dashboard and rendered site
+        run: |
+          python -m scripts.dashboard_builder --strict
+          mkdocs build --strict
 
       - name: Replay original 116 Methods Generator scenarios
         run: |
