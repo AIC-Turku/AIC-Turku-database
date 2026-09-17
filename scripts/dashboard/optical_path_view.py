@@ -24,6 +24,7 @@ from scripts.display_labels import (
     resolve_light_source_kind_label,
     resolve_stage_role_label,
 )
+from scripts.lightpath.spectral_ops import is_fluorescence_band_position
 from scripts.validate import Vocabulary
 
 
@@ -740,20 +741,6 @@ def _position_excitation_windows(position: dict[str, Any]) -> list[list[float | 
     return windows
 
 
-# Positions that exist to select a fluorescence band. A route that declares no
-# imaging mode implements only contrast methods - transmitted brightfield, phase
-# contrast, DIC - and none of those select an emission band.
-#
-# Public: scripts/ledger_gaps.py asks the same question about a whole holder
-# (every recorded position selects a fluorescence band) rather than one position
-# on one route, and imports these rather than keeping its own copy - which had
-# already happened once and could silently disagree with this one.
-FLUORESCENCE_PASSBAND_TYPES = {
-    "bandpass", "multiband_bandpass", "longpass", "shortpass", "notch",
-}
-FLUORESCENCE_STAGE_ROLES = {"excitation", "emission", "cube"}
-
-
 def route_declares_imaging(route: dict[str, Any]) -> bool:
     """True when a canonical route declares at least one imaging mode.
 
@@ -783,10 +770,7 @@ def position_serves_route(position: dict[str, Any], stage_role: str, route_decla
     """
     if route_declares_imaging_modes:
         return True
-    component_type = clean_text(position.get("component_type")).lower()
-    if component_type not in FLUORESCENCE_PASSBAND_TYPES:
-        return True
-    return clean_text(stage_role).lower() not in FLUORESCENCE_STAGE_ROLES
+    return not is_fluorescence_band_position(position.get("component_type"), stage_role)
 
 
 def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -1607,6 +1591,4 @@ __all__ = [
     "build_optical_path_view_dto",
     "build_optical_path_dto",
     "hardware_renderables_from_inventory",
-    "FLUORESCENCE_PASSBAND_TYPES",
-    "FLUORESCENCE_STAGE_ROLES",
 ]

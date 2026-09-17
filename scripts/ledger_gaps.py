@@ -22,10 +22,7 @@ from typing import Any
 
 import yaml
 
-from scripts.dashboard.optical_path_view import (
-    FLUORESCENCE_PASSBAND_TYPES,
-    FLUORESCENCE_STAGE_ROLES,
-)
+from scripts.lightpath.spectral_ops import is_fluorescence_band_position
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = REPO_ROOT / "docs" / "ledger_gaps.md"
@@ -100,19 +97,18 @@ def element_ids_on_route(light_path: dict[str, Any]) -> set[str]:
 def holder_cannot_serve_route(element: dict[str, Any]) -> bool:
     """True when every recorded position selects a fluorescence band.
 
-    The same classification `scripts/dashboard/optical_path_view.py` uses to
-    decide which positions the Methods generator may offer on a given route -
-    imported from there rather than redefined, so the two cannot drift apart the
-    way they already had once.
+    The same classification `scripts/lightpath/spectral_ops.py` uses to decide
+    which positions the Methods generator may offer on a given route - imported
+    from there rather than redefined, so the two cannot drift apart the way
+    they already had once.
     """
-    if clean(element.get("stage_role")).lower() not in FLUORESCENCE_STAGE_ROLES:
-        return False
+    stage_role = element.get("stage_role")
     positions = element.get("positions") or {}
     if not isinstance(positions, dict) or not positions:
         return False
     return all(
         isinstance(position, dict)
-        and clean(position.get("component_type")).lower() in FLUORESCENCE_PASSBAND_TYPES
+        and is_fluorescence_band_position(position.get("component_type"), stage_role)
         for position in positions.values()
     )
 
