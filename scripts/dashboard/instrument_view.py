@@ -12,7 +12,11 @@ import re
 from typing import Any, Iterable
 
 from scripts.build_context import clean_text
-from scripts.dashboard.optical_path_view import build_optical_path_view_dto
+from scripts.dashboard.optical_path_view import (
+    build_optical_path_view_dto,
+    position_serves_route,
+    route_declares_imaging,
+)
 from scripts.display_labels import resolve_endpoint_type_label, resolve_vocab_label
 from scripts.validate import Vocabulary
 
@@ -187,68 +191,6 @@ def _indefinite_article(following: str) -> str:
     return "an" if word[:1] in {"a", "e", "i", "o", "u"} else "a"
 
 
-def _inventory_method_extras(item: dict[str, Any]) -> list[str]:
-    extras: list[str] = []
-    source_meta = item.get("source_metadata") if isinstance(item.get("source_metadata"), dict) else {}
-    optical_meta = item.get("optical_element_metadata") if isinstance(item.get("optical_element_metadata"), dict) else {}
-    endpoint_meta = item.get("endpoint_metadata") if isinstance(item.get("endpoint_metadata"), dict) else {}
-
-    wavelength = _format_wavelength_label(source_meta.get("wavelength_nm"))
-    if wavelength:
-        extras.append(f"Wavelength: {wavelength}")
-    tunable_min = _fmt_num(source_meta.get("tunable_min_nm"))
-    tunable_max = _fmt_num(source_meta.get("tunable_max_nm"))
-    if tunable_min and tunable_max:
-        extras.append(f"Tunable range: {tunable_min}-{tunable_max} nm")
-    power = clean_text(source_meta.get("power"))
-    if power:
-        extras.append(f"Power: {power}")
-    timing = clean_text(source_meta.get("timing_mode"))
-    if timing:
-        extras.append(f"Timing mode: {timing}")
-
-    center = _fmt_num(optical_meta.get("center_nm"))
-    width = _fmt_num(optical_meta.get("width_nm"))
-    if center and width:
-        extras.append(f"Band: {center}/{width} nm")
-    elif center:
-        extras.append(f"Center: {center} nm")
-    cut_on = _fmt_num(optical_meta.get("cut_on_nm"))
-    if cut_on:
-        extras.append(f"Cut-on: {cut_on} nm")
-    cut_off = _fmt_num(optical_meta.get("cut_off_nm"))
-    if cut_off:
-        extras.append(f"Cut-off: {cut_off} nm")
-
-    def _band_summary(bands: Any, label: str) -> str:
-        summaries: list[str] = []
-        for band in bands if isinstance(bands, list) else []:
-            if not isinstance(band, dict):
-                continue
-            band_center = _fmt_num(band.get("center_nm"))
-            band_width = _fmt_num(band.get("width_nm"))
-            if band_center and band_width:
-                summaries.append(f"{band_center}/{band_width} nm")
-            elif band_center:
-                summaries.append(f"{band_center} nm")
-        return f"{label}: {', '.join(summaries)}" if summaries else ""
-
-    for label, key in (("Bands", "bands"), ("Transmission", "transmission_bands"), ("Reflection", "reflection_bands")):
-        summary = _band_summary(optical_meta.get(key), label)
-        if summary:
-            extras.append(summary)
-
-    collection_min = _fmt_num(endpoint_meta.get("collection_min_nm") or endpoint_meta.get("min_nm"))
-    collection_max = _fmt_num(endpoint_meta.get("collection_max_nm") or endpoint_meta.get("max_nm"))
-    if collection_min and collection_max:
-        extras.append(f"Collection range: {collection_min}-{collection_max} nm")
-    channel_name = clean_text(endpoint_meta.get("channel_name"))
-    if channel_name:
-        extras.append(f"Channel: {channel_name}")
-
-    return extras
-
-
 def _spec_lines(*pairs: tuple[str, Any]) -> list[str]:
     lines: list[str] = []
     for label, raw_value in pairs:
@@ -263,6 +205,48 @@ def _vocab_display(vocabulary: Vocabulary, vocab_name: str, value: Any) -> str:
     if not raw:
         return ""
     return vocab_label(vocabulary, vocab_name, raw)
+
+
+# The axes of vocab/modules.yaml `tags.provides_capability` the Methods generator
+# has controls for, and the vocabulary each one's terms are named by.
+_MODULE_CAPABILITY_VOCABS = {
+    "imaging_modes": "imaging_modes",
+    "contrast_methods": "contrast_methods",
+    "readouts": "measurement_readouts",
+}
+
+
+def _module_provides_capability(vocabulary: Vocabulary, module_id: str) -> dict[str, list[dict[str, str]]]:
+    """What technique a module implements, as the vocabulary already records it.
+
+    `vocab/modules.yaml` states that an Airyscan module provides `ism` and an
+    easy3D STED module provides `sted`. The Methods generator needs exactly that
+    relationship to ask why a STED module is reported on an acquisition that
+    claims no STED, and reproducing it as a table in browser JavaScript both
+    duplicated the vocabulary and got it wrong: it carried keys no record uses and
+    missed `3d_sim`, which one record does. So it is exported instead of restated.
+    """
+    term = (vocabulary.terms_by_vocab.get("modules") or {}).get(clean_text(module_id))
+    raw = term.tag_value("provides_capability") if term else None
+    if not isinstance(raw, dict):
+        return {}
+    provided: dict[str, list[dict[str, str]]] = {}
+    for axis, vocab_name in _MODULE_CAPABILITY_VOCABS.items():
+        entries = raw.get(axis)
+        if not isinstance(entries, list):
+            continue
+        rows = []
+        for entry in entries:
+            capability_id = clean_text(entry)
+            if not capability_id:
+                continue
+            rows.append({
+                "id": capability_id,
+                "display_label": _vocab_display(vocabulary, vocab_name, capability_id) or capability_id,
+            })
+        if rows:
+            provided[axis] = rows
+    return provided
 
 
 def _objective_display_label(vocabulary: Vocabulary, obj: dict[str, Any]) -> str:
@@ -468,7 +452,11 @@ def build_light_source_dto(vocabulary: Vocabulary, src: dict[str, Any]) -> dict[
             pulse_details.append(f"{repetition_rate_mhz} MHz repetition rate")
         targets_clause = f" targeting {_human_list([f'{item} nm' for item in depletion_targets_nm])}" if depletion_targets_nm else ""
         depletion_descriptor = "pulsed depletion laser" if normalized_timing_mode == "pulsed" else "depletion laser"
-        method_sentence = f"STED depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"STED depletion was delivered by a {depletion_descriptor}{targets_clause}."
+        # "STED depletion" names a mechanism the role does not record. The same
+        # beam depletes by stimulated emission under STED and drives reversible
+        # photoswitching under RESOLFT, so the technique is named by the method
+        # sentence and this one states only what the record says.
+        method_sentence = f"Depletion was delivered by a {depletion_descriptor} ({', '.join(pulse_details)}){targets_clause}." if pulse_details else f"Depletion was delivered by a {depletion_descriptor}{targets_clause}."
     elif normalized_role == "transmitted_illumination":
         method_sentence = f"Transmitted illumination was provided by {display_label}{tech_power_clause}."
     elif normalized_role == "excitation":
@@ -922,6 +910,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             {
                 **copy.deepcopy(module),
                 "display_label": module_name,
+                "provides_capability": _module_provides_capability(vocabulary, module_id),
                 "display_subtitle": provenance,
                 "display_notes": notes,
                 "method_sentence": _append_quarep_specs(
@@ -929,6 +918,14 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                     if module_name else "",
                     manufacturer, model, product_code,
                 ),
+                # Every selected module used to get its own sentence, so confirming
+                # eight of them produced eight parallel clauses. Sharing one frame
+                # lets the Methods draft name them in a single sentence.
+                "publication_template": "The {label} {be} used." if module_name else "",
+                "publication_label": _append_quarep_specs(
+                    module_name if module_name.lower().endswith("module") else f"{module_name} module",
+                    manufacturer, model, product_code,
+                ).rstrip(".") if module_name else "",
                 "review_prompts": _quarep_review_prompts(
                     module_name if module_name.lower().endswith("module") else f"{module_name} module",
                     manufacturer, model, product_code,
@@ -945,12 +942,47 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
     stand = clean_text(canonical_instrument.get("stand_orientation"))
     stand_label = _vocab_display(vocabulary, "stand_orientations", stand) if stand else stand
     display_name = clean_text(inst.get("display_name"))
-    if microscope_identity and stand_label:
-        instrument_reference = f"the {microscope_identity} {stand_label.lower()} microscope"
+    # The record's display name is what distinguishes two instruments the facility
+    # runs; manufacturer and model do not. Two spinning-disk systems share
+    # "3i / Zeiss Marianas CSU-W1 Spinning Disk Confocal", so naming an acquisition
+    # by that string attributes it to whichever of them a reader assumes. The
+    # display name leads and the catalogue identity follows in parentheses, unless
+    # the name already contains it.
+    stand_clause = stand_label.lower() if stand_label else ""
+    if stand_clause in {"other", "unknown", "not applicable", "n/a"}:
+        # A vocabulary placeholder is not a description of the stand. Rendering it
+        # produces "the ONI Nanoimager other microscope".
+        stand_clause = ""
+    if display_name:
+        normalized_name = display_name.lower()
+        # Compared without spacing or punctuation so "MSquared Aurora Airy Beam"
+        # and "M Squared Aurora Airy Beam" are recognised as the same name.
+        def _compact(value: str) -> str:
+            return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+        normalized_identity = microscope_identity.lower()
+        compact_name = _compact(display_name)
+        compact_identity = _compact(microscope_identity)
+        # "the Leica DM IRBE (Leica Microsystems Leica DM IRBE)" repeats the name
+        # to add a vendor. The parenthetical earns its place only when it names a
+        # model the display name does not already carry, in either direction.
+        identity_is_redundant = (
+            not microscope_identity
+            or compact_identity in compact_name
+            or compact_name in compact_identity
+        )
+        identity_clause = "" if identity_is_redundant else f" ({microscope_identity})"
+        if stand_clause and stand_clause not in normalized_name:
+            article = "an" if stand_clause[:1] in {"a", "e", "i", "o", "u"} else "a"
+            instrument_reference = (
+                f"the {display_name}{identity_clause}, {article} {stand_clause} microscope"
+            )
+        else:
+            instrument_reference = f"the {display_name}{identity_clause}"
+    elif microscope_identity and stand_clause:
+        instrument_reference = f"the {microscope_identity} {stand_clause} microscope"
     elif microscope_identity:
         instrument_reference = f"the {microscope_identity} microscope"
-    elif display_name:
-        instrument_reference = f"the {display_name}"
     else:
         instrument_reference = "the microscope"
     base_sentence = f"Images were acquired using the {microscope_identity} {stand_label.lower()} microscope, controlled by {acquisition_software}." if microscope_identity and stand_label else f"Images were acquired using the {microscope_identity} microscope, controlled by {acquisition_software}."
@@ -977,7 +1009,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         if not routes:
             return (
                 True,
-                "[PLEASE VERIFY: no optical route is recorded for this instrument; report each filter, "
+                "[PLEASE VERIFY: no light path is recorded for this instrument; report each filter, "
                 "dichroic, splitter, and modulator (manufacturer + model/catalog number) used for acquisition].",
             )
 
@@ -1060,10 +1092,23 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 if isinstance(selected_execution.get("selected_route_steps"), list)
                 else []
             )
+            route_images = route_declares_imaging(route)
             for step in steps:
                 if not isinstance(step, dict):
                     continue
                 if clean_text(step.get("kind")) != "optical_component":
+                    continue
+                # A holder whose recorded positions cannot serve this route has no
+                # answer to give here. Asking which of the BC43's four fluorescence
+                # emission filters a brightfield acquisition used is a question with
+                # no correct answer; the record itself is what needs correcting, and
+                # docs/ledger_gaps.md asks the facility for it.
+                available = step.get("available_positions")
+                if isinstance(available, list) and available and not any(
+                    position_serves_route(position, clean_text(step.get("stage_role")), route_images)
+                    for position in available
+                    if isinstance(position, dict)
+                ):
                     continue
                 label = clean_text(step.get("display_label") or step.get("component_id")) or "an optical element"
                 selection_state = clean_text(step.get("selection_state")).lower()
@@ -1099,7 +1144,7 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
             return (False, "")
         return (
             True,
-            "[PLEASE VERIFY: no filters, dichroics or splitters are recorded on the selected route; "
+            "[PLEASE VERIFY: no filters, dichroics or splitters are recorded on the light path being reported; "
             "report each optical element (manufacturer + model/catalog number) used for acquisition].",
         )
 
@@ -1180,7 +1225,21 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 for row in hardware_dto["illumination_logic"]
                 if clean_text(row.get("method_sentence"))
             ],
-            "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
+            # A draft that reports a processing package with no recorded version has
+            # to be able to ask for that version by name, the way it already does
+            # for acquisition software, so these are exported structured rather than
+            # as finished sentences.
+            "processing_software": [
+                {
+                    "name": clean_text(row.get("name")),
+                    "version": clean_text(row.get("version")),
+                    "role": clean_text(row.get("role")).lower(),
+                    "method_sentence": row["method_sentence"],
+                }
+                for row in software_rows
+                if clean_text(row.get("method_sentence"))
+                and clean_text(row.get("role")).lower() in {"processing", "analysis"}
+            ],
             "quarep_light_path_recommendation_needed": quarep_recommendation_needed,
             "quarep_light_path_recommendation": quarep_recommendation_text,
             # The same selectors, structured, so a draft can stop asking about the

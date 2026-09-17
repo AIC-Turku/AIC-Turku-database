@@ -5,14 +5,22 @@ terms:
     synonyms: ["excitation_laser"]
   - id: depletion
     label: "Depletion"
-    description: "STED depletion source used for stimulated emission depletion."
+    description: "Source that depletes or switches off fluorescence outside the effective focus. The mechanism belongs to the technique: stimulated emission under STED, reversible photoswitching under RESOLFT."
     synonyms: ["sted_depletion", "sted"]
+    tags:
+      # A depletion beam shapes the spot; it does not produce an image channel, so
+      # an acquisition using one is not asked in what order it was acquired.
+      forms_imaging_channel: false
   - id: activation
     label: "Activation"
     description: "Photoactivation or photoswitching source."
+    tags:
+      forms_imaging_channel: false
   - id: alignment
     label: "Alignment"
     description: "Alignment or service beam not used as primary excitation/depletion."
+    tags:
+      forms_imaging_channel: false
   - id: transmitted_illumination
     label: "Transmitted Illumination"
     description: "Diascopic or transmitted-light illumination source used for brightfield, phase contrast, darkfield, or DIC."

@@ -31,7 +31,7 @@ It is a planning and visualization tool, not a calibrated photon-budget model. I
 
 ### Methods generator
 
-The methods generator builds a reviewable draft from the microscope inventory. Users state the imaging method they used, confirm the physical light path the record associates with it, then select the hardware and acquisition actions on that path before adding acquisition-specific settings for publication.
+The methods generator builds a reviewable draft from the microscope inventory. Users state the imaging methods they used, confirm the physical light paths the record associates with them, then select the hardware and acquisition actions on those paths before adding acquisition-specific settings for publication.
 
 The generated text is intended as a reporting aid and is structured around QUAREP-LiMi reporting recommendations. It does not reconstruct historical configurations or replace acquisition metadata.
 
@@ -55,7 +55,8 @@ The experiment-planning page provides a structured inventory export that can be 
 - `scripts/planning_eval.py` — offline grounding check for saved planning answers.
 - `scripts/templates/*` — public page templates and browser runtime.
 - `docs/dataflow_contract.md` — production data-flow and module contract.
-- `docs/light_path_v2_migration.md` — canonical light-path authoring model.
+- `docs/ledger_gaps.md` — generated list of the facts the instrument records do not yet hold, and the questions they raise for facility staff.
+- `docs/light_path_model.md` — canonical light-path model: generated field, validation, and DTO reference plus the authored semantics.
 - `docs/objective_pool.md` — objective catalogue source boundaries and maintenance notes.
 - `docs/portability.md` — what another facility must edit to reuse this project.
 - `docs/planning_grounding.md` — what the planning export establishes, and how to check an assistant's answer.
@@ -79,20 +80,17 @@ Key rules:
 
 ## Canonical light-path model
 
-The current authoring structure is documented in `docs/light_path_v2_migration.md` and uses:
-
-- `hardware.sources`
-- `hardware.optical_path_elements`
-- `hardware.endpoints`
-- `light_paths[]`
-  - `id`
-  - `name`
-  - `illumination_sequence[]`
-  - `detection_sequence[]`
+Light paths are authored as a hardware inventory — `hardware.sources`,
+`hardware.optical_path_elements`, `hardware.endpoints` — plus ordered routes over
+it in `light_paths[]`. The full field reference is generated from the schema into
+`docs/light_path_model.md`; it is not repeated here, because a second copy is a
+copy that goes stale.
 
 Ordered route sequences are the primary topology source. Branches, splitters, and selectors remain explicit through the YAML, validation, DTO, and browser layers.
 
-For multiband dichroics/polychroics, explicit `transmission_bands` and/or `reflection_bands` are preferred. See `docs/dichroic_migration_note.md` for the compatibility rules around legacy cutoff representations.
+For multiband dichroics and polychroics, describe the windows explicitly with `transmission_bands` and, where known, `reflection_bands`; each band is a `{center_nm, width_nm}` object. Explicit bands are authoritative wherever they are present.
+
+Legacy encodings still parse. A single-edge dichroic remains valid through `cut_on_nm` or a single-value `cutoffs_nm`. A multiband dichroic given only `cutoffs_nm` is simulated by alternating pass/stop bands at each cutoff, which is an approximation: real multiband transmission is not a square wave between edges, so cutoff-only multiband records should be replaced with explicit bands rather than relied on.
 
 ## Virtual Microscope model
 
@@ -119,11 +117,16 @@ It follows the order an acquisition actually has:
 
 The imaging method is asked first, because it is the thing a user reliably knows.
 The instrument record states which light path implements each method, so choosing
-a method reveals only the compatible path (or, where several are recorded, asks
-which one was used). Route-specific sources, filters, splitters and detectors stay
-hidden until that decision is made, and changing the method or the path clears
-route-specific selections so stale hardware cannot follow into the next entry.
-One acquisition travels one path.
+a method reveals only the paths compatible with it, and route-specific sources,
+filters, splitters and detectors stay hidden until that decision is made.
+
+Methods are multi-select and additive: an acquisition is one image set and may
+travel more than one path, so a brightfield overview and a fluorescence channel of
+the same field are one entry with two paths, each described in its own sentence.
+Acquisition state is scoped to the acquisition — starting another acquisition,
+naming a different acquisition reference, or changing the method clears the
+hardware selections, the confirmed actions and any reviewed runtime plan, so
+nothing follows into the next entry unstated.
 
 It can:
 
@@ -135,7 +138,7 @@ It can:
 
 A method is never inferred from a route family: `confocal_point` does not imply
 STED, and `widefield_fluorescence` does not imply TIRF. See
-`docs/light_path_v2_migration.md` for the authoring rules and the validation
+`docs/light_path_model.md` for the authoring rules and the validation
 codes that enforce them.
 
 The user remains responsible for checking acquisition-specific settings and placeholders before publication.

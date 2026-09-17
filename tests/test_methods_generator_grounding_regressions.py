@@ -71,7 +71,11 @@ class LightSourceRoleGrounding(unittest.TestCase):
 
     def test_depletion_source_is_never_described_as_excitation(self):
         card = self._sentence_for({"kind": "laser", "wavelength_nm": 775, "role": "depletion"})
-        self.assertIn("Stimulated-emission depletion", card["method_sentence"])
+        self.assertIn("Depletion was provided", card["method_sentence"])
+        # The role says the beam depletes. Which mechanism does the depleting is
+        # decided by the method - stimulated emission under STED, reversible
+        # photoswitching under RESOLFT - so this sentence must not name one.
+        self.assertNotIn("Stimulated-emission", card["method_sentence"])
         self.assertNotIn("Excitation", card["method_sentence"])
 
     def test_transmitted_illumination_is_never_described_as_excitation(self):
@@ -433,9 +437,9 @@ class BrowserGroundingRegressions(unittest.TestCase):
         instrument["hardware"]["optical_path"]["hardware_inventory_renderables"].append(
             {"id": "sted", "display_label": "775 nm depletion laser", "inventory_class": "light_source",
              "publication_label": "775 nm laser",
-             "publication_template": "Stimulated-emission depletion was provided by {label}.",
+             "publication_template": "Depletion was provided by {label}.",
              "source_metadata": {"kind": "laser", "role": "depletion", "wavelength_nm": 775},
-             "method_sentence": "Stimulated-emission depletion was provided by 775 nm laser."})
+             "method_sentence": "Depletion was provided by 775 nm laser."})
         self.open_methods(instrument, storage={
             "scope_id": "scope-reg", "route": "epi", "validSelection": True,
             "sources": [{"id": "sted", "display_label": "775 nm depletion laser",
@@ -455,7 +459,10 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.check("#runtime-confirm")
         self.page.click("#add-btn")
         prose = self._prose()
-        self.assertIn("Excitation was provided by 488 nm laser.", prose)
+        # "a 488 nm laser": a runtime-confirmed source is a light source like any
+        # other, so it takes the same article a ticked one does. It used to lose the
+        # article because the runtime fact dropped the component's inventory class.
+        self.assertIn("Excitation was provided by a 488 nm laser.", prose)
         self.assertNotIn("594", prose)
         self.assertIn("which the instrument record gives as a fixed 488 nm source", self.output())
 
@@ -617,19 +624,23 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.click("#add-btn")
         self.assertIn("sequentially or simultaneously", self.output())
 
-    def test_one_acquisition_cannot_select_several_routes(self):
+    def test_several_light_paths_in_one_acquisition_are_reported_separately(self):
+        """Two paths in one entry is a real experiment - brightfield beside
+        fluorescence - so it is allowed, described per path, and confirmed when only
+        one method explains it."""
         instrument = _instrument()
         instrument["hardware"]["optical_path"]["authoritative_route_contract"]["routes"].append(
             {"id": "confocal", "display_label": "Point-scanning confocal", "relevant_hardware": {}})
         self.open_methods(instrument)
         self.page.check("#route-0")
-        expect(self.page.locator("#route-0")).to_be_checked()
         self.page.check("#route-1")
-        expect(self.page.locator("#route-0")).not_to_be_checked()
+        expect(self.page.locator("#route-0")).to_be_checked()
         expect(self.page.locator("#route-1")).to_be_checked()
         self.page.click("#add-btn")
-        self.assertNotIn("optical routes are reported for a single acquisition", self.output())
-        self.assertIn("Point-scanning confocal route", self.output())
+        output = self.output()
+        self.assertIn("light paths are reported for a single acquisition", output)
+        # Routing vocabulary never reaches the finished prose.
+        self.assertNotIn(" route", output.split("Review before publication")[0])
 
     def test_changing_the_selection_after_confirming_says_the_plan_was_dropped(self):
         self.open_methods(storage={
@@ -666,8 +677,9 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.check("#route-0")
         self.page.click("#add-btn")
         output = self.output()
-        self.assertIn("Filter Turret (Epifluorescence route)", output)
+        self.assertIn("which position of the Filter Turret was used", output)
         self.assertNotIn("Spectral module", output)
+        self.assertNotIn("Epifluorescence route", output)
 
     def test_technique_specific_settings_are_requested(self):
         instrument = _instrument()
@@ -719,7 +731,8 @@ class BrowserGroundingRegressions(unittest.TestCase):
         self.page.check("#filterposition-0-0")
         self.page.click("#add-btn")
         output = self.output()
-        self.assertIn("which position of Emission Wheel (Epifluorescence route)", output)
+        self.assertIn("which position of the Emission Wheel was used", output)
+        self.assertNotIn("Epifluorescence route", output)
         self.assertNotIn("Filter Turret (Epifluorescence route)", output)
 
     def test_a_position_with_incomplete_bands_is_flagged(self):

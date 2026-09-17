@@ -106,6 +106,21 @@ Rules:
 3. Ensure canonical parser emits route/component in `lightpath_dto`.
 4. Downstream consumers carry IDs/order from canonical DTOs automatically.
 5. Add/extend vocab entries for labels; do not add hardcoded ID maps in downstream code.
+6. A scientific relationship between two vocabularies is authored as a tag on the
+   term that owns it and exported through the DTO, never restated downstream. The
+   three the Methods generator needs are:
+   - `vocab/modules.yaml` `tags.provides_capability` — which technique a module
+     implements, exported on `modules[].provides_capability`;
+   - `vocab/imaging_modes.yaml` `tags.requires_source_role` — the source role a
+     technique cannot be performed without, exported on
+     `route_identity.imaging_modes[].requires_source_role`;
+   - `vocab/light_source_roles.yaml` `tags.forms_imaging_channel` — whether a
+     source in that role produces an image channel, exported on the source's
+     `forms_imaging_channel`.
+   Each of these was once a table in browser JavaScript, and each had drifted from
+   the vocabulary it copied: one carried module ids no record uses and missed one
+   that a record does, another required a depletion beam for STED but not for
+   RESOLFT, which use the same beam.
 
 ## Legacy and compatibility policy
 
@@ -134,9 +149,38 @@ Rules:
 - `vocab/optical_routes.yaml` `covers` is a compatibility gate consumed by
   validation only. It never supplies a missing mapping, and an axis a term does
   not mention is unknown rather than empty.
-- One acquisition travels one physical light path. The Methods Generator
-  enforces this with single-choice controls and clears route-specific selections
-  when the method or path changes.
+- `hardware.sources[].role` is a property of the source on the light path, and it
+  is instrument-global: one role per source, not one per method or per path. The
+  role records what the beam does — excites, depletes, illuminates — and the method
+  records the mechanism by which it does it. The Abberior's 775 nm beam is
+  `depletion` under both STED and RESOLFT, because it depletes in both; that
+  stimulated emission does the depleting under one and reversible photoswitching
+  under the other is a fact about the technique, not about the laser.
+  Consequently no publication sentence built from a role may name a mechanism:
+  "Depletion was provided by ..." is correct for both, "Stimulated-emission
+  depletion was provided by ..." was correct for neither, and the technique is
+  named by the opening sentence the selected method produces. A path- or
+  method-scoped role was considered and rejected: it would invalidate every role
+  already recorded to fix prose that mechanism-neutral wording fixes on its own.
+- An acquisition is one image set, and it may travel more than one physical light
+  path: a brightfield overview and a fluorescence channel of the same field are one
+  acquisition with two paths. The Methods Generator therefore offers methods, paths
+  and filter positions as multi-select controls, describes each path in its own
+  sentence rather than merging them, and asks the author to confirm a second path
+  that no selected method explains.
+- A configuration the record says the instrument cannot produce is questioned,
+  never asserted and never silently allowed. The checks are computed from recorded
+  values only: a filter position is not offered on a route whose recorded positions
+  could not serve it, a source whose recorded emission cannot pass a selected
+  filter's recorded excitation window is queried, a splitter recorded as feeding
+  its branches at once is queried when fewer detectors are reported than it feeds,
+  and a specialist module is withdrawn when the technique its vocabulary record
+  says it provides is no longer selected. None of them decides on the author's
+  behalf; each asks, or declines to offer an answer that cannot be right.
+- Acquisition state is scoped to the acquisition. Starting another acquisition,
+  naming a different acquisition reference, or changing the imaging method clears
+  the hardware selections, the confirmed actions and any reviewed runtime plan, so
+  nothing carries into the next entry unstated.
 - Compatibility entrypoints are retained for CI/API compatibility, not implementation
   ownership.
 

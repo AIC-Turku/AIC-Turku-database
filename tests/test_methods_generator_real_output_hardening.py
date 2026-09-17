@@ -61,12 +61,6 @@ def _instrument(*, runtime=None):
         "methods_generation": {"is_blocked": False, "blockers": []},
         "methods": {
             "base_sentence": "Images were acquired using the Real Output Scope.",
-            # This is intentionally bad legacy/exported prose. Production UI should
-            # rebuild the software option from the structured software record above.
-            "acquisition_software_sentence": (
-                "Instrument control and image acquisition were performed using "
-                "ControlSuite (vunknown). [PLEASE SPECIFY: acquisition software version]"
-            ),
             "specimen_preparation_recommendation": "[PLEASE SPECIFY: specimen preparation].",
             "acquisition_settings_recommendation": (
                 "[PLEASE SPECIFY: acquisition software/version (if applicable), exposure "
@@ -163,6 +157,9 @@ def test_selected_hardware_keeps_review_prompts_and_software_placeholders_out_of
     assert "A magnification changer was used." in prose
     assert "STED beam shaping used Abberior easy3D SLM." in prose
     assert "Adaptive illumination control was used." in prose
+    # Built from the structured software row above, which records the version as
+    # "unknown": a placeholder is not a version, so it is asked for rather than
+    # printed as "ControlSuite (vunknown)".
     assert "ControlSuite." in prose
     assert "vunknown" not in prose
     assert "[PLEASE SPECIFY" not in prose
@@ -173,7 +170,9 @@ def test_selected_hardware_keeps_review_prompts_and_software_placeholders_out_of
         "magnification changer setting",
         "which phase mask profile was applied",
         "adaptive illumination setting",
-        "acquisition software version for ControlSuite",
+        # Version requests are grouped into one line, so several confirmed products
+        # do not each add a near-identical request.
+        "the version of ControlSuite",
     ):
         assert prompt in output
 
@@ -303,3 +302,67 @@ def test_duplicate_position_labels_are_review_only_without_a_stable_key():
     assert "catalogue no. A1" not in prose
     assert "catalogue no. B1" not in prose
     assert "more than one recorded position has that label" in output
+
+
+def _with_camera(runtime):
+    """The instrument above, plus a recorded camera a runtime plan can name."""
+    camera = {
+        "id": "cam1",
+        "display_label": "Test Camera",
+        "inventory_class": "endpoint",
+        "publication_label": "Test Camera",
+        "publication_template": "Images were recorded using {label}.",
+        "method_sentence": "Images were recorded using Test Camera.",
+    }
+    instrument = _instrument(runtime=runtime)
+    optical_path = instrument["hardware"]["optical_path"]
+    optical_path["hardware_inventory_renderables"].append(camera)
+    optical_path["authoritative_route_contract"]["routes"][0]["relevant_hardware"]["endpoints"] = [camera]
+    return instrument
+
+
+def _confirm_runtime_and_add():
+    return _select_scope() + """
+      document.getElementById('runtime-confirm').checked = true;
+      document.getElementById('add-btn').listeners.click();
+    """
+
+
+def test_a_runtime_detector_satisfies_the_detector_the_entry_must_name():
+    """A confirmed plan that names the camera has named the camera.
+
+    The completeness check used to read only the tick boxes, so the same draft
+    said "Images were recorded using Test Camera" and then asked the author which
+    detector had been used.
+    """
+    output = _run(
+        _with_camera({
+            "scope_id": "scope-real-output", "route": "widefield", "validSelection": True,
+            "detectors": [{"id": "cam1", "display_label": "Test Camera"}],
+        }),
+        _confirm_runtime_and_add(),
+    )
+
+    assert "Images were recorded using Test Camera" in output
+    assert "[PLEASE SPECIFY: the detector" not in output
+
+
+def test_a_runtime_optic_alone_does_not_satisfy_the_illumination():
+    """A filter is not a light source.
+
+    Any runtime component used to count as illumination, so a plan naming only a
+    filter turret produced a draft that stated no illumination at all and did not
+    ask for one.
+    """
+    output = _run(
+        _with_camera({
+            "scope_id": "scope-real-output", "route": "widefield", "validSelection": True,
+            "selected_route_steps": [{
+                "kind": "optical_component", "component_id": "turret",
+                "display_label": "Filter Turret", "position_key": "Pos_1",
+            }],
+        }),
+        _confirm_runtime_and_add(),
+    )
+
+    assert "[PLEASE SPECIFY: the illumination" in output

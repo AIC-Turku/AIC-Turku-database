@@ -1,6 +1,5 @@
-// MONOLITH — pending extraction. See docs/archive/monolith_inventory.md and
-// docs/refactor_extraction_plan.md. New business logic should go in
-// assets/javascripts/virtual_microscope/ submodules, not here.
+// Large single-file module. Prefer adding new behaviour to a focused module
+// rather than growing this one.
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) {
