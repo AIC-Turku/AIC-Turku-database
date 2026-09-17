@@ -31,7 +31,6 @@ YAML instrument specs
 
 | Module | Role |
 |---|---|
-| `scripts/light_path_parser.py` | compatibility shim only |
 | `scripts/lightpath/model.py` | constants and primitive helpers |
 | `scripts/lightpath/parse_canonical.py` | canonical v2 parsing and strict/non-strict canonicalizers |
 | `scripts/lightpath/legacy_import.py` | legacy import adapter (migration/audit tooling only) |
@@ -64,7 +63,7 @@ YAML instrument specs
 
 - Dashboard display DTO: `inst["dto"]`
 - Optical-path view DTO: `build_optical_path_view_dto(...)`
-- Methods export view DTO: `methods_view_dto`
+- Methods export view DTO: `build_methods_generator_instrument_export(...)`'s return value
 - LLM derived summaries: `llm_context.derived_summaries`
 
 ## Downstream product inputs
@@ -93,7 +92,7 @@ Rules:
 ## Prohibited patterns (audit)
 
 - `yaml.safe_load` in validator/loaders/import scripts: **allowed** (canonical parsing).
-- `legacy` references in `light_path_parser.py`, `validate.py`, `migrate_light_paths.py`, `full_audit.py`: **allowed** (legacy compatibility/audit only).
+- `legacy` references in `validate.py`, `migrate_light_paths.py`, `full_audit.py`, and `scripts/lightpath/legacy_import.py`: **allowed** (legacy compatibility/audit only).
 - `fallback` in display labels and simulator-only role helpers: **allowed** (non-authoritative, display-only).
 - VM export from dashboard DTO: **forbidden** (VM export uses canonical lightpath DTO).
 - LLM/methods export from VM payload: **forbidden** (not present in production builders).
@@ -133,11 +132,29 @@ Rules:
 - VM runtime JS contains compatibility logic for broader payload tolerance; this is
   non-authoritative and must not be extended as a canonical data path.
 
+## Known limitations
+
+- `lightpath_dto.projections.llm.authoritative_route_contract` (populated in
+  `build_context.py`, consumed by both LLM and Methods export) is documented as the
+  canonical/neutral home for route optical facts, but is currently populated by
+  copying `dashboard_view_dto["hardware"]["optical_path"]["authoritative_route_contract"]`
+  after the dashboard view is built - it is not yet computed independently from
+  `canonical_lightpath_dto`. Methods export reading from this projection instead of
+  `inst["dto"]` directly does stop it from depending on dashboard-only mutations made
+  after this point, and matches the location LLM export already uses, but route facts
+  are still transitively dashboard-view-derived in production. Closing this fully means
+  building this projection directly from canonical DTOs before `dashboard_view_dto`
+  exists, with dashboard/Methods/LLM as sibling consumers of it - the target
+  architecture described by the PR #462 follow-up review, not yet implemented.
+
 ## Critical contract notes
 
 - LLM inventory records must carry canonical instrument and canonical lightpath context,
   not only dashboard DTO.
-- Methods export must expose frontend-consumed top-level keys and `methods_view_dto`.
+- Methods export exposes exactly one set of top-level keys consumed by
+  `methods_generator_app.js` and by the audit/grounding test suite (objectives,
+  detectors, light_sources, software, routes, diagnostics, etc.) - no nested
+  `methods_view_dto` compatibility copy.
 - VM branch auto-defaults are derived runtime initial state and must be marked
   non-authoritative.
 - Canonical `light_paths` remain topology truth.
@@ -181,6 +198,18 @@ Rules:
   naming a different acquisition reference, or changing the imaging method clears
   the hardware selections, the confirmed actions and any reviewed runtime plan, so
   nothing carries into the next entry unstated.
+- A fact confirmed by checkbox is a real choice, never a repeat of one already
+  made. A recorded light path is asked as a visible question only when the
+  selected method is genuinely recorded on two or more physically different
+  paths with different hardware - in the current catalogue this never happens,
+  so the control stays hidden and the path is confirmed silently, the way a
+  method recorded on exactly one path always was. A record with no
+  imaging-method control at all still asks explicitly, because the path is then
+  the only thing left to state. The same rule applies to acquisition software:
+  one recorded row could not have produced an image any other way and is
+  reported without confirmation; two or more rows - several LAS X modules, a
+  camera suite alongside a separate control package - is a real question about
+  which one this acquisition used, and stays a checkbox.
 - Compatibility entrypoints are retained for CI/API compatibility, not implementation
   ownership.
 

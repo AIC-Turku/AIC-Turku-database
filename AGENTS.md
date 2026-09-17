@@ -90,10 +90,6 @@ change that adds to either list should say why.
   - `node --check scripts/templates/virtual_microscope_app.js`
 - If full pytest is slow, run the narrowest relevant tests and report what was run.
 
-## Change Scope Guardrail
-
-Do not change runtime behavior in this step except adding AGENTS.md.
-
 ## Microscope inventory reviews
 
 - Read complete instrument YAML files, including retired records, not just generated pages or audit totals. Keep synthetic fixtures separate from staff questions.

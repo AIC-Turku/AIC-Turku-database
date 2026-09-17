@@ -61,50 +61,100 @@ document.addEventListener("DOMContentLoaded", async () => {
         return Number.isFinite(numeric) ? numeric : null;
     }
 
+    // Values that record the absence of a fact rather than a fact, shared by every
+    // software field this page reads: a name, a version, or an acquisition role.
+    const PLACEHOLDER_VALUES = new Set([
+        "unknown", "n/a", "na", "none", "not applicable", "tbd", "-", "--", "?",
+    ]);
+
+    /**
+     * The instrument's recorded rows with role "acquisition" and a real name.
+     *
+     * Not every recorded name is a usable fact: a placeholder name records that
+     * the software was never identified, which is a question for staff, not
+     * something to publish as if it were.
+     */
+    function acquisitionSoftwareRows(dto) {
+        return (Array.isArray(dto?.software) ? dto.software : []).filter((row) => {
+            if (!row || typeof row !== "object") return false;
+            const name = cleanText(row.name);
+            return cleanText(row.role).toLowerCase() === "acquisition"
+                && name
+                && !PLACEHOLDER_VALUES.has(name.toLowerCase());
+        });
+    }
+
+    /** Publication label and open review prompt for one recorded software row. */
+    function softwareFact(software) {
+        const name = cleanText(software.name);
+        const rawVersion = cleanText(software.version);
+        const version = rawVersion && !PLACEHOLDER_VALUES.has(rawVersion.toLowerCase())
+            ? rawVersion
+            : "";
+        const numericVersion = /^\d+(?:[.\-]\d+)*(?:\s|$)/.test(version);
+        const label = version
+            ? `${name} (${numericVersion ? `v${version}` : `version ${version}`})`
+            : name;
+        return { name, label, missingVersion: !version };
+    }
+
+    /**
+     * The one recorded acquisition-software fact, when confirming it would be
+     * asking a question with only one possible answer.
+     *
+     * A stand with exactly one recorded acquisition-software row could not have
+     * produced an image any other way, so there is nothing to confirm: this is
+     * the same "known unambiguous" as an acquisition's recorded objective or its
+     * sole recorded light path, not a per-acquisition choice like whether the
+     * environmental chamber was running. With two or more rows - several LAS X
+     * modules, a camera suite alongside a separate control package - which of
+     * them this acquisition actually used is a real question, and that case is
+     * still asked as a checkbox in "Confirmed acquisition actions".
+     */
+    function soleAcquisitionSoftwareFact(dto) {
+        const rows = acquisitionSoftwareRows(dto);
+        if (rows.length !== 1) return null;
+        const { name, label, missingVersion } = softwareFact(rows[0]);
+        return {
+            sentence: `Instrument control and image acquisition were performed using ${label}.`,
+            prompt: missingVersion ? `[PLEASE SPECIFY: the version of ${name}]` : "",
+        };
+    }
+
     function confirmedActionOptions(dto) {
         const methods = dto.methods || {};
         const options = [];
+        const placeholderValues = PLACEHOLDER_VALUES;
 
         // Acquisition software is a canonical structured record. Build its
         // confirmable sentence from that record instead of reusing a Methods string
         // that may contain a placeholder such as "vunknown" or an embedded
         // [PLEASE SPECIFY] request. The request stays structured and therefore lands
         // in the review block only when the user confirms that software was used.
-        const placeholderValues = new Set([
-            "unknown", "n/a", "na", "none", "not applicable", "tbd", "-", "--", "?",
-        ]);
-        const acquisitionSoftware = (Array.isArray(dto?.software) ? dto.software : []).filter((row) => {
-            if (!row || typeof row !== "object") return false;
-            const name = cleanText(row.name);
-            return cleanText(row.role).toLowerCase() === "acquisition"
-                && name
-                && !placeholderValues.has(name.toLowerCase());
-        });
-        acquisitionSoftware.forEach((software, softwareIndex) => {
-            const name = cleanText(software.name);
-            const rawVersion = cleanText(software.version);
-            const version = rawVersion && !placeholderValues.has(rawVersion.toLowerCase())
-                ? rawVersion
-                : "";
-            const numericVersion = /^\d+(?:[.\-]\d+)*(?:\s|$)/.test(version);
-            const softwareLabel = version
-                ? `${name} (${numericVersion ? `v${version}` : `version ${version}`})`
-                : name;
-            const sentence = `Instrument control and image acquisition were performed using ${softwareLabel}.`;
-            options.push({
-                id: `action-acquisition-software-${softwareIndex}`,
-                display_label: sentence,
-                method_sentence: sentence,
-                // Confirming five LAS X modules used to produce five sentences each
-                // claiming to have performed the acquisition. Sharing one frame lets
-                // them merge into the single sentence an author would write.
-                publication_template: "Instrument control and image acquisition were performed using {label}.",
-                publication_label: softwareLabel,
-                review_prompts: version
-                    ? []
-                    : [`[PLEASE SPECIFY: acquisition software version for ${name}]`],
+        //
+        // A single recorded row is reported automatically instead - see
+        // soleAcquisitionSoftwareFact - so it is offered here only when there is a
+        // real choice among two or more.
+        const acquisitionSoftware = acquisitionSoftwareRows(dto);
+        if (acquisitionSoftware.length > 1) {
+            acquisitionSoftware.forEach((software, softwareIndex) => {
+                const { name, label: softwareLabel, missingVersion } = softwareFact(software);
+                const sentence = `Instrument control and image acquisition were performed using ${softwareLabel}.`;
+                options.push({
+                    id: `action-acquisition-software-${softwareIndex}`,
+                    display_label: sentence,
+                    method_sentence: sentence,
+                    // Confirming five LAS X modules used to produce five sentences each
+                    // claiming to have performed the acquisition. Sharing one frame lets
+                    // them merge into the single sentence an author would write.
+                    publication_template: "Instrument control and image acquisition were performed using {label}.",
+                    publication_label: softwareLabel,
+                    review_prompts: missingVersion
+                        ? [`[PLEASE SPECIFY: acquisition software version for ${name}]`]
+                        : [],
+                });
             });
-        });
+        }
         const otherSentences = dedupeSentences([
             methods.environment_sentence,
             ...(methods.stage_sentences || []),
@@ -508,13 +558,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /**
-     * Bind canonical route checkboxes (with nested readout checkboxes) from
-     * authoritative_route_contract.routes into the given container.
+     * Build one checkbox per recorded route, always - `applyMethodAvailability`
+     * decides afterwards which of these wrappers a user ever sees.
      *
-     * Route checkboxes use prefix "route-" and value = route.id.
-     * Readout checkboxes use prefix "readout-{routeIndex}-" and
-     * value = "{routeId}:{readoutId}", with dataset.routeId and
-     * dataset.routeDisplayLabel for sentence generation.
+     * Route checkboxes use prefix "route-" and value = route.id; see
+     * bindReadouts for the nested readout checkboxes this used to also build.
+     *
+     * Most routes need no user decision at all: a method recorded on exactly one
+     * path has nothing to choose, and the path is confirmed by hiding this
+     * checkbox already checked rather than by asking a question with one answer.
+     * A route stays visible only when a currently checked method is genuinely
+     * recorded on more than one path with different hardware, or when the record
+     * offers no method control at all and the path is the only thing to state.
      *
      * Returns the number of route checkboxes rendered.
      */
@@ -534,7 +589,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             // publication prose, so it is not offered as a choice at all.
             if (!routeId || !routeLabel) return;
 
-            // Route checkbox
             const routeWrapper = document.createElement("div");
             routeWrapper.style.marginBottom = "4px";
 
@@ -569,8 +623,36 @@ document.addEventListener("DOMContentLoaded", async () => {
             routeWrapper.appendChild(routeLabelEl);
             container.appendChild(routeWrapper);
             routeCheckboxCount++;
+        });
 
-            // Nested readout checkboxes
+        return routeCheckboxCount;
+    }
+
+    /**
+     * Build one checkbox per recorded readout, nested under nothing visible.
+     *
+     * Readout checkboxes use prefix "readout-{routeIndex}-" and
+     * value = "{routeId}:{readoutId}", with dataset.routeId and
+     * dataset.routeDisplayLabel for sentence generation.
+     *
+     * A readout is a real, separate fact - FLIM, FCS, spectral imaging - that the
+     * imaging method does not already state, so it keeps its own section and its
+     * own checkbox regardless of whether the path that records it ever shows a
+     * checkbox of its own.
+     */
+    function bindReadouts(dto) {
+        const container = document.getElementById("readout-list");
+        container.innerHTML = "";
+        if (Array.isArray(container.children)) container.children = [];
+
+        const routeViews = routeViewsForInstrument(dto);
+        let readoutCheckboxCount = 0;
+
+        routeViews.forEach((route, routeIdx) => {
+            const routeId = cleanText(route.id);
+            const routeLabel = cleanText(route.display_label);
+            if (!routeId || !routeLabel) return;
+
             const routeIdentity = route.route_identity && typeof route.route_identity === "object"
                 ? route.route_identity
                 : {};
@@ -588,7 +670,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 const readoutWrapper = document.createElement("div");
                 readoutWrapper.style.marginBottom = "2px";
-                readoutWrapper.style.marginLeft = "20px";
 
                 const readoutCheckbox = document.createElement("input");
                 readoutCheckbox.type = "checkbox";
@@ -613,10 +694,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 readoutWrapper.appendChild(readoutCheckbox);
                 readoutWrapper.appendChild(readoutLabelEl);
                 container.appendChild(readoutWrapper);
+                readoutCheckboxCount++;
             });
         });
 
-        return routeCheckboxCount;
+        return readoutCheckboxCount;
     }
 
     function methodOptionsForInstrument(dto) {
@@ -705,47 +787,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
 
-    function shouldUseLegacyModalities(dto) {
-        const modalities = Array.isArray(dto?.modalities) ? dto.modalities : [];
-        if (!modalities.length) return false;
-        const routeViews = routeViewsForInstrument(dto);
-        const hasRoutes = routeViews.length > 0;
-        if (dto?.retired) return !hasRoutes;
-        const caps = dto?.capabilities && typeof dto.capabilities === "object" ? dto.capabilities : {};
-        const hasCapabilities = Object.values(caps).some(value => Array.isArray(value) && value.length > 0);
-        const hasExplicitRouteMethods = routeViews.some(route => {
-            const identity = route?.route_identity && typeof route.route_identity === "object"
-                ? route.route_identity : {};
-            return (Array.isArray(identity.imaging_modes) && identity.imaging_modes.length > 0)
-                || (Array.isArray(identity.contrast_methods) && identity.contrast_methods.length > 0);
-        });
-        return !hasCapabilities && !hasExplicitRouteMethods;
-    }
-
     function updateHardwareVisibility(dto, preserveSelections = true) {
         const retained = Object.fromEntries(["light", "det", "filter", "splitter"].map(prefix =>
             [prefix, new Set(preserveSelections ? getCheckedIds(prefix) : [])]
         ));
         const retainedPositions = new Set(preserveSelections ? getCheckedIds("filterposition") : []);
-        // Route selection is authoritative; fall back to legacy modality filter only
-        // when no route checkboxes are checked.
         const checkedRouteIds = new Set(getCheckedIds("route"));
-        const checkedModalityIds = checkedRouteIds.size === 0
-            ? new Set(getCheckedIds("modality"))
-            : new Set();
         const routeViews = routeViewsForInstrument(dto);
 
-        // Collect hardware IDs from routes that match the checked routes/modalities.
+        // Collect hardware IDs from routes that match the checked routes.
         // When nothing is checked, include hardware from ALL routes.
         const matchingRouteHardwareIds = new Set();
         routeViews
-            .filter(rv => {
-                if (checkedRouteIds.size === 0 && checkedModalityIds.size === 0) return true;
-                if (checkedRouteIds.has(cleanText(rv.id))) return true;
-                // Legacy modality fallback: illumination_mode or id match
-                return checkedModalityIds.has(cleanText(rv.illumination_mode)) ||
-                    checkedModalityIds.has(cleanText(rv.id));
-            })
+            .filter(rv => checkedRouteIds.size === 0 || checkedRouteIds.has(cleanText(rv.id)))
             .forEach(rv => {
                 ["sources", "filters", "splitters", "endpoints"].forEach(key => {
                     (rv.relevant_hardware?.[key] || []).forEach(item => {
@@ -755,17 +809,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
             });
 
-        // Filter inventory renderables by:
-        //   1. The item belongs to a matching route, OR
-        //   2. (Legacy) The item's own modalities array declares a checked modality.
-        // When nothing is checked, return all items unfiltered.
+        // Filter inventory renderables to those on a matching route. When nothing
+        // is checked, return all items unfiltered.
         function filterBySelection(items) {
-            if (checkedRouteIds.size === 0 && checkedModalityIds.size === 0) return items;
-            return items.filter(item => {
-                const id = cleanText(item?.id);
-                if (matchingRouteHardwareIds.has(id)) return true;
-                return Array.isArray(item?.modalities) && item.modalities.some(m => checkedModalityIds.has(cleanText(m)));
-            });
+            if (checkedRouteIds.size === 0) return items;
+            return items.filter(item => matchingRouteHardwareIds.has(cleanText(item?.id)));
         }
 
         // Which recorded paths each component sits on, over every route rather than
@@ -1079,39 +1127,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return getCheckedSelections(prefix).map(item => item.id).sort();
     }
 
-    /**
-     * Keep sentences and unresolved publication questions coupled for hardware
-     * categories that do not use publication templates. Previously these categories
-     * copied only `methodSentence`, silently dropping component `review_prompts`.
-     */
-    function selectedSentenceBundle(prefixes) {
-        const selections = (Array.isArray(prefixes) ? prefixes : [])
-            .flatMap(prefix => getCheckedSelections(prefix));
-        return {
-            sentences: dedupeSentences(selections.map(item => item.methodSentence)),
-            prompts: uniqueTexts(selections.flatMap(item => item.reviewPrompts || [])),
-        };
-    }
-
-    /**
-     * Sentence for the legacy modality compatibility list.
-     *
-     * Every other category now renders through `mergeByPublicationTemplate`, which
-     * merges by sentence frame instead of restating the frame per checkbox.
-     */
-    function groupedLabelSentence(prefix, selections) {
-        const labels = uniqueTexts(selections.map(item => item.displayLabel));
-        if (!labels.length) {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-        if (prefix === "modality") {
-            return labels.length === 1
-                ? `Imaging modality used was ${labels[0]}.`
-                : `Imaging modalities used included ${humanJoin(labels)}.`;
-        }
-        return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-    }
-
     function getExportedRuntimeSelectedConfiguration(dto) {
         const candidate = dto?.runtime_selected_configuration;
         return candidate && typeof candidate === "object" ? candidate : null;
@@ -1188,12 +1203,6 @@ document.addEventListener("DOMContentLoaded", async () => {
      */
     function instrumentDtoIsRenderable(dto) {
         return Boolean(dto) && Boolean(cleanText(dto?.methods?.base_sentence));
-    }
-
-    function exportDiagnosticNotes(dto) {
-        return uniqueTexts((Array.isArray(dto?.diagnostics) ? dto.diagnostics : [])
-            .filter(entry => entry && typeof entry === "object")
-            .map(entry => cleanText(entry.message) || cleanText(entry.code)));
     }
 
     function resolveRuntimeSelectedConfiguration(dto) {
@@ -1507,10 +1516,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const RUNTIME_ENDPOINT_CLASSES = new Set(["endpoint", "camera_port", "eyepiece"]);
 
     function runtimeAcquisitionFacts(dto) {
-        const empty = {
-            components: [], sentences: [], prompts: [], routeLabels: [],
-            hasRuntimeSelection: false, sources: [], endpoints: [],
-        };
+        const empty = { components: [], prompts: [], routeLabels: [], sources: [], endpoints: [] };
         const resolved = resolveRuntimeSelectedConfiguration(dto);
         const runtimeConfig = resolved.config;
         if (!runtimeConfig) return empty;
@@ -1644,7 +1650,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
         });
 
-        const sentences = [];
         const acquisitionPlan = runtimeConfig.acquisition_plan && typeof runtimeConfig.acquisition_plan === "object"
             ? runtimeConfig.acquisition_plan
             : null;
@@ -1666,10 +1671,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         return {
             components,
-            sentences: dedupeSentences(sentences),
             prompts: uniqueTexts(prompts),
             routeLabels: routeLabel ? [routeLabel] : [],
-            hasRuntimeSelection: true,
             sources: components.filter(item => RUNTIME_SOURCE_CLASSES.has(item.inventoryClass)),
             endpoints: components.filter(item => RUNTIME_ENDPOINT_CLASSES.has(item.inventoryClass)),
         };
@@ -1835,12 +1838,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const dto = currentInst;
 
         const routeCount = bindRoutes(dto);
+        const readoutCount = bindReadouts(dto);
         const methodCount = bindMethods(dto);
         toggleSectionVisibility("section-method", methodCount > 0);
+        setRouteSectionHelpText(methodCount > 0);
         toggleSectionVisibility("section-route", routeCount > 0);
-        const showLegacyModalities = shouldUseLegacyModalities(dto);
-        const modalityCount = bindCheckboxes("modality-list", showLegacyModalities ? (dto.modalities || []) : [], "modality");
-        toggleSectionVisibility("section-modality", modalityCount > 0);
+        toggleSectionVisibility("section-readout", readoutCount > 0);
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
         toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
         toggleSectionVisibility("section-obj", bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj") > 0);
@@ -1855,7 +1858,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Offering every light path before a method is chosen invites the user
             // to build a whole selection the first method click would then withdraw.
             // The path question is asked once the method has narrowed it.
-            ["section-route", "section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
+            ["section-route", "section-readout", "section-light", "section-filter", "section-splitter", "section-det"].forEach(id => {
                 const section = document.getElementById(id);
                 if (section) section.style.display = "none";
             });
@@ -1896,6 +1899,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     /**
+     * State the right reason the light-path section is being asked.
+     *
+     * Two different reasons show this section, and they read very differently: a
+     * method genuinely recorded on more than one path, or a record with no
+     * imaging-method control at all, where the path is the only thing to state.
+     * Stating the wrong reason ("recorded on more than one physical path") for a
+     * record with no method control - and no methods shown above to point at - is
+     * worse than saying nothing about why.
+     */
+    function setRouteSectionHelpText(hasMethodOptions) {
+        const routeHelp = document.getElementById("section-route-help");
+        if (!routeHelp) return;
+        routeHelp.textContent = hasMethodOptions
+            ? "One of the methods above is recorded on more than one physical path, and the hardware differs between them. Choose the one this acquisition actually used."
+            : "This record has no separate imaging-method control, so the physical light path is the only thing to state. Choose the one this acquisition actually used.";
+    }
+
+    /**
      * Re-derive what the instrument offers from the methods the user has ticked.
      *
      * Methods are additive and only gate availability: ticking one more offers more
@@ -1910,13 +1931,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         const allowed = new Set();
         methodSelections.forEach(method => (method.routeIds || []).forEach(id => allowed.add(id)));
         const constrained = methodSelections.length > 0;
+        // A record with no imaging-method control has nothing else to derive a
+        // path from, so every route stays an explicit, visible choice for it -
+        // the same record `confirmSoleRouteWithoutMethodControl` already handles
+        // when it has only one.
+        const hasMethodOptions = methodOptionsForInstrument(dto).length > 0;
+        // A method recorded on two or more physically different paths is a real
+        // question, because the hardware differs between them. A method recorded
+        // on exactly one leaves nothing to choose, so that path is confirmed by
+        // being hidden already checked rather than asked as a visible question.
+        const ambiguousRouteIds = new Set();
+        methodSelections.forEach((method) => {
+            if ((method.routeIds || []).length > 1) {
+                method.routeIds.forEach(id => ambiguousRouteIds.add(id));
+            }
+        });
 
         const routeInputs = Array.from(document.querySelectorAll('input[id^="route-"]'));
         routeInputs.forEach((route) => {
             const compatible = !constrained || allowed.has(route.value);
-            if (route.parentElement) route.parentElement.style.display = compatible ? "" : "none";
+            const needsChoice = !hasMethodOptions || ambiguousRouteIds.has(route.value);
+            if (route.parentElement) route.parentElement.style.display = (compatible && needsChoice) ? "" : "none";
             route.disabled = !compatible;
-            if (!compatible) route.checked = false;
+            // A route implied by a method that is no longer checked must not
+            // survive as a stale, hidden "yes" with no method behind it: going
+            // from a method checked to none checked used to leave exactly this,
+            // because becoming unconstrained made every route "compatible" again
+            // without clearing what a removed method had confirmed.
+            if (!compatible || (!constrained && hasMethodOptions)) route.checked = false;
         });
 
         // A method recorded on exactly one path leaves nothing to choose, so the
@@ -1953,7 +1995,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const checkedRoutes = new Set(getCheckedIds("route"));
-        document.querySelectorAll('input[id^="readout-"]').forEach((readout) => {
+        const readoutInputs = Array.from(document.querySelectorAll('input[id^="readout-"]'));
+        readoutInputs.forEach((readout) => {
             const routeId = cleanText(readout.dataset.routeId);
             const compatible = (!constrained || allowed.has(routeId));
             if (readout.parentElement) readout.parentElement.style.display = compatible ? "" : "none";
@@ -1961,7 +2004,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!compatible || !checkedRoutes.has(routeId)) readout.checked = false;
         });
 
-        toggleSectionVisibility("section-route", routeInputs.some(route => !route.disabled));
+        const routeVisible = (route) => Boolean(route.parentElement) && route.parentElement.style.display !== "none";
+        setRouteSectionHelpText(hasMethodOptions);
+        toggleSectionVisibility("section-route", routeInputs.some(routeVisible));
+        toggleSectionVisibility("section-readout", readoutInputs.some(readout => readout.parentElement && readout.parentElement.style.display !== "none"));
         // Hardware cannot belong to a path the acquisition does not name, and a
         // hidden control that stays ticked is reported without being visible.
         if (!checkedRoutes.size && routeInputs.some(route => !route.disabled)) {
@@ -2000,27 +2046,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         applyMethodAvailability(currentInst);
     });
 
-    // Container-level change listener for modality checkboxes. Registered once at
-    // initialization so it survives instrument switches; reads currentInst at call time.
-    document.getElementById("modality-list").addEventListener("change", () => {
-        if (currentInst) updateHardwareVisibility(currentInst);
-    });
-
-    // Container-level change listener for route/readout checkboxes. Route selection
-    // is authoritative; modality filter only activates when no route is checked.
+    // Container-level change listener for route checkboxes.
     document.getElementById("route-list").addEventListener("change", (event) => {
         const target = event?.target;
-        // A readout is recorded on a path, so confirming one confirms that path.
         // Withdrawing a path withdraws the readouts recorded on it. Paths are no
         // longer mutually exclusive, so nothing else is cleared here.
+        if (target?.dataset.category === "route" && !target.checked) {
+            document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
+                if (readout.dataset.routeId === target.value) readout.checked = false;
+            });
+        }
+        if (currentInst) updateHardwareVisibility(currentInst, true);
+    });
+
+    // A readout is recorded on a path, so confirming one confirms that path -
+    // the readout list can stay the only control a user ever has to click for a
+    // record whose one recorded path has nothing else to disambiguate.
+    document.getElementById("readout-list").addEventListener("change", (event) => {
+        const target = event?.target;
         if (target?.dataset.category === "readout" && target.checked) {
             const targetRouteId = cleanText(target.dataset.routeId);
             document.querySelectorAll('input[id^="route-"]').forEach(route => {
                 if (route.value === targetRouteId) route.checked = true;
-            });
-        } else if (target?.dataset.category === "route" && !target.checked) {
-            document.querySelectorAll('input[id^="readout-"]').forEach(readout => {
-                if (readout.dataset.routeId === target.value) readout.checked = false;
             });
         }
         if (currentInst) updateHardwareVisibility(currentInst, true);
@@ -2301,9 +2348,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return !label || !moduleLabels.some(moduleLabel => moduleLabel.includes(label) || label.includes(moduleLabel));
             });
 
+        const scannerSelections = getCheckedSelections("scanner");
         const equipment = mergeByPublicationTemplate([
             ...moduleSelections,
-            ...getCheckedSelections("scanner"),
+            ...scannerSelections,
             ...getCheckedSelections("magnification-changer"),
         ]);
         prompts.push(...equipment.prompts);
@@ -2318,11 +2366,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             prompts.push(`[PLEASE SPECIFY: the version of ${humanJoin(missingVersions)}]`);
         }
 
+        // The instrument's one recorded acquisition-software row states itself:
+        // confirming it would ask a question with only one possible answer. See
+        // soleAcquisitionSoftwareFact.
+        const soleSoftware = soleAcquisitionSoftwareFact(dto);
+        if (soleSoftware?.prompt) prompts.push(soleSoftware.prompt);
+
         const paragraphHardware = dedupeSentences([
             openingSentence,
             ...objectives.sentences,
             ...equipment.sentences,
             ...confirmedActions.sentences,
+            soleSoftware?.sentence,
         ]).join(" ");
 
         // Manual selections and confirmed plan components are merged in one pass,
@@ -2366,10 +2421,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
         const lightSelections = getCheckedSelections("light");
         const detectorSelections = getCheckedSelections("det");
+        const splitterSelections = getCheckedSelections("splitter");
         const lightPathSelections = [
             ...lightSelections,
             ...getCheckedSelections("filter").filter(item => !holdersWithPositions.has(cleanText(item.id))),
-            ...getCheckedSelections("splitter"),
+            ...splitterSelections,
             ...detectorSelections,
             ...specialistSelections,
         ];
@@ -2408,9 +2464,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             lightPathParagraphs.push(dedupeSentences(sentences).join(" "));
         });
-        if (runtime.sentences.length) {
-            lightPathParagraphs.push(dedupeSentences(runtime.sentences).join(" "));
-        }
 
         // One grouped question instead of one per source, with the alternatives the
         // selected light path actually allows.
@@ -2457,7 +2510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // that picks one branch at a time raises nothing: choosing one is its
         // normal use.
         const reportedEndpoints = detectorSelections.length + runtime.endpoints.length;
-        getCheckedSelections("splitter").forEach((splitter) => {
+        splitterSelections.forEach((splitter) => {
             if (cleanText(splitter.branchSelectionMode).toLowerCase() !== "multiple") return;
             if (!(splitter.branchCount > 1)) return;
             if (reportedEndpoints >= splitter.branchCount) return;
@@ -2564,7 +2617,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (moduleSelections.length) reportedCategories.add("module");
         if (detectorSelections.length) reportedCategories.add("detector");
         if (objectives.sentences.length) reportedCategories.add("objective");
-        if (getCheckedSelections("scanner").length) reportedCategories.add("scanner");
+        if (scannerSelections.length) reportedCategories.add("scanner");
         if (lightSelections.length) reportedCategories.add("source");
         // Software is deliberately absent: every software fact this entry reports
         // carries its own request for what the record does not hold, naming the
@@ -2582,12 +2635,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         }
 
-        const compatModalityText = shouldUseLegacyModalities(dto)
-            ? cleanText(groupedLabelSentence("modality", getCheckedSelections("modality")))
-            : "";
-
         return {
-            paragraphs: [paragraphHardware, ...lightPathParagraphs, compatModalityText]
+            paragraphs: [paragraphHardware, ...lightPathParagraphs]
                 .map(cleanText).filter(Boolean),
             entryPrompts: uniqueTexts(prompts.map(prompt => cleanText(prompt).replace(/\.$/, ""))),
             sectionPrompts: uniqueTexts(sectionPrompts.map(prompt => cleanText(prompt).replace(/\.$/, ""))),
@@ -2623,7 +2672,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // step that survives into the next acquisition is a claim nobody made.
     const ACQUISITION_SCOPED_PREFIXES = [
         "route", "readout", "light", "det", "filter", "filterposition", "splitter",
-        "modality", "module", "scanner", "obj", "magnification-changer",
+        "module", "scanner", "obj", "magnification-changer",
         "optical-modulator", "illumination-logic", "confirmed",
     ];
 
@@ -2674,10 +2723,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // acquisition that names none of them describes nothing.
         const routeSection = document.getElementById("section-route");
         const routeAvailable = Boolean(routeSection && routeSection.style.display !== "none");
-        // A legacy record states its modality instead of a path, and answering that
-        // question is the same answer.
-        const legacyModalityChosen = getCheckedIds("modality").length > 0;
-        if (routeAvailable && !legacyModalityChosen && getCheckedIds("route").length === 0) {
+        if (routeAvailable && getCheckedIds("route").length === 0) {
             setSelectionStatus("Choose the light path used for this acquisition.");
             return;
         }

@@ -316,7 +316,7 @@ class ContractInvariantTests(unittest.TestCase):
 
         methods_export = build_methods_generator_instrument_export(inst)
         # Methods export must read from canonical hardware (sources), not raw YAML or dto
-        self.assertEqual(methods_export["methods_view_dto"]["light_sources"][0]["display_label"], "Canonical Laser")
+        self.assertEqual(methods_export["light_sources"][0]["display_label"], "Canonical Laser")
         self.assertNotIn("RAW Manufacturer", str(methods_export))
         self.assertNotIn("RAW Laser", str(methods_export))
 
@@ -349,7 +349,7 @@ class ContractInvariantTests(unittest.TestCase):
             },
         }
         exported = build_methods_generator_instrument_export(inst)
-        routes = exported["methods_view_dto"]["routes"]
+        routes = exported["routes"]
         self.assertEqual(len(routes), 1)
         self.assertEqual(routes[0]["id"], "widefield")
         self.assertEqual(routes[0]["display_label"], "Widefield")

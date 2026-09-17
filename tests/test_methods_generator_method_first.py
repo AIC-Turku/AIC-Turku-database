@@ -304,12 +304,15 @@ class MethodFirstMethodsTests(unittest.TestCase):
         # The display name alone is not the recorded identity.
         self.assertNotIn("performed using the Method First Scope.", output)
 
-    def test_acquisition_software_is_only_reported_when_confirmed(self):
-        self.page.check("#method-0")
-        self.page.click("#add-btn")
-        self.assertNotIn("Acme Acquire", self.output())
+    def test_the_one_recorded_acquisition_software_is_reported_without_confirmation(self):
+        """One recorded row could not have produced an image any other way.
 
-        self.page.check("#confirmed-0")
+        The fixture records exactly one row with role: acquisition, so there is
+        nothing to confirm and no checkbox is offered for it - unlike a stand
+        with several, where which one was used is a real question.
+        """
+        expect(self.page.locator("#section-confirmed")).to_be_hidden()
+        self.page.check("#method-0")
         self.page.click("#add-btn")
         self.assertIn(
             "Instrument control and image acquisition were performed using Acme Acquire (v1.0).",
@@ -318,16 +321,20 @@ class MethodFirstMethodsTests(unittest.TestCase):
         self.assertEqual(self.output().count("Acme Acquire"), 1)
 
     def test_light_path_is_not_offered_before_the_method_decision(self):
-        """Choosing a method starts a fresh physical-path decision.
+        """An unambiguous method decides the path with nothing left to ask.
 
         Offering every path up front invites a whole selection that the first
         method click then clears, because route-specific state cannot survive a
-        method change.
+        method change. tirf (method-0) is recorded on exactly one path, so
+        checking it must not raise a question that has only one answer; see
+        test_a_method_on_several_paths_asks_which_and_clears_hardware_left_behind
+        for the one method here that genuinely needs a choice.
         """
         expect(self.page.locator("#section-method")).to_be_visible()
         expect(self.page.locator("#section-route")).to_be_hidden()
         self.page.check("#method-0")
-        expect(self.page.locator("#section-route")).to_be_visible()
+        expect(self.page.locator("#section-route")).to_be_hidden()
+        expect(self.page.locator("#route-0")).to_be_checked()
 
     def test_method_and_path_reporting_prompts_are_both_preserved(self):
         """Technique and physical-path settings are complementary, not aliases.
@@ -383,11 +390,12 @@ class MethodFirstMethodsTests(unittest.TestCase):
     def test_method_first_selection_reveals_only_compatible_route_hardware(self):
         expect(self.page.locator("#section-method")).to_be_visible()
         # The path question follows the method question; see
-        # test_light_path_is_not_offered_before_the_method_decision.
+        # test_light_path_is_not_offered_before_the_method_decision. tirf is
+        # unambiguous, so it never appears at all.
         expect(self.page.locator("#section-route")).to_be_hidden()
         expect(self.page.locator("#section-light")).to_be_hidden()
         self.page.check("#method-0")
-        expect(self.page.locator("#section-route")).to_be_visible()
+        expect(self.page.locator("#section-route")).to_be_hidden()
         expect(self.page.locator("#route-0")).to_be_checked()
         expect(self.page.locator("#section-light")).to_be_visible()
         expect(self.page.locator("#light-list")).to_contain_text("488 nm laser")

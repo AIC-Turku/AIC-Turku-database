@@ -25,7 +25,7 @@ class BuildContextTests(unittest.TestCase):
             inst,
             vocabulary=None,
             build_dashboard_view_dto=lambda _v, i, lp: {"id": i["id"], "hardware": {"optical_path": {"routes": []}}, "lightpath": lp},
-            build_methods_view_dto=lambda i: {"id": i["id"], "methods": {}},
+            build_methods_view_dto=lambda i, **_kw: {"id": i["id"], "methods": {}},
             build_llm_inventory_record=lambda i: {"id": i["id"], "summary": {}},
         )
 
@@ -39,13 +39,13 @@ class BuildContextTests(unittest.TestCase):
             inst,
             vocabulary=None,
             build_dashboard_view_dto=lambda _v, i, lp: {"derived_kind": "dashboard_view", "id": i["id"], "hardware": {"optical_path": {}}, "lp": lp},
-            build_methods_view_dto=lambda i: {"derived_kind": "methods_view", "id": i["id"]},
+            build_methods_view_dto=lambda i, **_kw: {"derived_kind": "methods_view", "id": i["id"]},
             build_llm_inventory_record=lambda i: {"derived_kind": "llm_record", "id": i["id"]},
         )
 
         self.assertIn("instrument", context.canonical_instrument_dto)
         self.assertEqual(context.dashboard_view_dto.get("derived_kind"), "dashboard_view")
-        self.assertEqual(context.methods_view_dto.get("derived_kind"), "methods_view")
+        self.assertEqual(context.methods_export_dto.get("derived_kind"), "methods_view")
 
     def test_canonical_and_derived_are_distinguishable(self) -> None:
         inst = self._minimal_instrument()
@@ -53,7 +53,7 @@ class BuildContextTests(unittest.TestCase):
             inst,
             vocabulary=None,
             build_dashboard_view_dto=lambda _v, i, lp: {"view_contract": "derived", "id": i["id"], "hardware": {"optical_path": {}}, "lp": lp},
-            build_methods_view_dto=lambda i: {"view_contract": "derived_methods", "id": i["id"]},
+            build_methods_view_dto=lambda i, **_kw: {"view_contract": "derived_methods", "id": i["id"]},
             build_llm_inventory_record=lambda i: {"view_contract": "derived_llm", "id": i["id"]},
         )
 
@@ -72,7 +72,7 @@ class BuildContextTests(unittest.TestCase):
                 inst,
                 vocabulary=None,
                 build_dashboard_view_dto=lambda _v, i, _lp: {"id": i["id"], "hardware": {"optical_path": {}}},
-                build_methods_view_dto=lambda i: copy.deepcopy(i.get("dto") or {}),
+                build_methods_view_dto=lambda i, **_kw: copy.deepcopy(i.get("dto") or {}),
                 build_llm_inventory_record=lambda i: copy.deepcopy(i.get("dto") or {}),
             )
         finally:
@@ -101,7 +101,7 @@ class BuildContextTests(unittest.TestCase):
                 inst,
                 vocabulary=None,
                 build_dashboard_view_dto=lambda _v, i, _lp: {"id": i["id"], "hardware": {"optical_path": {"from": "dashboard_view"}}},
-                build_methods_view_dto=lambda i: {"id": i["id"]},
+                build_methods_view_dto=lambda i, **_kw: {"id": i["id"]},
                 build_llm_inventory_record=lambda i: {"id": i["id"]},
             )
         finally:

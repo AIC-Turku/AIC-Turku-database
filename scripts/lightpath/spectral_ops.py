@@ -3,8 +3,6 @@
 This module owns parser-authoritative component serialization and spectral
 operation derivation.
 
-It must not import scripts.light_path_parser.
-
 Responsibilities:
 - normalize component numeric fields
 - build component labels/details/render kinds
@@ -46,6 +44,36 @@ from scripts.lightpath.model import (
     _vocab_context,
     get_active_vocab,
 )
+
+
+# Positions that exist to select a fluorescence band. A route that declares no
+# imaging mode implements only contrast methods - transmitted brightfield, phase
+# contrast, DIC - and none of those select an emission band.
+#
+# Shared by the dashboard's optical-path view (which route a fluorescence
+# position may be offered on) and scripts/ledger_gaps.py (whether every
+# recorded position on a holder selects a fluorescence band). Both ask the
+# same question about the same recorded component types and stage roles, so
+# both import this rather than keeping their own copy - which had already
+# happened once and let the two silently disagree.
+FLUORESCENCE_PASSBAND_TYPES = {
+    "bandpass", "multiband_bandpass", "longpass", "shortpass", "notch",
+}
+FLUORESCENCE_STAGE_ROLES = {"excitation", "emission", "cube"}
+
+
+def is_fluorescence_band_position(component_type: str, stage_role: str) -> bool:
+    """True when a recorded position exists to select a fluorescence band.
+
+    A position selects a fluorescence band only when both its component type
+    shapes a passband (bandpass/longpass/shortpass/notch, including multiband
+    variants) and it sits in a stage role that carries fluorescence signal
+    (excitation, emission, or a combined cube).
+    """
+    return (
+        _clean_string(component_type).lower() in FLUORESCENCE_PASSBAND_TYPES
+        and _clean_string(stage_role).lower() in FLUORESCENCE_STAGE_ROLES
+    )
 
 
 def _iter_mechanisms(light_path: dict[str, Any], stage_key: str) -> list[dict[str, Any]]:
@@ -1748,6 +1776,9 @@ def _splitter_payload(
 
 
 __all__ = [
+    "FLUORESCENCE_PASSBAND_TYPES",
+    "FLUORESCENCE_STAGE_ROLES",
+    "is_fluorescence_band_position",
     "_band_strings",
     "_build_label",
     "_render_kind",

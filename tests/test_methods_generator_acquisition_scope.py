@@ -123,7 +123,14 @@ def instrument():
             "instrument_reference": "the Scope Under Test, an inverted microscope",
             "specimen_preparation_recommendation": "[PLEASE SPECIFY: Specimen preparation metadata]",
             "acquisition_settings_recommendation": "[PLEASE SPECIFY: exposure time and pixel size].",
+            # A genuinely optional confirmable action, distinct from the sole
+            # acquisition-software row below: whether the chamber was running is a
+            # per-acquisition fact, unlike which software produced the image.
+            "environment_sentence": "Live-cell imaging was performed using an environmental chamber.",
         },
+        # Exactly one recorded row, so it is reported automatically and is not a
+        # "Confirmed acquisition actions" checkbox; see
+        # test_a_single_recorded_acquisition_software_needs_no_confirmation.
         "software": [{"name": "Scope Acquire", "version": "1.0", "role": "acquisition"}],
         "modalities": [],
         "modules": [{
@@ -354,7 +361,32 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.page.check("#confirmed-0")
         self.page.click("#add-btn")
         self.assertEqual(self.output().count("Point-scanning confocal imaging was performed"), 1)
-        self.assertIn("Scope Acquire", self.output())
+        self.assertIn("environmental chamber", self.output())
+
+    def test_a_single_recorded_acquisition_software_needs_no_confirmation(self):
+        """The one recorded row is reported without a checkbox to tick.
+
+        A stand with exactly one recorded acquisition-software row could not have
+        produced an image any other way, so there is nothing to confirm - unlike
+        the environmental chamber, which is a genuine per-acquisition choice and
+        still requires a tick.
+        """
+        self.method("Confocal point scanning").check()
+        confirmable = self.page.evaluate(
+            """() => [...document.querySelectorAll('#confirmed-list input')]
+                 .map(input => (input.closest('label') || input.parentElement).textContent)"""
+        )
+        self.assertFalse(any("Scope Acquire" in label for label in confirmable), confirmable)
+        self.page.check("#obj-0")
+        self.page.check("#light-0")
+        self.page.check("#det-0")
+        self.page.click("#add-btn")
+        output = self.output()
+        self.assertIn(
+            "Instrument control and image acquisition were performed using Scope Acquire (v1.0).",
+            output,
+        )
+        self.assertNotIn("environmental chamber", output)
 
     def test_a_new_acquisition_reference_starts_from_a_clean_acquisition(self):
         """Naming a different figure is naming a different acquisition.

@@ -36,7 +36,6 @@ class InstrumentBuildContext:
     canonical_lightpath_dto: dict[str, Any]
     dashboard_view_dto: dict[str, Any]
     methods_export_dto: dict[str, Any]
-    methods_view_dto: dict[str, Any]
     llm_inventory_record: dict[str, Any]
     vm_payload: dict[str, Any]
     diagnostics: list[dict[str, str]]
@@ -127,12 +126,23 @@ def build_instrument_context(
     build_input["dto"] = copy.deepcopy(dashboard_view_dto if isinstance(dashboard_view_dto, dict) else {})
     # Propagate authoritative_route_contract from dashboard view into lightpath_dto.projections.llm
     # so LLM and methods exports can access it from a consistent location without re-reading the dashboard view.
+    #
+    # KNOWN LIMITATION: this location is still populated FROM dashboard_view_dto here,
+    # not built independently from canonical/lightpath data. Methods export reading from
+    # lightpath_dto.projections.llm instead of inst["dto"] directly stops it from depending
+    # on dashboard-only mutations made after this point (e.g. site_render.py's later
+    # inst["dto"]["diagnostics"] = ...), and matches the location llm_export.py already
+    # uses - but it does not make route facts independent of the dashboard view's own
+    # construction (optical_path_view.py). Closing that fully means computing this
+    # projection directly from canonical_lightpath_dto before dashboard_view_dto exists,
+    # with dashboard/Methods/LLM as sibling consumers - the target architecture the PR
+    # #462 follow-up review described, not yet implemented.
     if isinstance(dashboard_view_dto, dict) and isinstance(build_input.get("lightpath_dto"), dict):
         _optical_path = ((dashboard_view_dto.get("hardware") or {}).get("optical_path") or {}) if isinstance((dashboard_view_dto.get("hardware") or {}).get("optical_path"), dict) else {}
         _arc = _optical_path.get("authoritative_route_contract") if isinstance(_optical_path.get("authoritative_route_contract"), dict) else None
         if _arc:
             build_input["lightpath_dto"].setdefault("projections", {}).setdefault("llm", {})["authoritative_route_contract"] = copy.deepcopy(_arc)
-    methods_export_dto = build_methods_view_dto(build_input)
+    methods_export_dto = build_methods_view_dto(build_input, vocabulary=vocabulary)
     llm_inventory_record = build_llm_inventory_record(build_input)
 
     # VM payload must consume the canonical parser DTO directly. Dashboard view DTOs
@@ -174,7 +184,6 @@ def build_instrument_context(
         canonical_lightpath_dto=canonical_lightpath_dto if isinstance(canonical_lightpath_dto, dict) else {},
         dashboard_view_dto=dashboard_view_dto if isinstance(dashboard_view_dto, dict) else {},
         methods_export_dto=methods_export_dto if isinstance(methods_export_dto, dict) else {},
-        methods_view_dto=methods_export_dto if isinstance(methods_export_dto, dict) else {},
         llm_inventory_record=llm_inventory_record if isinstance(llm_inventory_record, dict) else {},
         vm_payload=vm_payload,
         diagnostics=diagnostics,

@@ -38,7 +38,7 @@ class DashboardSmokeMinimalTests(unittest.TestCase):
             "runtime_selected_configuration": {"route_id": "r1"},
         }
         out = build_methods_generator_instrument_export(inst)
-        diags = out['methods_view_dto']['diagnostics']
+        diags = out['diagnostics']
         self.assertTrue(any(d.get('code') == 'missing_selected_execution' for d in diags if isinstance(d, dict)))
         for key in [
             "objectives",
@@ -48,7 +48,6 @@ class DashboardSmokeMinimalTests(unittest.TestCase):
             "routes",
             "diagnostics",
             "runtime_selected_configuration",
-            "methods_view_dto",
         ]:
             self.assertIn(key, out)
         self.assertEqual(out["objectives"][0]["id"], "obj_1")

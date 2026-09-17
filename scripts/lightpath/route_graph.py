@@ -7,7 +7,6 @@ This module owns route-local graph construction and the route execution contract
 - route_steps
 - selected_execution
 
-It must not import scripts.light_path_parser.
 It should not perform canonical parsing, legacy import, validation diagnostics,
 or VM payload rendering.
 """

@@ -61,7 +61,7 @@ The experiment-planning page provides a structured inventory export that can be 
 - `docs/portability.md` — what another facility must edit to reuse this project.
 - `docs/planning_grounding.md` — what the planning export establishes, and how to check an assistant's answer.
 
-Compatibility entry points such as `scripts/validate.py`, `scripts/light_path_parser.py`, and `scripts/dashboard_builder.py` remain available for existing workflows.
+Compatibility entry points such as `scripts/validate.py` and `scripts/dashboard_builder.py` remain available for existing workflows.
 
 ## Data flow
 

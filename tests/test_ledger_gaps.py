@@ -132,3 +132,55 @@ def test_a_holder_whose_positions_serve_their_route_is_not_reported():
         "stage_role": "emission",
         "positions": {"Pos_1": {"component_type": "bandpass"}, "Pos_2": {"component_type": "bandpass"}},
     })
+
+
+def test_the_fluorescence_classification_has_one_source_of_truth():
+    """This file's gap detector and the generator's position filter must agree.
+
+    Both ask the same question - can this position select a fluorescence band -
+    about the same recorded component types and stage roles. They used to answer
+    it from two independently written constant sets that happened to agree, then
+    from two imports of the same dashboard-owned constants (an inverted
+    dependency: an audit/reporting tool importing from the dashboard layer).
+    Both now call scripts.lightpath.spectral_ops.is_fluorescence_band_position,
+    a neutral module neither the dashboard nor ledger_gaps.py owns, so the two
+    cannot silently diverge and ledger_gaps.py does not depend on the dashboard.
+
+    Semantic examples, not object identity: a set swapped for a frozenset, or a
+    copy returned instead of the same object, must not make this fail while a
+    real behavior change - accepting a component type that is not a passband
+    shape, or a stage role that carries no fluorescence signal - must.
+    """
+    from scripts.dashboard.optical_path_view import position_serves_route
+    from scripts.ledger_gaps import holder_cannot_serve_route
+    from scripts.lightpath.spectral_ops import is_fluorescence_band_position
+
+    # Passband shapes in a fluorescence-carrying stage role select a band.
+    for component_type in ("bandpass", "multiband_bandpass", "longpass", "shortpass", "notch"):
+        for stage_role in ("excitation", "emission", "cube"):
+            assert is_fluorescence_band_position(component_type, stage_role), (
+                component_type, stage_role,
+            )
+
+    # An open position selects nothing, whatever the stage role.
+    assert not is_fluorescence_band_position("empty", "emission")
+    assert not is_fluorescence_band_position("mirror", "cube")
+    # A stage role that carries no fluorescence signal is not a fluorescence
+    # question even when the component type would otherwise qualify.
+    assert not is_fluorescence_band_position("bandpass", "analyzer")
+    assert not is_fluorescence_band_position("bandpass", "")
+    # Case is not authored consistently in the ledger.
+    assert is_fluorescence_band_position("BANDPASS", "Emission")
+
+    # Both call sites see the same answer for the same recorded facts, so a
+    # mismatch (were one to redefine its own copy again) fails here rather
+    # than as an unreported gap or a wrongly offered route position.
+    fact = ("bandpass", "emission")
+    assert is_fluorescence_band_position(*fact)
+    assert not position_serves_route(
+        {"component_type": fact[0]}, fact[1], route_declares_imaging_modes=False,
+    )
+    assert holder_cannot_serve_route({
+        "stage_role": fact[1],
+        "positions": {"Pos_1": {"component_type": fact[0]}},
+    })

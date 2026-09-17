@@ -116,7 +116,6 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'methods-metadata-warning',
               'methods-metadata-blockers',
               'section-route',
-              'section-modality',
               'section-module',
               'section-scanner',
               'section-obj',
@@ -128,7 +127,6 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
               'section-optical-modulator',
               'section-illumination-logic',
               'route-list',
-              'modality-list',
               'module-list',
               'scanner-list',
               'obj-list',
@@ -478,140 +476,6 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         # ...and withheld when it is not: this acquisition confirmed no software, so
         # the software-version gap belongs in the page banner, not in the draft.
         self.assertNotIn("software[0].version", result["output"])
-
-    def test_legacy_modality_record_still_produces_prose_without_an_internal_marker(self) -> None:
-        """A record with modalities but no capabilities keeps its compatibility path.
-
-        Every shipped record now declares capabilities, so this branch is
-        unreachable from the ledger and would otherwise be untested code. It
-        remains the fallback for a record that predates the capability axes; what
-        it must not do is leak the internal "(Compatibility)" marker into prose.
-        """
-        instrument = {
-            "id": "scope-legacy",
-            "display_name": "Legacy Scope",
-            "retired": False,
-            "methods_generation": {"is_blocked": False, "blockers": []},
-            "methods": {"base_sentence": "Images were acquired using the Legacy Scope."},
-            "capabilities": {},
-            "modalities": [{"id": "confocal", "display_label": "Point-Scanning Confocal"}],
-            "modules": [],
-            "hardware": {
-                "scanner": {"present": False},
-                "objectives": [],
-                "light_sources": [],
-                "detectors": [],
-                "magnification_changers": [],
-                "optical_modulators": [],
-                "illumination_logic": [],
-                "optical_path": {"filters": [], "splitters": []},
-            },
-        }
-        result = self.run_template(
-            instruments=[instrument],
-            actions_js="""
-            const systemSelect = document.getElementById('system-select');
-            systemSelect.value = 'scope-legacy';
-            systemSelect.listeners.change({ target: systemSelect });
-            const modality = state.inputs.find(cb => cb.id && cb.id.startsWith('modality-'));
-            if (modality) modality.checked = true;
-            document.getElementById('add-btn').listeners.click();
-            return { output: document.getElementById('output-text').value };
-            """,
-        )
-        self.assertIn("Imaging modality used was Point-Scanning Confocal.", result["output"])
-        self.assertNotIn("(Compatibility)", result["output"])
-
-    def test_modality_selector_filters_optical_hardware_from_dto_route_usage(self) -> None:
-        instrument = {
-            "id": "scope-modality-filter",
-            "display_name": "Scope Modality Filter",
-            "retired": False,
-            "methods_generation": {"is_blocked": False, "blockers": []},
-            "methods": {"base_sentence": "Base method block."},
-            "hardware": {
-                "scanner": {"present": False},
-                "objectives": [],
-                "light_sources": [],
-                "detectors": [],
-                "magnification_changers": [],
-                "optical_modulators": [],
-                "illumination_logic": [],
-                "optical_path": {
-                    "hardware_inventory_renderables": [
-                        {"id": "source:laser_488", "inventory_class": "light_source", "display_label": "488 Laser", "display_subtitle": "Light Source", "method_sentence": "488 sentence.", "modalities": ["widefield_fluorescence"]},
-                        {"id": "source:laser_561", "inventory_class": "light_source", "display_label": "561 Laser", "display_subtitle": "Light Source", "method_sentence": "Excitation was provided by 561 Laser.", "modalities": ["confocal"]},
-                        {"id": "optical_path_element:ex_488", "inventory_class": "optical_element", "display_label": "EX 488", "display_subtitle": "Optical Element", "method_sentence": "EX sentence.", "modalities": ["widefield_fluorescence"]},
-                        {"id": "optical_path_element:pinhole", "inventory_class": "optical_element", "display_label": "Pinhole", "display_subtitle": "Optical Element", "method_sentence": "Pinhole sentence.", "modalities": ["confocal"]},
-                        {"id": "endpoint:cam", "inventory_class": "endpoint", "display_label": "Main Camera", "display_subtitle": "Endpoint", "method_sentence": "Cam sentence.", "modalities": ["widefield_fluorescence"]},
-                        {"id": "endpoint:hyd", "inventory_class": "endpoint", "display_label": "HyD", "display_subtitle": "Endpoint", "method_sentence": "HyD sentence.", "modalities": ["confocal"]},
-                    ],
-                    "authoritative_route_contract": {
-                        "routes": [
-                        {
-                            "id": "widefield_fluorescence",
-                            "display_label": "Widefield",
-                            "illumination_mode": "widefield_fluorescence",
-                            "relevant_hardware": {
-                                "sources": [{"id": "source:laser_488", "display_label": "488 Laser", "modalities": ["widefield_fluorescence"]}],
-                                "filters": [{"id": "optical_path_element:ex_488", "display_label": "EX 488", "modalities": ["widefield_fluorescence"]}],
-                                "splitters": [],
-                                "endpoints": [{"id": "endpoint:cam", "display_label": "Main Camera", "modalities": ["widefield_fluorescence"]}],
-                            },
-                        },
-                        {
-                            "id": "confocal",
-                            "display_label": "Confocal",
-                            "illumination_mode": "confocal",
-                            "relevant_hardware": {
-                                "sources": [{"id": "source:laser_561", "display_label": "561 Laser", "modalities": ["confocal"]}],
-                                "filters": [{"id": "optical_path_element:pinhole", "display_label": "Pinhole", "modalities": ["confocal"]}],
-                                "splitters": [],
-                                "endpoints": [{"id": "endpoint:hyd", "display_label": "HyD", "modalities": ["confocal"]}],
-                            },
-                        },
-                    ],
-                    },
-                },
-            },
-            "modalities": [
-                {"id": "widefield_fluorescence", "display_label": "Widefield Fluorescence"},
-                {"id": "confocal", "display_label": "Confocal"},
-            ],
-            "modules": [],
-        }
-        result = self.run_template(
-            instruments=[instrument],
-            actions_js="""
-            const systemSelect = document.getElementById('system-select');
-            systemSelect.value = 'scope-modality-filter';
-            systemSelect.listeners.change({ target: systemSelect });
-            // Check the confocal modality checkbox and fire the container change event
-            const confocalCheckbox = state.inputs.find(cb => cb.id && cb.id.startsWith('modality-') && cb.value === 'confocal');
-            confocalCheckbox.checked = true;
-            document.getElementById('modality-list').listeners.change();
-            // Check all hardware items now shown (only confocal hardware after filtering)
-            document.getElementById('light-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
-            document.getElementById('filter-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
-            document.getElementById('det-list').children.forEach(w => { const cb = w.children[0]; if (cb) cb.checked = true; });
-            document.getElementById('add-btn').listeners.click();
-            return {
-              lightCount: document.getElementById('light-list').children.length,
-              lightLabel: document.getElementById('light-list').children[0].children[1].children[0].textContent,
-              filterLabel: document.getElementById('filter-list').children[0].children[1].children[0].textContent,
-              detectorLabel: document.getElementById('det-list').children[0].children[1].children[0].textContent,
-              output: document.getElementById('output-text').value,
-            };
-            """,
-        )
-
-        self.assertEqual(result["lightCount"], 1)
-        self.assertIn("561 Laser", result["lightLabel"])
-        self.assertIn("Pinhole", result["filterLabel"])
-        self.assertIn("HyD", result["detectorLabel"])
-        self.assertIn("Excitation was provided by 561 Laser.", result["output"])
-        self.assertIn("Pinhole sentence.", result["output"])
-        self.assertIn("HyD sentence.", result["output"])
 
     def test_methods_include_exact_runtime_selected_vm_configuration_when_available(self) -> None:
         instrument = {
@@ -1510,6 +1374,100 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertEqual(result["lightCount"], 1, "Only laser:561 should be shown for confocal route")
         self.assertEqual(result["detCount"], 1, "Only hyd:1 should be shown for confocal route")
 
+    def test_route_section_help_text_names_the_actual_reason_it_is_shown(self) -> None:
+        """The light-path section's help text must match why it is visible.
+
+        It is shown for two different reasons: a method genuinely recorded on more
+        than one physical path, or a record with no imaging-method control at all.
+        Stating the ambiguous-method reason for a record that has no methods to
+        point at is what test_the_light_path_section_never_appears_for_a_real_
+        instrument_or_method's own real-catalogue sweep skips checking, and it is
+        what shipped, unnoticed, for the retired Leica TCS SP5 Multiphoton.
+        """
+        no_method_control = {
+            "id": "scope-no-methods",
+            "display_name": "No Methods Scope",
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [], "light_sources": [], "detectors": [],
+                "magnification_changers": [], "optical_modulators": [], "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {"id": "route_a", "display_label": "Route A"},
+                            {"id": "route_b", "display_label": "Route B"},
+                        ]
+                    },
+                },
+            },
+            "modules": [],
+        }
+        result = self.run_template(
+            instruments=[no_method_control],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-no-methods';
+            systemSelect.listeners.change({ target: systemSelect });
+            return {
+                methodCount: state.inputs.filter(cb => cb.dataset && cb.dataset.category === 'method').length,
+                routeSectionDisplay: document.getElementById('section-route').style.display || '',
+                helpText: document.getElementById('section-route-help').textContent,
+            };
+            """,
+        )
+        self.assertEqual(result["methodCount"], 0)
+        self.assertNotEqual(result["routeSectionDisplay"], "none")
+        self.assertIn("no separate imaging-method control", result["helpText"])
+        self.assertNotIn("recorded on more than one physical path", result["helpText"])
+
+        # The ordinary case - a method genuinely recorded on two or more physical
+        # paths with different hardware - must keep the original wording naming
+        # the actual reason.
+        ambiguous_method = {
+            "id": "scope-ambiguous-method",
+            "display_name": "Ambiguous Method Scope",
+            "methods": {"base_sentence": "Images acquired."},
+            "hardware": {
+                "scanner": {"present": False},
+                "objectives": [], "light_sources": [], "detectors": [],
+                "magnification_changers": [], "optical_modulators": [], "illumination_logic": [],
+                "optical_path": {
+                    "hardware_inventory_renderables": [],
+                    "authoritative_route_contract": {
+                        "routes": [
+                            {
+                                "id": "smlm_a", "display_label": "SMLM path A",
+                                "route_identity": {"imaging_modes": [{"id": "smlm", "display_label": "SMLM"}]},
+                                "relevant_hardware": {"sources": [], "filters": [], "splitters": [], "endpoints": []},
+                            },
+                            {
+                                "id": "smlm_b", "display_label": "SMLM path B",
+                                "route_identity": {"imaging_modes": [{"id": "smlm", "display_label": "SMLM"}]},
+                                "relevant_hardware": {"sources": [], "filters": [], "splitters": [], "endpoints": []},
+                            },
+                        ]
+                    },
+                },
+            },
+            "modules": [],
+        }
+        result2 = self.run_template(
+            instruments=[ambiguous_method],
+            actions_js="""
+            const systemSelect = document.getElementById('system-select');
+            systemSelect.value = 'scope-ambiguous-method';
+            systemSelect.listeners.change({ target: systemSelect });
+            return {
+                methodCount: state.inputs.filter(cb => cb.dataset && cb.dataset.category === 'method').length,
+                helpText: document.getElementById('section-route-help').textContent,
+            };
+            """,
+        )
+        self.assertEqual(result2["methodCount"], 1)
+        self.assertIn("recorded on more than one physical path", result2["helpText"])
+
     def test_lambert_widefield_route_with_flim_readout(self) -> None:
         """Lambert FLIM: widefield route must show FLIM readout, not as standalone route."""
         instrument = {
@@ -1645,37 +1603,6 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertTrue(result["fretIsReadout"], "FRET must appear as a readout under TIRF route")
         self.assertEqual(result["fretReadoutLabel"], "FRET")
 
-
-    def test_active_instrument_hides_legacy_modality_section_when_capabilities_present(self) -> None:
-        instrument = {
-            "id": "scope-active",
-            "retired": False,
-            "capabilities": {"imaging_modes": ["confocal_point"], "readouts": ["flim"]},
-            "modalities": [{"id": "confocal", "display_label": "Confocal"}],
-            "hardware": {}, "methods": {"base_sentence": "Images acquired."}, "modules": []
-        }
-        result = self.run_template(
-            instruments=[instrument],
-            actions_js="""
-            const systemSelect = document.getElementById('system-select');
-            systemSelect.value = instrumentPayload[0].id;
-            systemSelect.listeners.change({ target: systemSelect });
-            return { sectionDisplay: document.getElementById('section-modality').style.display || '' };
-            """,
-        )
-        self.assertEqual(result["sectionDisplay"], "none")
-
-    def test_legacy_modalities_labeled_compatibility_in_template(self) -> None:
-        """The methods_generator template must label the legacy modality section as compatibility/legacy."""
-        template_content = TEMPLATE_PATH.read_text(encoding="utf-8")
-        # Must NOT still be labeled simply "Imaging Modalities"
-        self.assertNotIn("1. Select Microscope", template_content)
-        self.assertNotIn("2. Optical Routes", template_content)
-        # Must contain legacy indicator
-        self.assertTrue(
-            "Legacy" in template_content or "legacy" in template_content or "compat" in template_content.lower(),
-            "Modality section must be labeled as legacy/compatibility",
-        )
 
     def test_template_does_not_render_capability_axes_section(self) -> None:
         template_content = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -1893,88 +1820,6 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
         self.assertEqual("", result["sideMeta"])
-
-    def test_legacy_modality_selection_is_compatibility_only_not_in_primary_paragraph(self) -> None:
-        """When modalities are present and checked, the sentence must appear with (Compatibility) prefix,
-        not as part of the primary route/hardware paragraph."""
-        instrument = {
-            "id": "scope-compat-modality",
-            "display_name": "Scope Compat Modality",
-            "retired": False,
-            "methods_generation": {"is_blocked": False, "blockers": []},
-            "methods": {"base_sentence": "Images acquired."},
-            "hardware": {
-                "scanner": {"present": False},
-                "objectives": [],
-                "light_sources": [],
-                "detectors": [],
-                "magnification_changers": [],
-                "optical_modulators": [],
-                "illumination_logic": [],
-                "optical_path": {
-                    "hardware_inventory_renderables": [],
-                    "authoritative_route_contract": {"routes": []},
-                },
-            },
-            "modalities": [
-                {"id": "confocal", "display_label": "Confocal",
-                 "method_sentence": "Confocal imaging was performed."},
-            ],
-            "modules": [],
-        }
-        result = self.run_template(
-            instruments=[instrument],
-            actions_js="""
-            const systemSelect = document.getElementById('system-select');
-            systemSelect.value = 'scope-compat-modality';
-            systemSelect.listeners.change({ target: systemSelect });
-            // Check the confocal modality checkbox
-            const confocalCb = state.inputs.find(
-                cb => cb.id && cb.id.startsWith('modality-') && cb.value === 'confocal'
-            );
-            if (confocalCb) confocalCb.checked = true;
-            document.getElementById('add-btn').listeners.click();
-            return { output: document.getElementById('output-text').value };
-            """,
-        )
-        # Route-less legacy records may still report the selected modality, but
-        # implementation/migration vocabulary must never enter manuscript prose.
-        self.assertNotIn("(Compatibility)", result["output"])
-        self.assertIn("Imaging modality used was Confocal.", result["output"])
-
-    def test_modality_text_not_in_primary_output_when_route_also_selected(self) -> None:
-        """When a route is selected alongside modality, only route text appears in the primary paragraph."""
-        instrument = self._stellaris_like_instrument()
-        # Add a modality to the fixture
-        instrument["modalities"] = [
-            {"id": "confocal_point", "display_label": "Confocal Point",
-             "method_sentence": "Confocal point imaging was performed."},
-        ]
-        result = self.run_template(
-            instruments=[instrument],
-            actions_js="""
-            const systemSelect = document.getElementById('system-select');
-            systemSelect.value = 'scope-stellaris';
-            systemSelect.listeners.change({ target: systemSelect });
-            // Check both the route and a modality checkbox
-            const routeCb = state.inputs.find(
-                cb => cb.dataset && cb.dataset.category === 'route' && cb.value === 'confocal_point'
-            );
-            if (routeCb) routeCb.checked = true;
-            const modalityCb = state.inputs.find(
-                cb => cb.id && cb.id.startsWith('modality-') && cb.value === 'confocal_point'
-            );
-            if (modalityCb) modalityCb.checked = true;
-            document.getElementById('add-btn').listeners.click();
-            return { output: document.getElementById('output-text').value };
-            """,
-        )
-        # The route must be named in the microscope sentence
-        self.assertIn("Confocal point scanning imaging was performed using the STELLARIS Confocal.", result["output"])
-        self.assertNotIn(" route.", result["output"])
-        # Primary paragraph must NOT contain the modality sentence as primary content
-        self.assertNotIn("Confocal point imaging was performed", result["output"])
-
 
 if __name__ == "__main__":
     unittest.main()
