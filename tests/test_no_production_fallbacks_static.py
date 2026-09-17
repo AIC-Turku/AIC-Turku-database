@@ -7,7 +7,6 @@ from scripts.dashboard.methods_export import build_methods_generator_instrument_
 
 
 PRODUCTION_SCAN_FILES = [
-    "scripts/light_path_parser.py",
     "scripts/dashboard_builder.py",
     "scripts/build_context.py",
     "scripts/dashboard/vm_export.py",
@@ -20,7 +19,6 @@ PRODUCTION_SCAN_FILES = [
 
 # Explicit whitelist: migration/audit compatibility only.
 LEGACY_IMPORT_WHITELIST = {
-    "scripts/light_path_parser.py",
     "scripts/lightpath/legacy_import.py",
     "scripts/lightpath/parse_canonical.py",
     "scripts/lightpath/model.py",

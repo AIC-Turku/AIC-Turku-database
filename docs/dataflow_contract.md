@@ -31,7 +31,6 @@ YAML instrument specs
 
 | Module | Role |
 |---|---|
-| `scripts/light_path_parser.py` | compatibility shim only |
 | `scripts/lightpath/model.py` | constants and primitive helpers |
 | `scripts/lightpath/parse_canonical.py` | canonical v2 parsing and strict/non-strict canonicalizers |
 | `scripts/lightpath/legacy_import.py` | legacy import adapter (migration/audit tooling only) |
@@ -93,7 +92,7 @@ Rules:
 ## Prohibited patterns (audit)
 
 - `yaml.safe_load` in validator/loaders/import scripts: **allowed** (canonical parsing).
-- `legacy` references in `light_path_parser.py`, `validate.py`, `migrate_light_paths.py`, `full_audit.py`: **allowed** (legacy compatibility/audit only).
+- `legacy` references in `validate.py`, `migrate_light_paths.py`, `full_audit.py`, and `scripts/lightpath/legacy_import.py`: **allowed** (legacy compatibility/audit only).
 - `fallback` in display labels and simulator-only role helpers: **allowed** (non-authoritative, display-only).
 - VM export from dashboard DTO: **forbidden** (VM export uses canonical lightpath DTO).
 - LLM/methods export from VM payload: **forbidden** (not present in production builders).

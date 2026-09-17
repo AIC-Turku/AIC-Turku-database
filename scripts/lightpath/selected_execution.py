@@ -8,7 +8,6 @@ It converts route_steps into selected_route_steps and explicitly distinguishes:
 - authored resolved optical-component steps
 - unresolved multi-position optical-component steps requiring runtime selection
 
-It must not import scripts.light_path_parser.
 It should not parse canonical YAML, import legacy topology, validate contracts,
 build route graphs, or generate VM payloads.
 """

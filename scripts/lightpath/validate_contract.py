@@ -10,7 +10,6 @@ Responsibilities:
 - validate filter-cube structured spectral authoring
 - surface parse warnings as hard validation errors
 
-It must not import scripts.light_path_parser.
 It should not own canonical parsing, legacy import, route graph construction,
 selected_execution projection, spectral-op derivation, or VM payload assembly.
 """

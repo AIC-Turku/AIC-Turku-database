@@ -1,5 +1,4 @@
 import unittest
-import ast
 from pathlib import Path
 
 
@@ -30,10 +29,9 @@ class NoLegacyProductionImportsStaticTests(unittest.TestCase):
 
     def test_whitelisted_legacy_locations(self) -> None:
         # Whitelist rationale:
-        # - migration CLI + parser legacy importer wrappers
+        # - migration CLI legacy importer
         # - audit and validation may detect/report legacy topology
         whitelist = {
-            "scripts/light_path_parser.py",
             "scripts/lightpath/legacy_import.py",
             "scripts/migrate_light_paths.py",
             "scripts/full_audit.py",
@@ -48,16 +46,6 @@ class NoLegacyProductionImportsStaticTests(unittest.TestCase):
                 if path.as_posix() not in whitelist:
                     # Only enforce on production scripts directory; tests/docs handled separately.
                     self.assertFalse(path.as_posix().startswith("scripts/dashboard"), f"Unexpected legacy marker in production dashboard module: {path}")
-
-    def test_light_path_parser_is_compat_shim_without_impl_bodies(self) -> None:
-        src = Path("scripts/light_path_parser.py").read_text(encoding="utf-8")
-        tree = ast.parse(src)
-        defs = [
-            node.name
-            for node in tree.body
-            if isinstance(node, (ast.FunctionDef, ast.ClassDef))
-        ]
-        self.assertEqual([], defs)
 
 
 if __name__ == "__main__":

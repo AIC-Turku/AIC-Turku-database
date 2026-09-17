@@ -16,8 +16,6 @@ Non-responsibilities:
 - route graph construction
 - selected_execution construction
 - spectral operation derivation
-
-It must not import scripts.light_path_parser.
 """
 
 from __future__ import annotations

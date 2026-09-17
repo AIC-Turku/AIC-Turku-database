@@ -3,8 +3,6 @@
 This module owns parser-authoritative component serialization and spectral
 operation derivation.
 
-It must not import scripts.light_path_parser.
-
 Responsibilities:
 - normalize component numeric fields
 - build component labels/details/render kinds

@@ -6,7 +6,6 @@ This module contains only:
 - primitive string/number/list normalization helpers
 - simple route/modality helpers
 
-It must not import scripts.light_path_parser.
 It must not contain canonical parsing, legacy import, route graph building,
 selected execution, validation, spectral operations, or VM payload generation.
 """

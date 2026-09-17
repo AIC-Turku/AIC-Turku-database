@@ -14,7 +14,7 @@ import yaml
 
 from scripts.dashboard.instrument_view import build_objective_dto
 from scripts.dashboard.optical_path_view import _selectable_positions_by_component
-from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 from scripts.validate import Vocabulary
 
 

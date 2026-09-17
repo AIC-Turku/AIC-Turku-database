@@ -3,16 +3,18 @@ from pathlib import Path
 
 import yaml
 
-from scripts.light_path_parser import (
+from scripts.lightpath.legacy_import import import_legacy_light_path_model
+from scripts.lightpath.parse_canonical import (
     canonicalize_light_path_model,
-    generate_virtual_microscope_payload,
-    import_legacy_light_path_model,
-    infer_light_source_role,
     parse_canonical_light_path_model,
+)
+from scripts.lightpath.spectral_ops import infer_light_source_role
+from scripts.lightpath.validate_contract import (
     validate_light_path,
     validate_light_path_diagnostics,
     validate_light_path_warnings,
 )
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
 
 def _runtime_projection(payload: dict) -> dict:

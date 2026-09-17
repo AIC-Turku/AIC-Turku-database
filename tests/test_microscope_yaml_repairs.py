@@ -7,7 +7,7 @@ import subprocess
 import pytest
 import yaml
 
-from scripts.light_path_parser import generate_virtual_microscope_payload
+from scripts.lightpath.vm_payload import generate_virtual_microscope_payload
 
 ROOT = Path(__file__).resolve().parents[1]
 
