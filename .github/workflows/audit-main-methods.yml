@@ -45,9 +45,10 @@ jobs:
 
       - name: Recover the historical 116-scenario browser harness
         run: |
-          git show c5250cda66c93ac121e51d4403aaacf3c3e469e0:scripts/replay_methods_116_audit.py > scripts/replay_methods_116_audit.py
-          git show c5250cda66c93ac121e51d4403aaacf3c3e469e0:scripts/replay_methods_116_audit_v4.py > scripts/replay_methods_116_audit_v4.py
-          git show c5250cda66c93ac121e51d4403aaacf3c3e469e0:scripts/replay_methods_116_audit_v5.py > scripts/replay_methods_116_audit_v5.py
+          git fetch origin audit/historical-116-harness-source
+          git show origin/audit/historical-116-harness-source:scripts/replay_methods_116_audit.py > scripts/replay_methods_116_audit.py
+          git show origin/audit/historical-116-harness-source:scripts/replay_methods_116_audit_v4.py > scripts/replay_methods_116_audit_v4.py
+          git show origin/audit/historical-116-harness-source:scripts/replay_methods_116_audit_v5.py > scripts/replay_methods_116_audit_v5.py
 
       - name: Serve rendered site
         run: |
@@ -77,8 +78,6 @@ jobs:
           browser_errors = [r['id'] for r in rows if r.get('execution_error') or r.get('page_errors') or r.get('console_errors')]
           low_conf = [(r['id'], t.get('score'), t.get('action'), t.get('resolved')) for r in rows for t in r.get('trace',[]) if t.get('score',1) < .90]
 
-          # This audit intentionally accepts acquisition software preselected by default.
-          # Do not flag the presence of default acquisition software as a defect.
           checks = {
               'implementation vocabulary': re.compile(r'\b(runtime-selected|exported DTO|route-specific facts|wheel/turret positions?|position EMP_BF|other microscope)\b', re.I),
               'placeholder hardware in finished prose': re.compile(r'\b(Unknown Camera|Unknown PMT|Unknown Detector)\b', re.I),
@@ -104,7 +103,7 @@ jobs:
 
           lines = [
               '# Full Methods Generator audit — current main', '',
-              f'Pinned product commit: `{__import__("os").environ.get("GITHUB_BASE_SHA") or "68efc3041ae8ddf314c1d1c574aed6d7a48bb598"}`',
+              'Pinned product commit: `68efc3041ae8ddf314c1d1c574aed6d7a48bb598`',
               '',
               '## Execution integrity', '',
               f'- Historical scenarios: **{len(rows)}**',
@@ -127,8 +126,6 @@ jobs:
           PY
 
       - name: Publish audit outputs to a detached results branch
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           OUT_BRANCH="audit-output-main-methods-${GITHUB_SHA::7}"
           mkdir -p /tmp/audit-output
