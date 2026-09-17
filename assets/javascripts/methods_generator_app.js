@@ -1841,6 +1841,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const readoutCount = bindReadouts(dto);
         const methodCount = bindMethods(dto);
         toggleSectionVisibility("section-method", methodCount > 0);
+        setRouteSectionHelpText(methodCount > 0);
         toggleSectionVisibility("section-route", routeCount > 0);
         toggleSectionVisibility("section-readout", readoutCount > 0);
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
@@ -1896,6 +1897,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         startNewAcquisition({ keepMethods: true, keepLabel: true });
         setSelectionStatus("This reference names a new acquisition, so the selections have been cleared. The imaging method is kept; change it if this acquisition used another.");
     });
+
+    /**
+     * State the right reason the light-path section is being asked.
+     *
+     * Two different reasons show this section, and they read very differently: a
+     * method genuinely recorded on more than one path, or a record with no
+     * imaging-method control at all, where the path is the only thing to state.
+     * Stating the wrong reason ("recorded on more than one physical path") for a
+     * record with no method control - and no methods shown above to point at - is
+     * worse than saying nothing about why.
+     */
+    function setRouteSectionHelpText(hasMethodOptions) {
+        const routeHelp = document.getElementById("section-route-help");
+        if (!routeHelp) return;
+        routeHelp.textContent = hasMethodOptions
+            ? "One of the methods above is recorded on more than one physical path, and the hardware differs between them. Choose the one this acquisition actually used."
+            : "This record has no separate imaging-method control, so the physical light path is the only thing to state. Choose the one this acquisition actually used.";
+    }
 
     /**
      * Re-derive what the instrument offers from the methods the user has ticked.
@@ -1986,6 +2005,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         const routeVisible = (route) => Boolean(route.parentElement) && route.parentElement.style.display !== "none";
+        setRouteSectionHelpText(hasMethodOptions);
         toggleSectionVisibility("section-route", routeInputs.some(routeVisible));
         toggleSectionVisibility("section-readout", readoutInputs.some(readout => readout.parentElement && readout.parentElement.style.display !== "none"));
         // Hardware cannot belong to a path the acquisition does not name, and a
