@@ -12,7 +12,11 @@ import re
 from typing import Any, Iterable
 
 from scripts.build_context import clean_text
-from scripts.dashboard.optical_path_view import build_optical_path_view_dto
+from scripts.dashboard.optical_path_view import (
+    build_optical_path_view_dto,
+    position_serves_route,
+    route_declares_imaging,
+)
 from scripts.display_labels import resolve_endpoint_type_label, resolve_vocab_label
 from scripts.validate import Vocabulary
 
@@ -1150,10 +1154,23 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 if isinstance(selected_execution.get("selected_route_steps"), list)
                 else []
             )
+            route_images = route_declares_imaging(route)
             for step in steps:
                 if not isinstance(step, dict):
                     continue
                 if clean_text(step.get("kind")) != "optical_component":
+                    continue
+                # A holder whose recorded positions cannot serve this route has no
+                # answer to give here. Asking which of the BC43's four fluorescence
+                # emission filters a brightfield acquisition used is a question with
+                # no correct answer; the record itself is what needs correcting, and
+                # docs/ledger_gaps.md asks the facility for it.
+                available = step.get("available_positions")
+                if isinstance(available, list) and available and not any(
+                    position_serves_route(position, clean_text(step.get("stage_role")), route_images)
+                    for position in available
+                    if isinstance(position, dict)
+                ):
                     continue
                 label = clean_text(step.get("display_label") or step.get("component_id")) or "an optical element"
                 selection_state = clean_text(step.get("selection_state")).lower()
@@ -1271,6 +1288,22 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 if clean_text(row.get("method_sentence"))
             ],
             "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
+            # The same rows, structured. A draft that reports a processing package
+            # with no recorded version has to be able to ask for that version by
+            # name, the way it already does for acquisition software; without this
+            # the only signal was an instrument-level note that said no software
+            # version was recorded while the prose stated one.
+            "processing_software": [
+                {
+                    "name": clean_text(row.get("name")),
+                    "version": clean_text(row.get("version")),
+                    "role": clean_text(row.get("role")).lower(),
+                    "method_sentence": row["method_sentence"],
+                }
+                for row in software_rows
+                if clean_text(row.get("method_sentence"))
+                and clean_text(row.get("role")).lower() in {"processing", "analysis"}
+            ],
             "quarep_light_path_recommendation_needed": quarep_recommendation_needed,
             "quarep_light_path_recommendation": quarep_recommendation_text,
             # The same selectors, structured, so a draft can stop asking about the

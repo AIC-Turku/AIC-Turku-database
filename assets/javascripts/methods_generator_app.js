@@ -137,19 +137,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Processing tools share a frame for the same reason acquisition software
         // does: three analysis packages are one sentence, not three.
-        const processingSentences = dedupeSentences(methods.processing_sentences || []);
         const PROCESSING_FRAME = "Post-acquisition processing and analysis were performed using ";
-        processingSentences.forEach((text, index) => {
+        const processingRows = Array.isArray(methods.processing_software) && methods.processing_software.length
+            ? methods.processing_software
+            : dedupeSentences(methods.processing_sentences || []).map(text => ({ method_sentence: text }));
+        const seenProcessing = new Set();
+        processingRows.forEach((row, index) => {
+            const text = cleanText(row?.method_sentence);
+            if (!text || seenProcessing.has(text.toLowerCase())) return;
+            seenProcessing.add(text.toLowerCase());
             const label = text.startsWith(PROCESSING_FRAME)
                 ? text.slice(PROCESSING_FRAME.length).replace(/\.$/, "")
                 : "";
+            const name = cleanText(row?.name);
+            const version = cleanText(row?.version);
             options.push({
                 id: `action-processing-${index}`,
                 display_label: text,
                 method_sentence: text,
                 publication_template: label ? `${PROCESSING_FRAME}{label}.` : "",
                 publication_label: label,
-                review_prompts: [],
+                // A reported package with no recorded version asks for that version
+                // by name. The instrument-level note it replaces said no software
+                // version was recorded while the same draft stated one.
+                review_prompts: name && !(version && !placeholderValues.has(version.toLowerCase()))
+                    ? [`[PLEASE SPECIFY: the version of ${name} used]`]
+                    : [],
             });
         });
         return options;
@@ -336,6 +349,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             // rather than merging a transmitted lamp into a fluorescence clause.
             checkbox.dataset.routeIds = JSON.stringify(Array.isArray(item.route_ids) ? item.route_ids : []);
             checkbox.dataset.inventoryClass = item.inventory_class || "";
+            // The recorded emission of a light source, used only to ask whether a
+            // source and a filter position that cannot pass it were really paired.
+            const sourceMetadata = item.source_metadata && typeof item.source_metadata === "object"
+                ? item.source_metadata
+                : {};
+            checkbox.dataset.sourceSpectrum = JSON.stringify({
+                wavelength_nm: sourceMetadata.wavelength_nm,
+                width_nm: sourceMetadata.width_nm,
+                tunable_min_nm: sourceMetadata.tunable_min_nm,
+                tunable_max_nm: sourceMetadata.tunable_max_nm,
+            });
             // The recorded component type, used to check a specialist module against
             // the techniques the user says the acquisition used.
             checkbox.dataset.componentType = item.type || "";
@@ -349,6 +373,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Two cameras recorded under one model name are told apart by the port
             // the record routes each of them to, never by inventing a difference.
             checkbox.dataset.portLabel = item.port_label || "";
+            // How a splitter divides the light, as recorded. A splitter that feeds
+            // two branches at once is a different claim from a selector that picks
+            // one, and only the first raises a question when a single detector is
+            // reported behind it.
+            const opticalElementMetadata = item.optical_element_metadata && typeof item.optical_element_metadata === "object"
+                ? item.optical_element_metadata
+                : {};
+            checkbox.dataset.branchSelectionMode = cleanText(opticalElementMetadata.selection_mode);
+            checkbox.dataset.branchCount = cleanText(String(opticalElementMetadata.supported_branch_count ?? ""));
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
@@ -432,6 +465,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.displayLabel = positionLabel;
             checkbox.dataset.incomplete = position?.incomplete ? "1" : "";
             checkbox.dataset.routeIds = JSON.stringify(Array.isArray(position?.route_ids) ? position.route_ids : []);
+            // What this position lets reach the sample, from the recorded spectral
+            // model, so a source that cannot pass it can be questioned rather than
+            // reported alongside it as fact.
+            checkbox.dataset.excitationWindows = JSON.stringify(
+                Array.isArray(position?.excitation_windows) ? position.excitation_windows : []);
             const productCode = cleanText(position?.product_code);
             const isEmpty = Boolean(position?.is_empty);
             // Two empty slots of one turret are different configurations: a bare
@@ -855,6 +893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     function getCheckedSelections(prefix) {
         return Array.from(document.querySelectorAll(`input[id^="${prefix}-"]:checked`)).map(cb => ({
             id: cb.value,
+            checkboxId: cb.id,
             displayLabel: cleanText(cb.dataset.displayLabel),
             methodSentence: cleanText(cb.dataset.methodSentence),
             role: cleanText(cb.dataset.role),
@@ -868,13 +907,35 @@ document.addEventListener("DOMContentLoaded", async () => {
             inventoryClass: cleanText(cb.dataset.inventoryClass),
             componentType: cleanText(cb.dataset.componentType),
             providesCapability: parseJsonObject(cb.dataset.providesCapability),
+            excitationWindows: parseJsonArray2d(cb.dataset.excitationWindows),
+            sourceSpectrum: parseJsonObject(cb.dataset.sourceSpectrum),
             portLabel: cleanText(cb.dataset.portLabel),
             componentId: cleanText(cb.dataset.componentId),
             componentDisplayLabel: cleanText(cb.dataset.componentDisplayLabel),
             positionPhrase: cleanText(cb.dataset.positionPhrase),
             isEmptyPosition: cb.dataset.isEmptyPosition === "1",
             selectionMode: cleanText(cb.dataset.selectionMode),
+            branchSelectionMode: cleanText(cb.dataset.branchSelectionMode),
+            branchCount: Number(cb.dataset.branchCount) || 0,
         }));
+    }
+
+    function parseJsonArray2d(value) {
+        try {
+            const parsed = JSON.parse(value || "[]");
+            if (!Array.isArray(parsed)) return [];
+            // An unbounded side of a longpass or shortpass window is recorded as
+            // null, because the catalogue is JSON and JSON has no infinity.
+            const bound = (value, fallback) => (value === null || value === undefined
+                ? fallback
+                : Number(value));
+            return parsed
+                .filter(Array.isArray)
+                .map(pair => [bound(pair[0], -Infinity), bound(pair[1], Infinity)])
+                .filter(pair => pair.every(value => typeof value === "number" && !Number.isNaN(value)));
+        } catch (error) {
+            return [];
+        }
     }
 
     function parseJsonObject(value) {
@@ -1621,6 +1682,68 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     }
 
+    /**
+     * Ask about a source that the selected filter position cannot pass.
+     *
+     * Both numbers are recorded: the source's emission and what the position lets
+     * through on the illumination side. Where they cannot overlap, the pairing is
+     * not something the instrument can produce, and the draft used to report both
+     * as fact - on the EVOS, whose light cubes each contain their own LED, that
+     * meant "Illumination was provided by a 470 nm LED" beside "the light path
+     * included a Cy5/Alexa 647 filter cube".
+     *
+     * It asks rather than decides. An author may have a reason - a bleed-through
+     * control, a filter swapped since the record was written - and the recorded
+     * numbers cannot rule that out.
+     */
+    function sourceFilterMismatchPrompts(lightSelections, positionSelections) {
+        const prompts = [];
+        positionSelections.forEach((position) => {
+            const windows = Array.isArray(position.excitationWindows) ? position.excitationWindows : [];
+            if (!windows.length) return;
+            const positionRoutes = new Set(position.routeIds || []);
+            const blocked = lightSelections.filter((source) => {
+                const emission = sourceEmissionRange(source.sourceSpectrum);
+                if (!emission) return false;
+                // Only a source and a position recorded on the same path can be
+                // paired at all; two paths in one entry are described separately.
+                const sourceRoutes = source.routeIds || [];
+                if (positionRoutes.size && sourceRoutes.length
+                    && !sourceRoutes.some(routeId => positionRoutes.has(routeId))) {
+                    return false;
+                }
+                return !windows.some(([min, max]) => emission[0] <= max && emission[1] >= min);
+            });
+            if (!blocked.length) return;
+            // The recorded label verbatim: it is a product name, and lowercasing it
+            // produced "thermo fisher / AMG EVOS GFP light cube LED".
+            const names = humanJoin(blocked.map(source => cleanText(source.displayLabel)));
+            const positionName = cleanText(position.positionPhrase) || cleanText(position.displayLabel);
+            prompts.push(`[PLEASE VERIFY: ${names} ${blocked.length === 1 ? "is" : "are"} reported with ${positionName}, which the record says does not pass ${blocked.length === 1 ? "that wavelength" : "those wavelengths"}; confirm the illumination and the filter used]`);
+        });
+        return uniqueTexts(prompts);
+    }
+
+    /**
+     * The wavelengths a recorded source can emit, or null when the record does not
+     * say. A tunable source is reported over its whole recorded range, because any
+     * line in it may have been the one used.
+     */
+    function sourceEmissionRange(spectrum) {
+        const value = key => {
+            const parsed = Number(spectrum?.[key]);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
+        const tunableMin = value("tunable_min_nm");
+        const tunableMax = value("tunable_max_nm");
+        if (tunableMin !== null && tunableMax !== null) return [tunableMin, tunableMax];
+        const wavelength = value("wavelength_nm");
+        if (wavelength === null) return null;
+        const width = value("width_nm");
+        const half = width ? width / 2 : 0;
+        return [wavelength - half, wavelength + half];
+    }
+
     function reviewBlock(prompts, heading) {
         const items = uniqueTexts(prompts);
         if (!items.length) return "";
@@ -1810,6 +1933,31 @@ document.addEventListener("DOMContentLoaded", async () => {
             const route = routeInputs.find(input => input.value === method.routeIds[0]);
             if (route && !route.disabled) route.checked = true;
         });
+
+        // A specialist module belongs to the technique its record says it provides.
+        // Changing the method away from that technique withdraws the module the same
+        // way it withdraws hardware the new path does not reach: a draft must not
+        // state "The Easy3D STED module was used" as finished prose while also
+        // warning that STED is not among the methods selected. Re-ticking it is how
+        // an author states a use the record does not anticipate, and that is when
+        // the confirmation prompt is the right answer.
+        if (constrained) {
+            const claimed = new Set([
+                ...methodSelections.map(item => cleanText(item.id).toLowerCase()),
+                ...getCheckedSelections("readout").map(item => cleanText(item.id).split(":").pop().toLowerCase()),
+            ]);
+            getCheckedSelections("module").forEach((module) => {
+                const provided = Object.values(module.providesCapability || {})
+                    .filter(Array.isArray)
+                    .flat()
+                    .map(entry => cleanText(entry?.id).toLowerCase())
+                    .filter(Boolean);
+                if (!provided.length) return;
+                if (provided.some(id => claimed.has(id))) return;
+                const input = document.getElementById(module.checkboxId);
+                if (input) input.checked = false;
+            });
+        }
 
         const checkedRoutes = new Set(getCheckedIds("route"));
         document.querySelectorAll('input[id^="readout-"]').forEach((readout) => {
@@ -2245,6 +2393,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ...specialistSelections,
         ];
         prompts.push(...positionSelections.flatMap(item => item.reviewPrompts || []));
+        prompts.push(...sourceFilterMismatchPrompts(lightSelections, positionSelections));
 
         const positionGroups = groupSelectionsByRoute(positionSelections, routeIds);
         const routeGroups = groupSelectionsByRoute(
@@ -2320,6 +2469,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!detectorSelections.length && !runtime.endpoints.length) {
             prompts.push("[PLEASE SPECIFY: the detector, camera or eyepieces used to record this acquisition]");
         }
+
+        // A splitter recorded as feeding its branches at once has as many outputs as
+        // it has branches. Reporting one detector behind a two-camera DualCam set
+        // may be right - the second port can sit unused - but it is a claim the
+        // author has to make, not one the draft should make silently. A selector
+        // that picks one branch at a time raises nothing: choosing one is its
+        // normal use.
+        const reportedEndpoints = detectorSelections.length + runtime.endpoints.length;
+        getCheckedSelections("splitter").forEach((splitter) => {
+            if (cleanText(splitter.branchSelectionMode).toLowerCase() !== "multiple") return;
+            if (!(splitter.branchCount > 1)) return;
+            if (reportedEndpoints >= splitter.branchCount) return;
+            prompts.push(`[PLEASE VERIFY: ${cleanText(splitter.displayLabel)} is reported and the record says it feeds ${splitter.branchCount} branches at once, but ${reportedEndpoints === 1 ? "only one detector is" : `${reportedEndpoints} detectors are`} reported; confirm which branches were recorded and which detector each one reached]`);
+        });
 
         const selectedMethodIds = new Set(methodSelections.map(item => cleanText(item.id).toLowerCase()));
         const selectedSourceRoles = new Set(lightSelections.map(item => cleanText(item.role).toLowerCase()).filter(Boolean));
@@ -2404,15 +2567,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         // A record-quality gap belongs in this draft only when the draft reports the
         // thing it is about. The page banner lists every gap for the instrument.
         const reportedCategories = new Set();
-        if (confirmedActions.sentences.length) reportedCategories.add("software");
         if (moduleSelections.length) reportedCategories.add("module");
         if (detectorSelections.length) reportedCategories.add("detector");
         if (objectives.sentences.length) reportedCategories.add("objective");
         if (getCheckedSelections("scanner").length) reportedCategories.add("scanner");
         if (lightSelections.length) reportedCategories.add("source");
-        // The draft has already asked for the version of the software the user
-        // confirmed; repeating it as a record-quality note asks twice.
-        if (missingVersions.length) reportedCategories.delete("software");
+        // Software is deliberately absent: every software fact this entry reports
+        // carries its own request for what the record does not hold, naming the
+        // product. The instrument-level note is coarser than that and was actively
+        // wrong - a draft stating "Fusion BC43 (v2.7.0)" also carried a note saying
+        // no software version was recorded, because a different row, the analysis
+        // package, had none. The page banner still lists the record-level gap.
         const methodsMetadataStatus = getMethodsMetadataStatus(dto);
         if (methodsMetadataStatus.isBlocked) {
             const labels = uniqueTexts(methodsMetadataStatus.blockers
@@ -2454,9 +2619,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return reportedCategories.has(match[1]);
     }
 
-    // Everything a single acquisition asserts. The acquisition reference and the
-    // confirmed session actions (software, incubation, autofocus) describe the
-    // session rather than one image set, so they are not cleared between them.
     // Everything a user ticks to describe one acquisition. "confirmed" belongs here
     // with the rest: the confirmable actions include the acquisition software, the
     // environmental control and the post-acquisition processing, and a processing

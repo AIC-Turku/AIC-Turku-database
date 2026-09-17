@@ -140,6 +140,15 @@ Rules:
   and filter positions as multi-select controls, describes each path in its own
   sentence rather than merging them, and asks the author to confirm a second path
   that no selected method explains.
+- A configuration the record says the instrument cannot produce is questioned,
+  never asserted and never silently allowed. The checks are computed from recorded
+  values only: a filter position is not offered on a route whose recorded positions
+  could not serve it, a source whose recorded emission cannot pass a selected
+  filter's recorded excitation window is queried, a splitter recorded as feeding
+  its branches at once is queried when fewer detectors are reported than it feeds,
+  and a specialist module is withdrawn when the technique its vocabulary record
+  says it provides is no longer selected. None of them decides on the author's
+  behalf; each asks, or declines to offer an answer that cannot be right.
 - Acquisition state is scoped to the acquisition. Starting another acquisition,
   naming a different acquisition reference, or changing the imaging method clears
   the hardware selections, the confirmed actions and any reviewed runtime plan, so

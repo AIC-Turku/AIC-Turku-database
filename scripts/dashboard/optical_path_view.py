@@ -686,6 +686,120 @@ def _position_type_noun(position: dict[str, Any], stage_role: str) -> str:
 
 
 
+def _operation_pass_windows(operation: dict[str, Any]) -> list[list[float | None]]:
+    """The wavelength ranges one recorded spectral operation lets through.
+
+    Only the operations whose pass band is fully recorded produce a window. A
+    longpass or shortpass edge bounds one side only, and the unbounded side is
+    `null` rather than a guessed limit or a float infinity - these windows are
+    serialised into the instrument catalogue, and `Infinity` is not JSON a
+    browser will parse.
+    """
+    op = clean_text(operation.get("op")).lower()
+    windows: list[list[float | None]] = []
+
+    def band_window(band: Any) -> None:
+        if not isinstance(band, dict):
+            return
+        center = _float_or_none(band.get("center_nm"))
+        width = _float_or_none(band.get("width_nm"))
+        if center is None:
+            return
+        half = (width / 2) if width else 0.0
+        windows.append([center - half, center + half])
+
+    if op in {"bandpass", "multiband_bandpass"}:
+        bands = operation.get("bands")
+        if isinstance(bands, list) and bands:
+            for band in bands:
+                band_window(band)
+        else:
+            band_window(operation)
+    elif op == "longpass":
+        cut_on = _float_or_none(operation.get("cut_on_nm"))
+        if cut_on is not None:
+            windows.append([cut_on, None])
+    elif op == "shortpass":
+        cut_off = _float_or_none(operation.get("cut_off_nm") or operation.get("cut_on_nm"))
+        if cut_off is not None:
+            windows.append([None, cut_off])
+    return windows
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _position_excitation_windows(position: dict[str, Any]) -> list[list[float | None]]:
+    """What a position lets reach the sample, as recorded pass windows.
+
+    A source whose recorded emission cannot pass these windows cannot have
+    excited anything through this position. That is the one statement these
+    numbers support, and the Methods page uses it to ask rather than to decide:
+    an EVOS light cube carries its own LED, so pairing the 470 nm GFP cube's LED
+    with the Cy5 cube is a configuration the instrument cannot produce, and the
+    draft used to report both without comment.
+    """
+    spectral_ops = position.get("spectral_ops") if isinstance(position.get("spectral_ops"), dict) else {}
+    windows: list[list[float | None]] = []
+    for operation in spectral_ops.get("illumination") or []:
+        if not isinstance(operation, dict):
+            continue
+        # A dichroic steers rather than defines the excitation band, and reading
+        # its edge as a pass window would reject legitimate pairings.
+        if clean_text(operation.get("sub_role")) == "dichroic":
+            continue
+        windows.extend(_operation_pass_windows(operation))
+    return windows
+
+
+# Positions that exist to select a fluorescence band. A route that declares no
+# imaging mode implements only contrast methods - transmitted brightfield, phase
+# contrast, DIC - and none of those select an emission band.
+_FLUORESCENCE_PASSBAND_TYPES = {
+    "bandpass", "multiband_bandpass", "longpass", "shortpass", "notch",
+}
+_FLUORESCENCE_STAGE_ROLES = {"excitation", "emission", "cube"}
+
+
+def route_declares_imaging(route: dict[str, Any]) -> bool:
+    """True when a canonical route declares at least one imaging mode.
+
+    A route whose `imaging_modes` is empty is not an unfinished record: the
+    vocabulary authors `covers.imaging_modes: []` for the transmitted-light and
+    reflected-light families, and the instrument records follow it. Such a route
+    carries only contrast methods.
+    """
+    modes = route.get("imaging_modes")
+    return isinstance(modes, list) and bool([mode for mode in modes if clean_text(mode)])
+
+
+def position_serves_route(position: dict[str, Any], stage_role: str, route_declares_imaging_modes: bool) -> bool:
+    """Whether a recorded position can be the one a given route was set to.
+
+    The BC43 records its internal emission filter wheel on the transmitted path as
+    well as the fluorescence ones, and the wheel holds four fluorescence bandpass
+    filters and no open position. Offering those on a brightfield acquisition let a
+    draft state "the light path included a mCherry emission bandpass filter
+    (600/50 nm)" in a transmitted-light paragraph, and asking which of them was
+    used had no answer a brightfield author could give.
+
+    Nothing here decides what the wheel really holds. It refuses to present a
+    fluorescence band as a brightfield choice; `scripts/ledger_gaps.py` asks the
+    facility whether the path is recorded correctly and whether the wheel has an
+    open position that is not written down.
+    """
+    if route_declares_imaging_modes:
+        return True
+    component_type = clean_text(position.get("component_type")).lower()
+    if component_type not in _FLUORESCENCE_PASSBAND_TYPES:
+        return True
+    return clean_text(stage_role).lower() not in _FLUORESCENCE_STAGE_ROLES
+
+
 def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """Collect the positions each multi-position optical element can be set to.
 
@@ -699,6 +813,7 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
     for route in light_paths:
         route_id = clean_text(route.get("id"))
         route_label = clean_text(route.get("name") or route.get("display_label") or route_id)
+        route_images = route_declares_imaging(route)
         selected_execution = route.get("selected_execution") if isinstance(route.get("selected_execution"), dict) else {}
         steps = selected_execution.get("selected_route_steps")
         for step in steps if isinstance(steps, list) else []:
@@ -718,6 +833,8 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
             }
             for position in available:
                 if not isinstance(position, dict):
+                    continue
+                if not position_serves_route(position, holder_stage_role, route_images):
                     continue
                 key = clean_text(position.get("position_key") or position.get("position_id"))
                 # The holder's own name identifies the container, never the filter
@@ -775,6 +892,10 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     # of optic it is. Both come from the recorded spectral model;
                     # neither is inferred when the record does not carry it.
                     "spec_phrase": _position_spec_phrase(position),
+                    # The recorded pass windows on the illumination side, so the
+                    # page can ask about a source that cannot reach the sample
+                    # through this position instead of reporting both as fact.
+                    "excitation_windows": _position_excitation_windows(position),
                     "type_noun": _position_type_noun(position, holder_stage_role),
                     "stage_role": holder_stage_role,
                     "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",

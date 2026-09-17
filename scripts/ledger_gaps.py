@@ -71,6 +71,49 @@ def position_spectrum_is_missing(position: dict[str, Any]) -> bool:
     return not any(has_spectral_detail(position.get(key)) for key in NESTED_COMPONENT_KEYS)
 
 
+# A holder whose every recorded position selects a fluorescence band cannot be set
+# to anything a brightfield or phase-contrast acquisition could have used.
+FLUORESCENCE_PASSBAND_TYPES = {
+    "bandpass", "multiband_bandpass", "longpass", "shortpass", "notch",
+}
+FLUORESCENCE_STAGE_ROLES = {"excitation", "emission", "cube"}
+
+
+def element_ids_on_route(light_path: dict[str, Any]) -> set[str]:
+    found: set[str] = set()
+
+    def walk(items: Any) -> None:
+        for item in items or []:
+            if not isinstance(item, dict):
+                continue
+            element_id = clean(item.get("optical_path_element_id"))
+            if element_id:
+                found.add(element_id)
+            branches = item.get("branches")
+            if isinstance(branches, dict):
+                for branch in branches.get("items") or []:
+                    if isinstance(branch, dict):
+                        walk(branch.get("sequence"))
+
+    walk(light_path.get("illumination_sequence"))
+    walk(light_path.get("detection_sequence"))
+    return found
+
+
+def holder_cannot_serve_route(element: dict[str, Any]) -> bool:
+    """True when every recorded position selects a fluorescence band."""
+    if clean(element.get("stage_role")).lower() not in FLUORESCENCE_STAGE_ROLES:
+        return False
+    positions = element.get("positions") or {}
+    if not isinstance(positions, dict) or not positions:
+        return False
+    return all(
+        isinstance(position, dict)
+        and clean(position.get("component_type")).lower() in FLUORESCENCE_PASSBAND_TYPES
+        for position in positions.values()
+    )
+
+
 def instrument_files() -> list[Path]:
     active = sorted((REPO_ROOT / "instruments").glob("*.yaml"))
     retired = sorted((REPO_ROOT / "instruments" / "retired").glob("*.yaml"))
@@ -154,6 +197,25 @@ def collect_gaps() -> dict[str, dict[str, list[str]]]:
         if clean(identity.get("stand_orientation")).lower() in {"other", "unknown", ""}:
             gaps["stand_orientation"][name].append(clean(identity.get("stand_orientation")) or "(unset)")
 
+        elements_by_id = {
+            clean(element.get("id")): element
+            for element in hardware.get("optical_path_elements") or []
+            if isinstance(element, dict) and clean(element.get("id"))
+        }
+        for light_path in record.get("light_paths") or []:
+            if not isinstance(light_path, dict):
+                continue
+            if [mode for mode in (light_path.get("imaging_modes") or []) if clean(mode)]:
+                continue
+            route_label = clean(light_path.get("route_type")) or clean(light_path.get("id"))
+            for element_id in sorted(element_ids_on_route(light_path)):
+                element = elements_by_id.get(element_id)
+                if not element or not holder_cannot_serve_route(element):
+                    continue
+                gaps["route_position_mismatch"][name].append(
+                    f"{clean(element.get('name')) or element_id} on the {route_label} path"
+                )
+
         for element in hardware.get("optical_path_elements") or []:
             for key, position in (element.get("positions") or {}).items():
                 if not isinstance(position, dict):
@@ -214,6 +276,14 @@ SECTIONS: list[tuple[str, str, str]] = [
      "useful than an empty string, for the same reason."),
     ("stand_orientation", "Stand orientation",
      "Is there a better vocabulary term than `other` for this stand?"),
+    ("route_position_mismatch", "Filter holders no recorded position can serve",
+     "Does this path really pass through this holder, and if it does, what is it set "
+     "to for a non-fluorescence acquisition?\n\nEvery recorded position in the holder "
+     "selects a fluorescence band, but the path it is recorded on declares no "
+     "fluorescence imaging mode. Either the path does not pass through the holder, or "
+     "the holder has an open position that is not written down. Until this is "
+     "resolved the Methods draft offers no position for that path, because none of "
+     "the recorded ones could be the answer."),
     ("filter_bands", "Filter positions with no transmission bands",
      "For each position: what are the excitation band, dichroic edge and emission "
      "band, and the manufacturer and catalogue number?\n\nThe Methods draft prints "

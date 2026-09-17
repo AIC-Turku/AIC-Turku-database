@@ -125,12 +125,151 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.page.check("#" + matches[nth]["id"])
         return matches[nth]["label"]
 
+    def method_input(self, label: str) -> str:
+        """The selector for the method checkbox with exactly this recorded label."""
+        matches = self.page.evaluate(
+            """(label) => [...document.querySelectorAll('#method-list input')]
+                 .filter(input => input.dataset.displayLabel === label)
+                 .map(input => "#" + input.id)""",
+            label,
+        )
+        self.assertEqual(len(matches), 1, f"expected one method labelled {label!r}, got {matches}")
+        return matches[0]
+
     def add(self) -> str:
         self.page.click("#add-btn")
         return self.page.locator("#output-text").input_value()
 
     def prose(self) -> str:
         return self.page.locator("#output-text").input_value().split("Review before publication")[0]
+
+    # --- configurations the record says the instrument cannot produce ----------
+
+    def test_a_brightfield_acquisition_is_not_offered_fluorescence_filters(self):
+        """The BC43 records its emission wheel on the transmitted path too.
+
+        Every position in that wheel is a fluorescence bandpass and none is open,
+        so a brightfield acquisition could not have used any of them. The page used
+        to offer all four and let a draft state "the light path included a mCherry
+        emission bandpass filter (600/50 nm)" in a transmitted-light paragraph, and
+        to ask which of them was used - a question with no correct answer.
+        """
+        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.tick("method-list", "brightfield")
+        offered = self.page.evaluate(
+            """() => [...document.querySelectorAll('input[id^="filterposition-"]')]
+                 .map(input => input.dataset.displayLabel)"""
+        )
+        self.assertEqual(offered, [], f"fluorescence positions offered on a brightfield path: {offered}")
+
+        self.tick("obj-list", ".")
+        output = self.add()
+        self.assertNotIn("mCherry", output)
+        self.assertNotIn("which position of the BC43 Internal Emission Filters", output)
+
+    def test_a_source_that_cannot_pass_the_selected_filter_is_questioned(self):
+        """Each EVOS light cube carries its own LED.
+
+        Pairing the 470 nm GFP cube's LED with the Cy5 cube is a configuration the
+        instrument cannot produce, and the draft reported both without comment.
+        """
+        self.select_instrument("EVOS fl")
+        self.tick("method-list", "idefield")
+        self.tick("light-list", "470 nm")
+        self.tick("filter-list", "Cy5")
+        self.tick("obj-list", ".")
+        output = self.add()
+        self.assertIn("does not pass that wavelength", output)
+
+    def test_a_source_the_selected_filter_passes_is_not_questioned(self):
+        """The check has to stay silent on the pairing the instrument is for."""
+        self.select_instrument("EVOS fl")
+        self.tick("method-list", "idefield")
+        self.tick("light-list", "470 nm")
+        self.tick("filter-list", "GFP/Alexa 488")
+        self.tick("obj-list", ".")
+        output = self.add()
+        self.assertNotIn("does not pass", output)
+
+    def test_a_simultaneous_splitter_with_one_detector_asks_about_the_other_branch(self):
+        """A DualCam set feeds two cameras at once; one may still be unused."""
+        self.select_instrument("Nikon Ti2-E Crest V3")
+        self.tick("method-list", "onfocal spinning")
+        self.tick("obj-list", ".")
+        self.tick("light-list", ".")
+        self.tick("splitter-list", "DualCam-GFP")
+        self.page.check("#det-0")
+        output = self.add()
+        self.assertIn("feeds 2 branches at once", output)
+
+    def test_an_exclusive_port_selector_raises_no_branch_question(self):
+        """Choosing one branch of a selector is its normal use, not a gap."""
+        self.select_instrument("Nikon Ti2-E Crest V3")
+        self.tick("method-list", "onfocal spinning")
+        self.tick("obj-list", ".")
+        self.tick("light-list", ".")
+        self.tick("splitter-list", "Trinocular Port")
+        self.page.check("#det-0")
+        output = self.add()
+        self.assertNotIn("branches at once", output)
+
+    def test_a_reported_software_version_is_not_also_reported_as_missing(self):
+        """The draft stated a version and denied having one in the same breath.
+
+        The instrument-level note fired because a different row - the analysis
+        package - had no version. Each reported software fact now asks for what it
+        is missing, by name.
+        """
+        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.tick("method-list", "brightfield")
+        self.tick("obj-list", ".")
+        self.tick("confirmed-list", "Fusion BC43")
+        output = self.add()
+        self.assertIn("Fusion BC43 (v2.7.0)", output)
+        self.assertNotIn("Software version is not recorded", output)
+
+    def test_a_reported_package_with_no_version_is_asked_for_by_name(self):
+        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.tick("method-list", "brightfield")
+        self.tick("obj-list", ".")
+        self.tick("confirmed-list", "Imaris")
+        output = self.add()
+        self.assertIn("[PLEASE SPECIFY: the version of Imaris Quant used]", output)
+
+    def test_a_module_is_withdrawn_when_its_technique_is_deselected(self):
+        """A draft must not state a module as fact and warn about it as well.
+
+        Swapping STED for RESOLFT keeps the path and its hardware - that round trip
+        is what the same-path preservation exists for - but the depletion module
+        belongs to STED, and the record says so.
+        """
+        self.select_instrument("Abberior STED")
+        sted = self.method_input("STED")
+        resolft = self.method_input("RESOLFT")
+        self.page.check(sted)
+        self.tick("module-list", "Easy3D")
+        self.assertEqual(self.page.locator("#module-list input:checked").count(), 1)
+
+        self.page.uncheck(sted)
+        self.page.check(resolft)
+        self.assertEqual(self.page.locator("#module-list input:checked").count(), 0,
+                         "a STED module survived into an acquisition claiming no STED")
+
+        self.tick("obj-list", ".")
+        self.tick("light-list", "485")
+        output = self.add()
+        self.assertNotIn("Easy3D STED module", output.split("Review before publication")[0])
+
+    def test_a_module_re_ticked_deliberately_is_reported_with_its_warning(self):
+        """Re-ticking is how an author states a use the record does not anticipate."""
+        self.select_instrument("Abberior STED")
+        self.page.check(self.method_input("RESOLFT"))
+        self.tick("module-list", "Easy3D")
+        self.tick("obj-list", ".")
+        self.tick("light-list", "485")
+        output = self.add()
+        self.assertIn("Easy3D STED module", output.split("Review before publication")[0])
+        self.assertIn("STED is not among the methods selected", output)
 
     # --- findings that only real records can show ----------------------------
 

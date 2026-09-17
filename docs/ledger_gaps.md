@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**115 open questions across 23 records.**
+**116 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -154,6 +154,16 @@ Is there a better vocabulary term than `other` for this stand?
 
 - **MSquared Aurora Airy Beam** — other
 - **ONI Nanoimager** — other
+
+## Filter holders no recorded position can serve
+
+Does this path really pass through this holder, and if it does, what is it set to for a non-fluorescence acquisition?
+
+Every recorded position in the holder selects a fluorescence band, but the path it is recorded on declares no fluorescence imaging mode. Either the path does not pass through the holder, or the holder has an open position that is not written down. Until this is resolved the Methods draft offers no position for that path, because none of the recorded ones could be the answer.
+
+1 across 1 record:
+
+- **Andor BC43 Benchtop Confocal** — BC43 Internal Emission Filters on the transmitted_light path
 
 ## Filter positions with no transmission bands
 
