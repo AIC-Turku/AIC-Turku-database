@@ -787,47 +787,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
 
-    function shouldUseLegacyModalities(dto) {
-        const modalities = Array.isArray(dto?.modalities) ? dto.modalities : [];
-        if (!modalities.length) return false;
-        const routeViews = routeViewsForInstrument(dto);
-        const hasRoutes = routeViews.length > 0;
-        if (dto?.retired) return !hasRoutes;
-        const caps = dto?.capabilities && typeof dto.capabilities === "object" ? dto.capabilities : {};
-        const hasCapabilities = Object.values(caps).some(value => Array.isArray(value) && value.length > 0);
-        const hasExplicitRouteMethods = routeViews.some(route => {
-            const identity = route?.route_identity && typeof route.route_identity === "object"
-                ? route.route_identity : {};
-            return (Array.isArray(identity.imaging_modes) && identity.imaging_modes.length > 0)
-                || (Array.isArray(identity.contrast_methods) && identity.contrast_methods.length > 0);
-        });
-        return !hasCapabilities && !hasExplicitRouteMethods;
-    }
-
     function updateHardwareVisibility(dto, preserveSelections = true) {
         const retained = Object.fromEntries(["light", "det", "filter", "splitter"].map(prefix =>
             [prefix, new Set(preserveSelections ? getCheckedIds(prefix) : [])]
         ));
         const retainedPositions = new Set(preserveSelections ? getCheckedIds("filterposition") : []);
-        // Route selection is authoritative; fall back to legacy modality filter only
-        // when no route checkboxes are checked.
         const checkedRouteIds = new Set(getCheckedIds("route"));
-        const checkedModalityIds = checkedRouteIds.size === 0
-            ? new Set(getCheckedIds("modality"))
-            : new Set();
         const routeViews = routeViewsForInstrument(dto);
 
-        // Collect hardware IDs from routes that match the checked routes/modalities.
+        // Collect hardware IDs from routes that match the checked routes.
         // When nothing is checked, include hardware from ALL routes.
         const matchingRouteHardwareIds = new Set();
         routeViews
-            .filter(rv => {
-                if (checkedRouteIds.size === 0 && checkedModalityIds.size === 0) return true;
-                if (checkedRouteIds.has(cleanText(rv.id))) return true;
-                // Legacy modality fallback: illumination_mode or id match
-                return checkedModalityIds.has(cleanText(rv.illumination_mode)) ||
-                    checkedModalityIds.has(cleanText(rv.id));
-            })
+            .filter(rv => checkedRouteIds.size === 0 || checkedRouteIds.has(cleanText(rv.id)))
             .forEach(rv => {
                 ["sources", "filters", "splitters", "endpoints"].forEach(key => {
                     (rv.relevant_hardware?.[key] || []).forEach(item => {
@@ -837,17 +809,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
             });
 
-        // Filter inventory renderables by:
-        //   1. The item belongs to a matching route, OR
-        //   2. (Legacy) The item's own modalities array declares a checked modality.
-        // When nothing is checked, return all items unfiltered.
+        // Filter inventory renderables to those on a matching route. When nothing
+        // is checked, return all items unfiltered.
         function filterBySelection(items) {
-            if (checkedRouteIds.size === 0 && checkedModalityIds.size === 0) return items;
-            return items.filter(item => {
-                const id = cleanText(item?.id);
-                if (matchingRouteHardwareIds.has(id)) return true;
-                return Array.isArray(item?.modalities) && item.modalities.some(m => checkedModalityIds.has(cleanText(m)));
-            });
+            if (checkedRouteIds.size === 0) return items;
+            return items.filter(item => matchingRouteHardwareIds.has(cleanText(item?.id)));
         }
 
         // Which recorded paths each component sits on, over every route rather than
@@ -1159,25 +1125,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function getCheckedIds(prefix) {
         return getCheckedSelections(prefix).map(item => item.id).sort();
-    }
-
-    /**
-     * Sentence for the legacy modality compatibility list.
-     *
-     * Every other category now renders through `mergeByPublicationTemplate`, which
-     * merges by sentence frame instead of restating the frame per checkbox.
-     */
-    function groupedLabelSentence(prefix, selections) {
-        const labels = uniqueTexts(selections.map(item => item.displayLabel));
-        if (!labels.length) {
-            return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
-        }
-        if (prefix === "modality") {
-            return labels.length === 1
-                ? `Imaging modality used was ${labels[0]}.`
-                : `Imaging modalities used included ${humanJoin(labels)}.`;
-        }
-        return dedupeSentences(selections.map(item => item.methodSentence)).join(" ");
     }
 
     function getExportedRuntimeSelectedConfiguration(dto) {
@@ -1896,9 +1843,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleSectionVisibility("section-method", methodCount > 0);
         toggleSectionVisibility("section-route", routeCount > 0);
         toggleSectionVisibility("section-readout", readoutCount > 0);
-        const showLegacyModalities = shouldUseLegacyModalities(dto);
-        const modalityCount = bindCheckboxes("modality-list", showLegacyModalities ? (dto.modalities || []) : [], "modality");
-        toggleSectionVisibility("section-modality", modalityCount > 0);
         toggleSectionVisibility("section-module", bindCheckboxes("module-list", dto.modules || [], "module") > 0);
         toggleSectionVisibility("section-scanner", bindCheckboxes("scanner-list", dto.hardware?.scanner?.present ? [dto.hardware.scanner] : [], "scanner") > 0);
         toggleSectionVisibility("section-obj", bindCheckboxes("obj-list", dto.hardware?.objectives || [], "obj") > 0);
@@ -2082,14 +2026,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         applyMethodAvailability(currentInst);
     });
 
-    // Container-level change listener for modality checkboxes. Registered once at
-    // initialization so it survives instrument switches; reads currentInst at call time.
-    document.getElementById("modality-list").addEventListener("change", () => {
-        if (currentInst) updateHardwareVisibility(currentInst);
-    });
-
-    // Container-level change listener for route checkboxes. Route selection is
-    // authoritative; modality filter only activates when no route is checked.
+    // Container-level change listener for route checkboxes.
     document.getElementById("route-list").addEventListener("change", (event) => {
         const target = event?.target;
         // Withdrawing a path withdraws the readouts recorded on it. Paths are no
@@ -2678,12 +2615,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         }
 
-        const compatModalityText = shouldUseLegacyModalities(dto)
-            ? cleanText(groupedLabelSentence("modality", getCheckedSelections("modality")))
-            : "";
-
         return {
-            paragraphs: [paragraphHardware, ...lightPathParagraphs, compatModalityText]
+            paragraphs: [paragraphHardware, ...lightPathParagraphs]
                 .map(cleanText).filter(Boolean),
             entryPrompts: uniqueTexts(prompts.map(prompt => cleanText(prompt).replace(/\.$/, ""))),
             sectionPrompts: uniqueTexts(sectionPrompts.map(prompt => cleanText(prompt).replace(/\.$/, ""))),
@@ -2719,7 +2652,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // step that survives into the next acquisition is a claim nobody made.
     const ACQUISITION_SCOPED_PREFIXES = [
         "route", "readout", "light", "det", "filter", "filterposition", "splitter",
-        "modality", "module", "scanner", "obj", "magnification-changer",
+        "module", "scanner", "obj", "magnification-changer",
         "optical-modulator", "illumination-logic", "confirmed",
     ];
 
@@ -2770,10 +2703,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // acquisition that names none of them describes nothing.
         const routeSection = document.getElementById("section-route");
         const routeAvailable = Boolean(routeSection && routeSection.style.display !== "none");
-        // A legacy record states its modality instead of a path, and answering that
-        // question is the same answer.
-        const legacyModalityChosen = getCheckedIds("modality").length > 0;
-        if (routeAvailable && !legacyModalityChosen && getCheckedIds("route").length === 0) {
+        if (routeAvailable && getCheckedIds("route").length === 0) {
             setSelectionStatus("Choose the light path used for this acquisition.");
             return;
         }
