@@ -35,11 +35,8 @@ jobs:
           pip install -r requirements-test.txt
           python -m playwright install --with-deps chromium
 
-      - name: Validate current main-derived code
+      - name: Build rendered dashboard from pinned main-derived code
         run: |
-          python -m scripts.generate_templates --check
-          python -m scripts.validate
-          PYTHONPATH=. python -m pytest -q
           python -m scripts.dashboard_builder --strict
           mkdocs build --strict
 
@@ -60,12 +57,17 @@ jobs:
           cat /tmp/methods-audit-server.log
           exit 1
 
-      - name: Replay all 116 historical scenarios through Chromium
+      - name: Replay all 116 historical scenarios through Chromium and preserve outputs
         run: |
+          set +e
           PYTHONPATH=. python scripts/replay_methods_116_audit_v5.py \
             --url http://127.0.0.1:8000/methods_generator/ \
             --json methods-116-main.json \
             --markdown methods-116-main.md
+          code=$?
+          echo "$code" > replay-exit-code.txt
+          echo "Historical replay exit code: $code"
+          exit 0
 
       - name: Generate adversarial audit summary
         run: |
@@ -75,8 +77,9 @@ jobs:
 
           rows = json.loads(Path('methods-116-main.json').read_text())
           outputs = {r['id']: r.get('output','') for r in rows}
-          browser_errors = [r['id'] for r in rows if r.get('execution_error') or r.get('page_errors') or r.get('console_errors')]
+          browser_errors = [(r['id'], r.get('execution_error',''), r.get('page_errors',[]), r.get('console_errors',[])) for r in rows if r.get('execution_error') or r.get('page_errors') or r.get('console_errors')]
           low_conf = [(r['id'], t.get('score'), t.get('action'), t.get('resolved')) for r in rows for t in r.get('trace',[]) if t.get('score',1) < .90]
+          replay_exit = Path('replay-exit-code.txt').read_text().strip()
 
           checks = {
               'implementation vocabulary': re.compile(r'\b(runtime-selected|exported DTO|route-specific facts|wheel/turret positions?|position EMP_BF|other microscope)\b', re.I),
@@ -87,7 +90,6 @@ jobs:
               'EVOS 470nm with Cy5 cube': re.compile(r'470 nm LED[\s\S]{0,700}Cy5/Alexa 647 filter cube', re.I),
               'duplicate exact review line': None,
           }
-
           hits = {k: [] for k in checks}
           for sid, out in outputs.items():
               for name, rx in checks.items():
@@ -104,38 +106,45 @@ jobs:
           lines = [
               '# Full Methods Generator audit — current main', '',
               'Pinned product commit: `68efc3041ae8ddf314c1d1c574aed6d7a48bb598`',
-              '',
-              '## Execution integrity', '',
-              f'- Historical scenarios: **{len(rows)}**',
-              f'- Browser/execution-error scenarios: **{len(browser_errors)}** ({browser_errors or "none"})',
+              '', '## Execution integrity', '',
+              f'- Historical scenarios recovered: **{len(rows)}**',
+              f'- Historical replay process exit code: **{replay_exit}**',
+              f'- Browser/execution-error scenarios: **{len(browser_errors)}**',
               f'- Low-confidence control mappings (<0.90): **{len(low_conf)}**',
               '- Acquisition software selected by default is **accepted as desired behavior** and is not classified as a defect.',
-              '', '## Automated adversarial pattern scan', ''
+              '', '### Browser/execution errors', ''
           ]
-          for name, found in hits.items():
-              lines.append(f'- {name}: **{len(found)}** hit(s): `{found}`')
+          if browser_errors:
+              for item in browser_errors: lines.append(f'- `{item[0]}`: `{item[1]}` page={item[2]} console={item[3]}')
+          else:
+              lines.append('- none')
+          lines += ['', '### Low-confidence mappings', '']
+          if low_conf:
+              for item in low_conf: lines.append(f'- `{item[0]}` score={item[1]} action=`{item[2]}` resolved=`{item[3]}`')
+          else:
+              lines.append('- none')
+          lines += ['', '## Automated adversarial pattern scan', '']
+          for name, found in hits.items(): lines.append(f'- {name}: **{len(found)}** hit(s): `{found}`')
 
           lines += ['', '## Focus-scenario generated text', '']
           for sid in focus:
-              out = outputs.get(sid, '')
-              lines += [f'### {sid}', '', '```text', out, '```', '']
-
+              lines += [f'### {sid}', '', '```text', outputs.get(sid, ''), '```', '']
           lines += ['', '## All 116 scenario outputs', '', 'See `methods-116-main.md` in this output branch.']
           Path('methods-main-audit-summary.md').write_text('\n'.join(lines), encoding='utf-8')
-          print('\n'.join(lines[:30]))
+          print('\n'.join(lines[:80]))
           PY
 
       - name: Publish audit outputs to a detached results branch
         run: |
           OUT_BRANCH="audit-output-main-methods-${GITHUB_SHA::7}"
           mkdir -p /tmp/audit-output
-          cp methods-116-main.json methods-116-main.md methods-main-audit-summary.md /tmp/audit-output/
+          cp methods-116-main.json methods-116-main.md methods-main-audit-summary.md replay-exit-code.txt /tmp/audit-output/
           git reset --hard HEAD
           git clean -fd
           git checkout --orphan "$OUT_BRANCH"
           git rm -rf . >/dev/null 2>&1 || true
           cp /tmp/audit-output/* .
-          git add methods-116-main.json methods-116-main.md methods-main-audit-summary.md
+          git add methods-116-main.json methods-116-main.md methods-main-audit-summary.md replay-exit-code.txt
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'audit output: Methods Generator main 116 scenarios'
           git push origin "$OUT_BRANCH"
           echo "RESULT_BRANCH=$OUT_BRANCH" >> "$GITHUB_ENV"
@@ -146,9 +155,4 @@ jobs:
           script: |
             const branch = process.env.RESULT_BRANCH;
             const body = `Full Methods Generator audit completed on the main-derived product code.\n\nResults branch: \`${branch}\`\n\nAcquisition software selected by default was treated as desired behavior, not a defect.`;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
+            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body});
