@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/audit-main-methods.yml"
+      - "scripts/replay_methods_116_audit_v6.py"
   workflow_dispatch:
 
 permissions:
@@ -60,7 +61,7 @@ jobs:
       - name: Replay all 116 historical scenarios through Chromium and preserve outputs
         run: |
           set +e
-          PYTHONPATH=. python scripts/replay_methods_116_audit_v5.py \
+          PYTHONPATH=. python scripts/replay_methods_116_audit_v6.py \
             --url http://127.0.0.1:8000/methods_generator/ \
             --json methods-116-main.json \
             --markdown methods-116-main.md
