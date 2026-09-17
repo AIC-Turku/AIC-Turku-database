@@ -274,10 +274,57 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.select_instrument("Andor BC43 Benchtop Confocal")
         self.tick("method-list", "brightfield")
         self.tick("obj-list", ".")
-        self.tick("confirmed-list", "Fusion BC43")
         output = self.add()
         self.assertIn("Fusion BC43 (v2.7.0)", output)
         self.assertNotIn("Software version is not recorded", output)
+
+    def test_a_single_recorded_acquisition_software_is_reported_without_confirmation(self):
+        """One recorded row could not have produced an image any other way.
+
+        The BC43 has exactly one row with role: acquisition, and stating it used
+        to require ticking a checkbox that asked, in effect, whether the only
+        software this stand has was used to acquire the image. It reports itself
+        now, the way a sole recorded light path or objective already did, and the
+        checkbox is gone rather than pre-ticked: there is nothing left to confirm.
+        """
+        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.tick("method-list", "brightfield")
+        confirmable = self.page.evaluate(
+            """() => [...document.querySelectorAll('#confirmed-list input')]
+                 .map(input => (input.closest('label') || input.parentElement).textContent)"""
+        )
+        self.assertFalse(
+            any("Fusion BC43" in label for label in confirmable),
+            f"a single recorded acquisition software must not be offered as a checkbox: {confirmable}",
+        )
+        self.tick("obj-list", ".")
+        output = self.add()
+        self.assertIn(
+            "Instrument control and image acquisition were performed using Fusion BC43 (v2.7.0).",
+            output,
+        )
+
+    def test_several_recorded_acquisition_software_rows_still_ask_which_were_used(self):
+        """Five LAS X modules is a real choice; reporting all five would not be true.
+
+        Unlike a stand with one control package, the STELLARIS records five rows
+        under role: acquisition. Which of them this acquisition actually used is
+        not implied by the record, so each still requires an explicit tick.
+        """
+        self.select_instrument("Leica STELLARIS 8 FALCON FLIM")
+        self.tick("method-list", "Confocal point")
+        self.tick("obj-list", ".")
+        unconfirmed = self.add()
+        self.assertNotIn("Instrument control and image acquisition", unconfirmed)
+
+        self.tick("confirmed-list", "STELLARIS Control")
+        confirmed = self.add()
+        self.assertIn(
+            "Instrument control and image acquisition were performed using "
+            "LAS X STELLARIS Control Software.",
+            confirmed,
+        )
+        self.assertNotIn("Dye Finder", confirmed)
 
     def test_a_reported_package_with_no_version_is_asked_for_by_name(self):
         self.select_instrument("Andor BC43 Benchtop Confocal")
@@ -534,6 +581,132 @@ class RealCatalogueTestCase(unittest.TestCase):
                 for f in findings
             ),
         )
+
+    # --- the light-path checkbox: real work only, never a repeat of the method ---
+
+    def test_the_light_path_section_never_appears_for_a_real_instrument_or_method(self):
+        """No method in the real catalogue is recorded on more than one path.
+
+        A path is a real question only when the method the user selected is
+        recorded on two or more physically different implementations, which
+        happens nowhere in this catalogue. Before this fix "Light path and
+        readouts" showed up, already ticked, for every method of every
+        instrument - a section a user could not act on because it repeated
+        what they had just told the generator by picking the method.
+        """
+        findings = self.page.evaluate(
+            """() => {
+                const wait = () => new Promise(resolve => setTimeout(resolve, 0));
+                const visible = selector => [...document.querySelectorAll(selector)]
+                    .filter(input => input.offsetParent !== null);
+                return (async () => {
+                    const problems = [];
+                    const select = document.getElementById("system-select");
+                    const options = [...select.options].filter(option => option.value);
+                    for (const option of options) {
+                        select.value = option.value;
+                        select.dispatchEvent(new Event("change", {bubbles: true}));
+                        await wait();
+                        const methods = visible('#method-list input');
+                        const methodValues = methods.length ? methods.map(m => m.value) : [null];
+                        // A record with no imaging-method control (methodValue === null)
+                        // has nothing else to state the path with, so the section
+                        // showing there - with the path already confirmed - is
+                        // correct rather than the redundancy this test checks for.
+                        if (!methodValues.some(value => value !== null)) continue;
+                        for (const methodValue of methodValues) {
+                            if (methodValue === null) continue;
+                            document.getElementById("clear-btn").click();
+                            await wait();
+                            select.value = option.value;
+                            select.dispatchEvent(new Event("change", {bubbles: true}));
+                            await wait();
+                            const method = visible('#method-list input')
+                                .find(input => input.value === methodValue);
+                            if (!method) continue;
+                            method.checked = true;
+                            method.dispatchEvent(new Event("change", {bubbles: true}));
+                            await wait();
+                            const section = document.getElementById("section-route");
+                            if (section && section.offsetParent !== null) {
+                                problems.push({
+                                    instrument: option.textContent.trim(),
+                                    method: methodValue,
+                                });
+                            }
+                        }
+                    }
+                    return problems;
+                })();
+            }"""
+        )
+        self.assertEqual(
+            findings, [],
+            "the light-path section appeared for a method recorded on exactly one "
+            "path, which is never a real question:\n"
+            + "\n".join(f"  {f['instrument']} / {f['method']}" for f in findings),
+        )
+
+    def test_unchecking_the_only_method_leaves_no_light_path_confirmed(self):
+        """A path confirmed for a method must not survive the method's removal.
+
+        The light path is hidden, not removed, while its method is checked: it
+        still exists in the page and is still marked as confirmed. Unchecking
+        the method that justified it used to leave that stale "yes" behind,
+        with nothing left to explain it and no visible control to notice or
+        correct it.
+        """
+        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.tick("method-list", "Confocal spinning")
+        checked_before = self.page.evaluate(
+            "() => [...document.querySelectorAll('#route-list input')]"
+            ".filter(i => i.checked).map(i => i.id)"
+        )
+        self.assertTrue(checked_before, "expected the sole path to be confirmed automatically")
+
+        method_id = self.page.evaluate(
+            "() => [...document.querySelectorAll('#method-list input')].find(i => i.checked).id"
+        )
+        self.page.uncheck("#" + method_id)
+        checked_after = self.page.evaluate(
+            "() => [...document.querySelectorAll('#route-list input')]"
+            ".filter(i => i.checked).map(i => i.id)"
+        )
+        self.assertEqual(checked_after, [], "a path survived the method that implied it being unchecked")
+
+    def test_add_is_never_blocked_by_the_light_path_for_a_real_instrument(self):
+        """Nothing the user cannot see or reach may be a precondition for Add.
+
+        A path confirmed for an unambiguous method is hidden by design; Add must
+        never ask the user to act on a control that is not on the page.
+        """
+        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.tick("method-list", "Confocal spinning")
+        self.tick("obj-list", ".")
+        self.tick("light-list", ".")
+        output = self.add()
+        status = self.page.locator("#methods-selection-status").inner_text()
+        self.assertNotIn("light path", status.lower())
+        self.assertIn("Spinning-disk confocal imaging", output)
+
+    def test_readouts_remain_selectable_while_the_path_stays_hidden(self):
+        """A readout is a real, separate fact and keeps its own control.
+
+        The STELLARIS records FLIM, FCS, spectral imaging and FRET on its
+        confocal path. The method that implies the path is unambiguous, so the
+        path itself is never shown, but the readouts it can additionally record
+        are not a repeat of anything and must still be offered.
+        """
+        self.select_instrument("Leica STELLARIS 8 FALCON FLIM")
+        self.tick("method-list", "Confocal point")
+        self.assertFalse(
+            self.page.evaluate("() => document.getElementById('section-route').offsetParent !== null"),
+            "the light path is unambiguous and must stay hidden",
+        )
+        self.tick("readout-list", "FLIM")
+        self.tick("obj-list", ".")
+        output = self.add()
+        self.assertIn("with FLIM data acquired on the same light path", output)
 
 
 if __name__ == "__main__":

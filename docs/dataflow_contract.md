@@ -181,6 +181,18 @@ Rules:
   naming a different acquisition reference, or changing the imaging method clears
   the hardware selections, the confirmed actions and any reviewed runtime plan, so
   nothing carries into the next entry unstated.
+- A fact confirmed by checkbox is a real choice, never a repeat of one already
+  made. A recorded light path is asked as a visible question only when the
+  selected method is genuinely recorded on two or more physically different
+  paths with different hardware - in the current catalogue this never happens,
+  so the control stays hidden and the path is confirmed silently, the way a
+  method recorded on exactly one path always was. A record with no
+  imaging-method control at all still asks explicitly, because the path is then
+  the only thing left to state. The same rule applies to acquisition software:
+  one recorded row could not have produced an image any other way and is
+  reported without confirmation; two or more rows - several LAS X modules, a
+  camera suite alongside a separate control package - is a real question about
+  which one this acquisition used, and stays a checkbox.
 - Compatibility entrypoints are retained for CI/API compatibility, not implementation
   ownership.
 
