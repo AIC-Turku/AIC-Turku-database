@@ -51,7 +51,7 @@ jobs:
             fi
             sleep 1
           done
-          PYTHONPATH=. python scripts/replay_methods_116_audit_v4.py \
+          PYTHONPATH=. python scripts/replay_methods_116_audit_v5.py \
             --url http://127.0.0.1:8000/methods_generator/ \
             --json methods-116-rerun.json \
             --markdown methods-116-rerun.md
