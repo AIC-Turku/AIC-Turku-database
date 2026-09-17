@@ -960,7 +960,6 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
         def _compact(value: str) -> str:
             return re.sub(r"[^a-z0-9]+", "", value.lower())
 
-        normalized_identity = microscope_identity.lower()
         compact_name = _compact(display_name)
         compact_identity = _compact(microscope_identity)
         # "the Leica DM IRBE (Leica Microsystems Leica DM IRBE)" repeats the name

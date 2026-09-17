@@ -1080,20 +1080,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /**
-     * Keep sentences and unresolved publication questions coupled for hardware
-     * categories that do not use publication templates. Previously these categories
-     * copied only `methodSentence`, silently dropping component `review_prompts`.
-     */
-    function selectedSentenceBundle(prefixes) {
-        const selections = (Array.isArray(prefixes) ? prefixes : [])
-            .flatMap(prefix => getCheckedSelections(prefix));
-        return {
-            sentences: dedupeSentences(selections.map(item => item.methodSentence)),
-            prompts: uniqueTexts(selections.flatMap(item => item.reviewPrompts || [])),
-        };
-    }
-
-    /**
      * Sentence for the legacy modality compatibility list.
      *
      * Every other category now renders through `mergeByPublicationTemplate`, which
@@ -1188,12 +1174,6 @@ document.addEventListener("DOMContentLoaded", async () => {
      */
     function instrumentDtoIsRenderable(dto) {
         return Boolean(dto) && Boolean(cleanText(dto?.methods?.base_sentence));
-    }
-
-    function exportDiagnosticNotes(dto) {
-        return uniqueTexts((Array.isArray(dto?.diagnostics) ? dto.diagnostics : [])
-            .filter(entry => entry && typeof entry === "object")
-            .map(entry => cleanText(entry.message) || cleanText(entry.code)));
     }
 
     function resolveRuntimeSelectedConfiguration(dto) {
@@ -1507,10 +1487,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const RUNTIME_ENDPOINT_CLASSES = new Set(["endpoint", "camera_port", "eyepiece"]);
 
     function runtimeAcquisitionFacts(dto) {
-        const empty = {
-            components: [], sentences: [], prompts: [], routeLabels: [],
-            hasRuntimeSelection: false, sources: [], endpoints: [],
-        };
+        const empty = { components: [], prompts: [], routeLabels: [], sources: [], endpoints: [] };
         const resolved = resolveRuntimeSelectedConfiguration(dto);
         const runtimeConfig = resolved.config;
         if (!runtimeConfig) return empty;
@@ -1644,7 +1621,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
         });
 
-        const sentences = [];
         const acquisitionPlan = runtimeConfig.acquisition_plan && typeof runtimeConfig.acquisition_plan === "object"
             ? runtimeConfig.acquisition_plan
             : null;
@@ -1666,10 +1642,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         return {
             components,
-            sentences: dedupeSentences(sentences),
             prompts: uniqueTexts(prompts),
             routeLabels: routeLabel ? [routeLabel] : [],
-            hasRuntimeSelection: true,
             sources: components.filter(item => RUNTIME_SOURCE_CLASSES.has(item.inventoryClass)),
             endpoints: components.filter(item => RUNTIME_ENDPOINT_CLASSES.has(item.inventoryClass)),
         };
@@ -2301,9 +2275,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return !label || !moduleLabels.some(moduleLabel => moduleLabel.includes(label) || label.includes(moduleLabel));
             });
 
+        const scannerSelections = getCheckedSelections("scanner");
         const equipment = mergeByPublicationTemplate([
             ...moduleSelections,
-            ...getCheckedSelections("scanner"),
+            ...scannerSelections,
             ...getCheckedSelections("magnification-changer"),
         ]);
         prompts.push(...equipment.prompts);
@@ -2366,10 +2341,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
         const lightSelections = getCheckedSelections("light");
         const detectorSelections = getCheckedSelections("det");
+        const splitterSelections = getCheckedSelections("splitter");
         const lightPathSelections = [
             ...lightSelections,
             ...getCheckedSelections("filter").filter(item => !holdersWithPositions.has(cleanText(item.id))),
-            ...getCheckedSelections("splitter"),
+            ...splitterSelections,
             ...detectorSelections,
             ...specialistSelections,
         ];
@@ -2408,9 +2384,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             lightPathParagraphs.push(dedupeSentences(sentences).join(" "));
         });
-        if (runtime.sentences.length) {
-            lightPathParagraphs.push(dedupeSentences(runtime.sentences).join(" "));
-        }
 
         // One grouped question instead of one per source, with the alternatives the
         // selected light path actually allows.
@@ -2457,7 +2430,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // that picks one branch at a time raises nothing: choosing one is its
         // normal use.
         const reportedEndpoints = detectorSelections.length + runtime.endpoints.length;
-        getCheckedSelections("splitter").forEach((splitter) => {
+        splitterSelections.forEach((splitter) => {
             if (cleanText(splitter.branchSelectionMode).toLowerCase() !== "multiple") return;
             if (!(splitter.branchCount > 1)) return;
             if (reportedEndpoints >= splitter.branchCount) return;
@@ -2564,7 +2537,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (moduleSelections.length) reportedCategories.add("module");
         if (detectorSelections.length) reportedCategories.add("detector");
         if (objectives.sentences.length) reportedCategories.add("objective");
-        if (getCheckedSelections("scanner").length) reportedCategories.add("scanner");
+        if (scannerSelections.length) reportedCategories.add("scanner");
         if (lightSelections.length) reportedCategories.add("source");
         // Software is deliberately absent: every software fact this entry reports
         // carries its own request for what the record does not hold, naming the

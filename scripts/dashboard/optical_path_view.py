@@ -13,7 +13,7 @@ from __future__ import annotations
 import copy
 import json
 import re
-from typing import Any, Iterable
+from typing import Any
 
 from scripts.build_context import clean_text
 from scripts.display_labels import (
@@ -127,10 +127,6 @@ def _role_forms_imaging_channel(role_id: str, vocabulary: Vocabulary | None) -> 
     return term.tag_value("forms_imaging_channel", True) is not False
 
 
-def _compact_join(parts: Iterable[str]) -> str:
-    return ", ".join(part for part in parts if isinstance(part, str) and part.strip())
-
-
 def _human_list(items: list[str]) -> str:
     cleaned = [clean_text(item) for item in items if clean_text(item)]
     if not cleaned:
@@ -149,21 +145,6 @@ def _spec_lines(*pairs: tuple[str, Any]) -> list[str]:
             continue
         lines.append(f"**{label}:** {raw_value}")
     return lines
-
-
-def _first_component_label(position: Any) -> str:
-    if not isinstance(position, dict):
-        return ""
-    linked = position.get("linked_components") if isinstance(position.get("linked_components"), dict) else {}
-    if linked:
-        labels = []
-        for key in ("excitation_filter", "dichroic", "emission_filter"):
-            label = clean_text(((linked.get(key) or {}).get("label")))
-            if label:
-                labels.append(label)
-        if labels:
-            return " / ".join(labels)
-    return clean_text(position.get("display_label") or position.get("label") or position.get("name"))
 
 
 def _format_position_value(pos: dict[str, Any], vocabulary: Any = None) -> str:
@@ -762,10 +743,15 @@ def _position_excitation_windows(position: dict[str, Any]) -> list[list[float | 
 # Positions that exist to select a fluorescence band. A route that declares no
 # imaging mode implements only contrast methods - transmitted brightfield, phase
 # contrast, DIC - and none of those select an emission band.
-_FLUORESCENCE_PASSBAND_TYPES = {
+#
+# Public: scripts/ledger_gaps.py asks the same question about a whole holder
+# (every recorded position selects a fluorescence band) rather than one position
+# on one route, and imports these rather than keeping its own copy - which had
+# already happened once and could silently disagree with this one.
+FLUORESCENCE_PASSBAND_TYPES = {
     "bandpass", "multiband_bandpass", "longpass", "shortpass", "notch",
 }
-_FLUORESCENCE_STAGE_ROLES = {"excitation", "emission", "cube"}
+FLUORESCENCE_STAGE_ROLES = {"excitation", "emission", "cube"}
 
 
 def route_declares_imaging(route: dict[str, Any]) -> bool:
@@ -798,9 +784,9 @@ def position_serves_route(position: dict[str, Any], stage_role: str, route_decla
     if route_declares_imaging_modes:
         return True
     component_type = clean_text(position.get("component_type")).lower()
-    if component_type not in _FLUORESCENCE_PASSBAND_TYPES:
+    if component_type not in FLUORESCENCE_PASSBAND_TYPES:
         return True
-    return clean_text(stage_role).lower() not in _FLUORESCENCE_STAGE_ROLES
+    return clean_text(stage_role).lower() not in FLUORESCENCE_STAGE_ROLES
 
 
 def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -1621,4 +1607,6 @@ __all__ = [
     "build_optical_path_view_dto",
     "build_optical_path_dto",
     "hardware_renderables_from_inventory",
+    "FLUORESCENCE_PASSBAND_TYPES",
+    "FLUORESCENCE_STAGE_ROLES",
 ]

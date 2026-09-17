@@ -132,3 +132,23 @@ def test_a_holder_whose_positions_serve_their_route_is_not_reported():
         "stage_role": "emission",
         "positions": {"Pos_1": {"component_type": "bandpass"}, "Pos_2": {"component_type": "bandpass"}},
     })
+
+
+def test_the_fluorescence_classification_has_one_source_of_truth():
+    """This file's gap detector and the generator's position filter must agree.
+
+    Both ask the same question - can this position select a fluorescence band -
+    about the same recorded component types and stage roles. They used to answer
+    it from two independently written constant sets that happened to agree; this
+    imports scripts.dashboard.optical_path_view's copy rather than keeping one
+    here, so the two cannot silently diverge the way duplicated vocabulary already
+    had once on this branch.
+    """
+    from scripts.dashboard.optical_path_view import (
+        FLUORESCENCE_PASSBAND_TYPES as view_types,
+        FLUORESCENCE_STAGE_ROLES as view_roles,
+    )
+    from scripts.ledger_gaps import FLUORESCENCE_PASSBAND_TYPES, FLUORESCENCE_STAGE_ROLES
+
+    assert FLUORESCENCE_PASSBAND_TYPES is view_types
+    assert FLUORESCENCE_STAGE_ROLES is view_roles
