@@ -97,7 +97,7 @@ jobs:
             fi
             sleep 1
           done
-          python scripts/replay_methods_116_audit.py \
+          python scripts/replay_methods_116_audit_v2.py \
             --url http://127.0.0.1:8000/methods_generator/ \
             --json methods-116-rerun.json \
             --markdown methods-116-rerun.md
