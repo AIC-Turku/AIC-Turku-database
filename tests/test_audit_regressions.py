@@ -24,7 +24,9 @@ def scope(identifier="scope-test"):
                     "stage_sentences": ["Z-stacks were acquired."],
                     "autofocus_sentence": "Autofocus was used.",
                     "triggering_sentence": "Hardware triggering was used.",
-                    "processing_sentences": ["Images were deconvolved."]},
+                    "processing_software": [
+                        {"name": "Deconvolver", "version": "1.0", "role": "processing",
+                         "method_sentence": "Images were deconvolved."}]},
         "hardware": {"objectives": [
             # Shaped like the real export: prose is assembled from the template and
             # phrase, so the test exercises what production actually renders.

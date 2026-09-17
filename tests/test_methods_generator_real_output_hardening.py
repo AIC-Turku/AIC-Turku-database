@@ -61,12 +61,6 @@ def _instrument(*, runtime=None):
         "methods_generation": {"is_blocked": False, "blockers": []},
         "methods": {
             "base_sentence": "Images were acquired using the Real Output Scope.",
-            # This is intentionally bad legacy/exported prose. Production UI should
-            # rebuild the software option from the structured software record above.
-            "acquisition_software_sentence": (
-                "Instrument control and image acquisition were performed using "
-                "ControlSuite (vunknown). [PLEASE SPECIFY: acquisition software version]"
-            ),
             "specimen_preparation_recommendation": "[PLEASE SPECIFY: specimen preparation].",
             "acquisition_settings_recommendation": (
                 "[PLEASE SPECIFY: acquisition software/version (if applicable), exposure "
@@ -163,6 +157,9 @@ def test_selected_hardware_keeps_review_prompts_and_software_placeholders_out_of
     assert "A magnification changer was used." in prose
     assert "STED beam shaping used Abberior easy3D SLM." in prose
     assert "Adaptive illumination control was used." in prose
+    # Built from the structured software row above, which records the version as
+    # "unknown": a placeholder is not a version, so it is asked for rather than
+    # printed as "ControlSuite (vunknown)".
     assert "ControlSuite." in prose
     assert "vunknown" not in prose
     assert "[PLEASE SPECIFY" not in prose

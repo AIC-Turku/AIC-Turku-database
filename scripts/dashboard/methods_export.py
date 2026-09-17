@@ -248,24 +248,6 @@ def _strip_route_fact_alternatives(row: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-def _acquisition_software_sentence(dto: dict[str, Any]) -> str:
-    """Offer the recorded acquisition software as a confirmable statement."""
-    software = dto.get("software") if isinstance(dto.get("software"), list) else []
-    for row in software:
-        if not isinstance(row, dict):
-            continue
-        if clean_text(row.get("role")).lower() != "acquisition":
-            continue
-        name = clean_text(row.get("name"))
-        if not name or name.lower() in _PLACEHOLDER_IDENTITY_VALUES:
-            continue
-        version = clean_text(row.get("version"))
-        label = f"{name} (v{version})" if version else name
-        suffix = "" if version else " [PLEASE SPECIFY: acquisition software version]"
-        return f"Instrument control and image acquisition were performed using {label}.{suffix}"
-    return ""
-
-
 def _microscope_sentence(dto: dict[str, Any]) -> str:
     """Name the microscope from every identity field the record holds.
 
@@ -320,7 +302,6 @@ def _ground_methods_projection(dto: dict[str, Any]) -> None:
     # The record documents the software installed now, which is an acquisition-time
     # claim rather than an instrument identity. Offer it as something the user can
     # confirm instead of asserting it or pretending it is unrecorded.
-    methods["acquisition_software_sentence"] = _acquisition_software_sentence(dto)
     # A retired record describes the instrument as it was last configured, which is
     # a caveat on the whole draft. It belongs in the review block, not spliced into
     # the sentence other facts are composed onto.

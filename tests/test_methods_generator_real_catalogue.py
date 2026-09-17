@@ -166,6 +166,34 @@ class RealCatalogueTestCase(unittest.TestCase):
                 self.assertNotIn("Stimulated-emission", prose)
                 self.assertNotIn("STED depletion", prose)
 
+    def test_resolft_asks_for_its_depletion_beam_just_as_sted_does(self):
+        """Both techniques need the beam, so both are asked for it.
+
+        The browser table this replaced required a depletion source for STED only,
+        so a RESOLFT acquisition that named no depletion beam was published without
+        a word about the beam that makes it RESOLFT.
+        """
+        self.select_instrument("Abberior STED")
+        for method_label in ("STED", "RESOLFT"):
+            with self.subTest(method=method_label):
+                self.page.click("#clear-btn")
+                self.page.check(self.method_input(method_label))
+                self.tick("obj-list", ".")
+                self.tick("light-list", "485")
+                output = self.add()
+                self.assertIn("no source recorded as depletion was selected", output)
+
+    def test_a_depletion_beam_is_not_counted_as_an_imaging_channel(self):
+        """Its role says it shapes the spot rather than forming a channel."""
+        self.select_instrument("Abberior STED")
+        self.page.check(self.method_input("STED"))
+        self.tick("obj-list", ".")
+        self.tick("light-list", "485")
+        self.tick("light-list", "775")
+        self.tick("det-list", ".")
+        output = self.add()
+        self.assertNotIn("sequentially or simultaneously", output)
+
     # --- configurations the record says the instrument cannot produce ----------
 
     def test_a_brightfield_acquisition_is_not_offered_fluorescence_filters(self):

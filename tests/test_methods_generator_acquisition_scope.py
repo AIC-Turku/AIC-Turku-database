@@ -7,6 +7,12 @@ that the user had not selected for the acquisition being described.
 
 Each test names the behaviour it protects; the audit that found them is recorded
 in the pull request that introduced these fixes.
+
+Implementation vocabulary in prose is not checked here. A fixture can only prove
+it for the labels the fixture invented, and
+`tests/test_methods_generator_real_catalogue.py` sweeps every instrument and every
+method the facility has actually authored, which is where the words that reached a
+draft came from.
 """
 
 import json
@@ -20,6 +26,11 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# Roles whose sources do not produce an image channel, as
+# vocab/light_source_roles.yaml records it and the export carries it.
+_NON_CHANNEL_ROLES = {"depletion", "activation", "alignment"}
+
+
 def _source(identifier, label, template, role=""):
     return {
         "id": identifier,
@@ -29,6 +40,7 @@ def _source(identifier, label, template, role=""):
         "publication_template": template,
         "method_sentence": template.replace("{label}", label),
         "role": role,
+        "forms_imaging_channel": role not in _NON_CHANNEL_ROLES,
         "source_metadata": {"role": role} if role else {},
         "review_prompts": [],
     }
@@ -69,8 +81,12 @@ def instrument():
                 "imaging_modes": [
                     {"id": "confocal_point", "display_label": "Confocal point scanning",
                      "publication_phrase": "Point-scanning confocal imaging"},
+                    # As the real export carries it, from vocab/imaging_modes.yaml
+                    # `tags.requires_source_role`. The page must not know this by
+                    # itself.
                     {"id": "sted", "display_label": "STED",
-                     "publication_phrase": "Stimulated emission depletion (STED) imaging"},
+                     "publication_phrase": "Stimulated emission depletion (STED) imaging",
+                     "requires_source_role": "depletion"},
                 ],
                 "contrast_methods": [],
                 "readouts": [],
@@ -301,7 +317,9 @@ class AcquisitionScopeTests(unittest.TestCase):
         self.page.check("#light-0")
         self.page.check("#det-0")
         self.page.click("#add-btn")
-        self.assertIn("no depletion source was selected", self.output())
+        # The role is named as the record spells it, because the question is
+        # answered by looking at what the record calls that beam.
+        self.assertIn("no source recorded as depletion was selected", self.output())
 
     def test_a_depletion_source_outside_sted_is_flagged(self):
         """The converse: a confocal acquisition reporting a depletion beam is either
@@ -431,20 +449,6 @@ class AcquisitionScopeTests(unittest.TestCase):
         output = self.output()
         self.assertEqual(output.count("Specimen preparation metadata"), 1)
         self.assertIn("applies to every acquisition above", output)
-
-    def test_no_implementation_vocabulary_reaches_publication_prose(self):
-        """"route", "inventory" and placeholder identities are how the repository
-        talks about itself, not how a Methods section reads."""
-        self.method("Confocal point scanning").check()
-        self.page.check("#obj-0")
-        self.page.check("#light-0")
-        self.page.check("#det-0")
-        self.page.click("#add-btn")
-        prose = self.output().split("Review before publication")[0]
-        for banned in ["route", "runtime", "DTO", "inventory", "selected execution",
-                       "wheel position", "turret position", "Unknown", "Placeholder"]:
-            self.assertNotIn(banned, prose)
-
 
 if __name__ == "__main__":
     unittest.main()

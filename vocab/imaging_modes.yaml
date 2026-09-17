@@ -39,11 +39,17 @@ terms:
   label: STED
   publication_phrase: "Stimulated emission depletion (STED) imaging"
   description: "Stimulated Emission Depletion. Shrinks the effective fluorescence spot using a depletion beam around the excitation focus. Enables sub-diffraction super-resolution imaging."
+  tags:
+    requires_source_role: depletion
 - id: resolft
   display_label: RESOLFT
   label: RESOLFT
   publication_phrase: "RESOLFT imaging"
   description: "Reversibly Saturable Optical Linear Fluorescence Transitions. Achieves super-resolution using reversibly switchable fluorophores and targeted on/off control. Often allows lower light intensities than depletion-based methods."
+  tags:
+    # The same beam and the same recorded role as STED: it depletes. Which
+    # mechanism does the depleting is what distinguishes the two techniques.
+    requires_source_role: depletion
 - id: smlm
   display_label: SMLM
   label: SMLM

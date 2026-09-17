@@ -191,68 +191,6 @@ def _indefinite_article(following: str) -> str:
     return "an" if word[:1] in {"a", "e", "i", "o", "u"} else "a"
 
 
-def _inventory_method_extras(item: dict[str, Any]) -> list[str]:
-    extras: list[str] = []
-    source_meta = item.get("source_metadata") if isinstance(item.get("source_metadata"), dict) else {}
-    optical_meta = item.get("optical_element_metadata") if isinstance(item.get("optical_element_metadata"), dict) else {}
-    endpoint_meta = item.get("endpoint_metadata") if isinstance(item.get("endpoint_metadata"), dict) else {}
-
-    wavelength = _format_wavelength_label(source_meta.get("wavelength_nm"))
-    if wavelength:
-        extras.append(f"Wavelength: {wavelength}")
-    tunable_min = _fmt_num(source_meta.get("tunable_min_nm"))
-    tunable_max = _fmt_num(source_meta.get("tunable_max_nm"))
-    if tunable_min and tunable_max:
-        extras.append(f"Tunable range: {tunable_min}-{tunable_max} nm")
-    power = clean_text(source_meta.get("power"))
-    if power:
-        extras.append(f"Power: {power}")
-    timing = clean_text(source_meta.get("timing_mode"))
-    if timing:
-        extras.append(f"Timing mode: {timing}")
-
-    center = _fmt_num(optical_meta.get("center_nm"))
-    width = _fmt_num(optical_meta.get("width_nm"))
-    if center and width:
-        extras.append(f"Band: {center}/{width} nm")
-    elif center:
-        extras.append(f"Center: {center} nm")
-    cut_on = _fmt_num(optical_meta.get("cut_on_nm"))
-    if cut_on:
-        extras.append(f"Cut-on: {cut_on} nm")
-    cut_off = _fmt_num(optical_meta.get("cut_off_nm"))
-    if cut_off:
-        extras.append(f"Cut-off: {cut_off} nm")
-
-    def _band_summary(bands: Any, label: str) -> str:
-        summaries: list[str] = []
-        for band in bands if isinstance(bands, list) else []:
-            if not isinstance(band, dict):
-                continue
-            band_center = _fmt_num(band.get("center_nm"))
-            band_width = _fmt_num(band.get("width_nm"))
-            if band_center and band_width:
-                summaries.append(f"{band_center}/{band_width} nm")
-            elif band_center:
-                summaries.append(f"{band_center} nm")
-        return f"{label}: {', '.join(summaries)}" if summaries else ""
-
-    for label, key in (("Bands", "bands"), ("Transmission", "transmission_bands"), ("Reflection", "reflection_bands")):
-        summary = _band_summary(optical_meta.get(key), label)
-        if summary:
-            extras.append(summary)
-
-    collection_min = _fmt_num(endpoint_meta.get("collection_min_nm") or endpoint_meta.get("min_nm"))
-    collection_max = _fmt_num(endpoint_meta.get("collection_max_nm") or endpoint_meta.get("max_nm"))
-    if collection_min and collection_max:
-        extras.append(f"Collection range: {collection_min}-{collection_max} nm")
-    channel_name = clean_text(endpoint_meta.get("channel_name"))
-    if channel_name:
-        extras.append(f"Channel: {channel_name}")
-
-    return extras
-
-
 def _spec_lines(*pairs: tuple[str, Any]) -> list[str]:
     lines: list[str] = []
     for label, raw_value in pairs:
@@ -1287,12 +1225,10 @@ def build_instrument_mega_dto(vocabulary: Vocabulary, inst: dict[str, Any], ligh
                 for row in hardware_dto["illumination_logic"]
                 if clean_text(row.get("method_sentence"))
             ],
-            "processing_sentences": [row["method_sentence"] for row in software_rows if clean_text(row.get("method_sentence")) and clean_text(row.get("role")).lower() in {"processing", "analysis"}],
-            # The same rows, structured. A draft that reports a processing package
-            # with no recorded version has to be able to ask for that version by
-            # name, the way it already does for acquisition software; without this
-            # the only signal was an instrument-level note that said no software
-            # version was recorded while the prose stated one.
+            # A draft that reports a processing package with no recorded version has
+            # to be able to ask for that version by name, the way it already does
+            # for acquisition software, so these are exported structured rather than
+            # as finished sentences.
             "processing_software": [
                 {
                     "name": clean_text(row.get("name")),

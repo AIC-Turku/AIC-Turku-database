@@ -106,6 +106,21 @@ Rules:
 3. Ensure canonical parser emits route/component in `lightpath_dto`.
 4. Downstream consumers carry IDs/order from canonical DTOs automatically.
 5. Add/extend vocab entries for labels; do not add hardcoded ID maps in downstream code.
+6. A scientific relationship between two vocabularies is authored as a tag on the
+   term that owns it and exported through the DTO, never restated downstream. The
+   three the Methods generator needs are:
+   - `vocab/modules.yaml` `tags.provides_capability` — which technique a module
+     implements, exported on `modules[].provides_capability`;
+   - `vocab/imaging_modes.yaml` `tags.requires_source_role` — the source role a
+     technique cannot be performed without, exported on
+     `route_identity.imaging_modes[].requires_source_role`;
+   - `vocab/light_source_roles.yaml` `tags.forms_imaging_channel` — whether a
+     source in that role produces an image channel, exported on the source's
+     `forms_imaging_channel`.
+   Each of these was once a table in browser JavaScript, and each had drifted from
+   the vocabulary it copied: one carried module ids no record uses and missed one
+   that a record does, another required a depletion beam for STED but not for
+   RESOLFT, which use the same beam.
 
 ## Legacy and compatibility policy
 

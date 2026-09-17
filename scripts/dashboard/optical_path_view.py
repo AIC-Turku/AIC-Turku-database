@@ -89,6 +89,44 @@ def _method_publication_phrase(method_id: str, vocabulary: Vocabulary | None) ->
     return ""
 
 
+def _method_required_source_role(method_id: str, vocabulary: Vocabulary | None) -> str:
+    """The source role a technique cannot be performed without, as authored.
+
+    `vocab/imaging_modes.yaml` records that STED and RESOLFT both need a beam
+    whose role is `depletion`. The Methods page needs that in both directions - a
+    technique reported without its beam, and a beam reported without a technique
+    that uses it - and a table of it in browser JavaScript is a second copy of the
+    vocabulary. It had also drifted from it: the table required a depletion source
+    for STED and not for RESOLFT, which use the same beam.
+    """
+    if not method_id or not vocabulary:
+        return ""
+    for vocab_name in ("imaging_modes", "contrast_methods"):
+        term = vocabulary.terms_by_vocab.get(vocab_name, {}).get(method_id)
+        if term is None:
+            continue
+        role = term.tag_value("requires_source_role")
+        if isinstance(role, str) and role.strip():
+            return role.strip()
+    return ""
+
+
+def _role_forms_imaging_channel(role_id: str, vocabulary: Vocabulary | None) -> bool:
+    """Whether a source in this role produces an image channel.
+
+    A depletion, activation or alignment beam does not, so an acquisition using
+    one is not asked in what order its channels were acquired. Roles say this
+    about themselves in `vocab/light_source_roles.yaml`; a role that says nothing
+    forms a channel, which is what every illumination role does.
+    """
+    if not role_id or not vocabulary:
+        return True
+    term = vocabulary.terms_by_vocab.get("light_source_roles", {}).get(role_id)
+    if term is None:
+        return True
+    return term.tag_value("forms_imaging_channel", True) is not False
+
+
 def _compact_join(parts: Iterable[str]) -> str:
     return ", ".join(part for part in parts if isinstance(part, str) and part.strip())
 
@@ -126,34 +164,6 @@ def _first_component_label(position: Any) -> str:
         if labels:
             return " / ".join(labels)
     return clean_text(position.get("display_label") or position.get("label") or position.get("name"))
-
-
-def _mechanism_preview(mechanisms: Any) -> tuple[int, list[str]]:
-    if not isinstance(mechanisms, list):
-        return 0, []
-    previews: list[str] = []
-    total_positions = 0
-    for mechanism in mechanisms:
-        if not isinstance(mechanism, dict):
-            continue
-        positions = mechanism.get("positions")
-        if isinstance(positions, dict):
-            total_positions += len(positions)
-            iterable = [positions[key] for key in sorted(positions)]
-        elif isinstance(positions, list):
-            total_positions += len(positions)
-            iterable = positions
-        else:
-            iterable = []
-        for position in iterable:
-            label = _first_component_label(position)
-            if label and label not in previews:
-                previews.append(label)
-            if len(previews) >= 4:
-                break
-        if len(previews) >= 4:
-            break
-    return total_positions, previews[:4]
 
 
 def _format_position_value(pos: dict[str, Any], vocabulary: Any = None) -> str:
@@ -214,13 +224,6 @@ def _optical_element_position_pairs(element: dict[str, Any], vocabulary: Any = N
             if value:
                 pairs.append((f"Pos {i + 1}", value))
     return pairs
-
-
-def _terminal_summary(terminal: dict[str, Any], vocabulary: Vocabulary | None = None) -> str:
-    raw_endpoint_type = clean_text(terminal.get("endpoint_type") or terminal.get("type") or terminal.get("kind"))
-    endpoint_type = resolve_endpoint_type_label(raw_endpoint_type, vocabulary) if vocabulary else raw_endpoint_type.replace("_", " ").title()
-    route_text = ", ".join(terminal.get("routes") or []) if isinstance(terminal.get("routes"), list) else clean_text(terminal.get("path"))
-    return _compact_join([endpoint_type, route_text])
 
 
 # A recorded manufacturer/model that only restates that the value is unknown is not
@@ -1202,6 +1205,10 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
                 ("Used in routes", ", ".join(item.get("route_usage_summary") or [])),
             ),
             "role": role,
+            # Whether a source in this role produces an image channel, as its role
+            # records. The channel-order question is about channels, and a depletion
+            # beam is not one.
+            "forms_imaging_channel": _role_forms_imaging_channel(role, vocabulary),
             "method_sentence": method_sentence,
             "publication_template": sentence_template,
             "review_prompts": review_prompts,
@@ -1451,6 +1458,7 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
                 "id": value,
                 "display_label": _route_type_vocab_label(value, vocabulary),
                 "publication_phrase": _method_publication_phrase(value, vocabulary),
+                "requires_source_role": _method_required_source_role(value, vocabulary),
             }
             for value in (route_identity.get("imaging_modes") or [])
             if isinstance(value, str) and value.strip()
@@ -1460,6 +1468,7 @@ def build_optical_path_view_dto(lightpath_dto: dict[str, Any], raw_hardware: dic
                 "id": value,
                 "display_label": _route_type_vocab_label(value, vocabulary),
                 "publication_phrase": _method_publication_phrase(value, vocabulary),
+                "requires_source_role": _method_required_source_role(value, vocabulary),
             }
             for value in (route_identity.get("contrast_methods") or [])
             if isinstance(value, str) and value.strip()

@@ -105,21 +105,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                     : [`[PLEASE SPECIFY: acquisition software version for ${name}]`],
             });
         });
-        if (!acquisitionSoftware.length && !Array.isArray(dto?.software)) {
-            // Compatibility for older/synthetic DTOs that predate the canonical
-            // software list. Production exports always carry `software`, so this
-            // path cannot reintroduce placeholder software prose there.
-            const fallback = cleanText(methods.acquisition_software_sentence);
-            if (fallback) {
-                options.push({
-                    id: "action-acquisition-software-legacy",
-                    display_label: fallback,
-                    method_sentence: fallback,
-                    review_prompts: uniqueTexts([methods.acquisition_software_review_prompt]),
-                });
-            }
-        }
-
         const otherSentences = dedupeSentences([
             methods.environment_sentence,
             ...(methods.stage_sentences || []),
@@ -138,9 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Processing tools share a frame for the same reason acquisition software
         // does: three analysis packages are one sentence, not three.
         const PROCESSING_FRAME = "Post-acquisition processing and analysis were performed using ";
-        const processingRows = Array.isArray(methods.processing_software) && methods.processing_software.length
-            ? methods.processing_software
-            : dedupeSentences(methods.processing_sentences || []).map(text => ({ method_sentence: text }));
+        const processingRows = Array.isArray(methods.processing_software) ? methods.processing_software : [];
         const seenProcessing = new Set();
         processingRows.forEach((row, index) => {
             const text = cleanText(row?.method_sentence);
@@ -338,6 +321,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             checkbox.dataset.methodSentence = item.method_sentence || "";
             checkbox.dataset.category = prefix;
             checkbox.dataset.role = item.role || "";
+            // Whether a source in this role produces an image channel, as its role
+            // records. Absent means it does, which is what every illumination role
+            // does; only a page that knows otherwise may say otherwise.
+            checkbox.dataset.formsImagingChannel = item.forms_imaging_channel === false ? "0" : "1";
             // Publication prose is assembled from these structured fields rather
             // than by rewriting the finished sentence, so components that share a
             // sentence frame can be merged without parsing prose.
@@ -659,6 +646,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                         id: methodId, display_label: displayLabel, route_ids: [],
                         publication_phrase: publicationPhrase,
                         method_sentence: `${publicationPhrase} was performed.`,
+                        // The source role this technique cannot be performed
+                        // without, as vocab/imaging_modes.yaml records it.
+                        requires_source_role: cleanText(entry?.requires_source_role),
                     });
                 }
                 const option = byMethod.get(methodId);
@@ -686,6 +676,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             input.dataset.publicationPhrase = option.publication_phrase;
             input.dataset.methodSentence = option.method_sentence;
             input.dataset.routeIds = JSON.stringify(option.route_ids);
+            input.dataset.requiresSourceRole = option.requires_source_role || "";
             const label = document.createElement("label");
             label.htmlFor = input.id;
             label.textContent = ` ${option.display_label}`;
@@ -897,6 +888,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             displayLabel: cleanText(cb.dataset.displayLabel),
             methodSentence: cleanText(cb.dataset.methodSentence),
             role: cleanText(cb.dataset.role),
+            formsImagingChannel: cleanText(cb.dataset.formsImagingChannel) !== "0",
+            requiresSourceRole: cleanText(cb.dataset.requiresSourceRole),
             routeType: cleanText(cb.dataset.routeType),
             routeIds: parseJsonArray(cb.dataset.routeIds),
             publicationPhrase: cleanText(cb.dataset.publicationPhrase),
@@ -2157,18 +2150,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     const DEFAULT_ROLE_EXAMPLES = "excitation or, on a depletion-based system, depletion";
     const SOURCE_ROLE_PROMPT_PREFIX = "[PLEASE SPECIFY: the role of ";
-    // Roles that do not create an imaging channel. Counting them as channels asked
-    // a STED author in what order their depletion beam was acquired.
-    const NON_CHANNEL_SOURCE_ROLES = new Set(["depletion", "activation", "alignment", "switching"]);
-    // Methods whose defining hardware is selectable, so its absence is a fact about
-    // the draft rather than about the instrument.
-    const METHOD_REQUIRED_SOURCE_ROLES = {
-        sted: {
-            role: "depletion",
-            missing: "[PLEASE VERIFY: STED imaging is reported but no depletion source was selected; confirm the depletion laser and the power used at the sample]",
-        },
-    };
-    const DEPLETION_METHOD_IDS = new Set(["sted", "resolft"]);
 
     /**
      * Name a light path without repeating the word it already ends with.
@@ -2451,8 +2432,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // More than one imaging channel leaves the reader unable to tell simultaneous
         // from sequential acquisition. A depletion or activation beam is not a channel.
-        const channelCount = lightSelections.filter(
-            item => !NON_CHANNEL_SOURCE_ROLES.has(cleanText(item.role).toLowerCase())).length;
+        const channelCount = lightSelections.filter(item => item.formsImagingChannel).length;
         if (channelCount > 1 || detectorSelections.length > 1) {
             prompts.push("[PLEASE SPECIFY: whether the channels were acquired sequentially or simultaneously, and in what order]");
         }
@@ -2486,11 +2466,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const selectedMethodIds = new Set(methodSelections.map(item => cleanText(item.id).toLowerCase()));
         const selectedSourceRoles = new Set(lightSelections.map(item => cleanText(item.role).toLowerCase()).filter(Boolean));
-        selectedMethodIds.forEach((methodId) => {
-            const requirement = METHOD_REQUIRED_SOURCE_ROLES[methodId];
-            if (requirement && !selectedSourceRoles.has(requirement.role)) {
-                prompts.push(requirement.missing);
-            }
+        // A technique states the source role it cannot be performed without, and
+        // the check runs both ways from that one authored fact: a technique
+        // reported without its beam, and a beam reported without a technique that
+        // uses it. The role label comes from the record so the question reads in
+        // the facility's own vocabulary.
+        const requiredRoles = new Map();
+        methodSelections.forEach((method) => {
+            const role = cleanText(method.requiresSourceRole).toLowerCase();
+            if (role) requiredRoles.set(role, cleanText(method.displayLabel));
+        });
+        requiredRoles.forEach((methodLabel, role) => {
+            if (selectedSourceRoles.has(role)) return;
+            prompts.push(`[PLEASE VERIFY: ${methodLabel} imaging is reported but no source recorded as ${role} was selected; confirm the ${role} source and the power used at the sample]`);
+        });
+        // Only ask about a beam this microscope records a use for: a role no
+        // offered technique requires is not evidence of a missing method.
+        const offeredRequiredRoles = new Set(Array.from(
+            document.querySelectorAll('input[id^="method-"]'))
+            .map(input => cleanText(input.dataset.requiresSourceRole).toLowerCase())
+            .filter(Boolean));
+        lightSelections.forEach((source) => {
+            const role = cleanText(source.role).toLowerCase();
+            if (!role || requiredRoles.has(role) || !offeredRequiredRoles.has(role)) return;
+            if (!methodPhrases.length) return;
+            prompts.push(`[PLEASE VERIFY: a ${role} source is reported for an acquisition described as ${humanJoin(methodPhrases.map(decapitalizePhrase))}; confirm the method and the sources that were used]`);
         });
         // A module that belongs to a technique the acquisition does not claim is the
         // most common way a previous acquisition's hardware survives into this one.
@@ -2525,12 +2525,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             const names = humanJoin(askable.map(entry => cleanText(entry.display_label) || cleanText(entry.id)));
             prompts.push(`[PLEASE VERIFY: the ${module.displayLabel} module is reported but ${names} ${askable.length > 1 ? "are" : "is"} not among the methods selected for this acquisition; confirm the methods and the modules that were used]`);
         });
-
-        if (selectedSourceRoles.has("depletion")
-            && methodPhrases.length
-            && !Array.from(selectedMethodIds).some(id => DEPLETION_METHOD_IDS.has(id))) {
-            prompts.push(`[PLEASE VERIFY: a depletion source is reported for an acquisition described as ${humanJoin(methodPhrases.map(decapitalizePhrase))}; confirm the method and the sources that were used]`);
-        }
 
         prompts.push(cleanText(methods.retired_review_prompt));
         // Ask about the selectors whose position is still unknown, not about the
@@ -2604,6 +2598,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // (route types, element ids, capability axes) describe the record itself and
     // belong in the page banner, never in a manuscript checklist.
     const BLOCKER_CATEGORY_PATTERNS = [
+        // Nothing adds "software" to an entry's reported categories: every software
+        // fact an entry reports carries its own request, naming the product. The
+        // pattern stays so that a gap titled, say, "Software module version" cannot
+        // fall through to /module/i and be asked as a module question.
         [/software/i, "software"],
         [/module/i, "module"],
         [/detector|camera/i, "detector"],

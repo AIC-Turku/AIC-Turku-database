@@ -31,7 +31,7 @@ It is a planning and visualization tool, not a calibrated photon-budget model. I
 
 ### Methods generator
 
-The methods generator builds a reviewable draft from the microscope inventory. Users state the imaging method they used, confirm the physical light path the record associates with it, then select the hardware and acquisition actions on that path before adding acquisition-specific settings for publication.
+The methods generator builds a reviewable draft from the microscope inventory. Users state the imaging methods they used, confirm the physical light paths the record associates with them, then select the hardware and acquisition actions on those paths before adding acquisition-specific settings for publication.
 
 The generated text is intended as a reporting aid and is structured around QUAREP-LiMi reporting recommendations. It does not reconstruct historical configurations or replace acquisition metadata.
 
@@ -117,11 +117,16 @@ It follows the order an acquisition actually has:
 
 The imaging method is asked first, because it is the thing a user reliably knows.
 The instrument record states which light path implements each method, so choosing
-a method reveals only the compatible path (or, where several are recorded, asks
-which one was used). Route-specific sources, filters, splitters and detectors stay
-hidden until that decision is made, and changing the method or the path clears
-route-specific selections so stale hardware cannot follow into the next entry.
-One acquisition travels one path.
+a method reveals only the paths compatible with it, and route-specific sources,
+filters, splitters and detectors stay hidden until that decision is made.
+
+Methods are multi-select and additive: an acquisition is one image set and may
+travel more than one path, so a brightfield overview and a fluorescence channel of
+the same field are one entry with two paths, each described in its own sentence.
+Acquisition state is scoped to the acquisition — starting another acquisition,
+naming a different acquisition reference, or changing the method clears the
+hardware selections, the confirmed actions and any reviewed runtime plan, so
+nothing follows into the next entry unstated.
 
 It can:
 

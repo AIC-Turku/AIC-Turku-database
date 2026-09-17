@@ -13,6 +13,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = REPO_ROOT / "scripts" / "templates" / "methods_generator.md.j2"
 
 
+def assert_draft_was_produced(testcase, output: str) -> None:
+    """A liveness check: this test is about something else, but needs a draft.
+
+    The opening sentence is built from the selected method, so its exact wording
+    belongs to the tests that are about the opening sentence. Here it only has to
+    exist, which is what distinguishes "the feature under test works" from "the
+    generator produced nothing at all".
+    """
+    testcase.assertRegex(output, r"(was performed using|Images were acquired using)")
+
 class MethodsGeneratorTemplateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -272,7 +282,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         # A conditional acknowledgement belongs to the instruments its config
         # names, not to every draft.
         self.assertNotIn("Unrelated acknowledgement.", result["output"])
-        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
+        assert_draft_was_produced(self, result["output"])
 
     def test_duplicate_add_clicks_do_not_duplicate_same_method_block(self) -> None:
         instrument = {
@@ -457,7 +467,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             """,
         )
 
-        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
+        assert_draft_was_produced(self, result["output"])
         # The request is bracketed so an author checking the draft for "[" finds it,
         # and it sits in the review block rather than inside finished prose.
         self.assertIn("Review before publication:", result["output"])
@@ -841,7 +851,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
         self.assertNotIn("GFP Cube", result["output"])
         self.assertNotIn("Route-specific optical selections/facts", result["output"])
         self.assertNotIn("49002", result["output"])
-        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
+        assert_draft_was_produced(self, result["output"])
 
     def test_flattened_cube_route_facts_are_not_promoted_without_acquisition_evidence(self) -> None:
         instrument = {
@@ -1107,7 +1117,7 @@ class MethodsGeneratorTemplateTests(unittest.TestCase):
             return { output: document.getElementById('output-text').value };
             """,
         )
-        self.assertRegex(result["output"], r"(was performed using|Images were acquired using)")
+        assert_draft_was_produced(self, result["output"])
         self.assertNotIn("this should not be shown", result["output"])
 
     def test_route_fact_fields_survive_in_the_dto_without_reaching_prose(self) -> None:

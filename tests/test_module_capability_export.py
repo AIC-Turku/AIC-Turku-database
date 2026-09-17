@@ -1,4 +1,9 @@
-"""The technique a module implements is exported, not restated in the browser.
+"""The scientific relationships the page needs are exported, not restated in it.
+
+Three of them: which technique a module implements, which source role a technique
+cannot be performed without, and which roles produce an image channel. Each was a
+table in browser JavaScript, each duplicated a vocabulary that already held the
+fact, and each had drifted from it.
 
 `vocab/modules.yaml` already records that an Airyscan module provides `ism` and
 an easy3D STED module provides `sted`. The Methods generator needs exactly that
@@ -76,10 +81,36 @@ def test_the_modules_the_old_table_got_wrong_are_exported_correctly():
     assert _module_provides_capability(vocabulary, "incubation") == {}
 
 
-def test_the_browser_does_not_carry_its_own_copy_of_the_relationship():
-    """The rule this fix exists to keep: no hardcoded vocabulary in the page."""
+def test_a_technique_states_the_source_role_it_requires():
+    """STED and RESOLFT both need a depletion beam, and both say so.
+
+    The removed browser table required one for STED and not for RESOLFT, which
+    use the same beam, so a RESOLFT acquisition with no depletion source selected
+    was never questioned.
+    """
+    vocabulary = _vocabulary()
+    modes = vocabulary.terms_by_vocab["imaging_modes"]
+    assert modes["sted"].tag_value("requires_source_role") == "depletion"
+    assert modes["resolft"].tag_value("requires_source_role") == "depletion"
+    # A technique that needs no particular beam must not claim to.
+    for mode_id in ("confocal_point", "widefield_fluorescence", "tirf"):
+        assert modes[mode_id].tag_value("requires_source_role") is None
+
+
+def test_a_role_states_whether_it_produces_an_image_channel():
+    """The channel-order question is about channels; a depletion beam is not one."""
+    roles = _vocabulary().terms_by_vocab["light_source_roles"]
+    for role_id in ("depletion", "activation", "alignment"):
+        assert roles[role_id].tag_value("forms_imaging_channel") is False
+    # Illumination roles say nothing, and saying nothing means they do.
+    for role_id in ("excitation", "transmitted_illumination", "reflected_illumination"):
+        assert roles[role_id].tag_value("forms_imaging_channel", True) is True
+
+
+def test_the_browser_carries_no_copy_of_any_of_the_three_relationships():
     source = APP.read_text(encoding="utf-8")
-    assert "MODULE_TECHNIQUE_REQUIREMENTS" not in source
-    assert "providesCapability" in source, (
-        "the page must read the exported relationship from the module record"
-    )
+    for removed in ("MODULE_TECHNIQUE_REQUIREMENTS", "METHOD_REQUIRED_SOURCE_ROLES",
+                    "DEPLETION_METHOD_IDS", "NON_CHANNEL_SOURCE_ROLES"):
+        assert removed not in source, f"{removed} is a second copy of a vocabulary"
+    for read_instead in ("providesCapability", "requiresSourceRole", "formsImagingChannel"):
+        assert read_instead in source, f"the page must read {read_instead} from the record"
