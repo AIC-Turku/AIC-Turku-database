@@ -93,7 +93,7 @@ class MethodsGeneratorGroundingAudit(unittest.TestCase):
             {"id": "obj63", "display_label": "63×", "method_sentence": "A 63× objective was used."},
         ]
         out = build_methods_generator_instrument_export(_instrument(objectives=objectives))
-        self.assertEqual([row["id"] for row in out["methods_view_dto"]["objectives"]], ["obj20", "obj63"])
+        self.assertEqual([row["id"] for row in out["objectives"]], ["obj20", "obj63"])
         self.assertNotIn("20×", out["methods"]["base_sentence"])
         self.assertNotIn("63×", out["methods"]["base_sentence"])
 
@@ -103,7 +103,7 @@ class MethodsGeneratorGroundingAudit(unittest.TestCase):
             {"id": "cam_b", "display_label": "Camera B", "method_sentence": "Camera B was used."},
         ]
         out = build_methods_generator_instrument_export(_instrument(detectors=detectors))
-        self.assertEqual([row["id"] for row in out["methods_view_dto"]["detectors"]], ["cam_a", "cam_b"])
+        self.assertEqual([row["id"] for row in out["detectors"]], ["cam_a", "cam_b"])
         self.assertNotIn("Camera A", out["methods"]["base_sentence"])
         self.assertNotIn("Camera B", out["methods"]["base_sentence"])
 
@@ -111,7 +111,7 @@ class MethodsGeneratorGroundingAudit(unittest.TestCase):
         inst = _instrument(software=[])
         inst["canonical"]["hardware"] = {}
         out = build_methods_generator_instrument_export(inst)
-        codes = {row["code"] for row in out["methods_view_dto"]["diagnostics"]}
+        codes = {row["code"] for row in out["diagnostics"]}
         self.assertIn("missing_canonical_hardware", codes)
         self.assertIn("missing_canonical_software", codes)
         self.assertNotIn("CurrentControl", out["methods"]["base_sentence"])
@@ -152,8 +152,8 @@ class MethodsGeneratorGroundingAudit(unittest.TestCase):
     def test_multiple_acquisitions_share_no_mutable_export_state(self):
         first = build_methods_generator_instrument_export(_instrument(objectives=[{"id": "obj20", "display_label": "20×"}]))
         second = build_methods_generator_instrument_export(_instrument(objectives=[{"id": "obj63", "display_label": "63×"}]))
-        self.assertEqual([row["id"] for row in first["methods_view_dto"]["objectives"]], ["obj20"])
-        self.assertEqual([row["id"] for row in second["methods_view_dto"]["objectives"]], ["obj63"])
+        self.assertEqual([row["id"] for row in first["objectives"]], ["obj20"])
+        self.assertEqual([row["id"] for row in second["objectives"]], ["obj63"])
 
     def test_optional_hardware_present_but_unselected_is_not_a_route_fact(self):
         facts = {

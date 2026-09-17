@@ -63,7 +63,7 @@ YAML instrument specs
 
 - Dashboard display DTO: `inst["dto"]`
 - Optical-path view DTO: `build_optical_path_view_dto(...)`
-- Methods export view DTO: `methods_view_dto`
+- Methods export view DTO: `build_methods_generator_instrument_export(...)`'s return value
 - LLM derived summaries: `llm_context.derived_summaries`
 
 ## Downstream product inputs
@@ -151,7 +151,10 @@ Rules:
 
 - LLM inventory records must carry canonical instrument and canonical lightpath context,
   not only dashboard DTO.
-- Methods export must expose frontend-consumed top-level keys and `methods_view_dto`.
+- Methods export exposes exactly one set of top-level keys consumed by
+  `methods_generator_app.js` and by the audit/grounding test suite (objectives,
+  detectors, light_sources, software, routes, diagnostics, etc.) - no nested
+  `methods_view_dto` compatibility copy.
 - VM branch auto-defaults are derived runtime initial state and must be marked
   non-authoritative.
 - Canonical `light_paths` remain topology truth.

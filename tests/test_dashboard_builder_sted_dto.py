@@ -632,13 +632,12 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         self.assertIn("methods_generation", exported)
         self.assertTrue(exported["methods_generation"]["is_blocked"])
         self.assertEqual(exported["runtime_selected_configuration"]["route"], "epi")
-        self.assertEqual(exported["methods_view_dto"]["routes"][0]["id"], "epi")
-        self.assertEqual(exported["methods_view_dto"]["routes"][0]["id"], "epi")
-        self.assertEqual(exported["methods_view_dto"]["routes"][1]["id"], "confocal")
-        self.assertEqual(exported["methods_view_dto"]["objectives"][0]["id"], "obj_63x")
-        self.assertEqual(exported["methods_view_dto"]["light_sources"][0]["id"], "src_488")
-        self.assertEqual(exported["methods_view_dto"]["detectors"][0]["id"], "det_hyd")
-        self.assertEqual(exported["methods_view_dto"]["software"][0]["name"], "LAS X")
+        self.assertEqual(exported["routes"][0]["id"], "epi")
+        self.assertEqual(exported["routes"][1]["id"], "confocal")
+        self.assertEqual(exported["objectives"][0]["id"], "obj_63x")
+        self.assertEqual(exported["light_sources"][0]["id"], "src_488")
+        self.assertEqual(exported["detectors"][0]["id"], "det_hyd")
+        self.assertEqual(exported["software"][0]["name"], "LAS X")
 
     def test_methods_generator_export_reports_missing_canonical_data(self) -> None:
         exported = build_methods_generator_instrument_export(
@@ -648,7 +647,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
                 "lightpath_dto": {},
             }
         )
-        diagnostics = exported["methods_view_dto"]["diagnostics"]
+        diagnostics = exported["diagnostics"]
         self.assertTrue(any(item["code"] == "missing_canonical_hardware" for item in diagnostics))
         self.assertTrue(any(item["code"] == "missing_canonical_routes" for item in diagnostics))
 
@@ -914,7 +913,7 @@ class DashboardBuilderStedDtoTests(unittest.TestCase):
         }
 
         methods_export = build_methods_generator_instrument_export(instrument)
-        self.assertEqual([r["id"] for r in methods_export["methods_view_dto"]["routes"]], ["route_zeta", "route_alpha"])
+        self.assertEqual([r["id"] for r in methods_export["routes"]], ["route_zeta", "route_alpha"])
 
         llm_export = build_llm_inventory_payload({"short_name": "Core"}, [instrument])
         route_rows = llm_export["active_microscopes"][0]["llm_context"]["authoritative_route_contract"]["available_routes"]

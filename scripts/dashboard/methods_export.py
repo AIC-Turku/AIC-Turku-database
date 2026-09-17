@@ -518,31 +518,18 @@ def build_methods_generator_instrument_export(
             }
         )
 
-    methods_view_dto = {
-        "objectives": copy.deepcopy(canonical_hardware.get("objectives") or []),
-        "detectors": copy.deepcopy(canonical_hardware.get("detectors") or []),
-        "light_sources": copy.deepcopy(
-            canonical_hardware.get("sources")
-            or canonical_hardware.get("light_sources")
-            or []
-        ),
-        "software": copy.deepcopy(canonical_software),
-        "software_status": software_status,
-        "routes": canonical_routes,
-        "diagnostics": diagnostics,
-    }
-
     dto["methods_generation"] = copy.deepcopy(inst.get("methods_generation") or {})
-    dto["methods_view_dto"] = methods_view_dto
-    # Keep methods-specific DTO explicit while also exporting top-level fields
-    # required by methods_generator_app.js runtime contract.
-    dto["objectives"] = copy.deepcopy(methods_view_dto["objectives"])
-    dto["detectors"] = copy.deepcopy(methods_view_dto["detectors"])
-    dto["light_sources"] = copy.deepcopy(methods_view_dto["light_sources"])
-    dto["software"] = copy.deepcopy(methods_view_dto["software"])
-    dto["capabilities"] = copy.deepcopy((canonical.get("capabilities") if isinstance(canonical.get("capabilities"), dict) else {}))
-    dto["routes"] = copy.deepcopy(methods_view_dto["routes"])
-    dto["diagnostics"] = copy.deepcopy(methods_view_dto["diagnostics"])
+    dto["objectives"] = copy.deepcopy(canonical_hardware.get("objectives") or [])
+    dto["detectors"] = copy.deepcopy(canonical_hardware.get("detectors") or [])
+    dto["light_sources"] = copy.deepcopy(
+        canonical_hardware.get("sources")
+        or canonical_hardware.get("light_sources")
+        or []
+    )
+    dto["software"] = copy.deepcopy(canonical_software)
+    dto["software_status"] = software_status
+    dto["routes"] = canonical_routes
+    dto["diagnostics"] = diagnostics
 
     # Runtime-selected optical truth is exported on the DTO and should be the
     # primary source for methods text when present. localStorage is fallback-only.

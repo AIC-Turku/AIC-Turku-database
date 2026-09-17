@@ -45,7 +45,7 @@ class BuildContextTests(unittest.TestCase):
 
         self.assertIn("instrument", context.canonical_instrument_dto)
         self.assertEqual(context.dashboard_view_dto.get("derived_kind"), "dashboard_view")
-        self.assertEqual(context.methods_view_dto.get("derived_kind"), "methods_view")
+        self.assertEqual(context.methods_export_dto.get("derived_kind"), "methods_view")
 
     def test_canonical_and_derived_are_distinguishable(self) -> None:
         inst = self._minimal_instrument()

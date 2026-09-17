@@ -9,7 +9,7 @@ from scripts.dashboard.llm_export import build_llm_inventory_payload
 class DiagnosticsModelTests(unittest.TestCase):
     def test_missing_optional_display_label_creates_warning(self):
         exported = build_methods_generator_instrument_export({"dto": {"id": "x"}, "canonical": {}, "lightpath_dto": {}})
-        warnings = [d for d in exported["methods_view_dto"]["diagnostics"] if d.get("severity") == "warning"]
+        warnings = [d for d in exported["diagnostics"] if d.get("severity") == "warning"]
         self.assertTrue(warnings)
         self.assertIn("source", warnings[0])
 

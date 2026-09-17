@@ -29,7 +29,7 @@ class SoftwareStatusSemanticsTests(unittest.TestCase):
         dto = build_methods_generator_instrument_export(
             {"id": "s1", "display_name": "S1", "canonical": {"instrument": {"instrument_id": "s1", "display_name": "S1"}, "hardware": {}, "software": [], "software_status": "unknown"}, "lightpath_dto": {"light_paths": []}},
         )
-        self.assertEqual("unknown", dto["methods_view_dto"]["software_status"])
+        self.assertEqual("unknown", dto["software_status"])
 
     def test_methods_instrument_reference_excludes_acquisition_software(self):
         dto = build_instrument_mega_dto(

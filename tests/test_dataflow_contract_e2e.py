@@ -64,12 +64,12 @@ class DataflowContractE2ETests(unittest.TestCase):
         self.assertEqual(ctx.instrument_id, vm["instrument"]["instrument_id"])
 
         canonical_routes = [r["id"] for r in ctx.canonical_lightpath_dto["light_paths"]]
-        self.assertEqual(canonical_routes, [r["id"] for r in methods["methods_view_dto"]["routes"]])
+        self.assertEqual(canonical_routes, [r["id"] for r in methods["routes"]])
         self.assertEqual(canonical_routes, [r["id"] for r in vm["light_paths"]])
         self.assertEqual(canonical_routes, [r["id"] for r in llm["llm_context"]["authoritative_route_contract"]["routes"]])
 
         canonical_source_ids = {s["id"] for s in ctx.canonical_instrument_dto["hardware"]["sources"]}
-        methods_source_ids = {s["id"] for s in methods["methods_view_dto"]["light_sources"]}
+        methods_source_ids = {s["id"] for s in methods["light_sources"]}
         vm_source_ids = {s["id"] for s in vm["sources"]}
         dto_source_ids = {s["id"] for s in ctx.dashboard_view_dto.get("hardware", {}).get("sources", [])}
         self.assertEqual(canonical_source_ids, methods_source_ids)
@@ -79,7 +79,7 @@ class DataflowContractE2ETests(unittest.TestCase):
         canonical_endpoint_ids = {e["id"] for e in ctx.canonical_instrument_dto["hardware"]["endpoints"]}
         vm_endpoint_ids = {e["id"] for e in vm["endpoints"]}
         dto_endpoint_ids = {e["id"] for e in ctx.dashboard_view_dto.get("hardware", {}).get("endpoints", [])}
-        methods_endpoint_ids = {d["id"] for d in methods["methods_view_dto"]["detectors"]}
+        methods_endpoint_ids = {d["id"] for d in methods["detectors"]}
         self.assertEqual(canonical_endpoint_ids, vm_endpoint_ids)
         self.assertEqual(canonical_endpoint_ids, dto_endpoint_ids)
         self.assertEqual(canonical_endpoint_ids, methods_endpoint_ids)
@@ -137,9 +137,9 @@ class DataflowContractE2ETests(unittest.TestCase):
             build_llm_inventory_record=lambda i: build_llm_inventory_payload({"short_name": "Core"}, [i])["active_microscopes"][0],
         )
         methods = ctx.methods_export_dto
-        self.assertEqual(methods["methods_view_dto"]["routes"][0]["id"], "route_custom")
+        self.assertEqual(methods["routes"][0]["id"], "route_custom")
         self.assertEqual(
-            methods["methods_view_dto"]["routes"][0]["display_label"],
+            methods["routes"][0]["display_label"],
             "route_custom (missing vocabulary translation)",
         )
 

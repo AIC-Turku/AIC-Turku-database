@@ -112,7 +112,6 @@ class NoProductionFallbacksStaticTests(unittest.TestCase):
                 "objectives": [{"id": "poison_obj", "display_label": "Fake objective"}],
                 "detectors": [{"id": "poison_det", "display_label": "Fake detector"}],
                 "software": [{"role": "acquisition", "name": "PoisonControl"}],
-                "capabilities": {"sted": True},
                 "routes": [{"id": "poison_route", "display_label": "Fake route"}],
             },
         }
@@ -121,7 +120,7 @@ class NoProductionFallbacksStaticTests(unittest.TestCase):
         poisoned_out = build_methods_generator_instrument_export(inst_poisoned)
 
         for key in ("id", "display_name", "objectives", "detectors", "light_sources",
-                    "software", "capabilities", "routes", "diagnostics", "methods_view_dto"):
+                    "software", "routes", "diagnostics"):
             self.assertEqual(
                 clean_out[key], poisoned_out[key],
                 f"methods export field {key!r} changed when only the dashboard-derived "

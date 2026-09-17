@@ -174,7 +174,7 @@ class DashboardUiContractTests(unittest.TestCase):
         export = build_methods_generator_instrument_export(inst)
 
         # Should have diagnostics for missing data
-        diagnostics = export["methods_view_dto"]["diagnostics"]
+        diagnostics = export["diagnostics"]
         self.assertTrue(len(diagnostics) > 0, "Missing data should produce diagnostics")
 
         # Should have diagnostic codes

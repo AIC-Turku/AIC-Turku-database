@@ -36,7 +36,6 @@ class InstrumentBuildContext:
     canonical_lightpath_dto: dict[str, Any]
     dashboard_view_dto: dict[str, Any]
     methods_export_dto: dict[str, Any]
-    methods_view_dto: dict[str, Any]
     llm_inventory_record: dict[str, Any]
     vm_payload: dict[str, Any]
     diagnostics: list[dict[str, str]]
@@ -185,7 +184,6 @@ def build_instrument_context(
         canonical_lightpath_dto=canonical_lightpath_dto if isinstance(canonical_lightpath_dto, dict) else {},
         dashboard_view_dto=dashboard_view_dto if isinstance(dashboard_view_dto, dict) else {},
         methods_export_dto=methods_export_dto if isinstance(methods_export_dto, dict) else {},
-        methods_view_dto=methods_export_dto if isinstance(methods_export_dto, dict) else {},
         llm_inventory_record=llm_inventory_record if isinstance(llm_inventory_record, dict) else {},
         vm_payload=vm_payload,
         diagnostics=diagnostics,
