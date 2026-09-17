@@ -141,13 +141,15 @@ class RouteFactGrounding(unittest.TestCase):
         exported = build_methods_generator_instrument_export({
             "id": "scope-x",
             "display_name": "Scope X",
+            "lightpath_dto": {
+                "projections": {"llm": {"authoritative_route_contract": {"routes": [
+                    {"id": "r", "display_label": "R", "route_optical_facts": facts}
+                ]}}},
+            },
             "dto": {
                 "id": "scope-x",
                 "display_name": "Scope X",
                 "methods": {},
-                "hardware": {"optical_path": {"authoritative_route_contract": {"routes": [
-                    {"id": "r", "display_label": "R", "route_optical_facts": facts}
-                ]}}},
             },
         })
         rows = (exported["hardware"]["optical_path"]["authoritative_route_contract"]

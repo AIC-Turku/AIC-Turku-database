@@ -26,6 +26,7 @@ import yaml
 
 from scripts.build_context import clean_text
 from scripts.dashboard.loaders import facility_short_name
+from scripts.display_labels import resolve_vocab_label
 
 
 class AcknowledgementConfigError(ValueError):
@@ -288,12 +289,19 @@ def _microscope_sentence(dto: dict[str, Any]) -> str:
     return f"Images were acquired using the {display_name}{reference_clause}."
 
 
-def _ground_methods_projection(dto: dict[str, Any]) -> None:
+def _ground_methods_projection(
+    dto: dict[str, Any], authoritative_route_contract: dict[str, Any]
+) -> None:
     """Constrain the methods projection to acquisition-safe deterministic facts.
 
     This is a boundary between a planning-capability DTO and publication prose.
     It deliberately removes route alternatives and generic advice that are useful
     elsewhere but should not read as facts about a particular acquisition.
+
+    `authoritative_route_contract` must come from the canonical light-path DTO's
+    neutral projection (`lightpath_dto.projections.llm.authoritative_route_contract`),
+    not from the dashboard-derived `dto`, so a Methods draft cannot be swayed by
+    dashboard display state the dashboard view happens to carry.
     """
     methods = dto.get("methods") if isinstance(dto.get("methods"), dict) else {}
     dto["methods"] = methods
@@ -321,18 +329,11 @@ def _ground_methods_projection(dto: dict[str, Any]) -> None:
     methods["nyquist_recommendation"] = ""
     methods["data_deposition_recommendation"] = ""
 
-    optical_path = (
-        dto.get("hardware", {}).get("optical_path", {})
-        if isinstance(dto.get("hardware"), dict)
-        and isinstance(dto.get("hardware", {}).get("optical_path"), dict)
-        else {}
+    routes = copy.deepcopy(
+        authoritative_route_contract.get("routes")
+        if isinstance(authoritative_route_contract.get("routes"), list)
+        else []
     )
-    route_contract = (
-        optical_path.get("authoritative_route_contract", {})
-        if isinstance(optical_path.get("authoritative_route_contract"), dict)
-        else {}
-    )
-    routes = route_contract.get("routes") if isinstance(route_contract.get("routes"), list) else []
 
     removed_nonselected_fact = False
     for route in routes:
@@ -363,12 +364,30 @@ def _ground_methods_projection(dto: dict[str, Any]) -> None:
             "splitters, and detector path actually used]."
         )
 
+    # The browser reads dto.hardware.optical_path.authoritative_route_contract
+    # directly, so the grounded (alternative-stripped) routes computed above must
+    # still be published there — but as an overwrite from the canonical projection,
+    # not a mutation of whatever the dashboard-derived dto happened to carry.
+    hardware = dto.get("hardware") if isinstance(dto.get("hardware"), dict) else {}
+    dto["hardware"] = hardware
+    if not isinstance(hardware.setdefault("optical_path", {}), dict):
+        hardware["optical_path"] = {}
+    optical_path = hardware["optical_path"]
+    if not isinstance(optical_path.setdefault("authoritative_route_contract", {}), dict):
+        optical_path["authoritative_route_contract"] = {}
+    optical_path["authoritative_route_contract"]["routes"] = routes
 
-def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str, Any]:
+
+def build_methods_generator_instrument_export(
+    inst: dict[str, Any], *, vocabulary: Any = None
+) -> dict[str, Any]:
     """Build methods export DTO from canonical instrument + canonical light-path DTOs.
 
     Methods export must not infer undocumented capabilities. Missing canonical fields
-    are surfaced as diagnostics instead of invented fallback text.
+    are surfaced as diagnostics instead of invented fallback text. Every fact the
+    generated prose depends on (identity, retirement, route optics) is read from the
+    canonical instrument/light-path DTOs here, not from the dashboard-derived
+    `inst["dto"]`, which is display-only and must not be Methods authority.
     """
     canonical = copy.deepcopy(
         inst.get("canonical_instrument_dto")
@@ -398,6 +417,16 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
         or canonical_instrument.get("display_name")
         or dto.get("display_name")
     )
+    dto["retired"] = bool(inst.get("retired"))
+    stand_id = clean_text(canonical_instrument.get("stand_orientation"))
+    dto["identity"] = {
+        "manufacturer": clean_text(canonical_instrument.get("manufacturer")),
+        "model": clean_text(canonical_instrument.get("model")),
+        "stand_orientation": {
+            "id": stand_id,
+            "display_label": resolve_vocab_label(vocabulary, "stand_orientations", stand_id),
+        },
+    }
 
     diagnostics: list[dict[str, str]] = []
 
@@ -515,7 +544,14 @@ def build_methods_generator_instrument_export(inst: dict[str, Any]) -> dict[str,
         else copy.deepcopy(inst.get("runtime_selected_configuration"))
     )
 
-    _ground_methods_projection(dto)
+    lightpath_projections = lightpath.get("projections") if isinstance(lightpath.get("projections"), dict) else {}
+    llm_projection = lightpath_projections.get("llm") if isinstance(lightpath_projections.get("llm"), dict) else {}
+    authoritative_route_contract = (
+        llm_projection.get("authoritative_route_contract")
+        if isinstance(llm_projection.get("authoritative_route_contract"), dict)
+        else {}
+    )
+    _ground_methods_projection(dto, authoritative_route_contract)
     return dto
 
 

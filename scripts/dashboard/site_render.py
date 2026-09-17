@@ -849,7 +849,7 @@ def render_site(
             copy.deepcopy(
                 inst.get("build_context").methods_export_dto
                 if inst.get("build_context")
-                else build_methods_generator_instrument_export(inst)
+                else build_methods_generator_instrument_export(inst, vocabulary=vocabulary)
             )
             for inst in sorted(
                 [*instruments, *retired_instruments],

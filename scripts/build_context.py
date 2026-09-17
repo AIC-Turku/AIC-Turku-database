@@ -132,7 +132,7 @@ def build_instrument_context(
         _arc = _optical_path.get("authoritative_route_contract") if isinstance(_optical_path.get("authoritative_route_contract"), dict) else None
         if _arc:
             build_input["lightpath_dto"].setdefault("projections", {}).setdefault("llm", {})["authoritative_route_contract"] = copy.deepcopy(_arc)
-    methods_export_dto = build_methods_view_dto(build_input)
+    methods_export_dto = build_methods_view_dto(build_input, vocabulary=vocabulary)
     llm_inventory_record = build_llm_inventory_record(build_input)
 
     # VM payload must consume the canonical parser DTO directly. Dashboard view DTOs

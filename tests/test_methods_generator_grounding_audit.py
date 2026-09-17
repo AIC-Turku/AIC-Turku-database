@@ -43,6 +43,13 @@ def _instrument(*, route_facts=None, objectives=None, detectors=None, software=N
         },
         "lightpath_dto": {
             "light_paths": [{"id": "widefield", "name": "Widefield", "selected_execution": {"selected_route_steps": []}}],
+            "projections": {
+                "llm": {
+                    "authoritative_route_contract": {
+                        "routes": [{"id": "widefield", "display_label": "Widefield", "route_optical_facts": copy.deepcopy(route_facts)}]
+                    },
+                },
+            },
         },
         "dto": {
             "id": "scope-grounding",
@@ -51,9 +58,6 @@ def _instrument(*, route_facts=None, objectives=None, detectors=None, software=N
             "hardware": {
                 "objectives": copy.deepcopy(objectives),
                 "optical_path": {
-                    "authoritative_route_contract": {
-                        "routes": [{"id": "widefield", "display_label": "Widefield", "route_optical_facts": copy.deepcopy(route_facts)}]
-                    },
                     "hardware_inventory_renderables": [],
                 },
             },

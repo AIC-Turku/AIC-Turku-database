@@ -130,15 +130,14 @@ class NoProductionFallbacksStaticTests(unittest.TestCase):
                 "dto was poisoned; it must be sourced from canonical/lightpath DTOs only",
             )
 
-    @unittest.expectedFailure
-    def test_methods_export_prose_should_not_depend_on_dashboard_view_dto(self) -> None:
-        """Known gap (PR #462 follow-up review, finding 1/3): methods_export.py reads
+    def test_methods_export_prose_is_independent_of_dashboard_view_dto(self) -> None:
+        """PR #462 follow-up review, finding 1/3: methods_export.py used to read
         `dto.get("identity")`, `dto.get("retired")` and `dto["hardware"]["optical_path"]`
-        directly off the dashboard-derived `inst["dto"]` rather than off canonical/
-        lightpath DTOs, so the generated prose and QUAREP prompt are not actually
-        independent of the dashboard view. Remove @unittest.expectedFailure once
-        _microscope_sentence/_ground_methods_projection are changed to source
-        identity and route-optical-facts from canonical/lightpath instead of `dto`.
+        directly off the dashboard-derived `inst["dto"]`, so the generated prose and
+        QUAREP prompt were not actually independent of the dashboard view. It now
+        sources identity/retired from the canonical instrument DTO and route optical
+        facts from `lightpath_dto.projections.llm.authoritative_route_contract`, so
+        poisoning only the dashboard-derived dto must not change any of them.
         """
         canonical = {
             "instrument": {"instrument_id": "scope-x", "display_name": "Scope X"},
@@ -214,6 +213,42 @@ class NoProductionFallbacksStaticTests(unittest.TestCase):
             clean_out["methods"].get("quarep_light_path_recommendation_needed", False),
             poisoned_out["methods"].get("quarep_light_path_recommendation_needed", False),
         )
+
+        # Positive control: the same facts, genuinely recorded canonically/on the
+        # light-path DTO instead of the dashboard-only dto, must actually take
+        # effect — otherwise the equality assertions above would hold vacuously.
+        inst_genuine = copy.deepcopy(inst_clean)
+        inst_genuine["retired"] = True
+        inst_genuine["canonical"]["instrument"]["manufacturer"] = "RealCorp"
+        inst_genuine["canonical"]["instrument"]["model"] = "Real9000"
+        inst_genuine["lightpath_dto"]["projections"] = {
+            "llm": {
+                "authoritative_route_contract": {
+                    "routes": [
+                        {
+                            "id": "route1",
+                            "display_label": "Route One",
+                            "route_optical_facts": {
+                                "selected_or_selectable_emission_filters": [
+                                    {
+                                        "id": "real_filter",
+                                        "display_label": "Real Filter",
+                                        "selection_state": "selectable",
+                                        "available_positions": [
+                                            {"position_key": "1", "display_label": "DAPI"},
+                                        ],
+                                    }
+                                ]
+                            },
+                        }
+                    ]
+                },
+            },
+        }
+        genuine_out = build_methods_generator_instrument_export(inst_genuine)
+        self.assertIn("RealCorp", genuine_out["methods"]["base_sentence"])
+        self.assertNotEqual(clean_out["methods"]["retired_review_prompt"], genuine_out["methods"]["retired_review_prompt"])
+        self.assertTrue(genuine_out["methods"]["quarep_light_path_recommendation_needed"])
 
     def test_legacy_import_usage_is_whitelisted(self) -> None:
         for path in Path("scripts").rglob("*.py"):
