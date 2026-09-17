@@ -300,8 +300,13 @@ def _ground_methods_projection(
 
     `authoritative_route_contract` must come from the canonical light-path DTO's
     neutral projection (`lightpath_dto.projections.llm.authoritative_route_contract`),
-    not from the dashboard-derived `dto`, so a Methods draft cannot be swayed by
-    dashboard display state the dashboard view happens to carry.
+    not from the dashboard-derived `dto`, so this function's own output cannot be
+    swayed by dashboard-only mutations made to `dto` after that projection was
+    populated. Known limitation (see scripts/build_context.py): the projection
+    itself is currently populated by copying dashboard_view_dto's own output, so
+    this is not yet a full guarantee that route facts are independent of how the
+    dashboard view constructs them - only that this function stops re-reading
+    `dto` for them directly.
     """
     methods = dto.get("methods") if isinstance(dto.get("methods"), dict) else {}
     dto["methods"] = methods
@@ -384,10 +389,13 @@ def build_methods_generator_instrument_export(
     """Build methods export DTO from canonical instrument + canonical light-path DTOs.
 
     Methods export must not infer undocumented capabilities. Missing canonical fields
-    are surfaced as diagnostics instead of invented fallback text. Every fact the
-    generated prose depends on (identity, retirement, route optics) is read from the
-    canonical instrument/light-path DTOs here, not from the dashboard-derived
-    `inst["dto"]`, which is display-only and must not be Methods authority.
+    are surfaced as diagnostics instead of invented fallback text. Identity and
+    retirement are read from the canonical instrument DTO here, not from the
+    dashboard-derived `inst["dto"]`. Route optics are read from
+    `lightpath_dto.projections.llm.authoritative_route_contract` rather than
+    `inst["dto"]` directly - see _ground_methods_projection's docstring for the
+    known limitation that this projection is not yet independent of how the
+    dashboard view itself constructs route facts.
     """
     canonical = copy.deepcopy(
         inst.get("canonical_instrument_dto")

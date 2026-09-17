@@ -127,6 +127,17 @@ def build_instrument_context(
     build_input["dto"] = copy.deepcopy(dashboard_view_dto if isinstance(dashboard_view_dto, dict) else {})
     # Propagate authoritative_route_contract from dashboard view into lightpath_dto.projections.llm
     # so LLM and methods exports can access it from a consistent location without re-reading the dashboard view.
+    #
+    # KNOWN LIMITATION: this location is still populated FROM dashboard_view_dto here,
+    # not built independently from canonical/lightpath data. Methods export reading from
+    # lightpath_dto.projections.llm instead of inst["dto"] directly stops it from depending
+    # on dashboard-only mutations made after this point (e.g. site_render.py's later
+    # inst["dto"]["diagnostics"] = ...), and matches the location llm_export.py already
+    # uses - but it does not make route facts independent of the dashboard view's own
+    # construction (optical_path_view.py). Closing that fully means computing this
+    # projection directly from canonical_lightpath_dto before dashboard_view_dto exists,
+    # with dashboard/Methods/LLM as sibling consumers - the target architecture the PR
+    # #462 follow-up review described, not yet implemented.
     if isinstance(dashboard_view_dto, dict) and isinstance(build_input.get("lightpath_dto"), dict):
         _optical_path = ((dashboard_view_dto.get("hardware") or {}).get("optical_path") or {}) if isinstance((dashboard_view_dto.get("hardware") or {}).get("optical_path"), dict) else {}
         _arc = _optical_path.get("authoritative_route_contract") if isinstance(_optical_path.get("authoritative_route_contract"), dict) else None

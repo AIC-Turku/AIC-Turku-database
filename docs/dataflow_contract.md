@@ -132,6 +132,21 @@ Rules:
 - VM runtime JS contains compatibility logic for broader payload tolerance; this is
   non-authoritative and must not be extended as a canonical data path.
 
+## Known limitations
+
+- `lightpath_dto.projections.llm.authoritative_route_contract` (populated in
+  `build_context.py`, consumed by both LLM and Methods export) is documented as the
+  canonical/neutral home for route optical facts, but is currently populated by
+  copying `dashboard_view_dto["hardware"]["optical_path"]["authoritative_route_contract"]`
+  after the dashboard view is built - it is not yet computed independently from
+  `canonical_lightpath_dto`. Methods export reading from this projection instead of
+  `inst["dto"]` directly does stop it from depending on dashboard-only mutations made
+  after this point, and matches the location LLM export already uses, but route facts
+  are still transitively dashboard-view-derived in production. Closing this fully means
+  building this projection directly from canonical DTOs before `dashboard_view_dto`
+  exists, with dashboard/Methods/LLM as sibling consumers of it - the target
+  architecture described by the PR #462 follow-up review, not yet implemented.
+
 ## Critical contract notes
 
 - LLM inventory records must carry canonical instrument and canonical lightpath context,
