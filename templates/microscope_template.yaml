@@ -185,6 +185,7 @@ hardware:
       display_label: ""  # Optical path element display label: Optional alternate display label for UI-facing consumers.
       stage_role: ""  # Optical path element stage role: Descriptive grouping metadata for UI/runtime consumers. `light_paths` remain the sole canonical source of route topology, so stage_role should only be supplied when a stable stage grouping is genuinely useful. | Allowed values (canonical IDs): excitation, cube, dichroic, emission, analyzer, splitter
       element_type: ""  # Optical path element type: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling. | Allowed values (canonical IDs): filter_wheel, slider, turret, fixed, tunable, spectral_slider, spectral_array, selector, splitter, emission_splitter, image_splitter, dual_view, quad_view
+      slots: ""  # Optical path element slot count: Physical mechanism capacity. When larger than the number of documented positions, omitted positions remain unknown and the mechanism must not be treated as fixed.
       selection_mode: ""  # Optical path element selection mode: Inventory-level selector/splitter capability metadata. Canonical route branching now lives in light_paths sequence branch blocks. | Allowed values (canonical IDs): fixed, exclusive, multiple
       supported_branch_modes:  # Supported branch modes: Inventory-level capability metadata describing which branch modes a selector/splitter can support. | Allowed values (canonical IDs): transmitted, reflected, selected, passthrough
         - ""
@@ -197,6 +198,8 @@ hardware:
           manufacturer: ""  # Optical path position manufacturer: Structured provenance for direct position payloads.
           model: ""  # Optical path position model: Vendor-facing model/designation for direct position payloads.
           product_code: ""  # Optical path position product code: Explicit catalog/SKU/reference code for direct position payloads when known.
+          compatible_source_ids:  # Compatible source IDs: Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra.
+            - ""
           bands:  # Optical path position multiband array: Explicit multiband pass windows for direct position payloads.
             -
               center_nm: ""  # Optical path position band center (nm): Band center for direct multiband position payloads.

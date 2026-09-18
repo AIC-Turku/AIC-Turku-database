@@ -46,13 +46,9 @@ def test_a_gap_that_is_filled_in_leaves_the_list():
     gaps = collect_gaps()
     roles = gaps.get("source_role") or {}
     reported = {name for name, items in roles.items() if items}
-    # The 3i records carry roles on their laser lines and not on their widefield
-    # LED, so exactly the LED is expected to be listed for them.
-    listed = roles.get("3i CSU-W1 Spinning Disk", [])
-    assert listed, "expected the unroled 3i widefield LED to be reported"
-    assert all("laser" not in entry for entry in listed), (
-        f"laser lines already carry a recorded role and must not be listed: {listed}"
-    )
+    # The 3i CSU-W1 record now carries an explicit role on both its laser
+    # sources and the X-Cite widefield LED, so it must not be reported.
+    assert "3i CSU-W1 Spinning Disk" not in reported
     # Deltavision records roles on every source, so it must not appear at all.
     assert "Deltavision OMX" not in reported
 

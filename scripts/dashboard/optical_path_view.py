@@ -783,28 +783,26 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
     indexes them by component so the page can offer them as choices.
     """
     positions_by_component: dict[str, list[dict[str, Any]]] = {}
-    for route in light_paths:
-        route_id = clean_text(route.get("id"))
-        route_label = clean_text(route.get("name") or route.get("display_label") or route_id)
-        route_images = route_declares_imaging(route)
-        selected_execution = route.get("selected_execution") if isinstance(route.get("selected_execution"), dict) else {}
-        steps = selected_execution.get("selected_route_steps")
-        for step in steps if isinstance(steps, list) else []:
-            if not isinstance(step, dict):
-                continue
-            inventory_id = clean_text(step.get("hardware_inventory_id"))
-            available = step.get("available_positions")
-            if not inventory_id or not isinstance(available, list):
-                continue
-            holder_label = clean_text(step.get("display_label"))
-            holder_stage_role = clean_text(step.get("stage_role"))
-            known = positions_by_component.setdefault(inventory_id, [])
-            by_key = {row["id"]: row for row in known}
-            by_identity = {
-                (row["display_label"], row["product_code"], row["component_type"].lower()): row
-                for row in known
-            }
-            for position in available:
+
+    def register_step(
+        step: dict[str, Any],
+        route_id: str,
+        route_label: str,
+        route_images: bool,
+    ) -> None:
+        inventory_id = clean_text(step.get("hardware_inventory_id"))
+        available = step.get("available_positions")
+        if not inventory_id or not isinstance(available, list):
+            return
+        holder_label = clean_text(step.get("display_label"))
+        holder_stage_role = clean_text(step.get("stage_role"))
+        known = positions_by_component.setdefault(inventory_id, [])
+        by_key = {row["id"]: row for row in known}
+        by_identity = {
+            (row["display_label"], row["product_code"], row["component_type"].lower()): row
+            for row in known
+        }
+        for position in available:
                 if not isinstance(position, dict):
                     continue
                 if not position_serves_route(position, holder_stage_role, route_images):
@@ -872,6 +870,11 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     "type_noun": _position_type_noun(position, holder_stage_role),
                     "stage_role": holder_stage_role,
                     "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",
+                    "compatible_source_ids": [
+                        clean_text(source_id)
+                        for source_id in (position.get("compatible_source_ids") or [])
+                        if clean_text(source_id)
+                    ] if isinstance(position.get("compatible_source_ids"), list) else [],
                     "is_empty": (
                         clean_text(position.get("component_type")).lower() == "empty"
                         or clean_text(label).lower() in _EMPTY_POSITION_WORDS
@@ -884,6 +887,30 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                 by_key[key] = row
                 by_identity[twin] = row
                 known.append(row)
+
+    for route in light_paths:
+        route_id = clean_text(route.get("id"))
+        route_label = clean_text(route.get("name") or route.get("display_label") or route_id)
+        route_images = route_declares_imaging(route)
+        selected_execution = route.get("selected_execution") if isinstance(route.get("selected_execution"), dict) else {}
+        steps = selected_execution.get("selected_route_steps")
+        for step in steps if isinstance(steps, list) else []:
+            if not isinstance(step, dict):
+                continue
+            register_step(step, route_id, route_label, route_images)
+            # A camera-specific filter wheel recorded inside a detection branch
+            # (two cameras, each behind its own emission wheel) is not itself a
+            # top-level step - it only appears nested under the branch selector's
+            # `routing.branches[].sequence`. Without this, such a wheel's
+            # positions are computed but never indexed, so the Methods page can
+            # offer the wheel but not a single filter inside it.
+            routing = step.get("routing") if isinstance(step.get("routing"), dict) else {}
+            for branch in routing.get("branches") or []:
+                if not isinstance(branch, dict):
+                    continue
+                for branch_step in branch.get("sequence") or []:
+                    if isinstance(branch_step, dict):
+                        register_step(branch_step, route_id, route_label, route_images)
     return positions_by_component
 
 

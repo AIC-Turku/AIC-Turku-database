@@ -478,6 +478,32 @@ def validate_light_path_diagnostics(
     element_ids = {entry.get("id") for entry in elements}
     endpoint_ids = {entry.get("id") for entry in endpoints}
 
+    # Source-position compatibility is authored evidence, not a wavelength
+    # inference. Every reference must therefore resolve to a source on the same
+    # instrument; otherwise downstream UIs would silently hide or allow the wrong
+    # mechanism positions.
+    for element in elements:
+        if not isinstance(element, dict):
+            continue
+        element_id = _clean_identifier(element.get("id")) or "unknown_element"
+        positions = element.get("positions") if isinstance(element.get("positions"), dict) else {}
+        for position_key, position in positions.items():
+            if not isinstance(position, dict):
+                continue
+            compatible_source_ids = position.get("compatible_source_ids")
+            if compatible_source_ids is None:
+                continue
+            if not isinstance(compatible_source_ids, list):
+                # The schema validator reports the type error; avoid duplicating it.
+                continue
+            for source_id in compatible_source_ids:
+                normalized_source_id = _clean_identifier(source_id)
+                if normalized_source_id and normalized_source_id not in source_ids:
+                    errors.append(
+                        f"hardware.optical_path_elements[{element_id}].positions[{position_key}]"
+                        f".compatible_source_ids: unknown source id '{normalized_source_id}'."
+                    )
+
     hardware = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
     legacy_light_path = (
         hardware.get("light_path")

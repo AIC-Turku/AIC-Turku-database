@@ -103,6 +103,66 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             """
         )
 
+    def test_source_specific_position_rejects_incompatible_selected_source(self) -> None:
+        result = self.run_node_json(
+            """
+            const passthrough = {
+              component_type: 'passthrough',
+              spectral_ops: {
+                illumination: [{ op: 'passthrough' }],
+                detection: [{ op: 'passthrough' }]
+              }
+            };
+            const incompatible = {
+              ...passthrough,
+              display_label: 'NIR turret position',
+              position_key: 'Pos_2',
+              compatible_source_ids: ['src_730']
+            };
+            return rt.simulateInstrument(
+              {
+                metadata: { simulation_mode: 'strict' },
+                light_paths: [{
+                  id: 'confocal',
+                  selected_execution: { selected_route_steps: [] },
+                  illumination_sequence: [],
+                  detection_sequence: []
+                }],
+                sources: [],
+                optical_path_elements: [],
+                endpoints: []
+              },
+              {
+                sources: [{
+                  id: 'src_488',
+                  display_label: '488 nm laser',
+                  kind: 'laser',
+                  role: 'excitation',
+                  wavelength_nm: 488
+                }],
+                excitation: [],
+                dichroic: [incompatible],
+                emission: [],
+                splitters: [],
+                detectors: [],
+                illuminationComponents: [{ component: passthrough, mode: 'excitation' }],
+                detectionComponents: [{ component: incompatible, mode: 'emission' }],
+                resolvedExecution: [{}],
+                selectionMap: {}
+              },
+              [],
+              { currentRoute: 'confocal' }
+            );
+            """
+        )
+        self.assertFalse(result["validSelection"])
+        self.assertTrue(result["routeViolation"])
+        self.assertTrue(
+            any("not recorded as compatible with the selected source" in message
+                for message in result["routeViolationDetails"]),
+            result,
+        )
+
     def test_fpbase_search_results_are_normalized(self) -> None:
         result = self.run_node_json(
             """
@@ -378,11 +438,11 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
 
         expected_emission = self._find_stage_option_value(
             runtime_projection["emission"],
-            "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+            "Slot 1: 440/40 + 521/21 + 607/34 + 700/45",
         )
         expected_dichroic = self._find_stage_option_value(
             runtime_projection["dichroic"],
-            "Slot 1: Quad-band Dichroic",
+            "Slot 1: VIS quad-band confocal dichroic",
         )
         self.assertIsNotNone(expected_emission)
         self.assertIsNotNone(expected_dichroic)
@@ -390,12 +450,12 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         normalized_emission = self.normalized_stage_option_value(
             payload,
             "emission",
-            "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+            "Slot 1: 440/40 + 521/21 + 607/34 + 700/45",
         )
         normalized_dichroic = self.normalized_stage_option_value(
             payload,
             "dichroic",
-            "Slot 1: Quad-band Dichroic",
+            "Slot 1: VIS quad-band confocal dichroic",
         )
 
         self.assertEqual(normalized_emission["spectral_ops"], expected_emission["spectral_ops"])
@@ -433,12 +493,12 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             (
                 "3i CSU-W1 Spinning Disk.yaml",
                 "emission",
-                "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+                "Slot 1: 440/40 + 521/21 + 607/34 + 700/45",
             ),
             (
                 "3i CSU-W1 Spinning Disk.yaml",
                 "dichroic",
-                "Slot 1: Quad-band Dichroic",
+                "Slot 1: VIS quad-band confocal dichroic",
             ),
             (
                 "xCELLigence RTCA eSight.yaml",

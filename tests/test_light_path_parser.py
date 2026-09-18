@@ -2624,6 +2624,145 @@ class LightPathParserTests(unittest.TestCase):
         self.assertEqual(topology_step["position_key"], "Pos_1")
         self.assertIsNotNone(topology_step["spectral_ops"])
 
+    def test_partial_multi_slot_mechanism_with_one_documented_position_stays_unresolved(self) -> None:
+        """One documented slot on a multi-slot wheel is incomplete inventory, not a fixed optic."""
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_730", "kind": "laser", "wavelength_nm": 730}],
+                    "optical_path_elements": [
+                        {
+                            "id": "camera_filter",
+                            "stage_role": "emission",
+                            "element_type": "filter_wheel",
+                            "slots": 6,
+                            "positions": {
+                                "Pos_6": {
+                                    "component_type": "bandpass",
+                                    "center_nm": 809,
+                                    "width_nm": 81,
+                                    "label": "809/81",
+                                    "compatible_source_ids": ["src_730"],
+                                },
+                            },
+                        },
+                    ],
+                    "endpoints": [{"id": "cam", "endpoint_type": "detector"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [{"source_id": "src_730"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "camera_filter"},
+                            {"endpoint_id": "cam"},
+                        ],
+                    },
+                ],
+            }
+        )
+        route = payload["light_paths"][0]
+        step = next(
+            row for row in route["selected_execution"]["selected_route_steps"]
+            if row.get("component_id") == "camera_filter"
+        )
+        self.assertEqual(step["selection_state"], "unresolved")
+        self.assertIsNone(step["selected_position_id"])
+        self.assertIsNone(step["spectral_ops"])
+        self.assertEqual(len(step["available_positions"]), 1)
+        self.assertEqual(step["available_positions"][0]["position_key"], "Pos_6")
+        self.assertEqual(step["available_positions"][0]["compatible_source_ids"], ["src_730"])
+
+    def test_branch_local_partial_multi_slot_mechanism_stays_unresolved(self) -> None:
+        payload = generate_virtual_microscope_payload(
+            {
+                "hardware": {
+                    "sources": [{"id": "src_730", "kind": "laser", "wavelength_nm": 730}],
+                    "optical_path_elements": [
+                        {"id": "switch", "stage_role": "splitter", "element_type": "selector"},
+                        {
+                            "id": "camera_filter",
+                            "stage_role": "emission",
+                            "element_type": "filter_wheel",
+                            "slots": 6,
+                            "positions": {
+                                "Pos_6": {
+                                    "component_type": "bandpass",
+                                    "center_nm": 809,
+                                    "width_nm": 81,
+                                    "label": "809/81",
+                                },
+                            },
+                        },
+                    ],
+                    "endpoints": [{"id": "cam", "endpoint_type": "detector"}],
+                },
+                "light_paths": [
+                    {
+                        "id": "confocal",
+                        "illumination_sequence": [{"source_id": "src_730"}],
+                        "detection_sequence": [
+                            {"optical_path_element_id": "switch"},
+                            {
+                                "branches": {
+                                    "selection_mode": "exclusive",
+                                    "items": [{
+                                        "branch_id": "camera",
+                                        "sequence": [
+                                            {"optical_path_element_id": "camera_filter"},
+                                            {"endpoint_id": "cam"},
+                                        ],
+                                    }],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+        )
+        route = payload["light_paths"][0]
+        routing = next(
+            row for row in route["selected_execution"]["selected_route_steps"]
+            if row.get("kind") == "routing_component"
+        )
+        branch_step = routing["routing"]["branches"][0]["sequence"][0]
+        self.assertEqual(branch_step["component_id"], "camera_filter")
+        self.assertEqual(branch_step["selection_state"], "unresolved")
+        self.assertEqual(len(branch_step["available_positions"]), 1)
+        self.assertIsNone(branch_step["spectral_ops"])
+
+    def test_unknown_position_compatible_source_reference_is_rejected(self) -> None:
+        instrument = {
+            "hardware": {
+                "sources": [{"id": "src_488", "kind": "laser", "wavelength_nm": 488}],
+                "optical_path_elements": [{
+                    "id": "turret",
+                    "stage_role": "dichroic",
+                    "element_type": "turret",
+                    "positions": {
+                        "Pos_1": {
+                            "component_type": "dichroic",
+                            "compatible_source_ids": ["missing_source"],
+                        },
+                    },
+                }],
+                "endpoints": [{"id": "cam", "endpoint_type": "detector"}],
+            },
+            "light_paths": [{
+                "id": "route",
+                "illumination_sequence": [
+                    {"source_id": "src_488"},
+                    {"optical_path_element_id": "turret"},
+                ],
+                "detection_sequence": [{"endpoint_id": "cam"}],
+            }],
+        }
+        errors, _warnings, _cube_warnings = validate_light_path_diagnostics(instrument)
+        self.assertTrue(
+            any("missing_source" in error and "compatible_source_ids" in error for error in errors),
+            errors,
+        )
+
     def test_route_step_splitter_branches_include_resolved_branch_optics(self) -> None:
         payload = generate_virtual_microscope_payload(
             {

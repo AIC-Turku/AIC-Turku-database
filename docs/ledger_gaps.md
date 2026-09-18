@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**116 open questions across 23 records.**
+**117 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -24,9 +24,8 @@ This is the single request that still appears on an otherwise complete Methods d
 
 One role per source is the answer, even where the same beam serves more than one technique. The Abberior's 775 nm beam depletes by stimulated emission under STED and drives reversible photoswitching under RESOLFT; both are recorded as `depletion`, because the role states what the beam does on the path and the method states the mechanism. The draft says "Depletion was provided by..." and names the technique in its opening sentence, so a single role cannot make a RESOLFT paragraph claim stimulated emission.
 
-65 across 19 records:
+64 across 18 records:
 
-- **3i CSU-W1 Spinning Disk** — led Excelitas X-Cite XLED1
 - **3i Marianas CSU-W1 Spinning Disk Med C** — led CoolLED pE-300
 - **Agilent xCELLigence RTCA eSight** — 393 led Agilent High-power LED (Blue); 482 led Agilent High-power LED (Green); 595 led Agilent High-power LED (Red)
 - **Andor BC43 Benchtop Confocal** — 405 laser Andor Borealis Illumination; 488 laser Andor Borealis Illumination; 561 laser Andor Borealis Illumination; 638 laser Andor Borealis Illumination
@@ -173,7 +172,7 @@ For each position: what are the excitation band, dichroic edge and emission band
 
 The Methods draft prints what a filter passes when the bands are recorded and only its catalogue number when they are not, so these positions produce the least useful sentences in a fluorescence draft.
 
-4 across 2 records:
+6 across 2 records:
 
-- **3i CSU-W1 Spinning Disk** — CSU-W1 Dichroic Slider / NIR dichroic position
+- **3i CSU-W1 Spinning Disk** — Yokogawa CSU-W Filter Turret / VIS quad-band confocal dichroic; Yokogawa CSU-W Filter Turret / NIR short-pass confocal dichroic; CSU-W NIR Beam Combiner / NIR beam combiner
 - **Nikon Eclipse Ti2-E** — Filter Turret / Chroma 89403bs; Filter Turret / Chroma 84000v2; Lamp Filter Cubes / Standard Cubes

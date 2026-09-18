@@ -815,6 +815,13 @@ def _build_route_steps(
                         "kind": "optical_component",
                         "component_id": seq_id or None,
                         "display_label": seq_step.get("display_label"),
+                        # Carried through so a branch-local element (a per-camera
+                        # filter wheel, for instance) can still be matched back to
+                        # its inventory row and offer its positions as choices -
+                        # dropping these here is what left every position on a
+                        # branch-local wheel unreachable from the dashboard.
+                        "hardware_inventory_id": seq_step.get("hardware_inventory_id"),
+                        "stage_role": seq_step.get("stage_role"),
                         "position_id": position_id,
                         "position_key": position_key,
                         "position_label": position_label,

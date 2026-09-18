@@ -386,6 +386,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // rather than merging a transmitted lamp into a fluorescence clause.
             checkbox.dataset.routeIds = JSON.stringify(Array.isArray(item.route_ids) ? item.route_ids : []);
             checkbox.dataset.inventoryClass = item.inventory_class || "";
+            checkbox.dataset.hardwareId = item.hardware_id || "";
             // The recorded emission of a light source, used only to ask whether a
             // source and a filter position that cannot pass it were really paired.
             const sourceMetadata = item.source_metadata && typeof item.source_metadata === "object"
@@ -453,10 +454,26 @@ document.addEventListener("DOMContentLoaded", async () => {
      */
     function positionsOnSelectedRoutes(positions) {
         const checkedRouteIds = new Set(getCheckedIds("route"));
-        if (!checkedRouteIds.size) return positions;
+        const selectedSourceIds = new Set(
+            getCheckedSelections("light")
+                .map((source) => cleanText(source.hardwareId))
+                .filter(Boolean)
+        );
         return positions.filter((position) => {
             const routeIds = Array.isArray(position?.route_ids) ? position.route_ids.map(cleanText) : [];
-            return !routeIds.length || routeIds.some(id => checkedRouteIds.has(id));
+            if (checkedRouteIds.size && routeIds.length
+                && !routeIds.some(id => checkedRouteIds.has(id))) {
+                return false;
+            }
+
+            const compatibleSourceIds = Array.isArray(position?.compatible_source_ids)
+                ? position.compatible_source_ids.map(cleanText).filter(Boolean)
+                : [];
+            if (selectedSourceIds.size && compatibleSourceIds.length
+                && !compatibleSourceIds.some(id => selectedSourceIds.has(id))) {
+                return false;
+            }
+            return true;
         });
     }
 
@@ -798,22 +815,60 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Collect hardware IDs from routes that match the checked routes.
         // When nothing is checked, include hardware from ALL routes.
         const matchingRouteHardwareIds = new Set();
+        const branchRestrictedHardwareIds = new Set();
+        const checkedEndpointIds = new Set(getCheckedIds("det"));
+
         routeViews
             .filter(rv => checkedRouteIds.size === 0 || checkedRouteIds.has(cleanText(rv.id)))
             .forEach(rv => {
+                const routeHardwareIds = new Set();
                 ["sources", "filters", "splitters", "endpoints"].forEach(key => {
                     (rv.relevant_hardware?.[key] || []).forEach(item => {
                         const id = cleanText(item?.id);
-                        if (id) matchingRouteHardwareIds.add(id);
+                        if (id) {
+                            matchingRouteHardwareIds.add(id);
+                            routeHardwareIds.add(id);
+                        }
                     });
                 });
+
+                const branches = Array.isArray(rv?.branch_summary?.branches)
+                    ? rv.branch_summary.branches : [];
+                const allBranchHardwareIds = new Set(
+                    branches.flatMap(branch => Array.isArray(branch?.hardware_inventory_ids)
+                        ? branch.hardware_inventory_ids.map(cleanText).filter(Boolean)
+                        : [])
+                );
+                const selectedBranches = checkedEndpointIds.size
+                    ? branches.filter(branch =>
+                        (Array.isArray(branch?.endpoint_inventory_ids)
+                            ? branch.endpoint_inventory_ids.map(cleanText)
+                            : []
+                        ).some(id => checkedEndpointIds.has(id)))
+                    : [];
+
+                if (selectedBranches.length) {
+                    routeHardwareIds.forEach(id => {
+                        if (!allBranchHardwareIds.has(id)) branchRestrictedHardwareIds.add(id);
+                    });
+                    selectedBranches.forEach(branch => {
+                        (Array.isArray(branch?.hardware_inventory_ids)
+                            ? branch.hardware_inventory_ids
+                            : []
+                        ).map(cleanText).filter(Boolean).forEach(id => branchRestrictedHardwareIds.add(id));
+                    });
+                } else {
+                    routeHardwareIds.forEach(id => branchRestrictedHardwareIds.add(id));
+                }
             });
 
-        // Filter inventory renderables to those on a matching route. When nothing
-        // is checked, return all items unfiltered.
-        function filterBySelection(items) {
+        // Filter inventory renderables to those on a matching route. Branch-local
+        // optics additionally follow the selected endpoint, while endpoints
+        // themselves remain visible so the user can switch camera/port.
+        function filterBySelection(items, respectBranch = false) {
             if (checkedRouteIds.size === 0) return items;
-            return items.filter(item => matchingRouteHardwareIds.has(cleanText(item?.id)));
+            const allowed = respectBranch ? branchRestrictedHardwareIds : matchingRouteHardwareIds;
+            return items.filter(item => allowed.has(cleanText(item?.id)));
         }
 
         // Which recorded paths each component sits on, over every route rather than
@@ -881,8 +936,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const allSplitterItems = inventoryItemsForClasses(dto, ["splitter"]);
         toggleSectionVisibility("section-light", bindCheckboxes("light-list", annotate(filterBySelection(allLightItems)), "light", retained.light) > 0);
         toggleSectionVisibility("section-det", bindCheckboxes("det-list", annotate(decorateExclusiveEndpoints(filterBySelection(allDetItems))), "det", retained.det) > 0);
-        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", annotate(filterBySelection(allFilterItems)), "filter", retained.filter, retainedPositions) > 0);
-        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", annotate(filterBySelection(allSplitterItems)), "splitter", retained.splitter) > 0);
+        toggleSectionVisibility("section-filter", bindCheckboxes("filter-list", annotate(filterBySelection(allFilterItems, true)), "filter", retained.filter, retainedPositions) > 0);
+        toggleSectionVisibility("section-splitter", bindCheckboxes("splitter-list", annotate(filterBySelection(allSplitterItems, true)), "splitter", retained.splitter) > 0);
 
         const renderedPositionIds = new Set(
             Array.from(document.querySelectorAll('input[id^="filterposition-"]')).map(input => input.value)
@@ -946,6 +1001,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             publicationLabel: cleanText(cb.dataset.publicationLabel),
             reviewPrompts: parseJsonArray(cb.dataset.reviewPrompts),
             inventoryClass: cleanText(cb.dataset.inventoryClass),
+            hardwareId: cleanText(cb.dataset.hardwareId),
             componentType: cleanText(cb.dataset.componentType),
             providesCapability: parseJsonObject(cb.dataset.providesCapability),
             excitationWindows: parseJsonArray2d(cb.dataset.excitationWindows),
@@ -2071,6 +2127,22 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
         if (currentInst) updateHardwareVisibility(currentInst, true);
+    });
+
+    // Branch-local optics depend on the selected camera/endpoint. Keep all
+    // endpoints visible, but immediately re-scope filters and splitters when the
+    // user switches branch.
+    document.getElementById("det-list").addEventListener("change", (event) => {
+        if (event?.target?.dataset.category !== "det" || !currentInst) return;
+        updateHardwareVisibility(currentInst, true);
+    });
+
+    // Some mechanism positions are explicitly tied to installed source lines
+    // (for example the VIS versus 730-nm CSU-W dichroic states). Re-render their
+    // selectable positions when the source selection changes.
+    document.getElementById("light-list").addEventListener("change", (event) => {
+        if (event?.target?.dataset.category !== "light" || !currentInst) return;
+        updateHardwareVisibility(currentInst, true);
     });
 
     // Picking a position means the holder was in the path; clearing the holder
