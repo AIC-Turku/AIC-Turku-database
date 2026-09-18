@@ -481,6 +481,63 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertIn("master", output.lower())
         self.assertIn("slave", output.lower())
 
+    def test_3i_confocal_camera_selection_scopes_branch_local_filter_wheel(self):
+        """ORCA and Evolve are exclusive camera branches with different emission wheels."""
+        self.select_instrument("3i CSU-W1 Spinning Disk")
+        self.tick("method-list", "Confocal spinning disk")
+        self.tick("light-list", "730 nm laser")
+
+        self.tick("det-list", "ORCA-Flash4.0")
+        filter_text = self.page.locator("#filter-list").inner_text()
+        self.assertIn("CSU-W Filter Wheel 1 (ORCA path)", filter_text)
+        self.assertNotIn("CSU-W Filter Wheel 2 (Evolve path)", filter_text)
+        self.assertIn("Alexa 750", filter_text)
+
+        self.tick("det-list", "Photometrics Evolve")
+        filter_text = self.page.locator("#filter-list").inner_text()
+        self.assertNotIn("CSU-W Filter Wheel 1 (ORCA path)", filter_text)
+        self.assertIn("CSU-W Filter Wheel 2 (Evolve path)", filter_text)
+        self.assertIn("Alexa 750", filter_text)
+
+    def test_3i_source_selection_scopes_recorded_confocal_positions(self):
+        """The recorded SlideBook states tie VIS lines to turret 1 and 730 nm to turret 2."""
+        self.select_instrument("3i CSU-W1 Spinning Disk")
+        self.tick("method-list", "Confocal spinning disk")
+        self.tick("light-list", "488 nm laser")
+        self.tick("det-list", "ORCA-Flash4.0")
+
+        text = self.page.locator("#filter-list").inner_text()
+        self.assertIn("VIS quad-band confocal dichroic", text)
+        self.assertNotIn("NIR short-pass confocal dichroic", text)
+        self.assertIn("GFP", text)
+        self.assertNotIn("Alexa 750", text)
+
+        # Start a clean 730-nm acquisition so the compatibility check is not
+        # broadened by retaining the 488-nm source as a second channel.
+        self.page.click("#clear-btn")
+        self.page.check(self.method_input("Confocal spinning disk"))
+        self.tick("light-list", "730 nm laser")
+        self.tick("det-list", "ORCA-Flash4.0")
+        text = self.page.locator("#filter-list").inner_text()
+        self.assertNotIn("VIS quad-band confocal dichroic", text)
+        self.assertIn("NIR short-pass confocal dichroic", text)
+        self.assertNotIn("GFP", text)
+        self.assertIn("Alexa 750", text)
+
+    def test_3i_partial_evolve_wheel_does_not_imply_alexa750_for_visible_acquisition(self):
+        """One documented slot on the six-position Evolve wheel is not a fixed filter."""
+        self.select_instrument("3i CSU-W1 Spinning Disk")
+        self.tick("method-list", "Confocal spinning disk")
+        self.tick("light-list", "488 nm laser")
+        self.tick("det-list", "Photometrics Evolve")
+
+        text = self.page.locator("#filter-list").inner_text()
+        self.assertIn("CSU-W Filter Wheel 2 (Evolve path)", text)
+        self.assertNotIn("Alexa 750", text)
+        # The holder is present because the branch traverses it, but no known
+        # visible-light position is invented from wheel 1.
+        self.assertNotIn("GFP", text)
+
     def test_real_filter_positions_publish_their_recorded_transmission(self):
         """The bands come from the spectral model the repository already derives, so
         the draft states what a filter passes and not only its catalogue number."""
