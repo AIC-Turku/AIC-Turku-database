@@ -20,6 +20,7 @@ from scripts.lightpath.model import (
     CUBE_LINK_KEYS,
     _clean_identifier,
     _clean_string,
+    _coerce_number,
 )
 from scripts.lightpath.route_graph import (
     _iter_element_positions,
@@ -90,6 +91,16 @@ def _build_selected_route_steps(
                 "spectral_ops": component.get("spectral_ops"),
             }
 
+            compatible_source_ids = position.get("compatible_source_ids")
+            if isinstance(compatible_source_ids, list):
+                normalized_source_ids = [
+                    _clean_identifier(source_id)
+                    for source_id in compatible_source_ids
+                    if _clean_identifier(source_id)
+                ]
+                if normalized_source_ids:
+                    entry["compatible_source_ids"] = normalized_source_ids
+
             # Identity is authored on the position itself. The resolved component
             # payload is only a fallback, and its ``name`` defaults to the parent
             # element's name (see ``_component_payload``), so a position that
@@ -129,6 +140,28 @@ def _build_selected_route_steps(
 
         return out
 
+    def _element_requires_position_selection(
+        element: dict[str, Any],
+    ) -> bool:
+        """Return True when a mechanism cannot safely be treated as fixed.
+
+        A selector with one *recorded* position is not necessarily fixed.  If the
+        hardware declares more physical slots than are documented, the omitted
+        slots are unknown rather than evidence that the sole recorded position was
+        always selected.  This matters for partially documented camera filter
+        wheels such as the CSU-W1 Evolve branch.
+        """
+        positions = _iter_element_positions(element)
+        if len(positions) > 1:
+            return True
+
+        slot_count = _coerce_number(element.get("slots"))
+        return bool(
+            len(positions) == 1
+            and slot_count is not None
+            and slot_count > 1
+        )
+
     def _derive_selection_state(
         step: dict[str, Any],
     ) -> tuple[str, list[dict[str, Any]] | None]:
@@ -157,7 +190,7 @@ def _build_selected_route_steps(
         element_row = element_lookup.get(element_id, {})
         positions = _iter_element_positions(element_row)
 
-        if len(positions) <= 1:
+        if not _element_requires_position_selection(element_row):
             return "fixed", None
 
         return "unresolved", _available_positions_for_element(element_row)
@@ -178,18 +211,20 @@ def _build_selected_route_steps(
                 selection_state = "fixed"
             else:
                 authored = branch_step.get("_authored_position_id")
-                if authored:
+                elem_id = _clean_identifier(branch_step.get("component_id"))
+                elem_row = element_lookup.get(elem_id, {})
+                if authored and branch_step.get("position_id"):
                     selection_state = "resolved"
+                elif authored:
+                    # Match top-level behavior: an authored but unknown branch-local
+                    # position must not silently resolve to the first recorded slot.
+                    selection_state = "unresolved"
+                    available = _available_positions_for_element(elem_row)
+                elif _element_requires_position_selection(elem_row):
+                    selection_state = "unresolved"
+                    available = _available_positions_for_element(elem_row)
                 else:
-                    elem_id = _clean_identifier(branch_step.get("component_id"))
-                    elem_row = element_lookup.get(elem_id, {})
-                    positions = _iter_element_positions(elem_row)
-
-                    if len(positions) <= 1:
-                        selection_state = "fixed"
-                    else:
-                        selection_state = "unresolved"
-                        available = _available_positions_for_element(elem_row)
+                    selection_state = "fixed"
 
             entry: dict[str, Any] = {
                 "kind": branch_step.get("kind"),
