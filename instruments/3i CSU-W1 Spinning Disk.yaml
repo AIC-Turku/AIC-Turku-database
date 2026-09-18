@@ -208,7 +208,7 @@ hardware:
     wavelength_nm: 405
     power: 100 mW
     role: excitation
-    notes: Visible LaserStack line routed through the CSU-W VIS input; SlideBook visible confocal configurations use CSU-W Filter Turret position 1.
+    notes: Visible LaserStack line routed through the CSU-W VIS input and the VIS confocal dichroic. The supplied 488 nm SlideBook configuration confirms CSU-W Filter Turret position 1 for the visible route.
     url: ''
     id: laserstack_v4
   - kind: laser
@@ -331,13 +331,12 @@ hardware:
           width_nm: 34
         - center_nm: 699.5
           width_nm: 45
-        notes: Semrock transmission windows are 420-460, 510-531, 589-623, and 677-722 nm. These bands replace the previous incorrect reuse of the emission-filter bandwidths.
+        notes: Semrock transmission windows are 420-460, 510-531, 589.5-623.5, and 677-722 nm. These bands replace the previous incorrect reuse of the emission-filter bandwidths.
   - name: Yokogawa CSU-W Emission Filter Wheel 1
     display_label: CSU-W Filter Wheel 1 (ORCA path)
     stage_role: emission
     id: csu_w1_emission_wheel
     element_type: filter_wheel
-    slots: 10
     notes: First camera-port emission wheel. Supplied SlideBook configurations encode the paired wheels as Wheel 1 + Wheel 2: 488 ORCA = 31 and 730 ORCA = 61, confirming wheel-1 positions 3 and 6 for those channels.
     positions:
       Pos_1:
@@ -400,7 +399,6 @@ hardware:
     stage_role: emission
     id: csu_w1_emission_wheel_2
     element_type: filter_wheel
-    slots: 10
     notes: Second camera-port emission wheel. Supplied SlideBook 730 Evolve configuration is encoded as 16, confirming wheel-2 position 6 while wheel 1 is parked at position 1. Other installed wheel-2 filter positions remain unverified and are not copied from wheel 1.
     positions:
       Pos_6:
