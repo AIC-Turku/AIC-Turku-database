@@ -250,6 +250,7 @@ hardware:
   - kind: led
     manufacturer: Excelitas
     model: X-Cite XLED1
+    role: excitation
     notes: 4-channel LED light source for DAPI, FITC, TRITC/Texas Red, and Cy5-class widefield fluorescence
     url: ''
     id: x_cite_xled1
