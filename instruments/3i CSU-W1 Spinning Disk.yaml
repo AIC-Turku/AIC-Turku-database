@@ -294,16 +294,7 @@ hardware:
         name: VIS quad-band confocal dichroic
         manufacturer: Semrock
         product_code: Di01-T405/488/568/647
-        bands:
-        - center_nm: 447.5
-          width_nm: 51
-        - center_nm: 524
-          width_nm: 42
-        - center_nm: 603
-          width_nm: 34
-        - center_nm: 707.5
-          width_nm: 85
-        notes: Semrock transmission windows are 422-473, 503-545, 586-620, and 665-750 nm. The reflected laser bands include the installed 405, 488, 561, and 640 nm lines. Supplied SlideBook visible confocal configuration uses filter-turret position 1.
+        notes: Laser-optimized confocal dichroic for the 405/488/561/640 LaserStack route. Semrock specifies transmission at the laser bands (405 nm, 488 nm, 561-568 nm, and 638-647 nm) and broad reflection bands at 422-473, 503-545, 586-620, and 665-750 nm. The canonical direct-position schema does not currently distinguish top-level transmission and reflection band arrays, so no generic bands are encoded here; treating the broad reflection bands as generic pass bands would invert the simulated dichroic behavior. Supplied SlideBook visible confocal configuration uses filter-turret position 1.
       Pos_2:
         component_type: dichroic
         name: NIR short-pass confocal dichroic
@@ -336,7 +327,7 @@ hardware:
           width_nm: 40
         - center_nm: 520.5
           width_nm: 21
-        - center_nm: 606
+        - center_nm: 606.5
           width_nm: 34
         - center_nm: 699.5
           width_nm: 45
