@@ -60,10 +60,108 @@ if (!(mask[0] < 0.001 && mask[1] > 0.999)) throw new Error(JSON.stringify(mask))
 def test_nir_dichroic_is_unknown_not_empty_or_unqualified_passthrough():
     pos = position('3i CSU-W1 Spinning Disk.yaml', 'dichroic', 'csu_w1_dichroic_slider', 1)
     assert pos['component_type'] == 'dichroic'
+    assert pos['model'] == 'T750SPXR-XT-UF1'
+    assert pos['manufacturer'] == 'Chroma'
     for phase in ('illumination', 'detection'):
         assert any(op.get('unsupported_reason') for op in pos['spectral_ops'][phase])
     assert not pos.get('cut_on_nm')
     assert not pos.get('transmission_bands')
+    assert not pos.get('bands')
+
+
+def test_3i_visible_dichroic_identity_is_recorded_without_inverting_reflection_bands():
+    pos = position('3i CSU-W1 Spinning Disk.yaml', 'dichroic', 'csu_w1_dichroic_slider', 0)
+    assert pos['component_type'] == 'multiband_dichroic'
+    assert pos['product_code'] == 'Di01-T405/488/568/647'
+    assert pos['manufacturer'] == 'Semrock'
+    # The broad 422-473 / 503-545 / 586-620 / 665-750 windows are reflection
+    # bands for this laser-optimized optic. The current canonical direct-position
+    # schema cannot represent their orientation separately, so they must not be
+    # exported as generic transmission bands.
+    assert not pos.get('bands')
+    for phase in ('illumination', 'detection'):
+        assert any(op.get('unsupported_reason') for op in pos['spectral_ops'][phase])
+
+
+def test_3i_nir_beam_combiner_is_source_specific_inventory_not_a_shared_route_step():
+    record = ledger('3i CSU-W1 Spinning Disk.yaml')
+    elements = {row['id']: row for row in record['hardware']['optical_path_elements']}
+    combiner = elements['csu_w1_nir_beam_combiner']
+    assert combiner['element_type'] == 'fixed'
+    assert combiner['positions']['Pos_1']['model'] == 'DM A660LP Beam Combiner'
+    assert not any(
+        step.get('optical_path_element_id') == 'csu_w1_nir_beam_combiner'
+        for step in next(
+            route for route in record['light_paths']
+            if route['id'] == 'confocal_spinning_disk'
+        )['illumination_sequence']
+    )
+    source = next(
+        row for row in record['hardware']['sources']
+        if row['id'] == 'singleline_730nm_laser_launch'
+    )
+    assert 'DM A660LP' in source['notes']
+
+
+def test_3i_all_five_confocal_laser_sources_remain_on_the_recorded_route():
+    record = ledger('3i CSU-W1 Spinning Disk.yaml')
+    route = next(route for route in record['light_paths'] if route['id'] == 'confocal_spinning_disk')
+    source_ids = [step['source_id'] for step in route['illumination_sequence'] if 'source_id' in step]
+    assert source_ids == [
+        'laserstack_v4',
+        'laserstack_v4_2',
+        'laserstack_v4_3',
+        'laserstack_v4_4',
+        'singleline_730nm_laser_launch',
+    ]
+    sources = {row['id']: row for row in record['hardware']['sources']}
+    assert [sources[source_id]['wavelength_nm'] for source_id in source_ids] == [405, 488, 561, 640, 730]
+
+
+def test_3i_confocal_camera_branches_use_separate_emission_wheels():
+    record = ledger('3i CSU-W1 Spinning Disk.yaml')
+    route = next(route for route in record['light_paths'] if route['id'] == 'confocal_spinning_disk')
+    branch_block = next(step['branches'] for step in route['detection_sequence'] if 'branches' in step)
+    assert branch_block['selection_mode'] == 'exclusive'
+    branches = {branch['branch_id']: branch['sequence'] for branch in branch_block['items']}
+    assert branches['to_camera_1'] == [
+        {'optical_path_element_id': 'csu_w1_emission_wheel'},
+        {'endpoint_id': 'detector_1'},
+    ]
+    assert branches['to_camera_2'] == [
+        {'optical_path_element_id': 'csu_w1_emission_wheel_2'},
+        {'endpoint_id': 'detector_2'},
+    ]
+
+
+def test_3i_emission_filters_match_confirmed_slidebook_and_filter_data():
+    record = ledger('3i CSU-W1 Spinning Disk.yaml')
+    elements = {row['id']: row for row in record['hardware']['optical_path_elements']}
+    wheel1 = elements['csu_w1_emission_wheel']['positions']
+    wheel2 = elements['csu_w1_emission_wheel_2']['positions']
+
+    assert [(band['center_nm'], band['width_nm']) for band in wheel1['Pos_1']['bands']] == [
+        (440, 40), (521, 21), (607, 34), (700, 45),
+    ]
+    assert wheel1['Pos_3']['bands'] == [{'center_nm': 525, 'width_nm': 50}]
+    assert wheel1['Pos_6']['product_code'] == 'FF02-809/81-25'
+    assert wheel1['Pos_6']['bands'] == [{'center_nm': 809, 'width_nm': 81}]
+    assert set(wheel2) == {'Pos_6'}
+    assert wheel2['Pos_6']['product_code'] == 'FF02-809/81-25'
+    assert wheel2['Pos_6']['bands'] == [{'center_nm': 809, 'width_nm': 81}]
+
+
+def test_3i_widefield_semrock_spectra_are_not_reused_from_the_old_25_nm_placeholders():
+    record = ledger('3i CSU-W1 Spinning Disk.yaml')
+    elements = {row['id']: row for row in record['hardware']['optical_path_elements']}
+    dichroic = elements['widefield_dichroic']['positions']['Pos_1']
+    emitter = elements['widefield_emission']['positions']['Pos_1']
+    assert [(b['center_nm'], b['width_nm']) for b in dichroic['bands']] == [
+        (440, 40), (520.5, 21), (606.5, 34), (699.5, 45),
+    ]
+    assert [(b['center_nm'], b['width_nm']) for b in emitter['bands']] == [
+        (440, 40), (521, 21), (607, 34), (700, 45),
+    ]
 
 
 @pytest.mark.parametrize('index, ex, di, em', [
