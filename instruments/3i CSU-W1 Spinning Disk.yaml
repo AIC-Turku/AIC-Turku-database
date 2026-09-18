@@ -338,7 +338,7 @@ hardware:
     id: csu_w1_emission_wheel
     element_type: filter_wheel
     slots: 10
-    notes: First camera-port emission wheel. Yokogawa specifies a 10-position primary emission filter wheel for the two-camera CSU-W1 configuration. Supplied SlideBook configurations encode the paired wheels as Wheel 1 + Wheel 2: 488 ORCA = 31 and 730 ORCA = 61, confirming wheel-1 positions 3 and 6 for those channels.
+    notes: 'First camera-port emission wheel. Yokogawa specifies a 10-position primary emission filter wheel for the two-camera CSU-W1 configuration. Supplied SlideBook configurations encode the paired wheels as Wheel 1 + Wheel 2: 488 ORCA = 31 and 730 ORCA = 61, confirming wheel-1 positions 3 and 6 for those channels.'
     positions:
       Pos_1:
         component_type: multiband_bandpass
