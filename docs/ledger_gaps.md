@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**118 open questions across 23 records.**
+**117 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -24,9 +24,8 @@ This is the single request that still appears on an otherwise complete Methods d
 
 One role per source is the answer, even where the same beam serves more than one technique. The Abberior's 775 nm beam depletes by stimulated emission under STED and drives reversible photoswitching under RESOLFT; both are recorded as `depletion`, because the role states what the beam does on the path and the method states the mechanism. The draft says "Depletion was provided by..." and names the technique in its opening sentence, so a single role cannot make a RESOLFT paragraph claim stimulated emission.
 
-65 across 19 records:
+64 across 18 records:
 
-- **3i CSU-W1 Spinning Disk** — led Excelitas X-Cite XLED1
 - **3i Marianas CSU-W1 Spinning Disk Med C** — led CoolLED pE-300
 - **Agilent xCELLigence RTCA eSight** — 393 led Agilent High-power LED (Blue); 482 led Agilent High-power LED (Green); 595 led Agilent High-power LED (Red)
 - **Andor BC43 Benchtop Confocal** — 405 laser Andor Borealis Illumination; 488 laser Andor Borealis Illumination; 561 laser Andor Borealis Illumination; 638 laser Andor Borealis Illumination
