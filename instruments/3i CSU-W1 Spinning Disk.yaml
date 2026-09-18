@@ -295,12 +295,19 @@ hardware:
         name: VIS quad-band confocal dichroic
         manufacturer: Semrock
         product_code: Di01-T405/488/568/647
+        compatible_source_ids:
+        - laserstack_v4
+        - laserstack_v4_2
+        - laserstack_v4_3
+        - laserstack_v4_4
         notes: Laser-optimized confocal dichroic for the 405/488/561/640 LaserStack route. Semrock specifies transmission at the laser bands (405 nm, 488 nm, 561-568 nm, and 638-647 nm) and broad reflection bands at 422-473, 503-545, 586-620, and 665-750 nm. The canonical direct-position schema does not currently distinguish top-level transmission and reflection band arrays, so no generic bands are encoded here; treating the broad reflection bands as generic pass bands would invert the simulated dichroic behavior. Supplied SlideBook visible confocal configuration uses filter-turret position 1.
       Pos_2:
         component_type: dichroic
         name: NIR short-pass confocal dichroic
         manufacturer: Chroma
         model: T750SPXR-XT-UF1
+        compatible_source_ids:
+        - singleline_730nm_laser_launch
         notes: Supplied SlideBook 730 ORCA and 730 Evolve configurations both use filter-turret position 2. Local documentation identifies the installed NIR optic as Chroma t750spxr-xt-uf1. Exact numeric transmission/reflection data for the installed ultra-flat optic remain unverified and are therefore not encoded.
   - name: CSU-W NIR Beam Combiner
     stage_role: dichroic
@@ -346,6 +353,11 @@ hardware:
         name: Quad-band emitter
         manufacturer: Semrock
         product_code: FF01-440/521/607/700-25
+        compatible_source_ids:
+        - laserstack_v4
+        - laserstack_v4_2
+        - laserstack_v4_3
+        - laserstack_v4_4
         bands:
         - center_nm: 440
           width_nm: 40
@@ -361,12 +373,16 @@ hardware:
         name: DAPI
         manufacturer: Semrock
         product_code: FF01-445/45-25
+        compatible_source_ids:
+        - laserstack_v4
         bands:
         - center_nm: 445
           width_nm: 45
       Pos_3:
         component_type: bandpass
         name: GFP
+        compatible_source_ids:
+        - laserstack_v4_2
         bands:
         - center_nm: 525
           width_nm: 50
@@ -376,6 +392,8 @@ hardware:
         name: Cy3 / Alexa 568
         manufacturer: Semrock
         product_code: FF01-617/73-25
+        compatible_source_ids:
+        - laserstack_v4_3
         bands:
         - center_nm: 617
           width_nm: 73
@@ -384,6 +402,8 @@ hardware:
         name: Cy5 / Alexa 647
         manufacturer: Semrock
         product_code: FF01-692/40-25
+        compatible_source_ids:
+        - laserstack_v4_4
         bands:
         - center_nm: 692
           width_nm: 40
@@ -392,6 +412,8 @@ hardware:
         name: Alexa 750
         manufacturer: Semrock
         product_code: FF02-809/81-25
+        compatible_source_ids:
+        - singleline_730nm_laser_launch
         bands:
         - center_nm: 809
           width_nm: 81
@@ -409,6 +431,8 @@ hardware:
         name: Alexa 750
         manufacturer: Semrock
         product_code: FF02-809/81-25
+        compatible_source_ids:
+        - singleline_730nm_laser_launch
         bands:
         - center_nm: 809
           width_nm: 81
