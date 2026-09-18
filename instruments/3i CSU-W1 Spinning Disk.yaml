@@ -49,7 +49,7 @@ modules:
 software:
 - role: acquisition
   name: 3i SlideBook
-  version: '6'
+  version: '2026.1 (49301)'
   url: ''
 hardware:
   environment:
@@ -67,8 +67,10 @@ hardware:
     type: infrared_reflection
   scanner:
     type: spinning_disk
+    manufacturer: Yokogawa
+    model: CSU-W1
     pinhole_um: 50
-    notes: Yokogawa CSU-W1 with 50 µm pinhole disk. Appropriate for standard live-cell spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification confocal sectioning.
+    notes: 50 µm pinhole disk. Appropriate for standard live-cell spinning-disk confocal imaging; less optimal than a 25 µm disk for low-magnification confocal sectioning.
     url: ''
   detectors:
   - kind: scmos
