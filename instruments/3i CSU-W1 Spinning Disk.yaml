@@ -356,7 +356,7 @@ hardware:
         notes: Quad-band emitter for multicolor spinning-disk imaging. Nominal passbands corrected to the Semrock specification.
       Pos_2:
         component_type: bandpass
-        name: DAPI / 405 channel
+        name: DAPI
         manufacturer: Semrock
         product_code: FF01-445/45-25
         bands:
@@ -364,14 +364,14 @@ hardware:
           width_nm: 45
       Pos_3:
         component_type: bandpass
-        name: GFP / 488 channel
+        name: GFP
         bands:
         - center_nm: 525
           width_nm: 50
         notes: Supplied SlideBook 488 ORCA configuration selects wheel-1 position 3. Previously 525/30 (FF01-525/30-25 in the old PDF) before 2021-08-18.
       Pos_4:
         component_type: bandpass
-        name: Cy3 / Alexa 568 / 561 channel
+        name: Cy3 / Alexa 568
         manufacturer: Semrock
         product_code: FF01-617/73-25
         bands:
@@ -379,7 +379,7 @@ hardware:
           width_nm: 73
       Pos_5:
         component_type: bandpass
-        name: Cy5 / Alexa 647 / 640 channel
+        name: Cy5 / Alexa 647
         manufacturer: Semrock
         product_code: FF01-692/40-25
         bands:
@@ -387,7 +387,7 @@ hardware:
           width_nm: 40
       Pos_6:
         component_type: bandpass
-        name: Alexa 750 / 730 channel
+        name: Alexa 750
         manufacturer: Semrock
         product_code: FF02-809/81-25
         bands:
@@ -403,7 +403,7 @@ hardware:
     positions:
       Pos_6:
         component_type: bandpass
-        name: Alexa 750 / 730 channel
+        name: Alexa 750
         manufacturer: Semrock
         product_code: FF02-809/81-25
         bands:
