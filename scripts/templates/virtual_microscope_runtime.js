@@ -3087,6 +3087,62 @@ function detectorCollectionMask(detector, grid) {
       });
     });
 
+    // Some installations explicitly document which source lines can use a
+    // mechanism position. This is authoritative installation metadata, unlike a
+    // wavelength guess from incomplete spectra. Reject a selected position when
+    // none of the selected sources is recorded as compatible.
+    const hardwareId = (value) => {
+      const raw = cleanString(value);
+      if (!raw) return '';
+      const tail = raw.includes(':') ? raw.split(':').pop() : raw;
+      return normalizeIdentifier(tail);
+    };
+    const selectedSourceIds = new Set();
+    selectedSources.forEach((source) => {
+      [
+        source && source.id,
+        source && source.source_id,
+        source && source.hardware_id,
+        source && source.component_id,
+        source && source.mechanismId,
+      ].forEach((value) => {
+        const normalized = hardwareId(value);
+        if (normalized) selectedSourceIds.add(normalized);
+      });
+    });
+
+    const compatibilityComponents = [
+      ...excitationComponents,
+      ...dichroicComponents,
+      ...emissionComponents,
+      ...illuminationOrderedRaw,
+      ...detectionOrderedRaw,
+    ];
+    const seenCompatibilityComponents = new Set();
+    compatibilityComponents.forEach((component) => {
+      if (!(component && typeof component === 'object')) return;
+      const compatible = Array.isArray(component.compatible_source_ids)
+        ? component.compatible_source_ids.map(hardwareId).filter(Boolean)
+        : [];
+      if (!compatible.length || !selectedSourceIds.size) return;
+      const identity = cleanString(
+        component.position_key
+        || component.position_id
+        || component.display_label
+        || component.label
+        || component.name
+        || component.id
+      );
+      const dedupeKey = `${identity}::${compatible.join(",")}`;
+      if (seenCompatibilityComponents.has(dedupeKey)) return;
+      seenCompatibilityComponents.add(dedupeKey);
+      if (!compatible.some((sourceId) => selectedSourceIds.has(sourceId))) {
+        routeViolations.push(
+          `${component.display_label || component.label || component.name || component.id || "Selected optical position"} is not recorded as compatible with the selected source.`
+        );
+      }
+    });
+
     if (routeViolations.length) {
       return {
         grid,
