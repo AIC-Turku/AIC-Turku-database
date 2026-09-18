@@ -195,6 +195,11 @@ def _build_selected_route_steps(
                 "kind": branch_step.get("kind"),
                 "component_id": branch_step.get("component_id"),
                 "display_label": branch_step.get("display_label"),
+                # Kept so the dashboard can index a branch-local element (e.g. a
+                # per-camera filter wheel) by inventory id the same way it
+                # indexes a top-level step, and offer its recorded positions.
+                "hardware_inventory_id": branch_step.get("hardware_inventory_id"),
+                "stage_role": branch_step.get("stage_role"),
                 "selection_state": selection_state,
                 "unsupported_reason": branch_step.get("unsupported_reason"),
             }
