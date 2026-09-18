@@ -378,11 +378,11 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
 
         expected_emission = self._find_stage_option_value(
             runtime_projection["emission"],
-            "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+            "Slot 1: 440/40 + 521/21 + 607/34 + 700/45",
         )
         expected_dichroic = self._find_stage_option_value(
             runtime_projection["dichroic"],
-            "Slot 1: Quad-band Dichroic",
+            "Slot 1: VIS quad-band confocal dichroic",
         )
         self.assertIsNotNone(expected_emission)
         self.assertIsNotNone(expected_dichroic)
@@ -390,12 +390,12 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
         normalized_emission = self.normalized_stage_option_value(
             payload,
             "emission",
-            "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+            "Slot 1: 440/40 + 521/21 + 607/34 + 700/45",
         )
         normalized_dichroic = self.normalized_stage_option_value(
             payload,
             "dichroic",
-            "Slot 1: Quad-band Dichroic",
+            "Slot 1: VIS quad-band confocal dichroic",
         )
 
         self.assertEqual(normalized_emission["spectral_ops"], expected_emission["spectral_ops"])
@@ -433,12 +433,12 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             (
                 "3i CSU-W1 Spinning Disk.yaml",
                 "emission",
-                "Slot 1: 440/25 + 521/25 + 607/25 + 700/25",
+                "Slot 1: 440/40 + 521/21 + 607/34 + 700/45",
             ),
             (
                 "3i CSU-W1 Spinning Disk.yaml",
                 "dichroic",
-                "Slot 1: Quad-band Dichroic",
+                "Slot 1: VIS quad-band confocal dichroic",
             ),
             (
                 "xCELLigence RTCA eSight.yaml",
