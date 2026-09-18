@@ -95,6 +95,7 @@ Installed mechanisms that alter or route light — excitation and emission filte
 | `hardware.optical_path_elements[].display_label` | optional | string | — | 8 | Optional alternate display label for UI-facing consumers. |
 | `hardware.optical_path_elements[].stage_role` | optional | string | [`optical_path_stage_roles`](../vocab/optical_path_stage_roles.yaml) | 57 | Descriptive grouping metadata for UI/runtime consumers. `light_paths` remain the sole canonical source of route topology, so stage_role should only be supplied when a stable stage grouping is genuinely useful. |
 | `hardware.optical_path_elements[].element_type` | required | string | [`optical_path_element_types`](../vocab/optical_path_element_types.yaml) | 57 | Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling. |
+| `hardware.optical_path_elements[].slots` | optional | positive_number | — | 7 | Physical mechanism capacity. When larger than the number of documented positions, omitted positions remain unknown and the mechanism must not be treated as fixed. |
 | `hardware.optical_path_elements[].selection_mode` | optional | string | [`selection_modes`](../vocab/selection_modes.yaml) | 23 | Inventory-level selector/splitter capability metadata. Canonical route branching now lives in light_paths sequence branch blocks. |
 | `hardware.optical_path_elements[].supported_branch_modes` | optional | list of string | [`branch_modes`](../vocab/branch_modes.yaml) | 20 | Inventory-level capability metadata describing which branch modes a selector/splitter can support. |
 | `hardware.optical_path_elements[].supported_branch_count` | optional | positive_number | — | 19 | Inventory-level capability metadata describing how many branches a selector/splitter can support. |
@@ -104,6 +105,7 @@ Installed mechanisms that alter or route light — excitation and emission filte
 | `hardware.optical_path_elements[].positions{}.manufacturer` | optional | string | — | 19 | Structured provenance for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.model` | optional | string | — | 8 | Vendor-facing model/designation for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.product_code` | optional | string | — | 64 | Explicit catalog/SKU/reference code for direct position payloads when known. |
+| `hardware.optical_path_elements[].positions{}.compatible_source_ids` | optional | list of string | — | 9 | Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra. |
 | `hardware.optical_path_elements[].positions{}.bands` | optional | list of object | — | 97 | Explicit multiband pass windows for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.bands[].center_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 143 | Band center for direct multiband position payloads. |
 | `hardware.optical_path_elements[].positions{}.bands[].width_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 143 | Band width for direct multiband position payloads. |
@@ -486,7 +488,6 @@ Both are the places where the model and the data have parted company.
 | `hardware.optical_path_elements[].positions{}.notes` | 67 |
 | `hardware.optical_path_elements[].positions{}.slot` | 5 |
 | `hardware.optical_path_elements[].positions{}.url` | 2 |
-| `hardware.optical_path_elements[].slots` | 7 |
 | `hardware.sources[].path` | 3 |
 | `light_paths[].modalities` | 1 |
 | `light_paths[].notes` | 9 |
