@@ -1447,6 +1447,13 @@ sections:
         used_by: [dashboard, method_generator]
         rationale: Canonical mechanism/selector/splitter type used for validator, DTO, and runtime handling.
 
+      - path: hardware.optical_path_elements[].slots
+        title: Optical path element slot count
+        status: optional
+        type: positive_number
+        used_by: [dashboard, method_generator]
+        rationale: Physical mechanism capacity. When larger than the number of documented positions, omitted positions remain unknown and the mechanism must not be treated as fixed.
+
       - path: hardware.optical_path_elements[].selection_mode
         title: Optical path element selection mode
         status: optional
@@ -1516,6 +1523,14 @@ sections:
         type: string
         used_by: [dashboard, method_generator]
         rationale: Explicit catalog/SKU/reference code for direct position payloads when known.
+
+      - path: hardware.optical_path_elements[].positions{}.compatible_source_ids
+        title: Compatible source IDs
+        status: optional
+        type: list
+        item_type: string
+        used_by: [dashboard, method_generator]
+        rationale: Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra.
 
       - path: hardware.optical_path_elements[].positions{}.bands
         title: Optical path position multiband array
