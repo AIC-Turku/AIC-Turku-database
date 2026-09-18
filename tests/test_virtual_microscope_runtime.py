@@ -103,6 +103,66 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             """
         )
 
+    def test_source_specific_position_rejects_incompatible_selected_source(self) -> None:
+        result = self.run_node_json(
+            """
+            const passthrough = {
+              component_type: 'passthrough',
+              spectral_ops: {
+                illumination: [{ op: 'passthrough' }],
+                detection: [{ op: 'passthrough' }]
+              }
+            };
+            const incompatible = {
+              ...passthrough,
+              display_label: 'NIR turret position',
+              position_key: 'Pos_2',
+              compatible_source_ids: ['src_730']
+            };
+            return rt.simulateInstrument(
+              {
+                metadata: { simulation_mode: 'strict' },
+                light_paths: [{
+                  id: 'confocal',
+                  selected_execution: { selected_route_steps: [] },
+                  illumination_sequence: [],
+                  detection_sequence: []
+                }],
+                sources: [],
+                optical_path_elements: [],
+                endpoints: []
+              },
+              {
+                sources: [{
+                  id: 'src_488',
+                  display_label: '488 nm laser',
+                  kind: 'laser',
+                  role: 'excitation',
+                  wavelength_nm: 488
+                }],
+                excitation: [],
+                dichroic: [incompatible],
+                emission: [],
+                splitters: [],
+                detectors: [],
+                illuminationComponents: [{ component: passthrough, mode: 'excitation' }],
+                detectionComponents: [{ component: incompatible, mode: 'emission' }],
+                resolvedExecution: [{}],
+                selectionMap: {}
+              },
+              [],
+              { currentRoute: 'confocal' }
+            );
+            """
+        )
+        self.assertFalse(result["validSelection"])
+        self.assertTrue(result["routeViolation"])
+        self.assertTrue(
+            any("not recorded as compatible with the selected source" in message
+                for message in result["routeViolationDetails"]),
+            result,
+        )
+
     def test_fpbase_search_results_are_normalized(self) -> None:
         result = self.run_node_json(
             """
