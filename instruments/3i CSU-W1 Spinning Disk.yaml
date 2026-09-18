@@ -337,7 +337,8 @@ hardware:
     stage_role: emission
     id: csu_w1_emission_wheel
     element_type: filter_wheel
-    notes: First camera-port emission wheel. Supplied SlideBook configurations encode the paired wheels as Wheel 1 + Wheel 2: 488 ORCA = 31 and 730 ORCA = 61, confirming wheel-1 positions 3 and 6 for those channels.
+    slots: 10
+    notes: First camera-port emission wheel. Yokogawa specifies a 10-position primary emission filter wheel for the two-camera CSU-W1 configuration. Supplied SlideBook configurations encode the paired wheels as Wheel 1 + Wheel 2: 488 ORCA = 31 and 730 ORCA = 61, confirming wheel-1 positions 3 and 6 for those channels.
     positions:
       Pos_1:
         component_type: multiband_bandpass
@@ -399,7 +400,8 @@ hardware:
     stage_role: emission
     id: csu_w1_emission_wheel_2
     element_type: filter_wheel
-    notes: Second camera-port emission wheel. Supplied SlideBook 730 Evolve configuration is encoded as 16, confirming wheel-2 position 6 while wheel 1 is parked at position 1. Other installed wheel-2 filter positions remain unverified and are not copied from wheel 1.
+    slots: 6
+    notes: Second camera-port emission wheel. Yokogawa specifies a 6-position second emission filter wheel for the two-camera CSU-W1 configuration. Supplied SlideBook 730 Evolve configuration is encoded as 16, confirming wheel-2 position 6 while wheel 1 is at position 1. Other installed wheel-2 filter positions remain unverified and are not copied from wheel 1.
     positions:
       Pos_6:
         component_type: bandpass
