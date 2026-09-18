@@ -11,7 +11,7 @@ builders, so they cannot drift from the code. The explanatory sections are
 authored in `scripts/light_path_model.py` and cover what the schema cannot
 state: why the model is shaped this way and which readings of it are wrong.
 
-Generated from 93 schema rules in the `canonical_light_paths_v2` section
+Generated from 95 schema rules in the `canonical_light_paths_v2` section
 and 23 instrument records.
 
 ## 1. Canonical structure
