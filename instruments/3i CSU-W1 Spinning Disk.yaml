@@ -77,7 +77,7 @@ hardware:
     pixel_pitch_um: 6.5
     qe_peak_pct: 82
     sensor_format_px: 2048 x 2048
-    notes: ''
+    notes: 'SlideBook Camera 1. In the supplied 730 nm configuration, the Yokogawa CSU-W Camera Switcher is at position 1 and NIR Shift is at position 2.'
     url: ''
     id: detector_1
   - kind: emccd
@@ -86,7 +86,7 @@ hardware:
     pixel_pitch_um: 16.0
     qe_peak_pct: 95
     sensor_format_px: 512 x 512
-    notes: 10 MHz back-illuminated EMCCD
+    notes: '10 MHz back-illuminated EMCCD. SlideBook Camera 2. In the supplied 730 nm configuration, the Yokogawa CSU-W Camera Switcher is at position 2 and NIR Shift is at position 1.'
     url: ''
     id: detector_2
   eyepieces:
@@ -208,7 +208,7 @@ hardware:
     wavelength_nm: 405
     power: 100 mW
     role: excitation
-    notes: ''
+    notes: Visible LaserStack line routed through the CSU-W VIS input; SlideBook visible confocal configurations use CSU-W Filter Turret position 1.
     url: ''
     id: laserstack_v4
   - kind: laser
@@ -217,7 +217,7 @@ hardware:
     wavelength_nm: 488
     power: 150 mW
     role: excitation
-    notes: ''
+    notes: Visible LaserStack line routed through the CSU-W VIS input; SlideBook visible confocal configurations use CSU-W Filter Turret position 1.
     url: ''
     id: laserstack_v4_2
   - kind: laser
@@ -226,7 +226,7 @@ hardware:
     wavelength_nm: 561
     power: 100 mW
     role: excitation
-    notes: ''
+    notes: Visible LaserStack line routed through the CSU-W VIS input; SlideBook visible confocal configurations use CSU-W Filter Turret position 1.
     url: ''
     id: laserstack_v4_3
   - kind: laser
@@ -235,7 +235,7 @@ hardware:
     wavelength_nm: 640
     power: 100 mW
     role: excitation
-    notes: ''
+    notes: Visible LaserStack line routed through the CSU-W VIS input; SlideBook visible confocal configurations use CSU-W Filter Turret position 1.
     url: ''
     id: laserstack_v4_4
   - kind: laser
@@ -244,7 +244,7 @@ hardware:
     wavelength_nm: 730
     power: 30 mW
     role: excitation
-    notes: Near-IR excitation line delivered via the CSU-W1 near-IR illumination port. Requires the installed IR/VIS combining dichroic, disk dichroic, and IR emitter to be documented explicitly in the light path.
+    notes: Near-IR excitation line delivered through the dedicated CSU-W1 NIR input. The source-specific NIR input contains the installed Yokogawa DM A660LP beam combiner before the beam joins the common CSU-W path. Supplied SlideBook 730 nm configurations use CSU-W Filter Turret position 2; NIR Shift is position 2 for ORCA and position 1 for Evolve.
     url: ''
     id: singleline_730nm_laser_launch
   - kind: led
@@ -283,29 +283,45 @@ hardware:
         bands:
         - center_nm: 650
           width_nm: 13
-  - name: CSU-W1 Dichroic Slider
+  - name: Yokogawa CSU-W Filter Turret
+    display_label: CSU-W Filter Turret
     stage_role: dichroic
     id: csu_w1_dichroic_slider
-    element_type: slider
+    element_type: turret
     positions:
       Pos_1:
         component_type: multiband_dichroic
-        name: Quad-band Dichroic
+        name: VIS quad-band confocal dichroic
+        manufacturer: Semrock
         product_code: Di01-T405/488/568/647
         bands:
-        - center_nm: 440
-          width_nm: 25
-        - center_nm: 521
-          width_nm: 25
-        - center_nm: 607
-          width_nm: 25
-        - center_nm: 700
-          width_nm: 25
-        notes: Standard multiband spinning-disk dichroic for 405/488/561/640-class excitation.
+        - center_nm: 447.5
+          width_nm: 51
+        - center_nm: 524
+          width_nm: 42
+        - center_nm: 603
+          width_nm: 34
+        - center_nm: 707.5
+          width_nm: 85
+        notes: Semrock transmission windows are 422-473, 503-545, 586-620, and 665-750 nm. The reflected laser bands include the installed 405, 488, 561, and 640 nm lines. Supplied SlideBook visible confocal configuration uses filter-turret position 1.
       Pos_2:
         component_type: dichroic
-        name: NIR dichroic position
-        notes: Installed NIR dichroic used with the 730 nm excitation / 809 nm emission route. Product code and spectral data are unverified; this is not an empty or spectrally transparent position.
+        name: NIR short-pass confocal dichroic
+        manufacturer: Chroma
+        model: T750SPXR-XT-UF1
+        notes: Supplied SlideBook 730 ORCA and 730 Evolve configurations both use filter-turret position 2. Local documentation identifies the installed NIR optic as Chroma t750spxr-xt-uf1. Exact numeric transmission/reflection data for the installed ultra-flat optic remain unverified and are therefore not encoded.
+  - name: CSU-W NIR Beam Combiner
+    stage_role: dichroic
+    id: csu_w1_nir_beam_combiner
+    element_type: fixed
+    notes: Source-specific optic on the dedicated 730 nm NIR input before it joins the common CSU-W path; the 405/488/561/640 LaserStack lines enter through the VIS input and do not traverse this optic.
+    positions:
+      Pos_1:
+        component_type: dichroic
+        name: NIR beam combiner
+        manufacturer: Yokogawa
+        model: DM A660LP Beam Combiner
+        notes: Installed identity is documented locally. The exact spectral curve and catalogue number remain unverified and are therefore not encoded.
   - name: Widefield Dichroic
     stage_role: dichroic
     id: widefield_dichroic
@@ -313,66 +329,93 @@ hardware:
     positions:
       Pos_1:
         component_type: multiband_dichroic
+        manufacturer: Semrock
         product_code: FF410/504/582/669-Di01-25x36
         bands:
         - center_nm: 440
-          width_nm: 25
-        - center_nm: 521
-          width_nm: 25
-        - center_nm: 607
-          width_nm: 25
-        - center_nm: 700
-          width_nm: 25
-  - name: CSU-W1 Emission Wheel
+          width_nm: 40
+        - center_nm: 520.5
+          width_nm: 21
+        - center_nm: 606
+          width_nm: 34
+        - center_nm: 699.5
+          width_nm: 45
+        notes: Semrock transmission windows are 420-460, 510-531, 589-623, and 677-722 nm. These bands replace the previous incorrect reuse of the emission-filter bandwidths.
+  - name: Yokogawa CSU-W Emission Filter Wheel 1
+    display_label: CSU-W Filter Wheel 1 (ORCA path)
     stage_role: emission
     id: csu_w1_emission_wheel
     element_type: filter_wheel
+    slots: 10
+    notes: First camera-port emission wheel. Supplied SlideBook configurations encode the paired wheels as Wheel 1 + Wheel 2: 488 ORCA = 31 and 730 ORCA = 61, confirming wheel-1 positions 3 and 6 for those channels.
     positions:
       Pos_1:
         component_type: multiband_bandpass
         name: Quad-band emitter
+        manufacturer: Semrock
         product_code: FF01-440/521/607/700-25
         bands:
         - center_nm: 440
-          width_nm: 25
+          width_nm: 40
         - center_nm: 521
-          width_nm: 25
+          width_nm: 21
         - center_nm: 607
-          width_nm: 25
+          width_nm: 34
         - center_nm: 700
-          width_nm: 25
-        notes: Quad-band emitter for multicolor spinning-disk imaging
+          width_nm: 45
+        notes: Quad-band emitter for multicolor spinning-disk imaging. Nominal passbands corrected to the Semrock specification.
       Pos_2:
         component_type: bandpass
-        name: DAPI
+        name: DAPI / 405 channel
+        manufacturer: Semrock
         product_code: FF01-445/45-25
         bands:
         - center_nm: 445
           width_nm: 45
       Pos_3:
         component_type: bandpass
-        name: GFP
+        name: GFP / 488 channel
         bands:
         - center_nm: 525
           width_nm: 50
-        notes: Previously 525/30 (FF01-525/30-25 in the old PDF) before 2021-08-18.
+        notes: Supplied SlideBook 488 ORCA configuration selects wheel-1 position 3. Previously 525/30 (FF01-525/30-25 in the old PDF) before 2021-08-18.
       Pos_4:
         component_type: bandpass
-        name: Cy3 / Alexa 568
+        name: Cy3 / Alexa 568 / 561 channel
+        manufacturer: Semrock
         product_code: FF01-617/73-25
         bands:
         - center_nm: 617
           width_nm: 73
       Pos_5:
         component_type: bandpass
-        name: Cy5 / Alexa 647
+        name: Cy5 / Alexa 647 / 640 channel
+        manufacturer: Semrock
         product_code: FF01-692/40-25
         bands:
         - center_nm: 692
           width_nm: 40
       Pos_6:
         component_type: bandpass
-        name: Alexa 750
+        name: Alexa 750 / 730 channel
+        manufacturer: Semrock
+        product_code: FF02-809/81-25
+        bands:
+        - center_nm: 809
+          width_nm: 81
+        notes: Supplied SlideBook 730 ORCA configuration selects wheel-1 position 6.
+  - name: Yokogawa CSU-W Emission Filter Wheel 2
+    display_label: CSU-W Filter Wheel 2 (Evolve path)
+    stage_role: emission
+    id: csu_w1_emission_wheel_2
+    element_type: filter_wheel
+    slots: 10
+    notes: Second camera-port emission wheel. Supplied SlideBook 730 Evolve configuration is encoded as 16, confirming wheel-2 position 6 while wheel 1 is parked at position 1. Other installed wheel-2 filter positions remain unverified and are not copied from wheel 1.
+    positions:
+      Pos_6:
+        component_type: bandpass
+        name: Alexa 750 / 730 channel
+        manufacturer: Semrock
         product_code: FF02-809/81-25
         bands:
         - center_nm: 809
@@ -384,16 +427,26 @@ hardware:
     positions:
       Pos_1:
         component_type: multiband_bandpass
+        manufacturer: Semrock
         product_code: FF01-440/521/607/700-25
         bands:
         - center_nm: 440
-          width_nm: 25
+          width_nm: 40
         - center_nm: 521
-          width_nm: 25
+          width_nm: 21
         - center_nm: 607
-          width_nm: 25
+          width_nm: 34
         - center_nm: 700
-          width_nm: 25
+          width_nm: 45
+  - name: Yokogawa CSU-W Camera Switcher
+    stage_role: splitter
+    id: csu_w1_camera_switcher
+    element_type: selector
+    selection_mode: exclusive
+    supported_branch_modes:
+    - selected
+    supported_branch_count: 2
+    notes: Supplied SlideBook configurations use camera-switcher position 1 for Camera 1 (Hamamatsu ORCA) and position 2 for Camera 2 (Photometrics Evolve).
   - name: Trinocular Port Selector
     stage_role: splitter
     id: trinocular_port_selector
@@ -413,18 +466,19 @@ light_paths:
   - optical_path_element_id: csu_w1_dichroic_slider
   detection_sequence:
   - optical_path_element_id: csu_w1_dichroic_slider
-  - optical_path_element_id: csu_w1_emission_wheel
-  - optical_path_element_id: trinocular_port_selector
+  - optical_path_element_id: csu_w1_camera_switcher
   - branches:
       selection_mode: exclusive
       items:
       - branch_id: to_camera_1
-        label: To ORCA-Flash4.0
+        label: To ORCA-Flash4.0 through CSU-W filter wheel 1
         sequence:
+        - optical_path_element_id: csu_w1_emission_wheel
         - endpoint_id: detector_1
       - branch_id: to_camera_2
-        label: To Evolve EMCCD
+        label: To Evolve EMCCD through CSU-W filter wheel 2
         sequence:
+        - optical_path_element_id: csu_w1_emission_wheel_2
         - endpoint_id: detector_2
   route_type: confocal_spinning_disk
   imaging_modes:
