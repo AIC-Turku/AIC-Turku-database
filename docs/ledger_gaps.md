@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**116 open questions across 23 records.**
+**118 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -173,7 +173,7 @@ For each position: what are the excitation band, dichroic edge and emission band
 
 The Methods draft prints what a filter passes when the bands are recorded and only its catalogue number when they are not, so these positions produce the least useful sentences in a fluorescence draft.
 
-4 across 2 records:
+6 across 2 records:
 
-- **3i CSU-W1 Spinning Disk** — CSU-W1 Dichroic Slider / NIR dichroic position
+- **3i CSU-W1 Spinning Disk** — Yokogawa CSU-W Filter Turret / VIS quad-band confocal dichroic; Yokogawa CSU-W Filter Turret / NIR short-pass confocal dichroic; CSU-W NIR Beam Combiner / NIR beam combiner
 - **Nikon Eclipse Ti2-E** — Filter Turret / Chroma 89403bs; Filter Turret / Chroma 84000v2; Lamp Filter Cubes / Standard Cubes
