@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**117 open questions across 23 records.**
+**116 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -103,9 +103,8 @@ Is the scanner a named unit (for example a Yokogawa CSU-W1 or a CrestOptics X-Li
 
 Without this the draft asks for the manufacturer of, say, a Leica tandem scanner on a Leica system, which reads oddly to an author.
 
-10 across 10 records:
+9 across 9 records:
 
-- **3i CSU-W1 Spinning Disk** — type=spinning_disk
 - **3i Marianas CSU-W1 Spinning Disk Med C** — type=spinning_disk
 - **Abberior STED** — type=galvo
 - **Andor BC43 Benchtop Confocal** — type=spinning_disk
