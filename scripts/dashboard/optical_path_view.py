@@ -870,6 +870,11 @@ def _selectable_positions_by_component(light_paths: list[dict[str, Any]]) -> dic
                     "type_noun": _position_type_noun(position, holder_stage_role),
                     "stage_role": holder_stage_role,
                     "selection_mode": clean_text(position.get("selection_mode")).lower() or "exclusive",
+                    "compatible_source_ids": [
+                        clean_text(source_id)
+                        for source_id in (position.get("compatible_source_ids") or [])
+                        if clean_text(source_id)
+                    ] if isinstance(position.get("compatible_source_ids"), list) else [],
                     "is_empty": (
                         clean_text(position.get("component_type")).lower() == "empty"
                         or clean_text(label).lower() in _EMPTY_POSITION_WORDS
