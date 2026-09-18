@@ -496,7 +496,7 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertIn("525/50 nm", output)
         self.assertIn("617/73 nm", output)
         # Both filters of one wheel are named in a single clause.
-        self.assertEqual(output.count("in the CSU-W1 Emission Wheel"), 1)
+        self.assertEqual(output.count("in the CSU-W Filter Wheel 1 (ORCA path)"), 1)
         self.assertIn("state which filter was used for which channel", output)
 
     # --- the sweep no fixture can replace ------------------------------------
