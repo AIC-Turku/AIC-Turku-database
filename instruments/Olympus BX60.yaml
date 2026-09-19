@@ -7,7 +7,7 @@ instrument:
   funding: ''
   stand_orientation: upright
   ocular_availability: trinocular
-  location: ''
+  location: MediCity, BioCity 4th floor, room 4086
   notes: 'Widefield microscope (upright). Imaging modes: Brightfield, Fluorescence (epifluorescence), Phase contrast.'
   url: ''
 capabilities:
