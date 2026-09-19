@@ -2973,6 +2973,13 @@ class LightPathParserTests(unittest.TestCase):
             ["transmitted_light_illuminator"],
         )
         self.assertEqual(
+            [step["id"] for step in by_id["transmitted_light"]["detection_traversal"] if step.get("kind") == "endpoint"],
+            ["detector_1"],
+        )
+        self.assertNotIn("bc43_internal_emission_filters", json.dumps(by_id["transmitted_light"]))
+        self.assertNotIn("bc43_internal_dichroic", json.dumps(by_id["transmitted_light"]))
+        self.assertIn("differential_phase_contrast", instrument["light_paths"][2]["contrast_methods"])
+        self.assertEqual(
             [step["id"] for step in by_id["widefield_fluorescence"]["detection_traversal"] if step.get("kind") == "endpoint"],
             ["detector_1"],
         )
