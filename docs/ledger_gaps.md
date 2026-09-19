@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**116 open questions across 23 records.**
+**102 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -24,7 +24,7 @@ This is the single request that still appears on an otherwise complete Methods d
 
 One role per source is the answer, even where the same beam serves more than one technique. The Abberior's 775 nm beam depletes by stimulated emission under STED and drives reversible photoswitching under RESOLFT; both are recorded as `depletion`, because the role states what the beam does on the path and the method states the mechanism. The draft says "Depletion was provided by..." and names the technique in its opening sentence, so a single role cannot make a RESOLFT paragraph claim stimulated emission.
 
-64 across 18 records:
+58 across 17 records:
 
 - **3i Marianas CSU-W1 Spinning Disk Med C** — led CoolLED pE-300
 - **Agilent xCELLigence RTCA eSight** — 393 led Agilent High-power LED (Blue); 482 led Agilent High-power LED (Green); 595 led Agilent High-power LED (Red)
@@ -42,7 +42,6 @@ One role per source is the answer, even where the same beam serves more than one
 - **Olympus BX60** — arc_lamp Osram HBO 103W short arc bulb
 - **Zeiss AxioZoom.V16** — arc_lamp Zeiss HXP 200C
 - **Zeiss LSM 510 JPK AFM** — 488 laser Unknown Placeholder Laser
-- **Zeiss LSM 880 with AiryScan** — 405 laser Unknown 405 nm (Diode); 458 laser Unknown 458 nm (Argon); 488 laser Unknown 488 nm (Argon); 514 laser Unknown 514 nm (Argon); 543 laser Unknown 543 nm (HeNe); 633 laser Unknown 633 nm (HeNe)
 - **Zeiss TIRF** — 488 laser Unknown 488 nm; 561 laser Unknown 561 nm; 639 laser Unknown 639 nm
 
 ## Detector identity
@@ -51,24 +50,13 @@ Which detector or camera is this, by manufacturer and model?
 
 A recorded `Unknown` is the record saying it does not know, so the Methods draft omits the detector from the prose and asks for it.
 
-10 across 6 records:
+5 across 5 records:
 
 - **Leica DM IRBE** — Unknown / Unknown Camera
 - **Leica DM RB** — Unknown / Unknown Camera
 - **Leica DM RE** — Unknown / Unknown Camera
 - **Leica TCS SP5 Multiphoton** — (no manufacturer) / Photomultiplier Tubes (non-descanned)
 - **Zeiss LSM 510 JPK AFM** — Zeiss / Unknown PMT
-- **Zeiss LSM 880 with AiryScan** — Unknown / PMT (Ch1); Unknown / Cooled PMT (Ch2); Unknown / Transmitted light PMT; Unknown / 32-channel GaAsP spectral array detector; Unknown / 32-channel AiryScan detector (GaAsP)
-
-## Detectors no light path reaches
-
-Should a light path terminate at these detectors, and through which branches?
-
-They are recorded hardware, but no `light_paths[].endpoint_id` names them, so no tool can offer them. An acquisition that used one cannot report it.
-
-2 across 1 record:
-
-- **Zeiss LSM 880 with AiryScan** — detector_4 (32-channel GaAsP spectral array detector); detector_5 (32-channel AiryScan detector (GaAsP))
 
 ## Detectors recorded under one name
 
@@ -103,7 +91,7 @@ Is the scanner a named unit (for example a Yokogawa CSU-W1 or a CrestOptics X-Li
 
 Without this the draft asks for the manufacturer of, say, a Leica tandem scanner on a Leica system, which reads oddly to an author.
 
-9 across 9 records:
+8 across 8 records:
 
 - **3i Marianas CSU-W1 Spinning Disk Med C** — type=spinning_disk
 - **Abberior STED** — type=galvo
@@ -113,7 +101,6 @@ Without this the draft asks for the manufacturer of, say, a Leica tandem scanner
 - **MSquared Aurora Airy Beam** — type=tandem
 - **Nikon Ti2-E Crest V3** — type=spinning_disk
 - **Zeiss LSM 510 JPK AFM** — type=galvo
-- **Zeiss LSM 880 with AiryScan** — type=resonant
 
 ## Acquisition software not named
 

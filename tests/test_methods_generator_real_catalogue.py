@@ -416,7 +416,7 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.tick("module-list", "AiryScan Detector")
         self.tick("det-list", "Airyscan first-generation 32-element GaAsP detector")
         self.tick("filter-list", "AiryScan Emission Wheel")
-        self.tick("filter-list", "BP 465-505 + LP 525")
+        self.tick("filter-list", r"BP 465-505 \+ LP 525")
         output = self.add()
         self.assertIn("Image scanning microscopy (ISM; Airyscan) was performed", output)
         self.assertIn("Airyscan first-generation 32-element GaAsP detector", output)

@@ -97,7 +97,7 @@ class DataflowContractE2ETests(unittest.TestCase):
         inst = {
             "id": canonical["id"],
             "display_name": canonical["display_name"],
-            "canonical": canonical,
+            "canonical": canonical["canonical"],
             "dto": {"id": canonical["id"], "display_name": canonical["display_name"]},
         }
         ctx = build_instrument_context(
