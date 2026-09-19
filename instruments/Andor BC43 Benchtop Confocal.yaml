@@ -38,24 +38,13 @@ software:
   name: Fusion BC43
   version: 2.7.0
   developer: Andor
+  notes: 'Activated modules: Focus Map and Tilt Correction; Irregular Montage.'
   url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
 - role: analysis
   name: Imaris Quant
   version: ''
   developer: Oxford Instruments / Andor
   notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
-  url: ''
-- role: acquisition
-  name: Fusion Focus Map and Tilt Correction
-  version: 2.7.0
-  developer: Andor
-  notes: Activated module.
-  url: ''
-- role: acquisition
-  name: Fusion Irregular Montage
-  version: 2.7.0
-  developer: Andor
-  notes: Activated module.
   url: ''
 hardware:
   environment:
