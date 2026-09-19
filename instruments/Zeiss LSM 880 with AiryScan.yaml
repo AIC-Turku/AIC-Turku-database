@@ -9,7 +9,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting standard confocal and super-resolution AiryScan imaging. Dedicated for fast and sensitive live-cell imaging with a full incubation chamber. Imaging modes: Confocal scanning (spectral detection), Super-resolution AiryScan mode, Fast live-cell imaging (resonant scan), Multiplex mode (AiryScan Fast). Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
+  notes: 'Full incubation chamber. Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
 capabilities:
   imaging_modes:
@@ -27,10 +27,10 @@ capabilities:
   non_optical: []
 modules:
 - type: airyscan
-  notes: 32-channel GaAsP area detector for super-resolution
+  notes: Airyscan Fast installed.
   url: ''
   manufacturer: Zeiss
-  model: Airyscan
+  model: Airyscan (first generation)
 - type: incubation
   notes: Environmental chamber with temperature control and heated stage inserts
   url: ''
@@ -70,42 +70,43 @@ hardware:
     model: Piezo Z-stage
     notes: Piezo Z-stage
   scanner:
-    type: resonant
-    line_rate_hz: 8000
+    type: galvo
+    manufacturer: Zeiss
+    model: LSM 880 galvanometric scan unit
     notes: ''
     url: ''
   detectors:
   - kind: pmt
-    manufacturer: Unknown
-    model: PMT (Ch1)
+    manufacturer: Zeiss
+    model: Side PMT Ch1
     qe_peak_pct: 30
     notes: ''
     url: ''
     id: detector_1
   - kind: pmt
-    manufacturer: Unknown
-    model: Cooled PMT (Ch2)
+    manufacturer: Zeiss
+    model: Temperature-controlled side PMT Ch2
     qe_peak_pct: 30
     notes: ''
     url: ''
     id: detector_2
   - kind: pmt
-    manufacturer: Unknown
-    model: Transmitted light PMT
+    manufacturer: Zeiss
+    model: T-PMT transmitted-light detector
     qe_peak_pct: 30
     notes: ''
     url: ''
     id: detector_3
-  - kind: pmt
-    manufacturer: Unknown
-    model: 32-channel GaAsP spectral array detector
+  - kind: gaasp_pmt
+    manufacturer: Zeiss
+    model: Quasar 32-channel GaAsP spectral detector
     qe_peak_pct: 45
     notes: ''
     url: ''
     id: detector_4
-  - kind: pmt
-    manufacturer: Unknown
-    model: 32-channel AiryScan detector (GaAsP)
+  - kind: gaasp_pmt
+    manufacturer: Zeiss
+    model: Airyscan first-generation 32-element GaAsP detector
     qe_peak_pct: 45
     notes: ''
     url: ''
@@ -207,6 +208,7 @@ hardware:
     is_installed: false
   sources:
   - kind: laser
+    role: excitation
     manufacturer: Unknown
     model: 405 nm (Diode)
     wavelength_nm: 405
@@ -215,6 +217,7 @@ hardware:
     url: ''
     id: 405_nm_diode
   - kind: laser
+    role: excitation
     manufacturer: Unknown
     model: 458 nm (Argon)
     wavelength_nm: 458
@@ -223,6 +226,7 @@ hardware:
     url: ''
     id: 458_nm_argon
   - kind: laser
+    role: excitation
     manufacturer: Unknown
     model: 488 nm (Argon)
     wavelength_nm: 488
@@ -231,6 +235,7 @@ hardware:
     url: ''
     id: 488_nm_argon
   - kind: laser
+    role: excitation
     manufacturer: Unknown
     model: 514 nm (Argon)
     wavelength_nm: 514
@@ -239,6 +244,7 @@ hardware:
     url: ''
     id: 514_nm_argon
   - kind: laser
+    role: excitation
     manufacturer: Unknown
     model: 543 nm (HeNe)
     wavelength_nm: 543
@@ -247,6 +253,7 @@ hardware:
     url: ''
     id: 543_nm_hene
   - kind: laser
+    role: excitation
     manufacturer: Unknown
     model: 633 nm (HeNe)
     wavelength_nm: 633
@@ -262,53 +269,60 @@ hardware:
     url: ''
     id: transmitted_illumination
   optical_path_elements:
+  - name: Secondary Detection Beam Splitter
+    stage_role: splitter
+    id: secondary_detection_beam_splitter
+    element_type: splitter
+    selection_mode: multiple
+    supported_branch_modes:
+    - selected
   - name: AiryScan Emission Wheel
     stage_role: emission
     id: airyscan_emission_wheel
     element_type: filter_wheel
     positions:
       Pos_1:
-        name: AiryScan BP 420-488 + BP 495-550
+        name: Airyscan BP 420-480 + BP 495-550
         component_type: multiband_bandpass
         bands:
-        - center_nm: 454
-          width_nm: 68
+        - center_nm: 450
+          width_nm: 60
         - center_nm: 522.5
           width_nm: 55
       Pos_2:
-        name: AiryScan BP 465-505 + LP 525
+        name: Airyscan BP 420-480 + BP 495-620
+        component_type: multiband_bandpass
+        bands:
+        - center_nm: 450
+          width_nm: 60
+        - center_nm: 557.5
+          width_nm: 125
+      Pos_3:
+        name: Airyscan BP 420-480 + LP 605
+        component_type: multiband_bandpass
+        bands:
+        - center_nm: 450
+          width_nm: 60
+        cut_on_nm:
+        - 605
+      Pos_4:
+        name: Airyscan BP 465-505 + LP 525
         component_type: multiband_bandpass
         bands:
         - center_nm: 485
           width_nm: 40
         cut_on_nm:
         - 525
-      Pos_3:
-        name: AiryScan BP 420-488 + LP 555
-        component_type: multiband_bandpass
-        bands:
-        - center_nm: 454
-          width_nm: 68
-        cut_on_nm:
-        - 555
-      Pos_4:
-        name: AiryScan BP 495-550 + LP 570
+      Pos_5:
+        name: Airyscan BP 495-550 + LP 570
         component_type: multiband_bandpass
         bands:
         - center_nm: 522.5
           width_nm: 55
         cut_on_nm:
         - 570
-      Pos_5:
-        name: AiryScan BP 555-620 + LP 645
-        component_type: multiband_bandpass
-        bands:
-        - center_nm: 587.5
-          width_nm: 65
-        cut_on_nm:
-        - 645
       Pos_6:
-        name: AiryScan BP 570-620 + LP 645
+        name: Airyscan BP 570-620 + LP 645
         component_type: multiband_bandpass
         bands:
         - center_nm: 595
@@ -335,22 +349,27 @@ light_paths:
   - source_id: 543_nm_hene
   - source_id: 633_nm_hene
   detection_sequence:
-  - optical_path_element_id: trinocular_port
+  - optical_path_element_id: secondary_detection_beam_splitter
   - branches:
-      selection_mode: exclusive
+      selection_mode: multiple
       items:
       - branch_id: to_ch1
-        label: To PMT Ch1
+        label: To Side PMT Ch1
         sequence:
         - endpoint_id: detector_1
       - branch_id: to_ch2
-        label: To Cooled PMT Ch2
+        label: To Temperature-controlled Side PMT Ch2
         sequence:
         - endpoint_id: detector_2
-      - branch_id: to_eyepieces
-        label: To Eyepieces
+      - branch_id: to_quasar
+        label: To Quasar 32-channel GaAsP spectral detector
         sequence:
-        - endpoint_id: eyepieces
+        - endpoint_id: detector_4
+      - branch_id: to_airyscan
+        label: To Airyscan detector
+        sequence:
+        - optical_path_element_id: airyscan_emission_wheel
+        - endpoint_id: detector_5
   route_type: confocal_point
   imaging_modes:
   - confocal_point
@@ -364,7 +383,7 @@ light_paths:
       selection_mode: exclusive
       items:
       - branch_id: to_transmitted_pmt
-        label: To Transmitted Light PMT
+        label: To T-PMT transmitted-light detector
         sequence:
         - endpoint_id: detector_3
       - branch_id: to_eyepieces

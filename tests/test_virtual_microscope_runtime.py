@@ -103,6 +103,16 @@ class VirtualMicroscopeRuntimeTests(unittest.TestCase):
             """
         )
 
+    def test_lsm880_first_generation_airyscan_is_in_confocal_route_topology(self) -> None:
+        payload = self.parser_payload_for_instrument("Zeiss LSM 880 with AiryScan.yaml")
+        route = next(r for r in payload["light_paths"] if r.get("id") == "confocal_point")
+        serialized = json.dumps(route)
+        self.assertIn("detector_5", serialized)
+        self.assertIn("airyscan_emission_wheel", serialized)
+        self.assertIn("detector_4", serialized)
+        self.assertIn("secondary_detection_beam_splitter", serialized)
+        self.assertIn("Airyscan BP 420-480 + BP 495-550", json.dumps(payload))
+
     def test_source_specific_position_rejects_incompatible_selected_source(self) -> None:
         result = self.run_node_json(
             """

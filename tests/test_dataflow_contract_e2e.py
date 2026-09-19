@@ -1,6 +1,9 @@
 import unittest
+from pathlib import Path
 
-from scripts.build_context import build_instrument_context
+import yaml
+
+from scripts.build_context import build_instrument_context, normalize_instrument_dto
 from scripts.dashboard.instrument_view import build_instrument_mega_dto
 from scripts.dashboard.llm_export import build_llm_inventory_payload
 from scripts.dashboard.methods_export import build_methods_generator_instrument_export
@@ -83,6 +86,37 @@ class DataflowContractE2ETests(unittest.TestCase):
         self.assertEqual(canonical_endpoint_ids, vm_endpoint_ids)
         self.assertEqual(canonical_endpoint_ids, dto_endpoint_ids)
         self.assertEqual(canonical_endpoint_ids, methods_endpoint_ids)
+
+    def test_real_lsm880_airyscan_survives_methods_vm_and_llm_exports(self):
+        root = Path(__file__).resolve().parents[1]
+        source_path = root / "instruments" / "Zeiss LSM 880 with AiryScan.yaml"
+        payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+        canonical = normalize_instrument_dto(payload, source_path, retired=False)
+        policy = yaml.safe_load((root / "schema" / "instrument_policy.yaml").read_text(encoding="utf-8")) or {}
+        vocabulary = Vocabulary(vocab_registry=policy.get("vocab_registry") or {})
+        inst = {
+            "id": canonical["id"],
+            "display_name": canonical["display_name"],
+            "canonical": canonical["canonical"],
+            "dto": {"id": canonical["id"], "display_name": canonical["display_name"]},
+        }
+        ctx = build_instrument_context(
+            inst,
+            vocabulary=vocabulary,
+            build_dashboard_view_dto=build_instrument_mega_dto,
+            build_methods_view_dto=build_methods_generator_instrument_export,
+            build_llm_inventory_record=lambda i: build_llm_inventory_payload({"short_name": "AIC"}, [i])["active_microscopes"][0],
+        )
+
+        methods_text = str(ctx.methods_export_dto)
+        vm_text = str(ctx.vm_payload)
+        llm_text = str(ctx.llm_inventory_record)
+        for exported in (methods_text, vm_text, llm_text):
+            self.assertIn("Airyscan first-generation 32-element GaAsP detector", exported)
+            self.assertIn("Quasar 32-channel GaAsP spectral detector", exported)
+            self.assertIn("confocal_point", exported)
+        self.assertIn("Airyscan BP 420-480 + BP 495-550", vm_text)
+        self.assertNotIn("Multiplex mode", llm_text)
 
     def test_negative_missing_canonical_data_produces_diagnostics(self):
         inst = {"id": "scope-bad", "canonical": {}, "dto": {"id": "scope-bad"}, "lightpath_dto": {}}

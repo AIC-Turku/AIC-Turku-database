@@ -407,18 +407,21 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn("Unknown Camera", output.split("Review before publication")[0])
         self.assertIn("the detector or camera used for this acquisition", output)
 
-    def test_an_airyscan_entry_says_it_has_no_detector_to_report(self):
-        """The LSM 880 records an Airyscan detector, but no light path reaches it,
-        so the correct answer is not tickable. The draft has to say so rather than
-        publish an acquisition with no detection at all."""
+    def test_airyscan_detector_and_filter_are_reachable_on_the_real_lsm880(self):
+        """First-generation Airyscan hardware must be selectable and publishable."""
         self.select_instrument("Zeiss LSM 880 with AiryScan")
         self.tick("method-list", r"ISM \(AiryScan\)")
         self.tick("obj-list", "C-Plan-APOCHROMAT 63x")
         self.tick("light-list", "488 nm laser")
         self.tick("module-list", "AiryScan Detector")
+        self.tick("det-list", "Airyscan first-generation 32-element GaAsP detector")
+        self.tick("filter-list", "AiryScan Emission Wheel")
+        self.tick("filter-list", r"BP 465-505 \+ LP 525")
         output = self.add()
         self.assertIn("Image scanning microscopy (ISM; Airyscan) was performed", output)
-        self.assertIn("[PLEASE SPECIFY: the detector, camera or eyepieces used", output)
+        self.assertIn("Airyscan first-generation 32-element GaAsP detector", output)
+        self.assertIn("BP 465-505 + LP 525", output)
+        self.assertNotIn("[PLEASE SPECIFY: the detector, camera or eyepieces used", output)
 
     def test_a_module_does_not_survive_into_the_next_real_acquisition(self):
         """Airyscan then DIC on the real LSM 880 record."""
@@ -433,7 +436,7 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.tick("method-list", "^DIC$")
         self.tick("obj-list", "LD LCI Plan APOCHROMAT 40x")
         self.tick("light-list", "halogen lamp")
-        self.tick("det-list", "Transmitted light PMT")
+        self.tick("det-list", "T-PMT transmitted-light detector")
         self.page.fill("#session-label", "DIC")
         output = self.add()
 
