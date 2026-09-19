@@ -35,11 +35,11 @@ def page(browser):
 
 
 def test_all_microscope_spare_optional_and_history_filters(page):
-    expect(page.locator('.pool-item:visible')).to_have_count(135)
+    expect(page.locator('.pool-item:visible')).to_have_count(136)
     page.get_by_label('Catalogue view').select_option('instrument')
-    expect(page.locator('.pool-item:visible')).to_have_count(100)
+    expect(page.locator('.pool-item:visible')).to_have_count(101)
     page.get_by_label('Installation status').select_option('installed')
-    expect(page.locator('.pool-item:visible')).to_have_count(90)
+    expect(page.locator('.pool-item:visible')).to_have_count(91)
     page.get_by_label('Installation status').select_option('not_installed')
     expect(page.locator('.pool-item:visible')).to_have_count(10)
     page.get_by_label('Microscope', exact=True).select_option('scope-olympus-bx60')
@@ -51,7 +51,7 @@ def test_all_microscope_spare_optional_and_history_filters(page):
     expect(page.get_by_label('Microscope', exact=True)).to_be_disabled()
     page.locator('[data-pool-reset]').first.click()
     page.get_by_label('Include historical / retired microscope records').check()
-    expect(page.locator('.pool-item:visible')).to_have_count(137)
+    expect(page.locator('.pool-item:visible')).to_have_count(138)
 
 
 def test_deep_links_reveal_instrument_or_historical_record(browser):
@@ -78,7 +78,7 @@ def test_retired_microscope_query_and_unknown_link(browser):
     page2 = context.new_page()
     mount(page2, url='http://127.0.0.1:8123/objective_pool/?instrument=scope-testx1')
     expect(page2.locator('#pool-link-feedback')).to_contain_text('not in this catalogue')
-    expect(page2.locator('.pool-item:visible')).to_have_count(135)
+    expect(page2.locator('.pool-item:visible')).to_have_count(136)
     context.close()
 
 
@@ -109,7 +109,7 @@ def test_no_javascript_includes_labelled_history_and_microscope_links(browser):
     context = browser.new_context(java_script_enabled=False)
     page = context.new_page()
     page.set_content(render_catalogue())
-    expect(page.locator('.pool-item')).to_have_count(137)
+    expect(page.locator('.pool-item')).to_have_count(138)
     expect(page.locator('[data-retired="true"].pool-item').first).to_contain_text('Historical record')
     expect(page.locator('[data-source_kind="instrument"] a').first).to_have_attribute('href', '../instruments/scope-3i-csu-w1-spinning-disk/#objectives')
     expect(page.locator('#pool-controls')).to_be_hidden()

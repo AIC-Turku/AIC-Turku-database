@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**102 open questions across 23 records.**
+**96 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -24,11 +24,10 @@ This is the single request that still appears on an otherwise complete Methods d
 
 One role per source is the answer, even where the same beam serves more than one technique. The Abberior's 775 nm beam depletes by stimulated emission under STED and drives reversible photoswitching under RESOLFT; both are recorded as `depletion`, because the role states what the beam does on the path and the method states the mechanism. The draft says "Depletion was provided by..." and names the technique in its opening sentence, so a single role cannot make a RESOLFT paragraph claim stimulated emission.
 
-58 across 17 records:
+54 across 16 records:
 
 - **3i Marianas CSU-W1 Spinning Disk Med C** — led CoolLED pE-300
 - **Agilent xCELLigence RTCA eSight** — 393 led Agilent High-power LED (Blue); 482 led Agilent High-power LED (Green); 595 led Agilent High-power LED (Red)
-- **Andor BC43 Benchtop Confocal** — 405 laser Andor Borealis Illumination; 488 laser Andor Borealis Illumination; 561 laser Andor Borealis Illumination; 638 laser Andor Borealis Illumination
 - **EVOS fl** — led Thermo Fisher / AMG Transmitted Light LED; 357 led Thermo Fisher / AMG EVOS DAPI Light Cube LED; 445 led Thermo Fisher / AMG EVOS CFP Light Cube LED; 470 led Thermo Fisher / AMG EVOS GFP Light Cube LED; 531 led Thermo Fisher / AMG EVOS RFP Light Cube LED; 628 led Thermo Fisher / AMG EVOS Cy5 Light Cube LED
 - **Lambert FLIM** — 406 led Unknown Multi-LED excitation; 469 led Unknown Multi-LED excitation; 533 led Unknown Multi-LED excitation
 - **Leica DM IRBE** — arc_lamp Leica 50W HBO short arc bulb
@@ -91,11 +90,10 @@ Is the scanner a named unit (for example a Yokogawa CSU-W1 or a CrestOptics X-Li
 
 Without this the draft asks for the manufacturer of, say, a Leica tandem scanner on a Leica system, which reads oddly to an author.
 
-8 across 8 records:
+7 across 7 records:
 
 - **3i Marianas CSU-W1 Spinning Disk Med C** — type=spinning_disk
 - **Abberior STED** — type=galvo
-- **Andor BC43 Benchtop Confocal** — type=spinning_disk
 - **Leica STELLARIS 8 FALCON FLIM** — type=tandem
 - **Leica TCS SP5 Multiphoton** — type=resonant
 - **MSquared Aurora Airy Beam** — type=tandem
@@ -141,16 +139,6 @@ Is there a better vocabulary term than `other` for this stand?
 
 - **MSquared Aurora Airy Beam** — other
 - **ONI Nanoimager** — other
-
-## Filter holders no recorded position can serve
-
-Does this path really pass through this holder, and if it does, what is it set to for a non-fluorescence acquisition?
-
-Every recorded position in the holder selects a fluorescence band, but the path it is recorded on declares no fluorescence imaging mode. Either the path does not pass through the holder, or the holder has an open position that is not written down. Until this is resolved the Methods draft offers no position for that path, because none of the recorded ones could be the answer.
-
-1 across 1 record:
-
-- **Andor BC43 Benchtop Confocal** — BC43 Internal Emission Filters on the transmitted_light path
 
 ## Filter positions with no transmission bands
 

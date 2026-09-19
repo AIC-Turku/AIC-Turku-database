@@ -35,10 +35,10 @@ def test_generated_site_catalogue_round_trip_and_export_boundaries(browser, tmp_
         page.goto(origin + '/')
         page.get_by_role('link', name='Browse the objective catalogue', exact=True).click()
         expect(page.get_by_role('heading', name='Objectives', exact=True)).to_be_visible()
-        expect(page.locator('.pool-item:visible')).to_have_count(135)
-        assert page.locator('.pool-item').count() == 137
+        expect(page.locator('.pool-item:visible')).to_have_count(136)
+        assert page.locator('.pool-item').count() == 138
         data = context.request.get(origin+'/assets/objectives.json').json()
-        assert data['current_count'] == 135 and data['historical_count'] == 2
+        assert data['current_count'] == 136 and data['historical_count'] == 2
         pool = context.request.get(origin+'/assets/objective_pool.json').json()
         assert pool['inventory_kind'] == 'objective_pool' and len(pool['items']) == 35
         methods = context.request.get(origin+'/assets/instruments_data.json').json()

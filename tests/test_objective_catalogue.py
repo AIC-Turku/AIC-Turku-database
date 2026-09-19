@@ -62,14 +62,14 @@ def fixture_view(inst, pool=None):
 
 def test_complete_catalogue_coverage_states_and_synthetic_exclusion():
     view = catalogue()
-    assert view['total'] == 137
-    assert view['current_count'] == 135
-    assert view['spare_count'] == 35 and view['instrument_count'] == 100
+    assert view['total'] == 138
+    assert view['current_count'] == 136
+    assert view['spare_count'] == 35 and view['instrument_count'] == 101
     assert view['historical_count'] == 2
     assert view['problem_count'] == 8
     assert view['excluded_instrument_ids'] == ['scope-testx1']
     assert all(row['instrument_id'] != 'scope-testx1' for row in view['items'])
-    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == 90
+    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == 91
     assert sum(row['installation_status'] == 'not_installed' for row in view['items']) == 10
 
 
