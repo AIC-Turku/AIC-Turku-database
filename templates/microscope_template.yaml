@@ -23,7 +23,7 @@ instrument:
 capabilities:  # Capability axes: Canonical capability taxonomy that separates imaging modes, contrast methods, readouts, workflows, assay operations, and non-optical capabilities.
   imaging_modes:  # Capability imaging modes: Canonical imaging-mode capability axis (not a route identifier). For active instruments, every declared method must be explicitly associated with at least one compatible light_paths[].imaging_modes entry. | Allowed values (canonical IDs): confocal_point, confocal_spinning_disk, widefield_fluorescence, tirf, multiphoton, light_sheet, sim, sted, resolft, smlm, ism
     - ""
-  contrast_methods:  # Capability contrast methods: Canonical contrast-method capability axis. For active instruments, every declared method must be explicitly associated with at least one compatible light_paths[].contrast_methods entry. | Allowed values (canonical IDs): transmitted_brightfield, reflected_brightfield, phase_contrast, dic, darkfield, polarized_light, optical_sectioning
+  contrast_methods:  # Capability contrast methods: Canonical contrast-method capability axis. For active instruments, every declared method must be explicitly associated with at least one compatible light_paths[].contrast_methods entry. | Allowed values (canonical IDs): transmitted_brightfield, reflected_brightfield, phase_contrast, differential_phase_contrast, dic, darkfield, polarized_light, optical_sectioning
     - ""
   readouts:  # Capability measurement readouts: Canonical measurement-readout capability axis. | Allowed values (canonical IDs): spectral_imaging, flim, fcs, fret
     - ""
@@ -174,7 +174,7 @@ hardware:
       tunable_min_nm: ""  # Source tunable minimum wavelength: Lower tunable wavelength bound for tunable or white-light sources.
       tunable_max_nm: ""  # Source tunable maximum wavelength: Upper tunable wavelength bound for tunable or white-light sources.
       simultaneous_lines_max: ""  # Source simultaneous line count: Maximum simultaneously active lines for multi-line sources.
-      modalities:  # Source modalities: Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
+      modalities:  # Source modalities: Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative. | Allowed values (canonical IDs): widefield_fluorescence, transmitted_brightfield, phase_contrast, differential_phase_contrast, polarized_light, dic, darkfield, confocal_point, confocal_spinning_disk, tirf, tirf_sim, light_sheet, multiphoton, shg, thg, optical_sectioning, sim, sted, resolft, smlm, spt, ism, flim, fcs, frap, photoactivation, fret, spectral_imaging, afm, impedance_cytometry, live_cell_imaging, reflected_brightfield, epi, confocal, transmitted
         - ""
       notes: ""  # Source notes: Free-text source notes for operational caveats.
       url: ""  # Source URL: Reference link only.
