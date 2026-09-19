@@ -9,7 +9,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'Inverted confocal laser-scanning microscope supporting conventional confocal, spectral detection, first-generation Airyscan, and Airyscan Fast. Full incubation chamber. Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
+  notes: 'Full incubation chamber. Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
 capabilities:
   imaging_modes:
