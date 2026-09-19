@@ -9,7 +9,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room 5149
-  notes: 'State-of-the-art inverted confocal laser-scanning microscope supporting standard confocal and super-resolution AiryScan imaging. Dedicated for fast and sensitive live-cell imaging with a full incubation chamber. Imaging modes: conventional confocal scanning with spectral detection and first-generation Airyscan super-resolution imaging with Airyscan Fast mode installed. Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
+  notes: 'Inverted confocal laser-scanning microscope supporting conventional confocal, spectral detection, first-generation Airyscan, and Airyscan Fast. Full incubation chamber. Reservation system: Zeiss LSMM880 with AiryScan. Fluorophore selection guide available for users.'
   url: ''
 capabilities:
   imaging_modes:
@@ -27,7 +27,7 @@ capabilities:
   non_optical: []
 modules:
 - type: airyscan
-  notes: First-generation Airyscan with a 32-element GaAsP PMT area detector; Airyscan Fast mode is installed.
+  notes: Airyscan Fast installed.
   url: ''
   manufacturer: Zeiss
   model: Airyscan (first generation)
@@ -73,42 +73,42 @@ hardware:
     type: galvo
     manufacturer: Zeiss
     model: LSM 880 galvanometric scan unit
-    notes: Linear galvanometric scanner used for conventional confocal and first-generation Airyscan acquisition, including Airyscan Fast mode.
+    notes: ''
     url: ''
   detectors:
   - kind: pmt
     manufacturer: Zeiss
     model: Side PMT Ch1
     qe_peak_pct: 30
-    notes: Conventional side PMT in the LSM 880 Quasar detection unit.
+    notes: ''
     url: ''
     id: detector_1
   - kind: pmt
     manufacturer: Zeiss
     model: Temperature-controlled side PMT Ch2
     qe_peak_pct: 30
-    notes: Temperature-controlled conventional side PMT in the LSM 880 Quasar detection unit.
+    notes: ''
     url: ''
     id: detector_2
   - kind: pmt
     manufacturer: Zeiss
     model: T-PMT transmitted-light detector
     qe_peak_pct: 30
-    notes: Transmitted-light detector.
+    notes: ''
     url: ''
     id: detector_3
   - kind: gaasp_pmt
     manufacturer: Zeiss
     model: Quasar 32-channel GaAsP spectral detector
     qe_peak_pct: 45
-    notes: 32-channel GaAsP spectral array in the internal Quasar detection unit for conventional confocal and spectral imaging.
+    notes: ''
     url: ''
     id: detector_4
   - kind: gaasp_pmt
     manufacturer: Zeiss
     model: Airyscan first-generation 32-element GaAsP detector
     qe_peak_pct: 45
-    notes: First-generation Airyscan 32-element GaAsP PMT area detector; Airyscan Fast mode is installed.
+    notes: ''
     url: ''
     id: detector_5
   eyepieces:
@@ -213,7 +213,7 @@ hardware:
     model: 405 nm (Diode)
     wavelength_nm: 405
     power: ''
-    notes: Excitation diode line.
+    notes: ''
     url: ''
     id: 405_nm_diode
   - kind: laser
@@ -222,7 +222,7 @@ hardware:
     model: 458 nm (Argon)
     wavelength_nm: 458
     power: ''
-    notes: Excitation line from the shared multiline argon laser (458/488/514 nm).
+    notes: ''
     url: ''
     id: 458_nm_argon
   - kind: laser
@@ -231,7 +231,7 @@ hardware:
     model: 488 nm (Argon)
     wavelength_nm: 488
     power: ''
-    notes: Excitation line from the shared multiline argon laser (458/488/514 nm).
+    notes: ''
     url: ''
     id: 488_nm_argon
   - kind: laser
@@ -240,7 +240,7 @@ hardware:
     model: 514 nm (Argon)
     wavelength_nm: 514
     power: ''
-    notes: Excitation line from the shared multiline argon laser (458/488/514 nm).
+    notes: ''
     url: ''
     id: 514_nm_argon
   - kind: laser
@@ -249,7 +249,7 @@ hardware:
     model: 543 nm (HeNe)
     wavelength_nm: 543
     power: ''
-    notes: Excitation HeNe line.
+    notes: ''
     url: ''
     id: 543_nm_hene
   - kind: laser
@@ -258,22 +258,28 @@ hardware:
     model: 633 nm (HeNe)
     wavelength_nm: 633
     power: ''
-    notes: Excitation HeNe line.
+    notes: ''
     url: ''
     id: 633_nm_hene
   - kind: halogen_lamp
     manufacturer: Zeiss
     model: Transmitted light illumination (HAL 100 / LED)
     role: transmitted_illumination
-    notes: Transmitted brightfield illumination source for the inverted stand. Exact installed source (HAL 100 or LED) still requires local confirmation.
+    notes: Transmitted brightfield illumination source for the inverted stand.
     url: ''
     id: transmitted_illumination
   optical_path_elements:
+  - name: Secondary Detection Beam Splitter
+    stage_role: splitter
+    id: secondary_detection_beam_splitter
+    element_type: splitter
+    selection_mode: multiple
+    supported_branch_modes:
+    - selected
   - name: AiryScan Emission Wheel
     stage_role: emission
     id: airyscan_emission_wheel
     element_type: filter_wheel
-    notes: Standard first-generation Airyscan filter set; exact installed wheel positions should be double-checked locally.
     positions:
       Pos_1:
         name: Airyscan BP 420-480 + BP 495-550
@@ -343,6 +349,7 @@ light_paths:
   - source_id: 543_nm_hene
   - source_id: 633_nm_hene
   detection_sequence:
+  - optical_path_element_id: secondary_detection_beam_splitter
   - branches:
       selection_mode: multiple
       items:
@@ -358,24 +365,15 @@ light_paths:
         label: To Quasar 32-channel GaAsP spectral detector
         sequence:
         - endpoint_id: detector_4
+      - branch_id: to_airyscan
+        label: To Airyscan detector
+        sequence:
+        - optical_path_element_id: airyscan_emission_wheel
+        - endpoint_id: detector_5
   route_type: confocal_point
   imaging_modes:
   - confocal_point
-- id: airyscan
-  illumination_sequence:
-  - source_id: 405_nm_diode
-  - source_id: 458_nm_argon
-  - source_id: 488_nm_argon
-  - source_id: 514_nm_argon
-  - source_id: 543_nm_hene
-  - source_id: 633_nm_hene
-  detection_sequence:
-  - optical_path_element_id: airyscan_emission_wheel
-  - endpoint_id: detector_5
-  route_type: confocal_point
-  imaging_modes:
   - ism
-  notes: First-generation Airyscan detection path. Airyscan Fast mode is installed.
 - id: transmitted_light
   illumination_sequence:
   - source_id: transmitted_illumination
