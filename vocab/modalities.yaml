@@ -20,6 +20,10 @@ terms:
     label: "Phase Contrast"
     description: "Converts phase shifts from transparent specimens into intensity differences. Useful for live, unlabeled cells on standard culture plastic."
     synonyms: ["phase", "ph"]
+  - id: differential_phase_contrast
+    label: "Differential Phase Contrast (DPC)"
+    description: "Computational transmitted-light contrast generated from asymmetric illumination in opposing directions."
+    synonyms: ["DPC", "differential phase contrast"]
   - id: polarized_light
     label: "Polarized Light"
     description: "Uses crossed polarizers to generate contrast from birefringent materials like crystals, amyloid fibrils, or muscle fibers."
