@@ -68,7 +68,7 @@ Installed illumination sources. The inventory `illumination_sequence[]` referenc
 | `hardware.sources[].model` | optional | string | — | 100 | Vendor-facing source model/designation. |
 | `hardware.sources[].product_code` | optional | string | — | 3 | Explicit source SKU/catalog code when known. |
 | `hardware.sources[].technology` | optional | string | [`light_source_technologies`](../vocab/light_source_technologies.yaml) | 13 | Helpful subtype metadata for lasers, LED engines, and tunable sources. |
-| `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 42 | Declares the source role without relying on notes-based inference. |
+| `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 46 | Declares the source role without relying on notes-based inference. |
 | `hardware.sources[].timing_mode` | optional | string | [`light_source_timing_modes`](../vocab/light_source_timing_modes.yaml) | 5 | Declares whether the source is continuous-wave or pulsed. |
 | `hardware.sources[].wavelength_nm` | optional | spectral_descriptor | — | 76 | Peak or representative wavelength for discrete excitation sources. |
 | `hardware.sources[].width_nm` | optional | positive_number | — | 18 | Optional spectral width for broad-spectrum or band-defined sources. |
@@ -100,15 +100,15 @@ Installed mechanisms that alter or route light — excitation and emission filte
 | `hardware.optical_path_elements[].supported_branch_modes` | optional | list of string | [`branch_modes`](../vocab/branch_modes.yaml) | 21 | Inventory-level capability metadata describing which branch modes a selector/splitter can support. |
 | `hardware.optical_path_elements[].supported_branch_count` | optional | positive_number | — | 19 | Inventory-level capability metadata describing how many branches a selector/splitter can support. |
 | `hardware.optical_path_elements[].modalities` | optional | list of string | [`modalities`](../vocab/modalities.yaml) | — | Legacy compatibility modality hints for optical path elements. Ordered light_paths and route_type remain authoritative. |
-| `hardware.optical_path_elements[].positions` | optional | object | — | 36 | Position map for installed filter wheels, turrets, sliders, or cubes. |
-| `hardware.optical_path_elements[].positions{}.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 122 | Canonical optical component classifier for direct position payloads. |
+| `hardware.optical_path_elements[].positions` | optional | object | — | 35 | Position map for installed filter wheels, turrets, sliders, or cubes. |
+| `hardware.optical_path_elements[].positions{}.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 121 | Canonical optical component classifier for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.manufacturer` | optional | string | — | 19 | Structured provenance for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.model` | optional | string | — | 8 | Vendor-facing model/designation for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.product_code` | optional | string | — | 64 | Explicit catalog/SKU/reference code for direct position payloads when known. |
 | `hardware.optical_path_elements[].positions{}.compatible_source_ids` | optional | list of string | — | 9 | Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra. |
-| `hardware.optical_path_elements[].positions{}.bands` | optional | list of object | — | 97 | Explicit multiband pass windows for direct position payloads. |
-| `hardware.optical_path_elements[].positions{}.bands[].center_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 144 | Band center for direct multiband position payloads. |
-| `hardware.optical_path_elements[].positions{}.bands[].width_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 144 | Band width for direct multiband position payloads. |
+| `hardware.optical_path_elements[].positions{}.bands` | optional | list of object | — | 96 | Explicit multiband pass windows for direct position payloads. |
+| `hardware.optical_path_elements[].positions{}.bands[].center_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 140 | Band center for direct multiband position payloads. |
+| `hardware.optical_path_elements[].positions{}.bands[].width_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 140 | Band width for direct multiband position payloads. |
 | `hardware.optical_path_elements[].positions{}.excitation_filter` | optional | object | — | 29 | Explicit excitation-filter sub-component of a filter_cube position. |
 | `hardware.optical_path_elements[].positions{}.excitation_filter.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 29 | Canonical component classifier for the excitation filter sub-component. Inferred by the parser when omitted. |
 | `hardware.optical_path_elements[].positions{}.excitation_filter.center_nm` | optional | positive_number | — | 27 | Band center for bandpass-type excitation filters. |
@@ -157,10 +157,10 @@ Only the spectral-collection fields belong to the light-path contract; the rest 
 
 | Field | Status | Type | Vocabulary | In records | What it records |
 | --- | --- | --- | --- | --- | --- |
-| `hardware.detectors[].collection_min_nm` | optional | positive_number | — | 6 | Lower detector collection bound for spectral simulation. |
-| `hardware.detectors[].collection_max_nm` | optional | positive_number | — | 6 | Upper detector collection bound for spectral simulation. |
-| `hardware.detectors[].collection_center_nm` | optional | positive_number | — | 1 | Detector collection center for derived passband modeling. |
-| `hardware.detectors[].collection_width_nm` | optional | positive_number | — | 1 | Detector collection bandwidth for derived passband modeling. |
+| `hardware.detectors[].collection_min_nm` | optional | positive_number | — | 5 | Lower detector collection bound for spectral simulation. |
+| `hardware.detectors[].collection_max_nm` | optional | positive_number | — | 5 | Upper detector collection bound for spectral simulation. |
+| `hardware.detectors[].collection_center_nm` | optional | positive_number | — | — | Detector collection center for derived passband modeling. |
+| `hardware.detectors[].collection_width_nm` | optional | positive_number | — | — | Detector collection bandwidth for derived passband modeling. |
 
 ### `light_paths`
 
@@ -179,7 +179,7 @@ The ordered route declarations. Each one is a single explicit traversable path t
 | `light_paths[].illumination_sequence[].source_id` | optional | slug | — | 105 | Stable source reference for the source_id variant of an illumination sequence tagged union item. |
 | `light_paths[].illumination_sequence[].optical_path_element_id` | optional | slug | — | 23 | Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item. |
 | `light_paths[].detection_sequence` | required | list of object | — | 45 | Ordered sequence of strict tagged-union items used after the sample plane; each item must declare exactly one of optical_path_element_id, endpoint_id, or branches. |
-| `light_paths[].detection_sequence[].optical_path_element_id` | optional | slug | — | 66 | Stable optical-path-element reference for the optical_path_element_id variant of a detection sequence tagged union item. |
+| `light_paths[].detection_sequence[].optical_path_element_id` | optional | slug | — | 64 | Stable optical-path-element reference for the optical_path_element_id variant of a detection sequence tagged union item. |
 | `light_paths[].detection_sequence[].endpoint_id` | optional | slug | — | 10 | Stable endpoint reference for the endpoint_id variant of a detection sequence tagged union item. |
 | `light_paths[].detection_sequence[].branches` | optional | object | — | 34 | Explicit route-owned one-level branch block for the branches variant of a detection sequence tagged union item. |
 | `light_paths[].detection_sequence[].branches.selection_mode` | conditional — when `light_paths[].detection_sequence[].branches` is present | string | [`selection_modes`](../vocab/selection_modes.yaml) | 34 | Branch selection mode for an explicit detection route fork. |
@@ -485,7 +485,7 @@ Both are the places where the model and the data have parted company.
 | `hardware.optical_path_elements[].positions{}.cut_on_nm` | 11 |
 | `hardware.optical_path_elements[].positions{}.cutoffs_nm` | 1 |
 | `hardware.optical_path_elements[].positions{}.name` | 88 |
-| `hardware.optical_path_elements[].positions{}.notes` | 67 |
+| `hardware.optical_path_elements[].positions{}.notes` | 66 |
 | `hardware.optical_path_elements[].positions{}.slot` | 5 |
 | `hardware.optical_path_elements[].positions{}.url` | 2 |
 | `hardware.sources[].path` | 3 |
@@ -500,6 +500,8 @@ Scoped to the subtrees the `canonical_light_paths_v2` section owns outright (`ha
 - `hardware.optical_path_elements[].positions{}.dichroic.cutoffs_nm`
 - `hardware.eyepieces[].magnification`
 - `hardware.eyepieces[].field_number`
+- `hardware.detectors[].collection_center_nm`
+- `hardware.detectors[].collection_width_nm`
 
 ---
 

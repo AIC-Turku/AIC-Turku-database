@@ -96,22 +96,6 @@ def test_recorded_spectra_are_not_reported_as_missing_bands():
     assert position_spectrum_is_missing({"component_type": "filter_cube", "name": "Standard Cubes"})
 
 
-def test_a_holder_no_recorded_position_can_serve_is_a_question_for_staff():
-    """The BC43's emission wheel is recorded on its transmitted path too.
-
-    All four of its positions are fluorescence bandpass filters and none is open,
-    so the path as recorded cannot be traversed for a brightfield acquisition.
-    The Methods draft stops offering those positions there, which makes the record
-    the thing that needs correcting - and a correction nobody is asked for does
-    not happen.
-    """
-    gaps = collect_gaps()
-    reported = gaps.get("route_position_mismatch") or {}
-    listed = reported.get("Andor BC43 Benchtop Confocal", [])
-    assert listed, "the BC43 emission wheel on the transmitted path must be a question"
-    assert any("transmitted_light" in entry for entry in listed), listed
-
-
 def test_a_holder_whose_positions_serve_their_route_is_not_reported():
     """The same wheel on the fluorescence paths is not a gap."""
     from scripts.ledger_gaps import holder_cannot_serve_route

@@ -2210,6 +2210,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         // cannot reconstruct from the objective alone.
         phase_contrast: reportingRecommendation(
             "the condenser and phase annulus used (for example Ph1, Ph2 or Ph3) and the matching phase objective"),
+        differential_phase_contrast: reportingRecommendation(
+            "the DPC acquisition mode (for example High Speed or High Quality), transmitted-light intensity, and exposure time"),
         dic: reportingRecommendation(
             "the DIC prism/Wollaston set, the polariser and analyser, and the condenser setting used"),
         darkfield: reportingRecommendation(

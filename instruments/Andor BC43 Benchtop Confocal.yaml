@@ -16,7 +16,7 @@ capabilities:
   - widefield_fluorescence
   contrast_methods:
   - transmitted_brightfield
-  - phase_contrast
+  - differential_phase_contrast
   readouts: []
   workflows:
   - live_cell_imaging
@@ -38,6 +38,7 @@ software:
   name: Fusion BC43
   version: 2.7.0
   developer: Andor
+  notes: 'Activated modules: Focus Map and Tilt Correction; Irregular Montage.'
   url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
 - role: analysis
   name: Imaris Quant
@@ -56,23 +57,35 @@ hardware:
     type: infrared_reflection
   scanner:
     type: spinning_disk
+    manufacturer: Andor
+    model: BC43 dual-microlens spinning disk
     pinhole_um: 50
-    notes: Microlens-spinning disk multipoint confocal. Features 50 µm pinholes with optimized spacing for deep tissue imaging.
+    notes: ''
     url: ''
   detectors:
   - kind: scmos
     manufacturer: Andor
     model: 4.1 MP sCMOS
     pixel_pitch_um: 6.5
-    collection_min_nm: 425
-    collection_max_nm: 710
-    collection_center_nm: 567.5
-    collection_width_nm: 285
     qe_peak_pct: 82
     notes: 16-bit. 18.4 mm field of view.
     url: ''
     id: detector_1
   objectives:
+  - id: 2x_air
+    manufacturer: Andor
+    model: 2X Plan Achromat
+    product_code: INS-OBJ-02-006
+    magnification: 2.0
+    numerical_aperture: 0.06
+    working_distance: 7.5 mm
+    immersion: air
+    correction: plan_achromat
+    afc_compatible: true
+    specialties: []
+    notes: Included with the BC43 base system.
+    url: ''
+    is_installed: true
   - id: 10x_air
     manufacturer: Nikon
     model: 10X Plan Apo LD Air
@@ -84,7 +97,7 @@ hardware:
     correction: plan_apochromat
     afc_compatible: true
     specialties: []
-    notes: 'Included in base BC43 CF. Optical family: Lambda D.'
+    notes: 'Optical family: Lambda D.'
     url: ''
     is_installed: true
   - id: 20x_air
@@ -132,7 +145,7 @@ hardware:
   - id: 60x_oil
     manufacturer: Nikon
     model: 60X Plan Apo LD Oil
-    product_code: INS-OBJ-60D-142-0
+    product_code: INS-OBJ-60D-142-O
     magnification: 60.0
     numerical_aperture: 1.42
     working_distance: 0.15 mm
@@ -146,7 +159,7 @@ hardware:
   - id: 100x_oil
     manufacturer: Nikon
     model: 100x Plan Apo LD Oil
-    product_code: INS-OBJ-100D-145-0
+    product_code: INS-OBJ-100D-145-O
     magnification: 100.0
     numerical_aperture: 1.45
     working_distance: 0.13 mm
@@ -159,35 +172,39 @@ hardware:
     is_installed: true
   sources:
   - kind: laser
+    role: excitation
     manufacturer: Andor
     model: Borealis Illumination
     wavelength_nm: 405
     power: ''
-    notes: Part of BC43 excitation lines
+    notes: ''
     url: ''
     id: borealis_illumination
   - kind: laser
+    role: excitation
     manufacturer: Andor
     model: Borealis Illumination
     wavelength_nm: 488
     power: ''
-    notes: Part of BC43 excitation lines
+    notes: ''
     url: ''
     id: borealis_illumination_2
   - kind: laser
+    role: excitation
     manufacturer: Andor
     model: Borealis Illumination
     wavelength_nm: 561
     power: ''
-    notes: Part of BC43 excitation lines
+    notes: ''
     url: ''
     id: borealis_illumination_3
   - kind: laser
+    role: excitation
     manufacturer: Andor
     model: Borealis Illumination
     wavelength_nm: 638
     power: ''
-    notes: Part of BC43 excitation lines
+    notes: ''
     url: ''
     id: borealis_illumination_4
   - kind: led
@@ -202,19 +219,6 @@ hardware:
     stage_role: dichroic
     id: bc43_internal_dichroic
     element_type: fixed
-    positions:
-      Pos_1:
-        component_type: multiband_dichroic
-        bands:
-        - center_nm: 450
-          width_nm: 50
-        - center_nm: 525
-          width_nm: 50
-        - center_nm: 600
-          width_nm: 50
-        - center_nm: 685
-          width_nm: 50
-        notes: Built-in multiband dichroic for standard 4-line excitation. Explicit transmission windows are aligned to the installed emission channels.
   - name: BC43 Internal Emission Filters
     slots: 4
     stage_role: emission
@@ -225,26 +229,26 @@ hardware:
         name: DAPI
         component_type: bandpass
         bands:
-        - center_nm: 450
-          width_nm: 50
+        - center_nm: 445
+          width_nm: 20
       Pos_2:
         name: GFP
         component_type: bandpass
         bands:
-        - center_nm: 525
-          width_nm: 50
+        - center_nm: 529
+          width_nm: 24
       Pos_3:
         name: mCherry
         component_type: bandpass
         bands:
-        - center_nm: 600
-          width_nm: 50
+        - center_nm: 595
+          width_nm: 31
       Pos_4:
         name: CY5
         component_type: bandpass
         bands:
-        - center_nm: 685
-          width_nm: 50
+        - center_nm: 708
+          width_nm: 75
 light_paths:
 - id: confocal_spinning_disk
   illumination_sequence:
@@ -278,11 +282,9 @@ light_paths:
   illumination_sequence:
   - source_id: transmitted_light_illuminator
   detection_sequence:
-  - optical_path_element_id: bc43_internal_dichroic
-  - optical_path_element_id: bc43_internal_emission_filters
   - endpoint_id: detector_1
   route_type: transmitted_light
-  notes: Uses the same physical transmitted-light path as transmitted_brightfield; DPC contrast is computed from asymmetric LED illumination patterns.
+  notes: DPC uses asymmetric transmitted-light LED illumination.
   contrast_methods:
   - transmitted_brightfield
-  - phase_contrast
+  - differential_phase_contrast

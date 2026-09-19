@@ -52,6 +52,7 @@ terms:
       contrast_methods:
         - transmitted_brightfield
         - phase_contrast
+        - differential_phase_contrast
         - dic
         - darkfield
         - polarized_light

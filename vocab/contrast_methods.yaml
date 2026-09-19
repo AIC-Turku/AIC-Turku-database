@@ -14,6 +14,11 @@ terms:
   label: Phase contrast
   publication_phrase: "Phase-contrast imaging"
   description: Converts phase shifts from transparent specimens into intensity differences. Useful for live, unlabeled cells on standard culture plastic.
+- id: differential_phase_contrast
+  display_label: Differential Phase Contrast (DPC)
+  label: Differential Phase Contrast (DPC)
+  publication_phrase: "Differential phase-contrast (DPC) imaging"
+  description: Computational transmitted-light contrast from asymmetric illumination in opposing directions; does not require a phase annulus or phase-contrast objective.
 - id: dic
   display_label: DIC
   label: DIC

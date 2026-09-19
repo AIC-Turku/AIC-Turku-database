@@ -218,6 +218,16 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn("mCherry", output)
         self.assertNotIn("which position of the BC43 Internal Emission Filters", output)
 
+    def test_bc43_dpc_is_not_reported_as_zernike_phase_contrast(self):
+        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.tick("method-list", "Differential Phase Contrast")
+        self.tick("obj-list", ".")
+        output = self.add()
+        self.assertIn("Differential phase-contrast (DPC) imaging", output)
+        self.assertIn("DPC acquisition mode", output)
+        self.assertNotIn("phase annulus", output)
+        self.assertNotIn("matching phase objective", output)
+
     def test_a_source_that_cannot_pass_the_selected_filter_is_questioned(self):
         """Each EVOS light cube carries its own LED.
 
