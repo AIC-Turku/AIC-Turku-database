@@ -436,7 +436,7 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.tick("method-list", "^DIC$")
         self.tick("obj-list", "LD LCI Plan APOCHROMAT 40x")
         self.tick("light-list", "halogen lamp")
-        self.tick("det-list", "Transmitted light PMT")
+        self.tick("det-list", "T-PMT transmitted-light detector")
         self.page.fill("#session-label", "DIC")
         output = self.add()
 
