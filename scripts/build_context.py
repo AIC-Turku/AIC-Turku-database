@@ -469,7 +469,7 @@ def normalize_hardware(raw: Any) -> dict[str, Any]:
 
 def _derive_capabilities_from_legacy_modalities(modalities: list[str]) -> dict[str, list[str]]:
     imaging = {'confocal_point','confocal_spinning_disk','widefield_fluorescence','tirf','multiphoton','light_sheet','sim','sted','resolft','smlm','ism'}
-    contrast = {'transmitted_brightfield','reflected_brightfield','phase_contrast','dic','darkfield','polarized_light','optical_sectioning'}
+    contrast = {'transmitted_brightfield','reflected_brightfield','phase_contrast','differential_phase_contrast','dic','darkfield','polarized_light','optical_sectioning'}
     readouts = {'spectral_imaging','flim','fcs','fret'}
     workflows = {'live_cell_imaging'}
     assay = {'frap','photoactivation'}
