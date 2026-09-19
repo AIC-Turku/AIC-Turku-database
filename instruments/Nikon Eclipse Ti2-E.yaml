@@ -7,7 +7,7 @@ instrument:
   funding: ''
   stand_orientation: inverted
   ocular_availability: trinocular
-  location: ''
+  location: BioCity, 5th floor, room Dunkel
   notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning).'
   url: ''
 capabilities:
