@@ -108,7 +108,7 @@ hardware:
     correction: plan_apochromat
     afc_compatible: true
     specialties: []
-    notes: 'Included in base BC43 CF. Optical family: Lambda D.'
+    notes: 'Optical family: Lambda D.'
     url: ''
     is_installed: true
   - id: 20x_air
@@ -138,7 +138,7 @@ hardware:
     specialties: []
     notes: 'Optical family: Lambda D.'
     url: ''
-    is_installed: false
+    is_installed: true
   - id: 40x_silicone
     manufacturer: Nikon
     model: 40X Plan Apo LS Sil Oil
@@ -180,7 +180,7 @@ hardware:
     specialties: []
     notes: 'Optical family: Lambda D.'
     url: ''
-    is_installed: false
+    is_installed: true
   sources:
   - kind: laser
     role: excitation
