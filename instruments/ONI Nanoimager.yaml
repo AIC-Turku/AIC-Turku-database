@@ -7,7 +7,7 @@ instrument:
   funding: ''
   stand_orientation: other
   ocular_availability: camera_only
-  location: ''
+  location: Turku Bioscience, BioCity, 5th floor, room 5149
   notes: 'Super-resolution microscope (compact). Imaging modes: Single-molecule localization
     microscopy (2D & 3D SMLM), Single-particle tracking (3D SPT), TIRF imaging, FRET
     imaging. Field of view: 50 μm x 80 μm per channel. Simultaneous 2-channel imaging
