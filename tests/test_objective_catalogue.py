@@ -118,7 +118,8 @@ def test_source_views_and_hardware_are_unchanged():
             assert source == row['source_record']['objective'] == json.loads(row['source_text'])
         else:
             source = next(obj for obj in pool['items'] if obj['id'] == row['id'])
-            for key in ['source_text','condition','condition_note','enquiry','quantity','availability','product_code']:
+            for key in ['source_text','working_distance_text','working_distance_verification',
+                        'condition','condition_note','enquiry','quantity','availability','product_code']:
                 assert row[key] == source[key]
 
 
