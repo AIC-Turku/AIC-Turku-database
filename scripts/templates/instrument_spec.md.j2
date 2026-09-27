@@ -10,7 +10,7 @@ image_alt: "{{ social_image_alt }}"
 <script type="application/ld+json">{{ instrument_jsonld_json }}</script>
 
 {% macro render_spec_card(item) -%}
-- **{% if item.url %}[{{ item.display_label }}]({{ item.url }}){:target="_blank"}{% else %}{{ item.display_label }}{% endif %}**{% if item.display_subtitle %}
+- **{% if item.url %}[{{ item.display_label }}]({{ item.url }}){:target="_blank" rel="noopener"}{% else %}{{ item.display_label }}{% endif %}**{% if item.display_subtitle %}
   <br><small class="aic-muted">{{ item.display_subtitle }}</small>{% endif %}
   {% for line in item.spec_lines %}<br>{{ line }}{% endfor %}
 {%- endmacro %}
@@ -23,7 +23,7 @@ image_alt: "{{ social_image_alt }}"
 {%- set hardware_inventory = optical_path.hardware_inventory or [] -%}
 {%- set hardware_index_map = optical_path.hardware_index_map if optical_path.hardware_index_map else {} -%}
 
-# {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank"}{% else %}{{ identity.display_name }}{% endif %}
+# {% if identity.url %}[{{ identity.display_name }}]({{ identity.url }}){:target="_blank" rel="noopener"}{% else %}{{ identity.display_name }}{% endif %}
 
 {% set is_retired = instrument.retired %}
 {% if is_retired %}
@@ -121,7 +121,7 @@ image_alt: "{{ social_image_alt }}"
   <div class="aic-chiprow">
     {% for m in dto.modules %}
       {% if m.url %}
-        <a class="aic-chip" href="{{ m.url }}" target="_blank">{{ m.display_label }}</a>
+        <a class="aic-chip" href="{{ m.url }}" target="_blank" rel="noopener">{{ m.display_label }}</a>
       {% else %}
         <span class="aic-chip">{{ m.display_label }}</span>
       {% endif %}
@@ -200,7 +200,7 @@ image_alt: "{{ social_image_alt }}"
 {% for obj in hw.objectives %}
 {% if obj.is_installed == false %}
 <div style="opacity: 0.9;" markdown>
-- **{% if obj.url %}[{{ obj.display_label }}]({{ obj.url }}){:target="_blank"}{% else %}{{ obj.display_label }}{% endif %}<span class="aic-chip aic-chip--muted" style="margin-left: 8px;">Not installed</span>**
+- **{% if obj.url %}[{{ obj.display_label }}]({{ obj.url }}){:target="_blank" rel="noopener"}{% else %}{{ obj.display_label }}{% endif %}<span class="aic-chip aic-chip--muted" style="margin-left: 8px;">Not installed</span>**
   {% if obj.display_subtitle %}<br><small class="aic-muted">{{ obj.display_subtitle }}</small>{% endif %}
   {% for line in obj.spec_lines %}<br>{{ line }}{% endfor %}
 </div>
