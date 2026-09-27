@@ -38,7 +38,10 @@ def test_objective_working_distance_repairs_match_exact_identified_models():
 
     lambert = {str(row['product_code']): row for row in ledger('Lambert FLIM.yaml')['hardware']['objectives']}
     assert lambert['421351-9970']['working_distance'] == '7.9 mm at cover glass 0.75'
+    assert 'correction_collar' in lambert['421351-9970']['specialties']
     assert lambert['421361-9970']['working_distance'] == '2.9 mm at cover glass 0.75'
+    assert lambert['421361-9970']['model'] == 'LD Plan-Neofluar 40x/0.6 Corr Ph2 M27'
+    assert 'correction_collar' in lambert['421361-9970']['specialties']
     assert lambert['420780-9900']['working_distance'] == '0.19 mm'
 
     dmrb = {row['product_code']: row for row in ledger('Leica DM RB.yaml')['hardware']['objectives']}
