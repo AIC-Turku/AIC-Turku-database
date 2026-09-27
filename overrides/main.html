@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  <link rel="alternate" type="text/plain" href="{{ config.site_url }}llms.txt" title="LLM discovery">
+  <link rel="alternate" type="application/json" href="{{ config.site_url }}assets/llm_inventory.json" title="Machine-readable microscope inventory">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ config.site_name | e }}">
+  {% if page %}
+    <meta property="og:title" content="{{ page.title | e }} - {{ config.site_name | e }}">
+    {% if page.meta and page.meta.description %}
+      <meta property="og:description" content="{{ page.meta.description | e }}">
+    {% endif %}
+    {% if page.canonical_url %}
+      <meta property="og:url" content="{{ page.canonical_url | e }}">
+    {% endif %}
+  {% endif %}
+{% endblock %}
