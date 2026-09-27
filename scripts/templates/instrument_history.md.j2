@@ -1,5 +1,9 @@
 {% set dto = instrument.dto %}
 {% set identity = dto.identity if dto.identity else {} %}
+---
+title: {{ identity.display_name }} · History
+description: QC and maintenance history recorded for {{ identity.display_name }} at {{ facility_short_name }}.
+---
 
 # {{ identity.display_name }} · History
 
