@@ -44,7 +44,7 @@ hardware:
     product_code: '506505'
     magnification: 10.0
     numerical_aperture: 0.3
-    working_distance: ''
+    working_distance: 11.0 mm
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
