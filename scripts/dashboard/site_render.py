@@ -830,6 +830,23 @@ def render_site(
                 f"at {facility_name}."
             ),
             "isPartOf": {"@id": f"{public_site_url}#website"},
+            "breadcrumb": {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Instrument fleet",
+                        "item": public_site_url,
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": inst.get("display_name") or instrument_id,
+                        "item": f"{public_site_url}instruments/{instrument_id}/",
+                    },
+                ],
+            },
             "about": {
                 "@type": "Thing",
                 "name": inst.get("display_name") or instrument_id,
@@ -851,6 +868,8 @@ def render_site(
         overview_md = tpl_spec.render(
             instrument=inst,
             instrument_jsonld_json=json_script_data(instrument_jsonld),
+            social_image_url=(image_url if image_rel != "assets/images/placeholder.svg" else ""),
+            social_image_alt=f"{inst.get('display_name') or instrument_id} microscope",
             charts_json=charts_json,
             latest_metrics=latest_metrics,
             metric_names=metric_names,
@@ -986,6 +1005,7 @@ def render_site(
                 "name": f"{facility_name} microscope inventory",
                 "url": f"{public_site_url}assets/llm_inventory.json",
                 "isPartOf": {"@id": f"{public_site_url}#website"},
+                "creator": {"@id": f"{public_site_url}#organization"},
                 "distribution": [
                     {
                         "@type": "DataDownload",
@@ -1035,15 +1055,23 @@ def render_site(
         route_family_coverage=route_family_coverage(vocabulary),
     )
     public_site_url = str(facility.get("public_site_url") or "").rstrip("/") + "/"
+    source_repository_url = str(facility.get("source_repository_url") or "")
+    source_commit = clean_text(os.getenv("GITHUB_SHA"))
     llm_payload["metadata"] = {
         "schema_version": "aic-public-discovery.v1",
         "canonical_site_url": public_site_url,
-        "source_repository_url": str(facility.get("source_repository_url") or ""),
+        "source_repository_url": source_repository_url,
         "code_license": "MIT",
         "image_reuse_policy": "copyrighted_permission_required",
         "image_rights_url": f"{public_site_url}assets/image_rights.json",
         "licensing_url": f"{public_site_url}licensing/",
     }
+    if source_commit:
+        llm_payload["metadata"]["source_commit"] = source_commit
+        if source_repository_url:
+            llm_payload["metadata"]["source_commit_url"] = (
+                f"{source_repository_url.rstrip('/')}/commit/{source_commit}"
+            )
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
     try:
