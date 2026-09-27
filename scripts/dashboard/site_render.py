@@ -418,7 +418,7 @@ def build_mkdocs_config(
         "repo_url": str(facility.get("source_repository_url", "")),
         "repo_name": "Source on GitHub",
         "copyright": (
-            f'Code: MIT · Images: © their respective creators · '
+            f'Code: MIT · Images: copyrighted; see rights · '
             f'<a href="{site_url.rstrip("/")}/licensing/">Licensing and image rights</a>'
         ),
         "use_directory_urls": True,
