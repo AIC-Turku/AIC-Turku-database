@@ -155,12 +155,12 @@ hardware:
     product_code: 420792-9800
     magnification: 100.0
     numerical_aperture: 1.46
-    working_distance: 0.10 mm
+    working_distance: 0.11 mm
     immersion: oil
     correction: plan_apochromat
     specialties:
     - tirf
-    notes: Local OpenIRIS lists 420792-9800 as 100x/1.45 Oil DIC (UV) VIS-IR. The matching ZEISS 420792-9800-000 UV-VIS-IR variant specifies NA 1.46 and FWD 0.10 mm; those manufacturer values are used here.
+    notes: Local OpenIRIS lists 420792-9800 as 100x/1.45 Oil DIC (UV) VIS-IR. The matching ZEISS 420792-9800-000 UV-VIS-IR variant specifies NA 1.46 and a structured Free Working Distance of 0.11 mm. The same ZEISS page describes FWD as 0.10 mm in prose; the explicit specification-table value is used here.
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9800-000/Objective-Plan-Apochromat-100x-1.46-Oil-DIC-M27
     is_installed: true
   sources:
