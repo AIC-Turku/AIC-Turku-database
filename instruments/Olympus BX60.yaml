@@ -130,8 +130,8 @@ hardware:
     afc_compatible: false
     specialties:
     - phase
-    notes: Optional objective. Includes adjustable iris.
-    url: ''
+    notes: Optional objective. Includes adjustable iris. Working distance cross-checked against an exact UPlanFl 60x/1.25 Oil Iris Ph3 listing.
+    url: https://wie-tec.de/Olympus-microscope-objective-UPlanFl-60x-125-Oil-Iris-Ph3-UPLFLN60XOI
     is_installed: false
   sources:
   - kind: halogen_lamp
