@@ -91,7 +91,7 @@ hardware:
     product_code: '506082'
     magnification: 63.0
     numerical_aperture: 1.32
-    working_distance: ''
+    working_distance: 0.17 mm
     immersion: oil
     correction: plan_apochromat
     afc_compatible: false
