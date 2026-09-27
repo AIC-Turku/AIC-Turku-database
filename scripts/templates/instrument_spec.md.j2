@@ -1,7 +1,9 @@
 ---
 title: {{ instrument.dto.identity.display_name | default(instrument.display_name, true) }}
 description: Recorded hardware, capabilities, optical routes, objectives, status, and methods information for {{ instrument.dto.identity.display_name | default(instrument.display_name, true) }} at {{ facility_short_name }}.
-hide:
+{% if social_image_url %}image: "{{ social_image_url }}"
+image_alt: "{{ social_image_alt }}"
+{% endif %}hide:
   - toc  
 ---
 
