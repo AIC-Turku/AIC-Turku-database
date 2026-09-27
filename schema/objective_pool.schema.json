@@ -137,6 +137,46 @@
             ],
             "minLength": 1
           },
+          "working_distance_verification": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "value_text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "unit": {
+                    "const": "mm"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://"
+                  },
+                  "note": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "value_text",
+                  "unit",
+                  "source",
+                  "url",
+                  "note"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "condition": {
             "$ref": "#/$defs/condition"
           },
