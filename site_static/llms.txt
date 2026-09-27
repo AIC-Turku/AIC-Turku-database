@@ -10,6 +10,7 @@
 - Experiment planning: https://aic-turku.github.io/AIC-Turku-database/plan_experiments/
 - Methods generator: https://aic-turku.github.io/AIC-Turku-database/methods_generator/
 - Vocabulary dictionary: https://aic-turku.github.io/AIC-Turku-database/vocabulary_dictionary/
+- Sitemap: https://aic-turku.github.io/AIC-Turku-database/sitemap.xml
 - Source repository: https://github.com/AIC-Turku/AIC-Turku-database
 
 ## Interpretation rules
