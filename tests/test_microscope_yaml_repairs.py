@@ -29,7 +29,9 @@ def test_objective_working_distance_repairs_match_exact_identified_models():
     assert irbe['506062']['working_distance'] == '2.6-1.8 mm'
 
     dmre = {row['product_code']: row for row in ledger('Leica DMRE.yaml')['hardware']['objectives']}
-    assert dmre['506505']['afc_compatible'] is True
+    assert dmre['506507']['working_distance'] == '11.0 mm'
+    assert 'phase' in dmre['506507']['specialties']
+    assert 'afc_compatible' not in dmre['506507']
     assert dmre['506506']['working_distance'] == '1.15 mm'
     assert dmre['506082']['working_distance'] == '0.07 mm'
     assert 'cover-glass specification' in dmre['506082']['notes']
