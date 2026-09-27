@@ -52,6 +52,7 @@ Use this catalogue to compare objectives recorded on {{ facility_short_name }} m
         <div><dt>Numerical aperture (NA)</dt><dd>{{ item.numerical_aperture_text or 'Not recorded' }}</dd></div>
         <div><dt>Immersion</dt><dd>{{ item.immersion_label }}</dd></div>
         <div><dt>{{ item.working_distance_heading }}</dt><dd>{{ item.working_distance_label }}</dd></div>
+        {% if item.working_distance_verification_note %}<div><dt>Working-distance verification</dt><dd>{{ item.working_distance_verification_note }} <a href="{{ item.working_distance_verification_url }}" target="_blank" rel="noopener">Evidence: {{ item.working_distance_verification_source }}</a>.</dd></div>{% endif %}
         {% if item.source_kind == 'spare_pool' %}<div><dt>Mounting (source group)</dt><dd>{{ item.mount_label }}</dd></div>{% endif %}
         <div><dt>Availability</dt><dd>{{ item.availability_label }}</dd></div>
       </dl>
