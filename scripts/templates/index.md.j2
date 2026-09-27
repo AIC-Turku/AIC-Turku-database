@@ -5,6 +5,8 @@ hide:
   - toc
 ---
 
+<script type="application/ld+json">{{ site_jsonld_json }}</script>
+
 # Instrument fleet
 
 Explore the microscopes available at {{ facility_short_name }}. Search by name or filter by capability, then open an instrument to see its recorded hardware, optical routes, objectives, status, and QC and maintenance history.
@@ -55,7 +57,7 @@ Need a particular objective? [Browse the objective catalogue](objective_pool.md)
      aria-label="Open {{ inst.display_name }}">
 
     <div class="aic-card__media">
-      <img src="assets/images/{{ inst.image_filename }}" alt="{{ inst.display_name }}"
+      <img src="assets/images/{{ inst.image_filename }}" alt="" loading="lazy" decoding="async"
            onerror="this.onerror=null; this.src='assets/images/placeholder.svg';" />
       <div class="aic-badge aic-badge--{{ inst.status.color }}">{{ inst.status.badge }}</div>
     </div>

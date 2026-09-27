@@ -396,14 +396,20 @@ def build_mkdocs_config(
         "site_url": site_url,
         "repo_url": str(facility.get("source_repository_url", "")),
         "repo_name": "Source on GitHub",
+        "copyright": (
+            f'Code: MIT · Images: © their respective creators · '
+            f'<a href="{site_url.rstrip("/")}/licensing/">Licensing and image rights</a>'
+        ),
         "use_directory_urls": True,
         "docs_dir": "dashboard_docs",
         "theme": {
             "name": "material",
+            "custom_dir": "overrides",
             "features": [
                 "navigation.tabs",
                 "navigation.sections",
                 "navigation.top",
+                "navigation.footer",
                 "toc.integrate",
                 "search.suggest",
                 "search.highlight",
@@ -600,6 +606,64 @@ def render_site(
     if assets_root.exists():
         shutil.copytree(assets_root, docs_root / "assets", dirs_exist_ok=True)
 
+    # Expand the authored rights policy to one row per image shipped publicly.
+    # Unknown photographers stay unknown: repository ownership or filenames are
+    # not evidence of copyright ownership.
+    rights_source_path = assets_root / "image_rights.json"
+    authored_rights: dict[str, Any] = {}
+    if rights_source_path.exists():
+        authored_rights = json.loads(rights_source_path.read_text(encoding="utf-8"))
+    rights_policy = (
+        authored_rights.get("policy")
+        if isinstance(authored_rights.get("policy"), dict)
+        else {}
+    )
+    authored_rows = {
+        str(row.get("path")): row
+        for row in (authored_rights.get("images") or [])
+        if isinstance(row, dict) and row.get("path")
+    }
+    image_rows: list[dict[str, Any]] = []
+    public_images_root = assets_root / "images"
+    if public_images_root.exists():
+        image_suffixes = {".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".avif"}
+        for image_path in sorted(
+            p for p in public_images_root.rglob("*")
+            if p.is_file() and p.suffix.lower() in image_suffixes
+        ):
+            rel = f"assets/images/{image_path.relative_to(public_images_root).as_posix()}"
+            authored = authored_rows.get(rel, {})
+            holder = clean_text(authored.get("copyright_holder"))
+            notice = clean_text(authored.get("copyright_notice"))
+            if holder and not notice:
+                notice = f"© {holder}"
+            if not notice:
+                notice = "Copyright holder not recorded"
+            image_rows.append(
+                {
+                    "path": rel,
+                    "copyright_holder": holder or None,
+                    "copyright_notice": notice,
+                    "rights_status": clean_text(authored.get("rights_status")) or "copyrighted",
+                    "reuse": clean_text(authored.get("reuse")) or "permission_required",
+                    "source_url": authored.get("source_url"),
+                    "note": authored.get("note"),
+                    "creator_recorded": bool(holder),
+                }
+            )
+    image_rights_payload = {
+        "schema_version": authored_rights.get("schema_version", 1),
+        "policy": rights_policy,
+        "images": image_rows,
+    }
+    image_rights_path = docs_root / "assets" / "image_rights.json"
+    image_rights_path.parent.mkdir(parents=True, exist_ok=True)
+    image_rights_path.write_text(
+        json.dumps(image_rights_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    image_rights_by_path = {row["path"]: row for row in image_rows}
+
     # Small authored public files that must survive regeneration of dashboard_docs.
     static_root = repo_root / "site_static"
     if static_root.exists():
@@ -751,8 +815,42 @@ def render_site(
         instrument_dir = docs_root / "instruments" / instrument_id
         instrument_dir.mkdir(parents=True, exist_ok=True)
 
+        public_site_url = str(facility.get("public_site_url") or "").rstrip("/") + "/"
+        image_rel = f"assets/images/{context.dashboard_view_dto.get('identity', {}).get('image_filename', '')}"
+        image_url = f"{public_site_url}{image_rel}"
+        instrument_jsonld: dict[str, Any] = {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "@id": f"{public_site_url}instruments/{instrument_id}/#page",
+            "url": f"{public_site_url}instruments/{instrument_id}/",
+            "name": inst.get("display_name") or instrument_id,
+            "description": (
+                f"Recorded hardware, capabilities, optical routes, objectives, status, "
+                f"and methods information for {inst.get('display_name') or instrument_id} "
+                f"at {facility_name}."
+            ),
+            "isPartOf": {"@id": f"{public_site_url}#website"},
+            "about": {
+                "@type": "Thing",
+                "name": inst.get("display_name") or instrument_id,
+                "identifier": instrument_id,
+            },
+        }
+        if image_rel != "assets/images/placeholder.svg":
+            image_object: dict[str, Any] = {
+                "@type": "ImageObject",
+                "contentUrl": image_url,
+            }
+            rights_row = image_rights_by_path.get(image_rel, {})
+            if rights_row.get("copyright_notice"):
+                image_object["copyrightNotice"] = rights_row["copyright_notice"]
+            if rights_row.get("copyright_holder"):
+                image_object["creditText"] = rights_row["copyright_notice"]
+            instrument_jsonld["primaryImageOfPage"] = image_object
+
         overview_md = tpl_spec.render(
             instrument=inst,
+            instrument_jsonld_json=json_script_data(instrument_jsonld),
             charts_json=charts_json,
             latest_metrics=latest_metrics,
             metric_names=metric_names,
@@ -864,10 +962,45 @@ def render_site(
     vm_html = tpl_vm.render(lightpath_data_json=json_script_data(global_vm_payloads))
     (docs_root / "virtual_microscope.md").write_text(vm_html, encoding="utf-8")
 
+    public_site_url = str(facility.get("public_site_url") or "").rstrip("/") + "/"
+    site_jsonld = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": f"{public_site_url}#website",
+                "name": str(facility.get("site_name") or facility_name),
+                "url": public_site_url,
+                "description": str(facility.get("site_description") or ""),
+                "publisher": {"@id": f"{public_site_url}#organization"},
+            },
+            {
+                "@type": "Organization",
+                "@id": f"{public_site_url}#organization",
+                "name": str(facility.get("full_name") or facility_name),
+                "url": str(facility.get("organization_url") or public_site_url),
+            },
+            {
+                "@type": "Dataset",
+                "@id": f"{public_site_url}#instrument-inventory",
+                "name": f"{facility_name} microscope inventory",
+                "url": f"{public_site_url}assets/llm_inventory.json",
+                "isPartOf": {"@id": f"{public_site_url}#website"},
+                "distribution": [
+                    {
+                        "@type": "DataDownload",
+                        "encodingFormat": "application/json",
+                        "contentUrl": f"{public_site_url}assets/llm_inventory.json",
+                    }
+                ],
+            },
+        ],
+    }
     index_md = tpl_index.render(
         instruments=instruments,
         capability_filter_options=capability_filter_options,
         counts=fleet_counts,
+        site_jsonld_json=json_script_data(site_jsonld),
     )
     (docs_root / "index.md").write_text(index_md, encoding="utf-8")
 

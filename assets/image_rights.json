@@ -3,8 +3,8 @@
   "policy": {
     "default_rights_status": "copyrighted",
     "default_reuse": "permission_required",
-    "default_notice": "© respective photographer or creator",
-    "note": "The repository does not infer a photographer or copyright holder from a file name, instrument name, repository ownership, or EXIF data. Missing attribution does not grant reuse permission."
+    "default_notice": "Copyright holder not recorded",
+    "note": "The site build enumerates every shipped image. Do not infer a photographer or copyright holder from filenames, instrument names, repository ownership, or EXIF data. When known, record a person-specific notice such as © Person Name. Missing attribution does not grant reuse permission."
   },
   "images": []
 }

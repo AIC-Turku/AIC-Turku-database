@@ -5,6 +5,7 @@ hide:
   - toc  
 ---
 
+<script type="application/ld+json">{{ instrument_jsonld_json }}</script>
 
 {% macro render_spec_card(item) -%}
 - **{% if item.url %}[{{ item.display_label }}]({{ item.url }}){:target="_blank"}{% else %}{{ item.display_label }}{% endif %}**{% if item.display_subtitle %}
@@ -48,8 +49,9 @@ hide:
 
 <div class="aic-hero">
   <div class="aic-hero__media">
-    <img src="../../assets/images/{{ identity.image_filename }}" alt="{{ identity.display_name }}"
-         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg';" />
+    <img src="../../assets/images/{{ identity.image_filename }}"
+         alt="{% if identity.image_filename != 'placeholder.svg' %}{{ identity.display_name }} microscope{% endif %}" decoding="async"
+         onerror="this.onerror=null; this.src='../../assets/images/placeholder.svg'; this.alt='';" />
   </div>
 
   <div class="aic-hero__facts">

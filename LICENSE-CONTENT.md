@@ -14,7 +14,7 @@ Where a creator or copyright holder is known, the preferred notice is:
 
 If the repository does not yet record the individual creator, that missing attribution must not be interpreted as permission to reuse the image. The image remains copyrighted and permission is required.
 
-The machine-readable image-rights export published with the dashboard is generated from rights/image_rights.yaml. New or corrected creator information should be recorded there rather than added as ad-hoc text to generated pages.
+The machine-readable image-rights source is `assets/image_rights.json`. The site build expands it to cover every shipped image. When a photographer or creator is confirmed, record the person's name there using a notice such as `© Person Name`; missing attribution is never interpreted as permission to reuse.
 
 ## Logos and trademarks
 
