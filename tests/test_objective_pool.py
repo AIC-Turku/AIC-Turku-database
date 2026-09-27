@@ -131,7 +131,8 @@ def test_view_is_explicitly_separate_and_does_not_mutate_source():
     assert html.count('class="pool-item"') == 35
     assert 'not installed microscope configurations' in html
     assert 'date format not yet confirmed' in html
-    assert 'Pool working-distance values are reproduced as supplied, in mm' in html
+    assert 'Original pool working-distance values are preserved verbatim; their confirmed unit is mm' in html
+    assert 'shows that value separately with its evidence' in html
 
 
 def test_html_escapes_source_and_config_urls_are_checked():
