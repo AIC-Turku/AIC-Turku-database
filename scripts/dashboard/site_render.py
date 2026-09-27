@@ -608,6 +608,25 @@ def render_site(
             if static_file.is_file():
                 shutil.copy2(static_file, docs_root / static_file.name)
 
+    # Reusable deployments may omit AIC-specific static copy. Keep navigation
+    # valid and publish a conservative default instead of dropping the page.
+    licensing_path = docs_root / "licensing.md"
+    if not licensing_path.exists():
+        licensing_path.write_text(
+            (
+                "---\n"
+                "title: Licensing and image rights\n"
+                f"description: Code licensing and image reuse policy for {facility_name}.\n"
+                "---\n\n"
+                "# Licensing and image rights\n\n"
+                "Custom code is distributed under the repository's software licence. "
+                "Photographs and other visual material remain copyrighted by their "
+                "respective creator or rights holder unless an explicit image-specific "
+                "licence says otherwise. Missing attribution does not grant reuse permission.\n"
+            ),
+            encoding="utf-8",
+        )
+
     templates_dir = Path(__file__).resolve().parents[1] / "templates"
     jinja_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
     # Page copy addressed to visitors names the facility they are visiting. That
