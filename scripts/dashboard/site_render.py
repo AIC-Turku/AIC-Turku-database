@@ -396,6 +396,10 @@ def build_mkdocs_config(
         "site_url": site_url,
         "repo_url": str(facility.get("source_repository_url", "")),
         "repo_name": "Source on GitHub",
+        "copyright": (
+            f'Code: MIT · Images: © their respective creators · '
+            f'<a href="{site_url.rstrip("/")}/licensing/">Licensing and image rights</a>'
+        ),
         "use_directory_urls": True,
         "docs_dir": "dashboard_docs",
         "theme": {
@@ -405,6 +409,7 @@ def build_mkdocs_config(
                 "navigation.tabs",
                 "navigation.sections",
                 "navigation.top",
+                "navigation.footer",
                 "toc.integrate",
                 "search.suggest",
                 "search.highlight",
