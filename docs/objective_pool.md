@@ -32,8 +32,8 @@ canonical instrument DTOs into the shared page and `assets/objectives.json`.
 `assets/objective_pool.json` remains the original pool-only export. Catalogue filters
 are display metadata, never new capabilities. The Air/dry filter groups the pool's
 Dry descriptor with canonical Air; source values and per-item labels are preserved.
-Working distances on microscopes retain their recorded units; pool units remain
-unconfirmed where the source does not specify them.
+Working distances on microscopes retain their recorded units. The spare-pool source
+uses millimetres for working distance; this unit was confirmed during the 2026 objective-ledger review, while the original source text is preserved verbatim per item.
 
 As of this source snapshot the page has **135 current records**: 100 on active
 microscopes (90 explicitly installed and 10 explicitly not installed), plus 35 pool
@@ -101,7 +101,7 @@ Preserved rather than silently corrected:
 - Original codes, including spaces, en dashes and parenthesised alternatives. A row with two codes is not expanded into two physical objectives.
 - Leica NA ranges 1.00-0.50, 1.40-0.60 and 1.40-0.70.
 - Missing WD for Leica 506170 and the Olympus/IncuCyte lenses; missing Olympus product codes; missing Nikon mounting information.
-- The ZEISS 441351-9970 qualifier `2,9 at cover glass 0,75`. WD units are not stated explicitly in the source. Values remain source text until units are confirmed.
+- The ZEISS 441351-9970 qualifier `2,9 at cover glass 0,75`. The source text is preserved verbatim; the catalogue now labels the pool working-distance values in millimetres following facility confirmation.
 - Mount headings ZEISS `M27/0.75`, Leica `M25`, Olympus `thread 20` / `tubus length 160`, and IncuCyte `thread -23`. No pitch, adapter, RMS or individual objective compatibility is inferred.
 - Unspecified immersion for Olympus, IncuCyte and Nikon. Universal immersion does not establish an approved list of liquids. No magnification, NA or immersion is invented for the calibration item.
 
