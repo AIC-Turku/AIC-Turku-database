@@ -131,8 +131,8 @@ def test_units_optional_notes_and_retired_status_stay_distinct():
     assert all('Historical record' in row['association_label'] for row in view['items'] if row['retired'])
     assert all(row['source_kind'] == 'instrument' for row in view['items'] if row['retired'])
     pool_wd = next(row for row in view['items'] if row['id'] == 'pool-zeiss-441351-9970')
-    assert pool_wd['working_distance_label'] == '2,9 at cover glass 0,75 mm'
-    assert pool_wd['working_distance_heading'] == 'Working distance'
+    assert pool_wd['working_distance_label'] == '2,9 at cover glass 0,75'
+    assert pool_wd['working_distance_heading'] == 'Working distance (mm)'
     assert fixture_view(fixture())['items'][0]['working_distance_label'] == '0.62 mm'
 
 
