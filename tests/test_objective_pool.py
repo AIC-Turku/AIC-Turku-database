@@ -51,9 +51,9 @@ def test_unknowns_ranges_original_codes_and_units_are_preserved():
     assert data['source']['date_text'] == '020426' and data['source']['date_iso'] is None
     assert data['source']['working_distance_unit'] == 'mm'
     assert by_code(data, '506170')['working_distance_text'] is None
-    assert by_code(data, '506170')['working_distance_verification']['value_text'] == '0.59'
+    assert by_code(data, '506170')['working_distance_verification']['value_mm'] == 0.59
     assert by_code(data, '506082')['working_distance_text'] == '0,17'
-    assert by_code(data, '506082')['working_distance_verification']['value_text'] == '0.07'
+    assert by_code(data, '506082')['working_distance_verification']['value_mm'] == 0.07
     assert '0.17 mm is the cover-glass specification' in by_code(data, '506082')['working_distance_verification']['note']
     assert by_code(data, '506007')['numerical_aperture_text'] == '1.00-0.50'
     assert by_code(data, '506188')['numerical_aperture_text'] == '1.40-0.60'
@@ -84,6 +84,12 @@ def test_unknowns_ranges_original_codes_and_units_are_preserved():
     lambda d: d['items'][0].update(unknown_field='typo'),
     lambda d: d['items'][0].update(inspection={'date':'2026-09-13','by':'   '}),
     lambda d: d['source'].update(date_iso='020426'),
+    lambda d: d['items'][0].update(working_distance_verification={
+        'value_mm': 0, 'unit': 'mm', 'source': 'Test', 'url': 'https://example.org', 'note': 'bad value'}),
+    lambda d: d['items'][0].update(working_distance_verification={
+        'value_mm': 0.5, 'unit': 'um', 'source': 'Test', 'url': 'https://example.org', 'note': 'bad unit'}),
+    lambda d: d['items'][0].update(working_distance_verification={
+        'value_mm': 0.5, 'unit': 'mm', 'source': 'Test', 'url': 'http://example.org', 'note': 'insecure URL'}),
 ])
 def test_invalid_or_unsupported_state_is_rejected(change):
     data = canonical()
