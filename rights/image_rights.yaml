@@ -1,0 +1,14 @@
+schema_version: 1
+
+policy:
+  default_rights_status: copyrighted
+  default_reuse: permission_required
+  default_notice: "© respective photographer or creator"
+  note: >
+    The dashboard does not infer a photographer or copyright holder from a file
+    name, instrument name, repository ownership, or EXIF data. When the person
+    is known, add an image-specific entry below with copyright_holder and
+    copyright_notice: "© Person Name". Until then, the image remains
+    copyrighted and is not licensed for reuse.
+
+images: {}
