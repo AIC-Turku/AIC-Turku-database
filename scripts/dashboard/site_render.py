@@ -172,7 +172,6 @@ def build_nav(
         {"Virtual Microscope": "virtual_microscope.md"},
         {"Methods generator": "methods_generator.md"},
         {"Vocabulary dictionary": "vocabulary_dictionary.md"},
-        {"Licensing": "licensing.md"},
         {"Retired instruments": [{"Overview": "retired/index.md"}, *retired]},
     ]
 
