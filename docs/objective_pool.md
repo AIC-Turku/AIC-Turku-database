@@ -35,8 +35,8 @@ Dry descriptor with canonical Air; source values and per-item labels are preserv
 Working distances on microscopes retain their recorded units. The spare-pool source
 uses millimetres for working distance; this unit was confirmed during the 2026 objective-ledger review, while the original source text is preserved verbatim per item.
 
-As of this source snapshot the page has **135 current records**: 100 on active
-microscopes (90 explicitly installed and 10 explicitly not installed), plus 35 pool
+As of this source snapshot the page has **137 current records**: 102 on active
+microscopes (92 explicitly installed and 10 explicitly not installed), plus 35 pool
 records including one calibration item. Two retired-SP5 objective records are
 available in the historical view. Counts refer to source records, not physical assets.
 `facility.non_public_instrument_ids` explicitly excludes the existing synthetic
