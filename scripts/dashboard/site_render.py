@@ -902,6 +902,16 @@ def render_site(
         llm_records,
         route_family_coverage=route_family_coverage(vocabulary),
     )
+    public_site_url = str(facility.get("public_site_url") or "").rstrip("/") + "/"
+    llm_payload["metadata"] = {
+        "schema_version": "aic-public-discovery.v1",
+        "canonical_site_url": public_site_url,
+        "source_repository_url": str(facility.get("source_repository_url") or ""),
+        "code_license": "MIT",
+        "image_reuse_policy": "copyrighted_permission_required",
+        "image_rights_url": f"{public_site_url}assets/image_rights.json",
+        "licensing_url": f"{public_site_url}licensing/",
+    }
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
     try:
