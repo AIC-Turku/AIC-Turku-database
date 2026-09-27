@@ -35,6 +35,7 @@ from typing import Any
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
+from PIL import Image, ImageOps
 
 from scripts.objective_pool import (
     ObjectivePoolError, load_objective_pool, pool_schema,
@@ -380,6 +381,26 @@ def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
     return "\n".join(lines)
 
 
+PUBLIC_IMAGE_MAX_DIMENSION = 1600
+
+
+def optimize_public_jpeg(path: Path) -> None:
+    """Create a web-sized JPEG in place without altering the source asset."""
+    with Image.open(path) as source:
+        image = ImageOps.exif_transpose(source).convert("RGB")
+        image.thumbnail(
+            (PUBLIC_IMAGE_MAX_DIMENSION, PUBLIC_IMAGE_MAX_DIMENSION),
+            Image.Resampling.LANCZOS,
+        )
+        image.save(
+            path,
+            "JPEG",
+            quality=82,
+            optimize=True,
+            progressive=True,
+        )
+
+
 def build_mkdocs_config(
     *,
     facility: dict[str, Any],
@@ -397,7 +418,7 @@ def build_mkdocs_config(
         "repo_url": str(facility.get("source_repository_url", "")),
         "repo_name": "Source on GitHub",
         "copyright": (
-            f'Code: MIT · Images: © their respective creators · '
+            f'Code: MIT · Images: copyrighted; see rights · '
             f'<a href="{site_url.rstrip("/")}/licensing/">Licensing and image rights</a>'
         ),
         "use_directory_urls": True,
@@ -606,6 +627,11 @@ def render_site(
     if assets_root.exists():
         shutil.copytree(assets_root, docs_root / "assets", dirs_exist_ok=True)
 
+    public_images_root = docs_root / "assets" / "images"
+    if public_images_root.exists():
+        for public_jpeg in sorted(public_images_root.glob("scope-*.jpg")):
+            optimize_public_jpeg(public_jpeg)
+
     # Expand the authored rights policy to one row per image shipped publicly.
     # Unknown photographers stay unknown: repository ownership or filenames are
     # not evidence of copyright ownership.
@@ -624,14 +650,14 @@ def render_site(
         if isinstance(row, dict) and row.get("path")
     }
     image_rows: list[dict[str, Any]] = []
-    public_images_root = assets_root / "images"
-    if public_images_root.exists():
+    source_images_root = assets_root / "images"
+    if source_images_root.exists():
         image_suffixes = {".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".avif"}
         for image_path in sorted(
-            p for p in public_images_root.rglob("*")
+            p for p in source_images_root.rglob("*")
             if p.is_file() and p.suffix.lower() in image_suffixes
         ):
-            rel = f"assets/images/{image_path.relative_to(public_images_root).as_posix()}"
+            rel = f"assets/images/{image_path.relative_to(source_images_root).as_posix()}"
             authored = authored_rows.get(rel, {})
             holder = clean_text(authored.get("copyright_holder"))
             notice = clean_text(authored.get("copyright_notice"))
@@ -830,6 +856,23 @@ def render_site(
                 f"at {facility_name}."
             ),
             "isPartOf": {"@id": f"{public_site_url}#website"},
+            "breadcrumb": {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Instrument fleet",
+                        "item": public_site_url,
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": inst.get("display_name") or instrument_id,
+                        "item": f"{public_site_url}instruments/{instrument_id}/",
+                    },
+                ],
+            },
             "about": {
                 "@type": "Thing",
                 "name": inst.get("display_name") or instrument_id,
@@ -851,6 +894,8 @@ def render_site(
         overview_md = tpl_spec.render(
             instrument=inst,
             instrument_jsonld_json=json_script_data(instrument_jsonld),
+            social_image_url=(image_url if image_rel != "assets/images/placeholder.svg" else ""),
+            social_image_alt=f"{inst.get('display_name') or instrument_id} microscope",
             charts_json=charts_json,
             latest_metrics=latest_metrics,
             metric_names=metric_names,
@@ -986,6 +1031,7 @@ def render_site(
                 "name": f"{facility_name} microscope inventory",
                 "url": f"{public_site_url}assets/llm_inventory.json",
                 "isPartOf": {"@id": f"{public_site_url}#website"},
+                "creator": {"@id": f"{public_site_url}#organization"},
                 "distribution": [
                     {
                         "@type": "DataDownload",
@@ -1035,15 +1081,23 @@ def render_site(
         route_family_coverage=route_family_coverage(vocabulary),
     )
     public_site_url = str(facility.get("public_site_url") or "").rstrip("/") + "/"
+    source_repository_url = str(facility.get("source_repository_url") or "")
+    source_commit = clean_text(os.getenv("GITHUB_SHA"))
     llm_payload["metadata"] = {
         "schema_version": "aic-public-discovery.v1",
         "canonical_site_url": public_site_url,
-        "source_repository_url": str(facility.get("source_repository_url") or ""),
+        "source_repository_url": source_repository_url,
         "code_license": "MIT",
         "image_reuse_policy": "copyrighted_permission_required",
         "image_rights_url": f"{public_site_url}assets/image_rights.json",
         "licensing_url": f"{public_site_url}licensing/",
     }
+    if source_commit:
+        llm_payload["metadata"]["source_commit"] = source_commit
+        if source_repository_url:
+            llm_payload["metadata"]["source_commit_url"] = (
+                f"{source_repository_url.rstrip('/')}/commit/{source_commit}"
+            )
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
     try:

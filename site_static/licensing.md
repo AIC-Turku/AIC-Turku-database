@@ -11,9 +11,9 @@ Custom software and code in this repository are distributed under the **MIT Lice
 
 ## Photographs and other images
 
-Instrument and facility photographs remain **© their respective photographer or creator**. They are **not licensed for reuse** unless an image-specific record explicitly says otherwise.
+Instrument and facility photographs remain **copyrighted by their respective rights holder**. They are **not licensed for reuse** unless an image-specific record explicitly says otherwise.
 
-Where the creator is known, the preferred notice is **© Person Name**. If the creator is not yet recorded, that missing attribution does not grant permission to reuse the image.
+Where the copyright holder is known, the preferred notice is **© Person Name**. If the holder is not yet recorded, that missing attribution does not grant permission to reuse the image.
 
 Machine-readable rights policy: [`assets/image_rights.json`](assets/image_rights.json).
 

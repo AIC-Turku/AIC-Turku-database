@@ -17,6 +17,9 @@ on:
       - "maintenance/**"
       - "scripts/**"
       - "assets/**"
+      - "site_static/**"
+      - "overrides/**"
+      - "LICENSE*"
       - "templates/**"
       - "requirements.txt"
       - "requirements-docs.txt"
@@ -83,3 +86,9 @@ jobs:
 
       - name: Build MkDocs (strict)
         run: mkdocs build --strict
+
+      - name: Enrich sitemap with primary images
+        run: python scripts/enrich_sitemap_images.py
+
+      - name: Validate IndexNow payload
+        run: python scripts/submit_indexnow.py --sitemap site/sitemap.xml --key-file site_static/9f4a2c7e16b8d0e3c5a7f9b1d2e4c6a8.txt --dry-run
