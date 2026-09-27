@@ -154,13 +154,15 @@ def build_objective_catalogue_view(pool: dict, instruments: list[dict], vocabula
         wd_unit = pool["source"]["working_distance_unit"]
         wd_verification = item.get("working_distance_verification")
         wd_display = f"{wd_verification['value_mm']:g}" if wd_verification else item["working_distance_text"]
+        wd_display_unit = wd_verification["unit"] if wd_verification else wd_unit
         row.update({
             "source_kind": "spare_pool", "instrument_id": "", "instrument_name": None,
             "instrument_url": None, "retired": False, "is_installed": None,
             "installation_status": "pool_listing", "installation_label": "Not established by pool listing",
             "association_label": "Spare-pool listing", "notes": "",
             "working_distance_heading": (
-                f"Working distance ({wd_unit})" if wd_unit else "Working distance (unit unconfirmed)"
+                f"Working distance ({wd_display_unit})"
+                if wd_display_unit else "Working distance (unit unconfirmed)"
             ),
             "working_distance_label": wd_display or "Not recorded",
             "working_distance_verification_note": (
