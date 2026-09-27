@@ -58,7 +58,7 @@ def test_objective_working_distance_repairs_match_exact_identified_models():
     assert tirf['420650-9901']['working_distance'] == '0.55 mm'
     assert tirf['440865']['working_distance'] == '1.8 mm at cover glass 1.0'
     assert tirf['420780-9970']['working_distance'] == '0.10 mm'
-    assert tirf['420792-9800']['working_distance'] == '0.10 mm'
+    assert tirf['420792-9800']['working_distance'] == '0.11 mm'
     for code in ('420650-9901', '440865', '420780-9970', '420792-9800'):
         assert 'afc_compatible' not in tirf[code]
 
