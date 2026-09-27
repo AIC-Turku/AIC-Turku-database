@@ -44,7 +44,11 @@ def test_objective_working_distance_repairs_match_exact_identified_models():
     assert dmrb['506007']['working_distance'] == '0.08 mm'
     assert dmrb['506038']['working_distance'] == '0.09 mm'
 
-    tirf = {str(row['product_code']): row for row in ledger('Zeiss TIRF.yaml')['hardware']['objectives']}
+    tirf_record = ledger('Zeiss TIRF.yaml')['hardware']['objectives']
+    preexisting_2_5x = next(row for row in tirf_record if row['id'] == '2.5x_air')
+    assert preexisting_2_5x['is_installed'] is False
+    assert 'OpenIRIS objective list does not include a 2.5x objective' in preexisting_2_5x['notes']
+    tirf = {str(row['product_code']): row for row in tirf_record}
     assert tirf['420340-9901']['working_distance'] == '5.2 mm'
     assert tirf['420650-9901']['working_distance'] == '0.55 mm'
     assert tirf['440865']['working_distance'] == '1.8 mm at cover glass 1.0'
