@@ -133,6 +133,13 @@ def test_units_optional_notes_and_retired_status_stay_distinct():
     pool_wd = next(row for row in view['items'] if row['id'] == 'pool-zeiss-441351-9970')
     assert pool_wd['working_distance_label'] == '2,9 at cover glass 0,75'
     assert pool_wd['working_distance_heading'] == 'Working distance (mm)'
+    corrected = next(row for row in view['items'] if row['id'] == 'pool-leica-506082')
+    assert corrected['working_distance_text'] == '0,17'
+    assert corrected['working_distance_label'] == '0.07'
+    assert 'cover-glass specification' in corrected['working_distance_verification_note']
+    filled = next(row for row in view['items'] if row['id'] == 'pool-leica-506170')
+    assert filled['working_distance_text'] is None
+    assert filled['working_distance_label'] == '0.59'
     assert fixture_view(fixture())['items'][0]['working_distance_label'] == '0.62 mm'
 
 
