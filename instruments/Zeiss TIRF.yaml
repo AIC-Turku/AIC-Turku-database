@@ -95,8 +95,8 @@ hardware:
     is_installed: true
   - id: 10x_air
     manufacturer: Zeiss
-    model: EC Epiplan-Neofluar
-    product_code: ''
+    model: EC Plan-Neofluar 10x/0.3
+    product_code: 420340-9901
     magnification: 10.0
     numerical_aperture: 0.3
     working_distance: 5.2 mm
@@ -109,11 +109,11 @@ hardware:
     is_installed: true
   - id: 20x_air
     manufacturer: Zeiss
-    model: Plan Apochromat
-    product_code: ''
+    model: Plan-Apochromat 20x/0.8
+    product_code: 420650-9901
     magnification: 20.0
-    numerical_aperture: 0.45
-    working_distance: 8.2-6.9 mm
+    numerical_aperture: 0.8
+    working_distance: 0.55 mm
     immersion: air
     correction: plan_apochromat
     afc_compatible: true
@@ -121,13 +121,29 @@ hardware:
     notes: ''
     url: ''
     is_installed: true
+  - id: 40x_air
+    manufacturer: Zeiss
+    model: LD Achroplan 40x/0.60 Korr Ph2
+    product_code: 440865
+    magnification: 40.0
+    numerical_aperture: 0.6
+    working_distance: 1.8 mm at cover glass 1.0
+    immersion: air
+    correction: plan_achromat
+    afc_compatible: true
+    specialties:
+    - phase
+    - correction_collar
+    notes: Objective listed for this microscope in the facility OpenIRIS record.
+    url: ''
+    is_installed: true
   - id: 63x_oil
     manufacturer: Zeiss
-    model: Alpha Plan Apochromat
-    product_code: ''
+    model: alpha Plan-Apochromat 63x/1.46 Oil Corr TIRF
+    product_code: 420780-9970
     magnification: 63.0
     numerical_aperture: 1.46
-    working_distance: 0.55 mm
+    working_distance: 0.10 mm
     immersion: oil
     correction: plan_apochromat
     afc_compatible: true
@@ -138,8 +154,8 @@ hardware:
     is_installed: true
   - id: 100x_oil
     manufacturer: Zeiss
-    model: Alpha Plan Apochromat
-    product_code: ''
+    model: alpha Plan-Apochromat 100x/1.46 Oil DIC (UV) VIS-IR
+    product_code: 420792-9800
     magnification: 100.0
     numerical_aperture: 1.46
     working_distance: 0.11 mm
