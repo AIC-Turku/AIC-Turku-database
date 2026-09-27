@@ -349,7 +349,7 @@ items:
   immersion: dry
   working_distance_text: null
   working_distance_verification:
-    value_text: '0.59'
+    value_mm: 0.59
     unit: mm
     source: University of Bristol Confocal 9 technical specification
     url: https://www.bristol.ac.uk/media-library/sites/wolfson-bioimaging/documents/confocal-9%20tech%20specs%20.pdf
@@ -474,7 +474,7 @@ items:
   immersion: oil
   working_distance_text: 0,17
   working_distance_verification:
-    value_text: '0.07'
+    value_mm: 0.07
     unit: mm
     source: University of Bristol Wide-field imaging system 1 technical specification
     url: https://www.bristol.ac.uk/media-library/sites/wolfson-bioimaging/documents/widefield-1%20tech%20specs.pdf
