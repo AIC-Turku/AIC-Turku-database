@@ -77,6 +77,9 @@ jobs:
       - name: Build MkDocs
         run: mkdocs build --strict
 
+      - name: Enrich sitemap with primary images
+        run: python scripts/enrich_sitemap_images.py
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -87,4 +90,5 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Notify IndexNow
+        continue-on-error: true
         run: python scripts/submit_indexnow.py --sitemap site/sitemap.xml --key-file site_static/9f4a2c7e16b8d0e3c5a7f9b1d2e4c6a8.txt
