@@ -6,7 +6,7 @@ source:
   compiled_by: Jari Korhonen
   date_text: '020426'
   date_iso: null
-  working_distance_unit: null
+  working_distance_unit: mm
 families:
 - id: zeiss
   label: ZEISS
