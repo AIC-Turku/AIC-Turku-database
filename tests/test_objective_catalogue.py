@@ -146,6 +146,18 @@ def test_units_optional_notes_and_retired_status_stay_distinct():
 
 @pytest.mark.parametrize('config', [None, {'exclude_instrument_ids': 'scope-fixture'},
     {'exclude_instrument_ids':['not-a-scope']}, {'exclude_instrument_ids':['scope-fixture','scope-fixture']}, {'typo': []}])
+def test_verified_working_distance_keeps_its_unit_if_source_unit_is_unknown():
+    pool, instruments, vocab, facility = inputs()
+    pool = copy.deepcopy(pool)
+    pool['source']['working_distance_unit'] = None
+    view = build_objective_catalogue_view(pool, instruments, vocab, facility)
+    verified = next(row for row in view['items'] if row['id'] == 'pool-leica-506082')
+    unverified = next(row for row in view['items'] if row['id'] == 'pool-zeiss-441351-9970')
+    assert verified['working_distance_heading'] == 'Working distance (mm)'
+    assert verified['working_distance_label'] == '0.07'
+    assert unverified['working_distance_heading'] == 'Working distance (unit unconfirmed)'
+
+
 def test_bad_exclusion_config_does_not_silently_drop_records(config):
     pool, _, vocab, _ = inputs()
     with pytest.raises(ObjectiveCatalogueError):
