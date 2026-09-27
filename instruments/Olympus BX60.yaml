@@ -124,7 +124,7 @@ hardware:
     product_code: ''
     magnification: 60.0
     numerical_aperture: 1.25
-    working_distance: ''
+    working_distance: 0.12 mm
     immersion: oil
     correction: plan_fluorite
     afc_compatible: false
