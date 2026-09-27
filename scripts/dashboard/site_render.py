@@ -629,7 +629,7 @@ def render_site(
             if holder and not notice:
                 notice = f"© {holder}"
             if not notice:
-                notice = "© creator not recorded"
+                notice = "Copyright holder not recorded"
             image_rows.append(
                 {
                     "path": rel,
@@ -827,12 +827,6 @@ def render_site(
                 "identifier": instrument_id,
             },
         }
-        manufacturer = clean_text((context.dashboard_view_dto.get("identity") or {}).get("manufacturer"))
-        if manufacturer:
-            instrument_jsonld["about"]["manufacturer"] = {
-                "@type": "Organization",
-                "name": manufacturer,
-            }
         if image_rel != "assets/images/placeholder.svg":
             image_object: dict[str, Any] = {
                 "@type": "ImageObject",
