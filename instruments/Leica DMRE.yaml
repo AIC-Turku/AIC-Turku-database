@@ -47,10 +47,10 @@ hardware:
     working_distance: 11.0 mm
     immersion: air
     correction: plan_fluorite
-    afc_compatible: false
+    afc_compatible: true
     specialties:
     - dic
-    notes: Working distance cross-checked against Leica Objective Finder for article 506505.
+    notes: Leica Objective Finder records article 506505 with 11.0 mm working distance and AFC suitability.
     url: https://www.leica-microsystems.com/objectivefinder/
     is_installed: true
   - id: 20x_air
