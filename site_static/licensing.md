@@ -15,7 +15,7 @@ Instrument and facility photographs remain **© their respective photographer or
 
 Where the creator is known, the preferred notice is **© Person Name**. If the creator is not yet recorded, that missing attribution does not grant permission to reuse the image.
 
-Machine-readable rights policy: [`assets/image_rights.json`](assets/image_rights.json).
+Machine-readable rights policy: [`assets/image_rights.json`](../assets/image_rights.json).
 
 ## Logos, trademarks, and third-party material
 
