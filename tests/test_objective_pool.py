@@ -49,7 +49,7 @@ def test_source_inventory_coverage_and_faults():
 def test_unknowns_ranges_original_codes_and_units_are_preserved():
     data = canonical()
     assert data['source']['date_text'] == '020426' and data['source']['date_iso'] is None
-    assert data['source']['working_distance_unit'] is None
+    assert data['source']['working_distance_unit'] == 'mm'
     assert by_code(data, '506170')['working_distance_text'] is None
     assert by_code(data, '506007')['numerical_aperture_text'] == '1.00-0.50'
     assert by_code(data, '506188')['numerical_aperture_text'] == '1.40-0.60'
