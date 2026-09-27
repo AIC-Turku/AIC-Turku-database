@@ -58,7 +58,7 @@ hardware:
     product_code: '506513'
     magnification: 20.0
     numerical_aperture: 0.7
-    working_distance: ''
+    working_distance: 0.59 mm
     immersion: air
     correction: plan_apochromat
     afc_compatible: false
@@ -72,7 +72,7 @@ hardware:
     product_code: '506007'
     magnification: 40.0
     numerical_aperture: 1.0
-    working_distance: ''
+    working_distance: 0.08 mm
     immersion: oil
     correction: plan_fluorite
     afc_compatible: false
