@@ -392,7 +392,10 @@ def build_mkdocs_config(
 
     return {
         "site_name": str(facility.get("site_name", "Microscopy Dashboard")),
+        "site_description": str(facility.get("site_description", "")),
         "site_url": site_url,
+        "repo_url": str(facility.get("source_repository_url", "")),
+        "repo_name": "Source on GitHub",
         "use_directory_urls": True,
         "docs_dir": "dashboard_docs",
         "theme": {
@@ -596,6 +599,32 @@ def render_site(
     assets_root = repo_root / "assets"
     if assets_root.exists():
         shutil.copytree(assets_root, docs_root / "assets", dirs_exist_ok=True)
+
+    # Small authored public files that must survive regeneration of dashboard_docs.
+    static_root = repo_root / "site_static"
+    if static_root.exists():
+        for static_file in static_root.iterdir():
+            if static_file.is_file():
+                shutil.copy2(static_file, docs_root / static_file.name)
+
+    # Reusable deployments may omit AIC-specific static copy. Keep navigation
+    # valid and publish a conservative default instead of dropping the page.
+    licensing_path = docs_root / "licensing.md"
+    if not licensing_path.exists():
+        licensing_path.write_text(
+            (
+                "---\n"
+                "title: Licensing and image rights\n"
+                f"description: Code licensing and image reuse policy for {facility_name}.\n"
+                "---\n\n"
+                "# Licensing and image rights\n\n"
+                "Custom code is distributed under the repository's software licence. "
+                "Photographs and other visual material remain copyrighted by their "
+                "respective creator or rights holder unless an explicit image-specific "
+                "licence says otherwise. Missing attribution does not grant reuse permission.\n"
+            ),
+            encoding="utf-8",
+        )
 
     templates_dir = Path(__file__).resolve().parents[1] / "templates"
     jinja_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
@@ -872,6 +901,16 @@ def render_site(
         llm_records,
         route_family_coverage=route_family_coverage(vocabulary),
     )
+    public_site_url = str(facility.get("public_site_url") or "").rstrip("/") + "/"
+    llm_payload["metadata"] = {
+        "schema_version": "aic-public-discovery.v1",
+        "canonical_site_url": public_site_url,
+        "source_repository_url": str(facility.get("source_repository_url") or ""),
+        "code_license": "MIT",
+        "image_reuse_policy": "copyrighted_permission_required",
+        "image_rights_url": f"{public_site_url}assets/image_rights.json",
+        "licensing_url": f"{public_site_url}licensing/",
+    }
     llm_inventory_path.write_text(json.dumps(llm_payload, indent=2), encoding="utf-8")
 
     try:

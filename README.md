@@ -13,7 +13,7 @@ The project combines four related functions:
 
 The YAML records are the authored source of truth. Generated pages and browser tools use validated, normalized representations of those records and do not fill missing hardware metadata by assumption.
 
-## Public tools
+## Licensing\n\nCustom code is distributed under the MIT License. Photographs, logos, trademarks, and other visual material are not relicensed by MIT; photographs remain © their respective photographer or creator and require permission for reuse unless explicitly stated otherwise. See `LICENSE-CONTENT.md` and the public licensing page.\n\n## Public tools
 
 ### Instrument catalogue
 

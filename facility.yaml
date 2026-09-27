@@ -2,6 +2,8 @@ facility:
   short_name: "AIC Turku"
   full_name: "Advanced Imaging Core Facility at Turku Bioscience Centre"
   site_name: "AIC Microscopy Dashboard"
+  site_description: "Public microscope inventory, optical-path documentation, QC and maintenance history, experiment planning, and methods-reporting resources for AIC Turku."
+  source_repository_url: "https://github.com/AIC-Turku/AIC-Turku-database"
   public_site_url: "https://aic-turku.github.io/AIC-Turku-database/"
   contact_url: "https://bioscience.fi/aic/"
   organization_url: "https://bioscience.fi/aic/"
