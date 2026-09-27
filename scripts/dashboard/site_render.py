@@ -172,6 +172,7 @@ def build_nav(
         {"Virtual Microscope": "virtual_microscope.md"},
         {"Methods generator": "methods_generator.md"},
         {"Vocabulary dictionary": "vocabulary_dictionary.md"},
+        {"Licensing": "licensing.md"},
         {"Retired instruments": [{"Overview": "retired/index.md"}, *retired]},
     ]
 
@@ -392,7 +393,10 @@ def build_mkdocs_config(
 
     return {
         "site_name": str(facility.get("site_name", "Microscopy Dashboard")),
+        "site_description": str(facility.get("site_description", "")),
         "site_url": site_url,
+        "repo_url": str(facility.get("source_repository_url", "")),
+        "repo_name": "Source on GitHub",
         "use_directory_urls": True,
         "docs_dir": "dashboard_docs",
         "theme": {
@@ -596,6 +600,13 @@ def render_site(
     assets_root = repo_root / "assets"
     if assets_root.exists():
         shutil.copytree(assets_root, docs_root / "assets", dirs_exist_ok=True)
+
+    # Small authored public files that must survive regeneration of dashboard_docs.
+    static_root = repo_root / "site_static"
+    if static_root.exists():
+        for static_file in static_root.iterdir():
+            if static_file.is_file():
+                shutil.copy2(static_file, docs_root / static_file.name)
 
     templates_dir = Path(__file__).resolve().parents[1] / "templates"
     jinja_env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
