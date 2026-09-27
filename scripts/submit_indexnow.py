@@ -32,7 +32,8 @@ def load_site_url(mkdocs_path: Path) -> str:
 def load_sitemap_urls(sitemap_path: Path, site_url: str) -> list[str]:
     root = ET.parse(sitemap_path).getroot()
     urls = []
-    for loc in root.findall(".//{*}loc"):
+    sitemap_ns = "http://www.sitemaps.org/schemas/sitemap/0.9"
+    for loc in root.findall(f"{{{sitemap_ns}}}url/{{{sitemap_ns}}}loc"):
         if not loc.text:
             continue
         url = loc.text.strip()
