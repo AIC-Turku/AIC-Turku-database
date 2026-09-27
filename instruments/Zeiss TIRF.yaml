@@ -102,7 +102,6 @@ hardware:
     working_distance: 5.2 mm
     immersion: air
     correction: plan_fluorite
-    afc_compatible: false
     specialties: []
     notes: ''
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420340-9901-000/Objective-EC-Plan-Neofluar-10x-0.30-M27
