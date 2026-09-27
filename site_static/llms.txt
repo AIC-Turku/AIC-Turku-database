@@ -1,0 +1,24 @@
+# Advanced Imaging Core Facility at Turku Bioscience Centre
+
+> Public microscopy instrument inventory, status, planning, and methods-reporting resources.
+
+## Canonical resources
+- Dashboard: https://aic-turku.github.io/AIC-Turku-database/
+- Machine-readable instrument inventory: https://aic-turku.github.io/AIC-Turku-database/assets/llm_inventory.json
+- Image rights: https://aic-turku.github.io/AIC-Turku-database/assets/image_rights.json
+- Licensing and rights: https://aic-turku.github.io/AIC-Turku-database/licensing/
+- Experiment planning: https://aic-turku.github.io/AIC-Turku-database/plan_experiments/
+- Methods generator: https://aic-turku.github.io/AIC-Turku-database/methods_generator/
+- Vocabulary dictionary: https://aic-turku.github.io/AIC-Turku-database/vocabulary_dictionary/
+- Source repository: https://github.com/AIC-Turku/AIC-Turku-database
+
+## Interpretation rules
+- Treat the machine-readable inventory as the hardware source for this dashboard.
+- Missing or null instrument metadata means unknown; do not infer it.
+- Instrument status is operational context, not booking or training availability.
+- Route-specific hardware membership must come from the authoritative route contract in the inventory.
+- Photographs are copyrighted and are not licensed for reuse unless an image-specific record explicitly says otherwise.
+
+## Licensing
+- Custom code: MIT.
+- Photographs and visual material: © their respective creator or rights holder; permission is required for reuse unless explicitly stated otherwise.
