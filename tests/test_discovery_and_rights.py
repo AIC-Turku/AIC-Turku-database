@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from PIL import Image
+
 from scripts.dashboard.site_render import build_mkdocs_config
 from scripts.submit_indexnow import load_sitemap_urls
 
@@ -83,3 +85,18 @@ def test_indexnow_ignores_image_sitemap_locations(tmp_path):
     assert load_sitemap_urls(sitemap, "https://example.org/site/") == [
         "https://example.org/site/page/"
     ]
+
+
+
+def test_deployed_microscope_jpegs_are_web_sized(generated_dashboard):
+    source_images = ROOT / "assets" / "images"
+    public_images = generated_dashboard / "assets" / "images"
+    deployed = sorted(public_images.glob("scope-*.jpg"))
+    assert deployed
+    for path in deployed:
+        with Image.open(path) as image:
+            assert max(image.size) <= 1600, path.name
+
+    large_source = source_images / "scope-olympus-bx60.jpg"
+    large_public = public_images / "scope-olympus-bx60.jpg"
+    assert large_public.stat().st_size < large_source.stat().st_size
