@@ -35,6 +35,7 @@ from typing import Any
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
+from PIL import Image, ImageOps
 
 from scripts.objective_pool import (
     ObjectivePoolError, load_objective_pool, pool_schema,
@@ -380,6 +381,26 @@ def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
     return "\n".join(lines)
 
 
+PUBLIC_IMAGE_MAX_DIMENSION = 1600
+
+
+def optimize_public_jpeg(path: Path) -> None:
+    """Create a web-sized JPEG in place without altering the source asset."""
+    with Image.open(path) as source:
+        image = ImageOps.exif_transpose(source).convert("RGB")
+        image.thumbnail(
+            (PUBLIC_IMAGE_MAX_DIMENSION, PUBLIC_IMAGE_MAX_DIMENSION),
+            Image.Resampling.LANCZOS,
+        )
+        image.save(
+            path,
+            "JPEG",
+            quality=82,
+            optimize=True,
+            progressive=True,
+        )
+
+
 def build_mkdocs_config(
     *,
     facility: dict[str, Any],
@@ -606,6 +627,11 @@ def render_site(
     if assets_root.exists():
         shutil.copytree(assets_root, docs_root / "assets", dirs_exist_ok=True)
 
+    public_images_root = docs_root / "assets" / "images"
+    if public_images_root.exists():
+        for public_jpeg in sorted(public_images_root.glob("scope-*.jpg")):
+            optimize_public_jpeg(public_jpeg)
+
     # Expand the authored rights policy to one row per image shipped publicly.
     # Unknown photographers stay unknown: repository ownership or filenames are
     # not evidence of copyright ownership.
@@ -624,14 +650,14 @@ def render_site(
         if isinstance(row, dict) and row.get("path")
     }
     image_rows: list[dict[str, Any]] = []
-    public_images_root = assets_root / "images"
-    if public_images_root.exists():
+    source_images_root = assets_root / "images"
+    if source_images_root.exists():
         image_suffixes = {".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".avif"}
         for image_path in sorted(
-            p for p in public_images_root.rglob("*")
+            p for p in source_images_root.rglob("*")
             if p.is_file() and p.suffix.lower() in image_suffixes
         ):
-            rel = f"assets/images/{image_path.relative_to(public_images_root).as_posix()}"
+            rel = f"assets/images/{image_path.relative_to(source_images_root).as_posix()}"
             authored = authored_rows.get(rel, {})
             holder = clean_text(authored.get("copyright_holder"))
             notice = clean_text(authored.get("copyright_notice"))
