@@ -153,7 +153,7 @@ def build_objective_catalogue_view(pool: dict, instruments: list[dict], vocabula
         row = copy.deepcopy(item)
         wd_unit = pool["source"]["working_distance_unit"]
         wd_verification = item.get("working_distance_verification")
-        wd_display = wd_verification["value_text"] if wd_verification else item["working_distance_text"]
+        wd_display = f"{wd_verification['value_mm']:g}" if wd_verification else item["working_distance_text"]
         row.update({
             "source_kind": "spare_pool", "instrument_id": "", "instrument_name": None,
             "instrument_url": None, "retired": False, "is_installed": None,
