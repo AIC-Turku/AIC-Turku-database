@@ -1,3 +1,8 @@
+---
+title: {{ instrument.dto.identity.display_name | default(instrument.display_name, true) }} · History
+description: QC and maintenance history recorded for {{ instrument.dto.identity.display_name | default(instrument.display_name, true) }} at {{ facility_short_name }}.
+---
+
 {% set dto = instrument.dto %}
 {% set identity = dto.identity if dto.identity else {} %}
 

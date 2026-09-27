@@ -1,5 +1,6 @@
 ---
 title: {{ display.record_type_label }} · {{ display.instrument_display_name }}{% if date %}, {{ date }}{% endif %}
+description: Recorded {{ display.record_type_label | lower }} event for {{ display.instrument_display_name }}{% if date %} on {{ date }}{% endif %}, including event metadata and source record.
 hide:
   - navigation
   - toc

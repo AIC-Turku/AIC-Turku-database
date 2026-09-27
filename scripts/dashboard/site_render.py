@@ -449,7 +449,7 @@ def build_mkdocs_config(
         "extra_css": ["assets/stylesheets/dashboard.css"],
         "extra_javascript": [
             "assets/javascripts/dashboard.js",
-            "https://cdn.jsdelivr.net/npm/chart.js",
+            "https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js",
             "assets/javascripts/charts.js",
         ],
         "nav": build_nav(instruments, retired_instruments),
