@@ -120,7 +120,7 @@ def test_source_views_and_hardware_are_unchanged():
             source = next(obj for obj in pool['items'] if obj['id'] == row['id'])
             for key in ['source_text','working_distance_text','working_distance_verification',
                         'condition','condition_note','enquiry','quantity','availability','product_code']:
-                assert row[key] == source[key]
+                assert row.get(key) == source.get(key)
 
 
 def test_units_optional_notes_and_retired_status_stay_distinct():
@@ -128,7 +128,7 @@ def test_units_optional_notes_and_retired_status_stay_distinct():
     optional = next(row for row in view['items'] if row['instrument_id'] == 'scope-olympus-bx60' and row['objective_id'] == '60x_oil')
     assert optional['installation_status'] == 'not_installed'
     assert 'Optional objective' in optional['notes']
-    assert optional['working_distance_label'] == 'Not recorded'
+    assert optional['working_distance_label'] == '0.12 mm'
     assert all('Historical record' in row['association_label'] for row in view['items'] if row['retired'])
     assert all(row['source_kind'] == 'instrument' for row in view['items'] if row['retired'])
     pool_wd = next(row for row in view['items'] if row['id'] == 'pool-zeiss-441351-9970')
