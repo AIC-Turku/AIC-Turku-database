@@ -94,6 +94,23 @@ def test_unconfirmed_not_spare_and_missing_units_are_visible(browser):
     context.close()
 
 
+def test_verified_pool_working_distance_is_visible_without_hiding_source(browser):
+    context = browser.new_context()
+    page = context.new_page()
+    mount(page)
+    card = page.locator('#pool-leica-506082')
+    expect(card).to_contain_text('Working distance (mm)')
+    expect(card).to_contain_text('0.07')
+    expect(card).to_contain_text('Working-distance verification')
+    expect(card).to_contain_text('cover-glass specification')
+    card.locator('summary').click()
+    expect(card.locator('.pool-source')).to_contain_text('WD 0,17')
+    evidence = card.get_by_role('link', name=lambda name: name.startswith('Evidence:'))
+    expect(evidence).to_have_attribute('target', '_blank')
+    expect(evidence).to_have_attribute('rel', 'noopener')
+    context.close()
+
+
 def test_old_pool_permalink_and_mobile_view(page):
     page.set_viewport_size({'width':375,'height':812})
     page.get_by_label('Catalogue view').select_option('instrument')
