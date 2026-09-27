@@ -621,7 +621,11 @@ def render_site(
     image_rows: list[dict[str, Any]] = []
     public_images_root = assets_root / "images"
     if public_images_root.exists():
-        for image_path in sorted(p for p in public_images_root.rglob("*") if p.is_file()):
+        image_suffixes = {".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".avif"}
+        for image_path in sorted(
+            p for p in public_images_root.rglob("*")
+            if p.is_file() and p.suffix.lower() in image_suffixes
+        ):
             rel = f"assets/images/{image_path.relative_to(public_images_root).as_posix()}"
             authored = authored_rows.get(rel, {})
             holder = clean_text(authored.get("copyright_holder"))
