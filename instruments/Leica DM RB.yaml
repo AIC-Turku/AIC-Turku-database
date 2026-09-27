@@ -100,7 +100,7 @@ hardware:
     product_code: '506038'
     magnification: 100.0
     numerical_aperture: 1.4
-    working_distance: ''
+    working_distance: 0.09 mm
     immersion: oil
     correction: plan_apochromat
     afc_compatible: false
