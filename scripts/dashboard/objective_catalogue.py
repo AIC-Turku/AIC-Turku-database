@@ -157,9 +157,10 @@ def build_objective_catalogue_view(pool: dict, instruments: list[dict], vocabula
             "instrument_url": None, "retired": False, "is_installed": None,
             "installation_status": "pool_listing", "installation_label": "Not established by pool listing",
             "association_label": "Spare-pool listing", "notes": "",
-            "working_distance_heading": "Working distance" + (" (unit unconfirmed)" if not wd_unit else ""),
-            "working_distance_label": (item["working_distance_text"] + (" " + wd_unit if wd_unit else ""))
-                if item["working_distance_text"] else "Not recorded",
+            "working_distance_heading": (
+                f"Working distance ({wd_unit})" if wd_unit else "Working distance (unit unconfirmed)"
+            ),
+            "working_distance_label": item["working_distance_text"] or "Not recorded",
             # Display-only grouping: the source's Dry label/value stays intact on the card and in JSON.
             "immersion_filter": "air" if item["immersion"] == "dry" else item["immersion"],
         })
