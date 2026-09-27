@@ -14,6 +14,9 @@ on:
       - "schema/**"
       - "scripts/**"
       - "assets/**"
+      - "site_static/**"
+      - "overrides/**"
+      - "LICENSE*"
       - "templates/**"
       - "mkdocs.yml"
       - "requirements.txt"
@@ -59,7 +62,7 @@ jobs:
       - name: Run dashboard builder
         # facility.public_site_url is the authored site URL. Do not override it
         # here: a fork may use a GitHub Pages custom domain or another public URL.
-        run: python scripts/dashboard_builder.py
+        run: python scripts/dashboard_builder.py --strict
 
       - name: Generate Audit PDFs
         run: python scripts/generate_audit_pdfs.py
@@ -72,7 +75,7 @@ jobs:
           retention-days: 30
 
       - name: Build MkDocs
-        run: mkdocs build
+        run: mkdocs build --strict
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
