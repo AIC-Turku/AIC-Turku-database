@@ -90,7 +90,7 @@ hardware:
     product_code: '506062'
     magnification: 63.0
     numerical_aperture: 0.7
-    working_distance: ''
+    working_distance: 2.6-1.8 mm
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
