@@ -15,5 +15,16 @@
     {% if page.canonical_url %}
       <meta property="og:url" content="{{ page.canonical_url | e }}">
     {% endif %}
+    {% if page.meta and page.meta.image %}
+      <meta property="og:image" content="{{ page.meta.image | e }}">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:image" content="{{ page.meta.image | e }}">
+      {% if page.meta.image_alt %}
+        <meta property="og:image:alt" content="{{ page.meta.image_alt | e }}">
+        <meta name="twitter:image:alt" content="{{ page.meta.image_alt | e }}">
+      {% endif %}
+    {% else %}
+      <meta name="twitter:card" content="summary">
+    {% endif %}
   {% endif %}
 {% endblock %}
