@@ -144,8 +144,6 @@ def test_units_optional_notes_and_retired_status_stay_distinct():
     assert fixture_view(fixture())['items'][0]['working_distance_label'] == '0.62 mm'
 
 
-@pytest.mark.parametrize('config', [None, {'exclude_instrument_ids': 'scope-fixture'},
-    {'exclude_instrument_ids':['not-a-scope']}, {'exclude_instrument_ids':['scope-fixture','scope-fixture']}, {'typo': []}])
 def test_verified_working_distance_keeps_its_unit_if_source_unit_is_unknown():
     pool, instruments, vocab, facility = inputs()
     pool = copy.deepcopy(pool)
@@ -158,6 +156,8 @@ def test_verified_working_distance_keeps_its_unit_if_source_unit_is_unknown():
     assert unverified['working_distance_heading'] == 'Working distance (unit unconfirmed)'
 
 
+@pytest.mark.parametrize('config', [None, {'exclude_instrument_ids': 'scope-fixture'},
+    {'exclude_instrument_ids':['not-a-scope']}, {'exclude_instrument_ids':['scope-fixture','scope-fixture']}, {'typo': []}])
 def test_bad_exclusion_config_does_not_silently_drop_records(config):
     pool, _, vocab, _ = inputs()
     with pytest.raises(ObjectiveCatalogueError):
