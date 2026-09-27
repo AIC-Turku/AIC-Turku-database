@@ -90,9 +90,9 @@ hardware:
     correction: plan_fluorite
     afc_compatible: false
     specialties: []
-    notes: ''
+    notes: Pre-existing ledger association. The current facility OpenIRIS objective list does not include a 2.5x objective, so it is retained as associated but not installed pending physical confirmation.
     url: ''
-    is_installed: true
+    is_installed: false
   - id: 10x_air
     manufacturer: Zeiss
     model: EC Plan-Neofluar 10x/0.3
