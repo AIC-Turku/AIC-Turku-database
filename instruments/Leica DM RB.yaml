@@ -63,8 +63,8 @@ hardware:
     correction: plan_apochromat
     afc_compatible: false
     specialties: []
-    notes: ''
-    url: ''
+    notes: Working distance cross-checked against Leica HCS legacy objective documentation for product 506513.
+    url: https://wie-tec.de/mediafiles/Sonstiges/Mikroskop/Leica/leica_delta_hc.pdf
     is_installed: true
   - id: 40x_oil
     manufacturer: Leica
@@ -77,7 +77,7 @@ hardware:
     correction: plan_fluorite
     afc_compatible: false
     specialties: []
-    notes: NA range 1.00-0.50. Note that this has an adjustable iris diaphragm.
+    notes: NA range 1.00-0.50. Note that this has an adjustable iris diaphragm. Working distance matches the exact 506007 record in the AIC objective-pool source.
     url: ''
     is_installed: true
   - id: 63x_oil
@@ -106,7 +106,7 @@ hardware:
     afc_compatible: false
     specialties: []
     notes: NA range 1.40-0.7. Has an adjustable iris diaphragm for darkfield.
-    url: ''
+    url: https://wie-tec.de/leica-microscope-objective-hcx-pl-apo-100x14007-oil-cs-506038
     is_installed: true
   sources:
   - kind: halogen_lamp
