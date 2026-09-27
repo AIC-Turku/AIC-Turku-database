@@ -143,9 +143,9 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                  "value_text": {
-                    "type": "string",
-                    "minLength": 1
+                  "value_mm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
                   },
                   "unit": {
                     "const": "mm"
@@ -165,7 +165,7 @@
                   }
                 },
                 "required": [
-                  "value_text",
+                  "value_mm",
                   "unit",
                   "source",
                   "url",
