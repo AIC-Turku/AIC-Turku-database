@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import string
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -87,8 +88,9 @@ def main() -> None:
 
     site_url = load_site_url(args.mkdocs)
     key = args.key_file.read_text(encoding="utf-8").strip()
-    if not (8 <= len(key) <= 128) or any(ch not in "0123456789abcdefABCDEF-" for ch in key):
-        raise SystemExit("IndexNow key must be 8-128 hexadecimal characters or dashes")
+    allowed_key_chars = set(string.ascii_letters + string.digits + "-")
+    if not (8 <= len(key) <= 128) or any(ch not in allowed_key_chars for ch in key):
+        raise SystemExit("IndexNow key must be 8-128 letters, digits, or hyphens")
 
     urls = load_sitemap_urls(args.sitemap, site_url)
     statuses = []
