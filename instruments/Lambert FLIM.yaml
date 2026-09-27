@@ -60,12 +60,13 @@ hardware:
     afc_compatible: false
     specialties:
     - phase
+    - correction_collar
     notes: Korr (correction collar)
     url: https://www.micro-shop.zeiss.com/en/ts/shop/objectives/421351-9970-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-Ph2-M27
     is_installed: true
   - id: 40x_air_ph2
     manufacturer: Zeiss
-    model: Plan NEOFLUAR 40x/0.6 Ph2 Korr
+    model: LD Plan-Neofluar 40x/0.6 Corr Ph2 M27
     product_code: 421361-9970
     magnification: 40.0
     numerical_aperture: 0.6
@@ -75,6 +76,7 @@ hardware:
     afc_compatible: false
     specialties:
     - phase
+    - correction_collar
     notes: Korr (correction collar)
     url: https://www.micro-shop.zeiss.com/zh/us/shop/objectives/421361-9970-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-Ph2-M27
     is_installed: true
