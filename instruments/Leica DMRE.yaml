@@ -40,18 +40,18 @@ hardware:
   objectives:
   - id: 10x_air
     manufacturer: Leica
-    model: HCX PL FLUOTAR 10x/0.30
-    product_code: '506505'
+    model: HC PL FLUOTAR 10x/0.30 PH1
+    product_code: '506507'
     magnification: 10.0
     numerical_aperture: 0.3
     working_distance: 11.0 mm
     immersion: air
     correction: plan_fluorite
-    afc_compatible: true
     specialties:
+    - phase
     - dic
-    notes: Leica Objective Finder records article 506505 with 11.0 mm working distance and AFC suitability.
-    url: https://www.leica-microsystems.com/objectivefinder/
+    notes: The facility Leica DMRE getting-started record identifies the installed 10x as article 506507 with PH1. Independent exact-code specifications give an 11.0 mm working distance.
+    url: https://wie-tec.de/?a=17775&lang=eng
     is_installed: true
   - id: 20x_air
     manufacturer: Leica
