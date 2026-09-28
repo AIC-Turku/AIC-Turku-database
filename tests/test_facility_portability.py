@@ -211,6 +211,33 @@ class MkdocsConfigTests(unittest.TestCase):
         self.assertEqual(config["theme"]["favicon"], "assets/images/example-favicon.svg")
         self.assertEqual(_identity_leaks(yaml.safe_dump(config)), [])
 
+    def test_footer_links_back_to_the_configured_organization(self) -> None:
+        config = build_mkdocs_config(
+            facility={
+                "site_name": "Example Dashboard",
+                "full_name": "Example Imaging Core & Partners",
+                "organization_url": "https://example.org/imaging/",
+                "public_site_url": "https://example.org/dashboard/",
+            },
+            branding={},
+            instruments=[],
+            retired_instruments=[],
+        )
+        self.assertTrue(config["copyright"].startswith(
+            'Part of <a href="https://example.org/imaging/">Example Imaging Core &amp; Partners</a> · '
+        ))
+        self.assertEqual(_identity_leaks(yaml.safe_dump(config)), [])
+
+    def test_footer_omits_the_organization_link_without_an_absolute_url(self) -> None:
+        for url in ("#", "", None):
+            config = build_mkdocs_config(
+                facility={"site_name": "Example", "full_name": "Example Core", "organization_url": url},
+                branding={},
+                instruments=[],
+                retired_instruments=[],
+            )
+            self.assertNotIn("Part of", config["copyright"])
+
     def test_deploy_workflow_does_not_override_configured_site_url(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "deploy-dashboard.yml").read_text(
             encoding="utf-8"

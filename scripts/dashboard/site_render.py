@@ -27,6 +27,7 @@ It should not contain:
 from __future__ import annotations
 
 import copy
+import html
 import json
 import os
 import shutil
@@ -401,6 +402,20 @@ def optimize_public_jpeg(path: Path) -> None:
         )
 
 
+def _organization_footer_link(facility: dict[str, Any]) -> str:
+    """Return the footer link back to the facility's own site, or nothing.
+
+    The footer is rendered on every page, so this is the persistent route from
+    the dashboard to the authoritative facility site. It is omitted, not
+    pointed at a placeholder, when no absolute organization URL is configured.
+    """
+    url = str(facility.get("organization_url") or "").strip()
+    name = str(facility.get("full_name") or facility.get("short_name") or "").strip()
+    if not url.startswith(("https://", "http://")) or not name:
+        return ""
+    return f'Part of <a href="{html.escape(url)}">{html.escape(name)}</a> · '
+
+
 def build_mkdocs_config(
     *,
     facility: dict[str, Any],
@@ -417,7 +432,7 @@ def build_mkdocs_config(
         "site_url": site_url,
         "repo_url": str(facility.get("source_repository_url", "")),
         "repo_name": "Source on GitHub",
-        "copyright": (
+        "copyright": _organization_footer_link(facility) + (
             f'Code: MIT · Images: copyrighted; see rights · '
             f'<a href="{site_url.rstrip("/")}/licensing/">Licensing and image rights</a>'
         ),
