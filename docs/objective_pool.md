@@ -33,7 +33,7 @@ canonical instrument DTOs into the shared page and `assets/objectives.json`.
 are display metadata, never new capabilities. The Air/dry filter groups the pool's
 Dry descriptor with canonical Air; source values and per-item labels are preserved.
 Working distances on microscopes retain their recorded units. The spare-pool source
-uses millimetres for working distance; this unit was confirmed during the 2026 objective-ledger review. Original pool text remains verbatim. When an exact product-code match independently verifies a missing or erroneous source WD, the correction is stored separately as a working-distance verification and shown with its evidence rather than rewriting the source record.
+uses millimetres for working distance; the source document does not state the unit, and Guillaume Jacquemet confirmed it as millimetres on 27 September 2026 (for example, the Leica dipping 20x/0.50 and 40x/0.80 entries read 3.5 mm and 3.3 mm). Original pool text remains verbatim. When an exact product-code match independently verifies a missing or erroneous source WD, the correction is stored separately as a working-distance verification and shown with its evidence rather than rewriting the source record.
 
 As of this source snapshot the page has **137 current records**: 102 on active
 microscopes (92 explicitly installed and 10 explicitly not installed), plus 35 pool

@@ -6,8 +6,9 @@ source:
   compiled_by: Jari Korhonen
   date_text: '020426'
   date_iso: null
-  # The source document does not state the WD unit; mm was confirmed during the 2026
-  # objective-ledger review (PR #481). See docs/objective_pool.md.
+  # The source document does not state the WD unit. Guillaume Jacquemet confirmed mm on
+  # 27 September 2026 (the Leica dipping 20x/0.50 and 40x/0.80 entries read 3.5 and 3.3 mm).
+  # See docs/objective_pool.md.
   working_distance_unit: mm
 families:
 - id: zeiss
