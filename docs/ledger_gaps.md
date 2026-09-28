@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**96 open questions across 23 records.**
+**95 open questions across 23 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.
@@ -24,9 +24,8 @@ This is the single request that still appears on an otherwise complete Methods d
 
 One role per source is the answer, even where the same beam serves more than one technique. The Abberior's 775 nm beam depletes by stimulated emission under STED and drives reversible photoswitching under RESOLFT; both are recorded as `depletion`, because the role states what the beam does on the path and the method states the mechanism. The draft says "Depletion was provided by..." and names the technique in its opening sentence, so a single role cannot make a RESOLFT paragraph claim stimulated emission.
 
-54 across 16 records:
+53 across 15 records:
 
-- **3i Marianas CSU-W1 Spinning Disk Med C** — led CoolLED pE-300
 - **Agilent xCELLigence RTCA eSight** — 393 led Agilent High-power LED (Blue); 482 led Agilent High-power LED (Green); 595 led Agilent High-power LED (Red)
 - **EVOS fl** — led Thermo Fisher / AMG Transmitted Light LED; 357 led Thermo Fisher / AMG EVOS DAPI Light Cube LED; 445 led Thermo Fisher / AMG EVOS CFP Light Cube LED; 470 led Thermo Fisher / AMG EVOS GFP Light Cube LED; 531 led Thermo Fisher / AMG EVOS RFP Light Cube LED; 628 led Thermo Fisher / AMG EVOS Cy5 Light Cube LED
 - **Lambert FLIM** — 406 led Unknown Multi-LED excitation; 469 led Unknown Multi-LED excitation; 533 led Unknown Multi-LED excitation
@@ -90,9 +89,8 @@ Is the scanner a named unit (for example a Yokogawa CSU-W1 or a CrestOptics X-Li
 
 Without this the draft asks for the manufacturer of, say, a Leica tandem scanner on a Leica system, which reads oddly to an author.
 
-7 across 7 records:
+6 across 6 records:
 
-- **3i Marianas CSU-W1 Spinning Disk Med C** — type=spinning_disk
 - **Abberior STED** — type=galvo
 - **Leica STELLARIS 8 FALCON FLIM** — type=tandem
 - **Leica TCS SP5 Multiphoton** — type=resonant
@@ -146,7 +144,8 @@ For each position: what are the excitation band, dichroic edge and emission band
 
 The Methods draft prints what a filter passes when the bands are recorded and only its catalogue number when they are not, so these positions produce the least useful sentences in a fluorescence draft.
 
-6 across 2 records:
+7 across 3 records:
 
 - **3i CSU-W1 Spinning Disk** — Yokogawa CSU-W Filter Turret / VIS quad-band confocal dichroic; Yokogawa CSU-W Filter Turret / NIR short-pass confocal dichroic; CSU-W NIR Beam Combiner / NIR beam combiner
+- **3i Marianas CSU-W1 Spinning Disk Med C** — Yokogawa CSU-W Filter Turret / Pos_1
 - **Nikon Eclipse Ti2-E** — Filter Turret / Chroma 89403bs; Filter Turret / Chroma 84000v2; Lamp Filter Cubes / Standard Cubes

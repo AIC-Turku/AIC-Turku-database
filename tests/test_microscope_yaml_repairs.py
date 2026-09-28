@@ -183,7 +183,6 @@ def test_named_zeiss_filter_sets_have_phase_specific_composite_ops(index, ex, di
 
 
 @pytest.mark.parametrize('name, mechanism, count', [
-    ('3i CSU-W1 Spinning Disk Med C.yaml', 'zeiss_widefield_fluorescence_positions', 3),
     ('Leica Thunder.yaml', 'filter_turret', 2),
     ('xCELLigence RTCA eSight.yaml', 'internal_filter_turret', 3),
 ])
@@ -201,6 +200,25 @@ def test_partial_cube_repairs_preserve_missing_dichroic_diagnostics(name, mechan
         if name != 'Leica Thunder.yaml':
             assert 'excitation_filter' not in cube
 
+
+
+@pytest.mark.parametrize('index, ex, di, em', [
+    (0, (392, 23), 409, (447, 60)),
+    (1, (474, 27), 495, (525, 45)),
+    (2, (554, 23), 573, (609, 54)),
+])
+def test_med_c_semrock_led_cubes_carry_their_catalogue_prescription(index, ex, di, em):
+    pos = position('3i CSU-W1 Spinning Disk Med C.yaml', 'cube',
+                   'zeiss_widefield_fluorescence_positions', index)
+    assert not pos.get('_cube_incomplete')
+    ops = pos['spectral_ops']
+    assert [op['op'] for op in ops['illumination']] == ['bandpass', 'dichroic_reflect']
+    assert [op['op'] for op in ops['detection']] == ['dichroic_transmit', 'bandpass']
+    assert ops['illumination'][0]['center_nm'] == ex[0]
+    assert ops['illumination'][0]['width_nm'] == ex[1]
+    assert ops['illumination'][1]['cut_on_nm'] == di
+    assert ops['detection'][1]['center_nm'] == em[0]
+    assert ops['detection'][1]['width_nm'] == em[1]
 
 def test_remaining_zeiss_multiband_cubes_are_not_falsely_completed():
     for index in (2, 3):

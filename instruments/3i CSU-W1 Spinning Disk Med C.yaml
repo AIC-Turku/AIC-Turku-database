@@ -249,7 +249,7 @@ hardware:
         manufacturer: Semrock
         product_code: LED-DAPI-A-ZHE-Zero
         component_type: filter_cube
-        notes: LED-optimized DAPI filter set in a Zeiss cube. Spectral prescription from the Semrock LED-DAPI-A family; the ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation.
+        notes: 'LED-optimized DAPI filter set in a Zeiss cube. Spectral prescription (392/23 excitation, 409 nm dichroic edge, 447/60 emission) from the Semrock BrightLine LED-DAPI-A set, IDEX Health & Science LED filter-set datasheet (2016): https://www.idex-hs.com/docs/default-source/data-sheets/idx-smk-leddatasheet-web.pdf. The ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation. Nominal catalogue specification, not a measured transmission curve.'
         excitation_filter:
           component_type: bandpass
           center_nm: 392
@@ -265,7 +265,7 @@ hardware:
         manufacturer: Semrock
         product_code: LED-FITC-A-ZHE-Zero
         component_type: filter_cube
-        notes: LED-optimized FITC filter set in a Zeiss cube. Spectral prescription from the Semrock LED-FITC-A family; the ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation.
+        notes: 'LED-optimized FITC filter set in a Zeiss cube. Spectral prescription (474/27 excitation, 495 nm dichroic edge, 525/45 emission) from the Semrock BrightLine LED-FITC-A set, IDEX Health & Science LED filter-set datasheet (2016): https://www.idex-hs.com/docs/default-source/data-sheets/idx-smk-leddatasheet-web.pdf. The ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation. Nominal catalogue specification, not a measured transmission curve.'
         excitation_filter:
           component_type: bandpass
           center_nm: 474
@@ -281,7 +281,7 @@ hardware:
         manufacturer: Semrock
         product_code: LED-TRITC-A-ZHE-Zero
         component_type: filter_cube
-        notes: LED-optimized TRITC filter set in a Zeiss cube. Spectral prescription from the Semrock LED-TRITC-A family; the ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation.
+        notes: 'LED-optimized TRITC filter set in a Zeiss cube. Spectral prescription (554/23 excitation, 573 nm dichroic edge, 609/54 emission) from the Semrock BrightLine LED-TRITC-A set, IDEX Health & Science LED filter-set datasheet (2016): https://www.idex-hs.com/docs/default-source/data-sheets/idx-smk-leddatasheet-web.pdf. The ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation. Nominal catalogue specification, not a measured transmission curve.'
         excitation_filter:
           component_type: bandpass
           center_nm: 554
@@ -466,8 +466,6 @@ light_paths:
 - id: transmitted_light
   illumination_sequence: []
   detection_sequence:
-  - optical_path_element_id: csu_w1_brightfield_switcher
-    position_id: Pos_2
   - optical_path_element_id: trinocular_port_selector
   - branches:
       selection_mode: exclusive
@@ -475,6 +473,8 @@ light_paths:
       - branch_id: to_camera
         label: To Camera
         sequence:
+        - optical_path_element_id: csu_w1_brightfield_switcher
+          position_id: Pos_2
         - endpoint_id: detector_1
       - branch_id: to_eyepieces
         label: To Eyepieces

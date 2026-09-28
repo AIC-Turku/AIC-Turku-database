@@ -1891,6 +1891,13 @@ sections:
         used_by: [dashboard, method_generator]
         rationale: Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item.
 
+      - path: light_paths[].illumination_sequence[].position_id
+        title: Illumination optical path element position
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same illumination sequence item; the validator rejects a key that does not match an authored position on that element.
+
       - path: light_paths[].detection_sequence
         title: Detection sequence
         status: required
@@ -1905,6 +1912,13 @@ sections:
         type: slug
         used_by: [dashboard, method_generator]
         rationale: Stable optical-path-element reference for the optical_path_element_id variant of a detection sequence tagged union item.
+
+      - path: light_paths[].detection_sequence[].position_id
+        title: Detection optical path element position
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same detection sequence item; the validator rejects a key that does not match an authored position on that element.
 
       - path: light_paths[].detection_sequence[].endpoint_id
         title: Detection endpoint reference
@@ -1982,6 +1996,13 @@ sections:
         type: slug
         used_by: [dashboard, method_generator]
         rationale: Stable optical-path-element reference for the optical_path_element_id variant of a detection branch-local tagged union item.
+
+      - path: light_paths[].detection_sequence[].branches.items[].sequence[].position_id
+        title: Detection branch optical path element position
+        status: optional
+        type: string
+        used_by: [dashboard, method_generator]
+        rationale: Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same detection branch-local item; the validator rejects a key that does not match an authored position on that element.
 
       - path: light_paths[].detection_sequence[].branches.items[].sequence[].endpoint_id
         title: Detection branch endpoint reference

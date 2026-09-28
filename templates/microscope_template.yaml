@@ -255,9 +255,11 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
       -
         source_id: ""  # Illumination source reference: Stable source reference for the source_id variant of an illumination sequence tagged union item.
         optical_path_element_id: ""  # Illumination optical path element reference: Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item.
+        position_id: ""  # Illumination optical path element position: Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same illumination sequence item; the validator rejects a key that does not match an authored position on that element.
     detection_sequence:  # Detection sequence: Ordered sequence of strict tagged-union items used after the sample plane; each item must declare exactly one of optical_path_element_id, endpoint_id, or branches.
       -
         optical_path_element_id: ""  # Detection optical path element reference: Stable optical-path-element reference for the optical_path_element_id variant of a detection sequence tagged union item.
+        position_id: ""  # Detection optical path element position: Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same detection sequence item; the validator rejects a key that does not match an authored position on that element.
         endpoint_id: ""  # Detection endpoint reference: Stable endpoint reference for the endpoint_id variant of a detection sequence tagged union item.
         branches:  # Detection branch block: Explicit route-owned one-level branch block for the branches variant of a detection sequence tagged union item.
           selection_mode: ""  # Detection branch selection mode: Branch selection mode for an explicit detection route fork. | Allowed values (canonical IDs): fixed, exclusive, multiple
@@ -269,4 +271,5 @@ light_paths:  # Light paths: Canonical ordered YAML-first traversal definitions.
               sequence:  # Detection branch sequence: Linear branch-local traversal sequence for a detection route fork; each branch-local item must declare exactly one of optical_path_element_id or endpoint_id.
                 -
                   optical_path_element_id: ""  # Detection branch optical path element reference: Stable optical-path-element reference for the optical_path_element_id variant of a detection branch-local tagged union item.
+                  position_id: ""  # Detection branch optical path element position: Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same detection branch-local item; the validator rejects a key that does not match an authored position on that element.
                   endpoint_id: ""  # Detection branch endpoint reference: Stable endpoint reference for the endpoint_id variant of a detection branch-local tagged union item.
