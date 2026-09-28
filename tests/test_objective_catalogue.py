@@ -69,8 +69,8 @@ def test_complete_catalogue_coverage_states_and_synthetic_exclusion():
     assert view['problem_count'] == 8
     assert view['excluded_instrument_ids'] == ['scope-testx1']
     assert all(row['instrument_id'] != 'scope-testx1' for row in view['items'])
-    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == 91
-    assert sum(row['installation_status'] == 'not_installed' for row in view['items']) == 11
+    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == 92
+    assert sum(row['installation_status'] == 'not_installed' for row in view['items']) == 10
 
 
 @pytest.mark.parametrize('flag,expected', [(True,'installed'), (False,'not_installed'), (None,'unconfirmed'), ('omit','unconfirmed')])

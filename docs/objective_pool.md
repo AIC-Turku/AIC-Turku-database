@@ -36,7 +36,7 @@ Working distances on microscopes retain their recorded units. The spare-pool sou
 uses millimetres for working distance; this unit was confirmed during the 2026 objective-ledger review. Original pool text remains verbatim. When an exact product-code match independently verifies a missing or erroneous source WD, the correction is stored separately as a working-distance verification and shown with its evidence rather than rewriting the source record.
 
 As of this source snapshot the page has **137 current records**: 102 on active
-microscopes (91 explicitly installed and 11 explicitly not installed), plus 35 pool
+microscopes (92 explicitly installed and 10 explicitly not installed), plus 35 pool
 records including one calibration item. Two retired-SP5 objective records are
 available in the historical view. Counts refer to source records, not physical assets.
 `facility.non_public_instrument_ids` explicitly excludes the existing synthetic
