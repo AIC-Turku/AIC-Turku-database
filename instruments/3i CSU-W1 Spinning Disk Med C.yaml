@@ -64,6 +64,8 @@ hardware:
     type: infrared_reflection
   scanner:
     type: spinning_disk
+    manufacturer: Yokogawa
+    model: CSU-W1 T1
     pinhole_um: 50
     notes: Yokogawa CSU-W1 T1 Spinning Disk Confocal with 50µm disk.
   detectors:
@@ -73,7 +75,7 @@ hardware:
     pixel_pitch_um: 6.5
     qe_peak_pct: 95
     sensor_format_px: 2048 x 2048
-    notes: 4 Megapixel 95% QE backside illuminated sensor, 1.3e- read noise. Hardware specifications sourced from test report. Can also be used for widefield fluorescence imaging.
+    notes: 4 Megapixel 95% QE backside illuminated sensor, 1.3e- read noise. Hardware specifications sourced from the 2019 system test report. SlideBook filter-configuration screenshots identify this as Camera 1 (PMUSBCam00). Can also be used for widefield fluorescence and transmitted-light imaging.
     url: https://www.teledynevisionsolutions.com/products/prime-bsi/
     id: detector_1
   eyepieces:
@@ -206,7 +208,7 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 405
     power: 100 mW
-    notes: 'Solid state laser. Measured fiber output: 46 mW; Back Aperture Output: 3.7 mW.'
+    notes: 'Solid state laser. Measured fiber output: 46 mW; Back Aperture Output: 3.7 mW. SlideBook confocal configurations select Alternate Source position 1 (Laser = 8) for 405 nm.'
   - id: laserstack_488
     kind: laser
     role: excitation
@@ -214,7 +216,7 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 488
     power: 150 mW
-    notes: 'Solid state laser. Measured fiber output: 102 mW; Back Aperture Output: 9.6 mW.'
+    notes: 'Solid state laser. Measured fiber output: 102 mW; Back Aperture Output: 9.6 mW. SlideBook confocal configurations select Alternate Source position 3 (Laser = 32) for 488 nm.'
   - id: laserstack_561
     kind: laser
     role: excitation
@@ -222,7 +224,7 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 561
     power: 150 mW
-    notes: 'Solid state laser. Measured fiber output: 105.5 mW; Back Aperture Output: 10.5 mW.'
+    notes: 'Solid state laser. Measured fiber output: 105.5 mW; Back Aperture Output: 10.5 mW. SlideBook confocal configurations select Alternate Source position 5 (Laser = 128) for 561 nm.'
   - id: laserstack_640
     kind: laser
     role: excitation
@@ -230,12 +232,13 @@ hardware:
     model: LaserStack v4
     wavelength_nm: 640
     power: 100 mW
-    notes: 'Solid state laser. Measured fiber output: 50.4 mW; Back Aperture Output: 6.3 mW.'
+    notes: 'Solid state laser. Measured fiber output: 50.4 mW; Back Aperture Output: 6.3 mW. SlideBook confocal configurations select Alternate Source position 6 (Laser = 2) for 640 nm.'
   - id: pe_300
     kind: led
+    role: excitation
     manufacturer: CoolLED
     model: pE-300
-    notes: CoolLED PE-300 White Light Source with 3mm Liquid Light Guide. Broadband illumination.
+    notes: CoolLED pE-300 white-light LED source with 3 mm liquid light guide. Installed for widefield fluorescence excitation. The transmitted-light source used for brightfield/phase/DIC is not identified by the available records.
   optical_path_elements:
   - id: zeiss_widefield_fluorescence_positions
     name: Zeiss Widefield Fluorescence Positions
@@ -243,71 +246,98 @@ hardware:
     stage_role: cube
     positions:
       Pos_1:
+        manufacturer: Semrock
         product_code: LED-DAPI-A-ZHE-Zero
         component_type: filter_cube
-        notes: DAPI Filter Cube. Nominal DAPI band 445/45nm.
-        bands:
-        - center_nm: 445
-          width_nm: 45
-        # Emission band copied from the existing ledger. Excitation and dichroic data remain unknown.
+        notes: 'LED-optimized DAPI filter set in a Zeiss cube. Spectral prescription (392/23 excitation, 409 nm dichroic edge, 447/60 emission) from the Semrock BrightLine LED-DAPI-A set, IDEX Health & Science LED filter-set datasheet (2016): https://www.idex-hs.com/docs/default-source/data-sheets/idx-smk-leddatasheet-web.pdf. The ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation. Nominal catalogue specification, not a measured transmission curve.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 392
+          width_nm: 23
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 409
         emission_filter:
           component_type: bandpass
-          center_nm: 445
-          width_nm: 45
+          center_nm: 447
+          width_nm: 60
       Pos_2:
+        manufacturer: Semrock
         product_code: LED-FITC-A-ZHE-Zero
         component_type: filter_cube
-        notes: FITC Filter Cube. Nominal GFP band 525/30nm.
-        bands:
-        - center_nm: 525
-          width_nm: 30
-        # Emission band copied from the existing ledger. Excitation and dichroic data remain unknown.
+        notes: 'LED-optimized FITC filter set in a Zeiss cube. Spectral prescription (474/27 excitation, 495 nm dichroic edge, 525/45 emission) from the Semrock BrightLine LED-FITC-A set, IDEX Health & Science LED filter-set datasheet (2016): https://www.idex-hs.com/docs/default-source/data-sheets/idx-smk-leddatasheet-web.pdf. The ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation. Nominal catalogue specification, not a measured transmission curve.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 474
+          width_nm: 27
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 495
         emission_filter:
           component_type: bandpass
           center_nm: 525
-          width_nm: 30
+          width_nm: 45
       Pos_3:
+        manufacturer: Semrock
         product_code: LED-TRITC-A-ZHE-Zero
         component_type: filter_cube
-        notes: TRITC Filter Cube. Nominal Cy3/Alexa 568 band 617/73nm.
-        bands:
-        - center_nm: 617
-          width_nm: 73
-        # Emission band copied from the existing ledger. Excitation and dichroic data remain unknown.
+        notes: 'LED-optimized TRITC filter set in a Zeiss cube. Spectral prescription (554/23 excitation, 573 nm dichroic edge, 609/54 emission) from the Semrock BrightLine LED-TRITC-A set, IDEX Health & Science LED filter-set datasheet (2016): https://www.idex-hs.com/docs/default-source/data-sheets/idx-smk-leddatasheet-web.pdf. The ZHE-ZERO suffix specifies the Zeiss cube/zero-pixel-shift implementation. Nominal catalogue specification, not a measured transmission curve.'
+        excitation_filter:
+          component_type: bandpass
+          center_nm: 554
+          width_nm: 23
+        dichroic:
+          component_type: dichroic
+          cut_on_nm: 573
         emission_filter:
           component_type: bandpass
-          center_nm: 617
-          width_nm: 73
+          center_nm: 609
+          width_nm: 54
   - id: csu_w1_dichroic_slider
-    name: CSU-W1 Dichroic Slider
-    element_type: slider
+    name: Yokogawa CSU-W Filter Turret
+    display_label: CSU-W Filter Turret
+    element_type: turret
     stage_role: dichroic
+    slots: 3
     positions:
       Pos_1:
         component_type: multiband_dichroic
+        manufacturer: Semrock
         product_code: Di01-T405/488/568/647-13x15x0.5
-        notes: Quad band Dichroic for CSU-W1 405/488/568/647 Excitation.
-        bands:
-        - center_nm: 440
-          width_nm: 25
-        - center_nm: 521
-          width_nm: 25
-        - center_nm: 607
-          width_nm: 25
-        - center_nm: 700
-          width_nm: 25
+        compatible_source_ids:
+        - laserstack_405
+        - laserstack_488
+        - laserstack_561
+        - laserstack_640
+        notes: Quad-band confocal dichroic documented in the 2019 system test report. SlideBook confocal configurations select CSU-W Filter Turret position 1. No generic pass-band array is authored because the dichroic alternates transmission and reflection bands.
+      Pos_2:
+        component_type: empty
+        notes: Documented as empty in the 2019 system test report.
+      Pos_3:
+        component_type: empty
+        notes: Documented as empty in the 2019 system test report.
   - id: csu_w1_emission_wheel
-    name: CSU-W1 Emission Wheel
+    name: Yokogawa CSU-W Emission Filter Wheel 1
+    display_label: CSU-W Filter Wheel 1
     element_type: filter_wheel
     stage_role: emission
+    slots: 8
+    notes: The 2019 system test report documents positions 1-6; current SlideBook configurations additionally demonstrate position 8. Position 7 remains undocumented rather than being treated as empty.
     positions:
       Pos_1:
         component_type: multiband_bandpass
+        name: Quad-band emitter
+        manufacturer: Semrock
         product_code: FF01-440/521/607/700-25
-        notes: Quad Band Emitter.
+        compatible_source_ids:
+        - laserstack_405
+        - laserstack_488
+        - laserstack_561
+        - laserstack_640
+        notes: Quad-band emitter. SlideBook c405q, c488q, c561q and c640q configurations all select filter-wheel position 1.
         bands:
         - center_nm: 440
-          width_nm: 25
+          width_nm: 40
         - center_nm: 521
           width_nm: 21
         - center_nm: 607
@@ -316,36 +346,83 @@ hardware:
           width_nm: 45
       Pos_2:
         component_type: bandpass
+        name: DAPI
+        manufacturer: Semrock
         product_code: FF01-445/45-25
-        notes: Individual Emitter.
+        compatible_source_ids:
+        - laserstack_405
+        notes: Individual emitter. SlideBook c405 selects filter-wheel position 2.
         bands:
         - center_nm: 445
           width_nm: 45
       Pos_3:
         component_type: bandpass
+        name: GFP
+        manufacturer: Semrock
         product_code: FF01-525/30-25
-        notes: Individual Emitter.
+        compatible_source_ids:
+        - laserstack_488
+        notes: Individual emitter. SlideBook c488 selects filter-wheel position 3.
         bands:
         - center_nm: 525
           width_nm: 30
       Pos_4:
         component_type: bandpass
+        name: Cy3 / Alexa 568
+        manufacturer: Semrock
         product_code: FF02-617/73-25
-        notes: Individual Emitter.
+        compatible_source_ids:
+        - laserstack_561
+        notes: Individual emitter. SlideBook c561 selects filter-wheel position 4.
         bands:
         - center_nm: 617
           width_nm: 73
       Pos_5:
         component_type: bandpass
+        name: Cy5 / Alexa 647
+        manufacturer: Semrock
         product_code: FF01-692/40-25
-        notes: Individual Emitter.
+        compatible_source_ids:
+        - laserstack_640
+        notes: Individual emitter documented in the 2019 system test report; the corresponding c640 single-band SlideBook configuration was not included in the supplied screenshots.
         bands:
         - center_nm: 692
           width_nm: 40
+      Pos_6:
+        component_type: empty
+        notes: Documented as empty in the 2019 system test report.
+      Pos_8:
+        component_type: bandpass
+        name: 600/37
+        compatible_source_ids:
+        - laserstack_561
+        notes: SlideBook configuration named 600/37 selects the 561 nm source and CSU-W Filter Wheel 1 position 8. Manufacturer and product code are not identified by the available evidence.
+        bands:
+        - center_nm: 600
+          width_nm: 37
+  - id: csu_w1_brightfield_switcher
+    name: Yokogawa CSU-W Brightfield Switcher
+    element_type: selector
+    stage_role: splitter
+    selection_mode: exclusive
+    supported_branch_modes:
+    - selected
+    supported_branch_count: 2
+    positions:
+      Pos_1:
+        component_type: passthrough
+        notes: Confocal position. All supplied spinning-disk SlideBook configurations select Brightfield Switcher position 1.
+      Pos_2:
+        component_type: passthrough
+        notes: Transmitted-light position. Both supplied BF camera and BF eyes configurations select Brightfield Switcher position 2.
   - id: trinocular_port_selector
     name: Trinocular Head Port Selector
     element_type: splitter
     stage_role: splitter
+    selection_mode: exclusive
+    supported_branch_modes:
+    - selected
+    supported_branch_count: 2
 light_paths:
 - id: confocal_spinning_disk
   illumination_sequence:
@@ -354,9 +431,13 @@ light_paths:
   - source_id: laserstack_561
   - source_id: laserstack_640
   - optical_path_element_id: csu_w1_dichroic_slider
+    position_id: Pos_1
   detection_sequence:
   - optical_path_element_id: csu_w1_dichroic_slider
+    position_id: Pos_1
   - optical_path_element_id: csu_w1_emission_wheel
+  - optical_path_element_id: csu_w1_brightfield_switcher
+    position_id: Pos_1
   - endpoint_id: detector_1
   route_type: confocal_spinning_disk
   imaging_modes:
@@ -392,6 +473,8 @@ light_paths:
       - branch_id: to_camera
         label: To Camera
         sequence:
+        - optical_path_element_id: csu_w1_brightfield_switcher
+          position_id: Pos_2
         - endpoint_id: detector_1
       - branch_id: to_eyepieces
         label: To Eyepieces
