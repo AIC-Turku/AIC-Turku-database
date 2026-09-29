@@ -62,14 +62,14 @@ def fixture_view(inst, pool=None):
 
 def test_complete_catalogue_coverage_states_and_synthetic_exclusion():
     view = catalogue()
-    assert view['total'] == 138
-    assert view['current_count'] == 136
-    assert view['spare_count'] == 35 and view['instrument_count'] == 101
+    assert view['total'] == 139
+    assert view['current_count'] == 137
+    assert view['spare_count'] == 35 and view['instrument_count'] == 102
     assert view['historical_count'] == 2
     assert view['problem_count'] == 8
     assert view['excluded_instrument_ids'] == ['scope-testx1']
     assert all(row['instrument_id'] != 'scope-testx1' for row in view['items'])
-    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == 91
+    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == 92
     assert sum(row['installation_status'] == 'not_installed' for row in view['items']) == 10
 
 
@@ -118,8 +118,9 @@ def test_source_views_and_hardware_are_unchanged():
             assert source == row['source_record']['objective'] == json.loads(row['source_text'])
         else:
             source = next(obj for obj in pool['items'] if obj['id'] == row['id'])
-            for key in ['source_text','condition','condition_note','enquiry','quantity','availability','product_code']:
-                assert row[key] == source[key]
+            for key in ['source_text','working_distance_text','working_distance_verification',
+                        'condition','condition_note','enquiry','quantity','availability','product_code']:
+                assert row.get(key) == source.get(key)
 
 
 def test_units_optional_notes_and_retired_status_stay_distinct():
@@ -127,13 +128,32 @@ def test_units_optional_notes_and_retired_status_stay_distinct():
     optional = next(row for row in view['items'] if row['instrument_id'] == 'scope-olympus-bx60' and row['objective_id'] == '60x_oil')
     assert optional['installation_status'] == 'not_installed'
     assert 'Optional objective' in optional['notes']
-    assert optional['working_distance_label'] == 'Not recorded'
+    assert optional['working_distance_label'] == '0.12 mm'
     assert all('Historical record' in row['association_label'] for row in view['items'] if row['retired'])
     assert all(row['source_kind'] == 'instrument' for row in view['items'] if row['retired'])
     pool_wd = next(row for row in view['items'] if row['id'] == 'pool-zeiss-441351-9970')
     assert pool_wd['working_distance_label'] == '2,9 at cover glass 0,75'
-    assert 'unit unconfirmed' in pool_wd['working_distance_heading']
+    assert pool_wd['working_distance_heading'] == 'Working distance (mm)'
+    corrected = next(row for row in view['items'] if row['id'] == 'pool-leica-506082')
+    assert corrected['working_distance_text'] == '0,17'
+    assert corrected['working_distance_label'] == '0.07'
+    assert 'cover-glass specification' in corrected['working_distance_verification_note']
+    filled = next(row for row in view['items'] if row['id'] == 'pool-leica-506170')
+    assert filled['working_distance_text'] is None
+    assert filled['working_distance_label'] == '0.59'
     assert fixture_view(fixture())['items'][0]['working_distance_label'] == '0.62 mm'
+
+
+def test_verified_working_distance_keeps_its_unit_if_source_unit_is_unknown():
+    pool, instruments, vocab, facility = inputs()
+    pool = copy.deepcopy(pool)
+    pool['source']['working_distance_unit'] = None
+    view = build_objective_catalogue_view(pool, instruments, vocab, facility)
+    verified = next(row for row in view['items'] if row['id'] == 'pool-leica-506082')
+    unverified = next(row for row in view['items'] if row['id'] == 'pool-zeiss-441351-9970')
+    assert verified['working_distance_heading'] == 'Working distance (mm)'
+    assert verified['working_distance_label'] == '0.07'
+    assert unverified['working_distance_heading'] == 'Working distance (unit unconfirmed)'
 
 
 @pytest.mark.parametrize('config', [None, {'exclude_instrument_ids': 'scope-fixture'},

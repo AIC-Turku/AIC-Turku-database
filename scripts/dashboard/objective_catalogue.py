@@ -152,14 +152,28 @@ def build_objective_catalogue_view(pool: dict, instruments: list[dict], vocabula
     for item in pool["items"]:
         row = copy.deepcopy(item)
         wd_unit = pool["source"]["working_distance_unit"]
+        wd_verification = item.get("working_distance_verification")
+        wd_display = f"{wd_verification['value_mm']:g}" if wd_verification else item["working_distance_text"]
+        wd_display_unit = wd_verification["unit"] if wd_verification else wd_unit
         row.update({
             "source_kind": "spare_pool", "instrument_id": "", "instrument_name": None,
             "instrument_url": None, "retired": False, "is_installed": None,
             "installation_status": "pool_listing", "installation_label": "Not established by pool listing",
             "association_label": "Spare-pool listing", "notes": "",
-            "working_distance_heading": "Working distance" + (" (unit unconfirmed)" if not wd_unit else ""),
-            "working_distance_label": (item["working_distance_text"] + (" " + wd_unit if wd_unit else ""))
-                if item["working_distance_text"] else "Not recorded",
+            "working_distance_heading": (
+                f"Working distance ({wd_display_unit})"
+                if wd_display_unit else "Working distance (unit unconfirmed)"
+            ),
+            "working_distance_label": wd_display or "Not recorded",
+            "working_distance_verification_note": (
+                wd_verification["note"] if wd_verification else None
+            ),
+            "working_distance_verification_url": (
+                wd_verification["url"] if wd_verification else None
+            ),
+            "working_distance_verification_source": (
+                wd_verification["source"] if wd_verification else None
+            ),
             # Display-only grouping: the source's Dry label/value stays intact on the card and in JSON.
             "immersion_filter": "air" if item["immersion"] == "dry" else item["immersion"],
         })
@@ -174,7 +188,8 @@ def build_objective_catalogue_view(pool: dict, instruments: list[dict], vocabula
         row["search_text"] = " ".join(_text(row.get(key)) for key in (
             "id", "family_label", "name", "product_code", "source_text", "mount_label",
             "immersion_label", "kind_label", "condition_label", "magnification_label", "condition_note",
-            "instrument_name", "association_label", "location", "notes"))
+            "instrument_name", "association_label", "location", "notes",
+            "working_distance_verification_note", "working_distance_verification_source"))
 
     def options(key, label_key):
         labels = {}

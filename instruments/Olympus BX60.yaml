@@ -124,14 +124,14 @@ hardware:
     product_code: ''
     magnification: 60.0
     numerical_aperture: 1.25
-    working_distance: ''
+    working_distance: 0.12 mm
     immersion: oil
     correction: plan_fluorite
     afc_compatible: false
     specialties:
     - phase
-    notes: Optional objective. Includes adjustable iris.
-    url: ''
+    notes: Optional objective. Includes adjustable iris. Working distance cross-checked against an exact UPlanFl 60x/1.25 Oil Iris Ph3 listing.
+    url: https://wie-tec.de/Olympus-microscope-objective-UPlanFl-60x-125-Oil-Iris-Ph3-UPLFLN60XOI
     is_installed: false
   sources:
   - kind: halogen_lamp

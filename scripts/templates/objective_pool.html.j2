@@ -52,6 +52,7 @@ Use this catalogue to compare objectives recorded on {{ facility_short_name }} m
         <div><dt>Numerical aperture (NA)</dt><dd>{{ item.numerical_aperture_text or 'Not recorded' }}</dd></div>
         <div><dt>Immersion</dt><dd>{{ item.immersion_label }}</dd></div>
         <div><dt>{{ item.working_distance_heading }}</dt><dd>{{ item.working_distance_label }}</dd></div>
+        {% if item.working_distance_verification_note %}<div><dt>Working-distance verification</dt><dd>{{ item.working_distance_verification_note }} <a href="{{ item.working_distance_verification_url }}" target="_blank" rel="noopener">Evidence: {{ item.working_distance_verification_source }}</a>.</dd></div>{% endif %}
         {% if item.source_kind == 'spare_pool' %}<div><dt>Mounting (source group)</dt><dd>{{ item.mount_label }}</dd></div>{% endif %}
         <div><dt>Availability</dt><dd>{{ item.availability_label }}</dd></div>
       </dl>
@@ -82,7 +83,7 @@ Use this catalogue to compare objectives recorded on {{ facility_short_name }} m
   </div>
   <details class="pool-provenance"><summary>Sources, units and limitations</summary>
     <p>Microscope entries come from their existing objective records rather than being copied into the spare pool. Explicit installed/not-installed flags are preserved; missing flags remain unconfirmed. Retired-instrument associations are historical, not current locations or spare-stock declarations.</p>
-    <p class="pool-muted">Pool source: {{ pool.source.file_name }}, compiled by {{ pool.source.compiled_by }}. Date as written: <strong>{{ pool.source.date_text }}</strong>{% if pool.source.date_iso %} ({{ pool.source.date_iso }}){% else %} (date format not yet confirmed){% endif %}. Pool working-distance values are reproduced as supplied{% if pool.source.working_distance_unit %}, in {{ pool.source.working_distance_unit }}{% else %}; their units are not stated in the source and need confirmation{% endif %}. Microscope working distances retain their own recorded units. A catalogue record is not a verified count of physical copies.</p>
+    <p class="pool-muted">Pool source: {{ pool.source.file_name }}, compiled by {{ pool.source.compiled_by }}. Date as written: <strong>{{ pool.source.date_text }}</strong>{% if pool.source.date_iso %} ({{ pool.source.date_iso }}){% else %} (date format not yet confirmed){% endif %}. Original pool working-distance values are preserved verbatim{% if pool.source.working_distance_unit %}; their confirmed unit is {{ pool.source.working_distance_unit }}{% else %}; their units are not stated in the source and need confirmation{% endif %}. Where an exact product-code check establishes a corrected or previously missing working distance, the catalogue shows that value separately with its evidence and keeps the original source text in Details. Microscope working distances retain their own recorded units. A catalogue record is not a verified count of physical copies.</p>
     <p>Spare records are not added to the Methods Generator or Virtual Microscope. This combined catalogue does not change either tool's installed-hardware data.</p>
   </details>
 </div>

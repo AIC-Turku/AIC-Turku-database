@@ -23,6 +23,46 @@ def position(name, stage, mechanism_id, index):
     return mechanism['options'][index]['value']
 
 
+def test_objective_working_distance_repairs_match_exact_identified_models():
+    irbe = {row['product_code']: row for row in ledger('Leica DM IRBE.yaml')['hardware']['objectives']}
+    assert irbe['506010']['working_distance'] == '3.8 mm'
+    assert irbe['506062']['working_distance'] == '2.6-1.8 mm'
+
+    dmre = {row['product_code']: row for row in ledger('Leica DMRE.yaml')['hardware']['objectives']}
+    assert dmre['506507']['working_distance'] == '11.0 mm'
+    assert 'phase' in dmre['506507']['specialties']
+    assert 'afc_compatible' not in dmre['506507']
+    assert dmre['506506']['working_distance'] == '1.15 mm'
+    assert dmre['506082']['working_distance'] == '0.07 mm'
+    assert 'cover-glass specification' in dmre['506082']['notes']
+
+    lambert = {str(row['product_code']): row for row in ledger('Lambert FLIM.yaml')['hardware']['objectives']}
+    assert lambert['421351-9970']['working_distance'] == '7.9 mm at cover glass 0.75'
+    assert 'correction_collar' in lambert['421351-9970']['specialties']
+    assert lambert['421361-9970']['working_distance'] == '2.9 mm at cover glass 0.75'
+    assert lambert['421361-9970']['model'] == 'LD Plan-Neofluar 40x/0.6 Corr Ph2 M27'
+    assert 'correction_collar' in lambert['421361-9970']['specialties']
+    assert lambert['420780-9900']['working_distance'] == '0.19 mm'
+
+    dmrb = {row['product_code']: row for row in ledger('Leica DM RB.yaml')['hardware']['objectives']}
+    assert dmrb['506513']['working_distance'] == '0.59 mm'
+    assert dmrb['506007']['working_distance'] == '0.08 mm'
+    assert dmrb['506038']['working_distance'] == '0.09 mm'
+
+    tirf_record = ledger('Zeiss TIRF.yaml')['hardware']['objectives']
+    preexisting_2_5x = next(row for row in tirf_record if row['id'] == '2.5x_air')
+    assert preexisting_2_5x['is_installed'] is True
+    assert 'open staff question' in preexisting_2_5x['notes']
+    tirf = {str(row['product_code']): row for row in tirf_record}
+    assert tirf['420340-9901']['working_distance'] == '5.2 mm'
+    assert tirf['420650-9901']['working_distance'] == '0.55 mm'
+    assert tirf['440865']['working_distance'] == '1.8 mm at cover glass 1.0'
+    assert tirf['420780-9970']['working_distance'] == '0.10 mm'
+    assert tirf['420792-9800']['working_distance'] == '0.11 mm'
+    for code in ('420340-9901', '420650-9901', '440865', '420780-9970', '420792-9800'):
+        assert 'afc_compatible' not in tirf[code]
+
+
 def test_native_sensor_sizes_are_not_acquisition_output_sizes():
     nikon = ledger('Nikon Eclipse Ti2-E.yaml')['hardware']['detectors'][0]
     assert nikon['sensor_format_px'] == '2048 x 2048'

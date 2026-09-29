@@ -40,18 +40,18 @@ hardware:
   objectives:
   - id: 10x_air
     manufacturer: Leica
-    model: HCX PL FLUOTAR 10x/0.30
-    product_code: '506505'
+    model: HC PL FLUOTAR 10x/0.30 PH1
+    product_code: '506507'
     magnification: 10.0
     numerical_aperture: 0.3
-    working_distance: ''
+    working_distance: 11.0 mm
     immersion: air
     correction: plan_fluorite
-    afc_compatible: false
     specialties:
+    - phase
     - dic
-    notes: ''
-    url: ''
+    notes: The facility Leica DMRE getting-started record identifies the installed 10x as article 506507 with PH1. Independent exact-code specifications give an 11.0 mm working distance.
+    url: https://wie-tec.de/?a=17775&lang=eng
     is_installed: true
   - id: 20x_air
     manufacturer: Leica
@@ -59,15 +59,15 @@ hardware:
     product_code: '506506'
     magnification: 20.0
     numerical_aperture: 0.5
-    working_distance: ''
+    working_distance: 1.15 mm
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
     specialties:
     - phase
     - dic
-    notes: ''
-    url: ''
+    notes: Working distance verified against an exact 506506 facility technical specification.
+    url: https://www.bristol.ac.uk/media-library/sites/wolfson-bioimaging/documents/TIRF.pdf
     is_installed: true
   - id: 40x_air
     manufacturer: Leica
@@ -82,7 +82,7 @@ hardware:
     specialties:
     - phase
     - dic
-    notes: ''
+    notes: The facility DMRE getting-started record labels this installed 506014 objective as Ph3, but independent exact-code listings identify 506014 as Ph2, and facility staff confirmed Ph2 on 28 September 2026. The getting-started record is in error on this point. Working distance remains unknown.
     url: ''
     is_installed: true
   - id: 63x_oil
@@ -91,15 +91,15 @@ hardware:
     product_code: '506082'
     magnification: 63.0
     numerical_aperture: 1.32
-    working_distance: ''
+    working_distance: 0.07 mm
     immersion: oil
     correction: plan_apochromat
     afc_compatible: false
     specialties:
     - phase
     - dic
-    notes: ''
-    url: ''
+    notes: Working distance is 0.07 mm; 0.17 mm is the cover-glass specification and must not be used as WD.
+    url: https://www.bristol.ac.uk/media-library/sites/wolfson-bioimaging/documents/widefield-1%20tech%20specs.pdf
     is_installed: true
   - id: 100x_oil
     manufacturer: Leica

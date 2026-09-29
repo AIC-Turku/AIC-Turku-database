@@ -45,14 +45,14 @@ hardware:
     product_code: '506010'
     magnification: 10.0
     numerical_aperture: 0.3
-    working_distance: ''
+    working_distance: 3.8 mm
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
     specialties:
     - phase
-    notes: ''
-    url: ''
+    notes: Working distance verified against an exact 506010 legacy objective listing.
+    url: https://www.bristol.ac.uk/media-library/sites/wolfson-bioimaging/documents/widefield-4%20tech%20specs.pdf
     is_installed: true
   - id: 20x_air
     manufacturer: Leica
@@ -90,15 +90,15 @@ hardware:
     product_code: '506062'
     magnification: 63.0
     numerical_aperture: 0.7
-    working_distance: ''
+    working_distance: 2.6-1.8 mm
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
     specialties:
     - phase
     - correction_collar
-    notes: ''
-    url: ''
+    notes: Working-distance range cross-checked against an exact 506062 legacy objective listing.
+    url: https://www.spachoptics.com/Leica-Pl-Fluotar-L-63x-PH2-Objective-p/leica-506062.htm
     is_installed: true
   magnification_changers:
   - manufacturer: Leica

@@ -6,7 +6,10 @@ source:
   compiled_by: Jari Korhonen
   date_text: '020426'
   date_iso: null
-  working_distance_unit: null
+  # The source document does not state the WD unit. Guillaume Jacquemet confirmed mm on
+  # 27 September 2026 (the Leica dipping 20x/0.50 and 40x/0.80 entries read 3.5 and 3.3 mm).
+  # See docs/objective_pool.md.
+  working_distance_unit: mm
 families:
 - id: zeiss
   label: ZEISS
@@ -348,6 +351,12 @@ items:
   numerical_aperture_text: '0.70'
   immersion: dry
   working_distance_text: null
+  working_distance_verification:
+    value_mm: 0.59
+    unit: mm
+    source: University of Bristol Confocal 9 technical specification
+    url: https://www.bristol.ac.uk/media-library/sites/wolfson-bioimaging/documents/confocal-9%20tech%20specs%20.pdf
+    note: The pool source leaves WD blank; the exact 506170 objective is independently documented with a 0.59 mm working distance.
   condition: not_assessed
   condition_note: null
   availability: unconfirmed
@@ -467,6 +476,12 @@ items:
   numerical_aperture_text: '1.32'
   immersion: oil
   working_distance_text: 0,17
+  working_distance_verification:
+    value_mm: 0.07
+    unit: mm
+    source: University of Bristol Wide-field imaging system 1 technical specification
+    url: https://www.bristol.ac.uk/media-library/sites/wolfson-bioimaging/documents/widefield-1%20tech%20specs.pdf
+    note: The pool source records WD 0,17, but the exact 506082 objective is independently documented with WD 0.07 mm; 0.17 mm is the cover-glass specification.
   condition: reported_issue
   condition_note: problem with UV transmission
   availability: unconfirmed

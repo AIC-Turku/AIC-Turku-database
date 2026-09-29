@@ -54,29 +54,31 @@ hardware:
     product_code: 421351-9970
     magnification: 20.0
     numerical_aperture: 0.4
-    working_distance: ''
+    working_distance: 7.9 mm at cover glass 0.75
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
     specialties:
     - phase
+    - correction_collar
     notes: Korr (correction collar)
-    url: ''
+    url: https://www.micro-shop.zeiss.com/en/ts/shop/objectives/421351-9970-000/Objective-LD-Plan-Neofluar-20x-0.4-Corr-Ph2-M27
     is_installed: true
   - id: 40x_air_ph2
     manufacturer: Zeiss
-    model: Plan NEOFLUAR 40x/0.6 Ph2 Korr
+    model: LD Plan-Neofluar 40x/0.6 Corr Ph2 M27
     product_code: 421361-9970
     magnification: 40.0
     numerical_aperture: 0.6
-    working_distance: ''
+    working_distance: 2.9 mm at cover glass 0.75
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
     specialties:
     - phase
+    - correction_collar
     notes: Korr (correction collar)
-    url: ''
+    url: https://www.micro-shop.zeiss.com/zh/us/shop/objectives/421361-9970-000/Objective-LD-Plan-Neofluar-40x-0.6-Corr-Ph2-M27
     is_installed: true
   - id: 63x_oil
     manufacturer: Zeiss
@@ -84,13 +86,13 @@ hardware:
     product_code: 420780-9900
     magnification: 63.0
     numerical_aperture: 1.4
-    working_distance: ''
+    working_distance: 0.19 mm
     immersion: oil
     correction: plan_apochromat
     afc_compatible: false
     specialties: []
     notes: ''
-    url: ''
+    url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420780-9900-000/Objective-Plan-Apochromat-63x-1.4-Oil-M27
     is_installed: true
   sources:
   - kind: led
