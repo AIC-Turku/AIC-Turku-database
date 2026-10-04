@@ -1,13 +1,22 @@
 site_name: AIC Microscopy Dashboard
+site_description: Public microscope inventory, optical-path documentation, QC and
+  maintenance history, experiment planning, and methods-reporting resources for AIC
+  Turku.
 site_url: https://aic-turku.github.io/AIC-Turku-database/
+repo_url: https://github.com/AIC-Turku/AIC-Turku-database
+repo_name: Source on GitHub
+copyright: 'Code: MIT · Images: copyrighted; see rights · <a href="https://aic-turku.github.io/AIC-Turku-database/licensing/">Licensing
+  and image rights</a>'
 use_directory_urls: true
 docs_dir: dashboard_docs
 theme:
   name: material
+  custom_dir: overrides
   features:
   - navigation.tabs
   - navigation.sections
   - navigation.top
+  - navigation.footer
   - toc.integrate
   - search.suggest
   - search.highlight
@@ -38,7 +47,7 @@ extra_css:
 - assets/stylesheets/dashboard.css
 extra_javascript:
 - assets/javascripts/dashboard.js
-- https://cdn.jsdelivr.net/npm/chart.js
+- https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js
 - assets/javascripts/charts.js
 nav:
 - Fleet overview: index.md
