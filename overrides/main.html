@@ -2,6 +2,12 @@
 
 {% block extrahead %}
   {{ super() }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap">
+  {% if config.extra.theme_colors %}
+    <style>:root{ {%- for key, value in config.extra.theme_colors.items() %}--brand-{{ key | replace('_', '-') }}:{{ value | e }};{% endfor -%} }</style>
+  {% endif %}
   <link rel="alternate" type="text/plain" href="{{ config.site_url }}llms.txt" title="LLM discovery">
   <link rel="alternate" type="application/json" href="{{ config.site_url }}assets/llm_inventory.json" title="Machine-readable microscope inventory">
   <meta name="robots" content="index,follow,max-image-preview:large">
@@ -27,4 +33,13 @@
       <meta name="twitter:card" content="summary">
     {% endif %}
   {% endif %}
+{% endblock %}
+
+{% block header %}
+  {% if config.extra.parent_site %}
+    <div class="aic-parentbar">
+      <a href="{{ config.extra.parent_site.url | e }}">&larr; {{ config.extra.parent_site.name | e }}</a>
+    </div>
+  {% endif %}
+  {{ super() }}
 {% endblock %}

@@ -429,6 +429,56 @@ def optimize_public_jpeg(path: Path) -> None:
         )
 
 
+_THEME_COLOR_KEYS = ("blue", "blue_dark", "orange", "navy", "slate")
+_HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _build_theme_colors(branding: dict[str, Any]) -> dict[str, str]:
+    """Facility colours from `branding.colors`; absent keys fall back to the CSS defaults.
+
+    Only six-digit hex values are accepted, because the values are written into a
+    stylesheet. An invalid value is an error, not something to skip silently.
+    """
+    raw = branding.get("colors")
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("facility.yaml branding.colors must be a mapping.")
+    colors: dict[str, str] = {}
+    for key, value in raw.items():
+        if key not in _THEME_COLOR_KEYS:
+            raise ValueError(f"Unknown branding.colors key {key!r}; allowed: {', '.join(_THEME_COLOR_KEYS)}.")
+        if not isinstance(value, str) or not _HEX_COLOR.match(value):
+            raise ValueError(f"branding.colors.{key} must be a #rrggbb hex value, got {value!r}.")
+        colors[key] = value
+    return colors
+
+
+def _build_parent_site_extra(facility: dict[str, Any]) -> dict[str, Any]:
+    """Expose the authoritative parent site to templates, from facility.yaml.
+
+    Nothing is invented: with no `organization_url` there is no link bar.
+    """
+    url = str(facility.get("organization_url") or "").strip()
+    if not url:
+        return {}
+    name = str(facility.get("full_name") or facility.get("short_name") or "").strip()
+    return {"parent_site": {"url": url, "name": name}}
+
+
+def _build_copyright(facility: dict[str, Any], site_url: str) -> str:
+    """Footer line: licence summary plus a link back to the parent site."""
+    parts = [
+        "Code: MIT",
+        "Images: copyrighted; see rights",
+        f'<a href="{site_url.rstrip("/")}/licensing/">Licensing and image rights</a>',
+    ]
+    extra = _build_parent_site_extra(facility).get("parent_site")
+    if extra and extra["name"]:
+        parts.append(f'<a href="{extra["url"]}">{extra["name"]}</a>')
+    return " · ".join(parts)
+
+
 def build_mkdocs_config(
     *,
     facility: dict[str, Any],
@@ -438,6 +488,7 @@ def build_mkdocs_config(
 ) -> dict[str, Any]:
     """Build mkdocs.yml content."""
     site_url = os.getenv("MKDOCS_SITE_URL", str(facility.get("public_site_url", "")))
+    theme_colors = _build_theme_colors(branding)
 
     return {
         "site_name": str(facility.get("site_name", "Microscopy Dashboard")),
@@ -445,10 +496,7 @@ def build_mkdocs_config(
         "site_url": site_url,
         "repo_url": str(facility.get("source_repository_url", "")),
         "repo_name": "Source on GitHub",
-        "copyright": (
-            f'Code: MIT · Images: copyrighted; see rights · '
-            f'<a href="{site_url.rstrip("/")}/licensing/">Licensing and image rights</a>'
-        ),
+        "copyright": _build_copyright(facility, site_url),
         "use_directory_urls": True,
         "docs_dir": "dashboard_docs",
         "theme": {
@@ -480,9 +528,11 @@ def build_mkdocs_config(
                     },
                 },
             ],
+            "font": {"text": "Open Sans", "code": "Roboto Mono"},
             "logo": str(branding.get("logo", "assets/images/logo.svg")),
             "favicon": str(branding.get("favicon", "assets/images/favicon.svg")),
         },
+        "extra": {**_build_parent_site_extra(facility), **({"theme_colors": theme_colors} if theme_colors else {})},
         "plugins": ["search"],
         "markdown_extensions": [
             "admonition",

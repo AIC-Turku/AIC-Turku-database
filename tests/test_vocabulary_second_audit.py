@@ -209,3 +209,24 @@ def test_dictionary_flags_vocabulary_without_a_group(tmp_path):
     rendered = build_vocabulary_dictionary_markdown(vocabulary)
     assert "Uncategorised (needs a group in site_render.py)" in rendered
     assert "{ #brand-new }" in rendered
+
+
+def test_parent_site_link_comes_from_facility_yaml_only():
+    from scripts.dashboard.site_render import _build_copyright, _build_parent_site_extra
+
+    facility = {"full_name": "Core at Centre", "organization_url": "https://example.org/core/"}
+    assert _build_parent_site_extra(facility) == {"parent_site": {"url": "https://example.org/core/", "name": "Core at Centre"}}
+    assert 'href="https://example.org/core/"' in _build_copyright(facility, "https://x.test/site/")
+    # No authored URL, no invented link.
+    assert _build_parent_site_extra({"full_name": "Core"}) == {}
+    assert "example.org" not in _build_copyright({"full_name": "Core"}, "https://x.test/site/")
+
+
+def test_theme_colors_are_validated_hex_from_facility_config():
+    from scripts.dashboard.site_render import _build_theme_colors
+
+    assert _build_theme_colors({}) == {}
+    assert _build_theme_colors({"colors": {"blue": "#019ce1"}}) == {"blue": "#019ce1"}
+    for bad in ({"blue": "red"}, {"blue": "#fff"}, {"nope": "#019ce1"}):
+        with pytest.raises(ValueError):
+            _build_theme_colors({"colors": bad})
