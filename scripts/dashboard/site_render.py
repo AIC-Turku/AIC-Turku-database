@@ -29,6 +29,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -345,39 +346,66 @@ def build_vocabulary_dictionary_markdown(vocabulary: Vocabulary) -> str:
             source = "inline policy vocabulary"; source_key = f"inline:{namespace}"; source_name = namespace
         group = source_groups.setdefault(source_key, {"source": source, "source_name": source_name, "namespaces": [], "terms": terms})
         group["namespaces"].append(namespace)
+    # Display grouping only: which authoring task a vocabulary serves. A vocabulary
+    # missing from every group is listed under a visible diagnostic group rather
+    # than dropped or silently filed, so a new vocab file cannot go unnoticed.
     categories = [
-        ("🧭 Capabilities & Workflows", {"modalities", "modules", "imaging_modes", "contrast_methods", "measurement_readouts", "workflow_tags", "assay_operations", "non_optical_capabilities", "optical_routes"}),
-        ("🔬 Light Paths & Hardware", {"scanner_types", "light_source_kinds", "light_source_roles", "detector_kinds", "stage_types", "autofocus_types", "triggering_modes", "optical_component_types", "endpoint_types", "branch_modes", "ocular_availability"}),
-        ("🔭 Objectives", {"objective_immersion", "objective_corrections", "objective_specialties"}),
-        ("💻 Software", {"software_roles"}),
-        ("✅ Quality Control", {"qc_type", "qc_metric_classes", "qc_evaluation_status", "qc_artifact_roles", "qc_measurement_positions", "qc_setpoint_units", "metric_unit"}),
-        ("🛠️ Maintenance", {"maintenance_action", "maintenance_reason", "maintenance_status", "service_provider"}),
+        ("Capabilities & workflows", {"modalities", "modules", "imaging_modes", "contrast_methods", "measurement_readouts", "workflow_tags", "assay_operations", "non_optical_capabilities", "optical_routes", "adaptive_illumination_methods"}),
+        ("Light paths & optics", {"scanner_types", "light_source_kinds", "light_source_roles", "light_source_technologies", "light_source_timing_modes", "detector_kinds", "stage_types", "stand_orientations", "autofocus_types", "triggering_modes", "optical_component_types", "optical_modulator_types", "optical_path_element_types", "optical_path_stage_roles", "phase_mask_types", "light_sheet_types", "endpoint_types", "branch_modes", "selection_modes", "ocular_availability"}),
+        ("Objectives", {"objective_immersion", "objective_corrections", "objective_specialties"}),
+        ("Software", {"software_roles"}),
+        ("Quality control", {"qc_type", "qc_metric_classes", "qc_evaluation_status", "qc_artifact_roles", "qc_measurement_positions", "qc_setpoint_units", "metric_unit"}),
+        ("Maintenance", {"maintenance_action", "maintenance_reason", "maintenance_status", "service_provider"}),
+        ("Record semantics", {"identity_semantics"}),
     ]
-    rendered: set[str] = set()
-    def render_group(source_key: str, group: dict[str, Any]) -> None:
-        lines.append(f"    ## {resolve_vocab_section_title(str(group['source_name']))}\n")
-        namespaces = ", ".join(f"`{_markdown_table_cell(name)}`" for name in sorted(set(group["namespaces"])))
-        lines.append(f"    **Canonical source:** `{_markdown_table_cell(group['source'])}`  ")
-        lines.append(f"    **Used by namespaces:** {namespaces}\n")
-        lines.append("    | Label | Canonical ID | Synonyms (rewrite-safe) | Classified values (preserved) | Description |")
-        lines.append("    | :--- | :--- | :--- | :--- | :--- |")
-        for term in sorted(group["terms"].values(), key=lambda item: item.label.lower()):
-            synonyms = ", ".join(f"`{_markdown_table_cell(value).replace(chr(96), chr(92)+chr(96))}`" for value in term.synonyms) if term.synonyms else "-"
-            raw_classified = term.metadata.get("classified_values", [])
-            classified = ", ".join(f"`{_markdown_table_cell(value).replace(chr(96), chr(92)+chr(96))}`" for value in raw_classified if isinstance(value, str)) if isinstance(raw_classified, list) and raw_classified else "-"
-            lines.append(f"    | **{_markdown_table_cell(term.label)}** | `{_markdown_table_cell(term.id)}` | {synonyms} | {classified} | {_markdown_table_cell(term.description) if term.description else '-'} |")
-        lines.append("\n"); rendered.add(source_key)
+    grouped: list[tuple[str, list[tuple[str, dict[str, Any]]]]] = []
+    placed: set[str] = set()
     for title, names in categories:
-        matching = [(key, group) for key, group in source_groups.items() if group["source_name"] in names]
+        matching = sorted(
+            ((key, group) for key, group in source_groups.items() if group["source_name"] in names),
+            key=lambda item: str(item[1]["source_name"]),
+        )
+        placed.update(key for key, _ in matching)
         if matching:
-            lines.append(f'=== "{title}"\n')
-            for key, group in sorted(matching, key=lambda item: str(item[1]["source_name"])):
-                render_group(key, group)
-    remaining = [(key, group) for key, group in source_groups.items() if key not in rendered]
-    if remaining:
-        lines.append('=== "📦 Other"\n')
-        for key, group in sorted(remaining, key=lambda item: str(item[1]["source_name"])):
-            render_group(key, group)
+            grouped.append((title, matching))
+    leftover = sorted(
+        ((key, group) for key, group in source_groups.items() if key not in placed),
+        key=lambda item: str(item[1]["source_name"]),
+    )
+    if leftover:
+        grouped.append(("Uncategorised (needs a group in site_render.py)", leftover))
+
+    def slug(text: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+    # Jump index: every group and vocabulary, one line per group.
+    lines.append('<div class="vocab-dictionary" markdown>\n')
+    lines.append('<input type="search" id="vocab-filter" class="vocab-filter" placeholder="Filter terms, IDs and synonyms" aria-label="Filter vocabulary terms">\n')
+    lines.append('<p id="vocab-filter-status" class="vocab-filter-status" role="status" aria-live="polite"></p>\n')
+    lines.append("## Jump to a vocabulary { #jump }\n")
+    for title, matching in grouped:
+        links = " · ".join(
+            f"[{resolve_vocab_section_title(str(group['source_name']))}](#{slug(str(group['source_name']))})"
+            for _, group in matching
+        )
+        lines.append(f"**{title}:** {links}\n")
+    for title, matching in grouped:
+        lines.append(f"## {title} {{ #group-{slug(title)} }}\n")
+        for _, group in matching:
+            section = resolve_vocab_section_title(str(group["source_name"]))
+            lines.append(f"### {section} {{ #{slug(str(group['source_name']))} }}\n")
+            namespaces = ", ".join(f"`{_markdown_table_cell(name)}`" for name in sorted(set(group["namespaces"])))
+            lines.append(f"**Canonical source:** `{_markdown_table_cell(group['source'])}`  ")
+            lines.append(f"**Used by namespaces:** {namespaces}\n")
+            lines.append("| Label | Canonical ID | Synonyms (rewrite-safe) | Classified values (preserved) | Description |")
+            lines.append("| :--- | :--- | :--- | :--- | :--- |")
+            for term in sorted(group["terms"].values(), key=lambda item: item.label.lower()):
+                synonyms = ", ".join(f"`{_markdown_table_cell(value).replace(chr(96), chr(92)+chr(96))}`" for value in term.synonyms) if term.synonyms else "-"
+                raw_classified = term.metadata.get("classified_values", [])
+                classified = ", ".join(f"`{_markdown_table_cell(value).replace(chr(96), chr(92)+chr(96))}`" for value in raw_classified if isinstance(value, str)) if isinstance(raw_classified, list) and raw_classified else "-"
+                lines.append(f"| **{_markdown_table_cell(term.label)}** | `{_markdown_table_cell(term.id)}` | {synonyms} | {classified} | {_markdown_table_cell(term.description) if term.description else '-'} |")
+            lines.append("")
+    lines.append("</div>\n")
     return "\n".join(lines)
 
 
