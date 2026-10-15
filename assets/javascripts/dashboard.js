@@ -54,3 +54,51 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(function () { revealTarget(id); }, 0);
   });
 })();
+
+// Vocabulary dictionary filter: hide table rows, then whole vocabularies and
+// groups, that do not match. Matching is plain substring over the row text.
+document.addEventListener('DOMContentLoaded', function () {
+  var input = document.getElementById('vocab-filter');
+  var root = document.querySelector('.vocab-dictionary');
+  if (!input || !root) return;
+  var status = document.getElementById('vocab-filter-status');
+  var tables = Array.prototype.slice.call(root.querySelectorAll('table'));
+
+  function sectionNodes(table) {
+    // Heading, source lines and table form one vocabulary section.
+    // Material wraps tables in scroll containers; climb to the direct child of root.
+    var wrap = table;
+    while (wrap.parentElement && wrap.parentElement !== root) wrap = wrap.parentElement;
+    var nodes = [wrap];
+    var prev = wrap.previousElementSibling;
+    while (prev && !/^H[23]$/.test(prev.tagName)) { nodes.push(prev); prev = prev.previousElementSibling; }
+    if (prev) nodes.push(prev);
+    return nodes;
+  }
+
+  function apply() {
+    var q = input.value.trim().toLowerCase();
+    var shown = 0, total = 0;
+    tables.forEach(function (table) {
+      var rows = table.querySelectorAll('tbody tr');
+      var any = false;
+      rows.forEach(function (row) {
+        total += 1;
+        var hit = !q || row.textContent.toLowerCase().indexOf(q) !== -1;
+        row.hidden = !hit;
+        if (hit) { any = true; shown += 1; }
+      });
+      sectionNodes(table).forEach(function (n) { n.hidden = !any; });
+    });
+    root.querySelectorAll('h2[id^="group-"]').forEach(function (h) {
+      var el = h.nextElementSibling, visible = false;
+      while (el && !(el.tagName === 'H2')) {
+        if (el.tagName === 'H3' && !el.hidden) visible = true;
+        el = el.nextElementSibling;
+      }
+      h.hidden = !visible;
+    });
+    if (status) status.textContent = q ? shown + ' of ' + total + ' terms match' : '';
+  }
+  input.addEventListener('input', apply);
+});

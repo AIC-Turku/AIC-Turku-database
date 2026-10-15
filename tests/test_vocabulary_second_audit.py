@@ -191,3 +191,21 @@ def test_dashboard_js_reveals_inactive_tab_for_hash_targets():
     source = (Path(__file__).resolve().parents[1] / "assets/javascripts/dashboard.js").read_text(encoding="utf-8")
     assert ".tabbed-block" in source
     assert "hashchange" in source
+
+
+def test_dictionary_is_one_page_with_every_vocabulary_grouped():
+    """No content tabs, and no real vocabulary lands in the diagnostic group."""
+    vocabulary = Vocabulary(ROOT / "vocab")
+    rendered = build_vocabulary_dictionary_markdown(vocabulary)
+    assert '=== "' not in rendered
+    assert "Uncategorised" not in rendered
+    assert 'id="vocab-filter"' in rendered
+    assert "{ #autofocus-types }" in rendered
+
+
+def test_dictionary_flags_vocabulary_without_a_group(tmp_path):
+    path = write_vocab(tmp_path, "brand_new", [{"id": "a", "label": "A", "description": "A"}])
+    vocabulary = Vocabulary(tmp_path / "vocab", vocab_registry={"brand_new": {"source": "file", "path": str(path)}})
+    rendered = build_vocabulary_dictionary_markdown(vocabulary)
+    assert "Uncategorised (needs a group in site_render.py)" in rendered
+    assert "{ #brand-new }" in rendered
