@@ -459,3 +459,129 @@
   .vocab-dictionary td:nth-child(3):has(> :only-child:empty), .vocab-dictionary td:nth-child(3):not(:has(code)),
   .vocab-dictionary td:nth-child(4):not(:has(code)) { display: none; }
 }
+
+/* Facility look: white header, condensed uppercase navigation, slate headings,
+   a blue primary and one accent. The colours are facility configuration
+   (facility.yaml `branding.colors`, emitted as --brand-* in the page head); the
+   values below are neutral defaults for a facility that sets none. The accent is
+   decoration only; link text uses the darker blue so it keeps AA contrast. */
+:root {
+  --aic-blue: var(--brand-blue, #1e88e5);
+  --aic-blue-dark: var(--brand-blue-dark, #0b5cad);
+  --aic-orange: var(--brand-orange, #f57c00);
+  --aic-navy: var(--brand-navy, #1c2733);
+  --aic-slate: var(--brand-slate, #4a4f5a);
+  --aic-heading-font: "Roboto Condensed", "Arial Narrow", "Roboto", sans-serif;
+}
+
+/* Material's primary colour is used all over the page as an accent (buttons,
+   borders, focus rings, the Virtual Microscope controls), so it stays blue. Only
+   the header and tab strip are re-scoped to the white/navy look. */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--aic-blue-dark);
+  --md-primary-fg-color--light: var(--aic-blue);
+  --md-primary-fg-color--dark: var(--aic-navy);
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+  --md-accent-fg-color: var(--aic-blue-dark);
+  --md-typeset-a-color: var(--aic-blue-dark);
+  --md-typeset-color: #2d3139;
+}
+[data-md-color-scheme="default"] .md-header,
+[data-md-color-scheme="default"] .md-tabs {
+  --md-primary-fg-color: #ffffff;
+  --md-primary-bg-color: var(--aic-navy);
+  --md-primary-bg-color--light: var(--aic-slate);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: var(--aic-blue);
+  --md-primary-fg-color--light: var(--aic-blue);
+  --md-primary-fg-color--dark: var(--aic-blue-dark);
+  --md-accent-fg-color: var(--aic-blue);
+  --md-typeset-a-color: #4fc3f7;
+}
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+  --md-primary-fg-color: var(--aic-navy);
+  --md-primary-bg-color: #ffffff;
+}
+
+/* Persistent route back to the facility parent site. */
+.aic-parentbar {
+  background: var(--aic-navy);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.aic-parentbar a {
+  display: block;
+  box-sizing: border-box;
+  max-width: 61rem;
+  margin: 0 auto;
+  padding: 0.35rem 0.8rem;
+  color: #ffffff;
+  font-family: var(--aic-heading-font);
+}
+.aic-parentbar a:hover, .aic-parentbar a:focus-visible { color: #8fd8ff; }
+
+.md-header { box-shadow: 0 1px 0 var(--md-default-fg-color--lightest); }
+[data-md-color-scheme="default"] .md-header,
+[data-md-color-scheme="default"] .md-tabs { border-bottom: 1px solid #e3e7ea; }
+.md-tabs__link, .md-header__title {
+  font-family: var(--aic-heading-font);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.md-tabs__link { opacity: 0.85; }
+.md-tabs__item--active .md-tabs__link, .md-tabs__link:hover { opacity: 1; }
+.md-tabs__item--active { box-shadow: inset 0 -3px 0 var(--aic-orange); }
+
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4 {
+  font-family: var(--aic-heading-font);
+  font-weight: 700;
+  color: var(--aic-slate);
+}
+[data-md-color-scheme="slate"] .md-typeset h1, [data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3, [data-md-color-scheme="slate"] .md-typeset h4 { color: #e6eaed; }
+.md-typeset h1 { font-size: 2.2em; }
+.md-typeset h2 { border-bottom: 2px solid var(--aic-blue); padding-bottom: 0.2em; }
+
+.md-typeset .tabbed-labels > label, .md-typeset table:not([class]) th { font-family: var(--aic-heading-font); }
+.md-typeset table:not([class]) th { background: var(--aic-navy); color: #ffffff; }
+.md-typeset table:not([class]) { border-color: #dfe4e8; }
+
+.md-footer-meta { background: var(--aic-navy); }
+.md-footer-meta__inner .md-copyright, .md-footer-meta .md-copyright a { color: #cfd8de; }
+.md-footer-meta .md-copyright a:hover { color: #ffffff; }
+
+/* Keep every top-level tab visible at desktop widths despite the uppercase
+   condensed face; the strip clips rather than wraps. */
+.md-tabs__link { font-size: 0.66rem; margin-top: 0.8rem; }
+.md-tabs__item { padding-left: 0.4rem; padding-right: 0.4rem; }
+[data-md-color-scheme="default"] .md-search__input { background: #eef1f3; color: var(--aic-navy); }
+[data-md-color-scheme="default"] .md-search__input::placeholder,
+[data-md-color-scheme="default"] .md-search__icon { color: var(--aic-slate); }
+
+/* Material paints primary buttons with --md-primary-fg-color, which is white in
+   the light scheme here, so give buttons explicit colours. */
+.md-typeset .md-button {
+  color: var(--aic-blue-dark);
+  border-color: var(--aic-blue-dark);
+  font-family: var(--aic-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.md-typeset .md-button--primary {
+  background-color: var(--aic-blue-dark);
+  border-color: var(--aic-blue-dark);
+  color: #ffffff;
+}
+.md-typeset .md-button:hover, .md-typeset .md-button:focus-visible {
+  background-color: var(--aic-orange);
+  border-color: var(--aic-orange);
+  color: #ffffff;
+}
+[data-md-color-scheme="slate"] .md-typeset .md-button { color: #8fd8ff; border-color: #8fd8ff; }
+[data-md-color-scheme="slate"] .md-typeset .md-button--primary { background-color: var(--aic-blue); border-color: var(--aic-blue); color: #fff; }

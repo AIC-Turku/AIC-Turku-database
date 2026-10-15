@@ -24,3 +24,11 @@ facility:
 branding:
   logo: "assets/images/logo.svg"
   favicon: "assets/images/favicon.svg"
+  # Colours sampled from https://bioscience.fi/ so the dashboard reads as part of
+  # the same web presence. "orange" is decoration only; link text uses blue_dark.
+  colors:
+    blue: "#019ce1"
+    blue_dark: "#0c729f"
+    orange: "#e8541a"
+    navy: "#15242d"
+    slate: "#494957"
