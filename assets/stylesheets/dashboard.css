@@ -474,23 +474,37 @@
   --aic-heading-font: "Roboto Condensed", "Arial Narrow", "Roboto", sans-serif;
 }
 
+/* Material's primary colour is used all over the page as an accent (buttons,
+   borders, focus rings, the Virtual Microscope controls), so it stays blue. Only
+   the header and tab strip are re-scoped to the white/navy look. */
 [data-md-color-scheme="default"] {
-  --md-primary-fg-color: #ffffff;
-  --md-primary-fg-color--light: #ffffff;
-  --md-primary-fg-color--dark: #f3f5f7;
-  --md-primary-bg-color: var(--aic-navy);
-  --md-primary-bg-color--light: var(--aic-slate);
+  --md-primary-fg-color: var(--aic-blue-dark);
+  --md-primary-fg-color--light: var(--aic-blue);
+  --md-primary-fg-color--dark: var(--aic-navy);
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
   --md-accent-fg-color: var(--aic-blue-dark);
   --md-typeset-a-color: var(--aic-blue-dark);
   --md-typeset-color: #2d3139;
 }
+[data-md-color-scheme="default"] .md-header,
+[data-md-color-scheme="default"] .md-tabs {
+  --md-primary-fg-color: #ffffff;
+  --md-primary-bg-color: var(--aic-navy);
+  --md-primary-bg-color--light: var(--aic-slate);
+}
 
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: var(--aic-navy);
-  --md-primary-fg-color--light: #1d3340;
-  --md-primary-fg-color--dark: #0f1a21;
+  --md-primary-fg-color: var(--aic-blue);
+  --md-primary-fg-color--light: var(--aic-blue);
+  --md-primary-fg-color--dark: var(--aic-blue-dark);
   --md-accent-fg-color: var(--aic-blue);
   --md-typeset-a-color: #4fc3f7;
+}
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+  --md-primary-fg-color: var(--aic-navy);
+  --md-primary-bg-color: #ffffff;
 }
 
 /* Persistent route back to the facility parent site. */
@@ -549,3 +563,25 @@
 [data-md-color-scheme="default"] .md-search__input { background: #eef1f3; color: var(--aic-navy); }
 [data-md-color-scheme="default"] .md-search__input::placeholder,
 [data-md-color-scheme="default"] .md-search__icon { color: var(--aic-slate); }
+
+/* Material paints primary buttons with --md-primary-fg-color, which is white in
+   the light scheme here, so give buttons explicit colours. */
+.md-typeset .md-button {
+  color: var(--aic-blue-dark);
+  border-color: var(--aic-blue-dark);
+  font-family: var(--aic-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.md-typeset .md-button--primary {
+  background-color: var(--aic-blue-dark);
+  border-color: var(--aic-blue-dark);
+  color: #ffffff;
+}
+.md-typeset .md-button:hover, .md-typeset .md-button:focus-visible {
+  background-color: var(--aic-orange);
+  border-color: var(--aic-orange);
+  color: #ffffff;
+}
+[data-md-color-scheme="slate"] .md-typeset .md-button { color: #8fd8ff; border-color: #8fd8ff; }
+[data-md-color-scheme="slate"] .md-typeset .md-button--primary { background-color: var(--aic-blue); border-color: var(--aic-blue); color: #fff; }
