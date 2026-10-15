@@ -179,3 +179,15 @@ def test_dictionary_deduplicates_registry_aliases_and_labels_classification(tmp_
 def test_temporary_vocabulary_transfer_machinery_is_removed():
     assert not (ROOT / '.vocab-transfer').exists()
     assert not (ROOT / '.github/workflows/apply-vocabulary-hardening.yml').exists()
+
+
+def test_dashboard_js_reveals_inactive_tab_for_hash_targets():
+    """TOC links to headings inside inactive vocabulary tabs must activate the tab.
+
+    The vocabulary dictionary renders every section after the first inside a
+    hidden content tab, so without this the sidebar entries (Autofocus Types
+    onwards) scrolled nowhere.
+    """
+    source = (Path(__file__).resolve().parents[1] / "assets/javascripts/dashboard.js").read_text(encoding="utf-8")
+    assert ".tabbed-block" in source
+    assert "hashchange" in source
