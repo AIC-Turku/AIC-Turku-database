@@ -6,7 +6,8 @@ site_url: https://aic-turku.github.io/AIC-Turku-database/
 repo_url: https://github.com/AIC-Turku/AIC-Turku-database
 repo_name: Source on GitHub
 copyright: 'Code: MIT · Images: copyrighted; see rights · <a href="https://aic-turku.github.io/AIC-Turku-database/licensing/">Licensing
-  and image rights</a>'
+  and image rights</a> · <a href="https://bioscience.fi/aic/">Advanced Imaging Core
+  Facility at Turku Bioscience Centre</a>'
 use_directory_urls: true
 docs_dir: dashboard_docs
 theme:
@@ -30,8 +31,21 @@ theme:
     toggle:
       icon: material/brightness-4
       name: Switch to light mode
+  font:
+    text: Open Sans
+    code: Roboto Mono
   logo: assets/images/logo.svg
   favicon: assets/images/favicon.svg
+extra:
+  parent_site:
+    url: https://bioscience.fi/aic/
+    name: Advanced Imaging Core Facility at Turku Bioscience Centre
+  theme_colors:
+    blue: '#019ce1'
+    blue_dark: '#0c729f'
+    orange: '#e8541a'
+    navy: '#15242d'
+    slate: '#494957'
 plugins:
 - search
 markdown_extensions:
