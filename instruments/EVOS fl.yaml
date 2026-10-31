@@ -157,6 +157,8 @@ hardware:
       Pos_1:
         name: DAPI
         component_type: filter_cube
+        compatible_source_ids:
+        - evos_dapi_light_cube_led
         product_code: ZP-EPI-9001
         bands:
         - center_nm: 447
@@ -176,6 +178,8 @@ hardware:
       Pos_2:
         name: CFP
         component_type: filter_cube
+        compatible_source_ids:
+        - evos_cfp_light_cube_led
         product_code: AMEP-4653
         bands:
         - center_nm: 510
@@ -195,6 +199,8 @@ hardware:
       Pos_3:
         name: GFP/Alexa 488
         component_type: filter_cube
+        compatible_source_ids:
+        - evos_gfp_light_cube_led
         product_code: ZP-EPI-9002
         bands:
         - center_nm: 510
@@ -214,6 +220,8 @@ hardware:
       Pos_4:
         name: RFP/Alexa 555
         component_type: filter_cube
+        compatible_source_ids:
+        - evos_rfp_light_cube_led
         product_code: ZP-EPI-9003
         bands:
         - center_nm: 593
@@ -233,6 +241,8 @@ hardware:
       Pos_5:
         name: Cy5/Alexa 647
         component_type: filter_cube
+        compatible_source_ids:
+        - evos_cy5_light_cube_led
         product_code: AMEP-4656
         bands:
         - center_nm: 692

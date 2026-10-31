@@ -228,19 +228,23 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn("phase annulus", output)
         self.assertNotIn("matching phase objective", output)
 
-    def test_a_source_that_cannot_pass_the_selected_filter_is_questioned(self):
+    def test_a_source_that_cannot_pass_the_selected_filter_is_not_offered(self):
         """Each EVOS light cube carries its own LED.
 
-        Pairing the 470 nm GFP cube's LED with the Cy5 cube is a configuration the
-        instrument cannot produce, and the draft reported both without comment.
+        The record ties every cube position to its own LED, so once the 470 nm GFP
+        cube's LED is chosen the Cy5 cube is no longer offered: the draft cannot
+        describe a configuration the instrument cannot produce.
         """
         self.select_instrument("EVOS fl")
         self.tick("method-list", "idefield")
         self.tick("light-list", "470 nm")
-        self.tick("filter-list", "Cy5")
-        self.tick("obj-list", ".")
-        output = self.add()
-        self.assertIn("does not pass that wavelength", output)
+        visible_cy5 = self.page.evaluate(
+            """() => [...document.querySelectorAll('#filter-list input')]
+                .filter(input => input.offsetParent !== null)
+                .filter(input => /Cy5/i.test((input.closest('label') || input.parentElement).textContent))
+                .length"""
+        )
+        self.assertEqual(visible_cy5, 0)
 
     def test_a_source_the_selected_filter_passes_is_not_questioned(self):
         """The check has to stay silent on the pairing the instrument is for."""
