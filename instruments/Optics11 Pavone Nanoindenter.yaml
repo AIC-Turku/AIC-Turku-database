@@ -10,6 +10,8 @@ instrument:
   location: BioCity, 2nd floor
   notes: 'Benchtop nanoindenter with an integrated inverted microscope, for measuring the local mechanical properties of cells, biomaterials and 3D in vitro models in well plates, dishes or on slides, in air or liquid. Fibre-optic interferometric force sensing, force range about 200 pN to 1.5 mN, stiffness range about 10 Pa to 1 GPa. Operating modes: quasi-static indentation, peak-load poking, step response (stress relaxation, creep) and dynamic mechanical analysis (0.1-20 Hz), programmable in displacement, indentation or load control. Automated well-to-well measurement, coordinate lists, matrix scans and image stitching. Fitted with the optional widefield fluorescence module (installed and accepted October 2026); no environmental (CO2/humidity) module.'
   url: https://www.optics11life.com/products/pavone-nanoindenter/
+  # Sources: Pavone technical specifications V2.1 (January 2026), purchase invoice (2025),
+  # fluorescence-module quotation and Certificate of Acceptance (27 Oct 2026).
 capabilities:
   imaging_modes:
   - widefield_fluorescence
@@ -100,8 +102,9 @@ hardware:
     immersion: air
     correction: plan_fluorite
     afc_compatible: false
-    specialties: []
-    notes: 'Fluorescence-module objective. Identified as the 20x option from the installation calibration (0.29499 µm/px, almost the same as the base 20x objective); staff to confirm from the barrel. Specification from the Pavone technical sheet.'
+    specialties:
+    - phase
+    notes: 'Fluorescence-module objective (DLL is a Nikon phase-contrast type). Identified as the 20x option from the installation calibration (0.29499 µm/px, almost the same as the base 20x objective); staff to confirm from the barrel. Specification from the Pavone technical sheet.'
     url: ''
     is_installed: true
   sources:
@@ -116,8 +119,6 @@ hardware:
     role: excitation
     manufacturer: Optics11 Life
     model: Fluorescence module white LED
-    wavelength_nm: 562
-    width_nm: 325
     power: 100 W (electrical)
     notes: High-power white LED, 400-725 nm, CRI 92 (manufacturer specification).
   - id: uv_led
@@ -134,7 +135,7 @@ hardware:
     element_type: slider
     stage_role: excitation
     slots: 4
-    notes: 'Linear slider with 4 excitation filter slots (3 default sets plus 1 additional set bought with the module). Position bands are the excitation filters listed in the Pavone technical sheet; which sets are fitted, and in which slot, is still to be confirmed by staff.'
+    notes: 'Linear slider with 4 excitation filter slots, all fitted (the 3 default sets plus the additional set bought with the module). Bands are the four excitation filters listed in the Pavone technical sheet.'
     positions:
       Pos_1:
         name: Excitation 1 (DAPI/Hoechst)

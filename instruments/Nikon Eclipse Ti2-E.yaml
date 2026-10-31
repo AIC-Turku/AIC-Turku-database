@@ -42,12 +42,12 @@ modules:
 - type: tirf
   notes: iLas2 galvanometer-based TIRF and FRAP illuminator (ILAS2-TIRF/FRAP, MGTC0002) for point and motorized azimuthal (360 degree) TIRF, on a Ti2 motorized main laser branch (TI2-LA-BM-E). Controlled from NIS-Elements through the iLas2 TIRF/FRAP driver. Installed September 2026.
   url: ''
-  manufacturer: Nikon
+  manufacturer: Gataca Systems (supplied by Nikon)
   model: iLas2 TIRF/FRAP
 - type: frap
   notes: FRAP and targeted photobleaching are performed by the same iLas2 TIRF/FRAP illuminator, on user-defined regions, and can be combined with TIRF or widefield acquisition. Installed September 2026.
   url: ''
-  manufacturer: Nikon
+  manufacturer: Gataca Systems (supplied by Nikon)
   model: iLas2 TIRF/FRAP
 - type: hardware_triggering
   notes: National Instruments PCIe-6738 analog output card (32 analog outputs, 16-bit) with shielded 68-pin cable, installed with the September 2026 upgrade for hardware-timed control of devices from NIS-Elements.
@@ -57,7 +57,7 @@ modules:
 - type: photoactivation
   notes: Photoactivation and photoconversion of photoactivatable or photoconvertible probes in user-defined regions, using the iLas2 TIRF/FRAP illuminator with the 405 nm laser line. Installed September 2026.
   url: ''
-  manufacturer: Nikon
+  manufacturer: Gataca Systems (supplied by Nikon)
   model: iLas2 TIRF/FRAP
 software:
 - role: acquisition
@@ -255,6 +255,7 @@ hardware:
     correction: apochromat
     specialties:
     - tirf
+    - correction_collar
     notes: Correction collar for coverglass thickness 0.13-0.20 mm and temperature 23-37 °C. Added September 2026 with the TIRF upgrade.
     url: ''
     is_installed: true
@@ -420,6 +421,14 @@ hardware:
         name: Standard Cubes
         component_type: filter_cube
         notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
+        compatible_source_ids:
+        - spectra_x_395
+        - spectra_x_440
+        - spectra_x_475
+        - spectra_x_550
+        - spectra_x_575
+        - spectra_x_640
+        - spectra_x_730
       Pos_2:
         name: Chroma TRF89901-EMv2 405/488/561/640 TIRF cube
         manufacturer: Chroma

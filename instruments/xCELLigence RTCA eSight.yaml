@@ -47,7 +47,7 @@ hardware:
     temperature_control: true
     co2_control: true
     humidity_control: true
-    notes: Temperature, CO2 and humidity are provided by the host cell-culture incubator the unit sits in; the eSight itself does not control them.
+    notes: Temperature, CO2 and humidity are controlled during imaging, but by the host cell-culture incubator the unit sits in; the eSight itself has no environmental control.
   hardware_autofocus:
     is_installed: true
     type: contrast_based

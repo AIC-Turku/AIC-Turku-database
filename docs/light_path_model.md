@@ -70,8 +70,8 @@ Installed illumination sources. The inventory `illumination_sequence[]` referenc
 | `hardware.sources[].technology` | optional | string | [`light_source_technologies`](../vocab/light_source_technologies.yaml) | 13 | Helpful subtype metadata for lasers, LED engines, and tunable sources. |
 | `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 55 | Declares the source role without relying on notes-based inference. |
 | `hardware.sources[].timing_mode` | optional | string | [`light_source_timing_modes`](../vocab/light_source_timing_modes.yaml) | 7 | Declares whether the source is continuous-wave or pulsed. |
-| `hardware.sources[].wavelength_nm` | optional | spectral_descriptor | — | 82 | Peak or representative wavelength for discrete excitation sources. |
-| `hardware.sources[].width_nm` | optional | positive_number | — | 20 | Optional spectral width for broad-spectrum or band-defined sources. |
+| `hardware.sources[].wavelength_nm` | optional | spectral_descriptor | — | 81 | Peak or representative wavelength for discrete excitation sources. |
+| `hardware.sources[].width_nm` | optional | positive_number | — | 19 | Optional spectral width for broad-spectrum or band-defined sources. |
 | `hardware.sources[].power` | optional | string | — | 80 | Nominal source power metadata; not experiment-level truth. |
 | `hardware.sources[].pulse_width_ps` | conditional — when `timing_mode` is `pulsed` | positive_number | — | 4 | Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata. |
 | `hardware.sources[].repetition_rate_mhz` | conditional — when `timing_mode` is `pulsed` | positive_number | — | 5 | Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata. |
@@ -105,7 +105,7 @@ Installed mechanisms that alter or route light — excitation and emission filte
 | `hardware.optical_path_elements[].positions{}.manufacturer` | optional | string | — | 30 | Structured provenance for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.model` | optional | string | — | 8 | Vendor-facing model/designation for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.product_code` | optional | string | — | 66 | Explicit catalog/SKU/reference code for direct position payloads when known. |
-| `hardware.optical_path_elements[].positions{}.compatible_source_ids` | optional | list of string | — | 22 | Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra. |
+| `hardware.optical_path_elements[].positions{}.compatible_source_ids` | optional | list of string | — | 23 | Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra. |
 | `hardware.optical_path_elements[].positions{}.bands` | optional | list of object | — | 97 | Explicit multiband pass windows for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.bands[].center_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 138 | Band center for direct multiband position payloads. |
 | `hardware.optical_path_elements[].positions{}.bands[].width_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 138 | Band width for direct multiband position payloads. |

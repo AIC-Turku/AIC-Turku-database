@@ -237,6 +237,11 @@ class RealCatalogueTestCase(unittest.TestCase):
         """
         self.select_instrument("EVOS fl")
         self.tick("method-list", "idefield")
+        count_cy5 = """() => [...document.querySelectorAll('#filter-list input')]
+                .filter(input => input.offsetParent !== null)
+                .filter(input => /Cy5/i.test((input.closest('label') || input.parentElement).textContent))
+                .length"""
+        self.assertGreater(self.page.evaluate(count_cy5), 0, "the Cy5 cube should be offered before an LED is chosen")
         self.tick("light-list", "470 nm")
         visible_cy5 = self.page.evaluate(
             """() => [...document.querySelectorAll('#filter-list input')]
