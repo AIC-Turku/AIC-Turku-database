@@ -61,18 +61,18 @@ Installed illumination sources. The inventory `illumination_sequence[]` referenc
 | Field | Status | Type | Vocabulary | In records | What it records |
 | --- | --- | --- | --- | --- | --- |
 | `hardware.sources` | required | list of object (min 1) | — | 23 | Canonical illumination-source inventory referenced by ordered light_paths illumination_sequence entries. |
-| `hardware.sources[].id` | required | slug | — | 100 | Stable source identifier referenced by light_paths illumination_sequence. |
+| `hardware.sources[].id` | required | slug | — | 104 | Stable source identifier referenced by light_paths illumination_sequence. |
 | `hardware.sources[].name` | optional | string | — | 2 | Optional display label for the installed source when it differs from the vendor model/designation. |
-| `hardware.sources[].kind` | required | string | [`light_source_kinds`](../vocab/light_source_kinds.yaml) | 100 | Canonical source classifier used for inventory reporting and light-path DTO generation. |
-| `hardware.sources[].manufacturer` | optional | string | — | 100 | Structured provenance for installed sources. |
-| `hardware.sources[].model` | optional | string | — | 100 | Vendor-facing source model/designation. |
+| `hardware.sources[].kind` | required | string | [`light_source_kinds`](../vocab/light_source_kinds.yaml) | 104 | Canonical source classifier used for inventory reporting and light-path DTO generation. |
+| `hardware.sources[].manufacturer` | optional | string | — | 104 | Structured provenance for installed sources. |
+| `hardware.sources[].model` | optional | string | — | 104 | Vendor-facing source model/designation. |
 | `hardware.sources[].product_code` | optional | string | — | 3 | Explicit source SKU/catalog code when known. |
 | `hardware.sources[].technology` | optional | string | [`light_source_technologies`](../vocab/light_source_technologies.yaml) | 13 | Helpful subtype metadata for lasers, LED engines, and tunable sources. |
-| `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 47 | Declares the source role without relying on notes-based inference. |
+| `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 51 | Declares the source role without relying on notes-based inference. |
 | `hardware.sources[].timing_mode` | optional | string | [`light_source_timing_modes`](../vocab/light_source_timing_modes.yaml) | 5 | Declares whether the source is continuous-wave or pulsed. |
-| `hardware.sources[].wavelength_nm` | optional | spectral_descriptor | — | 76 | Peak or representative wavelength for discrete excitation sources. |
+| `hardware.sources[].wavelength_nm` | optional | spectral_descriptor | — | 80 | Peak or representative wavelength for discrete excitation sources. |
 | `hardware.sources[].width_nm` | optional | positive_number | — | 18 | Optional spectral width for broad-spectrum or band-defined sources. |
-| `hardware.sources[].power` | optional | string | — | 75 | Nominal source power metadata; not experiment-level truth. |
+| `hardware.sources[].power` | optional | string | — | 79 | Nominal source power metadata; not experiment-level truth. |
 | `hardware.sources[].pulse_width_ps` | conditional — when `timing_mode` is `pulsed` | positive_number | — | 4 | Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata. |
 | `hardware.sources[].repetition_rate_mhz` | conditional — when `timing_mode` is `pulsed` | positive_number | — | 4 | Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata. |
 | `hardware.sources[].depletion_targets_nm` | conditional — when `role` is `depletion` | list of positive_number | — | 2 | Required when the source is used as a depletion source. |
@@ -80,7 +80,7 @@ Installed illumination sources. The inventory `illumination_sequence[]` referenc
 | `hardware.sources[].tunable_max_nm` | optional | positive_number | — | 3 | Upper tunable wavelength bound for tunable or white-light sources. |
 | `hardware.sources[].simultaneous_lines_max` | optional | positive_number | — | 1 | Maximum simultaneously active lines for multi-line sources. |
 | `hardware.sources[].modalities` | optional | list of string | [`modalities`](../vocab/modalities.yaml) | 3 | Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative. |
-| `hardware.sources[].notes` | optional | text | — | 94 | Free-text source notes for operational caveats. |
+| `hardware.sources[].notes` | optional | text | — | 98 | Free-text source notes for operational caveats. |
 | `hardware.sources[].url` | optional | url | — | 79 | Reference link only. |
 
 ### `hardware.optical_path_elements`
@@ -101,11 +101,11 @@ Installed mechanisms that alter or route light — excitation and emission filte
 | `hardware.optical_path_elements[].supported_branch_count` | optional | positive_number | — | 21 | Inventory-level capability metadata describing how many branches a selector/splitter can support. |
 | `hardware.optical_path_elements[].modalities` | optional | list of string | [`modalities`](../vocab/modalities.yaml) | — | Legacy compatibility modality hints for optical path elements. Ordered light_paths and route_type remain authoritative. |
 | `hardware.optical_path_elements[].positions` | optional | object | — | 36 | Position map for installed filter wheels, turrets, sliders, or cubes. |
-| `hardware.optical_path_elements[].positions{}.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 127 | Canonical optical component classifier for direct position payloads. |
-| `hardware.optical_path_elements[].positions{}.manufacturer` | optional | string | — | 28 | Structured provenance for direct position payloads. |
+| `hardware.optical_path_elements[].positions{}.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 128 | Canonical optical component classifier for direct position payloads. |
+| `hardware.optical_path_elements[].positions{}.manufacturer` | optional | string | — | 29 | Structured provenance for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.model` | optional | string | — | 8 | Vendor-facing model/designation for direct position payloads. |
-| `hardware.optical_path_elements[].positions{}.product_code` | optional | string | — | 64 | Explicit catalog/SKU/reference code for direct position payloads when known. |
-| `hardware.optical_path_elements[].positions{}.compatible_source_ids` | optional | list of string | — | 16 | Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra. |
+| `hardware.optical_path_elements[].positions{}.product_code` | optional | string | — | 65 | Explicit catalog/SKU/reference code for direct position payloads when known. |
+| `hardware.optical_path_elements[].positions{}.compatible_source_ids` | optional | list of string | — | 17 | Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra. |
 | `hardware.optical_path_elements[].positions{}.bands` | optional | list of object | — | 93 | Explicit multiband pass windows for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.bands[].center_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 134 | Band center for direct multiband position payloads. |
 | `hardware.optical_path_elements[].positions{}.bands[].width_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 134 | Band width for direct multiband position payloads. |
@@ -116,10 +116,10 @@ Installed mechanisms that alter or route light — excitation and emission filte
 | `hardware.optical_path_elements[].positions{}.excitation_filter.bands` | optional | list of object | — | 2 | Explicit multiband pass windows for multiband excitation filters. |
 | `hardware.optical_path_elements[].positions{}.excitation_filter.bands[].center_nm` | conditional — when `hardware.optical_path_elements[].positions{}.excitation_filter.bands[]` is present | positive_number | — | 8 | Band center for multiband excitation filter sub-component. |
 | `hardware.optical_path_elements[].positions{}.excitation_filter.bands[].width_nm` | conditional — when `hardware.optical_path_elements[].positions{}.excitation_filter.bands[]` is present | positive_number | — | 8 | Band width for multiband excitation filter sub-component. |
-| `hardware.optical_path_elements[].positions{}.dichroic` | optional | object | — | 30 | Explicit dichroic sub-component of a filter_cube position. |
-| `hardware.optical_path_elements[].positions{}.dichroic.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 30 | Canonical component classifier for the dichroic sub-component. Inferred by the parser when omitted. |
+| `hardware.optical_path_elements[].positions{}.dichroic` | optional | object | — | 31 | Explicit dichroic sub-component of a filter_cube position. |
+| `hardware.optical_path_elements[].positions{}.dichroic.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 31 | Canonical component classifier for the dichroic sub-component. Inferred by the parser when omitted. |
 | `hardware.optical_path_elements[].positions{}.dichroic.cut_on_nm` | optional | positive_number | — | 30 | Single-edge dichroic cut-on wavelength. |
-| `hardware.optical_path_elements[].positions{}.dichroic.cutoffs_nm` | optional | list of positive_number | — | — | Multi-edge dichroic cutoff wavelength array. |
+| `hardware.optical_path_elements[].positions{}.dichroic.cutoffs_nm` | optional | list of positive_number | — | 1 | Multi-edge dichroic cutoff wavelength array. |
 | `hardware.optical_path_elements[].positions{}.emission_filter` | optional | object | — | 35 | Explicit emission-filter sub-component of a filter_cube position. |
 | `hardware.optical_path_elements[].positions{}.emission_filter.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 35 | Canonical component classifier for the emission filter sub-component. Inferred by the parser when omitted. |
 | `hardware.optical_path_elements[].positions{}.emission_filter.center_nm` | optional | positive_number | — | 28 | Band center for bandpass-type emission filters. |
@@ -176,7 +176,7 @@ The ordered route declarations. Each one is a single explicit traversable path t
 | `light_paths[].contrast_methods` | optional | list of string | [`contrast_methods`](../vocab/contrast_methods.yaml) | 19 | Explicitly associates contrast methods with the physical light path that implements them. On active instruments, mapped methods must also be declared in capabilities.contrast_methods, must be compatible with route_type, and every declared contrast method must be mapped to at least one path. |
 | `light_paths[].readouts` | optional | list of string | [`measurement_readouts`](../vocab/measurement_readouts.yaml) | 6 | Optional per-route measurement/readout tags associated with a route traversal. |
 | `light_paths[].illumination_sequence` | required | list of object | — | 45 | Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id. |
-| `light_paths[].illumination_sequence[].source_id` | optional | slug | — | 105 | Stable source reference for the source_id variant of an illumination sequence tagged union item. |
+| `light_paths[].illumination_sequence[].source_id` | optional | slug | — | 109 | Stable source reference for the source_id variant of an illumination sequence tagged union item. |
 | `light_paths[].illumination_sequence[].optical_path_element_id` | optional | slug | — | 23 | Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item. |
 | `light_paths[].illumination_sequence[].position_id` | optional | string | — | 1 | Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same illumination sequence item; the validator rejects a key that does not match an authored position on that element. |
 | `light_paths[].detection_sequence` | required | list of object | — | 45 | Ordered sequence of strict tagged-union items used after the sample plane; each item must declare exactly one of optical_path_element_id, endpoint_id, or branches. |
@@ -487,20 +487,19 @@ Both are the places where the model and the data have parted company.
 | `hardware.optical_path_elements[].notes` | 22 |
 | `hardware.optical_path_elements[].positions{}.cut_on_nm` | 11 |
 | `hardware.optical_path_elements[].positions{}.cutoffs_nm` | 1 |
-| `hardware.optical_path_elements[].positions{}.name` | 94 |
-| `hardware.optical_path_elements[].positions{}.notes` | 72 |
+| `hardware.optical_path_elements[].positions{}.name` | 95 |
+| `hardware.optical_path_elements[].positions{}.notes` | 73 |
 | `hardware.optical_path_elements[].positions{}.slot` | 5 |
 | `hardware.optical_path_elements[].positions{}.url` | 2 |
 | `hardware.sources[].path` | 3 |
 | `light_paths[].modalities` | 1 |
-| `light_paths[].notes` | 9 |
+| `light_paths[].notes` | 10 |
 
 Scoped to the subtrees the `canonical_light_paths_v2` section owns outright (`hardware.sources`, `hardware.optical_path_elements`, `hardware.eyepieces`, `hardware.endpoints`, `light_paths`).
 
 ### Defined but never authored
 
 - `hardware.optical_path_elements[].modalities`
-- `hardware.optical_path_elements[].positions{}.dichroic.cutoffs_nm`
 - `hardware.eyepieces[].magnification`
 - `hardware.eyepieces[].field_number`
 - `hardware.detectors[].collection_center_nm`

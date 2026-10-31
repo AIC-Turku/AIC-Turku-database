@@ -68,6 +68,7 @@ scenarios:
       imaging_modes: [tirf]
     expect:
       instruments_declaring_requirements:
+        - scope-nikon-eclipse-ti2-e
         - scope-oni-nanoimager
         - scope-zeiss-tirf
       covering_route_families: [widefield_fluorescence]

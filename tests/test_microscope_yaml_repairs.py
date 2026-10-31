@@ -65,8 +65,8 @@ def test_objective_working_distance_repairs_match_exact_identified_models():
 
 def test_native_sensor_sizes_are_not_acquisition_output_sizes():
     nikon = ledger('Nikon Eclipse Ti2-E.yaml')['hardware']['detectors'][0]
-    assert nikon['sensor_format_px'] == '2048 x 2048'
-    assert 'hamamatsu.com' in nikon['url']
+    assert nikon['sensor_format_px'] == '2400 x 2400'
+    assert 'photometrics.com' in nikon['url']
     dp71 = ledger('Olympus BX60.yaml')['hardware']['detectors'][0]
     assert dp71['sensor_format_px'] == '1.45 MP'
     assert 'physical array dimensions are not confirmed' in dp71['notes']

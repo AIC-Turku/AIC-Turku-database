@@ -410,7 +410,8 @@ class ParserComponentMatrixTests(unittest.TestCase):
             ("Zeiss TIRF.yaml", 2),
             ("Zeiss AxioZoom V16.yaml", 4),
             ("xCELLigence RTCA eSight.yaml", 3),
-            ("Nikon Eclipse Ti2-E.yaml", 1),
+            # Ti2-E: the TIRF cube has no recorded excitation passbands or in-cube emitter.
+            ("Nikon Eclipse Ti2-E.yaml", 2),
         ]
         for filename, expected_count in still_degraded:
             yaml_path = INSTRUMENTS_DIR / filename
