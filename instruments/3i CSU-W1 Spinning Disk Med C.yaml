@@ -43,9 +43,9 @@ modules:
 software:
 - role: acquisition
   name: SlideBook
-  version: '6'
+  version: '2026.1'
   developer: 3i
-  notes: SlideBook 6 Full Online License with hardware control and TTL Synchronization.
+  notes: Full online licence with hardware control and TTL synchronization, originally delivered as SlideBook 6 in 2019 and since updated to 2026.1.
 hardware:
   environment:
     temperature_control: true
