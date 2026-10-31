@@ -11,7 +11,7 @@ Nothing here should be filled in by assumption. Where a field is genuinely not
 applicable, recording that explicitly is better than leaving it blank, because
 the tools can then stop asking.
 
-**95 open questions across 23 records.**
+**95 open questions across 24 records.**
 
 Regenerate with `python -m scripts.ledger_gaps` after changing any instrument
 ledger; `python -m scripts.ledger_gaps --check` fails when this file is stale.

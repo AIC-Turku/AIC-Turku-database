@@ -31,7 +31,7 @@ capabilities:  # Capability axes: Canonical capability taxonomy that separates i
     - ""
   assay_operations:  # Capability assay operations: Assay-operation capabilities such as FRAP/photoactivation; distinct from readout-only axes. | Allowed values (canonical IDs): frap, photoactivation, photobleaching, uncaging, optogenetics
     - ""
-  non_optical:  # Capability non-optical: Non-optical capability tags; not optical light-path route types. | Allowed values (canonical IDs): afm, impedance_cytometry
+  non_optical:  # Capability non-optical: Non-optical capability tags; not optical light-path route types. | Allowed values (canonical IDs): afm, impedance_cytometry, nanoindentation
     - ""
 
 # -----------------------------------------------------------------------------
@@ -39,7 +39,7 @@ capabilities:  # Capability axes: Canonical capability taxonomy that separates i
 # -----------------------------------------------------------------------------
 modules:  # Installed modules: Only present when installed modules materially change imaging capabilities.
   -
-    type: ""  # Module type: Canonical module classifier used for structured capability reporting. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, airyscan, hardware_triggering, workstation, impedance_module, universal_vessel_holder, camera_port
+    type: ""  # Module type: Canonical module classifier used for structured capability reporting. | Allowed values (canonical IDs): incubation, microfluidics, hardware_autofocus, motorized_stage, frap, photoactivation, fcs, flim, optogenetics, adaptive_optics, piezo_z_stage, easy3d_sted, rescue_sted, 3d_sim, ring_tirf, tirf, aobs, environmental_enclosure, sim_module, afm_module, nanoindentation_module, airyscan, hardware_triggering, workstation, impedance_module, universal_vessel_holder, camera_port
     notes: ""  # Module notes: Useful for operational nuances and limitations.
     url: ""  # Module URL: Helpful vendor or manual reference.
     manufacturer: ""  # Module manufacturer: Vendor-facing module model/designation used as primary structured identity for the installed module.

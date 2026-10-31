@@ -121,6 +121,13 @@ terms:
     tags:
       provides_capability:
         non_optical: ["afm"]
+  - id: nanoindentation_module
+    label: "Nanoindentation Module"
+    description: "Probe-based indentation hardware (force sensor, indentation actuator and probe approach stage) for measuring local mechanical properties alongside optical imaging."
+    synonyms: ["nanoindenter", "indentation module"]
+    tags:
+      provides_capability:
+        non_optical: ["nanoindentation"]
   - id: airyscan
     label: "AiryScan Detector/Module"
     description: "Detector and reconstruction module that improves confocal sensitivity and resolution via multi-element signal collection."
