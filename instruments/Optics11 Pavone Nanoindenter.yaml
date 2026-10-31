@@ -104,7 +104,7 @@ hardware:
     afc_compatible: false
     specialties:
     - phase
-    notes: 'Fluorescence-module objective (DLL is a Nikon phase-contrast type). Identified as the 20x option from the installation calibration (0.29499 µm/px, almost the same as the base 20x objective); staff to confirm from the barrel. Specification from the Pavone technical sheet.'
+    notes: 'Fluorescence-module objective (DLL is a Nikon phase-contrast type). Both objectives are 20x: the installation calibration gives 0.28935 µm/px for the base objective and 0.29499 µm/px for the fluorescence objective (confirmed by facility staff), and the CFI Plan Fluor DLL 20x/0.5 is the only 20x option for the fluorescence module. Specification from the Pavone technical sheet.'
     url: ''
     is_installed: true
   sources:
