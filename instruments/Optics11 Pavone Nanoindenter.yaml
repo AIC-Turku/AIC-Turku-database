@@ -94,8 +94,8 @@ hardware:
     is_installed: true
   - id: 20x_air_fluo
     manufacturer: Nikon
-    model: CFI Plan Fluor DLL 20x
-    product_code: ''
+    model: CFI Plan Fluor DLL 20X
+    product_code: MRH10205
     magnification: 20.0
     numerical_aperture: 0.5
     working_distance: 2.1 mm
@@ -104,8 +104,8 @@ hardware:
     afc_compatible: false
     specialties:
     - phase
-    notes: 'Fluorescence-module objective (DLL is a Nikon phase-contrast type). Both objectives are 20x: the installation calibration gives 0.28935 µm/px for the base objective and 0.29499 µm/px for the fluorescence objective (confirmed by facility staff), and the CFI Plan Fluor DLL 20x/0.5 is the only 20x option for the fluorescence module. Specification from the Pavone technical sheet.'
-    url: ''
+    notes: 'Fluorescence-module objective, confirmed by facility staff. Nikon specifies the CFI Plan Fluor DLL 20X (MRH10205) as NA 0.50, WD 2.10 mm, Ph1, suitable for fluorescence and phase contrast. The installation calibration gives 0.29499 µm/px with this objective.'
+    url: https://www.microscope.healthcare.nikon.com/en_EU/products/optics/cfi-plan-fluor-series-for-phase-contrast
     is_installed: true
   sources:
   - id: transmitted_led
