@@ -86,7 +86,7 @@ hardware:
     sensor_format_px: 2400 x 2400
     qe_peak_pct: 95
     read_noise_e: 0.7
-    notes: Back-illuminated sCMOS, 22 mm sensor diagonal (5.76 MP). Replaced the Hamamatsu ORCA-Flash4.0 V3 in September 2026. Sensor format, peak QE and read noise are the manufacturer specification, not measured values. Read noise depends on the readout mode, 0.7 e- in Sub-Electron mode, 1.2 e- Sensitivity (12-bit), 1.6 e- Dynamic Range (16-bit), 2.0 e- Speed (8-bit).
+    notes: Back-illuminated sCMOS, 22 mm sensor diagonal (5.76 MP). Replaced the Hamamatsu ORCA-Flash4.0 V3 in September 2026. Sensor format, peak QE and read noise are the manufacturer specification, not measured values; peak QE is 95% in the supplier quotation and 96% in the current Photometrics datasheet. Read noise depends on the readout mode, 0.7 e- in Sub-Electron mode, 1.2 e- Sensitivity (12-bit), 1.6 e- Dynamic Range (16-bit), 2.0 e- Speed (8-bit).
     url: https://www.photometrics.com/products/kinetix-family/kinetix22
     id: kinetix22
   - kind: cmos
@@ -250,9 +250,10 @@ hardware:
     product_code: MRD01691
     magnification: 60.0
     numerical_aperture: 1.49
-    working_distance: 0.13 mm
+    working_distance: 0.16 - 0.07 mm
     immersion: oil
     correction: apochromat
+    afc_compatible: true
     specialties:
     - tirf
     - correction_collar
