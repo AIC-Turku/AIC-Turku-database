@@ -5,7 +5,7 @@ microscope: scope-zeiss-lsm-880-with-airyscan
 service_provider: vendor
 company: Carl Zeiss Oy
 contact: field service engineer
-reference: Service order 8583415960 / 10; external reference CCC-001568
+reference: Zeiss field service report, 2025-04-02
 started_utc: '2025-04-02T12:00:00Z'
 reason: scheduled
 reason_details: Annual preventive maintenance visit for the Zeiss LSM 880 / Axio Observer
@@ -29,7 +29,7 @@ status_notes: Usable, but limited by end-of-life argon output and occasional sta
 related_qc:
 - qc_scope-zeiss-lsm-880-with-airyscan_20250402T1200Z_post_service_laser_stage_v1
 attachments:
-- maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Service_report_8583415960-10_2025-04-02_13-55.pdf
+- maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Zeiss_service_report_2025-04-02.pdf
 - maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Signed_MaintenanceChecklist_LSM880_2018-09-25.pdf
 tags:
 - scheduled

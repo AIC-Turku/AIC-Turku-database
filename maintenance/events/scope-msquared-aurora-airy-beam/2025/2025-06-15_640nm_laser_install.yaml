@@ -4,7 +4,7 @@ maintenance_id: maint_scope-msquared-aurora-airy-beam_20250615_640nm_laser_insta
 microscope: scope-msquared-aurora-airy-beam
 service_provider: internal
 company: Abo Akademi University
-reference: Quote COHR-340008-2
+reference: Supplier quotation (Coherent)
 started_utc: '2025-06-15T09:00:00Z'
 ended_utc: '2025-06-15T13:00:00Z'
 reason: upgrade
@@ -21,7 +21,7 @@ microscope_status_after: in_service
 downtime_hours: 4.0
 related_qc: []
 attachments:
-- COHR-340008-2.pdf
+- Coherent_quotation_640nm_laser.pdf
 tags:
 - laser
 - upgrade
