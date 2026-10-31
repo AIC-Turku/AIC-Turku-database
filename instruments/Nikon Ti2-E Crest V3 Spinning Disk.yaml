@@ -20,6 +20,7 @@ capabilities:
   readouts: []
   workflows:
   - live_cell_imaging
+  - smart_microscopy
   assay_operations: []
   non_optical: []
 modules:

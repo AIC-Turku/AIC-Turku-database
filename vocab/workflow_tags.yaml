@@ -21,3 +21,12 @@ terms:
   display_label: Single-particle tracking
   label: Single-particle tracking
   description: Tracks individual particles or molecules over time to quantify motion and dynamics. Used for diffusion, transport, and interaction studies.
+- id: smart_microscopy
+  synonyms:
+  - scriptable microscopy
+  - feedback microscopy
+  - adaptive acquisition
+  - event-driven acquisition
+  display_label: Smart microscopy
+  label: Smart microscopy
+  description: The acquisition software can be scripted or programmed so that the experiment adapts while it runs, for example by detecting objects or events in the images and changing positions, channels, timing or photomanipulation targets in response. Examples include NIS-Elements JOBS, macros and Python control.
