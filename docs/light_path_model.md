@@ -61,14 +61,14 @@ Installed illumination sources. The inventory `illumination_sequence[]` referenc
 | Field | Status | Type | Vocabulary | In records | What it records |
 | --- | --- | --- | --- | --- | --- |
 | `hardware.sources` | required | list of object (min 1) | — | 23 | Canonical illumination-source inventory referenced by ordered light_paths illumination_sequence entries. |
-| `hardware.sources[].id` | required | slug | — | 104 | Stable source identifier referenced by light_paths illumination_sequence. |
+| `hardware.sources[].id` | required | slug | — | 105 | Stable source identifier referenced by light_paths illumination_sequence. |
 | `hardware.sources[].name` | optional | string | — | 2 | Optional display label for the installed source when it differs from the vendor model/designation. |
-| `hardware.sources[].kind` | required | string | [`light_source_kinds`](../vocab/light_source_kinds.yaml) | 104 | Canonical source classifier used for inventory reporting and light-path DTO generation. |
-| `hardware.sources[].manufacturer` | optional | string | — | 104 | Structured provenance for installed sources. |
-| `hardware.sources[].model` | optional | string | — | 104 | Vendor-facing source model/designation. |
-| `hardware.sources[].product_code` | optional | string | — | 3 | Explicit source SKU/catalog code when known. |
+| `hardware.sources[].kind` | required | string | [`light_source_kinds`](../vocab/light_source_kinds.yaml) | 105 | Canonical source classifier used for inventory reporting and light-path DTO generation. |
+| `hardware.sources[].manufacturer` | optional | string | — | 105 | Structured provenance for installed sources. |
+| `hardware.sources[].model` | optional | string | — | 105 | Vendor-facing source model/designation. |
+| `hardware.sources[].product_code` | optional | string | — | 4 | Explicit source SKU/catalog code when known. |
 | `hardware.sources[].technology` | optional | string | [`light_source_technologies`](../vocab/light_source_technologies.yaml) | 13 | Helpful subtype metadata for lasers, LED engines, and tunable sources. |
-| `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 51 | Declares the source role without relying on notes-based inference. |
+| `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 52 | Declares the source role without relying on notes-based inference. |
 | `hardware.sources[].timing_mode` | optional | string | [`light_source_timing_modes`](../vocab/light_source_timing_modes.yaml) | 5 | Declares whether the source is continuous-wave or pulsed. |
 | `hardware.sources[].wavelength_nm` | optional | spectral_descriptor | — | 80 | Peak or representative wavelength for discrete excitation sources. |
 | `hardware.sources[].width_nm` | optional | positive_number | — | 18 | Optional spectral width for broad-spectrum or band-defined sources. |
@@ -80,7 +80,7 @@ Installed illumination sources. The inventory `illumination_sequence[]` referenc
 | `hardware.sources[].tunable_max_nm` | optional | positive_number | — | 3 | Upper tunable wavelength bound for tunable or white-light sources. |
 | `hardware.sources[].simultaneous_lines_max` | optional | positive_number | — | 1 | Maximum simultaneously active lines for multi-line sources. |
 | `hardware.sources[].modalities` | optional | list of string | [`modalities`](../vocab/modalities.yaml) | 3 | Legacy compatibility modality hints for installed sources. Ordered light_paths and route_type remain authoritative. |
-| `hardware.sources[].notes` | optional | text | — | 98 | Free-text source notes for operational caveats. |
+| `hardware.sources[].notes` | optional | text | — | 99 | Free-text source notes for operational caveats. |
 | `hardware.sources[].url` | optional | url | — | 79 | Reference link only. |
 
 ### `hardware.optical_path_elements`
@@ -101,10 +101,10 @@ Installed mechanisms that alter or route light — excitation and emission filte
 | `hardware.optical_path_elements[].supported_branch_count` | optional | positive_number | — | 21 | Inventory-level capability metadata describing how many branches a selector/splitter can support. |
 | `hardware.optical_path_elements[].modalities` | optional | list of string | [`modalities`](../vocab/modalities.yaml) | — | Legacy compatibility modality hints for optical path elements. Ordered light_paths and route_type remain authoritative. |
 | `hardware.optical_path_elements[].positions` | optional | object | — | 36 | Position map for installed filter wheels, turrets, sliders, or cubes. |
-| `hardware.optical_path_elements[].positions{}.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 128 | Canonical optical component classifier for direct position payloads. |
-| `hardware.optical_path_elements[].positions{}.manufacturer` | optional | string | — | 29 | Structured provenance for direct position payloads. |
+| `hardware.optical_path_elements[].positions{}.component_type` | optional | string | [`optical_component_types`](../vocab/optical_component_types.yaml) | 129 | Canonical optical component classifier for direct position payloads. |
+| `hardware.optical_path_elements[].positions{}.manufacturer` | optional | string | — | 30 | Structured provenance for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.model` | optional | string | — | 8 | Vendor-facing model/designation for direct position payloads. |
-| `hardware.optical_path_elements[].positions{}.product_code` | optional | string | — | 65 | Explicit catalog/SKU/reference code for direct position payloads when known. |
+| `hardware.optical_path_elements[].positions{}.product_code` | optional | string | — | 66 | Explicit catalog/SKU/reference code for direct position payloads when known. |
 | `hardware.optical_path_elements[].positions{}.compatible_source_ids` | optional | list of string | — | 17 | Explicit source-position compatibility when installation evidence identifies which authored sources use a mechanism position. This constrains choices without inferring compatibility from incomplete spectra. |
 | `hardware.optical_path_elements[].positions{}.bands` | optional | list of object | — | 93 | Explicit multiband pass windows for direct position payloads. |
 | `hardware.optical_path_elements[].positions{}.bands[].center_nm` | conditional — when `hardware.optical_path_elements[].positions{}.bands[]` is present | positive_number | — | 134 | Band center for direct multiband position payloads. |
@@ -176,7 +176,7 @@ The ordered route declarations. Each one is a single explicit traversable path t
 | `light_paths[].contrast_methods` | optional | list of string | [`contrast_methods`](../vocab/contrast_methods.yaml) | 19 | Explicitly associates contrast methods with the physical light path that implements them. On active instruments, mapped methods must also be declared in capabilities.contrast_methods, must be compatible with route_type, and every declared contrast method must be mapped to at least one path. |
 | `light_paths[].readouts` | optional | list of string | [`measurement_readouts`](../vocab/measurement_readouts.yaml) | 6 | Optional per-route measurement/readout tags associated with a route traversal. |
 | `light_paths[].illumination_sequence` | required | list of object | — | 45 | Ordered sequence of strict tagged-union items used before the sample plane; each item must declare exactly one of source_id or optical_path_element_id. |
-| `light_paths[].illumination_sequence[].source_id` | optional | slug | — | 109 | Stable source reference for the source_id variant of an illumination sequence tagged union item. |
+| `light_paths[].illumination_sequence[].source_id` | optional | slug | — | 110 | Stable source reference for the source_id variant of an illumination sequence tagged union item. |
 | `light_paths[].illumination_sequence[].optical_path_element_id` | optional | slug | — | 23 | Stable optical-path-element reference for the optical_path_element_id variant of an illumination sequence tagged union item. |
 | `light_paths[].illumination_sequence[].position_id` | optional | string | — | 1 | Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same illumination sequence item; the validator rejects a key that does not match an authored position on that element. |
 | `light_paths[].detection_sequence` | required | list of object | — | 45 | Ordered sequence of strict tagged-union items used after the sample plane; each item must declare exactly one of optical_path_element_id, endpoint_id, or branches. |
@@ -190,8 +190,8 @@ The ordered route declarations. Each one is a single explicit traversable path t
 | `light_paths[].detection_sequence[].branches.items[].branch_id` | conditional — when `light_paths[].detection_sequence[].branches.items[]` is present | slug | — | 87 | Stable branch identifier scoped to the branch block. |
 | `light_paths[].detection_sequence[].branches.items[].label` | optional | string | — | 87 | Human-readable label for a detection branch. |
 | `light_paths[].detection_sequence[].branches.items[].sequence` | conditional — when `light_paths[].detection_sequence[].branches.items[]` is present | list of object (min 1) | — | 87 | Linear branch-local traversal sequence for a detection route fork; each branch-local item must declare exactly one of optical_path_element_id or endpoint_id. |
-| `light_paths[].detection_sequence[].branches.items[].sequence[].optical_path_element_id` | optional | slug | — | 6 | Stable optical-path-element reference for the optical_path_element_id variant of a detection branch-local tagged union item. |
-| `light_paths[].detection_sequence[].branches.items[].sequence[].position_id` | optional | string | — | 1 | Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same detection branch-local item; the validator rejects a key that does not match an authored position on that element. |
+| `light_paths[].detection_sequence[].branches.items[].sequence[].optical_path_element_id` | optional | slug | — | 8 | Stable optical-path-element reference for the optical_path_element_id variant of a detection branch-local tagged union item. |
+| `light_paths[].detection_sequence[].branches.items[].sequence[].position_id` | optional | string | — | 2 | Pins the authored position of the referenced optical_path_element_id for this route step. Only valid alongside optical_path_element_id in the same detection branch-local item; the validator rejects a key that does not match an authored position on that element. |
 | `light_paths[].detection_sequence[].branches.items[].sequence[].endpoint_id` | optional | slug | — | 87 | Stable endpoint reference for the endpoint_id variant of a detection branch-local tagged union item. |
 
 ## 3. What the schema cannot say
@@ -488,12 +488,12 @@ Both are the places where the model and the data have parted company.
 | `hardware.optical_path_elements[].positions{}.cut_on_nm` | 11 |
 | `hardware.optical_path_elements[].positions{}.cutoffs_nm` | 1 |
 | `hardware.optical_path_elements[].positions{}.name` | 95 |
-| `hardware.optical_path_elements[].positions{}.notes` | 73 |
+| `hardware.optical_path_elements[].positions{}.notes` | 74 |
 | `hardware.optical_path_elements[].positions{}.slot` | 5 |
 | `hardware.optical_path_elements[].positions{}.url` | 2 |
 | `hardware.sources[].path` | 3 |
 | `light_paths[].modalities` | 1 |
-| `light_paths[].notes` | 10 |
+| `light_paths[].notes` | 11 |
 
 Scoped to the subtrees the `canonical_light_paths_v2` section owns outright (`hardware.sources`, `hardware.optical_path_elements`, `hardware.eyepieces`, `hardware.endpoints`, `light_paths`).
 
