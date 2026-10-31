@@ -8,7 +8,7 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room Dunkel
-  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning). Upgraded in September 2026 with an iLas2 motorized azimuthal TIRF/FRAP illuminator (TIRF, FRAP, photobleaching, photoactivation and photoconversion), a 405/488/561/638 nm laser unit, and a Photometrics Kinetix22 sCMOS camera.'
+  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning). Upgraded in October 2026 with an iLas2 motorized azimuthal TIRF/FRAP illuminator (TIRF, FRAP, photobleaching, photoactivation and photoconversion), a 405/488/561/638 nm laser unit, and a Photometrics Kinetix22 sCMOS camera.'
   url: ''
 capabilities:
   imaging_modes:
@@ -30,7 +30,7 @@ capabilities:
   non_optical: []
 modules:
 - type: incubation
-  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T). A multiwell plate holder and an Okolab laser-interlock lid for TIRF/FRAP were added in September 2026.
+  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T). A multiwell plate holder and an Okolab laser-interlock lid for TIRF/FRAP were added in October 2026.
   url: ''
   manufacturer: Okolab
   model: H201-T
@@ -40,22 +40,22 @@ modules:
   manufacturer: Nikon
   model: Perfect Focus System
 - type: tirf
-  notes: iLas2 galvanometer-based TIRF and FRAP illuminator (ILAS2-TIRF/FRAP, MGTC0002) for point and motorized azimuthal (360 degree) TIRF, on a Ti2 motorized main laser branch (TI2-LA-BM-E). Controlled from NIS-Elements through the iLas2 TIRF/FRAP driver. Installed September 2026.
+  notes: iLas2 galvanometer-based TIRF and FRAP illuminator (ILAS2-TIRF/FRAP, MGTC0002) for point and motorized azimuthal (360 degree) TIRF, on a Ti2 motorized main laser branch (TI2-LA-BM-E). Controlled from NIS-Elements through the iLas2 TIRF/FRAP driver. Installed October 2026.
   url: ''
   manufacturer: Gataca Systems (supplied by Nikon)
   model: iLas2 TIRF/FRAP
 - type: frap
-  notes: FRAP and targeted photobleaching are performed by the same iLas2 TIRF/FRAP illuminator, on user-defined regions, and can be combined with TIRF or widefield acquisition. Installed September 2026.
+  notes: FRAP and targeted photobleaching are performed by the same iLas2 TIRF/FRAP illuminator, on user-defined regions, and can be combined with TIRF or widefield acquisition. Installed October 2026.
   url: ''
   manufacturer: Gataca Systems (supplied by Nikon)
   model: iLas2 TIRF/FRAP
 - type: hardware_triggering
-  notes: National Instruments PCIe-6738 analog output card (32 analog outputs, 16-bit) with shielded 68-pin cable, installed with the September 2026 upgrade for hardware-timed control of devices from NIS-Elements.
+  notes: National Instruments PCIe-6738 analog output card (32 analog outputs, 16-bit) with shielded 68-pin cable, installed with the October 2026 upgrade for hardware-timed control of devices from NIS-Elements.
   url: ''
   manufacturer: National Instruments
   model: PCIe-6738
 - type: photoactivation
-  notes: Photoactivation and photoconversion of photoactivatable or photoconvertible probes in user-defined regions, using the iLas2 TIRF/FRAP illuminator with the 405 nm laser line. Installed September 2026.
+  notes: Photoactivation and photoconversion of photoactivatable or photoconvertible probes in user-defined regions, using the iLas2 TIRF/FRAP illuminator with the 405 nm laser line. Installed October 2026.
   url: ''
   manufacturer: Gataca Systems (supplied by Nikon)
   model: iLas2 TIRF/FRAP
@@ -63,7 +63,7 @@ software:
 - role: acquisition
   name: Nikon NIS-Elements AR
   version: '6.1'
-  notes: Controls the iLas2 TIRF/FRAP illuminator and the laser unit through the iLas2 driver. Acquisitions can be scripted or automated in NIS-Elements.
+  notes: Controls the iLas2 TIRF/FRAP illuminator and the laser unit through the iLas2 driver. JOBS is installed for scripted and automated acquisition.
   url: ''
 hardware:
   environment:
@@ -86,7 +86,7 @@ hardware:
     sensor_format_px: 2400 x 2400
     qe_peak_pct: 95
     read_noise_e: 0.7
-    notes: Back-illuminated sCMOS, 22 mm sensor diagonal (5.76 MP). Replaced the Hamamatsu ORCA-Flash4.0 V3 in September 2026. Sensor format, peak QE and read noise are the manufacturer specification, not measured values; peak QE is 95% in the supplier quotation and 96% in the current Photometrics datasheet. Read noise depends on the readout mode, 0.7 e- in Sub-Electron mode, 1.2 e- Sensitivity (12-bit), 1.6 e- Dynamic Range (16-bit), 2.0 e- Speed (8-bit).
+    notes: Back-illuminated sCMOS, 22 mm sensor diagonal (5.76 MP). Replaced the Hamamatsu ORCA-Flash4.0 V3 in October 2026. Sensor format, peak QE and read noise are the manufacturer specification, not measured values; peak QE is 95% in the supplier quotation and 96% in the current Photometrics datasheet. Read noise depends on the readout mode, 0.7 e- in Sub-Electron mode, 1.2 e- Sensitivity (12-bit), 1.6 e- Dynamic Range (16-bit), 2.0 e- Speed (8-bit).
     url: https://www.photometrics.com/products/kinetix-family/kinetix22
     id: kinetix22
   - kind: cmos
@@ -257,7 +257,7 @@ hardware:
     specialties:
     - tirf
     - correction_collar
-    notes: Correction collar for coverglass thickness 0.13-0.20 mm and temperature 23-37 °C. Added September 2026 with the TIRF upgrade.
+    notes: Correction collar for coverglass thickness 0.13-0.20 mm and temperature 23-37 °C. Added October 2026 with the TIRF upgrade.
     url: ''
     is_installed: true
   sources:
@@ -440,7 +440,7 @@ hardware:
         - laser_488
         - laser_561
         - laser_638
-        notes: 'Laser TIRF cube for Nikon Ti, installed September 2026. Pos_2 orders it after the standard cubes; the physical turret slot is not recorded. Excitation ZET405/488/561/640xv2 (passbands not recorded). Dichroic ZT405/488/561/640rpcv2 reflects 380-410, 482-493, 556-566 and 630-647 nm (manufacturer specification). The matching single-band emitters (445/58, 525/50, 595/44, 706/95) were supplied for the emission wheel; their wheel positions are not recorded.'
+        notes: 'Laser TIRF cube for Nikon Ti, installed October 2026. Pos_2 orders it after the standard cubes; the physical turret slot is not recorded. Excitation ZET405/488/561/640xv2 (passbands not recorded). Dichroic ZT405/488/561/640rpcv2 reflects 380-410, 482-493, 556-566 and 630-647 nm (manufacturer specification). The matching single-band emitters (445/58, 525/50, 595/44, 706/95) were supplied for the emission wheel; their wheel positions are not recorded.'
         dichroic:
           component_type: multiband_dichroic
           cutoffs_nm:
@@ -504,7 +504,7 @@ light_paths:
   imaging_modes:
   - widefield_fluorescence
   - tirf
-  notes: The Spectra X LEDs give widefield epi-fluorescence through the standard cubes. Since September 2026 the 405/488/561/638 nm lasers enter through the iLas2 TIRF/FRAP illuminator and the TIRF cube for TIRF and laser epi illumination; the same illuminator performs FRAP.
+  notes: The Spectra X LEDs give widefield epi-fluorescence through the standard cubes. Since October 2026 the 405/488/561/638 nm lasers enter through the iLas2 TIRF/FRAP illuminator and the TIRF cube for TIRF and laser epi illumination; the same illuminator performs FRAP.
 - id: transmitted_light
   illumination_sequence:
   - source_id: transmitted_illuminator

@@ -1,6 +1,6 @@
 schema_version: 1
 record_type: maintenance_event
-maintenance_id: maint_scope-nikon-eclipse-ti2-e_20260901_tirf_frap_upgrade
+maintenance_id: maint_scope-nikon-eclipse-ti2-e_20261019_tirf_frap_upgrade
 microscope: scope-nikon-eclipse-ti2-e
 
 service_provider: distributor
@@ -8,7 +8,8 @@ company: Nikon
 contact: ''
 reference: Delivery 2026-08-31
 
-started_utc: '2026-09-01T00:00:00Z'
+started_utc: '2026-10-19T00:00:00Z'
+ended_utc: '2026-10-19T00:00:00Z'
 
 reason: upgrade
 reason_details: >-
@@ -41,11 +42,12 @@ tags:
   - objective
 
 followup: >-
-  Confirm with staff: the exact installation date; whether the DS-Fi3 colour
+  Confirm with staff: whether the DS-Fi3 colour
   camera is still mounted; the emission-wheel positions of the four TIRF
   emitters and the turret slot of the TIRF cube; where the second laser fiber
   output goes; and which objective uses the new 20x DIC prism.
 
 notes: >-
-  The upgrade took effect in September 2026; no exact day was reported, so
-  started_utc is normalized to the first of the month at 00:00 UTC.
+  The upgrade became usable on 2026-10-19 (reported by facility staff); the
+  hardware was delivered on 2026-08-31. No event time was given, so
+  started_utc and ended_utc are normalized to 00:00 UTC.
