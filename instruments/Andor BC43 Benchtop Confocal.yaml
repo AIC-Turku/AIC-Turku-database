@@ -220,13 +220,13 @@ hardware:
     stage_role: dichroic
     id: bc43_internal_dichroic
     element_type: fixed
-    notes: Expected to be a quad-band dichroic for the 405/488/561/638 nm lines; the part number and cut-off wavelengths are not recorded.
+    notes: Standard BC43 internal dichroic for the four fixed 405/488/561/638 nm fluorescence channels. Andor publishes the channel architecture but not the dichroic part number or spectral edges in the public BC43 specification.
   - name: BC43 Internal Emission Filters
     slots: 4
     stage_role: emission
     id: bc43_internal_emission_filters
     element_type: filter_wheel
-    notes: 'The band centres and widths match the Semrock emitters listed for published BC43 configurations (FF01-445/20, FF02-529/24, FF01-595/31, FF01-708/75); facility staff have not yet confirmed that these exact parts are fitted to this unit.'
+    notes: 'Standard manufacturer-defined BC43 emission channels from Andor specifications: 435-455 nm for 405 nm excitation, 517-541 nm for 488 nm, 580-610 nm for 561 nm, and 671-745 nm for 638 nm. Exact internal filter manufacturer and catalogue numbers are not published and are not inferred here.'
     positions:
       Pos_1:
         name: DAPI
@@ -245,13 +245,13 @@ hardware:
         component_type: bandpass
         bands:
         - center_nm: 595
-          width_nm: 31
+          width_nm: 30
       Pos_4:
         name: CY5
         component_type: bandpass
         bands:
         - center_nm: 708
-          width_nm: 75
+          width_nm: 74
 light_paths:
 - id: confocal_spinning_disk
   illumination_sequence:
