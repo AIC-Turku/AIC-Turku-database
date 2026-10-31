@@ -43,9 +43,9 @@ modules:
 software:
 - role: acquisition
   name: SlideBook
-  version: '6'
+  version: '2026.1'
   developer: 3i
-  notes: SlideBook 6 Full Online License with hardware control and TTL Synchronization.
+  notes: Full online licence with hardware control and TTL synchronization, originally delivered as SlideBook 6 in 2019 and since updated to 2026.1.
 hardware:
   environment:
     temperature_control: true
@@ -197,7 +197,7 @@ hardware:
     afc_compatible: true
     specialties:
     - dic
-    notes: 'Immersion: Oil.'
+    notes: 'Immersion: Oil. The only objective set up for DIC on this microscope.'
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9800-000/Objective-alpha-Plan-Apochromat-100x-1.46-Oil-DIC-M27
     is_installed: true
   sources:
@@ -237,8 +237,15 @@ hardware:
     kind: led
     role: excitation
     manufacturer: CoolLED
-    model: pE-300
-    notes: CoolLED pE-300 white-light LED source with 3 mm liquid light guide. Installed for widefield fluorescence excitation. The transmitted-light source used for brightfield/phase/DIC is not identified by the available records.
+    model: pE-300white
+    notes: CoolLED pE-300white three-channel white-light LED source with 3 mm liquid light guide (model confirmed by facility staff). The channel bands are not recorded because published specifications disagree. Installed for widefield fluorescence excitation. SlideBook drives it as the CoolLED pE-300/340 excitation wheel; the 488 LED Widefield configuration selects excitation wheel position 2.
+  - id: zeiss_vis_led
+    kind: led
+    role: transmitted_illumination
+    manufacturer: Zeiss
+    model: VIS-LED
+    product_code: 423053-9030
+    notes: Transmitted-light LED illuminator for brightfield, phase contrast and DIC.
   optical_path_elements:
   - id: zeiss_widefield_fluorescence_positions
     name: Zeiss Widefield Fluorescence Positions
@@ -322,7 +329,7 @@ hardware:
     element_type: filter_wheel
     stage_role: emission
     slots: 8
-    notes: The 2019 system test report documents positions 1-6; current SlideBook configurations additionally demonstrate position 8. Position 7 remains undocumented rather than being treated as empty.
+    notes: The 2019 system test report documents positions 1-6. Position 8 holds a 600/37 emitter installed in May 2024; facility staff confirmed position 7 is empty.
     positions:
       Pos_1:
         component_type: multiband_bandpass
@@ -384,19 +391,24 @@ hardware:
         product_code: FF01-692/40-25
         compatible_source_ids:
         - laserstack_640
-        notes: Individual emitter documented in the 2019 system test report; the corresponding c640 single-band SlideBook configuration was not included in the supplied screenshots.
+        notes: Individual emitter documented in the 2019 system test report. SlideBook c640 selects filter-wheel position 5.
         bands:
         - center_nm: 692
           width_nm: 40
       Pos_6:
         component_type: empty
         notes: Documented as empty in the 2019 system test report.
+      Pos_7:
+        component_type: empty
+        notes: Confirmed empty by facility staff.
       Pos_8:
         component_type: bandpass
         name: 600/37
+        manufacturer: Semrock
+        product_code: FF01-600/37-25
         compatible_source_ids:
         - laserstack_561
-        notes: SlideBook configuration named 600/37 selects the 561 nm source and CSU-W Filter Wheel 1 position 8. Manufacturer and product code are not identified by the available evidence.
+        notes: 'BrightLine HC 600/37 emitter (25 mm), bought by the facility after the original installation and fitted by 3i on 2024-05-08. Manufacturer specification: Tavg > 93% from 582 to 619 nm. The SlideBook configuration named 600/37 selects the 561 nm source and CSU-W Filter Wheel 1 position 8.'
         bands:
         - center_nm: 600
           width_nm: 37
@@ -414,7 +426,7 @@ hardware:
         notes: Confocal position. All supplied spinning-disk SlideBook configurations select Brightfield Switcher position 1.
       Pos_2:
         component_type: passthrough
-        notes: Transmitted-light position. Both supplied BF camera and BF eyes configurations select Brightfield Switcher position 2.
+        notes: Bypass position. Both supplied BF camera and BF eyes configurations, and the widefield fluorescence configurations, select Brightfield Switcher position 2.
   - id: trinocular_port_selector
     name: Trinocular Head Port Selector
     element_type: splitter
@@ -455,6 +467,9 @@ light_paths:
       - branch_id: to_camera
         label: To Camera
         sequence:
+        - optical_path_element_id: csu_w1_emission_wheel
+        - optical_path_element_id: csu_w1_brightfield_switcher
+          position_id: Pos_2
         - endpoint_id: detector_1
       - branch_id: to_eyepieces
         label: To Eyepieces
@@ -463,8 +478,10 @@ light_paths:
   route_type: widefield_fluorescence
   imaging_modes:
   - widefield_fluorescence
+  notes: SlideBook widefield configurations (e.g. 488 LED Widefield) send the image to the camera through the CSU-W Brightfield Switcher position 2, which bypasses the disk, and select a CSU-W Filter Wheel 1 emitter (position 3 for 488 LED Widefield).
 - id: transmitted_light
-  illumination_sequence: []
+  illumination_sequence:
+  - source_id: zeiss_vis_led
   detection_sequence:
   - optical_path_element_id: trinocular_port_selector
   - branches:
@@ -481,6 +498,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_light
+  notes: DIC is set up only for the 100x alpha Plan-Apochromat DIC objective; phase contrast uses the Ph1 objectives.
   contrast_methods:
   - transmitted_brightfield
   - phase_contrast

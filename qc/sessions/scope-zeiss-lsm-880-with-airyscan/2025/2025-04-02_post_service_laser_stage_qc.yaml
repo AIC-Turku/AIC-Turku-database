@@ -177,8 +177,8 @@ laser_inputs_human:
 artifacts:
 - artifact_id: art_service_report_pdf
   role: report
-  uri: maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Service_report_8583415960-10_2025-04-02_13-55.pdf
-  description: Zeiss field service report for service order 8583415960 / 10.
+  uri: maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Zeiss_service_report_2025-04-02.pdf
+  description: Zeiss field service report, 2025-04-02.
 - artifact_id: art_maintenance_checklist_pdf
   role: report
   uri: maintenance/events/scope-zeiss-lsm-880-with-airyscan/2025/attachments/Signed_MaintenanceChecklist_LSM880_2018-09-25.pdf

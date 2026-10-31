@@ -228,19 +228,28 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn("phase annulus", output)
         self.assertNotIn("matching phase objective", output)
 
-    def test_a_source_that_cannot_pass_the_selected_filter_is_questioned(self):
+    def test_a_source_that_cannot_pass_the_selected_filter_is_not_offered(self):
         """Each EVOS light cube carries its own LED.
 
-        Pairing the 470 nm GFP cube's LED with the Cy5 cube is a configuration the
-        instrument cannot produce, and the draft reported both without comment.
+        The record ties every cube position to its own LED, so once the 470 nm GFP
+        cube's LED is chosen the Cy5 cube is no longer offered: the draft cannot
+        describe a configuration the instrument cannot produce.
         """
         self.select_instrument("EVOS fl")
         self.tick("method-list", "idefield")
+        count_cy5 = """() => [...document.querySelectorAll('#filter-list input')]
+                .filter(input => input.offsetParent !== null)
+                .filter(input => /Cy5/i.test((input.closest('label') || input.parentElement).textContent))
+                .length"""
+        self.assertGreater(self.page.evaluate(count_cy5), 0, "the Cy5 cube should be offered before an LED is chosen")
         self.tick("light-list", "470 nm")
-        self.tick("filter-list", "Cy5")
-        self.tick("obj-list", ".")
-        output = self.add()
-        self.assertIn("does not pass that wavelength", output)
+        visible_cy5 = self.page.evaluate(
+            """() => [...document.querySelectorAll('#filter-list input')]
+                .filter(input => input.offsetParent !== null)
+                .filter(input => /Cy5/i.test((input.closest('label') || input.parentElement).textContent))
+                .length"""
+        )
+        self.assertEqual(visible_cy5, 0)
 
     def test_a_source_the_selected_filter_passes_is_not_questioned(self):
         """The check has to stay silent on the pairing the instrument is for."""
@@ -337,12 +346,12 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn("Dye Finder", confirmed)
 
     def test_a_reported_package_with_no_version_is_asked_for_by_name(self):
-        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.select_instrument("Nikon Ti2-E Crest V3")
         self.tick("method-list", "brightfield")
         self.tick("obj-list", ".")
-        self.tick("confirmed-list", "Imaris")
+        self.tick("confirmed-list", "NIS-Elements")
         output = self.add()
-        self.assertIn("[PLEASE SPECIFY: the version of Imaris Quant used]", output)
+        self.assertIn("[PLEASE SPECIFY: the version of NIS-Elements AR used]", output)
 
     def test_a_module_is_withdrawn_when_its_technique_is_deselected(self):
         """A draft must not state a module as fact and warn about it as well.

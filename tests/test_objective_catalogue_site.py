@@ -10,6 +10,7 @@ import threading
 import pytest
 from playwright.sync_api import expect
 from test_objective_pool_browser import browser
+from test_objective_catalogue import record_counts, current_total
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,31 +36,33 @@ def test_generated_site_catalogue_round_trip_and_export_boundaries(browser, tmp_
         page.goto(origin + '/')
         page.get_by_role('link', name='Browse the objective catalogue', exact=True).click()
         expect(page.get_by_role('heading', name='Objectives', exact=True)).to_be_visible()
-        expect(page.locator('.pool-item:visible')).to_have_count(137)
-        assert page.locator('.pool-item').count() == 139
+        counts = record_counts()
+        expect(page.locator('.pool-item:visible')).to_have_count(current_total())
+        assert page.locator('.pool-item').count() == current_total() + counts['historical']
         data = context.request.get(origin+'/assets/objectives.json').json()
-        assert data['current_count'] == 137 and data['historical_count'] == 2
+        assert data['current_count'] == current_total() and data['historical_count'] == counts['historical']
         pool = context.request.get(origin+'/assets/objective_pool.json').json()
-        assert pool['inventory_kind'] == 'objective_pool' and len(pool['items']) == 35
+        assert pool['inventory_kind'] == 'objective_pool' and len(pool['items']) == counts['spare']
         methods = context.request.get(origin+'/assets/instruments_data.json').json()
         assert all(not obj.get('id','').startswith('pool-') for inst in methods['instruments']
                    for obj in inst.get('hardware',{}).get('objectives',[]))
         # Test the actual generated paths in both directions, including an objective anchor.
         page.get_by_label('Microscope', exact=True).select_option('scope-olympus-bx60')
-        expect(page.locator('.pool-item:visible')).to_have_count(6)
+        bx60 = counts['per_instrument']['scope-olympus-bx60']
+        expect(page.locator('.pool-item:visible')).to_have_count(bx60)
         page.locator('.pool-item:visible').first.get_by_role('link', name='View microscope', exact=True).click()
         expect(page.locator('#objectives')).to_be_visible()
         assert page.locator('#objectives').count() == 1
         page.get_by_role('link', name="View this microscope's objectives in the catalogue", exact=True).click()
-        expect(page.locator('.pool-item:visible')).to_have_count(6)
+        expect(page.locator('.pool-item:visible')).to_have_count(bx60)
         expect(page.get_by_label('Microscope', exact=True)).to_have_value('scope-olympus-bx60')
         page.get_by_label('Installation status').select_option('not_installed')
-        expect(page.locator('.pool-item:visible')).to_have_count(1)
+        expect(page.locator('.pool-item:visible')).to_have_count(counts['not_installed_per_instrument']['scope-olympus-bx60'])
         expect(page.locator('.pool-item:visible')).to_contain_text('Optional objective')
         page.get_by_label('Catalogue view').select_option('spare_pool')
-        expect(page.locator('.pool-item:visible')).to_have_count(35)
+        expect(page.locator('.pool-item:visible')).to_have_count(counts['spare'])
         page.goto(origin+'/objective_pool/?instrument=scope-leica-tcs-sp5-multiphoton')
-        expect(page.locator('.pool-item:visible')).to_have_count(2)
+        expect(page.locator('.pool-item:visible')).to_have_count(counts['per_instrument']['scope-leica-tcs-sp5-multiphoton'])
         expect(page.get_by_label('Include historical / retired microscope records')).to_be_checked()
         page.goto(origin+'/objective_pool/?view=instrument#pool-leica-506007')
         expect(page.locator('#pool-leica-506007')).to_be_visible()

@@ -1,0 +1,37 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-3i-csu-w1-spinning-disk-med-c_20240508_600-37_emitter_install
+microscope: scope-3i-csu-w1-spinning-disk-med-c
+
+service_provider: vendor
+company: 3i (Intelligent Imaging Innovations)
+contact: ''
+reference: Annual service visit, 2024-05-08
+
+started_utc: '2024-05-08T00:00:00Z'
+ended_utc: '2024-05-08T00:00:00Z'
+
+reason: upgrade
+reason_details: >-
+  Add a 600/37 emitter for the 561 nm line, bought by the facility after the
+  original installation.
+
+action: install
+action_details: >-
+  Installed a Semrock BrightLine HC FF01-600/37-25 emitter in position 8 of the
+  Yokogawa CSU-W emission filter wheel 1 during the annual service visit.
+
+microscope_status_before: in_service
+microscope_status_after: in_service
+status_notes: In service.
+
+tags:
+  - upgrade
+  - filter
+  - emission
+
+followup: ''
+
+notes: >-
+  Installation date reported by facility staff; no event time was given, so
+  started_utc and ended_utc are normalized to 00:00 UTC.

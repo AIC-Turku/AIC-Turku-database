@@ -40,6 +40,49 @@ def catalogue():
     return copy.deepcopy(_catalogue())
 
 
+@lru_cache(maxsize=1)
+def record_counts():
+    """Objective counts read straight from the YAML records, independent of the view.
+
+    Tests compare the catalogue with these instead of hard-coded numbers, so adding,
+    retiring or moving an objective in a ledger does not require editing the tests.
+    """
+    import yaml
+
+    facility = yaml.safe_load((ROOT/'facility.yaml').read_text())['facility']
+    hidden = set(facility.get('non_public_instrument_ids') or [])
+
+    def objectives(folder):
+        rows = {}
+        for path in sorted((ROOT/folder).glob('*.yaml')):
+            record = yaml.safe_load(path.read_text())
+            instrument_id = record['instrument']['instrument_id']
+            if instrument_id not in hidden:
+                rows[instrument_id] = (record.get('hardware') or {}).get('objectives') or []
+        return rows
+
+    active, retired = objectives('instruments'), objectives('instruments/retired')
+    pool = yaml.safe_load((ROOT/'inventory/objective_pool.yaml').read_text())['items']
+    flat_active = [o for rows in active.values() for o in rows]
+    flat_retired = [o for rows in retired.values() for o in rows]
+    return {
+        'instrument': len(flat_active),
+        'historical': len(flat_retired),
+        'spare': len(pool),
+        'installed': sum(o.get('is_installed') is True for o in flat_active),
+        'not_installed_current': sum(o.get('is_installed') is False for o in flat_active),
+        'not_installed_all': sum(o.get('is_installed') is False for o in flat_active + flat_retired),
+        'per_instrument': {i: len(rows) for i, rows in {**active, **retired}.items()},
+        'not_installed_per_instrument': {
+            i: sum(o.get('is_installed') is False for o in rows) for i, rows in {**active, **retired}.items()},
+    }
+
+
+def current_total():
+    counts = record_counts()
+    return counts['instrument'] + counts['spare']
+
+
 def render_catalogue(view=None):
     env = Environment(loader=FileSystemLoader(ROOT/'scripts/templates'), autoescape=True)
     return env.get_template('objective_pool.html.j2').render(pool=view or catalogue(), staff_url=None)
@@ -62,15 +105,16 @@ def fixture_view(inst, pool=None):
 
 def test_complete_catalogue_coverage_states_and_synthetic_exclusion():
     view = catalogue()
-    assert view['total'] == 139
-    assert view['current_count'] == 137
-    assert view['spare_count'] == 35 and view['instrument_count'] == 102
-    assert view['historical_count'] == 2
+    counts = record_counts()
+    assert view['total'] == current_total() + counts['historical']
+    assert view['current_count'] == current_total()
+    assert view['spare_count'] == counts['spare'] and view['instrument_count'] == counts['instrument']
+    assert view['historical_count'] == counts['historical']
     assert view['problem_count'] == 8
     assert view['excluded_instrument_ids'] == ['scope-testx1']
     assert all(row['instrument_id'] != 'scope-testx1' for row in view['items'])
-    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == 92
-    assert sum(row['installation_status'] == 'not_installed' for row in view['items']) == 10
+    assert sum(row['installation_status'] == 'installed' and not row['retired'] for row in view['items']) == counts['installed']
+    assert sum(row['installation_status'] == 'not_installed' for row in view['items']) == counts['not_installed_all']
 
 
 @pytest.mark.parametrize('flag,expected', [(True,'installed'), (False,'not_installed'), (None,'unconfirmed'), ('omit','unconfirmed')])

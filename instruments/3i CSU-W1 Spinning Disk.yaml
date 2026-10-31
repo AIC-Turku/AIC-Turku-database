@@ -119,7 +119,7 @@ hardware:
     working_distance: 0.55 mm
     immersion: air
     correction: plan_apochromat
-    afc_compatible: false
+    afc_compatible: true
     specialties: []
     notes: ''
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/440640-9903-000/Objective-Plan-Apochromat-20x-0.8
@@ -133,7 +133,7 @@ hardware:
     working_distance: 0.62 mm
     immersion: water
     correction: apochromat
-    afc_compatible: false
+    afc_compatible: true
     specialties:
     - coverslip_correction
     - ir_transmission
@@ -149,7 +149,7 @@ hardware:
     working_distance: 0.19 mm
     immersion: oil
     correction: plan_apochromat
-    afc_compatible: false
+    afc_compatible: true
     specialties:
     - dic
     notes: ''
@@ -164,7 +164,7 @@ hardware:
     working_distance: 0.17 mm
     immersion: oil
     correction: plan_apochromat
-    afc_compatible: false
+    afc_compatible: true
     specialties:
     - dic
     notes: ''
@@ -179,7 +179,7 @@ hardware:
     working_distance: 0.57 mm at cover glass 0.17
     immersion: multi
     correction: plan_apochromat
-    afc_compatible: false
+    afc_compatible: true
     specialties:
     - dic
     - ir_transmission
@@ -196,7 +196,7 @@ hardware:
     working_distance: 0.28 mm at cover glass 0.17
     immersion: water
     correction: apochromat
-    afc_compatible: false
+    afc_compatible: true
     specialties:
     - ir_transmission
     - correction_collar

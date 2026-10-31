@@ -68,7 +68,7 @@ scenarios:
       imaging_modes: [tirf]
     expect:
       instruments_declaring_requirements:
-        - scope-deltavision-omx
+        - scope-nikon-eclipse-ti2-e
         - scope-oni-nanoimager
         - scope-zeiss-tirf
       covering_route_families: [widefield_fluorescence]
@@ -205,9 +205,7 @@ scenarios:
         - instrument: scope-3i-csu-w1-spinning-disk
           component: source:laserstack_v4_2
           not_on_route: widefield_fluorescence
-      exclusive_branch_blocks:
-        - instrument: scope-deltavision-omx
-          route: widefield_fluorescence
+      exclusive_branch_blocks: []
       must_remain_unknown:
         - simultaneous_three_channel_acquisition
         - fluorophore_route_compatibility

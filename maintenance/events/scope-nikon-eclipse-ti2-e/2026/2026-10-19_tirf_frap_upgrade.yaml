@@ -1,0 +1,53 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-nikon-eclipse-ti2-e_20261019_tirf_frap_upgrade
+microscope: scope-nikon-eclipse-ti2-e
+
+service_provider: distributor
+company: Nikon
+contact: ''
+reference: Delivery 2026-08-31
+
+started_utc: '2026-10-19T00:00:00Z'
+ended_utc: '2026-10-19T00:00:00Z'
+
+reason: upgrade
+reason_details: >-
+  Upgrade of the Ti2-E with motorized azimuthal TIRF, FRAP and a faster,
+  higher-sensitivity camera.
+
+action: install
+action_details: >-
+  Installed an iLas2 TIRF/FRAP galvanometer illuminator on a Ti2 motorized
+  main laser branch, with a 405/488/561/638 nm laser unit (second fiber output
+  and cooling unit), a laser interlock, a motorized HQ epi filter turret and a
+  Chroma 405/488/561/640 nm laser TIRF cube with single-band emitters
+  (445/58, 525/50, 595/44, 706/95). Added a CFI Apochromat TIRF 60XC oil
+  1.49 objective, a 20x DIC objective prism, an Okolab multiwell plate holder
+  and laser-interlock lid, and a National Instruments PCIe-6738 analog output (DAQ) card for hardware triggering. A Photometrics Kinetix22 sCMOS camera replaced the
+  Hamamatsu ORCA-Flash4.0 V3. Installation and user training by the supplier.
+
+microscope_status_before: in_service
+microscope_status_after: in_service
+status_notes: >-
+  In service with TIRF and FRAP added. The Spectra X LED widefield path is
+  unchanged.
+
+tags:
+  - upgrade
+  - tirf
+  - frap
+  - laser
+  - camera
+  - objective
+
+followup: >-
+  Confirm with staff: whether the DS-Fi3 colour
+  camera is still mounted; the emission-wheel positions of the four TIRF
+  emitters and the turret slot of the TIRF cube; where the second laser fiber
+  output goes; and which objective uses the new 20x DIC prism.
+
+notes: >-
+  The upgrade became usable on 2026-10-19 (reported by facility staff); the
+  hardware was delivered on 2026-08-31. No event time was given, so
+  started_utc and ended_utc are normalized to 00:00 UTC.

@@ -1,0 +1,209 @@
+instrument:
+  display_name: Optics11 Life Pavone Nanoindenter
+  instrument_id: scope-optics11-pavone
+  manufacturer: Optics11 Life
+  model: Pavone
+  year_of_purchase: '2025'
+  funding: Research Council of Finland FIRI funding
+  stand_orientation: inverted
+  ocular_availability: camera_only
+  location: BioCity, 2nd floor
+  notes: 'Benchtop nanoindenter with an integrated inverted microscope, for measuring the local mechanical properties of cells, biomaterials and 3D in vitro models in well plates, dishes or on slides, in air or liquid. Fibre-optic interferometric force sensing, force range about 200 pN to 1.5 mN, stiffness range about 10 Pa to 1 GPa. Operating modes: quasi-static indentation, peak-load poking, step response (stress relaxation, creep) and dynamic mechanical analysis (0.1-20 Hz), programmable in displacement, indentation or load control. Automated well-to-well measurement, coordinate lists, matrix scans and image stitching. Fitted with the optional widefield fluorescence module (installed and accepted October 2026); no environmental (CO2/humidity) module.'
+  url: https://www.optics11life.com/products/pavone-nanoindenter/
+  # Sources: Pavone technical specifications V2.1 (January 2026), purchase invoice (2025),
+  # fluorescence-module quotation and Certificate of Acceptance (27 Oct 2026).
+capabilities:
+  imaging_modes:
+  - widefield_fluorescence
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast
+  readouts: []
+  workflows: []
+  assay_operations: []
+  non_optical:
+  - nanoindentation
+modules:
+- type: nanoindentation_module
+  notes: 'Indentation piezo with at least 85 µm stroke, fibre-coupled plug-and-play force sensors (individually calibrated, read by an external interferometer), sampling up to 1 kHz, motorized probe-approach Z stage (29 mm travel, 500 nm steps). Probes held by the facility: well-plate probes of stiffness 0.025 N/m (tip radius 3 and 25 µm) and 0.5 N/m (tip radius 3, 10, 25 and 50 µm). Usable probe range: stiffness 0.025-50 N/m, tip radius 3-50 µm.'
+  url: https://www.optics11life.com/products/pavone-nanoindenter/
+  manufacturer: Optics11 Life
+  model: Pavone indentation head with interferometer
+- type: motorized_stage
+  notes: Motorized XY stage, 120 x 190 mm travel, 1 µm steps. The sample holder takes two samples at once (e.g. two well plates, up to 384 wells), petri dishes or slides.
+  url: ''
+  manufacturer: Optics11 Life
+  model: Pavone XY stage
+software:
+- role: acquisition
+  name: Pavone control software
+  version: 1.12.8
+  developer: Optics11 Life
+  notes: Touch-screen software on the bundled all-in-one PC. Runs programmable multi-step protocols combining imaging, mechanical measurements and temperature control.
+  url: ''
+- role: analysis
+  name: Prova
+  version: 1.0.1
+  developer: Optics11 Life
+  notes: Free version only. Processes force curves to quantify stiffness, viscoelasticity, adhesion and topography.
+  url: https://www.optics11life.com/news/news-prova-analytics-software/
+hardware:
+  environment:
+    temperature_control: true
+    temperature_range: above room temperature to 40 °C
+    co2_control: false
+    humidity_control: false
+    notes: Built-in air temperature control (±0.5 °C, about 2 h to stabilise at 37 °C). The optional environmental control module (CO2 and humidity) is not part of this system.
+  stages:
+  - type: xy_motorized
+    manufacturer: Optics11 Life
+    model: Pavone XY stage
+    notes: 120 x 190 mm travel, 1 µm steps.
+  - type: other
+    manufacturer: Optics11 Life
+    model: Pavone probe Z stage
+    notes: Motorized Z stage for probe approach, 29 mm travel, 500 nm steps.
+  scanner:
+    type: none
+    notes: ''
+    url: ''
+  detectors:
+  - id: detector_1
+    kind: cmos
+    manufacturer: Optics11 Life
+    model: Integrated monochrome CMOS camera
+    sensor_format_px: 1900 x 1200
+    notes: 'Monochrome, up to 40 fps (manufacturer specification). Used for brightfield, phase contrast and fluorescence. The sensor pixel size is not published; calibrated image pixel size at installation (October 2026): 0.28935 µm/px with the base 20x objective and 0.29499 µm/px with the fluorescence objective.'
+    url: ''
+  objectives:
+  - id: 20x_air
+    manufacturer: Nikon
+    model: CFI Achromat LWD ADL 20x
+    product_code: ''
+    magnification: 20.0
+    numerical_aperture: 0.4
+    working_distance: 3.1 mm
+    immersion: air
+    correction: achromat
+    afc_compatible: false
+    specialties:
+    - long_working_distance
+    - phase
+    notes: Objective of the Pavone standard package (single interchangeable objective on a motorized focus drive, 18 mm travel, 1 µm steps, with autofocus). Specification from the Pavone technical sheet.
+    url: ''
+    is_installed: true
+  - id: 20x_air_fluo
+    manufacturer: Nikon
+    model: CFI Plan Fluor DLL 20X
+    product_code: MRH10205
+    magnification: 20.0
+    numerical_aperture: 0.5
+    working_distance: 2.1 mm
+    immersion: air
+    correction: plan_fluorite
+    afc_compatible: false
+    specialties:
+    - phase
+    notes: 'Fluorescence-module objective, confirmed by facility staff. Nikon specifies the CFI Plan Fluor DLL 20X (MRH10205) as NA 0.50, WD 2.10 mm, Ph1, suitable for fluorescence and phase contrast. The installation calibration gives 0.29499 µm/px with this objective.'
+    url: https://www.microscope.healthcare.nikon.com/en_EU/products/optics/cfi-plan-fluor-series-for-phase-contrast
+    is_installed: true
+  sources:
+  - id: transmitted_led
+    kind: led
+    role: transmitted_illumination
+    manufacturer: Optics11 Life
+    model: Pavone transmitted LED
+    notes: LED illumination for brightfield and phase contrast. Phase-contrast quality depends on the vessel; petri dishes or plates up to 24 wells work best.
+  - id: white_led
+    kind: led
+    role: excitation
+    manufacturer: Optics11 Life
+    model: Fluorescence module white LED
+    power: 100 W (electrical)
+    notes: High-power white LED, 400-725 nm, CRI 92 (manufacturer specification).
+  - id: uv_led
+    kind: led
+    role: excitation
+    manufacturer: Optics11 Life
+    model: Fluorescence module UV LED
+    wavelength_nm: 370
+    width_nm: 10
+    notes: UV LED, 365-375 nm (manufacturer specification).
+  optical_path_elements:
+  - id: fluorescence_filter_slider
+    name: Fluorescence Filter Slider
+    element_type: slider
+    stage_role: excitation
+    slots: 4
+    notes: 'Linear slider with 4 excitation filter slots, all fitted (the 3 default sets plus the additional set bought with the module). Bands are the four excitation filters listed in the Pavone technical sheet.'
+    positions:
+      Pos_1:
+        name: Excitation 1 (DAPI/Hoechst)
+        component_type: bandpass
+        bands:
+        - center_nm: 375
+          width_nm: 88
+      Pos_2:
+        name: Excitation 2 (FITC/GFP)
+        component_type: bandpass
+        bands:
+        - center_nm: 488
+          width_nm: 20
+      Pos_3:
+        name: Excitation 3 (TRITC/Cy3/mCherry)
+        component_type: bandpass
+        bands:
+        - center_nm: 560
+          width_nm: 20
+      Pos_4:
+        name: Excitation 4 (Cy5)
+        component_type: bandpass
+        bands:
+        - center_nm: 650
+          width_nm: 20
+  - id: fluorescence_dichroic
+    name: Fluorescence Dichroic
+    element_type: fixed
+    stage_role: dichroic
+    notes: Quad-band dichroic mirror 410/504/582/669 nm (Pavone technical sheet), user-replaceable.
+    positions:
+      Pos_1:
+        component_type: multiband_dichroic
+        cutoffs_nm:
+        - 410
+        - 504
+        - 582
+        - 669
+  - id: fluorescence_emission_filter
+    name: Fluorescence Emission Filter
+    element_type: fixed
+    stage_role: emission
+    notes: Quad-band emission filter 440/521/607/700 nm (Pavone technical sheet); band widths are not published.
+    positions:
+      Pos_1:
+        component_type: multiband_bandpass
+        name: Quad-band emitter 440/521/607/700
+light_paths:
+- id: widefield_fluorescence
+  illumination_sequence:
+  - source_id: uv_led
+  - source_id: white_led
+  - optical_path_element_id: fluorescence_filter_slider
+  - optical_path_element_id: fluorescence_dichroic
+  detection_sequence:
+  - optical_path_element_id: fluorescence_dichroic
+  - optical_path_element_id: fluorescence_emission_filter
+  - endpoint_id: detector_1
+  route_type: widefield_fluorescence
+  imaging_modes:
+  - widefield_fluorescence
+  notes: Fluorescence images and videos can be recorded synchronously with mechanical testing. The fluorescence module uses its own Nikon CFI Plan Fluor DLL 20x/0.5 objective.
+- id: transmitted_light
+  illumination_sequence:
+  - source_id: transmitted_led
+  detection_sequence:
+  - endpoint_id: detector_1
+  route_type: transmitted_light
+  contrast_methods:
+  - transmitted_brightfield
+  - phase_contrast

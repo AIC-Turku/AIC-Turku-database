@@ -1,0 +1,42 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-optics11-pavone_20261027_fluorescence_module_install
+microscope: scope-optics11-pavone
+
+service_provider: vendor
+company: Optics11 Life
+contact: ''
+reference: Certificate of Acceptance, 2026-10-27
+
+started_utc: '2026-10-27T00:00:00Z'
+ended_utc: '2026-10-27T00:00:00Z'
+
+reason: upgrade
+reason_details: >-
+  Add the optional widefield fluorescence module to the Pavone nanoindenter.
+
+action: install
+action_details: >-
+  Installed the fluorescence module (white and UV LEDs, 4-slot filter slider
+  with 4 filter sets, quad-band dichroic and emission filter, fluorescence
+  objective). Recalibrated both objectives against the calibration target
+  (0.28935 and 0.29499 µm/px), confirmed camera alignment by stitching,
+  checked all LEDs and LED controls, and verified homogeneous illumination
+  with fluorescent beads through all filters. Software updated to Pavone
+  1.12.8 and Prova 1.0.1 (free version). Users trained on the fluorescence
+  module and imaging functions.
+
+microscope_status_before: in_service
+microscope_status_after: in_service
+status_notes: In service with fluorescence imaging added.
+
+tags:
+  - upgrade
+  - fluorescence
+  - installation
+
+followup: ''
+
+notes: >-
+  Date from the Certificate of Acceptance; no event time was given, so
+  started_utc and ended_utc are normalized to 00:00 UTC.

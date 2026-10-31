@@ -7,3 +7,11 @@ terms:
   display_label: Impedance cytometry
   label: Impedance cytometry
   description: Measures electrical impedance changes as cells pass sensing regions to infer size and biophysical properties. Often used for label-free cell phenotyping.
+- id: nanoindentation
+  synonyms:
+  - nanoindenter
+  - micro-indentation
+  - nanomechanical indentation
+  display_label: Nanoindentation
+  label: Nanoindentation
+  description: Presses a calibrated probe of known stiffness and tip radius into a sample and records force against indentation depth, to quantify local mechanical properties such as Young's modulus, viscoelasticity (stress relaxation, creep, dynamic mechanical analysis) and adhesion of cells, tissues, hydrogels and biomaterials.

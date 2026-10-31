@@ -20,6 +20,7 @@ capabilities:
   readouts: []
   workflows:
   - live_cell_imaging
+  - smart_microscopy
   assay_operations: []
   non_optical: []
 modules:
@@ -263,7 +264,7 @@ hardware:
     manufacturer: Nikon
     model: D-LEDI Fluorescence LED Illumination System
     power: ''
-    notes: For widefield epifluorescence. Broadband illumination.
+    notes: For widefield epifluorescence. Four-LED source (385, 475, 550 and 621 nm, Nikon specification), not a broadband lamp.
     url: ''
     id: d_ledi_fluorescence_led_illumination_system
   - kind: led

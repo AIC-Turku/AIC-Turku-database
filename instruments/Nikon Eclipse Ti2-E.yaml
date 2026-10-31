@@ -8,11 +8,12 @@ instrument:
   stand_orientation: inverted
   ocular_availability: trinocular
   location: BioCity, 5th floor, room Dunkel
-  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning).'
+  notes: 'Automated inverted microscope (high-content). Imaging modes: Widefield fluorescence (multichannel spectral imaging), Brightfield (and DIC), Time-lapse live-cell imaging (with autofocus), High-content screening (multi-well scanning). Upgraded in October 2026 with an iLas2 motorized azimuthal TIRF/FRAP illuminator (TIRF, FRAP, photobleaching, photoactivation and photoconversion), a 405/488/561/638 nm laser unit, and a Photometrics Kinetix22 sCMOS camera.'
   url: ''
 capabilities:
   imaging_modes:
   - widefield_fluorescence
+  - tirf
   contrast_methods:
   - transmitted_brightfield
   - dic
@@ -21,11 +22,15 @@ capabilities:
   workflows:
   - live_cell_imaging
   - high_content_screening
-  assay_operations: []
+  - smart_microscopy
+  assay_operations:
+  - frap
+  - photobleaching
+  - photoactivation
   non_optical: []
 modules:
 - type: incubation
-  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T)
+  notes: Enclosed incubation chamber (Okolab) with temperature control (Okolab H201-T). A multiwell plate holder and an Okolab laser-interlock lid for TIRF/FRAP were added in October 2026.
   url: ''
   manufacturer: Okolab
   model: H201-T
@@ -34,10 +39,31 @@ modules:
   url: ''
   manufacturer: Nikon
   model: Perfect Focus System
+- type: tirf
+  notes: iLas2 galvanometer-based TIRF and FRAP illuminator (ILAS2-TIRF/FRAP, MGTC0002) for point and motorized azimuthal (360 degree) TIRF, on a Ti2 motorized main laser branch (TI2-LA-BM-E). Controlled from NIS-Elements through the iLas2 TIRF/FRAP driver. Installed October 2026.
+  url: ''
+  manufacturer: Gataca Systems (supplied by Nikon)
+  model: iLas2 TIRF/FRAP
+- type: frap
+  notes: FRAP and targeted photobleaching are performed by the same iLas2 TIRF/FRAP illuminator, on user-defined regions, and can be combined with TIRF or widefield acquisition. Installed October 2026.
+  url: ''
+  manufacturer: Gataca Systems (supplied by Nikon)
+  model: iLas2 TIRF/FRAP
+- type: hardware_triggering
+  notes: National Instruments PCIe-6738 analog output card (32 analog outputs, 16-bit) with shielded 68-pin cable, installed with the October 2026 upgrade for hardware-timed control of devices from NIS-Elements.
+  url: ''
+  manufacturer: National Instruments
+  model: PCIe-6738
+- type: photoactivation
+  notes: Photoactivation and photoconversion of photoactivatable or photoconvertible probes in user-defined regions, using the iLas2 TIRF/FRAP illuminator with the 405 nm laser line. Installed October 2026.
+  url: ''
+  manufacturer: Gataca Systems (supplied by Nikon)
+  model: iLas2 TIRF/FRAP
 software:
 - role: acquisition
   name: Nikon NIS-Elements AR
   version: '6.1'
+  notes: Controls the iLas2 TIRF/FRAP illuminator and the laser unit through the iLas2 driver. JOBS is installed for scripted and automated acquisition.
   url: ''
 hardware:
   environment:
@@ -54,13 +80,15 @@ hardware:
     url: ''
   detectors:
   - kind: scmos
-    manufacturer: Hamamatsu
-    model: Orca Flash4.0 V3
+    manufacturer: Photometrics
+    model: Kinetix22
     pixel_pitch_um: 6.5
-    sensor_format_px: 2048 x 2048
-    notes: sCMOS. Native effective pixel array from the ORCA-Flash4.0 V3 manufacturer specification; not a session ROI.
-    url: https://www.hamamatsu.com/us/en/product/cameras/cmos-cameras/C13440-20CU.html
-    id: detector_1
+    sensor_format_px: 2400 x 2400
+    qe_peak_pct: 95
+    read_noise_e: 0.7
+    notes: Back-illuminated sCMOS, 22 mm sensor diagonal (5.76 MP). Replaced the Hamamatsu ORCA-Flash4.0 V3 in October 2026. Sensor format, peak QE and read noise are the manufacturer specification, not measured values; peak QE is 95% in the supplier quotation and 96% in the current Photometrics datasheet. Read noise depends on the readout mode, 0.7 e- in Sub-Electron mode, 1.2 e- Sensitivity (12-bit), 1.6 e- Dynamic Range (16-bit), 2.0 e- Speed (8-bit).
+    url: https://www.photometrics.com/products/kinetix-family/kinetix22
+    id: kinetix22
   - kind: cmos
     manufacturer: Nikon
     model: DS-Fi3
@@ -134,7 +162,7 @@ hardware:
     is_installed: true
   - id: 20x_air
     manufacturer: Nikon
-    model: S Plan Fluor ELWD ADM 20x/0.45 DIC N1
+    model: CFI S Plan Fluor ELWD 20XC
     product_code: MRH08230
     magnification: 20.0
     numerical_aperture: 0.45
@@ -146,7 +174,8 @@ hardware:
     - long_working_distance
     - dic
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
+    - correction_collar
+    notes: 'Correction collar for 0-2 mm vessel thickness (Nikon specification for MRH08230, the non-ADM ELWD 20XC). Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
     url: ''
     is_installed: true
   - id: 20x_air_2
@@ -209,10 +238,26 @@ hardware:
     afc_compatible: true
     specialties:
     - tirf
-    - phase
     - dic
     - polarization
+    - correction_collar
     notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
+    url: ''
+    is_installed: true
+  - id: 60x_oil_tirf
+    manufacturer: Nikon
+    model: CFI Apochromat TIRF 60XC Oil
+    product_code: MRD01691
+    magnification: 60.0
+    numerical_aperture: 1.49
+    working_distance: 0.16 - 0.07 mm
+    immersion: oil
+    correction: apochromat
+    afc_compatible: true
+    specialties:
+    - tirf
+    - correction_collar
+    notes: Correction collar for coverglass thickness 0.13-0.20 mm and temperature 23-37 °C. Added October 2026 with the TIRF upgrade.
     url: ''
     is_installed: true
   sources:
@@ -259,6 +304,38 @@ hardware:
     wavelength_nm: 730
     width_nm: 40
     id: spectra_x_730
+  - kind: laser
+    manufacturer: ''
+    model: LHU laser unit (MOM80000)
+    wavelength_nm: 405
+    power: 120 mW
+    role: excitation
+    notes: Line of the 405/488/561/638 nm laser unit feeding the iLas2 TIRF/FRAP illuminator. Nominal power from the supplier specification. Used mainly for photobleaching, photoactivation and photoconversion.
+    id: laser_405
+  - kind: laser
+    manufacturer: ''
+    model: LHU laser unit (MOM80000)
+    wavelength_nm: 488
+    power: 100 mW
+    role: excitation
+    notes: Line of the 405/488/561/638 nm laser unit feeding the iLas2 TIRF/FRAP illuminator. Nominal power from the supplier specification.
+    id: laser_488
+  - kind: laser
+    manufacturer: ''
+    model: LHU laser unit (MOM80000)
+    wavelength_nm: 561
+    power: 100 mW
+    role: excitation
+    notes: Line of the 405/488/561/638 nm laser unit feeding the iLas2 TIRF/FRAP illuminator. Nominal power from the supplier specification.
+    id: laser_561
+  - kind: laser
+    manufacturer: ''
+    model: LHU laser unit (MOM80000)
+    wavelength_nm: 638
+    power: 100 mW
+    role: excitation
+    notes: Line of the 405/488/561/638 nm laser unit feeding the iLas2 TIRF/FRAP illuminator. Nominal power from the supplier specification.
+    id: laser_638
   - kind: led
     manufacturer: Nikon
     model: Ti2 Transmitted Illuminator
@@ -345,6 +422,32 @@ hardware:
         name: Standard Cubes
         component_type: filter_cube
         notes: Standard DAPI, CFP, GFP, YFP, and TexasRed cubes
+        compatible_source_ids:
+        - spectra_x_395
+        - spectra_x_440
+        - spectra_x_475
+        - spectra_x_550
+        - spectra_x_575
+        - spectra_x_640
+        - spectra_x_730
+      Pos_2:
+        name: Chroma TRF89901-EMv2 405/488/561/640 TIRF cube
+        manufacturer: Chroma
+        product_code: TRF89901-EMv2
+        component_type: filter_cube
+        compatible_source_ids:
+        - laser_405
+        - laser_488
+        - laser_561
+        - laser_638
+        notes: 'Laser TIRF cube for Nikon Ti, installed October 2026. Pos_2 orders it after the standard cubes; the physical turret slot is not recorded. Excitation ZET405/488/561/640xv2 (passbands not recorded). Dichroic ZT405/488/561/640rpcv2 reflects 380-410, 482-493, 556-566 and 630-647 nm (manufacturer specification). The matching single-band emitters (445/58, 525/50, 595/44, 706/95) were supplied for the emission wheel; their wheel positions are not recorded.'
+        dichroic:
+          component_type: multiband_dichroic
+          cutoffs_nm:
+          - 410
+          - 493
+          - 566
+          - 647
   - name: DIC Fixed Analyzer
     stage_role: analyzer
     id: analyzer_slider
@@ -372,6 +475,10 @@ light_paths:
   - source_id: spectra_x_575
   - source_id: spectra_x_640
   - source_id: spectra_x_730
+  - source_id: laser_405
+  - source_id: laser_488
+  - source_id: laser_561
+  - source_id: laser_638
   - optical_path_element_id: epi_turret
   - optical_path_element_id: filter_turret
   detection_sequence:
@@ -381,10 +488,10 @@ light_paths:
   - branches:
       selection_mode: exclusive
       items:
-      - branch_id: to_orca
-        label: To Orca Flash4.0
+      - branch_id: to_kinetix22
+        label: To Kinetix22
         sequence:
-        - endpoint_id: detector_1
+        - endpoint_id: kinetix22
       - branch_id: to_ds_fi3
         label: To DS-Fi3
         sequence:
@@ -396,6 +503,8 @@ light_paths:
   route_type: widefield_fluorescence
   imaging_modes:
   - widefield_fluorescence
+  - tirf
+  notes: The Spectra X LEDs give widefield epi-fluorescence through the standard cubes. Since October 2026 the 405/488/561/638 nm lasers enter through the iLas2 TIRF/FRAP illuminator and the TIRF cube for TIRF and laser epi illumination; the same illuminator performs FRAP.
 - id: transmitted_light
   illumination_sequence:
   - source_id: transmitted_illuminator
@@ -404,10 +513,10 @@ light_paths:
   - branches:
       selection_mode: exclusive
       items:
-      - branch_id: to_orca
-        label: To Orca Flash4.0
+      - branch_id: to_kinetix22
+        label: To Kinetix22
         sequence:
-        - endpoint_id: detector_1
+        - endpoint_id: kinetix22
       - branch_id: to_ds_fi3
         label: To DS-Fi3
         sequence:
