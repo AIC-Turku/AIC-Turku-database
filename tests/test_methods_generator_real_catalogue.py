@@ -337,12 +337,12 @@ class RealCatalogueTestCase(unittest.TestCase):
         self.assertNotIn("Dye Finder", confirmed)
 
     def test_a_reported_package_with_no_version_is_asked_for_by_name(self):
-        self.select_instrument("Andor BC43 Benchtop Confocal")
+        self.select_instrument("Nikon Ti2-E Crest V3")
         self.tick("method-list", "brightfield")
         self.tick("obj-list", ".")
-        self.tick("confirmed-list", "Imaris")
+        self.tick("confirmed-list", "NIS-Elements")
         output = self.add()
-        self.assertIn("[PLEASE SPECIFY: the version of Imaris Quant used]", output)
+        self.assertIn("[PLEASE SPECIFY: the version of NIS-Elements AR used]", output)
 
     def test_a_module_is_withdrawn_when_its_technique_is_deselected(self):
         """A draft must not state a module as fact and warn about it as well.

@@ -24,7 +24,7 @@ capabilities:
   non_optical: []
 modules:
 - type: hardware_autofocus
-  notes: Dual function Focus Seek and Lock
+  notes: Dual function Focus Seek and Lock (FSL). Focus stabilization relies on the Find Coverslip function, which Fusion offers only for air objectives above 2x and for water objectives. FSL can be switched on with any objective but may not work as intended with the 2x air, silicone or oil objectives.
   url: ''
   manufacturer: Andor
   model: Focus Seek and Lock
@@ -41,10 +41,10 @@ software:
   notes: 'Activated modules: Focus Map and Tilt Correction; Irregular Montage.'
   url: https://fusion-benchtop-software-guide.scrollhelp.site/bc43softwareguide/
 - role: analysis
-  name: Imaris Quant
-  version: ''
+  name: Imaris Viewer
+  version: 11.0.0
   developer: Oxford Instruments / Andor
-  notes: Offline license for high-quality snapshots, movie creation, isosurface reconstructions, and traditional intensity-based/AI metric characterization.
+  notes: Imaris Viewer is the only analysis software installed on the acquisition PC. An offline Imaris Quant licence was part of the purchase but is not installed at present.
   url: ''
 hardware:
   environment:
@@ -60,16 +60,17 @@ hardware:
     manufacturer: Andor
     model: BC43 dual-microlens spinning disk
     pinhole_um: 50
-    notes: ''
-    url: ''
+    notes: 50 µm pinhole as stated in the manufacturer's BC43 specifications.
+    url: https://www.oxinst.com/learning/view/article/introducing-bc43
   detectors:
   - kind: scmos
     manufacturer: Andor
-    model: 4.1 MP sCMOS
+    model: ZL41 Cell 4.2
     pixel_pitch_um: 6.5
+    sensor_format_px: 2048 x 2000
     qe_peak_pct: 82
-    notes: 16-bit. 18.4 mm field of view.
-    url: ''
+    notes: sCMOS, 16-bit, 18.4 mm field of view, 15 fps at full frame. Sensor format, peak QE and frame rate are the manufacturer specification.
+    url: https://andor.oxinst.com/products/scmos-camera-series/zl41-cell-scmos
     id: detector_1
   objectives:
   - id: 2x_air
@@ -81,7 +82,7 @@ hardware:
     working_distance: 7.5 mm
     immersion: air
     correction: plan_achromat
-    afc_compatible: true
+    afc_compatible: false
     specialties: []
     notes: Included with the BC43 base system.
     url: ''
@@ -137,7 +138,7 @@ hardware:
     working_distance: 0.3 mm
     immersion: silicone
     correction: plan_apochromat
-    afc_compatible: true
+    afc_compatible: false
     specialties: []
     notes: 'Optical family: Lambda S.'
     url: ''
@@ -151,7 +152,7 @@ hardware:
     working_distance: 0.15 mm
     immersion: oil
     correction: plan_apochromat
-    afc_compatible: true
+    afc_compatible: false
     specialties: []
     notes: 'Optical family: Lambda D.'
     url: ''
@@ -165,7 +166,7 @@ hardware:
     working_distance: 0.13 mm
     immersion: oil
     correction: plan_apochromat
-    afc_compatible: true
+    afc_compatible: false
     specialties: []
     notes: 'Optical family: Lambda D.'
     url: ''
@@ -219,11 +220,13 @@ hardware:
     stage_role: dichroic
     id: bc43_internal_dichroic
     element_type: fixed
+    notes: Expected to be a quad-band dichroic for the 405/488/561/638 nm lines; the part number and cut-off wavelengths are not recorded.
   - name: BC43 Internal Emission Filters
     slots: 4
     stage_role: emission
     id: bc43_internal_emission_filters
     element_type: filter_wheel
+    notes: 'The band centres and widths match the Semrock emitters listed for published BC43 configurations (FF01-445/20, FF02-529/24, FF01-595/31, FF01-708/75); facility staff have not yet confirmed that these exact parts are fitted to this unit.'
     positions:
       Pos_1:
         name: DAPI
