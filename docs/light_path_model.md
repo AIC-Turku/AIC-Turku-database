@@ -484,7 +484,7 @@ Both are the places where the model and the data have parted company.
 | `hardware.endpoints[].kind` | 1 |
 | `hardware.endpoints[].modalities` | 1 |
 | `hardware.endpoints[].path` | 1 |
-| `hardware.optical_path_elements[].notes` | 22 |
+| `hardware.optical_path_elements[].notes` | 24 |
 | `hardware.optical_path_elements[].positions{}.cut_on_nm` | 11 |
 | `hardware.optical_path_elements[].positions{}.cutoffs_nm` | 1 |
 | `hardware.optical_path_elements[].positions{}.name` | 95 |
@@ -493,7 +493,7 @@ Both are the places where the model and the data have parted company.
 | `hardware.optical_path_elements[].positions{}.url` | 2 |
 | `hardware.sources[].path` | 3 |
 | `light_paths[].modalities` | 1 |
-| `light_paths[].notes` | 11 |
+| `light_paths[].notes` | 12 |
 
 Scoped to the subtrees the `canonical_light_paths_v2` section owns outright (`hardware.sources`, `hardware.optical_path_elements`, `hardware.eyepieces`, `hardware.endpoints`, `light_paths`).
 

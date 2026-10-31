@@ -197,7 +197,7 @@ hardware:
     afc_compatible: true
     specialties:
     - dic
-    notes: 'Immersion: Oil.'
+    notes: 'Immersion: Oil. The only objective set up for DIC on this microscope.'
     url: https://www.micro-shop.zeiss.com/en/us/shop/objectives/420792-9800-000/Objective-alpha-Plan-Apochromat-100x-1.46-Oil-DIC-M27
     is_installed: true
   sources:
@@ -237,8 +237,8 @@ hardware:
     kind: led
     role: excitation
     manufacturer: CoolLED
-    model: pE-300
-    notes: CoolLED pE-300 white-light LED source with 3 mm liquid light guide. Installed for widefield fluorescence excitation. SlideBook drives it as the CoolLED pE-300/340 excitation wheel; the 488 LED Widefield configuration selects excitation wheel position 2.
+    model: pE-300white
+    notes: CoolLED pE-300white three-channel white-light LED source with 3 mm liquid light guide (model confirmed by facility staff). The channel bands are not recorded because published specifications disagree. Installed for widefield fluorescence excitation. SlideBook drives it as the CoolLED pE-300/340 excitation wheel; the 488 LED Widefield configuration selects excitation wheel position 2.
   - id: zeiss_vis_led
     kind: led
     role: transmitted_illumination
@@ -498,6 +498,7 @@ light_paths:
         sequence:
         - endpoint_id: eyepieces
   route_type: transmitted_light
+  notes: DIC is set up only for the 100x alpha Plan-Apochromat DIC objective; phase contrast uses the Ph1 objectives.
   contrast_methods:
   - transmitted_brightfield
   - phase_contrast
