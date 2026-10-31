@@ -46,11 +46,11 @@ hardware:
   detectors:
   - kind: scmos
     manufacturer: Hamamatsu
-    model: ORCA-Flash4.0 V3 (C11440-22CU)
+    model: ORCA-Flash4.0 V2 (C11440-22CU)
     pixel_pitch_um: 6.5
     qe_peak_pct: 82
     sensor_format_px: 2048 x 2048
-    notes: Supplied with water chiller for camera chip cooling
+    notes: Supplied with water chiller for camera chip cooling. C11440-22CU is the ORCA-Flash4.0 V2; Hamamatsu rates V2 units from serial 100001 at 82% peak QE and earlier units at 72%, so the serial number decides the QE.
     url: ''
     id: detector_1
   objectives:

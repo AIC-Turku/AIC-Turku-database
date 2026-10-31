@@ -60,7 +60,7 @@ hardware:
     product_code: ''
     magnification: 4.0
     numerical_aperture: 0.13
-    working_distance: 16.4 mm
+    working_distance: 17 mm
     immersion: air
     correction: fluorite
     afc_compatible: false

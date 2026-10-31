@@ -77,7 +77,7 @@ hardware:
     model: PlanApo Z
     product_code: ''
     magnification: 1.0
-    numerical_aperture: 0.125
+    numerical_aperture: 0.25
     working_distance: 56 mm
     immersion: air
     correction: plan_apochromat

@@ -86,7 +86,7 @@ hardware:
     sensor_format_px: 2400 x 2400
     qe_peak_pct: 95
     read_noise_e: 0.7
-    notes: Back-illuminated sCMOS, 22 mm sensor diagonal (5.76 MP). Replaced the Hamamatsu ORCA-Flash4.0 V3 in September 2026. Sensor format, peak QE and read noise are the manufacturer specification, not measured values.
+    notes: Back-illuminated sCMOS, 22 mm sensor diagonal (5.76 MP). Replaced the Hamamatsu ORCA-Flash4.0 V3 in September 2026. Sensor format, peak QE and read noise are the manufacturer specification, not measured values. Read noise depends on the readout mode, 0.7 e- in Sub-Electron mode, 1.2 e- Sensitivity (12-bit), 1.6 e- Dynamic Range (16-bit), 2.0 e- Speed (8-bit).
     url: https://www.photometrics.com/products/kinetix-family/kinetix22
     id: kinetix22
   - kind: cmos
@@ -162,7 +162,7 @@ hardware:
     is_installed: true
   - id: 20x_air
     manufacturer: Nikon
-    model: S Plan Fluor ELWD ADM 20x/0.45 DIC N1
+    model: CFI S Plan Fluor ELWD 20XC
     product_code: MRH08230
     magnification: 20.0
     numerical_aperture: 0.45
@@ -174,7 +174,8 @@ hardware:
     - long_working_distance
     - dic
     - polarization
-    notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
+    - correction_collar
+    notes: 'Correction collar for 0-2 mm vessel thickness (Nikon specification for MRH08230, the non-ADM ELWD 20XC). Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) recommended; polarization suitable.'
     url: ''
     is_installed: true
   - id: 20x_air_2
@@ -237,9 +238,9 @@ hardware:
     afc_compatible: true
     specialties:
     - tirf
-    - phase
     - dic
     - polarization
+    - correction_collar
     notes: 'Mode suitability: BF recommended; FLUO (VIS) recommended; FLUO (UV) possible; polarization suitable.'
     url: ''
     is_installed: true

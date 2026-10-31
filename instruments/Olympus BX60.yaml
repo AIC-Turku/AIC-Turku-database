@@ -164,8 +164,8 @@ hardware:
         notes: 'Excitation: 355/50 nm. Dichroic Cutoff: 400 nm.'
         excitation_filter:
           component_type: bandpass
-          center_nm: 355
-          width_nm: 50
+          center_nm: 357.5
+          width_nm: 55
         dichroic:
           component_type: dichroic
           cut_on_nm: 400

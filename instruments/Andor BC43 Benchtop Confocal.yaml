@@ -67,9 +67,9 @@ hardware:
     manufacturer: Andor
     model: ZL41 Cell 4.2
     pixel_pitch_um: 6.5
-    sensor_format_px: 2048 x 2000
+    sensor_format_px: 2040 x 1992
     qe_peak_pct: 82
-    notes: sCMOS, 16-bit, 18.4 mm field of view, 15 fps at full frame. Sensor format, peak QE and frame rate are the manufacturer specification.
+    notes: sCMOS, 16-bit, 4.1 MP, 18.4 mm diagonal field of view, cooled to 0 °C, 15 fps at full frame. Sensor format from the BC43 user guide (v3.1); the stand-alone ZL41 Cell 4.2 is 2048 x 2048.
     url: https://andor.oxinst.com/products/scmos-camera-series/zl41-cell-scmos
     id: detector_1
   objectives:
@@ -89,7 +89,7 @@ hardware:
     is_installed: true
   - id: 10x_air
     manufacturer: Nikon
-    model: 10X Plan Apo LD Air
+    model: 10X Plan Apo λD Air
     product_code: INS-OBJ-10D-045
     magnification: 10.0
     numerical_aperture: 0.45
@@ -103,7 +103,7 @@ hardware:
     is_installed: true
   - id: 20x_air
     manufacturer: Nikon
-    model: 20X Plan Apo LD Air
+    model: 20X Plan Apo λD Air
     product_code: INS-OBJ-20D-080
     magnification: 20.0
     numerical_aperture: 0.8
@@ -117,7 +117,7 @@ hardware:
     is_installed: true
   - id: 40x_air
     manufacturer: Nikon
-    model: 40X Plan Apo LD Air
+    model: 40X Plan Apo λD Air
     product_code: INS-OBJ-40D-095
     magnification: 40.0
     numerical_aperture: 0.95
@@ -131,7 +131,7 @@ hardware:
     is_installed: true
   - id: 40x_silicone
     manufacturer: Nikon
-    model: 40X Plan Apo LS Sil Oil
+    model: 40X Plan Apo λS Sil Oil
     product_code: INS-OBJ-40S-125-SIL
     magnification: 40.0
     numerical_aperture: 1.25
@@ -145,7 +145,7 @@ hardware:
     is_installed: true
   - id: 60x_oil
     manufacturer: Nikon
-    model: 60X Plan Apo LD Oil
+    model: 60X Plan Apo λD Oil
     product_code: INS-OBJ-60D-142-O
     magnification: 60.0
     numerical_aperture: 1.42
@@ -159,7 +159,7 @@ hardware:
     is_installed: true
   - id: 100x_oil
     manufacturer: Nikon
-    model: 100x Plan Apo LD Oil
+    model: 100x Plan Apo λD Oil
     product_code: INS-OBJ-100D-145-O
     magnification: 100.0
     numerical_aperture: 1.45

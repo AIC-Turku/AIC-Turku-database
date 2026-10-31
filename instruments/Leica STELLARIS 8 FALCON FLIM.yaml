@@ -307,11 +307,13 @@ hardware:
     model: STELLARIS White Light Laser
     product_code: ''
     technology: supercontinuum
+    timing_mode: pulsed
+    repetition_rate_mhz: 78
     tunable_min_nm: 440
     tunable_max_nm: 790
     simultaneous_lines_max: 8
     power: unknown
-    notes: Local quotation states visible excitation range 440-790 nm. Service report SA-223726 records WLL replacement and that all WLL laser lines were in specification after integration. Measured powers are not provided.
+    notes: Pulsed white-light laser at 78 MHz (published STELLARIS specification; lower rates need a pulse picker, not recorded here). Local quotation states visible excitation range 440-790 nm. Service report SA-223726 records WLL replacement and that all WLL laser lines were in specification after integration. Measured powers are not provided.
     url: https://www.leica-microsystems.com/science-lab/life-science/stellaris-white-light-lasers/
   - id: laser_405_dmod
     name: 405 nm DMOD laser
@@ -320,9 +322,10 @@ hardware:
     model: Laser 405 DMOD
     product_code: '158202140'
     technology: diode
+    timing_mode: cw
     wavelength_nm: 405
     power: unknown
-    notes: Local quotation also lists Laser Port 405/UV, product code 158301200.
+    notes: Continuous-wave diode with direct modulation (DMOD), not a pulsed laser. Local quotation also lists Laser Port 405/UV, product code 158301200.
     url: ''
   - id: leica_led_3
     kind: led
