@@ -1,0 +1,41 @@
+schema_version: 1
+record_type: maintenance_event
+maintenance_id: maint_scope-deltavision-omx_20261031_retired
+microscope: scope-deltavision-omx
+
+service_provider: internal
+company: Advanced Imaging Core
+contact: AIC staff
+reference: Facility decision, 2026-10-31
+
+started_utc: '2026-10-31T00:00:00Z'
+ended_utc: '2026-10-31T00:00:00Z'
+
+reason: other
+reason_details: >-
+  The Deltavision OMX has been retired. It had been out of service since
+  2026-08-11, with only the 405 nm and 647 nm TIRF functions reported working.
+
+action: other
+action_details: >-
+  Retired the system and removed it from the active instrument list. The
+  instrument remains in BioCity room 5149 but is no longer offered to users.
+  Its two 60x oil objectives stay with the retired record and were not added
+  to the spare objective pool.
+
+microscope_status_before: out_of_service
+microscope_status_after: out_of_service
+status_notes: >-
+  Retired. The system remains in room 5149 but is not available for use.
+
+tags:
+  - retired
+  - out_of_service
+
+followup: ''
+
+notes: >-
+  Retirement recorded on 2026-10-31. No event time was provided, so
+  started_utc and ended_utc are normalized to 00:00 UTC. This closes out the
+  open 2026-08-11 out-of-service report, which is kept as the issue that led
+  to the retirement.
