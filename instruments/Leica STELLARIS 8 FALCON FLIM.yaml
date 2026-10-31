@@ -204,7 +204,7 @@ hardware:
   - id: obj_10x_air_0_40
     manufacturer: Leica Microsystems
     model: HC PL APO 10x/0.40 CS2
-    product_code: '15506424'
+    product_code: '11506424'
     magnification: 10.0
     numerical_aperture: 0.4
     working_distance: 2.56 mm
@@ -218,7 +218,7 @@ hardware:
   - id: obj_20x_air_0_75
     manufacturer: Leica Microsystems
     model: HC PL APO 20x/0.75 CS2
-    product_code: '15506517'
+    product_code: '11506517'
     magnification: 20.0
     numerical_aperture: 0.75
     working_distance: 0.62 mm
@@ -232,7 +232,7 @@ hardware:
   - id: obj_40x_glycerol_1_25_corr
     manufacturer: Leica Microsystems
     model: HC PL APO 40x/1.25 GLYC CORR CS2
-    product_code: '15506422'
+    product_code: '11506422'
     magnification: 40.0
     numerical_aperture: 1.25
     working_distance: 0.35 mm
@@ -247,7 +247,7 @@ hardware:
   - id: obj_63x_oil_1_40
     manufacturer: Leica Microsystems
     model: HC PL APO 63x/1.40 OIL CS2
-    product_code: '15506350'
+    product_code: '11506350'
     magnification: 63.0
     numerical_aperture: 1.4
     working_distance: 0.14 mm
@@ -260,8 +260,8 @@ hardware:
     is_installed: true
   - id: obj_86x_water_1_20_motcorr_sted
     manufacturer: Leica Microsystems
-    model: HC PL APO 86x/1.20 W motCORR STED W
-    product_code: '15506333'
+    model: HC PL APO 86x/1.20 W motCORR STED white
+    product_code: '11506333'
     magnification: 86.0
     numerical_aperture: 1.2
     working_distance: 0.3 mm

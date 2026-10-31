@@ -89,7 +89,7 @@ hardware:
     numerical_aperture: 1.45
     working_distance: 0.13 mm
     immersion: oil
-    correction: apochromat
+    correction: plan_apochromat
     afc_compatible: true
     specialties: []
     notes: ''

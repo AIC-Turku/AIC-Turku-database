@@ -110,7 +110,7 @@ hardware:
     numerical_aperture: 0.4
     working_distance: 7.5 - 6.2 mm
     immersion: air
-    correction: fluorite
+    correction: plan_fluorite
     afc_compatible: true
     specialties:
     - correction_collar
@@ -187,13 +187,13 @@ hardware:
     is_installed: false
   - id: 10x_air_2
     manufacturer: Leica
-    model: HC PL APO FLUOTAR 10x/0.30 PH 1
+    model: HC PL FLUOTAR 10x/0.30 PH1
     product_code: '11506507'
     magnification: 10.0
     numerical_aperture: 0.3
     working_distance: 11.0 mm
     immersion: air
-    correction: plan_apochromat
+    correction: plan_fluorite
     afc_compatible: false
     specialties:
     - phase
