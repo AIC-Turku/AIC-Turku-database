@@ -10,7 +10,9 @@ instrument:
   location: BioCity, 5th floor, room 5149
   notes: Advanced multi-modal super-resolution system. Supports 2D/3D SIM, localization
     microscopy, fast widefield acquisition, Blaze dynamic high-speed SIM, and Ring-TIRF
-    for evenly illuminated large fields of view.
+    for evenly illuminated large fields of view. Retired in October 2026; both 60x oil
+    objectives remain physically with the microscope for now and have not been moved
+    to the facility spare-objective pool.
   url: ''
 capabilities:
   imaging_modes:
