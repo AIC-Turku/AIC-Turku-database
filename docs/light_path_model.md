@@ -69,12 +69,12 @@ Installed illumination sources. The inventory `illumination_sequence[]` referenc
 | `hardware.sources[].product_code` | optional | string | — | 4 | Explicit source SKU/catalog code when known. |
 | `hardware.sources[].technology` | optional | string | [`light_source_technologies`](../vocab/light_source_technologies.yaml) | 13 | Helpful subtype metadata for lasers, LED engines, and tunable sources. |
 | `hardware.sources[].role` | optional | string | [`light_source_roles`](../vocab/light_source_roles.yaml) | 55 | Declares the source role without relying on notes-based inference. |
-| `hardware.sources[].timing_mode` | optional | string | [`light_source_timing_modes`](../vocab/light_source_timing_modes.yaml) | 7 | Declares whether the source is continuous-wave or pulsed. |
+| `hardware.sources[].timing_mode` | optional | string | [`light_source_timing_modes`](../vocab/light_source_timing_modes.yaml) | 6 | Declares whether the source is continuous-wave or pulsed. |
 | `hardware.sources[].wavelength_nm` | optional | spectral_descriptor | — | 81 | Peak or representative wavelength for discrete excitation sources. |
 | `hardware.sources[].width_nm` | optional | positive_number | — | 19 | Optional spectral width for broad-spectrum or band-defined sources. |
 | `hardware.sources[].power` | optional | string | — | 80 | Nominal source power metadata; not experiment-level truth. |
 | `hardware.sources[].pulse_width_ps` | conditional — when `timing_mode` is `pulsed` | positive_number | — | 4 | Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata. |
-| `hardware.sources[].repetition_rate_mhz` | conditional — when `timing_mode` is `pulsed` | positive_number | — | 5 | Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata. |
+| `hardware.sources[].repetition_rate_mhz` | conditional — when `timing_mode` is `pulsed` | positive_number | — | 4 | Required when pulsed timing is declared so timing-sensitive consumers receive explicit metadata. |
 | `hardware.sources[].depletion_targets_nm` | conditional — when `role` is `depletion` | list of positive_number | — | 2 | Required when the source is used as a depletion source. |
 | `hardware.sources[].tunable_min_nm` | optional | positive_number | — | 3 | Lower tunable wavelength bound for tunable or white-light sources. |
 | `hardware.sources[].tunable_max_nm` | optional | positive_number | — | 3 | Upper tunable wavelength bound for tunable or white-light sources. |
