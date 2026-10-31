@@ -49,6 +49,11 @@ modules:
   url: ''
   manufacturer: Nikon
   model: iLas2 TIRF/FRAP
+- type: hardware_triggering
+  notes: National Instruments PCIe-6738 analog output card (32 analog outputs, 16-bit) with shielded 68-pin cable, installed with the September 2026 upgrade for hardware-timed control of devices from NIS-Elements.
+  url: ''
+  manufacturer: National Instruments
+  model: PCIe-6738
 - type: photoactivation
   notes: Photoactivation and photoconversion of photoactivatable or photoconvertible probes in user-defined regions, using the iLas2 TIRF/FRAP illuminator with the 405 nm laser line. Installed September 2026.
   url: ''

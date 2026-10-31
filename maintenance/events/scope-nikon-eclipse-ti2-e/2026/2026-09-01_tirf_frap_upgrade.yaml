@@ -23,7 +23,7 @@ action_details: >-
   Chroma 405/488/561/640 nm laser TIRF cube with single-band emitters
   (445/58, 525/50, 595/44, 706/95). Added a CFI Apochromat TIRF 60XC oil
   1.49 objective, a 20x DIC objective prism, an Okolab multiwell plate holder
-  and laser-interlock lid. A Photometrics Kinetix22 sCMOS camera replaced the
+  and laser-interlock lid, and a National Instruments PCIe-6738 analog output (DAQ) card for hardware triggering. A Photometrics Kinetix22 sCMOS camera replaced the
   Hamamatsu ORCA-Flash4.0 V3. Installation and user training by the supplier.
 
 microscope_status_before: in_service
@@ -44,8 +44,7 @@ followup: >-
   Confirm with staff: the exact installation date; whether the DS-Fi3 colour
   camera is still mounted; the emission-wheel positions of the four TIRF
   emitters and the turret slot of the TIRF cube; where the second laser fiber
-  output goes; which objective uses the new 20x DIC prism; and whether a DAQ
-  card was added for hardware triggering.
+  output goes; and which objective uses the new 20x DIC prism.
 
 notes: >-
   The upgrade took effect in September 2026; no exact day was reported, so
