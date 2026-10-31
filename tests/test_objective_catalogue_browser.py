@@ -6,7 +6,7 @@ import json
 import pytest
 from playwright.sync_api import expect
 from test_objective_pool_browser import browser
-from test_objective_catalogue import catalogue, render_catalogue, fixture, fixture_view
+from test_objective_catalogue import catalogue, render_catalogue, fixture, fixture_view, record_counts, current_total
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,35 +35,36 @@ def page(browser):
 
 
 def test_all_microscope_spare_optional_and_history_filters(page):
-    expect(page.locator('.pool-item:visible')).to_have_count(136)
+    counts = record_counts()
+    expect(page.locator('.pool-item:visible')).to_have_count(current_total())
     page.get_by_label('Catalogue view').select_option('instrument')
-    expect(page.locator('.pool-item:visible')).to_have_count(101)
+    expect(page.locator('.pool-item:visible')).to_have_count(counts['instrument'])
     page.get_by_label('Installation status').select_option('installed')
-    expect(page.locator('.pool-item:visible')).to_have_count(92)
+    expect(page.locator('.pool-item:visible')).to_have_count(counts['installed'])
     page.get_by_label('Installation status').select_option('not_installed')
-    expect(page.locator('.pool-item:visible')).to_have_count(9)
+    expect(page.locator('.pool-item:visible')).to_have_count(counts['not_installed_current'])
     page.get_by_label('Microscope', exact=True).select_option('scope-olympus-bx60')
-    expect(page.locator('.pool-item:visible')).to_have_count(1)
+    expect(page.locator('.pool-item:visible')).to_have_count(counts['not_installed_per_instrument']['scope-olympus-bx60'])
     expect(page.locator('.pool-item:visible')).to_contain_text('Optional objective')
     page.get_by_label('Catalogue view').select_option('spare_pool')
-    expect(page.locator('.pool-item:visible')).to_have_count(35)
+    expect(page.locator('.pool-item:visible')).to_have_count(counts['spare'])
     expect(page.get_by_label('Installation status')).to_be_disabled()
     expect(page.get_by_label('Microscope', exact=True)).to_be_disabled()
     page.locator('[data-pool-reset]').first.click()
     page.get_by_label('Include historical / retired microscope records').check()
-    expect(page.locator('.pool-item:visible')).to_have_count(140)
+    expect(page.locator('.pool-item:visible')).to_have_count(current_total() + counts['historical'])
 
 
 def test_deep_links_reveal_instrument_or_historical_record(browser):
     context = browser.new_context()
     page = context.new_page()
     mount(page, url='http://127.0.0.1:8123/objective_pool/?instrument=scope-3i-csu-w1-spinning-disk')
-    expect(page.locator('.pool-item:visible')).to_have_count(7)
+    expect(page.locator('.pool-item:visible')).to_have_count(record_counts()['per_instrument']['scope-3i-csu-w1-spinning-disk'])
     expect(page.get_by_label('Catalogue view')).to_have_value('instrument')
     expect(page.locator('.pool-item:visible [data-copy-enquiry]')).to_have_count(0)
     retired_id = next(row['id'] for row in catalogue()['items'] if row['retired'])
     page.evaluate('(id) => window.location.hash = id', retired_id)
-    expect(page.locator('[data-retired="true"].pool-item:visible')).to_have_count(4)
+    expect(page.locator('[data-retired="true"].pool-item:visible')).to_have_count(record_counts()['historical'])
     expect(page.get_by_label('Include historical / retired microscope records')).to_be_checked()
     expect(page.locator('[id="'+retired_id+'"] details')).to_have_attribute('open','')
     context.close()
@@ -73,12 +74,12 @@ def test_retired_microscope_query_and_unknown_link(browser):
     context = browser.new_context()
     page = context.new_page()
     mount(page, url='http://127.0.0.1:8123/objective_pool/?instrument=scope-leica-tcs-sp5-multiphoton')
-    expect(page.locator('.pool-item:visible')).to_have_count(2)
+    expect(page.locator('.pool-item:visible')).to_have_count(record_counts()['per_instrument']['scope-leica-tcs-sp5-multiphoton'])
     expect(page.get_by_label('Include historical / retired microscope records')).to_be_checked()
     page2 = context.new_page()
     mount(page2, url='http://127.0.0.1:8123/objective_pool/?instrument=scope-testx1')
     expect(page2.locator('#pool-link-feedback')).to_contain_text('not in this catalogue')
-    expect(page2.locator('.pool-item:visible')).to_have_count(136)
+    expect(page2.locator('.pool-item:visible')).to_have_count(current_total())
     context.close()
 
 
@@ -127,7 +128,7 @@ def test_no_javascript_includes_labelled_history_and_microscope_links(browser):
     context = browser.new_context(java_script_enabled=False)
     page = context.new_page()
     page.set_content(render_catalogue())
-    expect(page.locator('.pool-item')).to_have_count(140)
+    expect(page.locator('.pool-item')).to_have_count(current_total() + record_counts()['historical'])
     expect(page.locator('[data-retired="true"].pool-item').first).to_contain_text('Historical record')
     expect(page.locator('[data-source_kind="instrument"] a').first).to_have_attribute('href', '../instruments/scope-3i-csu-w1-spinning-disk/#objectives')
     expect(page.locator('#pool-controls')).to_be_hidden()
